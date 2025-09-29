@@ -136,10 +136,26 @@ scripts/, tools/, schemas/ ...
 
 Per altre linee guida consulta `agents.md` e i README specifici nelle rispettive app.
 
+## Hook di sicurezza locali
+
+1. Installa le dipendenze di sviluppo Python (richiede Python 3.9+):
+   ```bash
+   python -m pip install --user -r requirements-dev.txt
+   ```
+   > Su Windows puoi usare `py -3 -m pip install --user -r requirements-dev.txt`. Se ottieni l'errore `No module named pre_commit`, ripeti il comando per assicurarti che `pip` abbia installato il pacchetto.
+2. Installa gli hook di pre-commit nel repository:
+   ```bash
+   pre-commit install
+   ```
+3. Esegui un controllo completo (opzionale ma consigliato prima del primo commit):
+   ```bash
+   pre-commit run --all-files
+   ```
+
 ## Gestione secrets e rotazione
 
 - I file `infra/env/*.env.dev` restano fuori dal versionamento (`.gitignore`) e sono pensati solo per lo sviluppo locale. Usa i template `*.env.dev.example` come base e mantieni le credenziali nel tuo password manager.
 - Per la CI utilizza variabili sicure (GitHub Secrets/Environments) che popolano file `infra/env/*.env.ci` o variabili d'ambiente equivalenti. I template `*.env.ci.example` elencano i nomi richiesti senza fornire valori sensibili.
 - **Rotazione OpenRouter API key:** genera una chiave dedicata per MeepleAI, ruotala almeno ogni 90 giorni o immediatamente in caso di sospetta fuga, aggiorna il secret GitHub `OPENROUTER_API_KEY` e invalida la chiave precedente dal pannello OpenRouter.
 - **Rotazione GitHub PAT (per n8n o automazioni):** usa PAT con scope minimi, memorizzalo come secret GitHub (`GITHUB_TOKEN`/`N8N_GITHUB_PAT`), ruotalo ogni 90 giorni e revoca immediatamente i token inutilizzati.
-- Installa gli hook di sicurezza prima di committare: `pip install pre-commit && pre-commit install`. Il gancio `detect-secrets` blocca la maggior parte dei leak accidentali; aggiorna il baseline con `detect-secrets scan > .secrets.baseline` solo dopo aver verificato che non siano presenti segreti reali.
+- Configura gli hook di sicurezza come descritto nella sezione precedente: il gancio `detect-secrets` blocca la maggior parte dei leak accidentali; aggiorna il baseline con `detect-secrets scan > .secrets.baseline` solo dopo aver verificato che non siano presenti segreti reali.

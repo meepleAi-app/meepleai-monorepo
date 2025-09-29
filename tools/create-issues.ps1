@@ -37,6 +37,27 @@ function Ensure-File([string]$Path) {
   }
 }
 
+function New-GitHubPagedUrl {
+  param(
+    [string]$UrlBase,
+    [int]$Page
+  )
+  $queryIndex = $UrlBase.IndexOf('?')
+  $separator = if ($queryIndex -lt 0) {
+    '?'
+  } elseif ($queryIndex -eq $UrlBase.Length - 1) {
+    ''
+  } else {
+    '&'
+  }
+  return "{0}{1}per_page=100&page={2}" -f $UrlBase, $separator, $Page
+}
+
+function Invoke-GitHubApi {
+  param([string]$Url)
+  return gh api $Url 2>$null
+}
+
 function Get-AllPages {
   param(
     [string]$UrlBase,
@@ -45,10 +66,9 @@ function Get-AllPages {
   $page = 1
   $acc = @()
   while ($true) {
-    $delimiter = if ($UrlBase.Contains("?")) { "&" } else { "?" }
-    $url = "{0}{1}per_page=100&page={2}" -f $UrlBase, $delimiter, $page
+    $url = New-GitHubPagedUrl -UrlBase $UrlBase -Page $page
     try {
-      $raw = gh api $url 2>$null
+      $raw = Invoke-GitHubApi -Url $url
     } catch {
       $msg = $_.Exception.Message
       if ($msg -match "404" -or $msg -match "Not Found") {
@@ -225,98 +245,100 @@ function Add-DependsComment {
 }
 
 # MAIN
-$script:ResolvedRepo = Resolve-Repo -RepoIn $Repo
-$Repo = $script:ResolvedRepo
-Ensure-File -Path $CsvPath
+if ($MyInvocation.InvocationName -ne '.') {
+  $script:ResolvedRepo = Resolve-Repo -RepoIn $Repo
+  $Repo = $script:ResolvedRepo
+  Ensure-File -Path $CsvPath
 
-$rows = Import-Csv -Path $CsvPath
+  $rows = Import-Csv -Path $CsvPath
 
-# 1) Prepara labels da CSV e creale se mancano
-$allLabels = @()
-foreach ($r in $rows) {
-  $labelsRaw = "$($r.Labels)".Trim()
-  if ($labelsRaw) {
-    $allLabels += ($labelsRaw -split "," | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
-  }
-}
-Ensure-Labels -Repo $Repo -Wanted $allLabels
-
-# 2) Creazione/aggiornamento issues
-$issueIndex = @{}   # mappa ID -> issue number
-foreach ($r in $rows) {
-  $id            = "$($r.ID)".Trim()
-  $titlePlain    = "$($r.Title)".Trim()
-  $title         = "$id - $titlePlain"
-  $component     = "$($r.Component)".Trim()
-  $type          = "$($r.Type)".Trim()
-  $priority      = "$($r.Priority)".Trim()
-  $effort        = "$($r.Effort)".Trim()
-  $deps          = "$($r.Dependencies)".Trim()
-  $milestoneName = "$($r.Milestone)".Trim()
-  $labelsRaw     = "$($r.Labels)".Trim()
-  $desc          = "$($r.Description)"
-  $ac            = "$($r.AcceptanceCriteria)"
-
-  $labels = @()
-  if ($labelsRaw) {
-    $labels = $labelsRaw -split "," | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
-  }
-
-  if ($milestoneName) { $null = Ensure-Milestone -Repo $Repo -Title $milestoneName }
-
-  $body = New-IssueBody -Component $component -Type $type -Priority $priority -Effort $effort `
-                        -Dependencies $deps -Description $desc -AcceptanceCriteria $ac
-
-  $existing = Find-IssueByIdInTitle -Repo $Repo -Id $id
-  if ($existing) {
-    Write-Host "Trovata issue esistente #$existing $title"
-    if ($Update) {
-      Update-Issue -Repo $Repo -Number $existing -Title $title -Body $body -Labels $labels -MilestoneName $milestoneName
-      Write-Host "Aggiornata #$existing"
-    } else {
-      Write-Host "Skip update (manca -Update)"
-    }
-    $issueIndex[$id] = $existing
-    continue
-  }
-
-  $num = Create-Issue -Repo $Repo -Title $title -Body $body -Labels $labels -MilestoneName $milestoneName
-  if ($num) {
-    Write-Host "Creata issue #$num $title"
-    $issueIndex[$id] = $num
-  } else {
-    Write-Warning "Impossibile determinare il numero issue creata per $id"
-  }
-}
-
-# 3) Linking dipendenze (commento "Depends on: #X, #Y")
-if ($LinkDeps) {
+  # 1) Prepara labels da CSV e creale se mancano
+  $allLabels = @()
   foreach ($r in $rows) {
-    $id      = "$($r.ID)".Trim()
-    $depsRaw = "$($r.Dependencies)".Trim()
-    if (-not $depsRaw) { continue }
-    if (-not $issueIndex.ContainsKey($id)) { continue }
-
-    $depIds = @()
-    foreach ($tok in ($depsRaw -split "[,;]")) {
-      $t = $tok.Trim()
-      if ($t) { $depIds += $t }
+    $labelsRaw = "$($r.Labels)".Trim()
+    if ($labelsRaw) {
+      $allLabels += ($labelsRaw -split "," | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" })
     }
-    if ($depIds.Count -eq 0) { continue }
+  }
+  Ensure-Labels -Repo $Repo -Wanted $allLabels
 
-    $currentNum = [int]$issueIndex[$id]
-    $depNums = @()
-    foreach ($did in $depIds) {
-      if ($issueIndex.ContainsKey($did)) {
-        $depNums += [int]$issueIndex[$did]
+  # 2) Creazione/aggiornamento issues
+  $issueIndex = @{}   # mappa ID -> issue number
+  foreach ($r in $rows) {
+    $id            = "$($r.ID)".Trim()
+    $titlePlain    = "$($r.Title)".Trim()
+    $title         = "$id - $titlePlain"
+    $component     = "$($r.Component)".Trim()
+    $type          = "$($r.Type)".Trim()
+    $priority      = "$($r.Priority)".Trim()
+    $effort        = "$($r.Effort)".Trim()
+    $deps          = "$($r.Dependencies)".Trim()
+    $milestoneName = "$($r.Milestone)".Trim()
+    $labelsRaw     = "$($r.Labels)".Trim()
+    $desc          = "$($r.Description)"
+    $ac            = "$($r.AcceptanceCriteria)"
+
+    $labels = @()
+    if ($labelsRaw) {
+      $labels = $labelsRaw -split "," | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
+    }
+
+    if ($milestoneName) { $null = Ensure-Milestone -Repo $Repo -Title $milestoneName }
+
+    $body = New-IssueBody -Component $component -Type $type -Priority $priority -Effort $effort `
+                          -Dependencies $deps -Description $desc -AcceptanceCriteria $ac
+
+    $existing = Find-IssueByIdInTitle -Repo $Repo -Id $id
+    if ($existing) {
+      Write-Host "Trovata issue esistente #$existing $title"
+      if ($Update) {
+        Update-Issue -Repo $Repo -Number $existing -Title $title -Body $body -Labels $labels -MilestoneName $milestoneName
+        Write-Host "Aggiornata #$existing"
       } else {
-        $found = Find-IssueByIdInTitle -Repo $Repo -Id $did
-        if ($found) { $depNums += [int]$found }
+        Write-Host "Skip update (manca -Update)"
       }
+      $issueIndex[$id] = $existing
+      continue
     }
-    if ($depNums.Count -gt 0) {
-      Add-DependsComment -Repo $Repo -Number $currentNum -DependsOn $depNums
-      Write-Host "Aggiunto commento dipendenze su #$currentNum -> $($depNums -join ', ')"
+
+    $num = Create-Issue -Repo $Repo -Title $title -Body $body -Labels $labels -MilestoneName $milestoneName
+    if ($num) {
+      Write-Host "Creata issue #$num $title"
+      $issueIndex[$id] = $num
+    } else {
+      Write-Warning "Impossibile determinare il numero issue creata per $id"
+    }
+  }
+
+  # 3) Linking dipendenze (commento "Depends on: #X, #Y")
+  if ($LinkDeps) {
+    foreach ($r in $rows) {
+      $id      = "$($r.ID)".Trim()
+      $depsRaw = "$($r.Dependencies)".Trim()
+      if (-not $depsRaw) { continue }
+      if (-not $issueIndex.ContainsKey($id)) { continue }
+
+      $depIds = @()
+      foreach ($tok in ($depsRaw -split "[,;]")) {
+        $t = $tok.Trim()
+        if ($t) { $depIds += $t }
+      }
+      if ($depIds.Count -eq 0) { continue }
+
+      $currentNum = [int]$issueIndex[$id]
+      $depNums = @()
+      foreach ($did in $depIds) {
+        if ($issueIndex.ContainsKey($did)) {
+          $depNums += [int]$issueIndex[$did]
+        } else {
+          $found = Find-IssueByIdInTitle -Repo $Repo -Id $did
+          if ($found) { $depNums += [int]$found }
+        }
+      }
+      if ($depNums.Count -gt 0) {
+        Add-DependsComment -Repo $Repo -Number $currentNum -DependsOn $depNums
+        Write-Host "Aggiunto commento dipendenze su #$currentNum -> $($depNums -join ', ')"
+      }
     }
   }
 }

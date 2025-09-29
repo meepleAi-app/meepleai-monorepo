@@ -416,3 +416,9 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Next.js build output
+apps/web/.next/
+
+# TypeScript incremental build info
+*.tsbuildinfo

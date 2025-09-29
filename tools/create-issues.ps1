@@ -1,20 +1,4 @@
-﻿# Setup-CreateIssues.ps1
-# Scrive tools\create-issues.ps1 in UTF-8 (no BOM), ASCII-safe, poi fa parse-test e dry-run opzionale.
-
-Param(
-  [switch]$RunDryRun   # se passato, esegue un dry-run dopo il parse test
-)
-
-$ErrorActionPreference = "Stop"
-
-$root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$dstDir = Join-Path $root "tools"
-$dst = Join-Path $dstDir "create-issues.ps1"
-if (-not (Test-Path $dstDir)) { New-Item -ItemType Directory -Path $dstDir | Out-Null }
-
-# --- Contenuto ASCII-safe dello script principale ---
-$code = @'
-# create-issues.ps1
+﻿# create-issues.ps1
 # UTF-8 (no BOM) - SOLO ASCII. Niente caratteri “smart”.
 # Funzioni:
 # - Crea le label mancanti (palette default).
@@ -315,31 +299,5 @@ if ($LinkDeps) {
       Add-DependsComment -Repo $Repo -Number $currentNum -DependsOn $depNums
       Write-Host "Aggiunto commento dipendenze su #$currentNum -> $($depNums -join ', ')"
     }
-  }
-}
-'@
-
-# Scrivi file in UTF-8 (no BOM)
-Set-Content -LiteralPath $dst -Value $code -Encoding utf8
-Write-Host "Scritto: $dst"
-
-# Parse test (senza eseguire)
-$parseErrors = $null
-$tokens = $null
-[void][System.Management.Automation.Language.Parser]::ParseFile($dst, [ref]$tokens, [ref]$parseErrors)
-if ($parseErrors -and $parseErrors.Count -gt 0) {
-  Write-Error "Errori di parsing: $($parseErrors | ForEach-Object { $_.Message } -join '; ')"
-} else {
-  Write-Host "Parse OK"
-}
-
-# Dry-run opzionale
-if ($RunDryRun) {
-  $csv = Join-Path $root "meepleai_backlog\meepleai_backlog.csv"
-  if (-not (Test-Path $csv)) {
-    Write-Warning "CSV non trovato a $csv. Salta dry-run."
-  } else {
-    Write-Host "Eseguo dry-run..."
-    powershell -NoProfile -ExecutionPolicy Bypass -File $dst -CsvPath $csv -DryRun
   }
 }

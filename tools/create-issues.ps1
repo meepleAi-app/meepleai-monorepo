@@ -38,13 +38,25 @@ function Ensure-File([string]$Path) {
 }
 
 function Get-AllPages {
-  param([string]$UrlBase)
+  param(
+    [string]$UrlBase,
+    [string]$ErrorContext = "GitHub API call"
+  )
   $page = 1
   $acc = @()
   while ($true) {
     $delimiter = if ($UrlBase -like "*?*") { "&" } else { "?" }
     $url = "{0}{1}per_page=100&page={2}" -f $UrlBase, $delimiter, $page
-    $raw = gh api $url 2>$null
+    try {
+      $raw = gh api $url 2>$null
+    } catch {
+      $msg = $_.Exception.Message
+      if ($msg -match "404" -or $msg -match "Not Found") {
+        $repoHint = if ($script:ResolvedRepo) { " per il repository '$($script:ResolvedRepo)'" } else { "" }
+        throw "GitHub API ha restituito 404$repoHint durante $ErrorContext (endpoint: '$url'). Verifica che il repo esista, che tu abbia accesso e che 'gh auth login' sia configurato."
+      }
+      throw
+    }
     if (-not $raw) { break }
     $arr = $raw | ConvertFrom-Json
     if (-not $arr -or $arr.Count -eq 0) { break }
@@ -54,7 +66,10 @@ function Get-AllPages {
   return $acc
 }
 
-function Get-Labels { param([string]$Repo) return Get-AllPages -UrlBase ("repos/{0}/labels" -f $Repo) }
+function Get-Labels {
+  param([string]$Repo)
+  return Get-AllPages -UrlBase ("repos/{0}/labels" -f $Repo) -ErrorContext "il recupero delle label"
+}
 
 function Create-Label {
   param([string]$Repo,[string]$Name,[string]$Color,[string]$Description)
@@ -115,7 +130,10 @@ function Ensure-Labels {
   }
 }
 
-function Get-Milestones { param([string]$Repo) return Get-AllPages -UrlBase ("repos/{0}/milestones" -f $Repo) }
+function Get-Milestones {
+  param([string]$Repo)
+  return Get-AllPages -UrlBase ("repos/{0}/milestones" -f $Repo) -ErrorContext "il recupero delle milestone"
+}
 
 function Create-Milestone {
   param([string]$Repo,[string]$Title)
@@ -207,7 +225,8 @@ function Add-DependsComment {
 }
 
 # MAIN
-$Repo = Resolve-Repo -RepoIn $Repo
+$script:ResolvedRepo = Resolve-Repo -RepoIn $Repo
+$Repo = $script:ResolvedRepo
 Ensure-File -Path $CsvPath
 
 $rows = Import-Csv -Path $CsvPath

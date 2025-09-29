@@ -169,7 +169,7 @@ POSTGRES_DB=meepleai
 
 ### 1. Starting Development
 1. Clone the repository
-2. Copy environment templates: `cp infra/env/*.env.example infra/env/*.env`
+2. Copy environment templates: `cp infra/env/*.env.dev.example infra/env/*.env.dev`
 3. Start services: `cd infra && docker compose up -d --build`
 4. Verify services are running: `docker compose ps`
 

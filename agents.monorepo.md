@@ -20,7 +20,7 @@
 
 ### 1.2 Naming & Struttura repository
 - Monorepo con cartelle: `/apps` (frontend/backend), `/packages` (librerie condivise), `/tools` (script), `/docs` (md), `/infra` (docker, k8s), `/tests`.
-- Ogni app espone `README.md` locale con comandi di build/test e variabili `.env.example`.
+- Ogni app espone `README.md` locale con comandi di build/test e template `.env.dev.example`/`.env.ci.example`.
 
 ### 1.3 Git & Commit
 - **Branch naming:** `feature/<scope>-<short-desc>`, `fix/<scope>-<bug>`, `chore/<scope>-...`.
@@ -85,7 +85,7 @@
 - [ ] Lint + typecheck ok.
 - [ ] Unit test verdi (TS/C#) con copertura ≥ 80% sul delta.
 - [ ] E2E/UX test passano (puppeteer/playwright per web; http e2e per API).
-- [ ] Nessun secret in diff; `.env` aggiornato in `.env.example` se serve.
+- [ ] Nessun secret in diff; `.env` aggiornato nei template `.env.dev.example`/`.env.ci.example` se serve.
 - [ ] Multi-tenant: test RLS/permessi aggiornati.
 - [ ] Performance: no regressioni note.
 - [ ] Docs aggiornate.
@@ -212,7 +212,7 @@ Output: patch ai md, con sommario delle modifiche.
 3. Integra `/docs/issues-log.csv` e PR template con checklist §5.
 4. Configura n8n con i tre webhook base (scan/fix/review).
 5. Aggiungi test E2E Puppeteer/Playwright per flussi critici.
-6. Stabilisci policy secrets e `.env.example`.
+6. Stabilisci policy secrets e template `.env.dev.example`/`.env.ci.example`.
 
 ---
 
@@ -264,7 +264,7 @@ Cosa è cambiato e perché.
 - [ ] Issue linkata (Fixes #...)
 - [ ] Lint/typecheck ok
 - [ ] Test unit/integrazione/e2e verdi
-- [ ] Secrets assenti; .env.example aggiornato
+- [ ] Secrets assenti; template .env.dev.example/.env.ci.example aggiornati
 - [ ] Tenancy testata
 - [ ] No regressioni di performance
 - [ ] Docs aggiornate

@@ -1,7 +1,43 @@
+using Api.Infrastructure;
+using Api.Services;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 public class QaEndpointTests
 {
-    [Fact(Skip="integration placeholder")]
-    public void Placeholder() => Assert.True(true);
+    [Fact]
+    public async Task RoundTrip_CreatesAndQueriesDemoSpec()
+    {
+        await using var connection = new SqliteConnection("Filename=:memory:");
+        await connection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using (var setupContext = new MeepleAiDbContext(options))
+        {
+            await setupContext.Database.EnsureCreatedAsync();
+        }
+
+        await using var dbContext = new MeepleAiDbContext(options);
+        var ruleService = new RuleSpecService(dbContext);
+        var ragService = new RagService(dbContext);
+
+        var tenantId = "tenant-test";
+        var gameId = "demo-chess";
+
+        var spec = await ruleService.GetOrCreateDemoAsync(tenantId, gameId);
+
+        Assert.Equal(gameId, spec.gameId);
+        Assert.Equal(2, spec.rules.Count);
+
+        var response = await ragService.AskAsync(tenantId, gameId, "How many players?");
+
+        Assert.Equal("Two players.", response.answer);
+        Assert.Single(response.snippets);
+        Assert.Equal("Two players.", response.snippets[0].text);
+        Assert.Equal("RuleSpec:v0-demo:Basics", response.snippets[0].source);
+    }
 }

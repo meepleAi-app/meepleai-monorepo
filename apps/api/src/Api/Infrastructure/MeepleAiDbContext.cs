@@ -11,6 +11,7 @@ public class MeepleAiDbContext : DbContext
 
     public DbSet<TenantEntity> Tenants => Set<TenantEntity>();
     public DbSet<UserEntity> Users => Set<UserEntity>();
+    public DbSet<UserSessionEntity> UserSessions => Set<UserSessionEntity>();
     public DbSet<GameEntity> Games => Set<GameEntity>();
     public DbSet<RuleSpecEntity> RuleSpecs => Set<RuleSpecEntity>();
     public DbSet<RuleAtomEntity> RuleAtoms => Set<RuleAtomEntity>();
@@ -38,13 +39,42 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.Id).HasMaxLength(64);
             entity.Property(e => e.Email).IsRequired().HasMaxLength(256);
             entity.Property(e => e.DisplayName).HasMaxLength(128);
+            entity.Property(e => e.PasswordHash).IsRequired();
+            entity.Property(e => e.Role)
+                .HasConversion<string>()
+                .HasMaxLength(32)
+                .IsRequired();
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
             entity.HasOne(e => e.Tenant)
                 .WithMany(t => t.Users)
                 .HasForeignKey(e => e.TenantId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.Sessions)
+                .WithOne(s => s.User)
+                .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => new { e.TenantId, e.Email }).IsUnique();
+        });
+
+        modelBuilder.Entity<UserSessionEntity>(entity =>
+        {
+            entity.ToTable("user_sessions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
+            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.TokenHash).IsRequired().HasMaxLength(128);
+            entity.Property(e => e.UserAgent).HasMaxLength(256);
+            entity.Property(e => e.IpAddress).HasMaxLength(64);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.ExpiresAt).IsRequired();
+            entity.HasOne(e => e.Tenant)
+                .WithMany(t => t.Sessions)
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => e.TokenHash).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.UserId });
         });
 
         modelBuilder.Entity<GameEntity>(entity =>
@@ -66,6 +96,7 @@ public class MeepleAiDbContext : DbContext
         {
             entity.ToTable("rule_specs");
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
             entity.Property(e => e.Version).IsRequired().HasMaxLength(32);
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
@@ -85,6 +116,7 @@ public class MeepleAiDbContext : DbContext
         {
             entity.ToTable("rule_atoms");
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
             entity.Property(e => e.Key).IsRequired().HasMaxLength(32);
             entity.Property(e => e.Text).IsRequired();
             entity.Property(e => e.Section).HasMaxLength(128);
@@ -121,6 +153,7 @@ public class MeepleAiDbContext : DbContext
         {
             entity.ToTable("chats");
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
             entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.GameId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.AgentId).IsRequired().HasMaxLength(64);
@@ -144,6 +177,7 @@ public class MeepleAiDbContext : DbContext
         {
             entity.ToTable("chat_logs");
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
             entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.Level).IsRequired().HasMaxLength(16);
             entity.Property(e => e.Message).IsRequired();

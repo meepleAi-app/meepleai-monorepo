@@ -121,6 +121,19 @@ dotnet test
 docker build -f src/Api/Dockerfile .
 ```
 
+### Repository Safety Hooks
+```bash
+# Install Python tooling (requires Python 3.9+)
+python -m pip install --user -r requirements-dev.txt
+
+# Register git hooks
+pre-commit install
+
+# Run the full suite on demand
+pre-commit run --all-files
+```
+> Windows tip: if `python -m pre_commit` reports `No module named pre_commit`, rerun the installation command using `py -3 -m pip install --user -r requirements-dev.txt` to ensure the package is available on PATH.
+
 ## 🌐 Service Endpoints
 
 ### Development URLs
@@ -169,7 +182,7 @@ POSTGRES_DB=meepleai
 
 ### 1. Starting Development
 1. Clone the repository
-2. Copy environment templates: `cp infra/env/*.env.example infra/env/*.env`
+2. Copy environment templates: `cp infra/env/*.env.dev.example infra/env/*.env.dev`
 3. Start services: `cd infra && docker compose up -d --build`
 4. Verify services are running: `docker compose ps`
 

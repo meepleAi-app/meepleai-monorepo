@@ -25,12 +25,12 @@
   - `/packages` — librerie condivise (TS), es. `@meeple/shared`.
   - `/infra` — Docker Compose, config runtime, seeds.
     - `/infra/docker-compose.yml`
-    - `/infra/env/` variabili di esempio (`.env.example` per web/api/n8n)
+    - `/infra/env/` variabili di esempio (`.env.dev.example` / `.env.ci.example` per web/api/n8n)
   - `/tools` — script locali (PowerShell/Bash), es. `create-issues.ps1`.
   - `/docs` — documentazione e audit.
   - `/.github/workflows` — CI/CD (ci.yml, e2e.yml).
   - `/tests` — E2E/UX (Puppeteer/Playwright) e integrazione API.
-- Ogni app espone `README.md` locale con comandi di build/test e `.env.example`.
+- Ogni app espone `README.md` locale con comandi di build/test e template `.env.dev.example`.
 
 > Nota: Se nel repo attuale esistono cartelle come `Api/` o `docker/`, migrare/aliasare verso la struttura sopra o aggiornare i path in `infra/docker-compose.yml`.
 
@@ -97,7 +97,7 @@
 - [ ] Lint + typecheck ok.
 - [ ] Unit test verdi (TS/C#) con copertura ≥ 80% sul delta.
 - [ ] E2E/UX test passano (puppeteer/playwright per web; http e2e per API).
-- [ ] Nessun secret in diff; `.env` aggiornato in `.env.example` se serve.
+- [ ] Nessun secret in diff; `.env` aggiornato nei template `.env.dev.example`/`.env.ci.example` se serve.
 - [ ] Multi-tenant: test RLS/permessi aggiornati.
 - [ ] Performance: no regressioni note.
 - [ ] Docs aggiornate.
@@ -190,7 +190,7 @@ Output: patch ai md, con sommario delle modifiche.
   - **/agent/issue-scan** → esegue prompt Auditor, salva issue in GitHub e logga su `/docs/issues-log.csv`.
   - **/agent/fix** → genera patch (TS/C#) e apre PR Draft.
   - **/agent/review** → commenta PR con checklist §5 e hardening tips.
-- **Env richieste** (in `infra/env/n8n.env.example`): `GITHUB_TOKEN`, `REPO_SLUG`, `OPENROUTER_API_KEY` ([Unverified] se usi OpenRouter), `STACK_BASE_URL`.
+- **Env richieste** (in `infra/env/n8n.env.dev.example` / `.ci.example`): `GITHUB_TOKEN`, `REPO_SLUG`, `OPENROUTER_API_KEY` ([Unverified] se usi OpenRouter), `STACK_BASE_URL`.
 - **Esecuzione locale**: `docker compose --profile n8n up -d`.
 
 ---
@@ -225,7 +225,7 @@ Output: patch ai md, con sommario delle modifiche.
 3. Integra `/docs/issues-log.csv` e PR template con checklist §5.
 4. Configura n8n con i tre webhook base (scan/fix/review).
 5. Aggiungi test E2E Puppeteer/Playwright per flussi critici.
-6. Stabilisci policy secrets e `.env.example`.
+6. Stabilisci policy secrets e template `.env.dev.example`/`.env.ci.example`.
 
 ---
 
@@ -302,7 +302,7 @@ Cosa è cambiato e perché.
 - [ ] Issue linkata (Fixes #...)
 - [ ] Lint/typecheck ok (web/api)
 - [ ] Test unit/integrazione/e2e verdi
-- [ ] Nessun secret in diff; .env.example aggiornato
+- [ ] Nessun secret in diff; template .env.dev.example/.env.ci.example aggiornati
 - [ ] Tenancy e RLS testate
 - [ ] No regressioni performance
 - [ ] Docs aggiornate
@@ -332,7 +332,7 @@ Cosa è cambiato e perché.
 - [ ] Issue linkata (Fixes #...)
 - [ ] Lint/typecheck ok
 - [ ] Test unit/integrazione/e2e verdi
-- [ ] Secrets assenti; .env.example aggiornato
+- [ ] Secrets assenti; template .env.dev.example/.env.ci.example aggiornati
 - [ ] Tenancy testata
 - [ ] No regressioni di performance
 - [ ] Docs aggiornate
@@ -437,13 +437,13 @@ services:
   web:
     build: ../apps/web
     env_file:
-      - ./env/web.env
+      - ./env/web.env.dev
     depends_on: [api]
     ports: ["3000:3000"]
   api:
     build: ../apps/api
     env_file:
-      - ./env/api.env
+      - ./env/api.env.dev
     depends_on: [postgres, redis]
     ports: ["8080:8080"]
   postgres:
@@ -462,7 +462,7 @@ services:
   n8n:
     image: n8nio/n8n:latest
     env_file:
-      - ./env/n8n.env
+      - ./env/n8n.env.dev
     ports: ["5678:5678"]
 volumes:
   pgdata:

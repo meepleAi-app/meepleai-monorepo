@@ -11,7 +11,7 @@ Questo repository ospita gli stack principali di MeepleAI:
 
 ## Avvio rapido con Docker Compose
 
-1. Personalizza i file di esempio in `infra/env` (puoi modificarli direttamente oppure copiarli in file `.env` non tracciati se preferisci mantenere override locali). Tutti i valori forniti di default sono sicuri per lo sviluppo locale.
+1. Copia i template `infra/env/*.env.dev.example` in file `infra/env/*.env.dev` non tracciati (lo script `scripts/dev-up.ps1` lo fa automaticamente al primo avvio) e personalizzali con i tuoi segreti locali. Tutti i valori forniti di default sono sicuri per lo sviluppo locale.
 2. Avvia lo stack completo:
    ```bash
    cd infra
@@ -35,7 +35,7 @@ Ogni servizio espone un healthcheck nel `docker-compose.yml`, per cui `docker co
 
 ### Migrazioni EF Core
 
-- Assicurati di avere installato lo strumento CLI (`dotnet tool install --global dotnet-ef`) e di esportare le variabili d'ambiente presenti in `infra/env/api.env.example` o in un tuo `.env` locale.
+- Assicurati di avere installato lo strumento CLI (`dotnet tool install --global dotnet-ef`) e di esportare le variabili d'ambiente presenti in `infra/env/api.env.dev.example` (copiandole in `infra/env/api.env.dev`) o in un tuo `.env` locale.
 - Posizionati nel progetto API e applica le migrazioni con:
   ```bash
   cd apps/api/src/Api
@@ -119,11 +119,11 @@ erDiagram
 
 ```
 apps/
-  web/          # Next.js app + Dockerfile + .env.example
+  web/          # Next.js app + Dockerfile + template .env.dev.example
   api/          # Progetto .NET (Api + test + Dockerfile)
 infra/
   docker-compose.yml
-  env/          # File .env.* di esempio per i servizi
+  env/          # Template .env.dev.example e .env.ci.example per i servizi
   init/         # Script inizializzazione Postgres
 meepleai_backlog/ # Backlog prodotto
 scripts/, tools/, schemas/ ...
@@ -135,3 +135,27 @@ scripts/, tools/, schemas/ ...
 - API: `cd apps/api && dotnet test` (richiede .NET 8 SDK installato in locale)
 
 Per altre linee guida consulta `agents.md` e i README specifici nelle rispettive app.
+
+## Hook di sicurezza locali
+
+1. Installa le dipendenze di sviluppo Python (richiede Python 3.9+):
+   ```bash
+   python -m pip install --user -r requirements-dev.txt
+   ```
+   > Su Windows puoi usare `py -3 -m pip install --user -r requirements-dev.txt`. Se ottieni l'errore `No module named pre_commit`, ripeti il comando per assicurarti che `pip` abbia installato il pacchetto.
+2. Installa gli hook di pre-commit nel repository:
+   ```bash
+   pre-commit install
+   ```
+3. Esegui un controllo completo (opzionale ma consigliato prima del primo commit):
+   ```bash
+   pre-commit run --all-files
+   ```
+
+## Gestione secrets e rotazione
+
+- I file `infra/env/*.env.dev` restano fuori dal versionamento (`.gitignore`) e sono pensati solo per lo sviluppo locale. Usa i template `*.env.dev.example` come base e mantieni le credenziali nel tuo password manager.
+- Per la CI utilizza variabili sicure (GitHub Secrets/Environments) che popolano file `infra/env/*.env.ci` o variabili d'ambiente equivalenti. I template `*.env.ci.example` elencano i nomi richiesti senza fornire valori sensibili.
+- **Rotazione OpenRouter API key:** genera una chiave dedicata per MeepleAI, ruotala almeno ogni 90 giorni o immediatamente in caso di sospetta fuga, aggiorna il secret GitHub `OPENROUTER_API_KEY` e invalida la chiave precedente dal pannello OpenRouter.
+- **Rotazione GitHub PAT (per n8n o automazioni):** usa PAT con scope minimi, memorizzalo come secret GitHub (`GITHUB_TOKEN`/`N8N_GITHUB_PAT`), ruotalo ogni 90 giorni e revoca immediatamente i token inutilizzati.
+- Configura gli hook di sicurezza come descritto nella sezione precedente: il gancio `detect-secrets` blocca la maggior parte dei leak accidentali; aggiorna il baseline con `detect-secrets scan > .secrets.baseline` solo dopo aver verificato che non siano presenti segreti reali.

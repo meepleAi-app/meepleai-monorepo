@@ -53,7 +53,7 @@ services:
     image: n8nio/n8n:1.60.0
     container_name: meepleai-n8n
     env_file:
-      - ./env/n8n.env.example
+      - ./env/n8n.env.dev
     ports:
       - "5678:5678"
     depends_on:
@@ -68,7 +68,7 @@ services:
       dockerfile: ./src/Api/Dockerfile
     container_name: meepleai-api
     env_file:
-      - ./env/api.env.example
+      - ./env/api.env.dev
     environment:
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=${POSTGRES_DB:-meepleai};Username=${POSTGRES_USER:-meeple};Password=${POSTGRES_PASSWORD:-meeplepass}
@@ -98,7 +98,7 @@ services:
       dockerfile: ./Dockerfile
     container_name: meepleai-web
     env_file:
-      - ./env/web.env.example
+      - ./env/web.env.dev
     ports:
       - "3000:3000"
     depends_on:

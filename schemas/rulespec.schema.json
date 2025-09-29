@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RuleSpec",
+  "type": "object",
+  "required": [
+    "gameId",
+    "version",
+    "createdAt",
+    "rules"
+  ],
+  "properties": {
+    "gameId": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "text"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "section": {
+            "type": "string"
+          },
+          "page": {
+            "type": "string"
+          },
+          "line": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

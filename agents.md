@@ -242,15 +242,15 @@ popd
 # Backend .NET (apps/api)
 pushd .\apps\api
 # Verifica che esista Api.csproj; se il path differisce, aggiorna questo agents.md
-if (-Not (Test-Path .\Api.csproj)) { Write-Error "Api.csproj non trovato in apps/api" }
-dotnet restore .\Api.csproj
-dotnet build .\Api.csproj -warnaserror
+if (-Not (Test-Path .\src\Api\Api.csproj)) { Write-Error "Api.csproj non trovato in apps/api/src/Api" }
+dotnet restore .\src\Api\Api.csproj
+dotnet build .\src\Api\Api.csproj -warnaserror
 # Test con copertura
- dotnet test .\Api.csproj --collect:"XPlat Code Coverage"
+ dotnet test .\tests\Api.Tests\Api.Tests.csproj --collect:"XPlat Code Coverage"
 popd
 
-# Avvio stack docker (infra/docker)
-pushd .\infra\docker
+# Avvio stack docker (infra)
+pushd .\infra
 # Costruisci immagini locali e avvia in background
 docker compose up -d --build
 # Log rapidi

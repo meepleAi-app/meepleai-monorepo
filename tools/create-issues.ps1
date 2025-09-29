@@ -58,7 +58,8 @@ function Get-AllPages {
   $page = 1
   $acc = @()
   while ($true) {
-    $url = "$UrlBase" + (if ($UrlBase -like "*?*") { "&" } else { "?" }) + "per_page=100&page=$page"
+    $delimiter = if ($UrlBase -like "*?*") { "&" } else { "?" }
+    $url = "{0}{1}per_page=100&page={2}" -f $UrlBase, $delimiter, $page
     $raw = gh api $url 2>$null
     if (-not $raw) { break }
     $arr = $raw | ConvertFrom-Json

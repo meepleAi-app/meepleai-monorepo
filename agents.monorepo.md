@@ -5,9 +5,9 @@
 ---
 
 ## 0) Executive Summary
-- **Obiettivo:** permettere all’agente di analizzare il repo *meepleai-monorepo*, creare/risolvere issue, generare codice (TS/C#), scrivere test, aprire PR (draft), aggiornare documentazione, e mantenere qualità (lint, security, CI).
-- **Tecnologie target:** TypeScript/Node per `apps/web`, C#/.NET per `apps/api`, Docker Compose in `infra/`, n8n per automazioni, Qdrant/Postgres/Redis come servizi di base, GitHub Actions per CI.
-- **Flusso chiave (single‑dev):** Issue → Branch → Implementazione + Test locali → PR Draft → CI → Code Review (agente) → Merge → Release.
+- **Obiettivo:** permettere all’agente di analizzare il repo, creare/risolvere issue, generare codice (TS/C#), scrivere test, aprire PR (draft), aggiornare documentazione, e mantenere qualità (lint, security, CI).
+- **Tecnologie target:** TypeScript/Node, C#/.NET, Docker Compose, n8n per automazioni, Qdrant/Postgres come dati, Redis per rate limiting, GitHub Actions per CI.
+- **Flusso chiave (singolo sviluppatore):** Issue → Branch → Implementazione + Test locali → PR Draft → CI → Code Review (agente) → Merge → Release.
 
 ---
 
@@ -18,21 +18,9 @@
 - **C#/.NET:** abilitare Nullable Reference Types, analizzatori, StyleCop. Layering pulito: `Api`, `Application`, `Domain`, `Infrastructure`.
 - **Test:** Vitest/Jest (TS) e xUnit (C#). Copertura minima consigliata: 80% su unit.
 
-### 1.2 Naming & Struttura repository (MeepleAI)
-- **Radice monorepo**:
-  - `/apps/web` — Frontend (Next.js/TS). `package.json`, `pnpm-lock.yaml`.
-  - `/apps/api` — Backend .NET (C#). `MeepleAI.Api.csproj` ([Unverified] nome file se diverso). Soluzione: `MeepleAI.sln` in radice.
-  - `/packages` — librerie condivise (TS), es. `@meeple/shared`.
-  - `/infra` — Docker Compose, config runtime, seeds.
-    - `/infra/docker-compose.yml`
-    - `/infra/env/` variabili di esempio (`.env.example` per web/api/n8n)
-  - `/tools` — script locali (PowerShell/Bash), es. `create-issues.ps1`.
-  - `/docs` — documentazione e audit.
-  - `/.github/workflows` — CI/CD (ci.yml, e2e.yml).
-  - `/tests` — E2E/UX (Puppeteer/Playwright) e integrazione API.
-- Ogni app espone `README.md` locale con comandi di build/test e `.env.example`.
-
-> Nota: Se nel repo attuale esistono cartelle come `Api/` o `docker/`, migrare/aliasare verso la struttura sopra o aggiornare i path in `infra/docker-compose.yml`.
+### 1.2 Naming & Struttura repository
+- Monorepo con cartelle: `/apps` (frontend/backend), `/packages` (librerie condivise), `/tools` (script), `/docs` (md), `/infra` (docker, k8s), `/tests`.
+- Ogni app espone `README.md` locale con comandi di build/test e variabili `.env.example`.
 
 ### 1.3 Git & Commit
 - **Branch naming:** `feature/<scope>-<short-desc>`, `fix/<scope>-<bug>`, `chore/<scope>-...`.
@@ -104,19 +92,21 @@
 
 ---
 
-## 6) Testing Standard (MeepleAI)
+## 6) Testing Standard
 
 ### 6.1 Unit
-- **TS (apps/web):** Vitest/Jest; mock I/O rete. Aggiungi `vitest.config.ts`. Script: `pnpm test`.
-- **C# (apps/api):** xUnit; `dotnet test`. Abilita raccolta coverage.
+- **TS:** Vitest/Jest; mockare I/O e rete. Snapshot solo per UI stabili.
+- **C#:** xUnit; usare `Moq`/`NSubstitute`; testare Domain senza DB.
 
 ### 6.2 Integration & E2E
-- **API (apps/api):** avvia stack via `infra/docker-compose.yml`; test con xUnit + `WebApplicationFactory` o `RestClient`.
-- **Web (apps/web):** **Puppeteer** per flussi utente; salva screenshot in `/tests/e2e/__artifacts__`.
-- **Data:** semi deterministici; fixture per multi‑tenant.
+- **API TS/C#:** avvia stack via Docker Compose; usa supertest/REST client o xUnit + WebApplicationFactory.
+- **Web E2E & UX:** **Puppeteer** (o Playwright) per flussi utente critici; screenshot su failure.
+- **Data:** seme deterministico, fixture per tenant multipli.
 
 ### 6.3 Qualità continua
-- **GitHub Actions**: job separati `ci-web` (Node 20 + pnpm), `ci-api` (.NET 8), `e2e` (services: postgres/redis/qdrant).
+- GitHub Actions: job separati `lint`, `build`, `test`, `e2e`, `security` (SCA + trivy su immagini).
+
+---
 
 ## 7) Come l’Agente usa i file *.md (Codex/Claude Code)
 
@@ -185,13 +175,10 @@ Output: patch ai md, con sommario delle modifiche.
 
 ---
 
-## 9) Integrazione con n8n e Automazioni Locali (MeepleAI)
-- **Workflow n8n** (in `infra/n8n/flows/`):
-  - **/agent/issue-scan** → esegue prompt Auditor, salva issue in GitHub e logga su `/docs/issues-log.csv`.
-  - **/agent/fix** → genera patch (TS/C#) e apre PR Draft.
-  - **/agent/review** → commenta PR con checklist §5 e hardening tips.
-- **Env richieste** (in `infra/env/n8n.env.example`): `GITHUB_TOKEN`, `REPO_SLUG`, `OPENROUTER_API_KEY` ([Unverified] se usi OpenRouter), `STACK_BASE_URL`.
-- **Esecuzione locale**: `docker compose --profile n8n up -d`.
+## 9) Integrazione con n8n e Automazioni Locali
+- Workflow n8n per: (a) **/agent/issue-scan** → esegue prompt Auditor e apre issue via GitHub API; (b) **/agent/fix** → genera patch e apre PR Draft; (c) **/agent/review** → commenta PR.
+- Configurare credenziali GitHub e variabili repo nella UI n8n; usare coda/ritentativi per payload pesanti.
+- Conservare log chiamate e costo token (se disponibile) per rendicontazione.
 
 ---
 
@@ -229,42 +216,20 @@ Output: patch ai md, con sommario delle modifiche.
 
 ---
 
-## 14) Appendice — Comandi Locali (PowerShell) — monorepo MeepleAI
+## 14) Appendice — Comandi Locali (PowerShell)
 ```powershell
-# Posizionati nella root del repo
+# Lint & test TS
+pnpm i && pnpm lint && pnpm typecheck && pnpm test
 
-# Frontend (apps/web)
-pushd .\apps\web
-pnpm install
-pnpm lint && pnpm typecheck && pnpm test
-popd
+# Test C#
+dotnet restore && dotnet build -warnaserror && dotnet test --collect:"XPlat Code Coverage"
 
-# Backend .NET (apps/api)
-pushd .\apps\api
-# Verifica che esista Api.csproj; se il path differisce, aggiorna questo agents.md
-if (-Not (Test-Path .\Api.csproj)) { Write-Error "Api.csproj non trovato in apps/api" }
-dotnet restore .\Api.csproj
-dotnet build .\Api.csproj -warnaserror
-# Test con copertura
- dotnet test .\Api.csproj --collect:"XPlat Code Coverage"
-popd
-
-# Avvio stack docker (infra/docker)
-pushd .\infra\docker
-# Costruisci immagini locali e avvia in background
+# Avvio stack
 docker compose up -d --build
-# Log rapidi
-docker compose ps
-popd
 
-# E2E web (tests)
-pushd .\tests
-# Puppeteer/Playwright, a seconda di cosa usi
+# E2E web (esempio)
 pnpm e2e
-popd
 ```
-
-**Nota PowerShell:** se `tools/create-issues.ps1` dà errore tipo "Termine 'if' non riconosciuto", assicurati che il file non contenga BOM/CRLF corrotti e che lo shebang non confonda PowerShell. Esegui con: `pwsh -File .\tools\create-issues.ps1 -DryRun`.
 
 ---
 
@@ -279,49 +244,16 @@ popd
 ## 16) Template Issue (da copiare)
 ```
 Titolo: <chiaro e breve>
-Contesto: path=<apps/...>, versione=<git sha>
+Contesto: <path, versione>
 Passi per riprodurre (se bug): <1..n>
 Root cause ipotizzata: <testo>
 Definizione di Done: <criteri>
 Criteri di Accettazione: <test descrittivo>
 Impatti: <performance|sicurezza|UX>
-Labels: type:<bug|feat|refactor>, area:<web|api|infra|docs|tests>, priority:P1
+Labels: <type:..., area:..., priority:P1>
 ```
 
-### 16.1 File `/docs/issues-log.csv` (intestazione)
-```
-id,title,labels,area,path,status,author,created_at,linked_pr
-```
-
-### 16.2 PR Template `.github/pull_request_template.md`
-```
-# Descrizione
-Cosa è cambiato e perché.
-
-# Checklist
-- [ ] Issue linkata (Fixes #...)
-- [ ] Lint/typecheck ok (web/api)
-- [ ] Test unit/integrazione/e2e verdi
-- [ ] Nessun secret in diff; .env.example aggiornato
-- [ ] Tenancy e RLS testate
-- [ ] No regressioni performance
-- [ ] Docs aggiornate
-
-# Rischi / Failure Modes
-- ...
-
-# Evidenze test
-- <log/screenshot>
-```
-
-### 16.3 CODEOWNERS
-```
-# Default: manutentore
-* @DegrassiAaron
-/apps/web/ @DegrassiAaron
-/apps/api/ @DegrassiAaron
-/tests/ @DegrassiAaron
-```
+---
 
 ## 17) Template PR (da copiare)
 ```
@@ -346,132 +278,8 @@ Cosa è cambiato e perché.
 
 ---
 
-## 18) CI/CD — GitHub Actions per MeepleAI
-
-### 18.1 `.github/workflows/ci.yml`
-```yaml
-name: ci
-on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-  push:
-    branches: [main]
-
-jobs:
-  ci-web:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/web
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with: { version: 9 }
-      - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: 'pnpm' }
-      - run: pnpm i
-      - run: pnpm lint && pnpm typecheck && pnpm test -- --ci
-
-  ci-api:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/api
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with: { dotnet-version: '8.0.x' }
-      - run: dotnet restore
-      - run: dotnet build -warnaserror
-      - run: dotnet test --collect:"XPlat Code Coverage"
-
-  security:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: aquasecurity/trivy-action@0.24.0
-        with:
-          scan-type: fs
-          format: table
-          exit-code: '0'
-```
-
-### 18.2 `.github/workflows/e2e.yml`
-```yaml
-name: e2e
-on: [pull_request]
-
-jobs:
-  e2e:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd="pg_isready -U postgres" --health-interval=10s --health-timeout=5s --health-retries=5
-      redis:
-        image: redis:7
-        ports: ["6379:6379"]
-      qdrant:
-        image: qdrant/qdrant:latest
-        ports: ["6333:6333","6334:6334"]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with: { version: 9 }
-      - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: 'pnpm' }
-      - run: pnpm i
-        working-directory: tests/e2e
-      - run: pnpm e2e
-        working-directory: tests/e2e
-```
-
-### 18.3 `infra/docker-compose.yml` (scheletro)
-```yaml
-version: '3.9'
-services:
-  web:
-    build: ../apps/web
-    env_file:
-      - ./env/web.env
-    depends_on: [api]
-    ports: ["3000:3000"]
-  api:
-    build: ../apps/api
-    env_file:
-      - ./env/api.env
-    depends_on: [postgres, redis]
-    ports: ["8080:8080"]
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_PASSWORD: postgres
-    ports: ["5432:5432"]
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-  redis:
-    image: redis:7
-    ports: ["6379:6379"]
-  qdrant:
-    image: qdrant/qdrant:latest
-    ports: ["6333:6333","6334:6334"]
-  n8n:
-    image: n8nio/n8n:latest
-    env_file:
-      - ./env/n8n.env
-    ports: ["5678:5678"]
-volumes:
-  pgdata:
-```
-
----
-
-## 19) Aggiornamenti futuri
-- Allineare nomi esatti dei progetti .NET (csproj/sln) e dei package TS nel repo.
-- Aggiungere step di pubblicazione Docker (buildx + push su GHCR) e release tagging.
-- Portare Playwright headless per cross‑browser se Puppeteer non basta.
+## 18) Aggiornamenti futuri
+- Aggiungere `CODEOWNERS` per cartelle critiche.
+- Integrare SAST/DAST nei workflow.
+- Portare E2E su container di CI con browser headless.
 

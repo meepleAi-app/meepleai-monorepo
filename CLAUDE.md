@@ -16,39 +16,37 @@ MeepleAI is a board game rules assistant platform built as a microservices archi
 ```
 meepleai-monorepo/
 ├── apps/
-│   └── meepleai/              # Next.js frontend application
-│       ├── src/
-│       │   ├── lib/           # API utilities and shared logic
-│       │   └── pages/         # Next.js pages and API routes
-│       ├── package.json       # Frontend dependencies
-│       └── Dockerfile         # Frontend container config
-├── services/
-│   └── meepleagentai/         # .NET 8 Web API backend
-│       ├── src/Api/           # Main API project
-│       │   ├── Models/        # Data contracts and DTOs
-│       │   ├── Services/      # Business logic services
-│       │   └── Program.cs     # API entry point
-│       ├── tests/             # Unit tests
-│       └── MeepleAgentAI.sln  # .NET solution file
-├── docker/
-│   ├── docker-compose.yml     # Main orchestration file
-│   └── init/                  # Database initialization scripts
-├── schemas/                   # JSON schemas for data validation
-├── scripts/                   # PowerShell development scripts
-├── tools/                     # Utility scripts and tools
-└── meepleai_backlog/         # Project backlog and planning
+│   ├── web/                  # Next.js frontend application
+│   │   ├── src/              # UI source code
+│   │   ├── package.json      # Frontend dependencies
+│   │   └── Dockerfile        # Frontend container config
+│   └── api/                  # .NET 8 Web API backend
+│       ├── src/Api/          # Main API project
+│       │   ├── Models/       # Data contracts and DTOs
+│       │   ├── Services/     # Business logic services
+│       │   └── Program.cs    # API entry point
+│       ├── tests/            # Unit tests
+│       └── MeepleAI.Api.sln  # .NET solution file
+├── infra/
+│   ├── docker-compose.yml    # Main orchestration file
+│   ├── env/                  # Environment presets for compose
+│   └── init/                 # Database initialization scripts
+├── schemas/                  # JSON schemas for data validation
+├── scripts/                  # PowerShell development scripts
+├── tools/                    # Utility scripts and tools
+└── meepleai_backlog/        # Project backlog and planning
 ```
 
 ## 🛠️ Technology Stack
 
-### Frontend (`apps/meepleai`)
+### Frontend (`apps/web`)
 - **Framework**: Next.js 14.2.12
 - **Language**: TypeScript 5.5.4
 - **Runtime**: React 18.3.1
 - **Styling**: CSS-in-JS (inline styles currently)
 - **Build Tool**: Next.js built-in
 
-### Backend (`services/meepleagentai`)
+### Backend (`apps/api`)
 - **Framework**: .NET 8 Web API
 - **Language**: C# with nullable reference types enabled
 - **Database**: PostgreSQL via Npgsql
@@ -85,7 +83,7 @@ meepleai-monorepo/
 
 ### Frontend Development
 ```bash
-cd apps/meepleai
+cd apps/web
 
 # Install dependencies (if needed)
 npm install
@@ -105,7 +103,7 @@ npm test
 
 ### Backend Development
 ```bash
-cd services/meepleagentai
+cd apps/api
 
 # Restore packages
 dotnet restore
@@ -143,13 +141,13 @@ docker build -f src/Api/Dockerfile .
 
 ### Required Environment Variables
 
-#### Frontend (`apps/meepleai`)
+#### Frontend (`apps/web`)
 ```bash
 NEXT_PUBLIC_API_BASE=http://localhost:8080
 NEXT_PUBLIC_TENANT_ID=dev
 ```
 
-#### Backend (`services/meepleagentai`)
+#### Backend (`apps/api`)
 ```bash
 ASPNETCORE_URLS=http://+:8080
 ConnectionStrings__Postgres=Host=postgres;Database=meepleai;Username=meeple;Password=meeplepass
@@ -171,8 +169,8 @@ POSTGRES_DB=meepleai
 
 ### 1. Starting Development
 1. Clone the repository
-2. Copy environment templates: `cp docker/.env.example docker/.env`
-3. Start services: `./scripts/dev-up.ps1`
+2. Copy environment templates: `cp infra/env/*.env.example infra/env/*.env`
+3. Start services: `cd infra && docker compose up -d --build`
 4. Verify services are running: `docker compose ps`
 
 ### 2. Making Changes
@@ -234,11 +232,11 @@ POSTGRES_DB=meepleai
 docker compose ps
 
 # View logs for specific service
-docker compose logs meepleagentai-api
-docker compose logs meepleai-web
+docker compose logs api
+docker compose logs web
 
 # Restart specific service
-docker compose restart meepleagentai-api
+docker compose restart api
 
 # Rebuild and restart
 docker compose up --build -d
@@ -249,7 +247,7 @@ docker compose up --build -d
 ### Documentation Files
 - `agents.md`: Comprehensive agent development guidelines
 - `agents.monorepo.md`: Monorepo-specific development patterns
-- `docker/init/n8n/README.md`: n8n workflow setup instructions
+- `infra/init/n8n/README.md`: n8n workflow setup instructions
 
 ### Key Scripts
 - `tools/create-issues.ps1`: GitHub issue creation automation

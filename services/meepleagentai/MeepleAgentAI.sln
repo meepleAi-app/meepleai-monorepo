@@ -1,3 +1,0 @@
-Microsoft Visual Studio Solution File, Format Version 12.00
-# minimal stub; genera con:
-# dotnet new sln -n MeepleAgentAI && dotnet sln add src/Api/Api.csproj

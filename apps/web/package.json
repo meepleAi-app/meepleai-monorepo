@@ -5,7 +5,9 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",
-    "test": "node -e \"console.log('smoke tests ok')\""
+    "test": "node -e \"console.log('smoke tests ok')\"",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "next": "14.2.12",
@@ -16,6 +18,8 @@
     "typescript": "5.5.4",
     "@types/node": "20.11.30",
     "@types/react": "18.2.66",
-    "@types/react-dom": "18.2.22"
+    "@types/react-dom": "18.2.22",
+    "eslint": "8.57.0",
+    "eslint-config-next": "14.2.12"
   }
 }

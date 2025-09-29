@@ -1,5 +1,8 @@
 # MeepleAI Monorepo
 
+![CI](https://github.com/MeepleAI/meepleai-monorepo/actions/workflows/ci.yml/badge.svg)
+
+
 Questo repository ospita gli stack principali di MeepleAI:
 
 - **apps/web** – front-end Next.js per l'interfaccia degli agenti Meeple.

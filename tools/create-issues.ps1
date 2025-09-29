@@ -45,7 +45,7 @@ function Get-AllPages {
   $page = 1
   $acc = @()
   while ($true) {
-    $delimiter = if ($UrlBase -like "*?*") { "&" } else { "?" }
+    $delimiter = if ($UrlBase.Contains("?")) { "&" } else { "?" }
     $url = "{0}{1}per_page=100&page={2}" -f $UrlBase, $delimiter, $page
     try {
       $raw = gh api $url 2>$null

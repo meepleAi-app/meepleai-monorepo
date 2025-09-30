@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using Serilog.Events;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,9 +32,19 @@ var connectionString = builder.Configuration.GetConnectionString("Postgres")
 builder.Services.AddDbContext<MeepleAiDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+// Configure Redis
+var redisUrl = builder.Configuration["REDIS_URL"] ?? "localhost:6379";
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var configuration = ConfigurationOptions.Parse(redisUrl);
+    configuration.AbortOnConnectFail = false; // Fail gracefully if Redis unavailable
+    return ConnectionMultiplexer.Connect(configuration);
+});
+
 builder.Services.AddScoped<RuleSpecService>();
 builder.Services.AddScoped<RagService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<RateLimitService>();
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 
@@ -91,6 +102,7 @@ app.Use(async (context, next) =>
     await next();
 });
 
+// Authentication middleware
 app.Use(async (context, next) =>
 {
     if (context.Request.Cookies.TryGetValue(AuthService.SessionCookieName, out var token) &&
@@ -112,6 +124,60 @@ app.Use(async (context, next) =>
             context.User = new ClaimsPrincipal(identity);
             context.Items[nameof(ActiveSession)] = session;
         }
+    }
+
+    await next();
+});
+
+// Rate limiting middleware
+app.Use(async (context, next) =>
+{
+    var rateLimiter = context.RequestServices.GetRequiredService<RateLimitService>();
+    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+
+    // Get rate limit key (prioritize tenant, fallback to IP)
+    string rateLimitKey;
+    RateLimitConfig config;
+
+    if (context.Items.TryGetValue(nameof(ActiveSession), out var sessionObj) && sessionObj is ActiveSession session)
+    {
+        // Authenticated: rate limit per tenant + role
+        rateLimitKey = $"tenant:{session.User.tenantId}";
+        config = RateLimitService.GetConfigForRole(session.User.role);
+    }
+    else
+    {
+        // Anonymous: rate limit per IP
+        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        rateLimitKey = $"ip:{ip}";
+        config = RateLimitService.GetConfigForRole(null); // Default anonymous limits
+    }
+
+    var result = await rateLimiter.CheckRateLimitAsync(
+        rateLimitKey,
+        config.MaxTokens,
+        config.RefillRate,
+        context.RequestAborted);
+
+    // Add rate limit headers
+    context.Response.Headers["X-RateLimit-Limit"] = config.MaxTokens.ToString();
+    context.Response.Headers["X-RateLimit-Remaining"] = result.TokensRemaining.ToString();
+
+    if (!result.Allowed)
+    {
+        context.Response.Headers["Retry-After"] = result.RetryAfterSeconds.ToString();
+        context.Response.StatusCode = 429; // Too Many Requests
+
+        logger.LogWarning("Rate limit exceeded for {Key}. Retry after {RetryAfter}s",
+            rateLimitKey, result.RetryAfterSeconds);
+
+        await context.Response.WriteAsJsonAsync(new
+        {
+            error = "Rate limit exceeded",
+            retryAfter = result.RetryAfterSeconds,
+            message = $"Too many requests. Please try again in {result.RetryAfterSeconds} seconds."
+        });
+        return;
     }
 
     await next();

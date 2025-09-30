@@ -22,7 +22,8 @@
       "Bash(dotnet add:*)",
       "Bash(gh pr create:*)",
       "Bash(npm run lint)",
-      "Bash(npm install)"
+      "Bash(npm install)",
+      "Bash(dotnet test:*)"
     ],
     "deny": [],
     "ask": []

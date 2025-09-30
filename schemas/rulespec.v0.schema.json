@@ -1,0 +1,406 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://meepleai.com/schemas/rulespec.v0.schema.json",
+  "title": "RuleSpec v0",
+  "description": "Formal specification for normalized board game rules",
+  "type": "object",
+  "required": ["gameId", "version", "metadata", "setup", "phases", "actions", "scoring", "endConditions"],
+  "properties": {
+    "gameId": {
+      "type": "string",
+      "description": "Unique identifier for the game"
+    },
+    "version": {
+      "type": "string",
+      "description": "Version of this RuleSpec (e.g., 'v0.1', 'v1.0')",
+      "pattern": "^v\\d+\\.\\d+$"
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["name", "createdAt"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display name of the game"
+        },
+        "description": {
+          "type": "string",
+          "description": "Brief description of the game"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when this RuleSpec was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when this RuleSpec was last updated"
+        },
+        "playerCount": {
+          "type": "object",
+          "properties": {
+            "min": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "playTime": {
+          "type": "object",
+          "properties": {
+            "min": {
+              "type": "integer",
+              "description": "Minimum play time in minutes"
+            },
+            "max": {
+              "type": "integer",
+              "description": "Maximum play time in minutes"
+            }
+          }
+        },
+        "ageRange": {
+          "type": "object",
+          "properties": {
+            "min": {
+              "type": "integer",
+              "description": "Minimum age recommendation"
+            }
+          }
+        }
+      }
+    },
+    "setup": {
+      "type": "object",
+      "description": "Initial game setup instructions",
+      "required": ["steps"],
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Overview of the setup process"
+        },
+        "steps": {
+          "type": "array",
+          "description": "Ordered list of setup steps",
+          "items": {
+            "type": "object",
+            "required": ["id", "text"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique identifier for this step"
+              },
+              "text": {
+                "type": "string",
+                "description": "Description of the setup step"
+              },
+              "order": {
+                "type": "integer",
+                "description": "Order in which this step should be performed"
+              },
+              "components": {
+                "type": "array",
+                "description": "Game components involved in this step",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "components": {
+          "type": "array",
+          "description": "List of all game components",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "quantity"],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "quantity": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "phases": {
+      "type": "array",
+      "description": "Game phases or rounds structure",
+      "items": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for this phase"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the phase (e.g., 'Turn', 'Round', 'Action Phase')"
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed description of what happens in this phase"
+          },
+          "order": {
+            "type": "integer",
+            "description": "Order of this phase in the game flow"
+          },
+          "steps": {
+            "type": "array",
+            "description": "Ordered steps within this phase",
+            "items": {
+              "type": "object",
+              "required": ["id", "text"],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "order": {
+                  "type": "integer"
+                },
+                "optional": {
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            }
+          },
+          "allowedActions": {
+            "type": "array",
+            "description": "Actions that can be performed during this phase",
+            "items": {
+              "type": "string",
+              "description": "Reference to action ID"
+            }
+          }
+        }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "description": "All possible player actions in the game",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "type"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for this action"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name of the action"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["mandatory", "optional", "triggered"],
+            "description": "Whether this action is mandatory, optional, or triggered by conditions"
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed description of the action"
+          },
+          "prerequisites": {
+            "type": "array",
+            "description": "Conditions that must be met to perform this action",
+            "items": {
+              "type": "string"
+            }
+          },
+          "effects": {
+            "type": "array",
+            "description": "Effects of performing this action",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cost": {
+            "type": "object",
+            "description": "Cost to perform this action",
+            "properties": {
+              "resources": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer"
+                }
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "scoring": {
+      "type": "object",
+      "description": "Scoring rules and victory conditions",
+      "required": ["method"],
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": ["points", "elimination", "objective", "hybrid"],
+          "description": "Primary scoring method"
+        },
+        "description": {
+          "type": "string",
+          "description": "Overview of how scoring works"
+        },
+        "sources": {
+          "type": "array",
+          "description": "All ways to earn points/victory",
+          "items": {
+            "type": "object",
+            "required": ["id", "name", "value"],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string",
+                "description": "Name of this scoring source"
+              },
+              "value": {
+                "type": "integer",
+                "description": "Points awarded (or -1 for variable)"
+              },
+              "description": {
+                "type": "string"
+              },
+              "when": {
+                "type": "string",
+                "description": "When these points are awarded"
+              }
+            }
+          }
+        },
+        "tiebreakers": {
+          "type": "array",
+          "description": "Ordered tiebreaker rules",
+          "items": {
+            "type": "object",
+            "required": ["order", "rule"],
+            "properties": {
+              "order": {
+                "type": "integer",
+                "description": "Priority order (1 = first tiebreaker)"
+              },
+              "rule": {
+                "type": "string",
+                "description": "Tiebreaker rule description"
+              }
+            }
+          }
+        }
+      }
+    },
+    "endConditions": {
+      "type": "array",
+      "description": "Conditions that trigger game end",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "description"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["rounds", "points", "elimination", "objective", "custom"],
+            "description": "Type of end condition"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of when the game ends"
+          },
+          "value": {
+            "type": "integer",
+            "description": "Numeric threshold (e.g., number of rounds, target score)"
+          }
+        }
+      }
+    },
+    "edgeCases": {
+      "type": "array",
+      "description": "Special rules, exceptions, and clarifications",
+      "items": {
+        "type": "object",
+        "required": ["id", "category", "text"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for this edge case"
+          },
+          "category": {
+            "type": "string",
+            "enum": ["exception", "clarification", "variant", "faq"],
+            "description": "Type of edge case"
+          },
+          "text": {
+            "type": "string",
+            "description": "Description of the edge case or special rule"
+          },
+          "relatedActions": {
+            "type": "array",
+            "description": "Actions this edge case relates to",
+            "items": {
+              "type": "string",
+              "description": "Reference to action ID"
+            }
+          },
+          "relatedPhases": {
+            "type": "array",
+            "description": "Phases this edge case relates to",
+            "items": {
+              "type": "string",
+              "description": "Reference to phase ID"
+            }
+          }
+        }
+      }
+    },
+    "glossary": {
+      "type": "array",
+      "description": "Game-specific terminology definitions",
+      "items": {
+        "type": "object",
+        "required": ["term", "definition"],
+        "properties": {
+          "term": {
+            "type": "string",
+            "description": "Game term or keyword"
+          },
+          "definition": {
+            "type": "string",
+            "description": "Definition of the term"
+          },
+          "examples": {
+            "type": "array",
+            "description": "Usage examples",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

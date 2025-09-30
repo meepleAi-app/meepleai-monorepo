@@ -1,0 +1,193 @@
+{
+  "gameId": "tic-tac-toe",
+  "version": "v0.1",
+  "metadata": {
+    "name": "Tic-Tac-Toe",
+    "description": "A classic two-player game where players take turns marking spaces in a 3x3 grid, trying to get three in a row.",
+    "createdAt": "2025-09-30T08:00:00Z",
+    "playerCount": {
+      "min": 2,
+      "max": 2
+    },
+    "playTime": {
+      "min": 1,
+      "max": 5
+    },
+    "ageRange": {
+      "min": 5
+    }
+  },
+  "setup": {
+    "description": "Draw a 3x3 grid on paper or use a physical board. Decide who plays X and who plays O. X always goes first.",
+    "steps": [
+      {
+        "id": "setup-1",
+        "text": "Draw a 3x3 grid with 9 empty spaces",
+        "order": 1,
+        "components": ["grid"]
+      },
+      {
+        "id": "setup-2",
+        "text": "Assign X to one player and O to the other player",
+        "order": 2,
+        "components": ["markers"]
+      },
+      {
+        "id": "setup-3",
+        "text": "Player with X goes first",
+        "order": 3
+      }
+    ],
+    "components": [
+      {
+        "id": "grid",
+        "name": "3x3 Grid",
+        "quantity": 1,
+        "description": "A grid with 9 spaces arranged in 3 rows and 3 columns"
+      },
+      {
+        "id": "markers",
+        "name": "Player Markers (X and O)",
+        "quantity": 2,
+        "description": "Two distinct markers for each player"
+      }
+    ]
+  },
+  "phases": [
+    {
+      "id": "turn",
+      "name": "Player Turn",
+      "description": "On their turn, a player places their mark (X or O) in an empty space on the grid.",
+      "order": 1,
+      "steps": [
+        {
+          "id": "turn-1",
+          "text": "Current player selects an empty space on the grid",
+          "order": 1,
+          "optional": false
+        },
+        {
+          "id": "turn-2",
+          "text": "Current player places their mark (X or O) in the selected space",
+          "order": 2,
+          "optional": false
+        },
+        {
+          "id": "turn-3",
+          "text": "Check for win condition or draw",
+          "order": 3,
+          "optional": false
+        },
+        {
+          "id": "turn-4",
+          "text": "If no win/draw, switch to the other player",
+          "order": 4,
+          "optional": false
+        }
+      ],
+      "allowedActions": ["place-mark"]
+    }
+  ],
+  "actions": [
+    {
+      "id": "place-mark",
+      "name": "Place Mark",
+      "type": "mandatory",
+      "description": "Place your mark (X or O) in an empty space on the grid",
+      "prerequisites": [
+        "It is your turn",
+        "The selected space is empty"
+      ],
+      "effects": [
+        "Your mark is placed in the selected space",
+        "The space becomes occupied",
+        "Turn passes to the other player (if game not won/drawn)"
+      ],
+      "cost": {
+        "description": "Uses one turn"
+      }
+    }
+  ],
+  "scoring": {
+    "method": "objective",
+    "description": "The first player to get three of their marks in a row (horizontally, vertically, or diagonally) wins. If all spaces are filled without a winner, the game is a draw.",
+    "sources": [
+      {
+        "id": "three-in-a-row",
+        "name": "Three in a Row",
+        "value": -1,
+        "description": "Get three of your marks in a horizontal, vertical, or diagonal line",
+        "when": "Immediately upon placing the third mark in a line"
+      }
+    ],
+    "tiebreakers": [
+      {
+        "order": 1,
+        "rule": "If no player achieves three in a row and all spaces are filled, the game is a draw"
+      }
+    ]
+  },
+  "endConditions": [
+    {
+      "id": "win-condition",
+      "type": "objective",
+      "description": "A player gets three of their marks in a row (horizontally, vertically, or diagonally)"
+    },
+    {
+      "id": "draw-condition",
+      "type": "custom",
+      "description": "All 9 spaces are filled and no player has three in a row"
+    }
+  ],
+  "edgeCases": [
+    {
+      "id": "edge-1",
+      "category": "clarification",
+      "text": "A player cannot place their mark in a space that is already occupied",
+      "relatedActions": ["place-mark"]
+    },
+    {
+      "id": "edge-2",
+      "category": "clarification",
+      "text": "The game ends immediately when a player gets three in a row - no additional moves are made",
+      "relatedActions": ["place-mark"],
+      "relatedPhases": ["turn"]
+    },
+    {
+      "id": "edge-3",
+      "category": "variant",
+      "text": "Misere variant: The player who gets three in a row LOSES instead of wins",
+      "relatedActions": ["place-mark"]
+    },
+    {
+      "id": "edge-4",
+      "category": "faq",
+      "text": "Q: Can the first player always force a win? A: No, with perfect play from both sides, Tic-Tac-Toe always results in a draw"
+    }
+  ],
+  "glossary": [
+    {
+      "term": "Mark",
+      "definition": "A symbol (X or O) placed by a player in a space on the grid",
+      "examples": [
+        "Player 1's mark is X",
+        "Place your mark in an empty space"
+      ]
+    },
+    {
+      "term": "Three in a Row",
+      "definition": "Three marks of the same type (X or O) aligned horizontally, vertically, or diagonally",
+      "examples": [
+        "X-X-X in the top row",
+        "O-O-O diagonally from top-left to bottom-right"
+      ]
+    },
+    {
+      "term": "Draw",
+      "definition": "A game outcome where all spaces are filled but no player has three in a row",
+      "examples": [
+        "The game ended in a draw after all 9 spaces were filled"
+      ]
+    }
+  ]
+}

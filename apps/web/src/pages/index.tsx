@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { api } from "../lib/api";
 
 type AuthUser = {
@@ -147,7 +148,7 @@ export default function Home() {
           <h1>MeepleAI</h1>
           <p>Frontend ↔ MeepleAgentAI</p>
         </div>
-        <a
+        <Link
           href="/logs"
           style={{
             padding: "8px 16px",
@@ -159,7 +160,7 @@ export default function Home() {
           }}
         >
           View Logs
-        </a>
+        </Link>
       </div>
 
       {statusMessage && <p style={{ color: "#0070f3" }}>{statusMessage}</p>}

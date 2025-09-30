@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 type LogEntry = {
   timestamp: string;
@@ -65,7 +66,7 @@ export default function LogsPage() {
             Monitor application logs with request correlation
           </p>
         </div>
-        <a
+        <Link
           href="/"
           style={{
             padding: "8px 16px",
@@ -76,7 +77,7 @@ export default function LogsPage() {
           }}
         >
           Back to Home
-        </a>
+        </Link>
       </div>
 
       <div style={{ marginBottom: 24 }}>
@@ -159,7 +160,7 @@ export default function LogsPage() {
         <h3 style={{ marginTop: 0 }}>How Correlation Works</h3>
         <ul style={{ marginBottom: 0 }}>
           <li>
-            Each HTTP request receives a unique <code>X-Correlation-Id</code> (using ASP.NET Core's{" "}
+            Each HTTP request receives a unique <code>X-Correlation-Id</code> (using ASP.NET Core&apos;s{" "}
             <code>TraceIdentifier</code>)
           </li>
           <li>All logs for a request include the same correlation ID for tracing</li>

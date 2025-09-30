@@ -9,13 +9,19 @@
 *.user
 *.userosscache
 *.sln.docstates
-# Environment configuration (allow only checked-in templates)
+# Environment configuration
+# Allow only .example and .ci.example templates
 .env
 .env.*
 *.env
 *.env.*
 !*.env.example
-!*.env.*.example
+!*.env.ci.example
+# Explicitly exclude development environment files with secrets
+*.env.dev
+*.env.local
+*.env.prod
+*.env.production
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

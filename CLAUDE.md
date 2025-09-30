@@ -121,18 +121,25 @@ dotnet test
 docker build -f src/Api/Dockerfile .
 ```
 
-### Repository Safety Hooks
+### Repository Safety Hooks & Security
 ```bash
 # Install Python tooling (requires Python 3.9+)
 python -m pip install --user -r requirements-dev.txt
 
-# Register git hooks
+# Register git hooks (blocks commits with secrets)
 pre-commit install
 
 # Run the full suite on demand
 pre-commit run --all-files
 ```
 > Windows tip: if `python -m pre_commit` reports `No module named pre_commit`, rerun the installation command using `py -3 -m pip install --user -r requirements-dev.txt` to ensure the package is available on PATH.
+
+**Security Note**: Pre-commit hooks will automatically:
+- Detect and block API keys, tokens, and private keys
+- Prevent commits of `.env.dev` and `.env.local` files with secrets
+- Check for large files, merge conflicts, and code quality issues
+
+See [SECURITY.md](SECURITY.md) for complete security guidelines and secrets management.
 
 ## 🌐 Service Endpoints
 
@@ -154,6 +161,8 @@ pre-commit run --all-files
 
 ### Required Environment Variables
 
+**⚠️ Security**: Never commit real secrets to git. Use `.env.dev` files locally (ignored by git) and inject secrets via CI/CD for production.
+
 #### Frontend (`apps/web`)
 ```bash
 NEXT_PUBLIC_API_BASE=http://localhost:8080
@@ -166,7 +175,7 @@ ASPNETCORE_URLS=http://+:8080
 ConnectionStrings__Postgres=Host=postgres;Database=meepleai;Username=meeple;Password=meeplepass
 QDRANT_URL=http://qdrant:6333
 REDIS_URL=redis:6379
-OPENROUTER_API_KEY=changeme
+OPENROUTER_API_KEY=changeme  # ⚠️ Replace with your key in .env.dev
 JWT_ISSUER=http://localhost:8080
 ALLOW_ORIGIN=http://localhost:3000
 ```
@@ -174,9 +183,11 @@ ALLOW_ORIGIN=http://localhost:3000
 #### Infrastructure
 ```bash
 POSTGRES_USER=meeple
-POSTGRES_PASSWORD=meeplepass
+POSTGRES_PASSWORD=meeplepass  # ⚠️ Use strong password in production
 POSTGRES_DB=meepleai
 ```
+
+**Setup**: Run `.\scripts\dev-up.ps1` to auto-create `.env.dev` files from templates, then update secrets locally.
 
 ## 📋 Development Workflow
 

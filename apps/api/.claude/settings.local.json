@@ -6,7 +6,10 @@
       "Read(//d/Repositories/meepleai-monorepo/infra/**)",
       "Bash(docker compose ps:*)",
       "Bash(docker ps:*)",
-      "Read(//d/Repositories/meepleai-monorepo/**)"
+      "Read(//d/Repositories/meepleai-monorepo/**)",
+      "Bash(gh issue list:*)",
+      "Bash(cat:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

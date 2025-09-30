@@ -5,8 +5,24 @@ using Api.Models;
 using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Serilog;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .Enrich.WithMachineName()
+    .Enrich.WithEnvironmentName()
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+    .CreateLogger();
+
+builder.Host.UseSerilog();
 
 var connectionString = builder.Configuration.GetConnectionString("Postgres")
     ?? builder.Configuration["ConnectionStrings__Postgres"]
@@ -48,6 +64,33 @@ using (var scope = app.Services.CreateScope())
 
 app.UseCors("web");
 
+// Request logging with correlation ID
+app.UseSerilogRequestLogging(options =>
+{
+    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+    {
+        diagnosticContext.Set("RequestId", httpContext.TraceIdentifier);
+        diagnosticContext.Set("RequestPath", httpContext.Request.Path.Value ?? string.Empty);
+        diagnosticContext.Set("RequestMethod", httpContext.Request.Method);
+        diagnosticContext.Set("UserAgent", httpContext.Request.Headers.UserAgent.ToString());
+        diagnosticContext.Set("RemoteIp", httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+
+        if (httpContext.User.Identity?.IsAuthenticated == true)
+        {
+            diagnosticContext.Set("UserId", httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "unknown");
+            diagnosticContext.Set("UserEmail", httpContext.User.FindFirst(ClaimTypes.Email)?.Value ?? "unknown");
+            diagnosticContext.Set("TenantId", httpContext.User.FindFirst("tenant")?.Value ?? "unknown");
+        }
+    };
+});
+
+// Add correlation ID to response headers
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Correlation-Id"] = context.TraceIdentifier;
+    await next();
+});
+
 app.Use(async (context, next) =>
 {
     if (context.Request.Cookies.TryGetValue(AuthService.SessionCookieName, out var token) &&
@@ -76,7 +119,7 @@ app.Use(async (context, next) =>
 
 app.MapGet("/", () => Results.Json(new { ok = true, name = "MeepleAgentAI" }));
 
-app.MapPost("/auth/register", async (RegisterPayload payload, HttpContext context, AuthService auth, CancellationToken ct) =>
+app.MapPost("/auth/register", async (RegisterPayload payload, HttpContext context, AuthService auth, ILogger<Program> logger, CancellationToken ct) =>
 {
     try
     {
@@ -90,21 +133,25 @@ app.MapPost("/auth/register", async (RegisterPayload payload, HttpContext contex
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString());
 
+        logger.LogInformation("User registration attempt for {Email} in tenant {TenantId}", payload.email, payload.tenantId);
         var result = await auth.RegisterAsync(command, ct);
         WriteSessionCookie(context, result.SessionToken, result.ExpiresAt);
+        logger.LogInformation("User {UserId} registered successfully with role {Role}", result.User.id, result.User.role);
         return Results.Json(new AuthResponse(result.User, result.ExpiresAt));
     }
     catch (ArgumentException ex)
     {
+        logger.LogWarning("Registration validation failed for {Email}: {Error}", payload.email, ex.Message);
         return Results.BadRequest(new { error = ex.Message });
     }
     catch (InvalidOperationException ex)
     {
+        logger.LogWarning("Registration conflict for {Email}: {Error}", payload.email, ex.Message);
         return Results.Conflict(new { error = ex.Message });
     }
 });
 
-app.MapPost("/auth/login", async (LoginPayload payload, HttpContext context, AuthService auth, CancellationToken ct) =>
+app.MapPost("/auth/login", async (LoginPayload payload, HttpContext context, AuthService auth, ILogger<Program> logger, CancellationToken ct) =>
 {
     var command = new LoginCommand(
         payload.tenantId,
@@ -113,14 +160,17 @@ app.MapPost("/auth/login", async (LoginPayload payload, HttpContext context, Aut
         context.Connection.RemoteIpAddress?.ToString(),
         context.Request.Headers.UserAgent.ToString());
 
+    logger.LogInformation("Login attempt for {Email} in tenant {TenantId}", payload.email, payload.tenantId);
     var result = await auth.LoginAsync(command, ct);
     if (result == null)
     {
+        logger.LogWarning("Login failed for {Email} in tenant {TenantId}", payload.email, payload.tenantId);
         RemoveSessionCookie(context);
         return Results.Unauthorized();
     }
 
     WriteSessionCookie(context, result.SessionToken, result.ExpiresAt);
+    logger.LogInformation("User {UserId} logged in successfully", result.User.id);
     return Results.Json(new AuthResponse(result.User, result.ExpiresAt));
 });
 
@@ -146,7 +196,7 @@ app.MapGet("/auth/me", (HttpContext context) =>
     return Results.Unauthorized();
 });
 
-app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService rag, CancellationToken ct) =>
+app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService rag, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -155,6 +205,8 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
 
     if (!string.Equals(req.tenantId, session.User.tenantId, StringComparison.Ordinal))
     {
+        logger.LogWarning("Tenant mismatch: User {UserId} attempted to access tenant {RequestedTenantId}",
+            session.User.id, req.tenantId);
         return Results.Forbid();
     }
 
@@ -163,7 +215,10 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
         return Results.BadRequest(new { error = "tenantId and gameId are required" });
     }
 
+    logger.LogInformation("QA request from user {UserId} for game {GameId}: {Query}",
+        session.User.id, req.gameId, req.query);
     var resp = await rag.AskAsync(req.tenantId, req.gameId, req.query, ct);
+    logger.LogInformation("QA response delivered for game {GameId}", req.gameId);
     return Results.Json(resp);
 });
 

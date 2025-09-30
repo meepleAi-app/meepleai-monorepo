@@ -9,7 +9,17 @@
       "Read(//d/Repositories/meepleai-monorepo/**)",
       "Bash(gh issue list:*)",
       "Bash(cat:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(python -m pre_commit run:*)",
+      "Bash(py -3 -m pip install --user -r requirements-dev.txt)",
+      "Bash(git commit:*)",
+      "Bash(git branch:*)",
+      "Bash(git checkout:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr create --title \"SEC-01: Implement secrets management and security policies\" --body \"$(cat <<''EOF''\n## Summary\n\nImplements comprehensive secrets management and security policies to close issue #9 (SEC-01).\n\n### Key Changes\n- 🔒 **Removed committed API key** from `infra/env/api.env.dev` (sanitized to placeholder)\n- 🛡️ **Enhanced .gitignore** to exclude `*.env.dev`, `*.env.local`, `*.env.prod` files\n- ✅ **Pre-commit hooks** upgraded with secret detection, private key detection, and quality checks\n- 📖 **SECURITY.md** added with comprehensive guidelines:\n  - Secrets management best practices\n  - Rotation procedures (OpenRouter API keys, GitHub PAT, DB credentials)\n  - Authentication & authorization security details\n  - Pre-commit hook setup instructions\n  - Incident response procedures\n  - Production security checklist\n- 📝 **CLAUDE.md** updated with security warnings and SECURITY.md references\n- 📦 **requirements-dev.txt** updated with `detect-secrets` dependency\n\n## Security Impact\n\n### Immediate Protection\n- Committed secrets sanitized\n- Future commits blocked if they contain secrets (pre-commit hooks)\n- Clear separation between templates (`.example`) and actual secrets (`.dev`, `.local`)\n\n### Pre-commit Hooks Now Detect\n- API keys, tokens, passwords (detect-secrets)\n- Private keys (RSA, SSH, PGP)\n- High-entropy strings\n- Large files (>1MB)\n- Merge conflicts and YAML syntax errors\n\n## Test Plan\n\n- [x] Removed real API key from `infra/env/api.env.dev`\n- [x] Verified `.gitignore` excludes `*.env.dev` files\n- [x] Updated pre-commit configuration with enhanced hooks\n- [x] Created comprehensive SECURITY.md documentation\n- [x] Updated CLAUDE.md with security references\n- [x] Added detect-secrets to requirements-dev.txt\n\n### Manual Testing Steps\n1. Install pre-commit hooks:\n   ```bash\n   pip install -r requirements-dev.txt\n   pre-commit install\n   ```\n\n2. Test secret detection:\n   ```bash\n   # Try to commit a fake API key - should be blocked\n   echo \"OPENROUTER_API_KEY=sk-or-v1-abc123fake\" > test.env\n   git add test.env\n   git commit -m \"test\"  # Should fail with secret detection error\n   ```\n\n3. Verify `.env.dev` files are ignored:\n   ```bash\n   git status  # Should not show *.env.dev files\n   ```\n\n## Documentation\n\n- [SECURITY.md](../SECURITY.md) - Complete security guidelines\n- [CLAUDE.md](../CLAUDE.md) - Updated with security notes\n\n## Breaking Changes\n\nNone. This is additive security hardening.\n\n## Related Issues\n\nCloses #9\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\nEOF\n)\")",
+      "Bash(gh pr view:*)",
+      "Bash(gh issue view:*)",
+      "Bash(dotnet add:*)"
     ],
     "deny": [],
     "ask": []

@@ -45,6 +45,7 @@ builder.Services.AddScoped<RuleSpecService>();
 builder.Services.AddScoped<RagService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<RateLimitService>();
+builder.Services.AddScoped<PdfStorageService>();
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 
@@ -288,7 +289,7 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
     return Results.Json(resp);
 });
 
-app.MapPost("/ingest/pdf", (HttpContext context) =>
+app.MapPost("/ingest/pdf", async (HttpContext context, PdfStorageService pdfStorage, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -301,7 +302,38 @@ app.MapPost("/ingest/pdf", (HttpContext context) =>
         return Results.Forbid();
     }
 
-    return Results.Json(new IngestPdfResponse(Guid.NewGuid().ToString("N")));
+    var form = await context.Request.ReadFormAsync(ct);
+    var file = form.Files.GetFile("file");
+    var gameId = form["gameId"].ToString();
+
+    if (string.IsNullOrWhiteSpace(gameId))
+    {
+        return Results.BadRequest(new { error = "gameId is required" });
+    }
+
+    logger.LogInformation("User {UserId} uploading PDF for game {GameId}", session.User.id, gameId);
+
+    var result = await pdfStorage.UploadPdfAsync(session.User.tenantId, gameId, session.User.id, file!, ct);
+
+    if (!result.Success)
+    {
+        logger.LogWarning("PDF upload failed for game {GameId}: {Error}", gameId, result.Message);
+        return Results.BadRequest(new { error = result.Message });
+    }
+
+    logger.LogInformation("PDF uploaded successfully: {PdfId}", result.Document!.Id);
+    return Results.Json(new { documentId = result.Document.Id, fileName = result.Document.FileName });
+});
+
+app.MapGet("/games/{gameId}/pdfs", async (string gameId, HttpContext context, PdfStorageService pdfStorage, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    var pdfs = await pdfStorage.GetPdfsByGameAsync(session.User.tenantId, gameId, ct);
+    return Results.Json(new { pdfs });
 });
 
 app.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, RuleSpecService rules, CancellationToken ct) =>

@@ -18,6 +18,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<AgentEntity> Agents => Set<AgentEntity>();
     public DbSet<ChatEntity> Chats => Set<ChatEntity>();
     public DbSet<ChatLogEntity> ChatLogs => Set<ChatLogEntity>();
+    public DbSet<PdfDocumentEntity> PdfDocuments => Set<PdfDocumentEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -192,6 +193,35 @@ public class MeepleAiDbContext : DbContext
                 .HasForeignKey(e => e.ChatId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => new { e.TenantId, e.ChatId, e.CreatedAt });
+        });
+
+        modelBuilder.Entity<PdfDocumentEntity>(entity =>
+        {
+            entity.ToTable("pdf_documents");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
+            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.GameId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.FileName).IsRequired().HasMaxLength(256);
+            entity.Property(e => e.FilePath).IsRequired().HasMaxLength(512);
+            entity.Property(e => e.FileSizeBytes).IsRequired();
+            entity.Property(e => e.ContentType).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.UploadedByUserId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.UploadedAt).IsRequired();
+            entity.Property(e => e.Metadata).HasColumnType("text");
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Game)
+                .WithMany()
+                .HasForeignKey(e => e.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.UploadedBy)
+                .WithMany()
+                .HasForeignKey(e => e.UploadedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => new { e.TenantId, e.GameId, e.UploadedAt });
         });
     }
 }

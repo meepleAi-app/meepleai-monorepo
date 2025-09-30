@@ -148,19 +148,34 @@ export default function Home() {
           <h1>MeepleAI</h1>
           <p>Frontend ↔ MeepleAgentAI</p>
         </div>
-        <Link
-          href="/logs"
-          style={{
-            padding: "8px 16px",
-            background: "#1a73e8",
-            color: "white",
-            textDecoration: "none",
-            borderRadius: 4,
-            fontSize: 14
-          }}
-        >
-          View Logs
-        </Link>
+        <div style={{ display: "flex", gap: 12 }}>
+          <Link
+            href="/upload"
+            style={{
+              padding: "8px 16px",
+              background: "#0070f3",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: 4,
+              fontSize: 14
+            }}
+          >
+            Upload PDF
+          </Link>
+          <Link
+            href="/logs"
+            style={{
+              padding: "8px 16px",
+              background: "#1a73e8",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: 4,
+              fontSize: 14
+            }}
+          >
+            View Logs
+          </Link>
+        </div>
       </div>
 
       {statusMessage && <p style={{ color: "#0070f3" }}>{statusMessage}</p>}

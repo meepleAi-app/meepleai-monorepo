@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "Read(//d/Repositories/meepleai-monorepo/apps/**)",
+      "Read(//d/Repositories/meepleai-monorepo/infra/**)",
+      "Bash(docker compose ps:*)",
+      "Bash(docker ps:*)",
+      "Read(//d/Repositories/meepleai-monorepo/**)"
     ],
     "deny": [],
     "ask": []

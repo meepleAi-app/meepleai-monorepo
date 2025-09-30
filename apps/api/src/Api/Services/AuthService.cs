@@ -64,7 +64,8 @@ public class AuthService
             DisplayName = command.displayName?.Trim(),
             PasswordHash = HashPassword(command.password),
             Role = role,
-            CreatedAt = now
+            CreatedAt = now,
+            Tenant = tenant
         };
         _db.Users.Add(user);
 
@@ -165,7 +166,9 @@ public class AuthService
             ExpiresAt = expires,
             LastSeenAt = now,
             IpAddress = ipAddress,
-            UserAgent = userAgent
+            UserAgent = userAgent,
+            Tenant = user.Tenant,
+            User = user
         };
 
         return (entity, token);

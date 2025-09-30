@@ -117,7 +117,7 @@ app.MapPost("/auth/login", async (LoginPayload payload, HttpContext context, Aut
     if (result == null)
     {
         RemoveSessionCookie(context);
-        return Results.Unauthorized(new { error = "Invalid credentials" });
+        return Results.Unauthorized();
     }
 
     WriteSessionCookie(context, result.SessionToken, result.ExpiresAt);

@@ -13,4 +13,5 @@ public class TenantEntity
     public ICollection<AgentEntity> Agents { get; set; } = new List<AgentEntity>();
     public ICollection<ChatEntity> Chats { get; set; } = new List<ChatEntity>();
     public ICollection<ChatLogEntity> ChatLogs { get; set; } = new List<ChatLogEntity>();
+    public ICollection<UserSessionEntity> Sessions { get; set; } = new List<UserSessionEntity>();
 }

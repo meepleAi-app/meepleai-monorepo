@@ -2,12 +2,14 @@ namespace Api.Infrastructure.Entities;
 
 public class UserEntity
 {
-    public string Id { get; set; } = default!;
-    public string TenantId { get; set; } = default!;
-    public string Email { get; set; } = default!;
+    required public string Id { get; set; } 
+    required public string TenantId { get; set; } 
+    required public string Email { get; set; } 
     public string? DisplayName { get; set; }
-        = null;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    required public string PasswordHash { get; set; }
+    public UserRole Role { get; set; }
+    public DateTime CreatedAt { get; set; } 
 
-    public TenantEntity Tenant { get; set; } = default!;
+    required public TenantEntity Tenant { get; set; } 
+    public ICollection<UserSessionEntity> Sessions { get; set; } = new List<UserSessionEntity>();
 }

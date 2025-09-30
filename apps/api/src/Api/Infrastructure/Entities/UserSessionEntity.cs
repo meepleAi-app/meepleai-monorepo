@@ -16,3 +16,26 @@ public class UserSessionEntity
     public TenantEntity Tenant { get; set; } = default!;
     public UserEntity User { get; set; } = default!;
 }
+namespace Api.Infrastructure.Entities;
+
+public class UserSessionEntity
+{
+    public string Id { get; set; }
+    public string TenantId { get; set; }
+    public string UserId { get; set; } 
+    public string SessionToken { get; set; }
+    public DateTime CreatedAt { get; set; }
+        = DateTime.UtcNow;
+    public DateTimeOffset? ExpiresAt { get; set; }
+        = null;
+    public DateTimeOffset? LastSeenAt { get; set; }
+        = null;
+    public DateTimeOffset? RevokedAt { get; set; }
+        = null;
+    public string? UserAgent { get; set; }
+        = null;
+    public string? IpAddress { get; set; }
+        = null;
+
+    public TenantEntity Tenant { get; set; } 
+    public UserEntity User { get; set; }

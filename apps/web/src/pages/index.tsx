@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { api } from "../lib/api";
 
 type AuthUser = {
@@ -142,8 +143,25 @@ export default function Home() {
 
   return (
     <main style={{ padding: 24, maxWidth: 800, margin: "0 auto", fontFamily: "sans-serif" }}>
-      <h1>MeepleAI</h1>
-      <p>Frontend ↔ MeepleAgentAI</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <h1>MeepleAI</h1>
+          <p>Frontend ↔ MeepleAgentAI</p>
+        </div>
+        <Link
+          href="/logs"
+          style={{
+            padding: "8px 16px",
+            background: "#1a73e8",
+            color: "white",
+            textDecoration: "none",
+            borderRadius: 4,
+            fontSize: 14
+          }}
+        >
+          View Logs
+        </Link>
+      </div>
 
       {statusMessage && <p style={{ color: "#0070f3" }}>{statusMessage}</p>}
       {errorMessage && <p style={{ color: "#d93025" }}>{errorMessage}</p>}

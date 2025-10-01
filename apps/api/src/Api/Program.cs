@@ -45,6 +45,7 @@ builder.Services.AddScoped<RuleSpecService>();
 builder.Services.AddScoped<RagService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<RateLimitService>();
+builder.Services.AddScoped<PdfTextExtractionService>();
 builder.Services.AddScoped<PdfStorageService>();
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
@@ -334,6 +335,36 @@ app.MapGet("/games/{gameId}/pdfs", async (string gameId, HttpContext context, Pd
 
     var pdfs = await pdfStorage.GetPdfsByGameAsync(session.User.tenantId, gameId, ct);
     return Results.Json(new { pdfs });
+});
+
+app.MapGet("/pdfs/{pdfId}/text", async (string pdfId, HttpContext context, MeepleAiDbContext db, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    var pdf = await db.PdfDocuments
+        .Where(p => p.Id == pdfId && p.TenantId == session.User.tenantId)
+        .Select(p => new
+        {
+            p.Id,
+            p.FileName,
+            p.ExtractedText,
+            p.ProcessingStatus,
+            p.ProcessedAt,
+            p.PageCount,
+            p.CharacterCount,
+            p.ProcessingError
+        })
+        .FirstOrDefaultAsync(ct);
+
+    if (pdf == null)
+    {
+        return Results.NotFound(new { error = "PDF not found" });
+    }
+
+    return Results.Json(pdf);
 });
 
 app.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, RuleSpecService rules, CancellationToken ct) =>

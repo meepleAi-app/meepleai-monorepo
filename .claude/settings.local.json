@@ -12,7 +12,8 @@
       "Bash(npm run build:*)",
       "Bash(dotnet test)",
       "Bash(git add:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

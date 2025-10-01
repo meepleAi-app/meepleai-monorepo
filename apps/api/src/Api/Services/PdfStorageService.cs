@@ -8,6 +8,7 @@ public class PdfStorageService
 {
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<PdfStorageService> _logger;
+    private readonly PdfTextExtractionService _textExtractionService;
     private readonly string _storageBasePath;
     private const long MaxFileSizeBytes = 50 * 1024 * 1024; // 50 MB
     private static readonly HashSet<string> AllowedContentTypes = new()
@@ -15,10 +16,15 @@ public class PdfStorageService
         "application/pdf"
     };
 
-    public PdfStorageService(MeepleAiDbContext db, IConfiguration config, ILogger<PdfStorageService> logger)
+    public PdfStorageService(
+        MeepleAiDbContext db,
+        IConfiguration config,
+        ILogger<PdfStorageService> logger,
+        PdfTextExtractionService textExtractionService)
     {
         _db = db;
         _logger = logger;
+        _textExtractionService = textExtractionService;
         _storageBasePath = config["PDF_STORAGE_PATH"] ?? Path.Combine(Directory.GetCurrentDirectory(), "pdf_uploads");
 
         // Ensure storage directory exists
@@ -97,13 +103,17 @@ public class PdfStorageService
                 FileSizeBytes = file.Length,
                 ContentType = file.ContentType,
                 UploadedByUserId = userId,
-                UploadedAt = DateTime.UtcNow
+                UploadedAt = DateTime.UtcNow,
+                ProcessingStatus = "pending"
             };
 
             _db.PdfDocuments.Add(pdfDoc);
             await _db.SaveChangesAsync(ct);
 
             _logger.LogInformation("Created PDF document record {PdfId} for game {GameId}", fileId, gameId);
+
+            // Extract text asynchronously (PDF-02)
+            _ = Task.Run(async () => await ExtractTextAsync(fileId, filePath), CancellationToken.None);
 
             return new PdfUploadResult(true, "PDF uploaded successfully", new PdfDocumentDto
             {
@@ -137,6 +147,74 @@ public class PdfStorageService
             .ToListAsync(ct);
 
         return pdfs;
+    }
+
+    /// <summary>
+    /// Extracts text from PDF asynchronously and updates database
+    /// </summary>
+    private async Task ExtractTextAsync(string pdfId, string filePath)
+    {
+        try
+        {
+            _logger.LogInformation("Starting text extraction for PDF {PdfId}", pdfId);
+
+            // Update status to processing
+            var pdfDoc = await _db.PdfDocuments.FindAsync(pdfId);
+            if (pdfDoc == null)
+            {
+                _logger.LogError("PDF document {PdfId} not found for text extraction", pdfId);
+                return;
+            }
+
+            pdfDoc.ProcessingStatus = "processing";
+            await _db.SaveChangesAsync();
+
+            // Extract text
+            var result = await _textExtractionService.ExtractTextAsync(filePath);
+
+            if (result.Success)
+            {
+                pdfDoc.ExtractedText = result.ExtractedText;
+                pdfDoc.PageCount = result.PageCount;
+                pdfDoc.CharacterCount = result.CharacterCount;
+                pdfDoc.ProcessingStatus = "completed";
+                pdfDoc.ProcessedAt = DateTime.UtcNow;
+
+                _logger.LogInformation(
+                    "Text extraction completed for PDF {PdfId}: {PageCount} pages, {CharCount} characters",
+                    pdfId, result.PageCount, result.CharacterCount);
+            }
+            else
+            {
+                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingError = result.ErrorMessage;
+                pdfDoc.ProcessedAt = DateTime.UtcNow;
+
+                _logger.LogError("Text extraction failed for PDF {PdfId}: {Error}", pdfId, result.ErrorMessage);
+            }
+
+            await _db.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during text extraction for PDF {PdfId}", pdfId);
+
+            try
+            {
+                var pdfDoc = await _db.PdfDocuments.FindAsync(pdfId);
+                if (pdfDoc != null)
+                {
+                    pdfDoc.ProcessingStatus = "failed";
+                    pdfDoc.ProcessingError = ex.Message;
+                    pdfDoc.ProcessedAt = DateTime.UtcNow;
+                    await _db.SaveChangesAsync();
+                }
+            }
+            catch (Exception innerEx)
+            {
+                _logger.LogError(innerEx, "Failed to update error status for PDF {PdfId}", pdfId);
+            }
+        }
     }
 
     private static string SanitizeFileName(string fileName)

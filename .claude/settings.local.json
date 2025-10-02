@@ -18,7 +18,16 @@
       "Bash(git add:*)",
       "Bash(node:*)",
       "Bash(git push:*)",
-      "Bash(gh issue comment:*)"
+      "Bash(gh issue comment:*)",
+      "Bash(gh pr view:*)",
+      "Bash(git commit:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh pr review:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(git branch:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr comment:*)"
     ],
     "deny": [],
     "ask": []

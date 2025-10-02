@@ -2,6 +2,8 @@ using Api.Infrastructure;
 using Api.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Moq;
 using Xunit;
 
 public class QaEndpointTests
@@ -23,7 +25,18 @@ public class QaEndpointTests
 
         await using var dbContext = new MeepleAiDbContext(options);
         var ruleService = new RuleSpecService(dbContext);
-        var ragService = new RagService(dbContext);
+
+        // Mock dependencies for RagService (AI-01 not used in this legacy test)
+        var embeddingServiceMock = new Mock<EmbeddingService>(
+            Mock.Of<IHttpClientFactory>(),
+            Mock.Of<Microsoft.Extensions.Configuration.IConfiguration>(),
+            Mock.Of<ILogger<EmbeddingService>>());
+        var qdrantServiceMock = new Mock<QdrantService>(
+            Mock.Of<Microsoft.Extensions.Configuration.IConfiguration>(),
+            Mock.Of<ILogger<QdrantService>>());
+        var ragLoggerMock = Mock.Of<ILogger<RagService>>();
+
+        var ragService = new RagService(dbContext, embeddingServiceMock.Object, qdrantServiceMock.Object, ragLoggerMock);
 
         var tenantId = "tenant-test";
         var gameId = "demo-chess";

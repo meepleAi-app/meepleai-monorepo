@@ -7,6 +7,7 @@ namespace Api.Services;
 public class PdfStorageService
 {
     private readonly MeepleAiDbContext _db;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<PdfStorageService> _logger;
     private readonly PdfTextExtractionService _textExtractionService;
     private readonly string _storageBasePath;
@@ -18,11 +19,13 @@ public class PdfStorageService
 
     public PdfStorageService(
         MeepleAiDbContext db,
+        IServiceScopeFactory scopeFactory,
         IConfiguration config,
         ILogger<PdfStorageService> logger,
         PdfTextExtractionService textExtractionService)
     {
         _db = db;
+        _scopeFactory = scopeFactory;
         _logger = logger;
         _textExtractionService = textExtractionService;
         _storageBasePath = config["PDF_STORAGE_PATH"] ?? Path.Combine(Directory.GetCurrentDirectory(), "pdf_uploads");
@@ -154,12 +157,16 @@ public class PdfStorageService
     /// </summary>
     private async Task ExtractTextAsync(string pdfId, string filePath)
     {
+        // Create new scope for background task to avoid disposed DbContext
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
         try
         {
             _logger.LogInformation("Starting text extraction for PDF {PdfId}", pdfId);
 
             // Update status to processing
-            var pdfDoc = await _db.PdfDocuments.FindAsync(pdfId);
+            var pdfDoc = await db.PdfDocuments.FindAsync(pdfId);
             if (pdfDoc == null)
             {
                 _logger.LogError("PDF document {PdfId} not found for text extraction", pdfId);
@@ -167,7 +174,7 @@ public class PdfStorageService
             }
 
             pdfDoc.ProcessingStatus = "processing";
-            await _db.SaveChangesAsync();
+            await db.SaveChangesAsync();
 
             // Extract text
             var result = await _textExtractionService.ExtractTextAsync(filePath);
@@ -183,6 +190,11 @@ public class PdfStorageService
                 _logger.LogInformation(
                     "Text extraction completed for PDF {PdfId}: {PageCount} pages, {CharCount} characters",
                     pdfId, result.PageCount, result.CharacterCount);
+
+                await db.SaveChangesAsync();
+
+                // AI-01: Trigger vector indexing in background
+                _ = Task.Run(async () => await IndexVectorsAsync(pdfDoc.TenantId, pdfDoc.GameId, pdfId, result.ExtractedText), CancellationToken.None);
             }
             else
             {
@@ -191,9 +203,9 @@ public class PdfStorageService
                 pdfDoc.ProcessedAt = DateTime.UtcNow;
 
                 _logger.LogError("Text extraction failed for PDF {PdfId}: {Error}", pdfId, result.ErrorMessage);
-            }
 
-            await _db.SaveChangesAsync();
+                await db.SaveChangesAsync();
+            }
         }
         catch (Exception ex)
         {
@@ -201,18 +213,127 @@ public class PdfStorageService
 
             try
             {
-                var pdfDoc = await _db.PdfDocuments.FindAsync(pdfId);
+                var pdfDoc = await db.PdfDocuments.FindAsync(pdfId);
                 if (pdfDoc != null)
                 {
                     pdfDoc.ProcessingStatus = "failed";
                     pdfDoc.ProcessingError = ex.Message;
                     pdfDoc.ProcessedAt = DateTime.UtcNow;
-                    await _db.SaveChangesAsync();
+                    await db.SaveChangesAsync();
                 }
             }
             catch (Exception innerEx)
             {
                 _logger.LogError(innerEx, "Failed to update error status for PDF {PdfId}", pdfId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// AI-01: Index PDF text as vectors in Qdrant
+    /// </summary>
+    private async Task IndexVectorsAsync(string tenantId, string gameId, string pdfId, string extractedText)
+    {
+        // Create new scope for background task to avoid disposed DbContext
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var chunkingService = scope.ServiceProvider.GetRequiredService<TextChunkingService>();
+        var embeddingService = scope.ServiceProvider.GetRequiredService<EmbeddingService>();
+        var qdrantService = scope.ServiceProvider.GetRequiredService<QdrantService>();
+
+        try
+        {
+            _logger.LogInformation("Starting vector indexing for PDF {PdfId}", pdfId);
+
+            // Create or update vector document record
+            var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId);
+            if (vectorDoc == null)
+            {
+                vectorDoc = new VectorDocumentEntity
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    TenantId = tenantId,
+                    GameId = gameId,
+                    PdfDocumentId = pdfId,
+                    IndexingStatus = "processing"
+                };
+                db.VectorDocuments.Add(vectorDoc);
+            }
+            else
+            {
+                vectorDoc.IndexingStatus = "processing";
+            }
+            await db.SaveChangesAsync();
+
+            // Step 1: Chunk the text
+            var textChunks = chunkingService.PrepareForEmbedding(extractedText);
+            if (textChunks.Count == 0)
+            {
+                throw new InvalidOperationException("No chunks generated from text");
+            }
+
+            _logger.LogInformation("Generated {ChunkCount} chunks for PDF {PdfId}", textChunks.Count, pdfId);
+
+            // Step 2: Generate embeddings for all chunks
+            var texts = textChunks.Select(c => c.Text).ToList();
+            var embeddingResult = await embeddingService.GenerateEmbeddingsAsync(texts);
+
+            if (!embeddingResult.Success)
+            {
+                throw new InvalidOperationException($"Embedding generation failed: {embeddingResult.ErrorMessage}");
+            }
+
+            // Step 3: Combine chunks with embeddings
+            var documentChunks = new List<DocumentChunk>();
+            for (int i = 0; i < textChunks.Count; i++)
+            {
+                documentChunks.Add(new DocumentChunk
+                {
+                    Text = textChunks[i].Text,
+                    Embedding = embeddingResult.Embeddings[i],
+                    Page = textChunks[i].Page,
+                    CharStart = textChunks[i].CharStart,
+                    CharEnd = textChunks[i].CharEnd
+                });
+            }
+
+            // Step 4: Index in Qdrant
+            var indexResult = await qdrantService.IndexDocumentChunksAsync(tenantId, gameId, pdfId, documentChunks);
+
+            if (!indexResult.Success)
+            {
+                throw new InvalidOperationException($"Qdrant indexing failed: {indexResult.ErrorMessage}");
+            }
+
+            // Step 5: Update vector document status
+            vectorDoc.ChunkCount = indexResult.IndexedCount;
+            vectorDoc.TotalCharacters = extractedText.Length;
+            vectorDoc.IndexingStatus = "completed";
+            vectorDoc.IndexedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Vector indexing completed for PDF {PdfId}: {ChunkCount} chunks indexed",
+                pdfId, indexResult.IndexedCount);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Vector indexing failed for PDF {PdfId}", pdfId);
+
+            try
+            {
+                var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId);
+                if (vectorDoc != null)
+                {
+                    vectorDoc.IndexingStatus = "failed";
+                    vectorDoc.IndexingError = ex.Message;
+                    vectorDoc.IndexedAt = DateTime.UtcNow;
+                    await db.SaveChangesAsync();
+                }
+            }
+            catch (Exception innerEx)
+            {
+                _logger.LogError(innerEx, "Failed to update vector document error status for PDF {PdfId}", pdfId);
             }
         }
     }

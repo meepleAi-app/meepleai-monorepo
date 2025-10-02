@@ -8,7 +8,12 @@ public record RegisterPayload(
     string? role,
     string? tenantName);
 
-public record LoginPayload(string tenantId, string email, string password);
+public class LoginPayload
+{
+    public string tenantId { get; set; } = default!;
+    public string email { get; set; } = default!;
+    public string password { get; set; } = default!;
+}
 
 public record RegisterCommand(
     string tenantId,

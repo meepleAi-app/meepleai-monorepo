@@ -19,6 +19,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ChatEntity> Chats => Set<ChatEntity>();
     public DbSet<ChatLogEntity> ChatLogs => Set<ChatLogEntity>();
     public DbSet<PdfDocumentEntity> PdfDocuments => Set<PdfDocumentEntity>();
+    public DbSet<VectorDocumentEntity> VectorDocuments => Set<VectorDocumentEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -222,6 +223,35 @@ public class MeepleAiDbContext : DbContext
                 .HasForeignKey(e => e.UploadedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(e => new { e.TenantId, e.GameId, e.UploadedAt });
+        });
+
+        modelBuilder.Entity<VectorDocumentEntity>(entity =>
+        {
+            entity.ToTable("vector_documents");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
+            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.GameId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.PdfDocumentId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.ChunkCount).IsRequired();
+            entity.Property(e => e.TotalCharacters).IsRequired();
+            entity.Property(e => e.IndexingStatus).IsRequired().HasMaxLength(32);
+            entity.Property(e => e.EmbeddingModel).IsRequired().HasMaxLength(128);
+            entity.Property(e => e.EmbeddingDimensions).IsRequired();
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Game)
+                .WithMany()
+                .HasForeignKey(e => e.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.PdfDocument)
+                .WithMany()
+                .HasForeignKey(e => e.PdfDocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => new { e.TenantId, e.GameId });
+            entity.HasIndex(e => e.PdfDocumentId).IsUnique();
         });
     }
 }

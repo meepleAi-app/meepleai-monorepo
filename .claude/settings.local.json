@@ -12,6 +12,10 @@
       "Bash(npm run build:*)",
       "Bash(dotnet test)",
       "Bash(git add:*)",
+      "Bash(git pull:*)",
+      "Bash(git merge:*)",
+      "Bash(git stash:*)",
+      "Bash(git add:*)",
       "Bash(node:*)",
       "Bash(git push:*)"
     ],

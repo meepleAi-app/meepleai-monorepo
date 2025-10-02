@@ -94,7 +94,7 @@ public class EmbeddingService
     /// <summary>
     /// Generate embedding for a single text
     /// </summary>
-    public async Task<EmbeddingResult> GenerateEmbeddingAsync(string text, CancellationToken ct = default)
+    public virtual async Task<EmbeddingResult> GenerateEmbeddingAsync(string text, CancellationToken ct = default)
     {
         var result = await GenerateEmbeddingsAsync(new List<string> { text }, ct);
         return result;

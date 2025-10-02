@@ -75,4 +75,121 @@ public class RagService
             return new QaResponse("An error occurred while processing your question.", Array.Empty<Snippet>());
         }
     }
+
+    /// <summary>
+    /// AI-02: Generate structured explanation with outline, script, and citations
+    /// </summary>
+    public async Task<ExplainResponse> ExplainAsync(string tenantId, string gameId, string topic, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(topic))
+        {
+            return CreateEmptyExplainResponse("Please provide a topic to explain.");
+        }
+
+        try
+        {
+            // Step 1: Generate embedding for the topic
+            var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(topic, cancellationToken);
+            if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
+            {
+                _logger.LogError("Failed to generate topic embedding: {Error}", embeddingResult.ErrorMessage);
+                return CreateEmptyExplainResponse("Unable to process topic.");
+            }
+
+            var topicEmbedding = embeddingResult.Embeddings[0];
+
+            // Step 2: Search Qdrant for relevant chunks (get more for comprehensive explanation)
+            var searchResult = await _qdrantService.SearchAsync(tenantId, gameId, topicEmbedding, limit: 5, cancellationToken);
+
+            if (!searchResult.Success || searchResult.Results.Count == 0)
+            {
+                _logger.LogInformation("No vector results found for topic {Topic} in game {GameId}", topic, gameId);
+                return CreateEmptyExplainResponse($"No relevant information found about '{topic}' in the rulebook.");
+            }
+
+            // Step 3: Build outline from retrieved chunks
+            var outline = BuildOutline(topic, searchResult.Results);
+
+            // Step 4: Build script from chunks with proper structure
+            var script = BuildScript(topic, searchResult.Results);
+
+            // Step 5: Create citations
+            var citations = searchResult.Results.Select(r => new Snippet(
+                r.Text,
+                $"PDF:{r.PdfId}",
+                r.Page,
+                0 // line number not tracked in chunks
+            )).ToList();
+
+            // Step 6: Calculate estimated reading time (average reading speed: 200 words/minute)
+            var wordCount = script.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+            var estimatedMinutes = Math.Max(1, (int)Math.Ceiling(wordCount / 200.0));
+
+            _logger.LogInformation(
+                "RAG explain generated for topic '{Topic}' with {SectionCount} sections, {CitationCount} citations, ~{Minutes} min read",
+                topic, outline.sections.Count, citations.Count, estimatedMinutes);
+
+            return new ExplainResponse(outline, script, citations, estimatedMinutes);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during RAG explain for topic {Topic} in game {GameId}", topic, gameId);
+            return CreateEmptyExplainResponse("An error occurred while generating the explanation.");
+        }
+    }
+
+    private ExplainResponse CreateEmptyExplainResponse(string message)
+    {
+        return new ExplainResponse(
+            new ExplainOutline("", new List<string>()),
+            message,
+            Array.Empty<Snippet>(),
+            0
+        );
+    }
+
+    private ExplainOutline BuildOutline(string topic, IReadOnlyList<SearchResultItem> results)
+    {
+        // Extract key sections from the retrieved chunks
+        // For now, create sections based on the number of chunks retrieved
+        var sections = new List<string>();
+
+        for (int i = 0; i < results.Count && i < 5; i++)
+        {
+            var result = results[i];
+            // Extract first sentence or first 50 chars as section title
+            var text = result.Text.Trim();
+            var firstSentence = text.Split('.')[0];
+            if (firstSentence.Length > 60)
+            {
+                firstSentence = firstSentence.Substring(0, 57) + "...";
+            }
+            sections.Add(firstSentence);
+        }
+
+        return new ExplainOutline(topic, sections);
+    }
+
+    private string BuildScript(string topic, IReadOnlyList<SearchResultItem> results)
+    {
+        // Build a structured explanation script with citations
+        var scriptParts = new List<string>();
+
+        scriptParts.Add($"# Explanation: {topic}");
+        scriptParts.Add("");
+        scriptParts.Add("## Overview");
+        scriptParts.Add("");
+
+        // Combine the most relevant chunks into a coherent explanation
+        for (int i = 0; i < results.Count; i++)
+        {
+            var result = results[i];
+            scriptParts.Add($"### Section {i + 1} (Page {result.Page})");
+            scriptParts.Add("");
+            scriptParts.Add(result.Text.Trim());
+            scriptParts.Add("");
+        }
+
+        return string.Join("\n", scriptParts);
+    }
 }

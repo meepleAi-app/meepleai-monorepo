@@ -328,6 +328,40 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
     return Results.Json(resp);
 });
 
+app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, RagService rag, AuditService audit, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(req.tenantId, session.User.tenantId, StringComparison.Ordinal))
+    {
+        await audit.LogTenantAccessDeniedAsync(
+            session.User.tenantId,
+            req.tenantId,
+            session.User.id,
+            "explain_endpoint",
+            req.gameId,
+            context.Connection.RemoteIpAddress?.ToString(),
+            context.Request.Headers.UserAgent.ToString(),
+            ct);
+        return Results.Forbid();
+    }
+
+    if (string.IsNullOrWhiteSpace(req.tenantId) || string.IsNullOrWhiteSpace(req.gameId))
+    {
+        return Results.BadRequest(new { error = "tenantId and gameId are required" });
+    }
+
+    logger.LogInformation("Explain request from user {UserId} for game {GameId}: {Topic}",
+        session.User.id, req.gameId, req.topic);
+    var resp = await rag.ExplainAsync(req.tenantId, req.gameId, req.topic, ct);
+    logger.LogInformation("Explain response delivered for game {GameId}, estimated {Minutes} min read",
+        req.gameId, resp.estimatedReadingTimeMinutes);
+    return Results.Json(resp);
+});
+
 app.MapPost("/ingest/pdf", async (HttpContext context, PdfStorageService pdfStorage, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)

@@ -2,6 +2,7 @@ using Api.Infrastructure;
 using Api.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -26,14 +27,39 @@ public class QaEndpointTests
         await using var dbContext = new MeepleAiDbContext(options);
         var ruleService = new RuleSpecService(dbContext);
 
-        // Mock dependencies for RagService (AI-01 not used in this legacy test)
+        // Mock dependencies for RagService (AI-01 mocked to avoid external API calls)
+        var configMock = new Mock<Microsoft.Extensions.Configuration.IConfiguration>();
+        configMock.Setup(c => c["OPENROUTER_API_KEY"]).Returns("test-key");
+
+        var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(new HttpClient());
+
         var embeddingServiceMock = new Mock<EmbeddingService>(
-            Mock.Of<IHttpClientFactory>(),
-            Mock.Of<Microsoft.Extensions.Configuration.IConfiguration>(),
+            httpClientFactoryMock.Object,
+            configMock.Object,
             Mock.Of<ILogger<EmbeddingService>>());
+
+        // Configure mock to return successful embedding result
+        var mockEmbedding = Enumerable.Repeat(0.1f, 1536).ToArray();
+        var embeddingResult = EmbeddingResult.CreateSuccess(new List<float[]> { mockEmbedding });
+        embeddingServiceMock
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(embeddingResult);
+
         var qdrantServiceMock = new Mock<QdrantService>(
             Mock.Of<Microsoft.Extensions.Configuration.IConfiguration>(),
             Mock.Of<ILogger<QdrantService>>());
+
+        // Configure mock to return successful search result with expected answer
+        var searchResults = new List<SearchResultItem>
+        {
+            new() { Score = 0.95f, Text = "Two players.", PdfId = "pdf-demo-chess", Page = 1, ChunkIndex = 0 }
+        };
+        var searchResult = SearchResult.CreateSuccess(searchResults);
+        qdrantServiceMock
+            .Setup(q => q.SearchAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(searchResult);
+
         var ragLoggerMock = Mock.Of<ILogger<RagService>>();
 
         var ragService = new RagService(dbContext, embeddingServiceMock.Object, qdrantServiceMock.Object, ragLoggerMock);
@@ -51,6 +77,6 @@ public class QaEndpointTests
         Assert.Equal("Two players.", response.answer);
         Assert.Single(response.snippets);
         Assert.Equal("Two players.", response.snippets[0].text);
-        Assert.Equal("RuleSpec:v0-demo:Basics", response.snippets[0].source);
+        Assert.Equal("PDF:pdf-demo-chess", response.snippets[0].source);
     }
 }

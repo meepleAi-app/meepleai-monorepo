@@ -156,7 +156,7 @@ public class QdrantService
     /// <summary>
     /// Search for similar chunks with tenant/game filtering
     /// </summary>
-    public async Task<SearchResult> SearchAsync(
+    public virtual async Task<SearchResult> SearchAsync(
         string tenantId,
         string gameId,
         float[] queryEmbedding,

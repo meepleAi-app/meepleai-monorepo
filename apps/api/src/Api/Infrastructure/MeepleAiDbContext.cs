@@ -1,13 +1,20 @@
 using Api.Infrastructure.Entities;
+using Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Infrastructure;
 
 public class MeepleAiDbContext : DbContext
 {
-    public MeepleAiDbContext(DbContextOptions<MeepleAiDbContext> options) : base(options)
+    private readonly ITenantContext? _tenantContext;
+
+    public MeepleAiDbContext(DbContextOptions<MeepleAiDbContext> options, ITenantContext? tenantContext = null) : base(options)
     {
+        _tenantContext = tenantContext;
     }
+
+    // Property for global query filter - evaluated at query time
+    private string? CurrentTenantId => _tenantContext?.TenantId;
 
     public DbSet<TenantEntity> Tenants => Set<TenantEntity>();
     public DbSet<UserEntity> Users => Set<UserEntity>();
@@ -20,6 +27,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ChatLogEntity> ChatLogs => Set<ChatLogEntity>();
     public DbSet<PdfDocumentEntity> PdfDocuments => Set<PdfDocumentEntity>();
     public DbSet<VectorDocumentEntity> VectorDocuments => Set<VectorDocumentEntity>();
+    public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -253,5 +261,38 @@ public class MeepleAiDbContext : DbContext
             entity.HasIndex(e => new { e.TenantId, e.GameId });
             entity.HasIndex(e => e.PdfDocumentId).IsUnique();
         });
+
+        modelBuilder.Entity<AuditLogEntity>(entity =>
+        {
+            entity.ToTable("audit_logs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
+            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.UserId).HasMaxLength(64);
+            entity.Property(e => e.Action).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.Resource).IsRequired().HasMaxLength(128);
+            entity.Property(e => e.ResourceId).HasMaxLength(64);
+            entity.Property(e => e.Result).IsRequired().HasMaxLength(32);
+            entity.Property(e => e.Details).HasMaxLength(1024);
+            entity.Property(e => e.IpAddress).HasMaxLength(64);
+            entity.Property(e => e.UserAgent).HasMaxLength(256);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.HasIndex(e => new { e.TenantId, e.CreatedAt });
+            entity.HasIndex(e => new { e.UserId, e.CreatedAt });
+        });
+
+        // AUTH-02: Global query filters for tenant isolation
+        // Automatically filter all queries by current tenant using the CurrentTenantId property
+        // Note: When CurrentTenantId is null, all data is returned (for migrations, admin operations, etc.)
+        modelBuilder.Entity<UserEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
+        modelBuilder.Entity<UserSessionEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
+        modelBuilder.Entity<GameEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
+        modelBuilder.Entity<RuleSpecEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
+        modelBuilder.Entity<AgentEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
+        modelBuilder.Entity<ChatEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
+        modelBuilder.Entity<ChatLogEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
+        modelBuilder.Entity<PdfDocumentEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
+        modelBuilder.Entity<VectorDocumentEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
+        modelBuilder.Entity<AuditLogEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
     }
 }

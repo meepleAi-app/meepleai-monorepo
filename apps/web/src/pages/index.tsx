@@ -150,6 +150,19 @@ export default function Home() {
         </div>
         <div style={{ display: "flex", gap: 12 }}>
           <Link
+            href="/chat"
+            style={{
+              padding: "8px 16px",
+              background: "#34a853",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: 4,
+              fontSize: 14
+            }}
+          >
+            Chat
+          </Link>
+          <Link
             href="/upload"
             style={{
               padding: "8px 16px",

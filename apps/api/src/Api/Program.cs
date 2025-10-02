@@ -44,6 +44,10 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 // Configure HttpClient for EmbeddingService
 builder.Services.AddHttpClient();
 
+// AUTH-02: Tenant context
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITenantContext, TenantContext>();
+
 // AI-01: Vector search services
 builder.Services.AddSingleton<QdrantService>();
 builder.Services.AddScoped<EmbeddingService>();
@@ -52,6 +56,7 @@ builder.Services.AddScoped<TextChunkingService>();
 builder.Services.AddScoped<RuleSpecService>();
 builder.Services.AddScoped<RagService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<RateLimitService>();
 builder.Services.AddScoped<PdfTextExtractionService>();
 builder.Services.AddScoped<PdfStorageService>();
@@ -290,7 +295,7 @@ app.MapGet("/auth/me", (HttpContext context) =>
     return Results.Unauthorized();
 });
 
-app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService rag, ILogger<Program> logger, CancellationToken ct) =>
+app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService rag, AuditService audit, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -299,8 +304,15 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
 
     if (!string.Equals(req.tenantId, session.User.tenantId, StringComparison.Ordinal))
     {
-        logger.LogWarning("Tenant mismatch: User {UserId} attempted to access tenant {RequestedTenantId}",
-            session.User.id, req.tenantId);
+        await audit.LogTenantAccessDeniedAsync(
+            session.User.tenantId,
+            req.tenantId,
+            session.User.id,
+            "qa_endpoint",
+            req.gameId,
+            context.Connection.RemoteIpAddress?.ToString(),
+            context.Request.Headers.UserAgent.ToString(),
+            ct);
         return Results.Forbid();
     }
 

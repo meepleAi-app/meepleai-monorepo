@@ -439,6 +439,58 @@ app.MapGet("/pdfs/{pdfId}/text", async (string pdfId, HttpContext context, Meepl
     return Results.Json(pdf);
 });
 
+app.MapGet("/games/{gameId}/rulespec", async (string gameId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    logger.LogInformation("Fetching RuleSpec for game {GameId} in tenant {TenantId}", gameId, session.User.tenantId);
+    var ruleSpec = await ruleSpecService.GetRuleSpecAsync(session.User.tenantId, gameId, ct);
+
+    if (ruleSpec == null)
+    {
+        logger.LogInformation("RuleSpec not found for game {GameId}", gameId);
+        return Results.NotFound(new { error = "RuleSpec not found" });
+    }
+
+    return Results.Json(ruleSpec);
+});
+
+app.MapPut("/games/{gameId}/rulespec", async (string gameId, RuleSpec ruleSpec, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        logger.LogWarning("User {UserId} with role {Role} attempted to update RuleSpec without permission", session.User.id, session.User.role);
+        return Results.Forbid();
+    }
+
+    if (!string.Equals(ruleSpec.gameId, gameId, StringComparison.Ordinal))
+    {
+        return Results.BadRequest(new { error = "gameId in URL does not match gameId in RuleSpec" });
+    }
+
+    try
+    {
+        logger.LogInformation("User {UserId} updating RuleSpec for game {GameId}", session.User.id, gameId);
+        var updated = await ruleSpecService.UpdateRuleSpecAsync(session.User.tenantId, gameId, ruleSpec, ct);
+        logger.LogInformation("RuleSpec updated successfully for game {GameId}, version {Version}", gameId, updated.version);
+        return Results.Json(updated);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Failed to update RuleSpec for game {GameId}: {Error}", gameId, ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
 app.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, RuleSpecService rules, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)

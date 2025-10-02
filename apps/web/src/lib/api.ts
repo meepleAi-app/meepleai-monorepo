@@ -21,5 +21,18 @@ export const api = {
     }
     if (!res.ok) throw new Error(`API ${path} ${res.status}`);
     return res.json();
+  },
+  async put<T>(path: string, body: unknown): Promise<T> {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    if (res.status === 401) {
+      throw new Error("Unauthorized");
+    }
+    if (!res.ok) throw new Error(`API ${path} ${res.status}`);
+    return res.json();
   }
 };

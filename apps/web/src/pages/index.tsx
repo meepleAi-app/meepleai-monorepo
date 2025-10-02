@@ -188,6 +188,19 @@ export default function Home() {
           >
             View Logs
           </Link>
+          <Link
+            href="/editor?gameId=demo-chess"
+            style={{
+              padding: "8px 16px",
+              background: "#ea4335",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: 4,
+              fontSize: 14
+            }}
+          >
+            Editor RuleSpec
+          </Link>
         </div>
       </div>
 

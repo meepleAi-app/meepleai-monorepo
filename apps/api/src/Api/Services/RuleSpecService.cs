@@ -90,6 +90,58 @@ public class RuleSpecService
         return ToModel(specEntity);
     }
 
+    public async Task<RuleSpec?> GetRuleSpecAsync(string tenantId, string gameId, CancellationToken cancellationToken = default)
+    {
+        var specEntity = await _dbContext.RuleSpecs
+            .Include(r => r.Atoms)
+            .Where(r => r.TenantId == tenantId && r.GameId == gameId)
+            .OrderByDescending(r => r.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return specEntity is null ? null : ToModel(specEntity);
+    }
+
+    public async Task<RuleSpec> UpdateRuleSpecAsync(string tenantId, string gameId, RuleSpec ruleSpec, CancellationToken cancellationToken = default)
+    {
+        // Ensure game exists
+        var game = await _dbContext.Games
+            .FirstOrDefaultAsync(g => g.Id == gameId && g.TenantId == tenantId, cancellationToken);
+
+        if (game is null)
+        {
+            throw new InvalidOperationException($"Game {gameId} not found for tenant {tenantId}");
+        }
+
+        // Create new RuleSpec version
+        var specEntity = new RuleSpecEntity
+        {
+            TenantId = tenantId,
+            GameId = gameId,
+            Version = ruleSpec.version,
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        int sortOrder = 1;
+        foreach (var atom in ruleSpec.rules)
+        {
+            specEntity.Atoms.Add(new RuleAtomEntity
+            {
+                RuleSpec = specEntity,
+                Key = atom.id,
+                Text = atom.text,
+                Section = atom.section,
+                PageNumber = int.TryParse(atom.page, out var page) ? page : null,
+                LineNumber = int.TryParse(atom.line, out var line) ? line : null,
+                SortOrder = sortOrder++,
+            });
+        }
+
+        _dbContext.RuleSpecs.Add(specEntity);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return ToModel(specEntity);
+    }
+
     private static RuleSpec ToModel(RuleSpecEntity entity)
     {
         var atoms = entity.Atoms

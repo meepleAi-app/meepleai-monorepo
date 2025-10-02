@@ -41,6 +41,14 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
     return ConnectionMultiplexer.Connect(configuration);
 });
 
+// Configure HttpClient for EmbeddingService
+builder.Services.AddHttpClient();
+
+// AI-01: Vector search services
+builder.Services.AddSingleton<QdrantService>();
+builder.Services.AddScoped<EmbeddingService>();
+builder.Services.AddScoped<TextChunkingService>();
+
 builder.Services.AddScoped<RuleSpecService>();
 builder.Services.AddScoped<RagService>();
 builder.Services.AddScoped<AuthService>();
@@ -73,6 +81,10 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
     db.Database.Migrate();
+
+    // AI-01: Initialize Qdrant collection
+    var qdrant = scope.ServiceProvider.GetRequiredService<QdrantService>();
+    await qdrant.EnsureCollectionExistsAsync();
 }
 
 app.UseCors("web");
@@ -219,27 +231,41 @@ app.MapPost("/auth/register", async (RegisterPayload payload, HttpContext contex
     }
 });
 
-app.MapPost("/auth/login", async (LoginPayload payload, HttpContext context, AuthService auth, ILogger<Program> logger, CancellationToken ct) =>
+app.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, AuthService auth, ILogger<Program> logger, CancellationToken ct) =>
 {
-    var command = new LoginCommand(
-        payload.tenantId,
-        payload.email,
-        payload.password,
-        context.Connection.RemoteIpAddress?.ToString(),
-        context.Request.Headers.UserAgent.ToString());
-
-    logger.LogInformation("Login attempt for {Email} in tenant {TenantId}", payload.email, payload.tenantId);
-    var result = await auth.LoginAsync(command, ct);
-    if (result == null)
+    if (payload == null)
     {
-        logger.LogWarning("Login failed for {Email} in tenant {TenantId}", payload.email, payload.tenantId);
-        RemoveSessionCookie(context);
-        return Results.Unauthorized();
+        logger.LogWarning("Login failed: payload is null");
+        return Results.BadRequest(new { error = "Invalid request payload" });
     }
 
-    WriteSessionCookie(context, result.SessionToken, result.ExpiresAt);
-    logger.LogInformation("User {UserId} logged in successfully", result.User.id);
-    return Results.Json(new AuthResponse(result.User, result.ExpiresAt));
+    try
+    {
+        var command = new LoginCommand(
+            payload.tenantId,
+            payload.email,
+            payload.password,
+            context.Connection.RemoteIpAddress?.ToString(),
+            context.Request.Headers.UserAgent.ToString());
+
+        logger.LogInformation("Login attempt for {Email} in tenant {TenantId}", payload.email, payload.tenantId);
+        var result = await auth.LoginAsync(command, ct);
+        if (result == null)
+        {
+            logger.LogWarning("Login failed for {Email} in tenant {TenantId}", payload.email, payload.tenantId);
+            RemoveSessionCookie(context);
+            return Results.Unauthorized();
+        }
+
+        WriteSessionCookie(context, result.SessionToken, result.ExpiresAt);
+        logger.LogInformation("User {UserId} logged in successfully", result.User.id);
+        return Results.Json(new AuthResponse(result.User, result.ExpiresAt));
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Login endpoint error");
+        return Results.Problem(detail: ex.Message, statusCode: 500);
+    }
 });
 
 app.MapPost("/auth/logout", async (HttpContext context, AuthService auth, CancellationToken ct) =>

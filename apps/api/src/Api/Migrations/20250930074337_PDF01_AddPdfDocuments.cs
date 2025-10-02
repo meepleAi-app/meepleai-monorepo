@@ -50,11 +50,6 @@ namespace Api.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_user_sessions_UserId",
-                table: "user_sessions",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_pdf_documents_GameId",
                 table: "pdf_documents",
                 column: "GameId");
@@ -75,10 +70,6 @@ namespace Api.Migrations
         {
             migrationBuilder.DropTable(
                 name: "pdf_documents");
-
-            migrationBuilder.DropIndex(
-                name: "IX_user_sessions_UserId",
-                table: "user_sessions");
         }
     }
 }

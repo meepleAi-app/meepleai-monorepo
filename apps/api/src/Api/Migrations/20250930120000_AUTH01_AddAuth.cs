@@ -68,6 +68,11 @@ namespace Api.Migrations
                 table: "user_sessions",
                 column: "TokenHash",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_user_sessions_UserId",
+                table: "user_sessions",
+                column: "UserId");
         }
 
         /// <inheritdoc />

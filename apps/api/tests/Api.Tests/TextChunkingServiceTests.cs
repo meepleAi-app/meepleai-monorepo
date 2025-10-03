@@ -186,4 +186,47 @@ public class TextChunkingServiceTests
                 $"Chunk {i} length {chunkLength} should be around {chunkSize}");
         }
     }
+
+    [Fact]
+    public void ChunkText_WithNoSentenceBoundary_FallsBackToWordBoundary()
+    {
+        // Text with no sentence terminators but with spaces (word boundaries)
+        var text = "This is a very long text without any sentence terminators but with many words and spaces";
+
+        var result = _service.ChunkText(text, chunkSize: 30, overlap: 5);
+
+        // Should break at word boundaries since no sentence boundaries exist
+        Assert.True(result.Count > 1);
+        // Verify that chunks were created (word boundary logic was used)
+        Assert.All(result, chunk => Assert.False(string.IsNullOrWhiteSpace(chunk.Text)));
+    }
+
+    [Fact]
+    public void ChunkText_WithSentenceTerminatorNotFollowedBySpace_UsesWordBoundary()
+    {
+        // Text with period not followed by space (e.g., abbreviations)
+        var text = "The Dr.Smith went to the store and bought many items for his family";
+
+        var result = _service.ChunkText(text, chunkSize: 25, overlap: 5);
+
+        // Should not break at "Dr." since it's not followed by space
+        Assert.True(result.Count > 1);
+        Assert.All(result, chunk => Assert.False(string.IsNullOrWhiteSpace(chunk.Text)));
+    }
+
+    [Fact]
+    public void ChunkText_NullText_ReturnsEmptyList()
+    {
+        var result = _service.ChunkText(null!);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void PrepareForEmbedding_WithNullText_ReturnsEmptyList()
+    {
+        var result = _service.PrepareForEmbedding(null!);
+
+        Assert.Empty(result);
+    }
 }

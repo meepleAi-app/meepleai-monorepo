@@ -7,7 +7,7 @@ namespace Api.Services;
 /// <summary>
 /// Service for generating text embeddings via OpenRouter API
 /// </summary>
-public class EmbeddingService
+public class EmbeddingService : IEmbeddingService
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<EmbeddingService> _logger;

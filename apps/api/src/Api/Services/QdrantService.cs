@@ -6,7 +6,7 @@ namespace Api.Services;
 /// <summary>
 /// Service for vector storage and retrieval using Qdrant
 /// </summary>
-public class QdrantService
+public class QdrantService : IQdrantService
 {
     private readonly QdrantClient _client;
     private readonly ILogger<QdrantService> _logger;

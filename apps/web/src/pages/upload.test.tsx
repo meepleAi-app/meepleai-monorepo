@@ -26,14 +26,11 @@ describe('Upload page', () => {
     expect(link).toHaveAttribute('href', '/');
   });
 
-  it('shows error when submitting without file', async () => {
-    const user = userEvent.setup();
+  it('disables upload button when no file selected', async () => {
     render(<UploadPage />);
 
     const uploadButton = screen.getByRole('button', { name: /upload pdf/i });
-    await user.click(uploadButton);
-
-    expect(screen.getByText('Please select a PDF file')).toBeInTheDocument();
+    expect(uploadButton).toBeDisabled();
   });
 
   it('shows error when game ID is empty', async () => {
@@ -116,10 +113,17 @@ describe('Upload page', () => {
   });
 
   it('disables upload button while uploading', async () => {
-    mockedFetch.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve({
+    // First call: delayed upload response
+    mockedFetch.mockImplementationOnce(() => new Promise((resolve) => setTimeout(() => resolve({
       ok: true,
       json: async () => ({ documentId: 'doc123' }),
     } as Response), 100)));
+
+    // Second call: loadPdfs after upload
+    mockedFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ pdfs: [] }),
+    } as Response);
 
     const user = userEvent.setup();
     render(<UploadPage />);
@@ -131,11 +135,15 @@ describe('Upload page', () => {
     const uploadButton = screen.getByRole('button', { name: /upload pdf/i });
     await user.click(uploadButton);
 
-    expect(uploadButton).toBeDisabled();
-    expect(screen.getByText(/uploading/i)).toBeInTheDocument();
-
+    // Button should be disabled and show uploading text
     await waitFor(() => {
-      expect(uploadButton).not.toBeDisabled();
+      expect(uploadButton).toBeDisabled();
+      expect(screen.getByText(/uploading/i)).toBeInTheDocument();
+    });
+
+    // After upload completes, success message appears
+    await waitFor(() => {
+      expect(screen.getByText(/pdf uploaded successfully/i)).toBeInTheDocument();
     });
   });
 
@@ -158,8 +166,8 @@ describe('Upload page', () => {
     const user = userEvent.setup();
     render(<UploadPage />);
 
-    const loadButton = screen.getByRole('button', { name: /load pdfs/i });
-    await user.click(loadButton);
+    const refreshButton = screen.getByRole('button', { name: /refresh/i });
+    await user.click(refreshButton);
 
     await waitFor(() => {
       expect(screen.getByText('rulebook1.pdf')).toBeInTheDocument();
@@ -199,8 +207,8 @@ describe('Upload page', () => {
     const user = userEvent.setup();
     render(<UploadPage />);
 
-    const loadButton = screen.getByRole('button', { name: /load pdfs/i });
-    await user.click(loadButton);
+    const refreshButton = screen.getByRole('button', { name: /refresh/i });
+    await user.click(refreshButton);
 
     await waitFor(() => {
       expect(screen.getByText(/500 B/i)).toBeInTheDocument();
@@ -218,11 +226,11 @@ describe('Upload page', () => {
     const user = userEvent.setup();
     render(<UploadPage />);
 
-    const loadButton = screen.getByRole('button', { name: /load pdfs/i });
-    await user.click(loadButton);
+    const refreshButton = screen.getByRole('button', { name: /refresh/i });
+    await user.click(refreshButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/no pdfs found/i)).toBeInTheDocument();
+      expect(screen.getByText(/no pdfs uploaded yet/i)).toBeInTheDocument();
     });
   });
 
@@ -266,8 +274,8 @@ describe('Upload page', () => {
     const gameIdInput = screen.getByLabelText(/game id/i);
     await user.clear(gameIdInput);
 
-    const loadButton = screen.getByRole('button', { name: /load pdfs/i });
-    await user.click(loadButton);
+    const refreshButton = screen.getByRole('button', { name: /refresh/i });
+    await user.click(refreshButton);
 
     // No fetch should be called
     expect(mockedFetch).not.toHaveBeenCalled();

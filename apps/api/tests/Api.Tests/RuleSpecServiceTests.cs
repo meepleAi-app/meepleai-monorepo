@@ -248,4 +248,247 @@ public class RuleSpecServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal("v2-new", result.version); // Should return the newer version
     }
+
+    [Fact]
+    public async Task UpdateRuleSpecAsync_ThrowsException_WhenGameNotExists()
+    {
+        // Arrange
+        var tenantId = "test-tenant";
+        var gameId = "nonexistent-game";
+        var ruleSpec = new Api.Models.RuleSpec(
+            gameId,
+            "v1",
+            DateTime.UtcNow,
+            new List<Api.Models.RuleAtom>()
+        );
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.UpdateRuleSpecAsync(tenantId, gameId, ruleSpec)
+        );
+        Assert.Contains("not found", exception.Message);
+    }
+
+    [Fact]
+    public async Task UpdateRuleSpecAsync_CreatesNewVersion_WhenGameExists()
+    {
+        // Arrange
+        var tenantId = "test-tenant";
+        var gameId = "test-game";
+
+        var tenant = new TenantEntity
+        {
+            Id = tenantId,
+            Name = "Test Tenant",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Tenants.Add(tenant);
+
+        var game = new GameEntity
+        {
+            Id = gameId,
+            TenantId = tenantId,
+            Name = "Test Game",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Games.Add(game);
+        await _dbContext.SaveChangesAsync();
+
+        var ruleSpec = new Api.Models.RuleSpec(
+            gameId,
+            "v2-updated",
+            DateTime.UtcNow,
+            new List<Api.Models.RuleAtom>
+            {
+                new Api.Models.RuleAtom("rule1", "Test rule 1", "Section A", "1", "1"),
+                new Api.Models.RuleAtom("rule2", "Test rule 2", "Section B", "2", "3")
+            }
+        );
+
+        // Act
+        var result = await _service.UpdateRuleSpecAsync(tenantId, gameId, ruleSpec);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("v2-updated", result.version);
+        Assert.Equal(2, result.rules.Count);
+        Assert.Equal("rule1", result.rules[0].id);
+        Assert.Equal("Test rule 1", result.rules[0].text);
+    }
+
+    [Fact]
+    public async Task UpdateRuleSpecAsync_StoresRulesInCorrectOrder()
+    {
+        // Arrange
+        var tenantId = "test-tenant";
+        var gameId = "test-game";
+
+        var tenant = new TenantEntity
+        {
+            Id = tenantId,
+            Name = "Test Tenant",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Tenants.Add(tenant);
+
+        var game = new GameEntity
+        {
+            Id = gameId,
+            TenantId = tenantId,
+            Name = "Test Game",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Games.Add(game);
+        await _dbContext.SaveChangesAsync();
+
+        var ruleSpec = new Api.Models.RuleSpec(
+            gameId,
+            "v1",
+            DateTime.UtcNow,
+            new List<Api.Models.RuleAtom>
+            {
+                new Api.Models.RuleAtom("r3", "Third", null, null, null),
+                new Api.Models.RuleAtom("r1", "First", null, null, null),
+                new Api.Models.RuleAtom("r2", "Second", null, null, null)
+            }
+        );
+
+        // Act
+        var result = await _service.UpdateRuleSpecAsync(tenantId, gameId, ruleSpec);
+
+        // Assert - should maintain order from input
+        Assert.Equal("r3", result.rules[0].id);
+        Assert.Equal("r1", result.rules[1].id);
+        Assert.Equal("r2", result.rules[2].id);
+    }
+
+    [Fact]
+    public async Task UpdateRuleSpecAsync_ParsesPageAndLineNumbers()
+    {
+        // Arrange
+        var tenantId = "test-tenant";
+        var gameId = "test-game";
+
+        var tenant = new TenantEntity
+        {
+            Id = tenantId,
+            Name = "Test Tenant",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Tenants.Add(tenant);
+
+        var game = new GameEntity
+        {
+            Id = gameId,
+            TenantId = tenantId,
+            Name = "Test Game",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Games.Add(game);
+        await _dbContext.SaveChangesAsync();
+
+        var ruleSpec = new Api.Models.RuleSpec(
+            gameId,
+            "v1",
+            DateTime.UtcNow,
+            new List<Api.Models.RuleAtom>
+            {
+                new Api.Models.RuleAtom("r1", "Rule with numbers", "Section", "42", "15")
+            }
+        );
+
+        // Act
+        var result = await _service.UpdateRuleSpecAsync(tenantId, gameId, ruleSpec);
+
+        // Assert
+        Assert.Equal("42", result.rules[0].page);
+        Assert.Equal("15", result.rules[0].line);
+    }
+
+    [Fact]
+    public async Task UpdateRuleSpecAsync_HandlesNullPageAndLine()
+    {
+        // Arrange
+        var tenantId = "test-tenant";
+        var gameId = "test-game";
+
+        var tenant = new TenantEntity
+        {
+            Id = tenantId,
+            Name = "Test Tenant",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Tenants.Add(tenant);
+
+        var game = new GameEntity
+        {
+            Id = gameId,
+            TenantId = tenantId,
+            Name = "Test Game",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Games.Add(game);
+        await _dbContext.SaveChangesAsync();
+
+        var ruleSpec = new Api.Models.RuleSpec(
+            gameId,
+            "v1",
+            DateTime.UtcNow,
+            new List<Api.Models.RuleAtom>
+            {
+                new Api.Models.RuleAtom("r1", "Rule without location", null, null, null)
+            }
+        );
+
+        // Act
+        var result = await _service.UpdateRuleSpecAsync(tenantId, gameId, ruleSpec);
+
+        // Assert
+        Assert.Null(result.rules[0].section);
+        Assert.Null(result.rules[0].page);
+        Assert.Null(result.rules[0].line);
+    }
+
+    [Fact]
+    public async Task UpdateRuleSpecAsync_HandlesInvalidPageAndLineNumbers()
+    {
+        // Arrange
+        var tenantId = "test-tenant";
+        var gameId = "test-game";
+
+        var tenant = new TenantEntity
+        {
+            Id = tenantId,
+            Name = "Test Tenant",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Tenants.Add(tenant);
+
+        var game = new GameEntity
+        {
+            Id = gameId,
+            TenantId = tenantId,
+            Name = "Test Game",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.Games.Add(game);
+        await _dbContext.SaveChangesAsync();
+
+        var ruleSpec = new Api.Models.RuleSpec(
+            gameId,
+            "v1",
+            DateTime.UtcNow,
+            new List<Api.Models.RuleAtom>
+            {
+                new Api.Models.RuleAtom("r1", "Rule with invalid numbers", "Section", "not-a-number", "also-not-a-number")
+            }
+        );
+
+        // Act
+        var result = await _service.UpdateRuleSpecAsync(tenantId, gameId, ruleSpec);
+
+        // Assert - should handle gracefully and store as null
+        Assert.Null(result.rules[0].page);
+        Assert.Null(result.rules[0].line);
+    }
 }

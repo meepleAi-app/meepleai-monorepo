@@ -48,9 +48,12 @@ builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 
+// Background task execution
+builder.Services.AddSingleton<IBackgroundTaskService, BackgroundTaskService>();
+
 // AI-01: Vector search services
-builder.Services.AddSingleton<QdrantService>();
-builder.Services.AddScoped<EmbeddingService>();
+builder.Services.AddSingleton<IQdrantService, QdrantService>();
+builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
 builder.Services.AddScoped<TextChunkingService>();
 
 builder.Services.AddScoped<RuleSpecService>();
@@ -322,7 +325,7 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString(),
             ct);
-        return Results.Forbid();
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
     if (string.IsNullOrWhiteSpace(req.tenantId) || string.IsNullOrWhiteSpace(req.gameId))
@@ -355,7 +358,7 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString(),
             ct);
-        return Results.Forbid();
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
     if (string.IsNullOrWhiteSpace(req.tenantId) || string.IsNullOrWhiteSpace(req.gameId))
@@ -381,7 +384,7 @@ app.MapPost("/ingest/pdf", async (HttpContext context, PdfStorageService pdfStor
     if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
         !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
     {
-        return Results.Forbid();
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
     var form = await context.Request.ReadFormAsync(ct);
@@ -478,7 +481,7 @@ app.MapPut("/games/{gameId}/rulespec", async (string gameId, RuleSpec ruleSpec, 
         !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         logger.LogWarning("User {UserId} with role {Role} attempted to update RuleSpec without permission", session.User.id, session.User.role);
-        return Results.Forbid();
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
     if (!string.Equals(ruleSpec.gameId, gameId, StringComparison.Ordinal))
@@ -509,12 +512,12 @@ app.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, Rule
 
     if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
     {
-        return Results.Forbid();
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
     if (!string.Equals(session.User.tenantId, request.tenantId, StringComparison.Ordinal))
     {
-        return Results.Forbid();
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
     if (string.IsNullOrWhiteSpace(request.tenantId) || string.IsNullOrWhiteSpace(request.gameId))

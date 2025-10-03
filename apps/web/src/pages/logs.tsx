@@ -103,7 +103,7 @@ export default function LogsPage() {
             background: "#f8f9fa",
             borderBottom: "1px solid #dadce0",
             display: "grid",
-            gridTemplateColumns: "180px 80px 100px 100px 1fr",
+            gridTemplateColumns: "180px 80px 100px 100px 100px 1fr",
             gap: 16,
             fontSize: 12,
             fontWeight: 600,
@@ -115,6 +115,7 @@ export default function LogsPage() {
           <div>Level</div>
           <div>Request ID</div>
           <div>User ID</div>
+          <div>Tenant ID</div>
           <div>Message</div>
         </div>
 
@@ -134,7 +135,7 @@ export default function LogsPage() {
                 padding: 16,
                 borderBottom: index < filteredLogs.length - 1 ? "1px solid #f0f0f0" : "none",
                 display: "grid",
-                gridTemplateColumns: "180px 80px 100px 100px 1fr",
+                gridTemplateColumns: "180px 80px 100px 100px 100px 1fr",
                 gap: 16,
                 fontSize: 13,
                 alignItems: "start"
@@ -149,6 +150,9 @@ export default function LogsPage() {
               </div>
               <div style={{ fontSize: 11, fontFamily: "monospace", color: "#5f6368" }}>
                 {log.userId || "-"}
+              </div>
+              <div style={{ fontSize: 11, fontFamily: "monospace", color: "#5f6368" }}>
+                {log.tenantId || "-"}
               </div>
               <div>{log.message}</div>
             </div>

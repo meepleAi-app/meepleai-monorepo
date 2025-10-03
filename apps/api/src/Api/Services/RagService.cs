@@ -7,14 +7,14 @@ namespace Api.Services;
 public class RagService
 {
     private readonly MeepleAiDbContext _dbContext;
-    private readonly EmbeddingService _embeddingService;
-    private readonly QdrantService _qdrantService;
+    private readonly IEmbeddingService _embeddingService;
+    private readonly IQdrantService _qdrantService;
     private readonly ILogger<RagService> _logger;
 
     public RagService(
         MeepleAiDbContext dbContext,
-        EmbeddingService embeddingService,
-        QdrantService qdrantService,
+        IEmbeddingService embeddingService,
+        IQdrantService qdrantService,
         ILogger<RagService> logger)
     {
         _dbContext = dbContext;

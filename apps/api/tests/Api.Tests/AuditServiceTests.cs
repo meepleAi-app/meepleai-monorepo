@@ -119,4 +119,64 @@ public class AuditServiceTests : IDisposable
         Assert.Equal("Denied", logs[0].Result);
         Assert.Contains(requestedTenantId, logs[0].Details);
     }
+
+    [Fact]
+    public async Task LogAsync_WithIpAddressAndUserAgent_SavesMetadata()
+    {
+        // Arrange
+        var ipAddress = "192.168.1.1";
+        var userAgent = "Mozilla/5.0";
+
+        // Act
+        await _service.LogAsync(
+            "tenant",
+            "user",
+            "action",
+            "resource",
+            "id",
+            "Success",
+            "details",
+            ipAddress,
+            userAgent);
+
+        // Assert
+        var log = await _dbContext.AuditLogs.FirstAsync();
+        Assert.Equal(ipAddress, log.IpAddress);
+        Assert.Equal(userAgent, log.UserAgent);
+    }
+
+    [Fact]
+    public async Task LogTenantAccessDeniedAsync_WithIpAddressAndUserAgent_SavesMetadata()
+    {
+        // Arrange
+        var ipAddress = "10.0.0.1";
+        var userAgent = "Chrome/91.0";
+
+        // Act
+        await _service.LogTenantAccessDeniedAsync(
+            "tenant-1",
+            "tenant-2",
+            "user-123",
+            "Game",
+            "game-456",
+            ipAddress,
+            userAgent);
+
+        // Assert
+        var log = await _dbContext.AuditLogs.FirstAsync();
+        Assert.Equal(ipAddress, log.IpAddress);
+        Assert.Equal(userAgent, log.UserAgent);
+        Assert.Equal("game-456", log.ResourceId);
+    }
+
+    [Fact]
+    public async Task LogAsync_HandlesNullUserId()
+    {
+        // Act
+        await _service.LogAsync("tenant", null, "action", "resource", "id", "Success");
+
+        // Assert
+        var log = await _dbContext.AuditLogs.FirstAsync();
+        Assert.Null(log.UserId);
+    }
 }

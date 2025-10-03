@@ -65,21 +65,17 @@ describe('Home page', () => {
     });
   });
 
-  it('shows error when asking without login', async () => {
+  it('disables ask button when not logged in', async () => {
     mockedApi.get.mockResolvedValue(null);
-    const user = userEvent.setup();
     render(<Home />);
 
+    // Wait for component to fully load
     await waitFor(() => {
       expect(screen.getByText('Nessun utente connesso.')).toBeInTheDocument();
     });
 
     const askButton = screen.getByRole('button', { name: /chiedi/i });
-    await user.click(askButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/devi effettuare l'accesso/i)).toBeInTheDocument();
-    });
+    expect(askButton).toBeDisabled();
   });
 
   it('can ask question when logged in', async () => {

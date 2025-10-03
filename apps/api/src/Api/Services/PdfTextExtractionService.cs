@@ -37,7 +37,7 @@ public class PdfTextExtractionService
 
         try
         {
-            var rawText = await Task.Run(() => ExtractRawText(filePath), ct);
+            var (rawText, pageCount) = await Task.Run(() => ExtractRawText(filePath), ct);
 
             if (string.IsNullOrWhiteSpace(rawText))
             {
@@ -46,13 +46,13 @@ public class PdfTextExtractionService
             }
 
             var normalizedText = NormalizeText(rawText);
-            var stats = CalculateStats(rawText, normalizedText);
+            var charCount = normalizedText.Length;
 
             _logger.LogInformation(
                 "Extracted text from PDF: {FilePath}, Pages: {PageCount}, Characters: {CharCount}",
-                filePath, stats.PageCount, stats.CharacterCount);
+                filePath, pageCount, charCount);
 
-            return PdfTextExtractionResult.CreateSuccess(normalizedText, stats.PageCount, stats.CharacterCount);
+            return PdfTextExtractionResult.CreateSuccess(normalizedText, pageCount, charCount);
         }
         catch (Exception ex)
         {
@@ -64,14 +64,16 @@ public class PdfTextExtractionService
     /// <summary>
     /// Extracts raw text from PDF using Docnet.Core
     /// </summary>
-    private string ExtractRawText(string filePath)
+    private (string Text, int PageCount) ExtractRawText(string filePath)
     {
         var textBuilder = new StringBuilder();
 
         using var library = DocLib.Instance;
         using var docReader = library.GetDocReader(filePath, new PageDimensions(1080, 1920));
 
-        for (int i = 0; i < docReader.GetPageCount(); i++)
+        var pageCount = docReader.GetPageCount();
+
+        for (int i = 0; i < pageCount; i++)
         {
             using var pageReader = docReader.GetPageReader(i);
             var pageText = pageReader.GetText();
@@ -83,7 +85,7 @@ public class PdfTextExtractionService
             }
         }
 
-        return textBuilder.ToString();
+        return (textBuilder.ToString(), pageCount);
     }
 
     /// <summary>
@@ -120,19 +122,6 @@ public class PdfTextExtractionService
         return text.Trim();
     }
 
-    /// <summary>
-    /// Calculates statistics about the extracted text
-    /// </summary>
-    private (int PageCount, int CharacterCount) CalculateStats(string rawText, string normalizedText)
-    {
-        // Estimate page count from raw text (Docnet.Core gives us raw pages)
-        var pageCount = rawText.Split(new[] { "\n\n" }, StringSplitOptions.RemoveEmptyEntries).Length;
-        pageCount = Math.Max(1, pageCount); // At least 1 page
-
-        var charCount = normalizedText.Length;
-
-        return (pageCount, charCount);
-    }
 }
 
 /// <summary>

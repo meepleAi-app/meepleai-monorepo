@@ -10,6 +10,7 @@ public class PdfStorageService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<PdfStorageService> _logger;
     private readonly PdfTextExtractionService _textExtractionService;
+    private readonly IBackgroundTaskService _backgroundTaskService;
     private readonly string _storageBasePath;
     private const long MaxFileSizeBytes = 50 * 1024 * 1024; // 50 MB
     private static readonly HashSet<string> AllowedContentTypes = new()
@@ -22,12 +23,14 @@ public class PdfStorageService
         IServiceScopeFactory scopeFactory,
         IConfiguration config,
         ILogger<PdfStorageService> logger,
-        PdfTextExtractionService textExtractionService)
+        PdfTextExtractionService textExtractionService,
+        IBackgroundTaskService backgroundTaskService)
     {
         _db = db;
         _scopeFactory = scopeFactory;
         _logger = logger;
         _textExtractionService = textExtractionService;
+        _backgroundTaskService = backgroundTaskService;
         _storageBasePath = config["PDF_STORAGE_PATH"] ?? Path.Combine(Directory.GetCurrentDirectory(), "pdf_uploads");
 
         // Ensure storage directory exists
@@ -116,7 +119,7 @@ public class PdfStorageService
             _logger.LogInformation("Created PDF document record {PdfId} for game {GameId}", fileId, gameId);
 
             // Extract text asynchronously (PDF-02)
-            _ = Task.Run(async () => await ExtractTextAsync(fileId, filePath), CancellationToken.None);
+            _backgroundTaskService.Execute(() => ExtractTextAsync(fileId, filePath));
 
             return new PdfUploadResult(true, "PDF uploaded successfully", new PdfDocumentDto
             {
@@ -194,7 +197,7 @@ public class PdfStorageService
                 await db.SaveChangesAsync();
 
                 // AI-01: Trigger vector indexing in background
-                _ = Task.Run(async () => await IndexVectorsAsync(pdfDoc.TenantId, pdfDoc.GameId, pdfId, result.ExtractedText), CancellationToken.None);
+                _backgroundTaskService.Execute(() => IndexVectorsAsync(pdfDoc.TenantId, pdfDoc.GameId, pdfId, result.ExtractedText));
             }
             else
             {

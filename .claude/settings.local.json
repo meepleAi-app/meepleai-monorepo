@@ -1,6 +1,9 @@
 {
   "permissions": {
     "allow": [
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(pnpm install:*)",
       "Bash(tree:*)",
       "Bash(cat:*)",
       "Bash(gh issue list:*)",
@@ -43,6 +46,7 @@
       "Bash(dotnet add package:*)",
       "Bash(gh issue close:*)",
       "Bash(Header2: Value2\"\n- Extracts images with dimensions and binary data\n- JSON serialization of tables/diagrams in database\n- Service registered in DI container\n\n**Acceptance Criteria Met:**\n✅ Tables extracted from PDFs\n✅ Rows converted to atomic rules\n✅ Diagram/image detection and extraction\n✅ Integration tests ready for 2+ games\n\nCloses #17\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+
     ],
     "deny": [],
     "ask": []

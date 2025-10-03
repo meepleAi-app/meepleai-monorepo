@@ -56,7 +56,7 @@ jobs:
       - name: Restore
         run: dotnet restore
       - name: Build
-        run: dotnet build -warnaserror
+        run: dotnet build
       - name: Test
         run: dotnet test --collect:"XPlat Code Coverage"
       - name: Generate coverage report

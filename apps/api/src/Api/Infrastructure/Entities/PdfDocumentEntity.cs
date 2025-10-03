@@ -21,6 +21,14 @@ public class PdfDocumentEntity
     public int? CharacterCount { get; set; }
     public string? ProcessingError { get; set; }
 
+    // PDF-03: Structured data extraction fields
+    public string? ExtractedTables { get; set; } // JSON array of tables
+    public string? ExtractedDiagrams { get; set; } // JSON array of diagram metadata
+    public string? AtomicRules { get; set; } // JSON array of atomic rules from tables
+    public int? TableCount { get; set; }
+    public int? DiagramCount { get; set; }
+    public int? AtomicRuleCount { get; set; }
+
     public TenantEntity Tenant { get; set; } = default!;
     public GameEntity Game { get; set; } = default!;
     public UserEntity UploadedBy { get; set; } = default!;

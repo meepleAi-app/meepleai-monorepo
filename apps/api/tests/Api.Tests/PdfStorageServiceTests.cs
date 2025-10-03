@@ -91,6 +91,9 @@ public class PdfStorageServiceTests : IDisposable
         var mockLogger = new Mock<ILogger<PdfTextExtractionService>>();
         var textExtractionServiceMock = new Mock<PdfTextExtractionService>(mockLogger.Object);
 
+        var tableExtractionLoggerMock = new Mock<ILogger<PdfTableExtractionService>>();
+        var tableExtractionServiceMock = new Mock<PdfTableExtractionService>(tableExtractionLoggerMock.Object);
+
         // Setup background task service that doesn't execute tasks (for unit tests)
         var backgroundTaskServiceMock = new Mock<IBackgroundTaskService>();
         backgroundTaskServiceMock.Setup(s => s.Execute(It.IsAny<Func<Task>>()));
@@ -127,6 +130,7 @@ public class PdfStorageServiceTests : IDisposable
             configMock.Object,
             loggerMock.Object,
             textExtractionServiceMock.Object,
+            tableExtractionServiceMock.Object,
             backgroundTaskServiceMock.Object);
 
         return (service, dbContext);
@@ -762,6 +766,10 @@ public class PdfStorageServiceTests : IDisposable
         var extractionLoggerMock = new Mock<ILogger<PdfTextExtractionService>>();
         var textExtractionService = new PdfTextExtractionService(extractionLoggerMock.Object);
 
+        // Create real PdfTableExtractionService
+        var tableExtractionLoggerMock = new Mock<ILogger<PdfTableExtractionService>>();
+        var tableExtractionService = new PdfTableExtractionService(tableExtractionLoggerMock.Object);
+
         // Create synchronous background task service for testing
         var backgroundTaskService = new SynchronousBackgroundTaskService();
 
@@ -771,6 +779,7 @@ public class PdfStorageServiceTests : IDisposable
             configMock.Object,
             loggerMock.Object,
             textExtractionService,
+            tableExtractionService,
             backgroundTaskService);
 
         return (service, dbContext);
@@ -926,6 +935,10 @@ public class PdfStorageServiceTests : IDisposable
             .Setup(s => s.ExtractTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(PdfTextExtractionResult.CreateFailure("Test error: File not found"));
 
+        // Mock PdfTableExtractionService
+        var tableExtractionLoggerMock = new Mock<ILogger<PdfTableExtractionService>>();
+        var tableExtractionServiceMock = new Mock<PdfTableExtractionService>(tableExtractionLoggerMock.Object);
+
         // Setup scope factory
         scopeFactoryMock.Setup(f => f.CreateScope()).Returns(() =>
         {
@@ -953,6 +966,7 @@ public class PdfStorageServiceTests : IDisposable
             configMock.Object,
             loggerMock.Object,
             textExtractionServiceMock.Object,
+            tableExtractionServiceMock.Object,
             backgroundTaskService);
 
         var tenantId = "tenant1";

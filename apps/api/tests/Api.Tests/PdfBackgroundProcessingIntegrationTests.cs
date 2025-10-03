@@ -81,12 +81,17 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
         var backgroundLoggerMock = new Mock<ILogger<BackgroundTaskService>>();
         var backgroundTaskService = new BackgroundTaskService(backgroundLoggerMock.Object);
 
+        // Use real PdfTableExtractionService
+        var tableExtractionLoggerMock = new Mock<ILogger<PdfTableExtractionService>>();
+        var tableExtractionService = new PdfTableExtractionService(tableExtractionLoggerMock.Object);
+
         return new PdfStorageService(
             DbContext,
             scopeFactoryMock.Object,
             configMock.Object,
             loggerMock.Object,
             textExtractionService,
+            tableExtractionService,
             backgroundTaskService);
     }
 

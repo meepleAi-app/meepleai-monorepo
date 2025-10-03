@@ -10,6 +10,7 @@ public class PdfStorageService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<PdfStorageService> _logger;
     private readonly PdfTextExtractionService _textExtractionService;
+    private readonly PdfTableExtractionService _tableExtractionService;
     private readonly IBackgroundTaskService _backgroundTaskService;
     private readonly string _storageBasePath;
     private const long MaxFileSizeBytes = 50 * 1024 * 1024; // 50 MB
@@ -24,12 +25,14 @@ public class PdfStorageService
         IConfiguration config,
         ILogger<PdfStorageService> logger,
         PdfTextExtractionService textExtractionService,
+        PdfTableExtractionService tableExtractionService,
         IBackgroundTaskService backgroundTaskService)
     {
         _db = db;
         _scopeFactory = scopeFactory;
         _logger = logger;
         _textExtractionService = textExtractionService;
+        _tableExtractionService = tableExtractionService;
         _backgroundTaskService = backgroundTaskService;
         _storageBasePath = config["PDF_STORAGE_PATH"] ?? Path.Combine(Directory.GetCurrentDirectory(), "pdf_uploads");
 
@@ -187,6 +190,33 @@ public class PdfStorageService
                 pdfDoc.ExtractedText = result.ExtractedText;
                 pdfDoc.PageCount = result.PageCount;
                 pdfDoc.CharacterCount = result.CharacterCount;
+
+                // PDF-03: Extract structured data (tables and diagrams)
+                var tableExtractionService = scope.ServiceProvider.GetRequiredService<PdfTableExtractionService>();
+                var structuredResult = await tableExtractionService.ExtractStructuredContentAsync(filePath);
+
+                if (structuredResult.Success)
+                {
+                    pdfDoc.ExtractedTables = System.Text.Json.JsonSerializer.Serialize(structuredResult.Tables);
+                    pdfDoc.ExtractedDiagrams = System.Text.Json.JsonSerializer.Serialize(
+                        structuredResult.Diagrams.Select(d => new
+                        {
+                            d.PageNumber,
+                            d.DiagramType,
+                            d.Description,
+                            d.Width,
+                            d.Height
+                        }));
+                    pdfDoc.AtomicRules = System.Text.Json.JsonSerializer.Serialize(structuredResult.AtomicRules);
+                    pdfDoc.TableCount = structuredResult.TableCount;
+                    pdfDoc.DiagramCount = structuredResult.DiagramCount;
+                    pdfDoc.AtomicRuleCount = structuredResult.AtomicRuleCount;
+
+                    _logger.LogInformation(
+                        "Structured extraction completed for PDF {PdfId}: {TableCount} tables, {DiagramCount} diagrams, {RuleCount} atomic rules",
+                        pdfId, structuredResult.TableCount, structuredResult.DiagramCount, structuredResult.AtomicRuleCount);
+                }
+
                 pdfDoc.ProcessingStatus = "completed";
                 pdfDoc.ProcessedAt = DateTime.UtcNow;
 

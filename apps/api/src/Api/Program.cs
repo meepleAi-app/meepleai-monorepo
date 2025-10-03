@@ -63,6 +63,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<RateLimitService>();
 builder.Services.AddScoped<PdfTextExtractionService>();
+builder.Services.AddScoped<PdfTableExtractionService>();
 builder.Services.AddScoped<PdfStorageService>();
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();

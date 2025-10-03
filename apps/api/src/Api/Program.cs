@@ -59,6 +59,7 @@ builder.Services.AddScoped<TextChunkingService>();
 builder.Services.AddScoped<RuleSpecService>();
 builder.Services.AddScoped<RuleSpecDiffService>();
 builder.Services.AddScoped<RagService>();
+builder.Services.AddScoped<SetupGuideService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<RateLimitService>();
@@ -373,6 +374,41 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
     var resp = await rag.ExplainAsync(req.tenantId, req.gameId, req.topic, ct);
     logger.LogInformation("Explain response delivered for game {GameId}, estimated {Minutes} min read",
         req.gameId, resp.estimatedReadingTimeMinutes);
+    return Results.Json(resp);
+});
+
+// AI-03: RAG Setup Guide endpoint
+app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, SetupGuideService setupGuide, AuditService audit, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(req.tenantId, session.User.tenantId, StringComparison.Ordinal))
+    {
+        await audit.LogTenantAccessDeniedAsync(
+            session.User.tenantId,
+            req.tenantId,
+            session.User.id,
+            "setup_endpoint",
+            req.gameId,
+            context.Connection.RemoteIpAddress?.ToString(),
+            context.Request.Headers.UserAgent.ToString(),
+            ct);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    if (string.IsNullOrWhiteSpace(req.tenantId) || string.IsNullOrWhiteSpace(req.gameId))
+    {
+        return Results.BadRequest(new { error = "tenantId and gameId are required" });
+    }
+
+    logger.LogInformation("Setup guide request from user {UserId} for game {GameId}",
+        session.User.id, req.gameId);
+    var resp = await setupGuide.GenerateSetupGuideAsync(req.tenantId, req.gameId, ct);
+    logger.LogInformation("Setup guide delivered for game {GameId}, {StepCount} steps, estimated {Minutes} min",
+        req.gameId, resp.steps.Count, resp.estimatedSetupTimeMinutes);
     return Results.Json(resp);
 });
 

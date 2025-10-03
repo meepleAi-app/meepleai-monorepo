@@ -19,3 +19,18 @@ public record ExplainOutline(
     string mainTopic,
     IReadOnlyList<string> sections
 );
+
+// AI-03: RAG Setup Guide models
+public record SetupGuideRequest(string tenantId, string gameId);
+public record SetupGuideResponse(
+    string gameTitle,
+    IReadOnlyList<SetupGuideStep> steps,
+    int estimatedSetupTimeMinutes
+);
+public record SetupGuideStep(
+    int stepNumber,
+    string title,
+    string instruction,
+    IReadOnlyList<Snippet> references,
+    bool isOptional = false
+);

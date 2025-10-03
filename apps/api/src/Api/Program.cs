@@ -57,6 +57,7 @@ builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
 builder.Services.AddScoped<TextChunkingService>();
 
 builder.Services.AddScoped<RuleSpecService>();
+builder.Services.AddScoped<RuleSpecDiffService>();
 builder.Services.AddScoped<RagService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AuditService>();
@@ -470,7 +471,7 @@ app.MapGet("/games/{gameId}/rulespec", async (string gameId, HttpContext context
     return Results.Json(ruleSpec);
 });
 
-app.MapPut("/games/{gameId}/rulespec", async (string gameId, RuleSpec ruleSpec, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+app.MapPut("/games/{gameId}/rulespec", async (string gameId, RuleSpec ruleSpec, HttpContext context, RuleSpecService ruleSpecService, AuditService auditService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -494,6 +495,19 @@ app.MapPut("/games/{gameId}/rulespec", async (string gameId, RuleSpec ruleSpec, 
         logger.LogInformation("User {UserId} updating RuleSpec for game {GameId}", session.User.id, gameId);
         var updated = await ruleSpecService.UpdateRuleSpecAsync(session.User.tenantId, gameId, ruleSpec, ct);
         logger.LogInformation("RuleSpec updated successfully for game {GameId}, version {Version}", gameId, updated.version);
+
+        // Audit trail for RuleSpec changes
+        await auditService.LogAsync(
+            session.User.tenantId,
+            session.User.id,
+            "UPDATE_RULESPEC",
+            "RuleSpec",
+            gameId,
+            "Success",
+            $"Updated RuleSpec to version {updated.version}",
+            context.Connection.RemoteIpAddress?.ToString(),
+            context.Request.Headers.UserAgent.ToString());
+
         return Results.Json(updated);
     }
     catch (InvalidOperationException ex)
@@ -501,6 +515,66 @@ app.MapPut("/games/{gameId}/rulespec", async (string gameId, RuleSpec ruleSpec, 
         logger.LogWarning("Failed to update RuleSpec for game {GameId}: {Error}", gameId, ex.Message);
         return Results.BadRequest(new { error = ex.Message });
     }
+});
+
+// RULE-02: Get version history
+app.MapGet("/games/{gameId}/rulespec/history", async (string gameId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    logger.LogInformation("Fetching RuleSpec version history for game {GameId}", gameId);
+    var history = await ruleSpecService.GetVersionHistoryAsync(session.User.tenantId, gameId, ct);
+    return Results.Json(history);
+});
+
+// RULE-02: Get specific version
+app.MapGet("/games/{gameId}/rulespec/versions/{version}", async (string gameId, string version, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    logger.LogInformation("Fetching RuleSpec version {Version} for game {GameId}", version, gameId);
+    var ruleSpec = await ruleSpecService.GetVersionAsync(session.User.tenantId, gameId, version, ct);
+
+    if (ruleSpec == null)
+    {
+        logger.LogInformation("RuleSpec version {Version} not found for game {GameId}", version, gameId);
+        return Results.NotFound(new { error = "RuleSpec version not found" });
+    }
+
+    return Results.Json(ruleSpec);
+});
+
+// RULE-02: Compare two versions (diff)
+app.MapGet("/games/{gameId}/rulespec/diff", async (string gameId, string? from, string? to, HttpContext context, RuleSpecService ruleSpecService, RuleSpecDiffService diffService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (string.IsNullOrWhiteSpace(from) || string.IsNullOrWhiteSpace(to))
+    {
+        return Results.BadRequest(new { error = "Both 'from' and 'to' version parameters are required" });
+    }
+
+    logger.LogInformation("Computing diff between versions {FromVersion} and {ToVersion} for game {GameId}", from, to, gameId);
+
+    var fromSpec = await ruleSpecService.GetVersionAsync(session.User.tenantId, gameId, from, ct);
+    var toSpec = await ruleSpecService.GetVersionAsync(session.User.tenantId, gameId, to, ct);
+
+    if (fromSpec == null || toSpec == null)
+    {
+        return Results.NotFound(new { error = "One or both RuleSpec versions not found" });
+    }
+
+    var diff = diffService.ComputeDiff(fromSpec, toSpec);
+    return Results.Json(diff);
 });
 
 app.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, RuleSpecService rules, CancellationToken ct) =>

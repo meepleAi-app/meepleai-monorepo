@@ -8,8 +8,10 @@ public class RuleSpecEntity
     public string GameId { get; set; } = default!;
     public string Version { get; set; } = default!;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string? CreatedByUserId { get; set; }
 
     public TenantEntity Tenant { get; set; } = default!;
     public GameEntity Game { get; set; } = default!;
+    public UserEntity? CreatedBy { get; set; }
     public ICollection<RuleAtomEntity> Atoms { get; set; } = new List<RuleAtomEntity>();
 }

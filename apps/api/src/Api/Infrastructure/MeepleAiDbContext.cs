@@ -111,6 +111,7 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.GameId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.CreatedByUserId).HasMaxLength(64);
             entity.HasOne(e => e.Tenant)
                 .WithMany(t => t.RuleSpecs)
                 .HasForeignKey(e => e.TenantId)
@@ -119,6 +120,10 @@ public class MeepleAiDbContext : DbContext
                 .WithMany(g => g.RuleSpecs)
                 .HasForeignKey(e => e.GameId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.CreatedBy)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
             entity.HasIndex(e => new { e.TenantId, e.GameId, e.Version }).IsUnique();
         });
 

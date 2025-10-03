@@ -142,6 +142,34 @@ public class RuleSpecService
         return ToModel(specEntity);
     }
 
+    public async Task<RuleSpecHistory> GetVersionHistoryAsync(string tenantId, string gameId, CancellationToken cancellationToken = default)
+    {
+        var versions = await _dbContext.RuleSpecs
+            .Include(r => r.Atoms)
+            .Include(r => r.CreatedBy)
+            .Where(r => r.TenantId == tenantId && r.GameId == gameId)
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => new RuleSpecVersion(
+                r.Version,
+                r.CreatedAt,
+                r.Atoms.Count,
+                r.CreatedBy != null ? r.CreatedBy.DisplayName ?? r.CreatedBy.Email : null
+            ))
+            .ToListAsync(cancellationToken);
+
+        return new RuleSpecHistory(gameId, versions, versions.Count);
+    }
+
+    public async Task<RuleSpec?> GetVersionAsync(string tenantId, string gameId, string version, CancellationToken cancellationToken = default)
+    {
+        var specEntity = await _dbContext.RuleSpecs
+            .Include(r => r.Atoms)
+            .Where(r => r.TenantId == tenantId && r.GameId == gameId && r.Version == version)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return specEntity is null ? null : ToModel(specEntity);
+    }
+
     private static RuleSpec ToModel(RuleSpecEntity entity)
     {
         var atoms = entity.Atoms

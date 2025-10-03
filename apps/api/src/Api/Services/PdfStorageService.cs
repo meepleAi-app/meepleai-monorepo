@@ -1,3 +1,4 @@
+using System.Linq;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -373,7 +374,12 @@ public class PdfStorageService
 
     private static string SanitizeFileName(string fileName)
     {
-        var invalidChars = Path.GetInvalidFileNameChars();
+        // Get OS-specific invalid chars and add additional problematic chars
+        var invalidChars = Path.GetInvalidFileNameChars()
+            .Concat(new[] { '<', '>', '?', '*', '|', '"', ':' })
+            .Distinct()
+            .ToArray();
+
         var sanitized = string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
         return sanitized.Length > 200 ? sanitized.Substring(0, 200) : sanitized;
     }

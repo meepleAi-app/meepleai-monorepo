@@ -1,0 +1,264 @@
+{
+  "name": "Agent Explain Webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agent/explain",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "agent-explain-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const requestId = $('Webhook Trigger').first().json.headers['x-correlation-id'] || \n  `n8n-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;\n\nconst body = $('Webhook Trigger').first().json.body;\n\nreturn {\n  requestId,\n  tenantId: body.tenantId,\n  gameId: body.gameId,\n  topic: body.topic,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "prepare-request",
+      "name": "Prepare Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://api:8080/agents/explain",
+        "authentication": "none",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "tenantId",
+              "value": "={{ $json.tenantId }}"
+            },
+            {
+              "name": "gameId",
+              "value": "={{ $json.gameId }}"
+            },
+            {
+              "name": "topic",
+              "value": "={{ $json.topic }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000,
+          "retry": {
+            "maxTries": 3,
+            "retryOnHttpStatusCodes": "429,500,502,503,504"
+          }
+        }
+      },
+      "id": "call-api",
+      "name": "Call Backend API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [650, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.error }}",
+              "value2": true,
+              "operation": "notEqual"
+            }
+          ]
+        }
+      },
+      "id": "check-success",
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const apiResponse = $('Call Backend API').first().json;\nconst requestData = $('Prepare Request').first().json;\n\nreturn {\n  success: true,\n  requestId: requestData.requestId,\n  timestamp: requestData.timestamp,\n  data: {\n    outline: apiResponse.outline,\n    script: apiResponse.script,\n    citations: apiResponse.citations,\n    estimatedReadingTimeMinutes: apiResponse.estimatedReadingTimeMinutes\n  }\n};"
+      },
+      "id": "format-success-response",
+      "name": "Format Success Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const error = $('Call Backend API').first().json.error || {};\nconst requestData = $('Prepare Request').first().json;\n\nreturn {\n  success: false,\n  requestId: requestData.requestId,\n  timestamp: requestData.timestamp,\n  error: {\n    message: error.message || 'Unknown error occurred',\n    statusCode: error.httpCode || 500\n  }\n};"
+      },
+      "id": "format-error-response",
+      "name": "Format Error Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Request-Id",
+                "value": "={{ $json.requestId }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "={{ $json.error.statusCode || 500 }}",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Request-Id",
+                "value": "={{ $json.requestId }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-error",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const requestData = $('Prepare Request').first().json;\nconst apiCall = $('Call Backend API').first();\nconst isSuccess = !apiCall.json.error;\n\nconsole.log(JSON.stringify({\n  level: isSuccess ? 'info' : 'error',\n  requestId: requestData.requestId,\n  timestamp: requestData.timestamp,\n  tenantId: requestData.tenantId,\n  gameId: requestData.gameId,\n  topic: requestData.topic,\n  success: isSuccess,\n  responseTime: Date.now() - new Date(requestData.timestamp).getTime(),\n  error: isSuccess ? null : (apiCall.json.error?.message || 'Unknown error')\n}));\n\nreturn {};"
+      },
+      "id": "log-request",
+      "name": "Log Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 500]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Request": {
+      "main": [
+        [
+          {
+            "node": "Call Backend API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Backend API": {
+      "main": [
+        [
+          {
+            "node": "Check Success",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Success": {
+      "main": [
+        [
+          {
+            "node": "Format Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Success Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "id": "agent-explain-webhook",
+  "meta": {
+    "instanceId": "meepleai-n8n"
+  },
+  "tags": [
+    {
+      "name": "meeple-agent",
+      "id": "1"
+    },
+    {
+      "name": "webhook",
+      "id": "2"
+    }
+  ]
+}

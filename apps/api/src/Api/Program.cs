@@ -54,6 +54,7 @@ builder.Services.AddSingleton<IBackgroundTaskService, BackgroundTaskService>();
 // AI-01: Vector search services
 builder.Services.AddSingleton<IQdrantService, QdrantService>();
 builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
+builder.Services.AddScoped<ILlmService, LlmService>();
 builder.Services.AddScoped<TextChunkingService>();
 
 builder.Services.AddScoped<RuleSpecService>();

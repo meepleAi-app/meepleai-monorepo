@@ -61,8 +61,15 @@ public class QaEndpointTests
             .ReturnsAsync(searchResult);
 
         var ragLoggerMock = Mock.Of<ILogger<RagService>>();
+        var llmServiceMock = new Mock<ILlmService>();
 
-        var ragService = new RagService(dbContext, embeddingServiceMock.Object, qdrantServiceMock.Object, ragLoggerMock);
+        // Configure LLM mock to return successful completion
+        var llmResult = LlmCompletionResult.CreateSuccess("Two players.");
+        llmServiceMock
+            .Setup(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(llmResult);
+
+        var ragService = new RagService(dbContext, embeddingServiceMock.Object, qdrantServiceMock.Object, llmServiceMock.Object, ragLoggerMock);
 
         var tenantId = "tenant-test";
         var gameId = "demo-chess";

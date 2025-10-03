@@ -9,22 +9,25 @@ public class RagService
     private readonly MeepleAiDbContext _dbContext;
     private readonly IEmbeddingService _embeddingService;
     private readonly IQdrantService _qdrantService;
+    private readonly ILlmService _llmService;
     private readonly ILogger<RagService> _logger;
 
     public RagService(
         MeepleAiDbContext dbContext,
         IEmbeddingService embeddingService,
         IQdrantService qdrantService,
+        ILlmService llmService,
         ILogger<RagService> logger)
     {
         _dbContext = dbContext;
         _embeddingService = embeddingService;
         _qdrantService = qdrantService;
+        _llmService = llmService;
         _logger = logger;
     }
 
     /// <summary>
-    /// AI-01: Answer question using vector similarity search
+    /// AI-04: Answer question using RAG with LLM generation and anti-hallucination
     /// </summary>
     public async Task<QaResponse> AskAsync(string tenantId, string gameId, string query, CancellationToken cancellationToken = default)
     {
@@ -51,11 +54,10 @@ public class RagService
             if (!searchResult.Success || searchResult.Results.Count == 0)
             {
                 _logger.LogInformation("No vector results found for query in game {GameId}", gameId);
-                return new QaResponse("No relevant information found in the rulebook.", Array.Empty<Snippet>());
+                return new QaResponse("Not specified", Array.Empty<Snippet>());
             }
 
-            // Step 3: Build response from top results
-            var topResult = searchResult.Results[0];
+            // Step 3: Build snippets from results
             var snippets = searchResult.Results.Select(r => new Snippet(
                 r.Text,
                 $"PDF:{r.PdfId}",
@@ -63,11 +65,44 @@ public class RagService
                 0 // line number not tracked in chunks
             )).ToList();
 
-            _logger.LogInformation(
-                "RAG query answered with {SnippetCount} snippets, top score: {Score}",
-                snippets.Count, topResult.Score);
+            // Step 4: Build context from retrieved chunks
+            var context = string.Join("\n\n---\n\n", searchResult.Results.Select(r =>
+                $"[Page {r.Page}]\n{r.Text}"));
 
-            return new QaResponse(topResult.Text, snippets);
+            // Step 5: Generate answer using LLM with anti-hallucination prompt
+            var systemPrompt = @"You are a board game rules assistant. Your job is to answer questions about board game rules based ONLY on the provided context from the rulebook.
+
+CRITICAL INSTRUCTIONS:
+- If the answer to the question is clearly found in the provided context, answer it concisely and accurately.
+- If the answer is NOT in the provided context or you're uncertain, respond with EXACTLY: ""Not specified""
+- Do NOT make assumptions or use external knowledge about the game.
+- Do NOT hallucinate or invent information.
+- Keep your answers brief and to the point (2-3 sentences maximum).
+- Reference page numbers when relevant.";
+
+            var userPrompt = $@"CONTEXT FROM RULEBOOK:
+{context}
+
+QUESTION:
+{query}
+
+ANSWER:";
+
+            var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken);
+
+            if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
+            {
+                _logger.LogError("Failed to generate LLM response: {Error}", llmResult.ErrorMessage);
+                return new QaResponse("Unable to generate answer.", snippets);
+            }
+
+            var answer = llmResult.Response.Trim();
+
+            _logger.LogInformation(
+                "RAG query answered with {SnippetCount} snippets, LLM generated answer: {AnswerPreview}",
+                snippets.Count, answer.Length > 50 ? answer.Substring(0, 50) + "..." : answer);
+
+            return new QaResponse(answer, snippets);
         }
         catch (Exception ex)
         {

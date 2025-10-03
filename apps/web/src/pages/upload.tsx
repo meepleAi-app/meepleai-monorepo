@@ -59,7 +59,9 @@ export default function UploadPage() {
         setFile(null);
         // Reset file input
         const fileInput = document.getElementById('fileInput') as HTMLInputElement;
-        if (fileInput) fileInput.value = '';
+        if (fileInput) {
+          fileInput.value = '';
+        }
         // Reload PDFs
         loadPdfs();
       } else {
@@ -74,7 +76,9 @@ export default function UploadPage() {
   };
 
   const loadPdfs = async () => {
-    if (!gameId.trim()) return;
+    if (!gameId.trim()) {
+      return;
+    }
 
     setLoadingPdfs(true);
     try {
@@ -96,8 +100,12 @@ export default function UploadPage() {
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    if (bytes < 1024) {
+      return bytes + ' B';
+    }
+    if (bytes < 1024 * 1024) {
+      return (bytes / 1024).toFixed(1) + ' KB';
+    }
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 

@@ -85,11 +85,20 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-    db.Database.Migrate();
 
-    // AI-01: Initialize Qdrant collection
-    var qdrant = scope.ServiceProvider.GetRequiredService<QdrantService>();
-    await qdrant.EnsureCollectionExistsAsync();
+    // Use EnsureCreated for testing, Migrate for production
+    if (app.Environment.IsEnvironment("Testing"))
+    {
+        // Test environment: database is already created by WebApplicationFactory
+    }
+    else
+    {
+        db.Database.Migrate();
+
+        // AI-01: Initialize Qdrant collection
+        var qdrant = scope.ServiceProvider.GetRequiredService<QdrantService>();
+        await qdrant.EnsureCollectionExistsAsync();
+    }
 }
 
 app.UseCors("web");
@@ -546,3 +555,4 @@ static void RemoveSessionCookie(HttpContext context)
 
     context.Response.Cookies.Delete(AuthService.SessionCookieName, options);
 }
+public partial class Program { }

@@ -5,8 +5,12 @@ export const api = {
       method: "GET",
       credentials: "include"
     });
-    if (res.status === 401) return null;
-    if (!res.ok) throw new Error(`API ${path} ${res.status}`);
+    if (res.status === 401) {
+      return null;
+    }
+    if (!res.ok) {
+      throw new Error(`API ${path} ${res.status}`);
+    }
     return res.json();
   },
   async post<T>(path: string, body?: unknown): Promise<T> {
@@ -19,7 +23,9 @@ export const api = {
     if (res.status === 401) {
       throw new Error("Unauthorized");
     }
-    if (!res.ok) throw new Error(`API ${path} ${res.status}`);
+    if (!res.ok) {
+      throw new Error(`API ${path} ${res.status}`);
+    }
     return res.json();
   },
   async put<T>(path: string, body: unknown): Promise<T> {
@@ -32,7 +38,9 @@ export const api = {
     if (res.status === 401) {
       throw new Error("Unauthorized");
     }
-    if (!res.ok) throw new Error(`API ${path} ${res.status}`);
+    if (!res.ok) {
+      throw new Error(`API ${path} ${res.status}`);
+    }
     return res.json();
   }
 };

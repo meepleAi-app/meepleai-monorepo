@@ -261,6 +261,19 @@ export default function RuleSpecEditor() {
         </div>
         <div style={{ display: "flex", gap: 12 }}>
           <Link
+            href={`/versions?gameId=${gameId}`}
+            style={{
+              padding: "8px 16px",
+              background: "#ff9800",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: 4,
+              fontSize: 14
+            }}
+          >
+            Storico Versioni
+          </Link>
+          <Link
             href="/"
             style={{
               padding: "8px 16px",

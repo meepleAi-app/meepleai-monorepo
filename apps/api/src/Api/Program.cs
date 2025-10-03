@@ -62,6 +62,7 @@ builder.Services.AddScoped<RagService>();
 builder.Services.AddScoped<SetupGuideService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AuditService>();
+builder.Services.AddScoped<AiRequestLogService>();
 builder.Services.AddScoped<RateLimitService>();
 builder.Services.AddScoped<PdfTextExtractionService>();
 builder.Services.AddScoped<PdfTableExtractionService>();
@@ -310,7 +311,7 @@ app.MapGet("/auth/me", (HttpContext context) =>
     return Results.Unauthorized();
 });
 
-app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService rag, AuditService audit, ILogger<Program> logger, CancellationToken ct) =>
+app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService rag, AuditService audit, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -336,14 +337,62 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
         return Results.BadRequest(new { error = "tenantId and gameId are required" });
     }
 
+    var startTime = DateTime.UtcNow;
     logger.LogInformation("QA request from user {UserId} for game {GameId}: {Query}",
         session.User.id, req.gameId, req.query);
-    var resp = await rag.AskAsync(req.tenantId, req.gameId, req.query, ct);
-    logger.LogInformation("QA response delivered for game {GameId}", req.gameId);
-    return Results.Json(resp);
+
+    try
+    {
+        var resp = await rag.AskAsync(req.tenantId, req.gameId, req.query, ct);
+        var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+        logger.LogInformation("QA response delivered for game {GameId}", req.gameId);
+
+        // ADM-01: Log AI request
+        await aiLog.LogRequestAsync(
+            req.tenantId,
+            session.User.id,
+            req.gameId,
+            "qa",
+            req.query,
+            resp.answer?.Length > 500 ? resp.answer.Substring(0, 500) : resp.answer,
+            latencyMs,
+            null, // Token count not available yet
+            null, // Confidence not available yet
+            "Success",
+            null,
+            context.Connection.RemoteIpAddress?.ToString(),
+            context.Request.Headers.UserAgent.ToString(),
+            ct);
+
+        return Results.Json(resp);
+    }
+    catch (Exception ex)
+    {
+        var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+        // ADM-01: Log failed AI request
+        await aiLog.LogRequestAsync(
+            req.tenantId,
+            session.User.id,
+            req.gameId,
+            "qa",
+            req.query,
+            null,
+            latencyMs,
+            null,
+            null,
+            "Error",
+            ex.Message,
+            context.Connection.RemoteIpAddress?.ToString(),
+            context.Request.Headers.UserAgent.ToString(),
+            ct);
+
+        throw;
+    }
 });
 
-app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, RagService rag, AuditService audit, ILogger<Program> logger, CancellationToken ct) =>
+app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, RagService rag, AuditService audit, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -369,16 +418,64 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
         return Results.BadRequest(new { error = "tenantId and gameId are required" });
     }
 
+    var startTime = DateTime.UtcNow;
     logger.LogInformation("Explain request from user {UserId} for game {GameId}: {Topic}",
         session.User.id, req.gameId, req.topic);
-    var resp = await rag.ExplainAsync(req.tenantId, req.gameId, req.topic, ct);
-    logger.LogInformation("Explain response delivered for game {GameId}, estimated {Minutes} min read",
-        req.gameId, resp.estimatedReadingTimeMinutes);
-    return Results.Json(resp);
+
+    try
+    {
+        var resp = await rag.ExplainAsync(req.tenantId, req.gameId, req.topic, ct);
+        var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+        logger.LogInformation("Explain response delivered for game {GameId}, estimated {Minutes} min read",
+            req.gameId, resp.estimatedReadingTimeMinutes);
+
+        // ADM-01: Log AI request
+        await aiLog.LogRequestAsync(
+            req.tenantId,
+            session.User.id,
+            req.gameId,
+            "explain",
+            req.topic,
+            resp.script?.Length > 500 ? resp.script.Substring(0, 500) : resp.script,
+            latencyMs,
+            null,
+            null,
+            "Success",
+            null,
+            context.Connection.RemoteIpAddress?.ToString(),
+            context.Request.Headers.UserAgent.ToString(),
+            ct);
+
+        return Results.Json(resp);
+    }
+    catch (Exception ex)
+    {
+        var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+        // ADM-01: Log failed AI request
+        await aiLog.LogRequestAsync(
+            req.tenantId,
+            session.User.id,
+            req.gameId,
+            "explain",
+            req.topic,
+            null,
+            latencyMs,
+            null,
+            null,
+            "Error",
+            ex.Message,
+            context.Connection.RemoteIpAddress?.ToString(),
+            context.Request.Headers.UserAgent.ToString(),
+            ct);
+
+        throw;
+    }
 });
 
 // AI-03: RAG Setup Guide endpoint
-app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, SetupGuideService setupGuide, AuditService audit, ILogger<Program> logger, CancellationToken ct) =>
+app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, SetupGuideService setupGuide, AuditService audit, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -404,12 +501,68 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
         return Results.BadRequest(new { error = "tenantId and gameId are required" });
     }
 
+    var startTime = DateTime.UtcNow;
     logger.LogInformation("Setup guide request from user {UserId} for game {GameId}",
         session.User.id, req.gameId);
-    var resp = await setupGuide.GenerateSetupGuideAsync(req.tenantId, req.gameId, ct);
-    logger.LogInformation("Setup guide delivered for game {GameId}, {StepCount} steps, estimated {Minutes} min",
-        req.gameId, resp.steps.Count, resp.estimatedSetupTimeMinutes);
-    return Results.Json(resp);
+
+    try
+    {
+        var resp = await setupGuide.GenerateSetupGuideAsync(req.tenantId, req.gameId, ct);
+        var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+        logger.LogInformation("Setup guide delivered for game {GameId}, {StepCount} steps, estimated {Minutes} min",
+            req.gameId, resp.steps.Count, resp.estimatedSetupTimeMinutes);
+
+        // ADM-01: Log AI request
+        var responseSnippet = resp.steps.Count > 0
+            ? string.Join("; ", resp.steps.Take(3).Select(s => s.instruction))
+            : "No steps generated";
+        if (responseSnippet.Length > 500)
+        {
+            responseSnippet = responseSnippet.Substring(0, 500);
+        }
+
+        await aiLog.LogRequestAsync(
+            req.tenantId,
+            session.User.id,
+            req.gameId,
+            "setup",
+            "setup_guide",
+            responseSnippet,
+            latencyMs,
+            null,
+            null,
+            "Success",
+            null,
+            context.Connection.RemoteIpAddress?.ToString(),
+            context.Request.Headers.UserAgent.ToString(),
+            ct);
+
+        return Results.Json(resp);
+    }
+    catch (Exception ex)
+    {
+        var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+        // ADM-01: Log failed AI request
+        await aiLog.LogRequestAsync(
+            req.tenantId,
+            session.User.id,
+            req.gameId,
+            "setup",
+            "setup_guide",
+            null,
+            latencyMs,
+            null,
+            null,
+            "Error",
+            ex.Message,
+            context.Connection.RemoteIpAddress?.ToString(),
+            context.Request.Headers.UserAgent.ToString(),
+            ct);
+
+        throw;
+    }
 });
 
 app.MapPost("/ingest/pdf", async (HttpContext context, PdfStorageService pdfStorage, ILogger<Program> logger, CancellationToken ct) =>
@@ -638,6 +791,48 @@ app.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, Rule
 
     var spec = await rules.GetOrCreateDemoAsync(request.tenantId, request.gameId, ct);
     return Results.Json(new { ok = true, spec });
+});
+
+// ADM-01: Admin dashboard endpoints
+app.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService logService, int limit = 100, int offset = 0, string? endpoint = null, string? userId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var requests = await logService.GetRequestsAsync(
+        session.User.tenantId,
+        limit,
+        offset,
+        endpoint,
+        userId,
+        startDate,
+        endDate,
+        ct);
+
+    return Results.Json(new { requests });
+});
+
+app.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logService, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var stats = await logService.GetStatsAsync(session.User.tenantId, startDate, endDate, ct);
+    return Results.Json(stats);
 });
 
 app.Run();

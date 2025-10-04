@@ -243,11 +243,9 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
 
         // Assert - background processing completed successfully
         Assert.NotNull(completedPdf);
-        if (completedPdf.ProcessingStatus == "failed")
-        {
-            _output.WriteLine($"PDF processing failed with error: {completedPdf.ProcessingError}");
-        }
-        Assert.Equal("completed", completedPdf.ProcessingStatus);
+        Assert.True(
+            completedPdf.ProcessingStatus == "completed",
+            $"Expected status 'completed' but got '{completedPdf.ProcessingStatus}'. Error: {completedPdf.ProcessingError}");
         Assert.NotNull(completedPdf.ExtractedText);
         // Text extraction may have encoding quirks, so check for core content
         Assert.Contains("Test PDF Content", completedPdf.ExtractedText);
@@ -277,11 +275,9 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
 
         // Assert
         Assert.NotNull(completedPdf);
-        if (completedPdf.ProcessingStatus == "failed")
-        {
-            _output.WriteLine($"PDF processing failed with error: {completedPdf.ProcessingError}");
-        }
-        Assert.Equal("completed", completedPdf.ProcessingStatus);
+        Assert.True(
+            completedPdf.ProcessingStatus == "completed",
+            $"Expected status 'completed' but got '{completedPdf.ProcessingStatus}'. Error: {completedPdf.ProcessingError}");
         Assert.Equal(3, completedPdf.PageCount);
         Assert.Contains("Page 1 content", completedPdf.ExtractedText);
         Assert.Contains("Page 2 content", completedPdf.ExtractedText);

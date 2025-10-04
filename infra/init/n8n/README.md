@@ -56,8 +56,48 @@ This directory contains n8n workflow definitions for MeepleAI agent webhooks. Th
 ### 2. Agent Setup Webhook (N8N-02)
 **Status**: ⏳ Pending
 
-### 3. Agent Q&A Webhook (N8N-03)
-**Status**: ⏳ Pending
+### 3. Agent Q&A Webhook (`agent-qa-webhook.json`)
+**Endpoint**: `POST /webhook/agent/qa`
+**Status**: ✅ Implemented (N8N-03)
+**Purpose**: Orchestrates RAG Q&A to provide direct answers to user questions with supporting snippets.
+
+**Features**:
+- Webhook trigger on `/agent/qa`
+- Request ID generation and correlation tracking
+- Automatic retry with exponential backoff (3 attempts)
+- Retry on HTTP status codes: 429, 500, 502, 503, 504
+- Structured logging with request metadata
+- Standardized JSON response format
+- Error handling with proper status codes
+
+**Request Payload**:
+```json
+{
+  "tenantId": "string",
+  "gameId": "string",
+  "query": "string"
+}
+```
+
+**Response Format**:
+```json
+{
+  "success": true,
+  "requestId": "n8n-1234567890-abc123",
+  "timestamp": "2025-10-04T10:30:00.000Z",
+  "data": {
+    "answer": "string",
+    "snippets": [
+      {
+        "text": "string",
+        "source": "string",
+        "page": 1,
+        "line": 10
+      }
+    ]
+  }
+}
+```
 
 ## Setup Instructions
 
@@ -86,6 +126,8 @@ http://localhost:5678/webhook/agent/explain
 For production environments, configure your reverse proxy to route requests to this endpoint.
 
 ### 4. Test the Workflow
+
+**Test Agent Explain Webhook:**
 ```bash
 curl -X POST http://localhost:5678/webhook/agent/explain \
   -H "Content-Type: application/json" \
@@ -93,6 +135,17 @@ curl -X POST http://localhost:5678/webhook/agent/explain \
     "tenantId": "dev",
     "gameId": "catan",
     "topic": "setup phase"
+  }'
+```
+
+**Test Agent Q&A Webhook:**
+```bash
+curl -X POST http://localhost:5678/webhook/agent/qa \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tenantId": "dev",
+    "gameId": "catan",
+    "query": "How do I win the game?"
   }'
 ```
 

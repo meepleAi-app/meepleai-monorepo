@@ -57,6 +57,9 @@ builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
 builder.Services.AddScoped<ILlmService, LlmService>();
 builder.Services.AddScoped<TextChunkingService>();
 
+// AI-05: AI response caching
+builder.Services.AddSingleton<IAiResponseCacheService, AiResponseCacheService>();
+
 builder.Services.AddScoped<RuleSpecService>();
 builder.Services.AddScoped<RuleSpecDiffService>();
 builder.Services.AddScoped<RagService>();

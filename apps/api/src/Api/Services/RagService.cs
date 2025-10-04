@@ -10,6 +10,7 @@ public class RagService
     private readonly IEmbeddingService _embeddingService;
     private readonly IQdrantService _qdrantService;
     private readonly ILlmService _llmService;
+    private readonly IAiResponseCacheService _cache;
     private readonly ILogger<RagService> _logger;
 
     public RagService(
@@ -17,23 +18,35 @@ public class RagService
         IEmbeddingService embeddingService,
         IQdrantService qdrantService,
         ILlmService llmService,
+        IAiResponseCacheService cache,
         ILogger<RagService> logger)
     {
         _dbContext = dbContext;
         _embeddingService = embeddingService;
         _qdrantService = qdrantService;
         _llmService = llmService;
+        _cache = cache;
         _logger = logger;
     }
 
     /// <summary>
     /// AI-04: Answer question using RAG with LLM generation and anti-hallucination
+    /// AI-05: Now with caching support for reduced latency
     /// </summary>
     public async Task<QaResponse> AskAsync(string tenantId, string gameId, string query, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
             return new QaResponse("Please provide a question.", Array.Empty<Snippet>());
+        }
+
+        // AI-05: Check cache first
+        var cacheKey = _cache.GenerateQaCacheKey(tenantId, gameId, query);
+        var cachedResponse = await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken);
+        if (cachedResponse != null)
+        {
+            _logger.LogInformation("Returning cached QA response for game {GameId}", gameId);
+            return cachedResponse;
         }
 
         try
@@ -102,7 +115,12 @@ ANSWER:";
                 "RAG query answered with {SnippetCount} snippets, LLM generated answer: {AnswerPreview}",
                 snippets.Count, answer.Length > 50 ? answer.Substring(0, 50) + "..." : answer);
 
-            return new QaResponse(answer, snippets);
+            var response = new QaResponse(answer, snippets);
+
+            // AI-05: Cache the response for future requests
+            await _cache.SetAsync(cacheKey, response, 86400, cancellationToken);
+
+            return response;
         }
         catch (Exception ex)
         {
@@ -113,12 +131,22 @@ ANSWER:";
 
     /// <summary>
     /// AI-02: Generate structured explanation with outline, script, and citations
+    /// AI-05: Now with caching support for reduced latency
     /// </summary>
     public async Task<ExplainResponse> ExplainAsync(string tenantId, string gameId, string topic, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(topic))
         {
             return CreateEmptyExplainResponse("Please provide a topic to explain.");
+        }
+
+        // AI-05: Check cache first
+        var cacheKey = _cache.GenerateExplainCacheKey(tenantId, gameId, topic);
+        var cachedResponse = await _cache.GetAsync<ExplainResponse>(cacheKey, cancellationToken);
+        if (cachedResponse != null)
+        {
+            _logger.LogInformation("Returning cached Explain response for game {GameId}, topic: {Topic}", gameId, topic);
+            return cachedResponse;
         }
 
         try
@@ -164,7 +192,12 @@ ANSWER:";
                 "RAG explain generated for topic '{Topic}' with {SectionCount} sections, {CitationCount} citations, ~{Minutes} min read",
                 topic, outline.sections.Count, citations.Count, estimatedMinutes);
 
-            return new ExplainResponse(outline, script, citations, estimatedMinutes);
+            var response = new ExplainResponse(outline, script, citations, estimatedMinutes);
+
+            // AI-05: Cache the response for future requests
+            await _cache.SetAsync(cacheKey, response, 86400, cancellationToken);
+
+            return response;
         }
         catch (Exception ex)
         {

@@ -6,34 +6,48 @@ namespace Api.Services;
 
 /// <summary>
 /// AI-03: Service for generating step-by-step setup guides using RAG
+/// AI-05: Now with caching support for reduced latency
 /// </summary>
 public class SetupGuideService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly IEmbeddingService _embeddingService;
     private readonly IQdrantService _qdrantService;
+    private readonly IAiResponseCacheService _cache;
     private readonly ILogger<SetupGuideService> _logger;
 
     public SetupGuideService(
         MeepleAiDbContext dbContext,
         IEmbeddingService embeddingService,
         IQdrantService qdrantService,
+        IAiResponseCacheService cache,
         ILogger<SetupGuideService> logger)
     {
         _dbContext = dbContext;
         _embeddingService = embeddingService;
         _qdrantService = qdrantService;
+        _cache = cache;
         _logger = logger;
     }
 
     /// <summary>
     /// AI-03: Generate step-by-step setup guide with references
+    /// AI-05: Now with caching support for reduced latency
     /// </summary>
     public async Task<SetupGuideResponse> GenerateSetupGuideAsync(
         string tenantId,
         string gameId,
         CancellationToken cancellationToken = default)
     {
+        // AI-05: Check cache first
+        var cacheKey = _cache.GenerateSetupCacheKey(tenantId, gameId);
+        var cachedResponse = await _cache.GetAsync<SetupGuideResponse>(cacheKey, cancellationToken);
+        if (cachedResponse != null)
+        {
+            _logger.LogInformation("Returning cached Setup guide for game {GameId}", gameId);
+            return cachedResponse;
+        }
+
         try
         {
             // Get game information
@@ -90,11 +104,16 @@ public class SetupGuideService
                 "Generated setup guide for game {GameId} with {StepCount} steps",
                 gameId, allSteps.Count);
 
-            return new SetupGuideResponse(
+            var response = new SetupGuideResponse(
                 game.Name,
                 allSteps,
                 estimatedTime
             );
+
+            // AI-05: Cache the response for future requests
+            await _cache.SetAsync(cacheKey, response, 86400, cancellationToken);
+
+            return response;
         }
         catch (Exception ex)
         {

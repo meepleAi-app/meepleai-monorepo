@@ -33,7 +33,8 @@ public class RagServiceTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("tenant1", "game1", "", CancellationToken.None);
@@ -51,7 +52,8 @@ public class RagServiceTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("tenant1", "game1", "   ", CancellationToken.None);
@@ -73,7 +75,8 @@ public class RagServiceTests
 
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("tenant1", "game1", "test query", CancellationToken.None);
@@ -95,7 +98,8 @@ public class RagServiceTests
 
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("tenant1", "game1", "test query", CancellationToken.None);
@@ -127,7 +131,8 @@ public class RagServiceTests
             .ReturnsAsync(SearchResult.CreateFailure("Search failed"));
 
         var mockLlm = new Mock<ILlmService>();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("tenant1", "game1", "test query", CancellationToken.None);
@@ -170,7 +175,8 @@ public class RagServiceTests
             .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("This game supports 2-4 players."));
 
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("tenant1", "game1", "How many players?", CancellationToken.None);
@@ -216,7 +222,8 @@ public class RagServiceTests
             .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Not specified"));
 
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("tenant1", "game1", "What is the recommended age for this game?", CancellationToken.None);
@@ -234,7 +241,8 @@ public class RagServiceTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("tenant1", "game1", "", CancellationToken.None);
@@ -274,7 +282,8 @@ public class RagServiceTests
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         var mockLlm = new Mock<ILlmService>();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("tenant1", "game1", "game setup", CancellationToken.None);
@@ -296,7 +305,8 @@ public class RagServiceTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("tenant1", "game1", "   ", CancellationToken.None);
@@ -320,7 +330,8 @@ public class RagServiceTests
 
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("tenant1", "game1", "test topic", CancellationToken.None);
@@ -343,7 +354,8 @@ public class RagServiceTests
 
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("tenant1", "game1", "test topic", CancellationToken.None);
@@ -375,7 +387,8 @@ public class RagServiceTests
             .ReturnsAsync(SearchResult.CreateFailure("Search failed"));
 
         var mockLlm = new Mock<ILlmService>();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("tenant1", "game1", "test topic", CancellationToken.None);
@@ -407,7 +420,8 @@ public class RagServiceTests
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>()));
 
         var mockLlm = new Mock<ILlmService>();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("tenant1", "game1", "test topic", CancellationToken.None);
@@ -439,7 +453,8 @@ public class RagServiceTests
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>()));
 
         var mockLlm = new Mock<ILlmService>();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("tenant1", "game1", "test query", CancellationToken.None);
@@ -477,7 +492,8 @@ public class RagServiceTests
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         var mockLlm = new Mock<ILlmService>();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("tenant1", "game1", "test topic", CancellationToken.None);
@@ -521,7 +537,8 @@ public class RagServiceTests
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         var mockLlm = new Mock<ILlmService>();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("tenant1", "game1", "test topic", CancellationToken.None);
@@ -543,7 +560,8 @@ public class RagServiceTests
 
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("tenant1", "game1", "test query", CancellationToken.None);
@@ -565,7 +583,8 @@ public class RagServiceTests
 
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, _mockLogger.Object);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("tenant1", "game1", "test topic", CancellationToken.None);

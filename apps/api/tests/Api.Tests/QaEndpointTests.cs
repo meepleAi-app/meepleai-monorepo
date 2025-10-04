@@ -69,7 +69,8 @@ public class QaEndpointTests
             .Setup(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(llmResult);
 
-        var ragService = new RagService(dbContext, embeddingServiceMock.Object, qdrantServiceMock.Object, llmServiceMock.Object, ragLoggerMock);
+        var cacheServiceMock = new Mock<IAiResponseCacheService>();
+        var ragService = new RagService(dbContext, embeddingServiceMock.Object, qdrantServiceMock.Object, llmServiceMock.Object, cacheServiceMock.Object, ragLoggerMock);
 
         var tenantId = "tenant-test";
         var gameId = "demo-chess";

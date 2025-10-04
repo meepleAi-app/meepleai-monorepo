@@ -14,6 +14,7 @@ public class SetupGuideServiceTests : IDisposable
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<IEmbeddingService> _mockEmbeddingService;
     private readonly Mock<IQdrantService> _mockQdrantService;
+    private readonly Mock<IAiResponseCacheService> _mockCacheService;
     private readonly Mock<ILogger<SetupGuideService>> _mockLogger;
     private readonly SetupGuideService _service;
 
@@ -28,12 +29,14 @@ public class SetupGuideServiceTests : IDisposable
         _dbContext.Database.EnsureCreated();
         _mockEmbeddingService = new Mock<IEmbeddingService>();
         _mockQdrantService = new Mock<IQdrantService>();
+        _mockCacheService = new Mock<IAiResponseCacheService>();
         _mockLogger = new Mock<ILogger<SetupGuideService>>();
 
         _service = new SetupGuideService(
             _dbContext,
             _mockEmbeddingService.Object,
             _mockQdrantService.Object,
+            _mockCacheService.Object,
             _mockLogger.Object
         );
     }

@@ -214,6 +214,7 @@ public class RuleSpecV0ModelTests
         // Assert
         Assert.Single(setup.Steps);
         Assert.Equal("Game setup instructions", setup.Description);
+        Assert.NotNull(setup.Components);
         Assert.Single(setup.Components);
     }
 
@@ -281,7 +282,9 @@ public class RuleSpecV0ModelTests
         Assert.Equal("Main Phase", phase.Name);
         Assert.Equal("Main game phase", phase.Description);
         Assert.Equal(1, phase.Order);
+        Assert.NotNull(phase.Steps);
         Assert.Single(phase.Steps);
+        Assert.NotNull(phase.AllowedActions);
         Assert.Equal(2, phase.AllowedActions.Count);
     }
 
@@ -314,6 +317,7 @@ public class RuleSpecV0ModelTests
         var cost = new ActionCost(resources, "Resource cost");
 
         // Assert
+        Assert.NotNull(cost.Resources);
         Assert.Equal(2, cost.Resources.Count);
         Assert.Equal(3, cost.Resources["gold"]);
         Assert.Equal("Resource cost", cost.Description);
@@ -362,7 +366,9 @@ public class RuleSpecV0ModelTests
         Assert.Equal("Buy Card", action.Name);
         Assert.Equal(ActionType.Optional, action.Type);
         Assert.Equal("Purchase a card", action.Description);
+        Assert.NotNull(action.Prerequisites);
         Assert.Single(action.Prerequisites);
+        Assert.NotNull(action.Effects);
         Assert.Single(action.Effects);
         Assert.NotNull(action.Cost);
     }
@@ -475,7 +481,9 @@ public class RuleSpecV0ModelTests
         // Assert
         Assert.Equal(ScoringMethod.Hybrid, rules.Method);
         Assert.Equal("Combined scoring", rules.Description);
+        Assert.NotNull(rules.Sources);
         Assert.Single(rules.Sources);
+        Assert.NotNull(rules.Tiebreakers);
         Assert.Single(rules.Tiebreakers);
     }
 
@@ -566,7 +574,9 @@ public class RuleSpecV0ModelTests
         // Assert
         Assert.Equal("ec-1", edgeCase.Id);
         Assert.Equal(EdgeCaseCategory.Clarification, edgeCase.Category);
+        Assert.NotNull(edgeCase.RelatedActions);
         Assert.Equal(2, edgeCase.RelatedActions.Count);
+        Assert.NotNull(edgeCase.RelatedPhases);
         Assert.Single(edgeCase.RelatedPhases);
     }
 
@@ -607,6 +617,7 @@ public class RuleSpecV0ModelTests
 
         // Assert
         Assert.Equal("Action Point", term.Term);
+        Assert.NotNull(term.Examples);
         Assert.Equal(2, term.Examples.Count);
     }
 
@@ -732,7 +743,9 @@ public class RuleSpecV0ModelTests
             glossary);
 
         // Assert
+        Assert.NotNull(spec.EdgeCases);
         Assert.Single(spec.EdgeCases);
+        Assert.NotNull(spec.Glossary);
         Assert.Single(spec.Glossary);
     }
 

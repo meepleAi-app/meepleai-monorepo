@@ -41,6 +41,7 @@ public class BackgroundTaskServiceTests
         // Act
         service.Execute(async () =>
         {
+            await Task.CompletedTask;
             try
             {
                 throw expectedException;
@@ -49,7 +50,6 @@ public class BackgroundTaskServiceTests
             {
                 tcs.SetResult(true);
             }
-            await Task.CompletedTask;
         });
 
         // Wait for background task to complete

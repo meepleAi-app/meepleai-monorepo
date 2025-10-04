@@ -187,7 +187,7 @@ public class SetupGuideServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task SetupStep_HasCorrectStructure()
+    public void SetupStep_HasCorrectStructure()
     {
         // Arrange
         var step = new SetupGuideStep(
@@ -245,5 +245,7 @@ public class SetupGuideServiceTests : IDisposable
         Assert.True(result.estimatedSetupTimeMinutes > 0);
         // Default steps are 5, so estimated time should be around 10 minutes (2 min per step)
         Assert.Equal(10, result.estimatedSetupTimeMinutes);
+
+        await Task.CompletedTask;
     }
 }

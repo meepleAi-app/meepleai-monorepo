@@ -29,7 +29,7 @@ public class TenantContextTests
     {
         // Arrange
         var mockHttpContext = new Mock<HttpContext>();
-        mockHttpContext.Setup(x => x.User).Returns((ClaimsPrincipal?)null);
+        mockHttpContext.Setup(x => x.User).Returns(default(ClaimsPrincipal)!);
 
         var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
         mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(mockHttpContext.Object);

@@ -55,7 +55,7 @@ public class PdfTableExtractionServiceTests
     }
 
     [Fact]
-    public async Task PdfStructuredExtractionResult_CreateSuccess_SetsPropertiesCorrectly()
+    public void PdfStructuredExtractionResult_CreateSuccess_SetsPropertiesCorrectly()
     {
         // Arrange
         var tables = new List<PdfTable>
@@ -97,7 +97,7 @@ public class PdfTableExtractionServiceTests
     }
 
     [Fact]
-    public async Task PdfStructuredExtractionResult_CreateFailure_SetsErrorMessage()
+    public void PdfStructuredExtractionResult_CreateFailure_SetsErrorMessage()
     {
         // Arrange
         var errorMessage = "Test error message";

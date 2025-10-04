@@ -243,6 +243,10 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
 
         // Assert - background processing completed successfully
         Assert.NotNull(completedPdf);
+        if (completedPdf.ProcessingStatus == "failed")
+        {
+            _output.WriteLine($"PDF processing failed with error: {completedPdf.ProcessingError}");
+        }
         Assert.Equal("completed", completedPdf.ProcessingStatus);
         Assert.NotNull(completedPdf.ExtractedText);
         // Text extraction may have encoding quirks, so check for core content
@@ -273,6 +277,10 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
 
         // Assert
         Assert.NotNull(completedPdf);
+        if (completedPdf.ProcessingStatus == "failed")
+        {
+            _output.WriteLine($"PDF processing failed with error: {completedPdf.ProcessingError}");
+        }
         Assert.Equal("completed", completedPdf.ProcessingStatus);
         Assert.Equal(3, completedPdf.PageCount);
         Assert.Contains("Page 1 content", completedPdf.ExtractedText);

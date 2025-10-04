@@ -49,6 +49,13 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
 
     private PdfStorageService CreateService()
     {
+        // Create services that will be used by background tasks
+        var extractionLoggerMock = new Mock<ILogger<PdfTextExtractionService>>();
+        var textExtractionService = new PdfTextExtractionService(extractionLoggerMock.Object);
+
+        var tableExtractionLoggerMock = new Mock<ILogger<PdfTableExtractionService>>();
+        var tableExtractionService = new PdfTableExtractionService(tableExtractionLoggerMock.Object);
+
         // Setup service scope factory for background tasks
         var scopeFactoryMock = new Mock<IServiceScopeFactory>();
         scopeFactoryMock.Setup(f => f.CreateScope()).Returns(() =>
@@ -62,6 +69,14 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
                 .Setup(sp => sp.GetService(typeof(Api.Infrastructure.MeepleAiDbContext)))
                 .Returns(scopedDbContext);
 
+            serviceProviderMock
+                .Setup(sp => sp.GetService(typeof(PdfTextExtractionService)))
+                .Returns(textExtractionService);
+
+            serviceProviderMock
+                .Setup(sp => sp.GetService(typeof(PdfTableExtractionService)))
+                .Returns(tableExtractionService);
+
             scopeMock.Setup(s => s.ServiceProvider).Returns(serviceProviderMock.Object);
             return scopeMock.Object;
         });
@@ -73,17 +88,9 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
 
         var loggerMock = new Mock<ILogger<PdfStorageService>>();
 
-        // Use real PdfTextExtractionService
-        var extractionLoggerMock = new Mock<ILogger<PdfTextExtractionService>>();
-        var textExtractionService = new PdfTextExtractionService(extractionLoggerMock.Object);
-
         // Use real BackgroundTaskService
         var backgroundLoggerMock = new Mock<ILogger<BackgroundTaskService>>();
         var backgroundTaskService = new BackgroundTaskService(backgroundLoggerMock.Object);
-
-        // Use real PdfTableExtractionService
-        var tableExtractionLoggerMock = new Mock<ILogger<PdfTableExtractionService>>();
-        var tableExtractionService = new PdfTableExtractionService(tableExtractionLoggerMock.Object);
 
         return new PdfStorageService(
             DbContext,

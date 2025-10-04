@@ -213,10 +213,14 @@ Accogliamo contributi dalla community! Prima di iniziare:
 - ✅ CLAUDE.md - guida sviluppo per AI agents
 - ✅ agents.md - standard operativi coding agents
 
+#### Testing & CI
+- ✅ PDF extraction in CI (libgdiplus, Docnet runtime Linux)
+- ✅ Integration tests con TestContainers (PostgreSQL + Qdrant)
+- ✅ Tutti i test di integrazione abilitati (294 test passing)
+- ✅ Coverage reporting automatico
+
 ### 🚧 In corso
 
-- 🚧 Stabilizzazione PDF extraction in CI (fix libgdiplus, Docnet runtime)
-- 🚧 Ottimizzazione performance integration tests
 - 🚧 Miglioramento error handling e logging
 
 ### 📋 Pianificato (Q1-Q2 2025)

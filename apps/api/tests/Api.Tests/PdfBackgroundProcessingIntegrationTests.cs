@@ -339,4 +339,76 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
         // Assert
         Assert.True(executed);
     }
+
+    [Fact]
+    public async Task BackgroundExtraction_HandlesEmptyPdf_WithRealPostgreSQL()
+    {
+        // Arrange
+        var service = CreateService();
+        var tenantId = "tenant4";
+        var gameId = "game4";
+        var userId = "user4";
+        await CreateTestGameAsync(tenantId, gameId, userId);
+
+        // Create empty PDF (no text content)
+        using var stream = new MemoryStream();
+        Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(2, Unit.Centimetre);
+                page.Content().Text("");
+            });
+        }).GeneratePdf(stream);
+        var pdfBytes = stream.ToArray();
+        var fileMock = CreateMockFormFile("empty.pdf", "application/pdf", pdfBytes);
+
+        // Act
+        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+
+        // Wait for background processing
+        var completedPdf = await WaitForProcessingCompletionAsync(result.Document!.Id);
+
+        // Assert
+        Assert.NotNull(completedPdf);
+        Assert.True(
+            completedPdf.ProcessingStatus == "completed",
+            $"Expected status 'completed' but got '{completedPdf.ProcessingStatus}'. Error: {completedPdf.ProcessingError}");
+        Assert.NotNull(completedPdf.ExtractedText);
+        // Empty PDF should have minimal or zero character count (whitespace may be extracted)
+        Assert.True(completedPdf.CharacterCount <= 10,
+            $"Expected minimal text (<=10 chars) but got {completedPdf.CharacterCount} characters: '{completedPdf.ExtractedText}'");
+        // Empty PDFs may report 0 pages depending on PDF structure
+        Assert.True(completedPdf.PageCount >= 0,
+            $"PageCount should be non-negative but got {completedPdf.PageCount}");
+    }
+
+    [Fact]
+    public async Task BackgroundExtraction_SetsStatusToFailed_WhenExtractionFails()
+    {
+        // Arrange
+        var service = CreateService();
+        var tenantId = "tenant5";
+        var gameId = "game5";
+        var userId = "user5";
+        await CreateTestGameAsync(tenantId, gameId, userId);
+
+        // Create a corrupt/invalid PDF file (just random bytes)
+        var corruptPdfBytes = new byte[] { 0x25, 0x50, 0x44, 0x46, 0x2D, 0x00, 0x00 }; // Invalid PDF header
+        var fileMock = CreateMockFormFile("corrupt.pdf", "application/pdf", corruptPdfBytes);
+
+        // Act
+        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+
+        // Wait for background processing to attempt and fail
+        var processedPdf = await WaitForProcessingCompletionAsync(result.Document!.Id);
+
+        // Assert
+        Assert.NotNull(processedPdf);
+        // Should either fail or complete with error (depending on Docnet's error handling)
+        Assert.True(
+            processedPdf.ProcessingStatus == "failed" || !string.IsNullOrEmpty(processedPdf.ProcessingError),
+            $"Expected processing to fail or have error, but status was '{processedPdf.ProcessingStatus}' with error: '{processedPdf.ProcessingError}'");
+    }
 }

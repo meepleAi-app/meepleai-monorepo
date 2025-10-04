@@ -173,3 +173,106 @@ Accogliamo contributi dalla community! Prima di iniziare:
 - **Rotazione OpenRouter API key:** genera una chiave dedicata per MeepleAI, ruotala almeno ogni 90 giorni o immediatamente in caso di sospetta fuga, aggiorna il secret GitHub `OPENROUTER_API_KEY` e invalida la chiave precedente dal pannello OpenRouter.
 - **Rotazione GitHub PAT (per n8n o automazioni):** usa PAT con scope minimi, memorizzalo come secret GitHub (`GITHUB_TOKEN`/`N8N_GITHUB_PAT`), ruotalo ogni 90 giorni e revoca immediatamente i token inutilizzati.
 - Configura gli hook di sicurezza come descritto nella sezione precedente: il gancio `detect-secrets` blocca la maggior parte dei leak accidentali; aggiorna il baseline con `detect-secrets scan > .secrets.baseline` solo dopo aver verificato che non siano presenti segreti reali.
+
+## 🗺️ Roadmap
+
+### ✅ Completato
+
+#### Infrastruttura & DevOps
+- ✅ Architettura microservizi con Docker Compose
+- ✅ CI/CD pipeline con GitHub Actions
+- ✅ Integration tests in CI con Qdrant gRPC
+- ✅ Pre-commit hooks per sicurezza (detect-secrets, secret scanning)
+- ✅ Gestione environment multi-ambiente (.env.dev, .env.ci)
+- ✅ Health checks per tutti i servizi
+
+#### Backend (.NET 8)
+- ✅ API REST con minimal APIs
+- ✅ Sistema multi-tenant con isolamento dati
+- ✅ Autenticazione basata su sessioni con cookie HttpOnly
+- ✅ Autorizzazione role-based (Admin, Editor, User)
+- ✅ Integrazione PostgreSQL con EF Core migrations
+- ✅ Cache distribuita con Redis
+- ✅ RAG (Retrieval-Augmented Generation) con Qdrant
+- ✅ PDF extraction service (Docnet + tabelle)
+- ✅ Seed demo data per testing
+
+#### Frontend (Next.js)
+- ✅ Interfaccia web React/TypeScript
+- ✅ API client con gestione errori
+- ✅ Health check endpoints
+- ✅ Integrazione con backend API
+
+#### Automazione
+- ✅ n8n workflow engine setup
+- ✅ Webhook n8n per Q&A endpoint
+
+#### Documentazione
+- ✅ CONTRIBUTING.md - linee guida per contributi
+- ✅ SECURITY.md - policy di sicurezza
+- ✅ CLAUDE.md - guida sviluppo per AI agents
+- ✅ agents.md - standard operativi coding agents
+
+### 🚧 In corso
+
+- 🚧 Stabilizzazione PDF extraction in CI (fix libgdiplus, Docnet runtime)
+- 🚧 Ottimizzazione performance integration tests
+- 🚧 Miglioramento error handling e logging
+
+### 📋 Pianificato (Q1-Q2 2025)
+
+#### Core Features
+- 📋 **Ingestion Pipeline completo**
+  - Upload multipli PDF
+  - Processamento asincrono con coda
+  - Estrazione avanzata tabelle e immagini
+  - Chunking intelligente per RAG
+
+- 📋 **Chat multi-turno persistente**
+  - Storico conversazioni per game/rule_spec
+  - Context window management
+  - Follow-up questions intelligenti
+
+- 📋 **Gestione avanzata rule specs**
+  - Versioning documenti
+  - Diff tra versioni
+  - Publishing workflow
+  - Retention policy per vecchie versioni
+
+#### UX & Frontend
+- 📋 UI/UX completo per chat interfaccia
+- 📋 Dashboard amministrazione tenant
+- 📋 Gestione upload PDF con progress tracking
+- 📋 Visualizzazione source documents per risposte
+
+#### Integrazioni
+- 📋 Supporto multiple LLM providers (oltre OpenRouter)
+- 📋 Webhook system per eventi (new chat, ingestion complete)
+- 📋 API pubblica per integrazioni terze parti
+
+#### Performance & Scale
+- 📋 Caching avanzato strategie (per query, per tenant)
+- 📋 Ottimizzazione vector search con filtri pre-compute
+- 📋 Monitoring e observability (OpenTelemetry)
+
+### 🔮 Visione futura (2025+)
+
+- 🔮 **Multi-modal support**: immagini, diagrammi, video tutorial giochi
+- 🔮 **AI Game Master**: agente autonomo che simula partite
+- 🔮 **Community features**: condivisione Q&A, knowledge base pubblica
+- 🔮 **Mobile app**: client iOS/Android nativo
+- 🔮 **Voice interface**: Q&A vocale durante le partite
+- 🔮 **Gamification**: statistiche utilizzo, achievements, leaderboard
+- 🔮 **Marketplace**: regole custom, espansioni community-driven
+- 🔮 **Real-time multiplayer**: assistenza durante partite online
+
+### Priorità di sviluppo
+
+La roadmap segue queste priorità:
+1. **Stabilità**: Fix CI/CD e test reliability (Q1 2025)
+2. **Core functionality**: Ingestion completo e chat persistente (Q1-Q2 2025)
+3. **User experience**: UI/UX migliorato (Q2 2025)
+4. **Scale & Performance**: Ottimizzazioni e monitoring (Q2-Q3 2025)
+5. **Innovation**: Features avanzate e multi-modal (Q4 2025+)
+
+Per seguire i progressi in tempo reale, consulta la [Project Board](https://github.com/MeepleAI/meepleai-monorepo/projects) e le [Issues](https://github.com/MeepleAI/meepleai-monorepo/issues).

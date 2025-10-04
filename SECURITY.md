@@ -213,6 +213,12 @@ Before deploying to production:
 - [ASP.NET Core Security Best Practices](https://learn.microsoft.com/en-us/aspnet/core/security/)
 - [Next.js Security](https://nextjs.org/docs/advanced-features/security-headers)
 
+## Contact
+
+For security concerns, contact the maintainers:
+- **Email**: Report via GitHub issue (for non-sensitive topics) or direct email to repository maintainer
+- **Response Time**: We aim to respond within 48 hours
+
 ---
 
-**Last Updated**: 2025-09-30
+**Last Updated**: 2025-10-04

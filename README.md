@@ -142,6 +142,14 @@ scripts/, tools/, schemas/ ...
 
 Per altre linee guida consulta `agents.md` e i README specifici nelle rispettive app.
 
+## Contribuire
+
+Accogliamo contributi dalla community! Prima di iniziare:
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Linee guida per pull request, coding standards, e testing
+- **[SECURITY.md](SECURITY.md)** - Policy di sicurezza e come segnalare vulnerabilità
+- **[agents.md](agents.md)** - Standard operativi per agenti di coding (Codex/Claude Code)
+
 ## Hook di sicurezza locali
 
 1. Installa le dipendenze di sviluppo Python (richiede Python 3.9+):

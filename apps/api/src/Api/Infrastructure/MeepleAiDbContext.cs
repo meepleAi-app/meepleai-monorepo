@@ -29,6 +29,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<VectorDocumentEntity> VectorDocuments => Set<VectorDocumentEntity>();
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
     public DbSet<AiRequestLogEntity> AiRequestLogs => Set<AiRequestLogEntity>();
+    public DbSet<N8nConfigEntity> N8nConfigs => Set<N8nConfigEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -311,6 +312,33 @@ public class MeepleAiDbContext : DbContext
             entity.HasIndex(e => new { e.UserId, e.CreatedAt });
         });
 
+        modelBuilder.Entity<N8nConfigEntity>(entity =>
+        {
+            entity.ToTable("n8n_configs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
+            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(128);
+            entity.Property(e => e.BaseUrl).IsRequired().HasMaxLength(512);
+            entity.Property(e => e.ApiKeyEncrypted).IsRequired().HasMaxLength(512);
+            entity.Property(e => e.WebhookUrl).HasMaxLength(512);
+            entity.Property(e => e.IsActive).IsRequired();
+            entity.Property(e => e.LastTestedAt);
+            entity.Property(e => e.LastTestResult).HasMaxLength(512);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.UpdatedAt).IsRequired();
+            entity.Property(e => e.CreatedByUserId).IsRequired().HasMaxLength(64);
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.CreatedBy)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => new { e.TenantId, e.Name }).IsUnique();
+        });
+
         // AUTH-02: Global query filters for tenant isolation
         // Automatically filter all queries by current tenant using the CurrentTenantId property
         // Note: When CurrentTenantId is null, all data is returned (for migrations, admin operations, etc.)
@@ -325,5 +353,6 @@ public class MeepleAiDbContext : DbContext
         modelBuilder.Entity<VectorDocumentEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
         modelBuilder.Entity<AuditLogEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
         modelBuilder.Entity<AiRequestLogEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
+        modelBuilder.Entity<N8nConfigEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
     }
 }

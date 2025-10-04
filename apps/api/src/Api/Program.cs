@@ -68,6 +68,7 @@ builder.Services.AddScoped<RateLimitService>();
 builder.Services.AddScoped<PdfTextExtractionService>();
 builder.Services.AddScoped<PdfTableExtractionService>();
 builder.Services.AddScoped<PdfStorageService>();
+builder.Services.AddScoped<N8nConfigService>();
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 
@@ -834,6 +835,147 @@ app.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logSe
 
     var stats = await logService.GetStatsAsync(session.User.tenantId, startDate, endDate, ct);
     return Results.Json(stats);
+});
+
+// ADM-02: n8n workflow configuration endpoints
+app.MapGet("/admin/n8n", async (HttpContext context, N8nConfigService n8nService, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var configs = await n8nService.GetConfigsAsync(session.User.tenantId, ct);
+    return Results.Json(new { configs });
+});
+
+app.MapGet("/admin/n8n/{configId}", async (string configId, HttpContext context, N8nConfigService n8nService, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var config = await n8nService.GetConfigAsync(session.User.tenantId, configId, ct);
+
+    if (config == null)
+    {
+        return Results.NotFound(new { error = "Configuration not found" });
+    }
+
+    return Results.Json(config);
+});
+
+app.MapPost("/admin/n8n", async (CreateN8nConfigRequest request, HttpContext context, N8nConfigService n8nService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation("Admin {UserId} creating n8n config: {Name}", session.User.id, request.Name);
+        var config = await n8nService.CreateConfigAsync(session.User.tenantId, session.User.id, request, ct);
+        logger.LogInformation("n8n config {ConfigId} created successfully", config.Id);
+        return Results.Json(config);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Failed to create n8n config: {Error}", ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+app.MapPut("/admin/n8n/{configId}", async (string configId, UpdateN8nConfigRequest request, HttpContext context, N8nConfigService n8nService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation("Admin {UserId} updating n8n config {ConfigId}", session.User.id, configId);
+        var config = await n8nService.UpdateConfigAsync(session.User.tenantId, configId, request, ct);
+        logger.LogInformation("n8n config {ConfigId} updated successfully", config.Id);
+        return Results.Json(config);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Failed to update n8n config: {Error}", ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+app.MapDelete("/admin/n8n/{configId}", async (string configId, HttpContext context, N8nConfigService n8nService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    logger.LogInformation("Admin {UserId} deleting n8n config {ConfigId}", session.User.id, configId);
+    var deleted = await n8nService.DeleteConfigAsync(session.User.tenantId, configId, ct);
+
+    if (!deleted)
+    {
+        return Results.NotFound(new { error = "Configuration not found" });
+    }
+
+    logger.LogInformation("n8n config {ConfigId} deleted successfully", configId);
+    return Results.Json(new { ok = true });
+});
+
+app.MapPost("/admin/n8n/{configId}/test", async (string configId, HttpContext context, N8nConfigService n8nService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation("Admin {UserId} testing n8n config {ConfigId}", session.User.id, configId);
+        var result = await n8nService.TestConnectionAsync(session.User.tenantId, configId, ct);
+        logger.LogInformation("n8n config {ConfigId} test result: {Success}", configId, result.Success);
+        return Results.Json(result);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Failed to test n8n config: {Error}", ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
 });
 
 app.Run();

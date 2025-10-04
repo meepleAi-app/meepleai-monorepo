@@ -34,3 +34,38 @@ public record SetupGuideStep(
     IReadOnlyList<Snippet> references,
     bool isOptional = false
 );
+
+// ADM-02: n8n Configuration models
+public record N8nConfigDto(
+    string Id,
+    string TenantId,
+    string Name,
+    string BaseUrl,
+    string? WebhookUrl,
+    bool IsActive,
+    DateTime? LastTestedAt,
+    string? LastTestResult,
+    DateTime CreatedAt,
+    DateTime UpdatedAt
+);
+
+public record CreateN8nConfigRequest(
+    string Name,
+    string BaseUrl,
+    string ApiKey,
+    string? WebhookUrl
+);
+
+public record UpdateN8nConfigRequest(
+    string? Name,
+    string? BaseUrl,
+    string? ApiKey,
+    string? WebhookUrl,
+    bool? IsActive
+);
+
+public record N8nTestResult(
+    bool Success,
+    string Message,
+    int? LatencyMs
+);

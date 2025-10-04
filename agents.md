@@ -1,6 +1,8 @@
 # agents.md — Standard Operativo per Agenti (Codex/Claude Code) nel Monorepo MeepleAI / MaapleAI
 
 > Questo file definisce **ruoli, regole, prompt, deliverable e flussi** per agenti di coding (OpenAI Codex, Claude Code, ecc.) che lavorano nel monorepo. È pensato per **team di 1 persona** con automazioni locali (Docker Desktop) e integrazione GitHub Flow.
+>
+> **Ultima revisione**: 2025-10-04 — Allineato con gli standard attuali del repository (npm, Jest, Playwright)
 
 ---
 
@@ -20,7 +22,7 @@
 
 ### 1.2 Naming & Struttura repository (MeepleAI)
 - **Radice monorepo**:
-  - `/apps/web` — Frontend (Next.js/TS). `package.json`, `pnpm-lock.yaml`.
+  - `/apps/web` — Frontend (Next.js/TS). `package.json`, `package-lock.json`.
   - `/apps/api` — Backend .NET (C#). `MeepleAI.Api.csproj` ([Unverified] nome file se diverso). Soluzione: `MeepleAI.sln` in radice.
   - `/packages` — librerie condivise (TS), es. `@meeple/shared`.
   - `/infra` — Docker Compose, config runtime, seeds.
@@ -107,7 +109,7 @@
 ## 6) Testing Standard (MeepleAI)
 
 ### 6.1 Unit
-- **TS (apps/web):** Vitest/Jest; mock I/O rete. Aggiungi `vitest.config.ts`. Script: `pnpm test`.
+- **TS (apps/web):** Jest; mock I/O rete. Script: `npm test`.
 - **C# (apps/api):** xUnit; `dotnet test`. Abilita raccolta coverage.
 
 ### 6.2 Integration & E2E
@@ -116,7 +118,7 @@
 - **Data:** semi deterministici; fixture per multi‑tenant.
 
 ### 6.3 Qualità continua
-- **GitHub Actions**: job separati `ci-web` (Node 20 + pnpm), `ci-api` (.NET 8), `e2e` (services: postgres/redis/qdrant).
+- **GitHub Actions**: job separati `ci-web` (Node 20 + npm), `ci-api` (.NET 8), `e2e` (services: postgres/redis/qdrant).
 
 ## 7) Come l’Agente usa i file *.md (Codex/Claude Code)
 
@@ -235,8 +237,8 @@ Output: patch ai md, con sommario delle modifiche.
 
 # Frontend (apps/web)
 pushd .\apps\web
-pnpm install
-pnpm lint && pnpm typecheck && pnpm test
+npm install
+npm run lint && npm run typecheck && npm test
 popd
 
 # Backend .NET (apps/api)
@@ -259,8 +261,8 @@ popd
 
 # E2E web (tests)
 pushd .\tests
-# Puppeteer/Playwright, a seconda di cosa usi
-pnpm e2e
+# Playwright per E2E testing
+npm run test:e2e
 popd
 ```
 
@@ -365,12 +367,10 @@ jobs:
         working-directory: apps/web
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with: { version: 9 }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: 'pnpm' }
-      - run: pnpm i
-      - run: pnpm lint && pnpm typecheck && pnpm test -- --ci
+        with: { node-version: 20, cache: 'npm' }
+      - run: npm ci
+      - run: npm run lint && npm run typecheck && npm test -- --ci
 
   ci-api:
     runs-on: ubuntu-latest
@@ -420,14 +420,12 @@ jobs:
         ports: ["6333:6333","6334:6334"]
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with: { version: 9 }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: 'pnpm' }
-      - run: pnpm i
-        working-directory: tests/e2e
-      - run: pnpm e2e
-        working-directory: tests/e2e
+        with: { node-version: 20, cache: 'npm' }
+      - run: npm ci
+        working-directory: apps/web
+      - run: npm run test:e2e
+        working-directory: apps/web
 ```
 
 ### 18.3 `infra/docker-compose.yml` (scheletro)

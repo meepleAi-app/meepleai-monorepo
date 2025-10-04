@@ -16,7 +16,6 @@ namespace Api.Tests;
 /// <summary>
 /// Integration tests for PDF background processing using TestContainers with PostgreSQL
 /// </summary>
-[Trait("Category", "Integration")]
 public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBase
 {
     private readonly List<string> _tempDirectories = new();
@@ -50,6 +49,13 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
 
     private PdfStorageService CreateService()
     {
+        // Create services that will be used by background tasks
+        var extractionLoggerMock = new Mock<ILogger<PdfTextExtractionService>>();
+        var textExtractionService = new PdfTextExtractionService(extractionLoggerMock.Object);
+
+        var tableExtractionLoggerMock = new Mock<ILogger<PdfTableExtractionService>>();
+        var tableExtractionService = new PdfTableExtractionService(tableExtractionLoggerMock.Object);
+
         // Setup service scope factory for background tasks
         var scopeFactoryMock = new Mock<IServiceScopeFactory>();
         scopeFactoryMock.Setup(f => f.CreateScope()).Returns(() =>
@@ -63,6 +69,14 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
                 .Setup(sp => sp.GetService(typeof(Api.Infrastructure.MeepleAiDbContext)))
                 .Returns(scopedDbContext);
 
+            serviceProviderMock
+                .Setup(sp => sp.GetService(typeof(PdfTextExtractionService)))
+                .Returns(textExtractionService);
+
+            serviceProviderMock
+                .Setup(sp => sp.GetService(typeof(PdfTableExtractionService)))
+                .Returns(tableExtractionService);
+
             scopeMock.Setup(s => s.ServiceProvider).Returns(serviceProviderMock.Object);
             return scopeMock.Object;
         });
@@ -74,17 +88,9 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
 
         var loggerMock = new Mock<ILogger<PdfStorageService>>();
 
-        // Use real PdfTextExtractionService
-        var extractionLoggerMock = new Mock<ILogger<PdfTextExtractionService>>();
-        var textExtractionService = new PdfTextExtractionService(extractionLoggerMock.Object);
-
         // Use real BackgroundTaskService
         var backgroundLoggerMock = new Mock<ILogger<BackgroundTaskService>>();
         var backgroundTaskService = new BackgroundTaskService(backgroundLoggerMock.Object);
-
-        // Use real PdfTableExtractionService
-        var tableExtractionLoggerMock = new Mock<ILogger<PdfTableExtractionService>>();
-        var tableExtractionService = new PdfTableExtractionService(tableExtractionLoggerMock.Object);
 
         return new PdfStorageService(
             DbContext,
@@ -244,7 +250,9 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
 
         // Assert - background processing completed successfully
         Assert.NotNull(completedPdf);
-        Assert.Equal("completed", completedPdf.ProcessingStatus);
+        Assert.True(
+            completedPdf.ProcessingStatus == "completed",
+            $"Expected status 'completed' but got '{completedPdf.ProcessingStatus}'. Error: {completedPdf.ProcessingError}");
         Assert.NotNull(completedPdf.ExtractedText);
         // Text extraction may have encoding quirks, so check for core content
         Assert.Contains("Test PDF Content", completedPdf.ExtractedText);
@@ -274,7 +282,9 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
 
         // Assert
         Assert.NotNull(completedPdf);
-        Assert.Equal("completed", completedPdf.ProcessingStatus);
+        Assert.True(
+            completedPdf.ProcessingStatus == "completed",
+            $"Expected status 'completed' but got '{completedPdf.ProcessingStatus}'. Error: {completedPdf.ProcessingError}");
         Assert.Equal(3, completedPdf.PageCount);
         Assert.Contains("Page 1 content", completedPdf.ExtractedText);
         Assert.Contains("Page 2 content", completedPdf.ExtractedText);
@@ -328,5 +338,77 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
 
         // Assert
         Assert.True(executed);
+    }
+
+    [Fact]
+    public async Task BackgroundExtraction_HandlesEmptyPdf_WithRealPostgreSQL()
+    {
+        // Arrange
+        var service = CreateService();
+        var tenantId = "tenant4";
+        var gameId = "game4";
+        var userId = "user4";
+        await CreateTestGameAsync(tenantId, gameId, userId);
+
+        // Create empty PDF (no text content)
+        using var stream = new MemoryStream();
+        Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(2, Unit.Centimetre);
+                page.Content().Text("");
+            });
+        }).GeneratePdf(stream);
+        var pdfBytes = stream.ToArray();
+        var fileMock = CreateMockFormFile("empty.pdf", "application/pdf", pdfBytes);
+
+        // Act
+        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+
+        // Wait for background processing
+        var completedPdf = await WaitForProcessingCompletionAsync(result.Document!.Id);
+
+        // Assert
+        Assert.NotNull(completedPdf);
+        Assert.True(
+            completedPdf.ProcessingStatus == "completed",
+            $"Expected status 'completed' but got '{completedPdf.ProcessingStatus}'. Error: {completedPdf.ProcessingError}");
+        Assert.NotNull(completedPdf.ExtractedText);
+        // Empty PDF should have minimal or zero character count (whitespace may be extracted)
+        Assert.True(completedPdf.CharacterCount <= 10,
+            $"Expected minimal text (<=10 chars) but got {completedPdf.CharacterCount} characters: '{completedPdf.ExtractedText}'");
+        // Empty PDFs may report 0 pages depending on PDF structure
+        Assert.True(completedPdf.PageCount >= 0,
+            $"PageCount should be non-negative but got {completedPdf.PageCount}");
+    }
+
+    [Fact]
+    public async Task BackgroundExtraction_SetsStatusToFailed_WhenExtractionFails()
+    {
+        // Arrange
+        var service = CreateService();
+        var tenantId = "tenant5";
+        var gameId = "game5";
+        var userId = "user5";
+        await CreateTestGameAsync(tenantId, gameId, userId);
+
+        // Create a corrupt/invalid PDF file (just random bytes)
+        var corruptPdfBytes = new byte[] { 0x25, 0x50, 0x44, 0x46, 0x2D, 0x00, 0x00 }; // Invalid PDF header
+        var fileMock = CreateMockFormFile("corrupt.pdf", "application/pdf", corruptPdfBytes);
+
+        // Act
+        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+
+        // Wait for background processing to attempt and fail
+        var processedPdf = await WaitForProcessingCompletionAsync(result.Document!.Id);
+
+        // Assert
+        Assert.NotNull(processedPdf);
+        // Should either fail or complete with error (depending on Docnet's error handling)
+        Assert.True(
+            processedPdf.ProcessingStatus == "failed" || !string.IsNullOrEmpty(processedPdf.ProcessingError),
+            $"Expected processing to fail or have error, but status was '{processedPdf.ProcessingStatus}' with error: '{processedPdf.ProcessingError}'");
     }
 }

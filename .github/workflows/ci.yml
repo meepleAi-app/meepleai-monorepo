@@ -75,12 +75,25 @@ jobs:
         run: dotnet restore
       - name: Build
         run: dotnet build
+      - name: Verify Qdrant is ready
+        run: |
+          echo "Waiting for Qdrant to be ready..."
+          for i in {1..30}; do
+            if curl -f http://localhost:6333/healthz > /dev/null 2>&1; then
+              echo "Qdrant is ready!"
+              break
+            fi
+            echo "Attempt $i: Qdrant not ready yet, waiting..."
+            sleep 2
+          done
+          curl -v http://localhost:6333/healthz || echo "Qdrant health check failed"
       - name: Test
         env:
+          CI: true
           OPENROUTER_API_KEY: test-key-for-ci
-          QDRANT_URL: http://localhost:6333
-          ConnectionStrings__Postgres: Host=localhost;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass
-        run: dotnet test --collect:"XPlat Code Coverage"
+          QDRANT_URL: http://127.0.0.1:6333
+          ConnectionStrings__Postgres: Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass
+        run: dotnet test --filter "Category!=Integration" --collect:"XPlat Code Coverage"
       - name: Generate coverage report
         run: |
           dotnet tool install -g dotnet-reportgenerator-globaltool

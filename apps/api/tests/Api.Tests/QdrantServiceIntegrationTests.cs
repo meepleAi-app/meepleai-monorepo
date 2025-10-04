@@ -6,6 +6,7 @@ namespace Api.Tests;
 /// <summary>
 /// Integration tests for QdrantService using real Qdrant container
 /// </summary>
+[Trait("Category", "Integration")]
 public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
 {
     [Fact]

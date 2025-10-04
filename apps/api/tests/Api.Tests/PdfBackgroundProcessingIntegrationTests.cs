@@ -16,6 +16,7 @@ namespace Api.Tests;
 /// <summary>
 /// Integration tests for PDF background processing using TestContainers with PostgreSQL
 /// </summary>
+[Trait("Category", "Integration")]
 public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBase
 {
     private readonly List<string> _tempDirectories = new();

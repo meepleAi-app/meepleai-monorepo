@@ -25,6 +25,21 @@ interface PdfProcessingResponse {
   processingError?: string | null;
 }
 
+type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+interface PdfTextResponse {
+  id: string;
+  fileName: string;
+  extractedText?: string | null;
+  processingStatus: ProcessingStatus;
+  processedAt?: string | null;
+  pageCount?: number | null;
+  characterCount?: number | null;
+  processingError?: string | null;
+}
+
+const POLLING_INTERVAL_MS = 2000;
+
 interface RuleAtom {
   id: string;
   text: string;
@@ -154,6 +169,133 @@ export default function UploadPage() {
     }
   }, [confirmedGameId]);
 
+  useEffect(() => {
+    if (currentStep !== 'parse' || !documentId) {
+      return;
+    }
+
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const pollStatus = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/pdfs/${documentId}/text`, {
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          let errorMessage = response.statusText || 'Request failed';
+          try {
+            const errorBody = await response.json();
+            if (errorBody && typeof errorBody.error === 'string') {
+              errorMessage = errorBody.error;
+            }
+          } catch {
+            // Ignore JSON parse errors for error responses
+          }
+
+          throw new Error(errorMessage);
+        }
+
+        const data = (await response.json()) as PdfTextResponse;
+        if (cancelled) {
+          return;
+        }
+
+        const status = data.processingStatus;
+        setProcessingStatus(status);
+        setProcessingMetadata({
+          pageCount: data.pageCount ?? null,
+          characterCount: data.characterCount ?? null,
+        });
+
+        if (status === 'failed') {
+          const errorMessage = data.processingError || 'Unknown error';
+          setProcessingError(errorMessage);
+          setMessage(`❌ PDF processing failed: ${errorMessage}`);
+          setIsPolling(false);
+          return;
+        }
+
+        setProcessingError(null);
+
+        if (status === 'completed') {
+          setIsPolling(false);
+          setMessage('✅ PDF processing completed. Loading RuleSpec…');
+          return;
+        }
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        setProcessingError(errorMessage);
+        setMessage(`❌ Unable to poll PDF status: ${errorMessage}`);
+        setIsPolling(false);
+        return;
+      }
+
+      if (!cancelled) {
+        timeoutId = setTimeout(pollStatus, POLLING_INTERVAL_MS);
+      }
+    };
+
+    setIsPolling(true);
+    pollStatus();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [API_BASE, currentStep, documentId]);
+
+  const handleParse = useCallback(async () => {
+    if (!confirmedGameId) {
+      setMessage('Please confirm a game before parsing');
+      return;
+    }
+
+    if (!documentId) {
+      setMessage('No document to parse. Please upload a PDF first.');
+      return;
+    }
+
+    autoAdvanceRef.current = true;
+    setParsing(true);
+    setMessage('');
+
+    try {
+      const fetchedRuleSpec = await api.get<RuleSpec>(`/games/${confirmedGameId}/rulespec`);
+
+      if (!fetchedRuleSpec) {
+        setMessage('❌ Failed to load RuleSpec: unauthorized');
+        return;
+      }
+
+      setRuleSpec(fetchedRuleSpec);
+      setMessage('✅ RuleSpec loaded successfully!');
+      setCurrentStep('review');
+    } catch (error) {
+      setMessage(`❌ Failed to load RuleSpec: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setParsing(false);
+    }
+  }, [confirmedGameId, documentId]);
+
+  useEffect(() => {
+    if (currentStep !== 'parse') {
+      return;
+    }
+
+    if (processingStatus === 'completed' && !autoAdvanceRef.current) {
+      autoAdvanceRef.current = true;
+      void handleParse();
+    }
+  }, [currentStep, handleParse, processingStatus]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
@@ -191,6 +333,10 @@ export default function UploadPage() {
       if (response.ok) {
         const data = await response.json();
         setDocumentId(data.documentId);
+        setProcessingStatus('pending');
+        setProcessingError(null);
+        setProcessingMetadata(null);
+        autoAdvanceRef.current = false;
         setMessage(`✅ PDF uploaded successfully! Document ID: ${data.documentId}`);
         await loadPdfs(confirmedGameId);
         setProcessingStatus('pending');
@@ -376,6 +522,11 @@ export default function UploadPage() {
     setFile(null);
     setDocumentId('');
     setRuleSpec(null);
+    setProcessingStatus(null);
+    setProcessingError(null);
+    setProcessingMetadata(null);
+    setIsPolling(false);
+    autoAdvanceRef.current = false;
     setMessage('');
     setProcessingStatus(null);
     setProcessingError(null);
@@ -525,6 +676,22 @@ export default function UploadPage() {
   };
   const effectiveProcessingStatus: ProcessingStatus = processingStatus ?? 'pending';
   const processingProgress = statusProgress[effectiveProcessingStatus];
+
+  const progressPercent = processingStatus === 'completed'
+    ? 100
+    : processingStatus === 'processing'
+      ? 70
+      : processingStatus === 'pending'
+        ? 35
+        : processingStatus === 'failed'
+          ? 100
+          : 0;
+
+  const statusLabel = processingStatus
+    ? processingStatus.charAt(0).toUpperCase() + processingStatus.slice(1)
+    : 'Waiting to start';
+
+  const isParseButtonDisabled = parsing || processingStatus !== 'completed';
 
   const renderStepIndicator = () => {
     const steps: WizardStep[] = ['upload', 'parse', 'review', 'publish'];

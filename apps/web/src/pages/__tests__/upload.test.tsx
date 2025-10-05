@@ -9,6 +9,7 @@ describe('UploadPage', () => {
     Promise.resolve({
       ok: status >= 200 && status < 300,
       status,
+      statusText: status >= 200 && status < 300 ? 'OK' : 'Error',
       json: () => Promise.resolve(data)
     } as Response);
 
@@ -19,6 +20,10 @@ describe('UploadPage', () => {
 
   afterAll(() => {
     global.fetch = originalFetch;
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('keeps upload disabled until a game is confirmed', async () => {

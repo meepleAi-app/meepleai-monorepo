@@ -35,6 +35,7 @@ const createRouter = (overrides: Partial<ReturnType<typeof useRouter>> = {}) => 
   isLocaleDomain: false,
   isReady: true,
   isPreview: false,
+  forward: jest.fn(),
   events: {
     emit: jest.fn(),
     on: jest.fn(),

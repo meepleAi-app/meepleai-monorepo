@@ -14,6 +14,7 @@ public class PdfStorageService
     private readonly PdfTextExtractionService _textExtractionService;
     private readonly PdfTableExtractionService _tableExtractionService;
     private readonly IBackgroundTaskService _backgroundTaskService;
+    private readonly IAiResponseCacheService _cacheService;
     private readonly ITextChunkingService? _textChunkingServiceOverride;
     private readonly IEmbeddingService? _embeddingServiceOverride;
     private readonly IQdrantService? _qdrantServiceOverride;
@@ -32,6 +33,7 @@ public class PdfStorageService
         PdfTextExtractionService textExtractionService,
         PdfTableExtractionService tableExtractionService,
         IBackgroundTaskService backgroundTaskService,
+        IAiResponseCacheService cacheService,
         ITextChunkingService? textChunkingService = null,
         IEmbeddingService? embeddingService = null,
         IQdrantService? qdrantService = null)
@@ -42,6 +44,7 @@ public class PdfStorageService
         _textExtractionService = textExtractionService;
         _tableExtractionService = tableExtractionService;
         _backgroundTaskService = backgroundTaskService;
+        _cacheService = cacheService;
         _textChunkingServiceOverride = textChunkingService;
         _embeddingServiceOverride = embeddingService;
         _qdrantServiceOverride = qdrantService;
@@ -132,6 +135,8 @@ public class PdfStorageService
 
             // Extract text asynchronously (PDF-02)
             _backgroundTaskService.Execute(() => ExtractTextAsync(fileId, filePath));
+
+            await InvalidateCacheSafelyAsync(gameId, ct, "PDF upload");
 
             return new PdfUploadResult(true, "PDF uploaded successfully", new PdfDocumentDto
             {
@@ -368,6 +373,8 @@ public class PdfStorageService
             vectorDoc.IndexedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
+            await InvalidateCacheSafelyAsync(gameId, CancellationToken.None, "vector indexing");
+
             _logger.LogInformation(
                 "Vector indexing completed for PDF {PdfId}: {ChunkCount} chunks indexed",
                 pdfId, indexResult.IndexedCount);
@@ -404,6 +411,22 @@ public class PdfStorageService
 
         var sanitized = string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
         return sanitized.Length > 200 ? sanitized.Substring(0, 200) : sanitized;
+    }
+
+    private async Task InvalidateCacheSafelyAsync(string gameId, CancellationToken ct, string operation)
+    {
+        try
+        {
+            await _cacheService.InvalidateGameAsync(gameId, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to invalidate AI cache for game {GameId} after {Operation}", gameId, operation);
+        }
     }
 }
 

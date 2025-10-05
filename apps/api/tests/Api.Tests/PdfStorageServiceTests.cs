@@ -34,12 +34,20 @@ public class PdfStorageServiceTests
         MeepleAiDbContext dbContext,
         string storagePath,
         Mock<IBackgroundTaskService> backgroundTaskMock,
-        Mock<IServiceScopeFactory>? scopeFactoryMock = null)
+        Mock<IServiceScopeFactory>? scopeFactoryMock = null,
+        Mock<IAiResponseCacheService>? cacheMock = null)
     {
         var configurationMock = new Mock<IConfiguration>();
         configurationMock.Setup(c => c[It.Is<string>(key => key == "PDF_STORAGE_PATH")]).Returns(storagePath);
 
         scopeFactoryMock ??= new Mock<IServiceScopeFactory>(MockBehavior.Strict);
+        cacheMock ??= new Mock<IAiResponseCacheService>();
+        cacheMock
+            .Setup(x => x.InvalidateGameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        cacheMock
+            .Setup(x => x.InvalidateEndpointAsync(It.IsAny<string>(), It.IsAny<AiCacheEndpoint>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         var loggerMock = new Mock<ILogger<PdfStorageService>>();
         var textExtractionService = new PdfTextExtractionService(Mock.Of<ILogger<PdfTextExtractionService>>());
@@ -52,7 +60,8 @@ public class PdfStorageServiceTests
             loggerMock.Object,
             textExtractionService,
             tableExtractionService,
-            backgroundTaskMock.Object);
+            backgroundTaskMock.Object,
+            cacheMock.Object);
     }
 
     private static async Task SeedUserAsync(MeepleAiDbContext dbContext, string userId)
@@ -213,8 +222,9 @@ public class PdfStorageServiceTests
                 .Callback<Func<Task>>(task => scheduledTask = task);
 
             var scopeFactoryMock = new Mock<IServiceScopeFactory>(MockBehavior.Strict);
+            var cacheMock = new Mock<IAiResponseCacheService>();
 
-            var service = CreateService(dbContext, storagePath, backgroundMock, scopeFactoryMock);
+            var service = CreateService(dbContext, storagePath, backgroundMock, scopeFactoryMock, cacheMock);
 
             var file = CreateFormFile("rules.pdf", "application/pdf", new byte[] { 1, 2, 3, 4 });
 
@@ -234,6 +244,8 @@ public class PdfStorageServiceTests
             Assert.Equal("user", stored.UploadedByUserId);
 
             Assert.NotNull(scheduledTask);
+
+            cacheMock.Verify(x => x.InvalidateGameAsync("game-1", It.IsAny<CancellationToken>()), Times.Once);
         }
         finally
         {

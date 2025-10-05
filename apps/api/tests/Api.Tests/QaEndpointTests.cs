@@ -25,7 +25,16 @@ public class QaEndpointTests
         }
 
         await using var dbContext = new MeepleAiDbContext(options);
-        var ruleService = new RuleSpecService(dbContext);
+
+        var cacheServiceMock = new Mock<IAiResponseCacheService>();
+        cacheServiceMock
+            .Setup(x => x.InvalidateGameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        cacheServiceMock
+            .Setup(x => x.InvalidateEndpointAsync(It.IsAny<string>(), It.IsAny<AiCacheEndpoint>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var ruleService = new RuleSpecService(dbContext, cacheServiceMock.Object);
 
         // Mock dependencies for RagService (AI-01 mocked to avoid external API calls)
         var configMock = new Mock<Microsoft.Extensions.Configuration.IConfiguration>();
@@ -67,7 +76,6 @@ public class QaEndpointTests
             .Setup(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(llmResult);
 
-        var cacheServiceMock = new Mock<IAiResponseCacheService>();
         var ragService = new RagService(dbContext, embeddingServiceMock.Object, qdrantServiceMock.Object, llmServiceMock.Object, cacheServiceMock.Object, ragLoggerMock);
 
         var gameId = "demo-chess";

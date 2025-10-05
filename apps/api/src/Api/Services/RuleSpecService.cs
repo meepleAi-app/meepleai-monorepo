@@ -9,9 +9,12 @@ namespace Api.Services;
 public class RuleSpecService
 {
     private readonly MeepleAiDbContext _dbContext;
-    public RuleSpecService(MeepleAiDbContext dbContext)
+    private readonly IAiResponseCacheService _cache;
+
+    public RuleSpecService(MeepleAiDbContext dbContext, IAiResponseCacheService cache)
     {
         _dbContext = dbContext;
+        _cache = cache;
     }
 
     // TODO: integra parser PDF (Tabula/Camelot via sidecar) e normalizzazione in RuleSpec
@@ -121,6 +124,8 @@ public class RuleSpecService
 
         _dbContext.RuleSpecs.Add(specEntity);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await _cache.InvalidateGameAsync(gameId, cancellationToken);
 
         return ToModel(specEntity);
     }

@@ -5,6 +5,7 @@ using Api.Models;
 using Api.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using Xunit;
 
 namespace Api.Tests;
@@ -14,6 +15,7 @@ public class RuleSpecServiceTests : IDisposable
     private readonly SqliteConnection _connection;
     private readonly MeepleAiDbContext _dbContext;
     private readonly RuleSpecService _service;
+    private readonly Mock<IAiResponseCacheService> _cacheMock = new();
 
     public RuleSpecServiceTests()
     {
@@ -27,7 +29,14 @@ public class RuleSpecServiceTests : IDisposable
         _dbContext = new MeepleAiDbContext(options);
         _dbContext.Database.EnsureCreated();
 
-        _service = new RuleSpecService(_dbContext);
+        _cacheMock
+            .Setup(x => x.InvalidateGameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        _cacheMock
+            .Setup(x => x.InvalidateEndpointAsync(It.IsAny<string>(), It.IsAny<AiCacheEndpoint>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        _service = new RuleSpecService(_dbContext, _cacheMock.Object);
     }
 
     public void Dispose()
@@ -143,6 +152,8 @@ public class RuleSpecServiceTests : IDisposable
         Assert.Equal(2, entity.Atoms.Count);
         Assert.Contains(entity.Atoms, a => a.Key == "a1" && a.Text == "First rule");
         Assert.Contains(entity.Atoms, a => a.Key == "a2" && a.Text == "Second rule");
+
+        _cacheMock.Verify(x => x.InvalidateGameAsync(game.Id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

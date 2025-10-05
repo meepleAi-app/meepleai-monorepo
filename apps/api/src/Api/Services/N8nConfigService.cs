@@ -2,7 +2,6 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -14,26 +13,22 @@ public class N8nConfigService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<N8nConfigService> _logger;
-    private readonly string _tenantId;
 
     public N8nConfigService(
         MeepleAiDbContext db,
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
-        ILogger<N8nConfigService> logger,
-        IOptions<SingleTenantOptions> tenantOptions)
+        ILogger<N8nConfigService> logger)
     {
         _db = db;
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
         _logger = logger;
-        _tenantId = (tenantOptions?.Value ?? new SingleTenantOptions()).GetTenantId();
     }
 
     public async Task<List<N8nConfigDto>> GetConfigsAsync(CancellationToken ct)
     {
         var configs = await _db.N8nConfigs
-            .Where(c => c.TenantId == _tenantId)
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync(ct);
 
@@ -53,7 +48,7 @@ public class N8nConfigService
     public async Task<N8nConfigDto?> GetConfigAsync(string configId, CancellationToken ct)
     {
         var config = await _db.N8nConfigs
-            .FirstOrDefaultAsync(c => c.Id == configId && c.TenantId == _tenantId, ct);
+            .FirstOrDefaultAsync(c => c.Id == configId, ct);
 
         if (config == null)
         {
@@ -79,7 +74,7 @@ public class N8nConfigService
         CancellationToken ct)
     {
         var existingConfig = await _db.N8nConfigs
-            .FirstOrDefaultAsync(c => c.TenantId == _tenantId && c.Name == request.Name, ct);
+            .FirstOrDefaultAsync(c => c.Name == request.Name, ct);
 
         if (existingConfig != null)
         {
@@ -89,7 +84,6 @@ public class N8nConfigService
         var config = new N8nConfigEntity
         {
             Id = Guid.NewGuid().ToString(),
-            TenantId = _tenantId,
             Name = request.Name,
             BaseUrl = request.BaseUrl.TrimEnd('/'),
             ApiKeyEncrypted = EncryptApiKey(request.ApiKey),
@@ -122,7 +116,7 @@ public class N8nConfigService
         CancellationToken ct)
     {
         var config = await _db.N8nConfigs
-            .FirstOrDefaultAsync(c => c.Id == configId && c.TenantId == _tenantId, ct);
+            .FirstOrDefaultAsync(c => c.Id == configId, ct);
 
         if (config == null)
         {
@@ -132,7 +126,7 @@ public class N8nConfigService
         if (request.Name != null && request.Name != config.Name)
         {
             var existingConfig = await _db.N8nConfigs
-                .FirstOrDefaultAsync(c => c.TenantId == _tenantId && c.Name == request.Name && c.Id != configId, ct);
+                .FirstOrDefaultAsync(c => c.Name == request.Name && c.Id != configId, ct);
 
             if (existingConfig != null)
             {
@@ -182,7 +176,7 @@ public class N8nConfigService
     public async Task<bool> DeleteConfigAsync(string configId, CancellationToken ct)
     {
         var config = await _db.N8nConfigs
-            .FirstOrDefaultAsync(c => c.Id == configId && c.TenantId == _tenantId, ct);
+            .FirstOrDefaultAsync(c => c.Id == configId, ct);
 
         if (config == null)
         {
@@ -198,7 +192,7 @@ public class N8nConfigService
     public async Task<N8nTestResult> TestConnectionAsync(string configId, CancellationToken ct)
     {
         var config = await _db.N8nConfigs
-            .FirstOrDefaultAsync(c => c.Id == configId && c.TenantId == _tenantId, ct);
+            .FirstOrDefaultAsync(c => c.Id == configId, ct);
 
         if (config == null)
         {

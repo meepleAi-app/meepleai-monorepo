@@ -1,7 +1,6 @@
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace Api.Services;
 
@@ -9,13 +8,10 @@ public class AiRequestLogService
 {
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<AiRequestLogService> _logger;
-    private readonly string _tenantId;
-
-    public AiRequestLogService(MeepleAiDbContext db, ILogger<AiRequestLogService> logger, IOptions<SingleTenantOptions> tenantOptions)
+    public AiRequestLogService(MeepleAiDbContext db, ILogger<AiRequestLogService> logger)
     {
         _db = db;
         _logger = logger;
-        _tenantId = (tenantOptions?.Value ?? new SingleTenantOptions()).GetTenantId();
     }
 
     public async Task LogRequestAsync(
@@ -37,7 +33,6 @@ public class AiRequestLogService
         {
             var log = new AiRequestLogEntity
             {
-                TenantId = _tenantId,
                 UserId = userId,
                 GameId = gameId,
                 Endpoint = endpoint,
@@ -72,8 +67,7 @@ public class AiRequestLogService
         DateTime? endDate = null,
         CancellationToken ct = default)
     {
-        var query = _db.AiRequestLogs
-            .Where(log => log.TenantId == _tenantId);
+        var query = _db.AiRequestLogs.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(endpoint))
         {
@@ -107,8 +101,7 @@ public class AiRequestLogService
         DateTime? endDate = null,
         CancellationToken ct = default)
     {
-        var query = _db.AiRequestLogs
-            .Where(log => log.TenantId == _tenantId);
+        var query = _db.AiRequestLogs.AsQueryable();
 
         if (startDate.HasValue)
         {

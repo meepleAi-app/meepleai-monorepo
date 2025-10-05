@@ -5,7 +5,6 @@ using System.Text;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace Api.Services;
 
@@ -13,13 +12,11 @@ public class GameService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
-    private readonly string _tenantId;
 
-    public GameService(MeepleAiDbContext dbContext, IOptions<SingleTenantOptions> tenantOptions, TimeProvider? timeProvider = null)
+    public GameService(MeepleAiDbContext dbContext, TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext;
         _timeProvider = timeProvider ?? TimeProvider.System;
-        _tenantId = (tenantOptions?.Value ?? new SingleTenantOptions()).GetTenantId();
     }
 
     public async Task<GameEntity> CreateGameAsync(string name, string? requestedGameId, CancellationToken ct = default)
@@ -39,12 +36,12 @@ public class GameService
             desiredId = Guid.NewGuid().ToString("N")[..12];
         }
 
-        if (await _dbContext.Games.AnyAsync(g => g.TenantId == _tenantId && g.Id == desiredId, ct))
+        if (await _dbContext.Games.AnyAsync(g => g.Id == desiredId, ct))
         {
             throw new InvalidOperationException($"Game with id '{desiredId}' already exists");
         }
 
-        if (await _dbContext.Games.AnyAsync(g => g.TenantId == _tenantId && g.Name == normalizedName, ct))
+        if (await _dbContext.Games.AnyAsync(g => g.Name == normalizedName, ct))
         {
             throw new InvalidOperationException($"Game with name '{normalizedName}' already exists");
         }
@@ -54,7 +51,6 @@ public class GameService
         var entity = new GameEntity
         {
             Id = desiredId,
-            TenantId = _tenantId,
             Name = normalizedName,
             CreatedAt = now
         };
@@ -69,7 +65,6 @@ public class GameService
     {
         return await _dbContext.Games
             .AsNoTracking()
-            .Where(g => g.TenantId == _tenantId)
             .OrderBy(g => g.Name)
             .ToListAsync(ct);
     }

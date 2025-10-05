@@ -4,7 +4,6 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace Api.Services;
 
@@ -15,16 +14,10 @@ public class AuthService
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromDays(7);
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
-    private readonly string _tenantId;
-    private readonly string _tenantName;
-
-    public AuthService(MeepleAiDbContext db, IOptions<SingleTenantOptions> tenantOptions, TimeProvider? timeProvider = null)
+    public AuthService(MeepleAiDbContext db, TimeProvider? timeProvider = null)
     {
         _db = db;
         _timeProvider = timeProvider ?? TimeProvider.System;
-        var options = tenantOptions?.Value ?? new SingleTenantOptions();
-        _tenantId = options.GetTenantId();
-        _tenantName = options.GetTenantName();
     }
 
     public async Task<AuthResult> RegisterAsync(RegisterCommand command, CancellationToken ct = default)
@@ -37,19 +30,7 @@ public class AuthService
         var email = command.email.Trim().ToLowerInvariant();
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        var tenant = await _db.Tenants.FirstOrDefaultAsync(t => t.Id == _tenantId, ct);
-        if (tenant == null)
-        {
-            tenant = new TenantEntity
-            {
-                Id = _tenantId,
-                Name = _tenantName,
-                CreatedAt = now
-            };
-            _db.Tenants.Add(tenant);
-        }
-
-        var existingUser = await _db.Users.FirstOrDefaultAsync(u => u.TenantId == _tenantId && u.Email == email, ct);
+        var existingUser = await _db.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
         if (existingUser != null)
         {
             throw new InvalidOperationException("Email is already registered");
@@ -60,13 +41,11 @@ public class AuthService
         var user = new UserEntity
         {
             Id = Guid.NewGuid().ToString("N"),
-            TenantId = _tenantId,
             Email = email,
             DisplayName = command.displayName?.Trim(),
             PasswordHash = HashPassword(command.password),
             Role = role,
-            CreatedAt = now,
-            Tenant = tenant
+            CreatedAt = now
         };
         _db.Users.Add(user);
 
@@ -88,7 +67,7 @@ public class AuthService
         var email = command.email.Trim().ToLowerInvariant();
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.TenantId == _tenantId && u.Email == email, ct);
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
         if (user == null)
         {
             return null;
@@ -158,7 +137,6 @@ public class AuthService
         var entity = new UserSessionEntity
         {
             Id = Guid.NewGuid().ToString("N"),
-            TenantId = user.TenantId,
             UserId = user.Id,
             TokenHash = HashToken(token),
             CreatedAt = now,
@@ -166,7 +144,6 @@ public class AuthService
             LastSeenAt = now,
             IpAddress = ipAddress,
             UserAgent = userAgent,
-            Tenant = user.Tenant,
             User = user
         };
 

@@ -6,7 +6,6 @@ using Api.Models;
 using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Events;
 using StackExchange.Redis;
@@ -45,9 +44,6 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 
 // Configure HttpClient for EmbeddingService
 builder.Services.AddHttpClient();
-
-// Single-tenant configuration
-builder.Services.Configure<SingleTenantOptions>(builder.Configuration.GetSection("Tenant"));
 
 // Background task execution
 builder.Services.AddSingleton<IBackgroundTaskService, BackgroundTaskService>();
@@ -608,17 +604,15 @@ app.MapGet("/games/{gameId}/pdfs", async (string gameId, HttpContext context, Pd
     return Results.Json(new { pdfs });
 });
 
-app.MapGet("/pdfs/{pdfId}/text", async (string pdfId, HttpContext context, MeepleAiDbContext db, IOptions<SingleTenantOptions> tenantOptions, CancellationToken ct) =>
+app.MapGet("/pdfs/{pdfId}/text", async (string pdfId, HttpContext context, MeepleAiDbContext db, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
         return Results.Unauthorized();
     }
 
-    var tenantId = tenantOptions.Value.GetTenantId();
-
     var pdf = await db.PdfDocuments
-        .Where(p => p.Id == pdfId && p.TenantId == tenantId)
+        .Where(p => p.Id == pdfId)
         .Select(p => new
         {
             p.Id,

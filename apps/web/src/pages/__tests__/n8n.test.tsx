@@ -180,8 +180,7 @@ describe('N8nWorkflowManagement', () => {
     expect(editWebhookInput).toHaveValue(existingConfig.webhookUrl);
 
     fireEvent.change(editNameInput, { target: { value: 'Production n8n Updated' } });
-    fireEvent.change(editBaseUrlInput, { target: { value: 'https://n8n-updated.example.com' } });
-    fireEvent.change(editWebhookInput, { target: { value: 'https://n8n-updated.example.com/webhook' } });
+    fireEvent.change(editWebhookInput, { target: { value: '' } });
 
     fireEvent.submit(screen.getByRole('button', { name: /Update Configuration/i }));
 
@@ -190,11 +189,12 @@ describe('N8nWorkflowManagement', () => {
       expect(putCall).toBeDefined();
       const [url, init] = putCall!;
       expect(url).toBe(`http://api.test/admin/n8n/${existingConfig.id}`);
-      expect(JSON.parse(init!.body as string)).toEqual({
+      const parsedBody = JSON.parse(init!.body as string);
+      expect(parsedBody).toEqual({
         name: 'Production n8n Updated',
-        baseUrl: 'https://n8n-updated.example.com',
-        webhookUrl: 'https://n8n-updated.example.com/webhook'
+        webhookUrl: null
       });
+      expect(parsedBody).not.toHaveProperty('apiKey');
     });
 
     await waitFor(() => expect(screen.queryByText('Edit Configuration')).not.toBeInTheDocument());
@@ -216,6 +216,8 @@ describe('N8nWorkflowManagement', () => {
       updatedAt: new Date().toISOString()
     };
 
+    const testDeferred = createDeferred<Response>();
+
     fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input.toString();
       const method = init?.method ?? 'GET';
@@ -225,9 +227,7 @@ describe('N8nWorkflowManagement', () => {
       }
 
       if (url === `http://api.test/admin/n8n/${existingConfig.id}/test` && method === 'POST') {
-        return Promise.resolve(
-          createResponse({ success: true, message: 'Test succeeded', latencyMs: 120 })
-        );
+        return testDeferred.promise;
       }
 
       if (url === `http://api.test/admin/n8n/${existingConfig.id}` && method === 'PUT') {
@@ -250,7 +250,17 @@ describe('N8nWorkflowManagement', () => {
     fetchMock.mockClear();
 
     // Test button triggers test endpoint and alert
-    fireEvent.click(screen.getByRole('button', { name: 'Test' }));
+    const testButton = screen.getByRole('button', { name: 'Test' });
+    fireEvent.click(testButton);
+
+    expect(testButton).toBeDisabled();
+    expect(testButton).toHaveTextContent('Testing...');
+
+    await act(async () => {
+      testDeferred.resolve(
+        createResponse({ success: true, message: 'Test succeeded', latencyMs: 120 })
+      );
+    });
 
     await waitFor(() => {
       const testCall = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST');
@@ -258,6 +268,8 @@ describe('N8nWorkflowManagement', () => {
       expect(testCall![0]).toBe(`http://api.test/admin/n8n/${existingConfig.id}/test`);
       expect(alertMock).toHaveBeenCalledWith('Test succeeded');
     });
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Test' })).not.toBeDisabled());
 
     await waitFor(() =>
       expect(fetchMock.mock.calls.some(([, init]) => (init?.method ?? 'GET') === 'GET')).toBe(true)

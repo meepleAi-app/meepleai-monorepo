@@ -374,11 +374,11 @@ public class PdfStorageServiceTests
                 storagePath,
                 backgroundMock,
                 scopeFactoryMock,
-                textExtractionMock.Object,
-                tableExtractionMock.Object,
-                chunkingMock.Object,
-                embeddingMock.Object,
-                qdrantMock.Object);
+                textExtractionService: textExtractionMock.Object,
+                tableExtractionService: tableExtractionMock.Object,
+                textChunkingService: chunkingMock.Object,
+                embeddingService: embeddingMock.Object,
+                qdrantService: qdrantMock.Object);
 
             var file = CreateFormFile("rules.pdf", "application/pdf", new byte[] { 1, 2, 3, 4 });
             var uploadResult = await service.UploadPdfAsync("game-1", "user", file, CancellationToken.None);

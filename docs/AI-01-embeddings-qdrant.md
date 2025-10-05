@@ -12,8 +12,10 @@ AI-01 implements the core vector search infrastructure for MeepleAI, enabling se
 
 - **Text embedding generation** via OpenRouter API
 - **Vector storage and retrieval** using Qdrant
-- **Multi-tenant isolation** with automatic filtering
+- **Single-tenant default context** (tenant_id mantenuto per compatibilità)
 - **Automatic indexing pipeline** from PDF upload to searchable vectors
+
+> **Nota**: gli esempi storici continuano a mostrare parametri `tenant_id`; nell'implementazione attuale il valore è impostato automaticamente su `meepleai`.
 
 ## Architecture
 

@@ -53,8 +53,8 @@
   },
   {
     "ID": "AUTH-02",
-    "Title": "Multi-tenant isolato",
-    "Description": "Isola dati per tenant_id; middleware per scoping query e RLS lato DB.",
+    "Title": "Single-tenant baseline",
+    "Description": "Imposta contesto tenant statico, rimuove parametri client obbligatori e garantisce fallback sicuro.",
     "Component": "Auth",
     "Type": "Feature",
     "Priority": "P0",
@@ -67,7 +67,7 @@
   {
     "ID": "DB-01",
     "Title": "Schema database iniziale",
-    "Description": "Tabelle: users, tenants, games, rule_specs, agents, chats, logs.",
+    "Description": "Tabelle: users, tenants (default), games, rule_specs, agents, chats, logs.",
     "Component": "DB",
     "Type": "Task",
     "Priority": "P0",
@@ -171,7 +171,7 @@
   {
     "ID": "AI-01",
     "Title": "Embeddings e indicizzazione Qdrant",
-    "Description": "Servizio embeddings HTTP; indicizzazione chunk per game/tenant con filtri.",
+    "Description": "Servizio embeddings HTTP; indicizzazione chunk per game con filtri.",
     "Component": "AI",
     "Type": "Feature",
     "Priority": "P0",
@@ -179,7 +179,7 @@
     "Labels": "area/ai,kind/feature",
     "Milestone": "MVP",
     "Dependencies": "PDF-02,DB-01",
-    "AcceptanceCriteria": "Query vettoriali filtrate per gioco/tenant."
+    "AcceptanceCriteria": "Query vettoriali filtrate per gioco."
   },
   {
     "ID": "AI-02",
@@ -288,7 +288,7 @@
   {
     "ID": "ADM-02",
     "Title": "Gestione n8n workflow",
-    "Description": "Pagina per configurare endpoint e variabili n8n per tenant.",
+    "Description": "Pagina per configurare endpoint e variabili n8n centralizzate.",
     "Component": "Admin",
     "Type": "Feature",
     "Priority": "P2",

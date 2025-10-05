@@ -3,8 +3,8 @@ INF-01,Inizializzare monorepo e Docker Compose,"Crea struttura monorepo (fronten
 INF-02,CI/CD base GitHub Actions,Workflow build+lint+test per frontend e api. Cache dipendenze. PR in draft su branch feature/*.,Infra,Task,P0,3,"area/infra,kind/ci",MVP,INF-01,"Action su PR e main, badge status in README."
 SEC-01,Gestione secrets .env e rotazione chiavi,Separare .env.dev/.env.ci; non committare secrets; doc rotazione PAT/OpenRouter; pre-commit per leakage.,Security,Task,P0,2,"area/security,kind/policy",MVP,INF-01,Secrets esclusi dal repo; pre-commit blocca fughe; guida in README.
 AUTH-01,Autenticazione e ruoli (Admin/Editor/User),Implementa login/registrazione; ruoli e permessi; sessioni sicure.,Auth,Feature,P0,5,"area/auth,kind/feature",MVP,INF-01,"E2E: accesso/logout, ruoli visibili in UI."
-AUTH-02,Multi-tenant isolato,Isola dati per tenant_id; middleware per scoping query e RLS lato DB.,Auth,Feature,P0,5,"area/auth,kind/feature",V1,"AUTH-01,DB-01",E2E: utente A non vede dati di B; audit accessi.
-DB-01,Schema database iniziale,"Tabelle: users, tenants, games, rule_specs, agents, chats, logs.",DB,Task,P0,3,"area/db,kind/schema",MVP,INF-01,Migrazioni applicate; README con diagramma ER.
+AUTH-02,Single-tenant baseline,"Imposta contesto tenant statico, rimuovi parametri client obbligatori e garantisci fallback sicuro.",Auth,Feature,P0,5,"area/auth,kind/feature",V1,"AUTH-01,DB-01","E2E: registrazione/login senza tenant esplicito; audit coerente." 
+DB-01,Schema database iniziale,"Tabelle: users, tenants (default), games, rule_specs, agents, chats, logs.",DB,Task,P0,3,"area/db,kind/schema",MVP,INF-01,Migrazioni applicate; README con descrizione modello single-tenant.
 RULE-01,Definizione formale RuleSpec v0,"JSON Schema per regole normalizzate (azioni, fasi, setup, punteggi, edge case).",RuleSpec,Feature,P0,3,"area/rulespec,kind/spec",MVP,DB-01,JSON Schema validato; esempi per 1 gioco.
 RULE-02,Versioning e diff RuleSpec,Versionare ogni modifica e mostrare diff leggibile per QA.,RuleSpec,Feature,P1,3,"area/rulespec,kind/feature",V1,"RULE-01,DB-01",UI diff e audit trail su modifiche.
 PDF-01,Upload PDF regolamenti,Endpoint e UI per upload; storage; validazioni base; metadati per game.,PDF,Feature,P0,3,"area/pdf,kind/feature",MVP,"AUTH-01,DB-01",PDF visibile in UI e associato al gioco.
@@ -12,7 +12,7 @@ PDF-02,Parsing testo + OCR,Estrazione testo con fallback OCR; normalizzazione pa
 PDF-03,Parser tabelle/flowchart,Integra tabula/camelot; righe come regole atomiche; gestione diagrammi.,PDF,Feature,P1,5,"area/pdf,kind/feature,ai/nlp",V1,PDF-02,Estrazione tabellare su almeno 2 giochi di test.
 EDIT-01,Editor grafico RuleSpec,UI per correggere/arricchire le regole parse e validare JSON Schema.,Editor,Feature,P1,5,"area/ui,area/rulespec,kind/feature",V1,"RULE-01,PDF-02","Salvataggio, validazione, undo/redo, preview."
 EDIT-02,Diff e versioni RuleSpec in UI,Visual diff tra versioni; rollback; commenti di revisione.,Editor,Feature,P2,3,"area/ui,area/rulespec,kind/feature",V1,"EDIT-01,RULE-02",Rollback funzionante; commenti persistenti.
-AI-01,Embeddings e indicizzazione Qdrant,Servizio embeddings HTTP; indicizzazione chunk per game/tenant con filtri.,AI,Feature,P0,5,"area/ai,kind/feature",MVP,"PDF-02,DB-01",Query vettoriali filtrate per gioco/tenant.
+AI-01,Embeddings e indicizzazione Qdrant,Servizio embeddings HTTP; indicizzazione chunk per game con filtri su gioco/modello.,AI,Feature,P0,5,"area/ai,kind/feature",MVP,"PDF-02,DB-01",Query vettoriali filtrate per gioco.
 AI-02,RAG Explain (10 minuti),Pipeline prompt→outline→script breve con citazioni pagina/linea.,AI,Feature,P0,5,"area/ai,kind/feature",MVP,"AI-01,RULE-01",Output con snippet e tempi stimati.
 AI-03,RAG Setup guidato,Istruzioni passo-passo per preparazione del gioco con riferimenti.,AI,Feature,P1,3,"area/ai,kind/feature",V1,"AI-01,RULE-01",Checklist completabile; citazioni presenti.
 AI-04,Q&A con snippet e fallback Not specified,Risposte con snippet; se non nel contesto → Not specified.,AI,Feature,P1,3,"area/ai,kind/feature",V1,AI-01,E2E: nessuna allucinazione senza snippet.
@@ -21,7 +21,7 @@ UI-01,Chat UI per ogni Meeple Agent,"Interfaccia chat con storia, citazioni, fee
 UI-02,Libreria giochi (CRUD),"Lista, filtri, dettaglio gioco con PDF e RuleSpec associato.",UI,Feature,P0,3,"area/ui,kind/feature",MVP,"AUTH-01,DB-01",CRUD completo con validazioni.
 UI-03,Wizard import PDF→RuleSpec,Flusso a step: upload→parse→review→publish.,UI,Feature,P1,3,"area/ui,kind/feature",V1,"PDF-02,EDIT-01",Completamento end-to-end per 1 gioco di test.
 ADM-01,Dashboard admin e log richieste,"Visualizzare richieste AI, latenza, confidenza, costi token.",Admin,Feature,P1,3,"area/admin,kind/feature",V1,AI-02,Grafici base e esport CSV.
-ADM-02,Gestione n8n workflow,Pagina per configurare endpoint e variabili n8n per tenant.,Admin,Feature,P2,3,"area/admin,kind/feature",V2,INF-01,Salvataggio credenziali sicuro e test connessione.
+ADM-02,Gestione n8n workflow,Pagina per configurare endpoint e variabili n8n centralizzate.,Admin,Feature,P2,3,"area/admin,kind/feature",V2,INF-01,Salvataggio credenziali sicuro e test connessione.
 N8N-01,Webhook /agent/explain,Espone webhook che orchestra RuleSpec+RAG per explain.,n8n,Feature,P0,3,"area/automations,kind/feature",MVP,AI-02,200 OK con payload standardizzato.
 N8N-02,Webhook /agent/setup,Espone webhook per setup guidato con checklist.,n8n,Feature,P1,2,"area/automations,kind/feature",V1,AI-03,200 OK con checklist JSON.
 N8N-03,Webhook /agent/qa,Espone webhook per Q&A con snippet e Not specified.,n8n,Feature,P1,2,"area/automations,kind/feature",V1,AI-04,200 OK con snippet/refs.

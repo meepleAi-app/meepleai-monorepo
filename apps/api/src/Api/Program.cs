@@ -46,6 +46,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 builder.Services.AddHttpClient();
 
 // AUTH-02: Tenant context
+builder.Services.Configure<TenantContextOptions>(builder.Configuration.GetSection("Tenant"));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 

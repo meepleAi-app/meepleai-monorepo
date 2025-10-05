@@ -20,9 +20,7 @@ echo "2. Registering test user..."
 REGISTER_RESPONSE=$(curl -s -X POST $API_URL/auth/register \
   -H "Content-Type: application/json" \
   -d '{
-    "tenantId": "dev",
-    "tenantName": "Dev Tenant",
-    "email": "test@dev.com",
+    "email": "test@meepleai.dev",
     "password": "TestPass123!",
     "displayName": "Test User",
     "role": "admin"
@@ -42,7 +40,7 @@ echo
 echo "4. Seeding demo data..."
 SEED_RESPONSE=$(curl -s -X POST $API_URL/admin/seed \
   -H "Content-Type: application/json" \
-  -d '{"tenantId": "dev", "gameId": "catan"}' \
+  -d '{"gameId": "catan"}' \
   -b $COOKIES_FILE)
 
 echo "Response: $SEED_RESPONSE"
@@ -59,4 +57,4 @@ echo "To test RAG query after upload:"
 echo "  curl -X POST $API_URL/agents/qa \\"
 echo "    -H 'Content-Type: application/json' \\"
 echo "    -b $COOKIES_FILE \\"
-echo "    -d '{\"tenantId\":\"dev\",\"gameId\":\"catan\",\"query\":\"How do I win the game?\"}'"
+echo "    -d '{\"gameId\":\"catan\",\"query\":\"How do I win the game?\"}'"

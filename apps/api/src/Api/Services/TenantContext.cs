@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.Extensions.Options;
 
 namespace Api.Services;
 
@@ -18,17 +19,42 @@ public interface ITenantContext
     string GetRequiredTenantId();
 }
 
+public class TenantContextOptions
+{
+    /// <summary>
+    /// Default tenant identifier used when no tenant is associated with the request.
+    /// </summary>
+    public string DefaultTenantId { get; set; } = "meepleai";
+}
+
 public class TenantContext : ITenantContext
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly TenantContextOptions _options;
 
-    public TenantContext(IHttpContextAccessor httpContextAccessor)
+    public TenantContext(IHttpContextAccessor httpContextAccessor, IOptions<TenantContextOptions> options)
     {
         _httpContextAccessor = httpContextAccessor;
+        _options = options.Value;
     }
 
-    public string? TenantId => _httpContextAccessor.HttpContext?.User
-        ?.FindFirst("tenant")?.Value;
+    public string? TenantId
+    {
+        get
+        {
+            var claimValue = _httpContextAccessor.HttpContext?.User
+                ?.FindFirst("tenant")?.Value;
+
+            if (!string.IsNullOrWhiteSpace(claimValue))
+            {
+                return claimValue;
+            }
+
+            return string.IsNullOrWhiteSpace(_options.DefaultTenantId)
+                ? null
+                : _options.DefaultTenantId.Trim();
+        }
+    }
 
     public string GetRequiredTenantId()
     {

@@ -1,5 +1,6 @@
 using Api.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using Moq;
 using System.Security.Claims;
 using Xunit;
@@ -9,236 +10,87 @@ namespace Api.Tests;
 public class TenantContextTests
 {
     [Fact]
-    public void TenantId_ReturnsNull_WhenHttpContextIsNull()
+    public void TenantId_ReturnsDefaultTenant_WhenHttpContextIsNull()
     {
-        // Arrange
-        var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
-        mockHttpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext?)null);
+        var httpContextAccessor = new Mock<IHttpContextAccessor>();
+        httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext?)null);
 
-        var tenantContext = new TenantContext(mockHttpContextAccessor.Object);
+        var context = new TenantContext(
+            httpContextAccessor.Object,
+            Options.Create(new TenantContextOptions { DefaultTenantId = "single-tenant" }));
 
-        // Act
-        var tenantId = tenantContext.TenantId;
-
-        // Assert
-        Assert.Null(tenantId);
+        Assert.Equal("single-tenant", context.TenantId);
     }
 
     [Fact]
-    public void TenantId_ReturnsNull_WhenUserIsNull()
+    public void TenantId_ReturnsDefaultTenant_WhenClaimIsMissing()
     {
-        // Arrange
-        var mockHttpContext = new Mock<HttpContext>();
-        mockHttpContext.Setup(x => x.User).Returns(default(ClaimsPrincipal)!);
-
-        var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
-        mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(mockHttpContext.Object);
-
-        var tenantContext = new TenantContext(mockHttpContextAccessor.Object);
-
-        // Act
-        var tenantId = tenantContext.TenantId;
-
-        // Assert
-        Assert.Null(tenantId);
-    }
-
-    [Fact]
-    public void TenantId_ReturnsNull_WhenTenantClaimDoesNotExist()
-    {
-        // Arrange
-        var claims = new List<Claim>
+        var identity = new ClaimsIdentity(new[]
         {
-            new Claim("user_id", "123"),
-            new Claim("email", "test@example.com")
-        };
-        var identity = new ClaimsIdentity(claims, "TestAuth");
-        var user = new ClaimsPrincipal(identity);
+            new Claim(ClaimTypes.Email, "user@example.com")
+        }, "Test");
+        var principal = new ClaimsPrincipal(identity);
 
-        var mockHttpContext = new Mock<HttpContext>();
-        mockHttpContext.Setup(x => x.User).Returns(user);
+        var httpContext = new Mock<HttpContext>();
+        httpContext.Setup(x => x.User).Returns(principal);
 
-        var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
-        mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(mockHttpContext.Object);
+        var httpContextAccessor = new Mock<IHttpContextAccessor>();
+        httpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext.Object);
 
-        var tenantContext = new TenantContext(mockHttpContextAccessor.Object);
+        var context = new TenantContext(
+            httpContextAccessor.Object,
+            Options.Create(new TenantContextOptions { DefaultTenantId = "single-tenant" }));
 
-        // Act
-        var tenantId = tenantContext.TenantId;
-
-        // Assert
-        Assert.Null(tenantId);
+        Assert.Equal("single-tenant", context.TenantId);
     }
 
     [Fact]
-    public void TenantId_ReturnsValue_WhenTenantClaimExists()
+    public void TenantId_PrefersClaim_WhenPresent()
     {
-        // Arrange
-        var claims = new List<Claim>
+        var identity = new ClaimsIdentity(new[]
         {
-            new Claim("tenant", "tenant-123"),
-            new Claim("user_id", "user-456")
-        };
-        var identity = new ClaimsIdentity(claims, "TestAuth");
-        var user = new ClaimsPrincipal(identity);
+            new Claim("tenant", "tenant-from-claim"),
+            new Claim(ClaimTypes.Email, "user@example.com")
+        }, "Test");
+        var principal = new ClaimsPrincipal(identity);
 
-        var mockHttpContext = new Mock<HttpContext>();
-        mockHttpContext.Setup(x => x.User).Returns(user);
+        var httpContext = new Mock<HttpContext>();
+        httpContext.Setup(x => x.User).Returns(principal);
 
-        var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
-        mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(mockHttpContext.Object);
+        var httpContextAccessor = new Mock<IHttpContextAccessor>();
+        httpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext.Object);
 
-        var tenantContext = new TenantContext(mockHttpContextAccessor.Object);
+        var context = new TenantContext(
+            httpContextAccessor.Object,
+            Options.Create(new TenantContextOptions { DefaultTenantId = "single-tenant" }));
 
-        // Act
-        var tenantId = tenantContext.TenantId;
-
-        // Assert
-        Assert.Equal("tenant-123", tenantId);
+        Assert.Equal("tenant-from-claim", context.TenantId);
     }
 
     [Fact]
-    public void GetRequiredTenantId_ThrowsException_WhenTenantIdIsNull()
+    public void GetRequiredTenantId_ReturnsDefault_WhenClaimMissing()
     {
-        // Arrange
-        var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
-        mockHttpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext?)null);
+        var httpContextAccessor = new Mock<IHttpContextAccessor>();
+        httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext?)null);
 
-        var tenantContext = new TenantContext(mockHttpContextAccessor.Object);
+        var context = new TenantContext(
+            httpContextAccessor.Object,
+            Options.Create(new TenantContextOptions { DefaultTenantId = "single-tenant" }));
 
-        // Act & Assert
-        var exception = Assert.Throws<UnauthorizedAccessException>(() => tenantContext.GetRequiredTenantId());
-        Assert.Contains("No tenant context available", exception.Message);
+        Assert.Equal("single-tenant", context.GetRequiredTenantId());
     }
 
     [Fact]
-    public void GetRequiredTenantId_ThrowsException_WhenTenantIdIsEmpty()
+    public void GetRequiredTenantId_Throws_WhenDefaultNotConfigured()
     {
-        // Arrange
-        var claims = new List<Claim>
-        {
-            new Claim("tenant", "")
-        };
-        var identity = new ClaimsIdentity(claims, "TestAuth");
-        var user = new ClaimsPrincipal(identity);
+        var httpContextAccessor = new Mock<IHttpContextAccessor>();
+        httpContextAccessor.Setup(x => x.HttpContext).Returns((HttpContext?)null);
 
-        var mockHttpContext = new Mock<HttpContext>();
-        mockHttpContext.Setup(x => x.User).Returns(user);
+        var context = new TenantContext(
+            httpContextAccessor.Object,
+            Options.Create(new TenantContextOptions { DefaultTenantId = "" }));
 
-        var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
-        mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(mockHttpContext.Object);
-
-        var tenantContext = new TenantContext(mockHttpContextAccessor.Object);
-
-        // Act & Assert
-        var exception = Assert.Throws<UnauthorizedAccessException>(() => tenantContext.GetRequiredTenantId());
-        Assert.Contains("No tenant context available", exception.Message);
-    }
-
-    [Fact]
-    public void GetRequiredTenantId_ThrowsException_WhenTenantIdIsWhitespace()
-    {
-        // Arrange
-        var claims = new List<Claim>
-        {
-            new Claim("tenant", "   ")
-        };
-        var identity = new ClaimsIdentity(claims, "TestAuth");
-        var user = new ClaimsPrincipal(identity);
-
-        var mockHttpContext = new Mock<HttpContext>();
-        mockHttpContext.Setup(x => x.User).Returns(user);
-
-        var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
-        mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(mockHttpContext.Object);
-
-        var tenantContext = new TenantContext(mockHttpContextAccessor.Object);
-
-        // Act & Assert
-        var exception = Assert.Throws<UnauthorizedAccessException>(() => tenantContext.GetRequiredTenantId());
-        Assert.Contains("No tenant context available", exception.Message);
-    }
-
-    [Fact]
-    public void GetRequiredTenantId_ReturnsValue_WhenTenantIdExists()
-    {
-        // Arrange
-        var claims = new List<Claim>
-        {
-            new Claim("tenant", "tenant-456")
-        };
-        var identity = new ClaimsIdentity(claims, "TestAuth");
-        var user = new ClaimsPrincipal(identity);
-
-        var mockHttpContext = new Mock<HttpContext>();
-        mockHttpContext.Setup(x => x.User).Returns(user);
-
-        var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
-        mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(mockHttpContext.Object);
-
-        var tenantContext = new TenantContext(mockHttpContextAccessor.Object);
-
-        // Act
-        var tenantId = tenantContext.GetRequiredTenantId();
-
-        // Assert
-        Assert.Equal("tenant-456", tenantId);
-    }
-
-    [Fact]
-    public void TenantId_IsAccessedMultipleTimes_ReturnsConsistentValue()
-    {
-        // Arrange
-        var claims = new List<Claim>
-        {
-            new Claim("tenant", "tenant-789")
-        };
-        var identity = new ClaimsIdentity(claims, "TestAuth");
-        var user = new ClaimsPrincipal(identity);
-
-        var mockHttpContext = new Mock<HttpContext>();
-        mockHttpContext.Setup(x => x.User).Returns(user);
-
-        var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
-        mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(mockHttpContext.Object);
-
-        var tenantContext = new TenantContext(mockHttpContextAccessor.Object);
-
-        // Act
-        var firstAccess = tenantContext.TenantId;
-        var secondAccess = tenantContext.TenantId;
-        var thirdAccess = tenantContext.TenantId;
-
-        // Assert
-        Assert.Equal("tenant-789", firstAccess);
-        Assert.Equal("tenant-789", secondAccess);
-        Assert.Equal("tenant-789", thirdAccess);
-    }
-
-    [Fact]
-    public void TenantId_WithMultipleTenantClaims_ReturnsFirst()
-    {
-        // Arrange - in case there are multiple tenant claims, should return the first one
-        var claims = new List<Claim>
-        {
-            new Claim("tenant", "tenant-first"),
-            new Claim("tenant", "tenant-second")
-        };
-        var identity = new ClaimsIdentity(claims, "TestAuth");
-        var user = new ClaimsPrincipal(identity);
-
-        var mockHttpContext = new Mock<HttpContext>();
-        mockHttpContext.Setup(x => x.User).Returns(user);
-
-        var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
-        mockHttpContextAccessor.Setup(x => x.HttpContext).Returns(mockHttpContext.Object);
-
-        var tenantContext = new TenantContext(mockHttpContextAccessor.Object);
-
-        // Act
-        var tenantId = tenantContext.TenantId;
-
-        // Assert
-        Assert.Equal("tenant-first", tenantId);
+        var ex = Assert.Throws<UnauthorizedAccessException>(() => context.GetRequiredTenantId());
+        Assert.Contains("No tenant context available", ex.Message);
     }
 }

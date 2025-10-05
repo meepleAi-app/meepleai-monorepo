@@ -71,7 +71,7 @@
 
 ## 3) GitHub Flow Operativo (single-dev)
 
-1. **Crea/Seleziona Issue** (o Audit → Issue). Aggiungi labels (`area`, `type`, `priority`, `tenant`).
+1. **Crea/Seleziona Issue** (o Audit → Issue). Aggiungi labels (`area`, `type`, `priority`); usa eventuali etichette `tenant/*` solo per lavori di compatibilità futura.
 2. **Branch:** `feature/<scope>-<desc>` collegata all’issue (`Fixes #ID`).
 3. **Implementazione locale:**
    - Sincronizza `main` → rebase.
@@ -100,7 +100,7 @@
 - [ ] Unit test verdi (TS/C#) con copertura ≥ 80% sul delta.
 - [ ] E2E/UX test passano (puppeteer/playwright per web; http e2e per API).
 - [ ] Nessun secret in diff; `.env` aggiornato nei template `.env.dev.example`/`.env.ci.example` se serve.
-- [ ] Multi-tenant: test RLS/permessi aggiornati.
+- [ ] Modalità single-tenant validata (nessun parametro `tenantId` richiesto dal client; log coerenti).
 - [ ] Performance: no regressioni note.
 - [ ] Docs aggiornate.
 
@@ -115,7 +115,7 @@
 ### 6.2 Integration & E2E
 - **API (apps/api):** avvia stack via `infra/docker-compose.yml`; test con xUnit + `WebApplicationFactory` o `RestClient`.
 - **Web (apps/web):** **Puppeteer** per flussi utente; salva screenshot in `/tests/e2e/__artifacts__`.
-- **Data:** semi deterministici; fixture per multi‑tenant.
+  - **Data:** semi deterministici basati sul tenant predefinito `meepleai`.
 
 ### 6.3 Qualità continua
 - **GitHub Actions**: job separati `ci-web` (Node 20 + npm), `ci-api` (.NET 8), `e2e` (services: postgres/redis/qdrant).
@@ -198,8 +198,8 @@ Output: patch ai md, con sommario delle modifiche.
 ---
 
 ## 10) Standard Tenancy & Dati
-- Ogni record ha `tenant_id` obbligatorio. Query **devono** filtrare per `tenant_id`.
-- Indici: per `tenant_id`, `game_id`, e chiavi di ricerca testuali.
+- Ogni record mantiene `tenant_id` per compatibilità ma il runtime utilizza il valore unico `meepleai`.
+- Le query possono sfruttare i filtri su `tenant_id` se necessario, ma il contesto applicativo imposta automaticamente il valore.
 - Qdrant esterno consigliato per dataset grandi; HNSW `M=32, ef=96` come default pragmatico.
 
 ---
@@ -212,7 +212,7 @@ Output: patch ai md, con sommario delle modifiche.
 ---
 
 ## 12) Rischi & Failure Modes (e Mitigazioni)
-- **RLS errata / tenant leak:** test E2E obbligatori, revisione query, policy DB.
+- **Single-tenant regressions:** assicurarsi che i client non debbano impostare `tenantId` e che gli audit log riportino il tenant predefinito.
 - **Secrets leakage:** `.env` non committato; variables in CI masked; rotate keys.
 - **Rate limit insufficiente:** Redis token bucket; backoff.
 - **Timeout workflow n8n:** job asincroni o retry con soglia; notifiche.

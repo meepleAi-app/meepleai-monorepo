@@ -18,9 +18,16 @@ test.describe('Home Page', () => {
     await page.goto('/');
 
     // Check registration form elements
+    const registrationForm = page
+      .locator('form')
+      .filter({ has: page.getByRole('heading', { name: 'Registrazione' }) });
+
     await expect(page.getByRole('heading', { name: 'Registrazione' })).toBeVisible();
-    await expect(page.getByText('Tenant ID')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Crea account' })).toBeVisible();
+    await expect(registrationForm.getByLabel('Email')).toBeVisible();
+    await expect(registrationForm.getByLabel('Password (min 8 caratteri)')).toBeVisible();
+    await expect(registrationForm.getByLabel('Nome visualizzato')).toBeVisible();
+    await expect(registrationForm.getByLabel('Ruolo')).toBeVisible();
+    await expect(registrationForm.getByRole('button', { name: 'Crea account' })).toBeVisible();
   });
 
   test('should display login form', async ({ page }) => {

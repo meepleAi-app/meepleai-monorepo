@@ -60,8 +60,6 @@ public class AuditService
         string? userAgent = null,
         CancellationToken ct = default)
     {
-        var details = $"User from tenant {userTenantId} attempted to access {resource} in tenant {requestedTenantId}";
-
         await LogAsync(
             userId,
             "ACCESS_DENIED",

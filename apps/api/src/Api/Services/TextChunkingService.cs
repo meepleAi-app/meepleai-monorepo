@@ -78,7 +78,7 @@ public class TextChunkingService : ITextChunkingService
             currentPosition = chunkEnd;
             if (currentPosition < textLength)
             {
-                currentPosition = Math.Max(currentPosition - overlap, currentPosition);
+                currentPosition = Math.Max(0, currentPosition - overlap);
             }
         }
 

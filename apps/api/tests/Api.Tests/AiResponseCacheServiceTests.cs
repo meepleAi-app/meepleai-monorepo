@@ -3,6 +3,9 @@ using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace Api.Tests;
@@ -144,6 +147,137 @@ public class AiResponseCacheServiceTests
         Assert.NotEqual(default, storedValue);
         Assert.NotNull(storedTtl);
         Assert.Equal(TimeSpan.FromSeconds(3600), storedTtl.Value);
+    }
+
+    [Fact]
+    public async Task InvalidateGameAsync_RemovesAllCacheEntriesForGame()
+    {
+        // Arrange
+        var cache = new Dictionary<string, string>();
+
+        _mockDatabase.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync((RedisKey key, CommandFlags _) =>
+            {
+                return cache.TryGetValue(key.ToString(), out var value)
+                    ? RedisValue.Unbox(value)
+                    : RedisValue.Null;
+            });
+
+        _mockDatabase.Setup(db => db.StringSetAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<bool>(),
+                It.IsAny<When>(),
+                It.IsAny<CommandFlags>()))
+            .Callback<RedisKey, RedisValue, TimeSpan?, bool, When, CommandFlags>((key, value, _, _, _, _) =>
+            {
+                cache[key.ToString()] = value.ToString();
+            })
+            .ReturnsAsync(true);
+
+        _mockDatabase.Setup(db => db.ScriptEvaluateAsync(
+                It.IsAny<string>(),
+                It.IsAny<RedisKey[]>(),
+                It.IsAny<RedisValue[]>(),
+                It.IsAny<CommandFlags>()))
+            .Returns<string, RedisKey[], RedisValue[], CommandFlags>((_, _, values, _) =>
+            {
+                var pattern = values[0].ToString();
+                var regex = new Regex("^" + Regex.Escape(pattern).Replace("\\*", ".*") + "$");
+                var keysToRemove = cache.Keys.Where(k => regex.IsMatch(k)).ToList();
+                foreach (var key in keysToRemove)
+                {
+                    cache.Remove(key);
+                }
+
+                return Task.FromResult(RedisResult.Create((long)keysToRemove.Count));
+            });
+
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var qaKey = service.GenerateQaCacheKey("game-1", "How many players?");
+        var explainKey = service.GenerateExplainCacheKey("game-1", "setup phase");
+        var setupKey = service.GenerateSetupCacheKey("game-1");
+
+        await service.SetAsync(qaKey, new QaResponse("cached answer", Array.Empty<Snippet>()));
+        await service.SetAsync(explainKey, new ExplainResponse(
+            new ExplainOutline("setup phase", new List<string>()),
+            "cached",
+            new List<Snippet>(),
+            1));
+        await service.SetAsync(setupKey, new SetupGuideResponse("Game", new List<SetupGuideStep>(), 5));
+
+        // Act
+        await service.InvalidateGameAsync("game-1");
+
+        // Assert
+        Assert.Null(await service.GetAsync<QaResponse>(qaKey));
+        Assert.Null(await service.GetAsync<ExplainResponse>(explainKey));
+        Assert.Null(await service.GetAsync<SetupGuideResponse>(setupKey));
+    }
+
+    [Fact]
+    public async Task InvalidateEndpointAsync_RemovesOnlyTargetNamespace()
+    {
+        // Arrange
+        var cache = new Dictionary<string, string>();
+
+        _mockDatabase.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync((RedisKey key, CommandFlags _) =>
+            {
+                return cache.TryGetValue(key.ToString(), out var value)
+                    ? RedisValue.Unbox(value)
+                    : RedisValue.Null;
+            });
+
+        _mockDatabase.Setup(db => db.StringSetAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<bool>(),
+                It.IsAny<When>(),
+                It.IsAny<CommandFlags>()))
+            .Callback<RedisKey, RedisValue, TimeSpan?, bool, When, CommandFlags>((key, value, _, _, _, _) =>
+            {
+                cache[key.ToString()] = value.ToString();
+            })
+            .ReturnsAsync(true);
+
+        _mockDatabase.Setup(db => db.ScriptEvaluateAsync(
+                It.IsAny<string>(),
+                It.IsAny<RedisKey[]>(),
+                It.IsAny<RedisValue[]>(),
+                It.IsAny<CommandFlags>()))
+            .Returns<string, RedisKey[], RedisValue[], CommandFlags>((_, _, values, _) =>
+            {
+                var pattern = values[0].ToString();
+                var regex = new Regex("^" + Regex.Escape(pattern).Replace("\\*", ".*") + "$");
+                var keysToRemove = cache.Keys.Where(k => regex.IsMatch(k)).ToList();
+                foreach (var key in keysToRemove)
+                {
+                    cache.Remove(key);
+                }
+
+                return Task.FromResult(RedisResult.Create((long)keysToRemove.Count));
+            });
+
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var qaKey = service.GenerateQaCacheKey("game-2", "How many turns?");
+        var explainKey = service.GenerateExplainCacheKey("game-2", "trading");
+
+        await service.SetAsync(qaKey, new QaResponse("cached", Array.Empty<Snippet>()));
+        await service.SetAsync(explainKey, new ExplainResponse(
+            new ExplainOutline("trading", new List<string>()),
+            "cached",
+            new List<Snippet>(),
+            1));
+
+        // Act
+        await service.InvalidateEndpointAsync("game-2", AiCacheEndpoint.Qa);
+
+        // Assert
+        Assert.Null(await service.GetAsync<QaResponse>(qaKey));
+        Assert.NotNull(await service.GetAsync<ExplainResponse>(explainKey));
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -82,9 +83,33 @@ public class LlmService : ILlmService
 
             var assistantMessage = chatResponse.Choices[0].Message?.Content ?? string.Empty;
 
+            var usage = chatResponse.Usage != null
+                ? new LlmUsage(
+                    chatResponse.Usage.PromptTokens,
+                    chatResponse.Usage.CompletionTokens,
+                    chatResponse.Usage.TotalTokens)
+                : LlmUsage.Empty;
+
+            var metadata = new Dictionary<string, string>();
+            if (!string.IsNullOrWhiteSpace(chatResponse.Id))
+            {
+                metadata["response_id"] = chatResponse.Id;
+            }
+
+            if (!string.IsNullOrWhiteSpace(chatResponse.Model))
+            {
+                metadata["model"] = chatResponse.Model;
+            }
+
+            var finishReason = chatResponse.Choices[0].FinishReason;
+            if (!string.IsNullOrWhiteSpace(finishReason))
+            {
+                metadata["finish_reason"] = finishReason;
+            }
+
             _logger.LogInformation("Successfully generated chat completion");
 
-            return LlmCompletionResult.CreateSuccess(assistantMessage);
+            return LlmCompletionResult.CreateSuccess(assistantMessage, usage, metadata);
         }
         catch (TaskCanceledException ex)
         {

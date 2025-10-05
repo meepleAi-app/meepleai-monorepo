@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Xunit;
 
 namespace Api.Tests;
@@ -41,6 +42,7 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
             var backgroundService = new TestBackgroundTaskService();
             var textExtractionService = new TestPdfTextExtractionService();
             var tableExtractionService = new TestPdfTableExtractionService();
+            var cacheService = new Mock<IAiResponseCacheService>().Object;
 
             var configuration = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string?>
@@ -56,7 +58,8 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
                 NullLogger<PdfStorageService>.Instance,
                 textExtractionService,
                 tableExtractionService,
-                backgroundService);
+                backgroundService,
+                cacheService);
 
             var file = CreateFormFile("rules.pdf", "application/pdf", new byte[] { 0x25, 0x50, 0x44, 0x46 });
 

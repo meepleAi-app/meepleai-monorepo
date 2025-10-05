@@ -1,7 +1,6 @@
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -52,12 +51,7 @@ public class SecurityAccessTests
             await setup.SaveChangesAsync();
         }
 
-        var httpAccessor = new HttpContextAccessor();
-        var tenantContext = new TenantContext(
-            httpAccessor,
-            Options.Create(new TenantContextOptions { DefaultTenantId = "meepleai" }));
-
-        await using var context = new MeepleAiDbContext(options, tenantContext);
+        await using var context = new MeepleAiDbContext(options, Options.Create(new SingleTenantOptions { TenantId = "meepleai" }));
 
         var userToUpdate = await context.Users.FirstAsync(u => u.Id == "user-1");
         userToUpdate.DisplayName = "Updated by admin";
@@ -82,20 +76,19 @@ public class SecurityAccessTests
             await setup.Database.EnsureCreatedAsync();
         }
 
-        await using var context = new MeepleAiDbContext(options);
-        var auditService = new AuditService(context, NullLogger<AuditService>.Instance);
+        await using var context = new MeepleAiDbContext(options, Options.Create(new SingleTenantOptions { TenantId = "meepleai" }));
+        var auditService = new AuditService(context, NullLogger<AuditService>.Instance, Options.Create(new SingleTenantOptions { TenantId = "meepleai" }));
 
         await auditService.LogTenantAccessDeniedAsync(
-            userId: "user-1",
             userTenantId: "meepleai",
             requestedTenantId: "meepleai",
+            userId: "user-1",
             resource: "admin/seed",
-            reason: "Role mismatch",
             cancellationToken: default);
 
         var entry = await context.AuditLogs.AsNoTracking().SingleAsync();
         Assert.Equal("meepleai", entry.TenantId);
         Assert.Equal("admin/seed", entry.Resource);
-        Assert.Contains("Role mismatch", entry.Details);
+        Assert.Contains("attempted to access", entry.Details);
     }
 }

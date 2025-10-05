@@ -3,6 +3,7 @@ using Api.Models;
 using Api.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 public class AuthServiceTests
@@ -22,13 +23,13 @@ public class AuthServiceTests
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = new MeepleAiDbContext(options);
+        var tenantOptions = Options.Create(new SingleTenantOptions { TenantId = "tenant-test", TenantName = "Tenant Test" });
+
+        await using var dbContext = new MeepleAiDbContext(options, tenantOptions);
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new AuthService(dbContext, timeProvider);
+        var authService = new AuthService(dbContext, tenantOptions, timeProvider);
 
         var register = await authService.RegisterAsync(new RegisterCommand(
-            "tenant-test",
-            "Tenant Test",
             "user@example.com",
             "Password!1",
             "Test User",
@@ -36,7 +37,6 @@ public class AuthServiceTests
             "127.0.0.1",
             "unit-tests"));
 
-        Assert.Equal("tenant-test", register.User.tenantId);
         Assert.Equal("Admin", register.User.role);
         Assert.False(string.IsNullOrWhiteSpace(register.SessionToken));
 
@@ -49,7 +49,6 @@ public class AuthServiceTests
         Assert.Null(afterLogout);
 
         var login = await authService.LoginAsync(new LoginCommand(
-            "tenant-test",
             "user@example.com",
             "Password!1",
             null,
@@ -60,7 +59,6 @@ public class AuthServiceTests
         Assert.NotEqual(register.SessionToken, login.SessionToken);
 
         var failedLogin = await authService.LoginAsync(new LoginCommand(
-            "tenant-test",
             "user@example.com",
             "wrong",
             null,

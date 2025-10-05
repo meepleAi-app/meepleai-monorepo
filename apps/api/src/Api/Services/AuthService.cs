@@ -4,6 +4,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Api.Services;
 
@@ -14,44 +15,44 @@ public class AuthService
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromDays(7);
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
+    private readonly string _tenantId;
+    private readonly string _tenantName;
 
-    public AuthService(MeepleAiDbContext db, TimeProvider? timeProvider = null)
+    public AuthService(MeepleAiDbContext db, IOptions<SingleTenantOptions> tenantOptions, TimeProvider? timeProvider = null)
     {
         _db = db;
         _timeProvider = timeProvider ?? TimeProvider.System;
+        var options = tenantOptions?.Value ?? new SingleTenantOptions();
+        _tenantId = options.GetTenantId();
+        _tenantName = options.GetTenantName();
     }
 
     public async Task<AuthResult> RegisterAsync(RegisterCommand command, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(command.tenantId))
-            throw new ArgumentException("TenantId is required", nameof(command.tenantId));
         if (string.IsNullOrWhiteSpace(command.email))
             throw new ArgumentException("Email is required", nameof(command.email));
         if (string.IsNullOrWhiteSpace(command.password) || command.password.Length < 8)
             throw new ArgumentException("Password must be at least 8 characters", nameof(command.password));
 
-        var normalizedTenantId = command.tenantId.Trim();
         var email = command.email.Trim().ToLowerInvariant();
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        var tenant = await _db.Tenants.FirstOrDefaultAsync(t => t.Id == normalizedTenantId, ct);
+        var tenant = await _db.Tenants.FirstOrDefaultAsync(t => t.Id == _tenantId, ct);
         if (tenant == null)
         {
             tenant = new TenantEntity
             {
-                Id = normalizedTenantId,
-                Name = string.IsNullOrWhiteSpace(command.tenantName)
-                    ? normalizedTenantId
-                    : command.tenantName!.Trim(),
+                Id = _tenantId,
+                Name = _tenantName,
                 CreatedAt = now
             };
             _db.Tenants.Add(tenant);
         }
 
-        var existingUser = await _db.Users.FirstOrDefaultAsync(u => u.TenantId == normalizedTenantId && u.Email == email, ct);
+        var existingUser = await _db.Users.FirstOrDefaultAsync(u => u.TenantId == _tenantId && u.Email == email, ct);
         if (existingUser != null)
         {
-            throw new InvalidOperationException("Email is already registered for this tenant");
+            throw new InvalidOperationException("Email is already registered");
         }
 
         var role = ParseRole(command.role);
@@ -59,7 +60,7 @@ public class AuthService
         var user = new UserEntity
         {
             Id = Guid.NewGuid().ToString("N"),
-            TenantId = normalizedTenantId,
+            TenantId = _tenantId,
             Email = email,
             DisplayName = command.displayName?.Trim(),
             PasswordHash = HashPassword(command.password),
@@ -79,17 +80,15 @@ public class AuthService
 
     public async Task<AuthResult?> LoginAsync(LoginCommand command, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(command.tenantId) || string.IsNullOrWhiteSpace(command.email) ||
-            string.IsNullOrWhiteSpace(command.password))
+        if (string.IsNullOrWhiteSpace(command.email) || string.IsNullOrWhiteSpace(command.password))
         {
             return null;
         }
 
-        var tenantId = command.tenantId.Trim();
         var email = command.email.Trim().ToLowerInvariant();
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.TenantId == tenantId && u.Email == email, ct);
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.TenantId == _tenantId && u.Email == email, ct);
         if (user == null)
         {
             return null;
@@ -222,7 +221,6 @@ public class AuthService
 
     private static AuthUser ToDto(UserEntity user) => new(
         user.Id,
-        user.TenantId,
         user.Email,
         user.DisplayName,
         user.Role.ToString());

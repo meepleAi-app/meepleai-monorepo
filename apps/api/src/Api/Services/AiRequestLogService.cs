@@ -1,6 +1,7 @@
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Api.Services;
 
@@ -8,15 +9,16 @@ public class AiRequestLogService
 {
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<AiRequestLogService> _logger;
+    private readonly string _tenantId;
 
-    public AiRequestLogService(MeepleAiDbContext db, ILogger<AiRequestLogService> logger)
+    public AiRequestLogService(MeepleAiDbContext db, ILogger<AiRequestLogService> logger, IOptions<SingleTenantOptions> tenantOptions)
     {
         _db = db;
         _logger = logger;
+        _tenantId = (tenantOptions?.Value ?? new SingleTenantOptions()).GetTenantId();
     }
 
     public async Task LogRequestAsync(
-        string tenantId,
         string? userId,
         string? gameId,
         string endpoint,
@@ -35,7 +37,7 @@ public class AiRequestLogService
         {
             var log = new AiRequestLogEntity
             {
-                TenantId = tenantId,
+                TenantId = _tenantId,
                 UserId = userId,
                 GameId = gameId,
                 Endpoint = endpoint,
@@ -62,7 +64,6 @@ public class AiRequestLogService
     }
 
     public async Task<List<AiRequestLogEntity>> GetRequestsAsync(
-        string tenantId,
         int limit = 100,
         int offset = 0,
         string? endpoint = null,
@@ -72,7 +73,7 @@ public class AiRequestLogService
         CancellationToken ct = default)
     {
         var query = _db.AiRequestLogs
-            .Where(log => log.TenantId == tenantId);
+            .Where(log => log.TenantId == _tenantId);
 
         if (!string.IsNullOrWhiteSpace(endpoint))
         {
@@ -102,13 +103,12 @@ public class AiRequestLogService
     }
 
     public async Task<AiRequestStats> GetStatsAsync(
-        string tenantId,
         DateTime? startDate = null,
         DateTime? endDate = null,
         CancellationToken ct = default)
     {
         var query = _db.AiRequestLogs
-            .Where(log => log.TenantId == tenantId);
+            .Where(log => log.TenantId == _tenantId);
 
         if (startDate.HasValue)
         {

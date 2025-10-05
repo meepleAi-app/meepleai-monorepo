@@ -1,20 +1,22 @@
 using Api.Infrastructure.Entities;
 using Api.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Api.Infrastructure;
 
 public class MeepleAiDbContext : DbContext
 {
-    private readonly ITenantContext? _tenantContext;
+    private readonly string? _tenantId;
 
-    public MeepleAiDbContext(DbContextOptions<MeepleAiDbContext> options, ITenantContext? tenantContext = null) : base(options)
+    public MeepleAiDbContext(DbContextOptions<MeepleAiDbContext> options, IOptions<SingleTenantOptions>? tenantOptions = null)
+        : base(options)
     {
-        _tenantContext = tenantContext;
+        _tenantId = tenantOptions?.Value?.GetTenantId();
     }
 
     // Property for global query filter - evaluated at query time
-    private string? CurrentTenantId => _tenantContext?.TenantId;
+    private string? CurrentTenantId => _tenantId;
 
     public DbSet<TenantEntity> Tenants => Set<TenantEntity>();
     public DbSet<UserEntity> Users => Set<UserEntity>();

@@ -1,6 +1,7 @@
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Api.Services;
 
@@ -8,15 +9,16 @@ public class AuditService
 {
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<AuditService> _logger;
+    private readonly string _tenantId;
 
-    public AuditService(MeepleAiDbContext db, ILogger<AuditService> logger)
+    public AuditService(MeepleAiDbContext db, ILogger<AuditService> logger, IOptions<SingleTenantOptions> tenantOptions)
     {
         _db = db;
         _logger = logger;
+        _tenantId = (tenantOptions?.Value ?? new SingleTenantOptions()).GetTenantId();
     }
 
     public async Task LogAsync(
-        string tenantId,
         string? userId,
         string action,
         string resource,
@@ -31,7 +33,7 @@ public class AuditService
         {
             var auditLog = new AuditLogEntity
             {
-                TenantId = tenantId,
+                TenantId = _tenantId,
                 UserId = userId,
                 Action = action,
                 Resource = resource,
@@ -64,7 +66,6 @@ public class AuditService
         CancellationToken ct = default)
     {
         await LogAsync(
-            userTenantId,
             userId,
             "ACCESS_DENIED",
             resource,

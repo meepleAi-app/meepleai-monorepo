@@ -1,23 +1,18 @@
 namespace Api.Models;
 
 public record RegisterPayload(
-    string tenantId,
     string email,
     string password,
     string? displayName,
-    string? role,
-    string? tenantName);
+    string? role);
 
 public class LoginPayload
 {
-    public string tenantId { get; set; } = default!;
     public string email { get; set; } = default!;
     public string password { get; set; } = default!;
 }
 
 public record RegisterCommand(
-    string tenantId,
-    string? tenantName,
     string email,
     string password,
     string? displayName,
@@ -26,7 +21,6 @@ public record RegisterCommand(
     string? userAgent);
 
 public record LoginCommand(
-    string tenantId,
     string email,
     string password,
     string? ipAddress,
@@ -34,7 +28,6 @@ public record LoginCommand(
 
 public record AuthUser(
     string id,
-    string tenantId,
     string email,
     string? displayName,
     string role);

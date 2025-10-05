@@ -6,6 +6,7 @@ using Api.Models;
 using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Events;
 using StackExchange.Redis;
@@ -45,10 +46,8 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 // Configure HttpClient for EmbeddingService
 builder.Services.AddHttpClient();
 
-// AUTH-02: Tenant context
-builder.Services.Configure<TenantContextOptions>(builder.Configuration.GetSection("Tenant"));
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ITenantContext, TenantContext>();
+// Single-tenant configuration
+builder.Services.Configure<SingleTenantOptions>(builder.Configuration.GetSection("Tenant"));
 
 // Background task execution
 builder.Services.AddSingleton<IBackgroundTaskService, BackgroundTaskService>();
@@ -133,7 +132,6 @@ app.UseSerilogRequestLogging(options =>
         {
             diagnosticContext.Set("UserId", httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "unknown");
             diagnosticContext.Set("UserEmail", httpContext.User.FindFirst(ClaimTypes.Email)?.Value ?? "unknown");
-            diagnosticContext.Set("TenantId", httpContext.User.FindFirst("tenant")?.Value ?? "unknown");
         }
     };
 });
@@ -159,7 +157,6 @@ app.Use(async (context, next) =>
             {
                 new(ClaimTypes.NameIdentifier, session.User.id),
                 new(ClaimTypes.Email, session.User.email),
-                new("tenant", session.User.tenantId),
                 new("displayName", session.User.displayName ?? string.Empty),
                 new(ClaimTypes.Role, session.User.role)
             };
@@ -178,14 +175,14 @@ app.Use(async (context, next) =>
     var rateLimiter = context.RequestServices.GetRequiredService<RateLimitService>();
     var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
 
-    // Get rate limit key (prioritize tenant, fallback to IP)
+    // Get rate limit key (prioritize authenticated user, fallback to IP)
     string rateLimitKey;
     RateLimitConfig config;
 
     if (context.Items.TryGetValue(nameof(ActiveSession), out var sessionObj) && sessionObj is ActiveSession session)
     {
-        // Authenticated: rate limit per tenant + role
-        rateLimitKey = $"tenant:{session.User.tenantId}";
+        // Authenticated: rate limit per user + role
+        rateLimitKey = $"user:{session.User.id}";
         config = RateLimitService.GetConfigForRole(session.User.role);
     }
     else
@@ -233,8 +230,6 @@ app.MapPost("/auth/register", async (RegisterPayload payload, HttpContext contex
     try
     {
         var command = new RegisterCommand(
-            payload.tenantId,
-            payload.tenantName,
             payload.email,
             payload.password,
             payload.displayName,
@@ -242,7 +237,7 @@ app.MapPost("/auth/register", async (RegisterPayload payload, HttpContext contex
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString());
 
-        logger.LogInformation("User registration attempt for {Email} in tenant {TenantId}", payload.email, payload.tenantId);
+        logger.LogInformation("User registration attempt for {Email}", payload.email);
         var result = await auth.RegisterAsync(command, ct);
         WriteSessionCookie(context, result.SessionToken, result.ExpiresAt);
         logger.LogInformation("User {UserId} registered successfully with role {Role}", result.User.id, result.User.role);
@@ -271,17 +266,16 @@ app.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, Au
     try
     {
         var command = new LoginCommand(
-            payload.tenantId,
             payload.email,
             payload.password,
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString());
 
-        logger.LogInformation("Login attempt for {Email} in tenant {TenantId}", payload.email, payload.tenantId);
+        logger.LogInformation("Login attempt for {Email}", payload.email);
         var result = await auth.LoginAsync(command, ct);
         if (result == null)
         {
-            logger.LogWarning("Login failed for {Email} in tenant {TenantId}", payload.email, payload.tenantId);
+            logger.LogWarning("Login failed for {Email}", payload.email);
             RemoveSessionCookie(context);
             return Results.Unauthorized();
         }
@@ -344,7 +338,6 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
 
         // ADM-01: Log AI request
         await aiLog.LogRequestAsync(
-            session.User.tenantId,
             session.User.id,
             req.gameId,
             "qa",
@@ -367,7 +360,6 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
 
         // ADM-01: Log failed AI request
         await aiLog.LogRequestAsync(
-            session.User.tenantId,
             session.User.id,
             req.gameId,
             "qa",
@@ -412,7 +404,6 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
 
         // ADM-01: Log AI request
         await aiLog.LogRequestAsync(
-            session.User.tenantId,
             session.User.id,
             req.gameId,
             "explain",
@@ -435,7 +426,6 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
 
         // ADM-01: Log failed AI request
         await aiLog.LogRequestAsync(
-            session.User.tenantId,
             session.User.id,
             req.gameId,
             "explain",
@@ -489,7 +479,6 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
         }
 
         await aiLog.LogRequestAsync(
-            session.User.tenantId,
             session.User.id,
             req.gameId,
             "setup",
@@ -512,7 +501,6 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
 
         // ADM-01: Log failed AI request
         await aiLog.LogRequestAsync(
-            session.User.tenantId,
             session.User.id,
             req.gameId,
             "setup",
@@ -567,19 +555,9 @@ app.MapPost("/ingest/pdf", async (HttpContext context, PdfStorageService pdfStor
     return Results.Json(new { documentId = result.Document.Id, fileName = result.Document.FileName });
 });
 
-app.MapGet("/games", async (HttpContext context, ITenantContext tenantContext, GameService gameService, CancellationToken ct) =>
+app.MapGet("/games", async (HttpContext context, GameService gameService, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
-    {
-        return Results.Unauthorized();
-    }
-
-    string tenantId;
-    try
-    {
-        tenantId = tenantContext.GetRequiredTenantId();
-    }
-    catch (UnauthorizedAccessException)
     {
         return Results.Unauthorized();
     }
@@ -589,7 +567,7 @@ app.MapGet("/games", async (HttpContext context, ITenantContext tenantContext, G
     return Results.Json(response);
 });
 
-app.MapPost("/games", async (CreateGameRequest? request, HttpContext context, ITenantContext tenantContext, GameService gameService, ILogger<Program> logger, CancellationToken ct) =>
+app.MapPost("/games", async (CreateGameRequest? request, HttpContext context, GameService gameService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
     {
@@ -601,39 +579,20 @@ app.MapPost("/games", async (CreateGameRequest? request, HttpContext context, IT
         return Results.BadRequest(new { error = "Request body is required" });
     }
 
-    string tenantId;
-    try
-    {
-        tenantId = tenantContext.GetRequiredTenantId();
-    }
-    catch (UnauthorizedAccessException)
-    {
-        return Results.Unauthorized();
-    }
-
-    if (!string.Equals(request.TenantId, tenantId, StringComparison.Ordinal))
-    {
-        logger.LogWarning(
-            "Tenant mismatch when creating game. Request tenant {RequestTenant} vs session tenant {Tenant}",
-            request.TenantId,
-            tenantId);
-        return Results.StatusCode(StatusCodes.Status403Forbidden);
-    }
-
     try
     {
         var game = await gameService.CreateGameAsync(request.Name, request.GameId, ct);
-        logger.LogInformation("Created game {GameId} for tenant {TenantId}", game.Id, tenantId);
+        logger.LogInformation("Created game {GameId}", game.Id);
         return Results.Created($"/games/{game.Id}", new GameResponse(game.Id, game.Name, game.CreatedAt));
     }
     catch (ArgumentException ex)
     {
-        logger.LogWarning(ex, "Invalid game creation request for tenant {TenantId}", tenantId);
+        logger.LogWarning(ex, "Invalid game creation request");
         return Results.BadRequest(new { error = ex.Message });
     }
     catch (InvalidOperationException ex)
     {
-        logger.LogWarning(ex, "Conflict creating game for tenant {TenantId}", tenantId);
+        logger.LogWarning(ex, "Conflict creating game");
         return Results.Conflict(new { error = ex.Message });
     }
 });
@@ -649,15 +608,17 @@ app.MapGet("/games/{gameId}/pdfs", async (string gameId, HttpContext context, Pd
     return Results.Json(new { pdfs });
 });
 
-app.MapGet("/pdfs/{pdfId}/text", async (string pdfId, HttpContext context, MeepleAiDbContext db, CancellationToken ct) =>
+app.MapGet("/pdfs/{pdfId}/text", async (string pdfId, HttpContext context, MeepleAiDbContext db, IOptions<SingleTenantOptions> tenantOptions, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
         return Results.Unauthorized();
     }
 
+    var tenantId = tenantOptions.Value.GetTenantId();
+
     var pdf = await db.PdfDocuments
-        .Where(p => p.Id == pdfId && p.TenantId == session.User.tenantId)
+        .Where(p => p.Id == pdfId && p.TenantId == tenantId)
         .Select(p => new
         {
             p.Id,
@@ -686,8 +647,8 @@ app.MapGet("/games/{gameId}/rulespec", async (string gameId, HttpContext context
         return Results.Unauthorized();
     }
 
-    logger.LogInformation("Fetching RuleSpec for game {GameId} in tenant {TenantId}", gameId, session.User.tenantId);
-    var ruleSpec = await ruleSpecService.GetRuleSpecAsync(session.User.tenantId, gameId, ct);
+    logger.LogInformation("Fetching RuleSpec for game {GameId}", gameId);
+    var ruleSpec = await ruleSpecService.GetRuleSpecAsync(gameId, ct);
 
     if (ruleSpec == null)
     {
@@ -720,12 +681,11 @@ app.MapPut("/games/{gameId}/rulespec", async (string gameId, RuleSpec ruleSpec, 
     try
     {
         logger.LogInformation("User {UserId} updating RuleSpec for game {GameId}", session.User.id, gameId);
-        var updated = await ruleSpecService.UpdateRuleSpecAsync(session.User.tenantId, gameId, ruleSpec, ct);
+        var updated = await ruleSpecService.UpdateRuleSpecAsync(gameId, ruleSpec, ct);
         logger.LogInformation("RuleSpec updated successfully for game {GameId}, version {Version}", gameId, updated.version);
 
         // Audit trail for RuleSpec changes
         await auditService.LogAsync(
-            session.User.tenantId,
             session.User.id,
             "UPDATE_RULESPEC",
             "RuleSpec",
@@ -733,7 +693,8 @@ app.MapPut("/games/{gameId}/rulespec", async (string gameId, RuleSpec ruleSpec, 
             "Success",
             $"Updated RuleSpec to version {updated.version}",
             context.Connection.RemoteIpAddress?.ToString(),
-            context.Request.Headers.UserAgent.ToString());
+            context.Request.Headers.UserAgent.ToString(),
+            ct);
 
         return Results.Json(updated);
     }
@@ -753,7 +714,7 @@ app.MapGet("/games/{gameId}/rulespec/history", async (string gameId, HttpContext
     }
 
     logger.LogInformation("Fetching RuleSpec version history for game {GameId}", gameId);
-    var history = await ruleSpecService.GetVersionHistoryAsync(session.User.tenantId, gameId, ct);
+    var history = await ruleSpecService.GetVersionHistoryAsync(gameId, ct);
     return Results.Json(history);
 });
 
@@ -766,7 +727,7 @@ app.MapGet("/games/{gameId}/rulespec/versions/{version}", async (string gameId, 
     }
 
     logger.LogInformation("Fetching RuleSpec version {Version} for game {GameId}", version, gameId);
-    var ruleSpec = await ruleSpecService.GetVersionAsync(session.User.tenantId, gameId, version, ct);
+    var ruleSpec = await ruleSpecService.GetVersionAsync(gameId, version, ct);
 
     if (ruleSpec == null)
     {
@@ -792,8 +753,8 @@ app.MapGet("/games/{gameId}/rulespec/diff", async (string gameId, string? from, 
 
     logger.LogInformation("Computing diff between versions {FromVersion} and {ToVersion} for game {GameId}", from, to, gameId);
 
-    var fromSpec = await ruleSpecService.GetVersionAsync(session.User.tenantId, gameId, from, ct);
-    var toSpec = await ruleSpecService.GetVersionAsync(session.User.tenantId, gameId, to, ct);
+    var fromSpec = await ruleSpecService.GetVersionAsync(gameId, from, ct);
+    var toSpec = await ruleSpecService.GetVersionAsync(gameId, to, ct);
 
     if (fromSpec == null || toSpec == null)
     {
@@ -821,7 +782,7 @@ app.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, Rule
         return Results.BadRequest(new { error = "gameId is required" });
     }
 
-    var spec = await rules.GetOrCreateDemoAsync(session.User.tenantId, request.gameId, ct);
+    var spec = await rules.GetOrCreateDemoAsync(request.gameId, ct);
     return Results.Json(new { ok = true, spec });
 });
 
@@ -839,7 +800,6 @@ app.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService lo
     }
 
     var requests = await logService.GetRequestsAsync(
-        session.User.tenantId,
         limit,
         offset,
         endpoint,
@@ -863,7 +823,7 @@ app.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logSe
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    var stats = await logService.GetStatsAsync(session.User.tenantId, startDate, endDate, ct);
+    var stats = await logService.GetStatsAsync(startDate, endDate, ct);
     return Results.Json(stats);
 });
 

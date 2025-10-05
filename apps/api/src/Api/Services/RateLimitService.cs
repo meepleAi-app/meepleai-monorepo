@@ -4,7 +4,7 @@ namespace Api.Services;
 
 /// <summary>
 /// Redis-based token bucket rate limiter.
-/// Supports per-IP and per-tenant rate limiting with configurable limits.
+/// Supports per-IP and per-user rate limiting with configurable limits.
 /// </summary>
 public class RateLimitService
 {

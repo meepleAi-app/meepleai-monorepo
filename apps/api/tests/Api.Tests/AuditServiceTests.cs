@@ -3,6 +3,7 @@ using Api.Infrastructure.Entities;
 using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -13,6 +14,7 @@ public class AuditServiceTests : IDisposable
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<ILogger<AuditService>> _loggerMock;
     private readonly AuditService _service;
+    private readonly SingleTenantOptions _tenantOptions;
 
     public AuditServiceTests()
     {
@@ -20,12 +22,14 @@ public class AuditServiceTests : IDisposable
             .UseSqlite("DataSource=:memory:")
             .Options;
 
-        _dbContext = new MeepleAiDbContext(options);
+        _tenantOptions = new SingleTenantOptions { TenantId = "tenant-test" };
+
+        _dbContext = new MeepleAiDbContext(options, Options.Create(_tenantOptions));
         _dbContext.Database.OpenConnection();
         _dbContext.Database.EnsureCreated();
 
         _loggerMock = new Mock<ILogger<AuditService>>();
-        _service = new AuditService(_dbContext, _loggerMock.Object);
+        _service = new AuditService(_dbContext, _loggerMock.Object, Options.Create(_tenantOptions));
     }
 
     public void Dispose()
@@ -38,7 +42,6 @@ public class AuditServiceTests : IDisposable
     public async Task LogAsync_CreatesAuditLog()
     {
         // Arrange
-        var tenantId = "test-tenant";
         var userId = "user-123";
         var action = "TestAction";
         var resource = "TestResource";
@@ -46,7 +49,6 @@ public class AuditServiceTests : IDisposable
 
         // Act
         await _service.LogAsync(
-            tenantId,
             userId,
             action,
             resource,
@@ -57,7 +59,7 @@ public class AuditServiceTests : IDisposable
         // Assert
         var logs = await _dbContext.AuditLogs.ToListAsync();
         Assert.Single(logs);
-        Assert.Equal(tenantId, logs[0].TenantId);
+        Assert.Equal(_tenantOptions.GetTenantId(), logs[0].TenantId);
         Assert.Equal(userId, logs[0].UserId);
         Assert.Equal(action, logs[0].Action);
         Assert.Equal(resource, logs[0].Resource);
@@ -73,7 +75,7 @@ public class AuditServiceTests : IDisposable
         var before = DateTime.UtcNow.AddSeconds(-1);
 
         // Act
-        await _service.LogAsync("tenant", "user", "action", "resource", "id", "Success");
+        await _service.LogAsync("user", "action", "resource", "id", "Success");
 
         var after = DateTime.UtcNow.AddSeconds(1);
 
@@ -86,7 +88,7 @@ public class AuditServiceTests : IDisposable
     public async Task LogAsync_HandlesNullDetails()
     {
         // Act
-        await _service.LogAsync("tenant", "user", "action", "resource", "id", "Success", null);
+        await _service.LogAsync("user", "action", "resource", "id", "Success", null);
 
         // Assert
         var log = await _dbContext.AuditLogs.FirstAsync();
@@ -112,7 +114,7 @@ public class AuditServiceTests : IDisposable
         // Assert
         var logs = await _dbContext.AuditLogs.ToListAsync();
         Assert.Single(logs);
-        Assert.Equal(userTenantId, logs[0].TenantId);
+        Assert.Equal(_tenantOptions.GetTenantId(), logs[0].TenantId);
         Assert.Equal(userId, logs[0].UserId);
         Assert.Equal("ACCESS_DENIED", logs[0].Action);
         Assert.Equal(resource, logs[0].Resource);
@@ -129,7 +131,6 @@ public class AuditServiceTests : IDisposable
 
         // Act
         await _service.LogAsync(
-            "tenant",
             "user",
             "action",
             "resource",
@@ -173,7 +174,7 @@ public class AuditServiceTests : IDisposable
     public async Task LogAsync_HandlesNullUserId()
     {
         // Act
-        await _service.LogAsync("tenant", null, "action", "resource", "id", "Success");
+        await _service.LogAsync(null, "action", "resource", "id", "Success");
 
         // Assert
         var log = await _dbContext.AuditLogs.FirstAsync();

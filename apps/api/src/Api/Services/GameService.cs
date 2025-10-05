@@ -5,6 +5,7 @@ using System.Text;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Api.Services;
 
@@ -12,25 +13,22 @@ public class GameService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
-    private readonly ITenantContext _tenantContext;
+    private readonly string _tenantId;
 
-    public GameService(MeepleAiDbContext dbContext, ITenantContext tenantContext, TimeProvider? timeProvider = null)
+    public GameService(MeepleAiDbContext dbContext, IOptions<SingleTenantOptions> tenantOptions, TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext;
-        _tenantContext = tenantContext;
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _tenantId = (tenantOptions?.Value ?? new SingleTenantOptions()).GetTenantId();
     }
 
     public async Task<GameEntity> CreateGameAsync(string name, string? requestedGameId, CancellationToken ct = default)
     {
-        var tenantId = _tenantContext.GetRequiredTenantId();
-
         if (string.IsNullOrWhiteSpace(name))
         {
             throw new ArgumentException("Game name is required", nameof(name));
         }
 
-        var normalizedTenantId = tenantId.Trim();
         var normalizedName = name.Trim();
         var desiredId = !string.IsNullOrWhiteSpace(requestedGameId)
             ? NormalizeId(requestedGameId)
@@ -41,12 +39,12 @@ public class GameService
             desiredId = Guid.NewGuid().ToString("N")[..12];
         }
 
-        if (await _dbContext.Games.AnyAsync(g => g.TenantId == normalizedTenantId && g.Id == desiredId, ct))
+        if (await _dbContext.Games.AnyAsync(g => g.TenantId == _tenantId && g.Id == desiredId, ct))
         {
             throw new InvalidOperationException($"Game with id '{desiredId}' already exists");
         }
 
-        if (await _dbContext.Games.AnyAsync(g => g.TenantId == normalizedTenantId && g.Name == normalizedName, ct))
+        if (await _dbContext.Games.AnyAsync(g => g.TenantId == _tenantId && g.Name == normalizedName, ct))
         {
             throw new InvalidOperationException($"Game with name '{normalizedName}' already exists");
         }
@@ -56,7 +54,7 @@ public class GameService
         var entity = new GameEntity
         {
             Id = desiredId,
-            TenantId = normalizedTenantId,
+            TenantId = _tenantId,
             Name = normalizedName,
             CreatedAt = now
         };
@@ -69,15 +67,9 @@ public class GameService
 
     public async Task<IReadOnlyList<GameEntity>> GetGamesAsync(CancellationToken ct = default)
     {
-        var tenantId = _tenantContext.TenantId;
-        if (string.IsNullOrWhiteSpace(tenantId))
-        {
-            return Array.Empty<GameEntity>();
-        }
-
         return await _dbContext.Games
             .AsNoTracking()
-            .Where(g => g.TenantId == tenantId)
+            .Where(g => g.TenantId == _tenantId)
             .OrderBy(g => g.Name)
             .ToListAsync(ct);
     }

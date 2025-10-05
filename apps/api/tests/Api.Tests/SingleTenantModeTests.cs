@@ -1,7 +1,6 @@
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -38,12 +37,7 @@ public class SingleTenantModeTests
             await setup.SaveChangesAsync();
         }
 
-        var httpAccessor = new HttpContextAccessor();
-        var tenantContext = new TenantContext(
-            httpAccessor,
-            Options.Create(new TenantContextOptions { DefaultTenantId = "meepleai" }));
-
-        await using var context = new MeepleAiDbContext(options, tenantContext);
+        await using var context = new MeepleAiDbContext(options, Options.Create(new SingleTenantOptions { TenantId = "meepleai" }));
 
         var games = await context.Games.AsNoTracking().ToListAsync();
 
@@ -77,9 +71,7 @@ public class SingleTenantModeTests
             await setup.SaveChangesAsync();
         }
 
-        var tenantContext = new StaticTenantContext("legacy");
-
-        await using var context = new MeepleAiDbContext(options, tenantContext);
+        await using var context = new MeepleAiDbContext(options, Options.Create(new SingleTenantOptions { TenantId = "legacy" }));
 
         var games = await context.Games.AsNoTracking().ToListAsync();
 
@@ -87,23 +79,4 @@ public class SingleTenantModeTests
         Assert.Equal("game-legacy", games[0].Id);
     }
 
-    private sealed class StaticTenantContext : ITenantContext
-    {
-        public StaticTenantContext(string tenantId)
-        {
-            TenantId = tenantId;
-        }
-
-        public string? TenantId { get; }
-
-        public string GetRequiredTenantId()
-        {
-            if (string.IsNullOrWhiteSpace(TenantId))
-            {
-                throw new UnauthorizedAccessException("No tenant context available");
-            }
-
-            return TenantId;
-        }
-    }
 }

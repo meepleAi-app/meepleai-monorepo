@@ -34,3 +34,13 @@
 | DOC-01 | README progetto (root) | Docs | Task | P0 | 2 | area/docs,kind/docs | MVP | INF-01 |
 | DOC-02 | agents.md per Codex/Claude Code | Docs | Task | P0 | 3 | area/docs,kind/docs | MVP | nan |
 | DOC-03 | CONTRIBUTING e SECURITY | Docs | Task | P1 | 2 | area/docs,kind/docs | V1 | SEC-01 |
+| API-01 | API REST giochi e regole | API | Feature | P0 | 3 | area/api,kind/feature | MVP | AUTH-01,DB-01 |
+| API-02 | Streaming explain RAG | API | Feature | P1 | 3 | area/api,kind/feature | V1 | API-01,AI-02 |
+| API-03 | Gestione API key e quote | API | Feature | P1 | 3 | area/api,area/security,kind/feature | V1 | API-01,PERF-01 |
+| DB-02 | Seed dataset demo | DB | Task | P1 | 2 | area/db,kind/data | MVP | DB-01 |
+| DB-03 | Indici full-text PDF/RuleSpec | DB | Task | P1 | 3 | area/db,kind/perf | V1 | PDF-02,AI-01 |
+| AI-06 | Valutazione RAG offline | AI | Task | P1 | 3 | area/ai,kind/test | V1 | AI-02 |
+| AI-07 | Versioning prompt e chain | AI | Feature | P1 | 2 | area/ai,kind/feature | V1 | AI-02 |
+| UI-04 | Timeline conversazioni RAG | UI | Feature | P1 | 3 | area/ui,kind/feature | V1 | UI-01,API-01 |
+| UI-05 | Audit accessibilità baseline | UI | Task | P1 | 2 | area/ui,kind/a11y | V1 | UI-01 |
+| SEC-03 | SAST e dependency scanning | Security | Task | P0 | 3 | area/security,kind/ci | MVP | INF-02 |

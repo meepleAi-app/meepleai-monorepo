@@ -8,6 +8,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;

@@ -42,8 +42,8 @@ describe('ChatPage', () => {
     mockApi.get.mockResolvedValue(mockAuthResponse);
     mockApi.post.mockResolvedValueOnce({
       answer: 'Il gioco supporta fino a 4 giocatori.',
-      sources: [
-        { title: 'Manuale Ufficiale', snippet: 'Sezione introduttiva', page: 3 }
+      snippets: [
+        { text: 'Sezione introduttiva', source: 'Manuale Ufficiale', page: 3 }
       ]
     });
 
@@ -64,7 +64,9 @@ describe('ChatPage', () => {
     }));
 
     await screen.findByText('Il gioco supporta fino a 4 giocatori.');
-    expect(screen.getByText('Manuale Ufficiale (Pagina 3)')).toBeInTheDocument();
+    expect(screen.getByText('Sezione introduttiva')).toBeInTheDocument();
+    expect(screen.getByText('Manuale Ufficiale')).toBeInTheDocument();
+    expect(screen.getByText('Pagina 3')).toBeInTheDocument();
     expect(screen.queryByText(/Errore nella comunicazione/i)).not.toBeInTheDocument();
   });
 

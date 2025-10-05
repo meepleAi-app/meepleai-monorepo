@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { api } from "../lib/api";
 
@@ -18,20 +18,21 @@ type Message = {
   id: string;
   role: "user" | "assistant";
   content: string;
-  sources?: Source[];
+  snippets?: Snippet[];
   feedback?: "helpful" | "not-helpful" | null;
   timestamp: Date;
 };
 
-type Source = {
-  title: string;
-  snippet: string;
-  page?: number;
+type Snippet = {
+  text: string;
+  source: string;
+  page?: number | null;
+  line?: number | null;
 };
 
 type QAResponse = {
   answer: string;
-  sources?: Source[];
+  snippets?: Snippet[];
 };
 
 export default function ChatPage() {
@@ -93,7 +94,7 @@ export default function ChatPage() {
         id: `msg-${Date.now()}-assistant`,
         role: "assistant",
         content: res.answer,
-        sources: res.sources,
+        snippets: res.snippets ?? [],
         feedback: null,
         timestamp: new Date()
       };
@@ -269,29 +270,67 @@ export default function ChatPage() {
                 <div style={{ whiteSpace: "pre-wrap" }}>{msg.content}</div>
 
                 {/* Sources */}
-                {msg.sources && msg.sources.length > 0 && (
+                {msg.snippets && msg.snippets.length > 0 && (
                   <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #dadce0" }}>
                     <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8, color: "#5f6368" }}>
                       Fonti:
                     </div>
-                    {msg.sources.map((source, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          marginBottom: 8,
-                          padding: 8,
-                          background: "#ffffff",
-                          border: "1px solid #dadce0",
-                          borderRadius: 4,
-                          fontSize: 12
-                        }}
-                      >
-                        <div style={{ fontWeight: 500, marginBottom: 4 }}>
-                          {source.title} {source.page !== undefined && `(Pagina ${source.page})`}
+                    {msg.snippets.map((snippet, idx) => {
+                      const isExternalLink = /^https?:\/\//.test(snippet.source);
+                      const badgeStyle: CSSProperties = {
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        padding: "2px 8px",
+                        background: "#e8f0fe",
+                        color: "#1a73e8",
+                        borderRadius: 9999,
+                        fontWeight: 500,
+                        fontSize: 11,
+                        textDecoration: "none"
+                      };
+
+                      return (
+                        <div
+                          key={idx}
+                          style={{
+                            marginBottom: 8,
+                            padding: 8,
+                            background: "#ffffff",
+                            border: "1px solid #dadce0",
+                            borderRadius: 4,
+                            fontSize: 12,
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 6
+                          }}
+                        >
+                          <div style={{ color: "#3c4043", lineHeight: 1.5 }}>{snippet.text}</div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                            {snippet.source && (
+                              isExternalLink ? (
+                                <a
+                                  href={snippet.source}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  style={badgeStyle}
+                                >
+                                  {snippet.source}
+                                </a>
+                              ) : (
+                                <span style={badgeStyle}>{snippet.source}</span>
+                              )
+                            )}
+                            {typeof snippet.page === "number" && snippet.page > 0 && (
+                              <span style={badgeStyle}>Pagina {snippet.page}</span>
+                            )}
+                            {typeof snippet.line === "number" && snippet.line > 0 && (
+                              <span style={badgeStyle}>Linea {snippet.line}</span>
+                            )}
+                          </div>
                         </div>
-                        <div style={{ color: "#5f6368", fontSize: 11 }}>{source.snippet}</div>
-                      </div>
-                    ))}
+                      );
+                      })}
                   </div>
                 )}
               </div>

@@ -1,7 +1,13 @@
+using System.Text.Json.Serialization;
+
 namespace Api.Models;
 
 public record QaRequest(string gameId, string query);
-public record QaResponse(string answer, IReadOnlyList<Snippet> snippets);
+public record QaResponse(string answer, IReadOnlyList<Snippet> snippets)
+{
+    [JsonPropertyName("sources")]
+    public IReadOnlyList<Snippet> Sources => snippets;
+}
 public record Snippet(string text, string source, int page, int line);
 
 public record IngestPdfResponse(string jobId);

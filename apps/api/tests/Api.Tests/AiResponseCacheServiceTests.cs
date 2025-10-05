@@ -1,5 +1,6 @@
 using Api.Models;
 using Api.Services;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
@@ -144,6 +145,33 @@ public class AiResponseCacheServiceTests
         Assert.NotEqual(default, storedValue);
         Assert.NotNull(storedTtl);
         Assert.Equal(TimeSpan.FromSeconds(3600), storedTtl.Value);
+    }
+
+    [Fact]
+    public void QaResponse_SerializesWithSourcesAlias()
+    {
+        // Arrange
+        var response = new QaResponse(
+            "Answer",
+            new List<Snippet> { new("Snippet text", "Manuale", 2, 12) }
+        );
+
+        // Act
+        var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+
+        // Assert
+        Assert.True(root.TryGetProperty("snippets", out var snippetsProperty));
+        Assert.True(root.TryGetProperty("sources", out var sourcesProperty));
+        Assert.Equal(snippetsProperty.GetArrayLength(), sourcesProperty.GetArrayLength());
+        Assert.Equal(
+            snippetsProperty[0].GetProperty("text").GetString(),
+            sourcesProperty[0].GetProperty("text").GetString());
     }
 
     [Fact]

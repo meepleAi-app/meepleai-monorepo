@@ -212,6 +212,7 @@ export default function UploadPage() {
 
     setParsing(true);
     setMessage('');
+    setRuleSpec(null);
 
     try {
       const fetchedRuleSpec = await api.get<RuleSpec>(`/games/${confirmedGameId}/rulespec`);

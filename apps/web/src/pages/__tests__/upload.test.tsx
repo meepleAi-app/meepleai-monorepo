@@ -124,6 +124,13 @@ describe('UploadPage', () => {
     await waitFor(() => expect(uploadButton).not.toBeDisabled());
   });
 
+  it('parses an uploaded PDF using the ingest endpoint', async () => {
+    const authResponse = {
+      user: {
+        id: 'user-parse',
+        email: 'parse@example.com',
+        role: 'Admin',
+        displayName: 'Parser'
   it('polls PDF processing status and auto advances to review when completed', async () => {
     jest.useFakeTimers();
 
@@ -246,6 +253,23 @@ describe('UploadPage', () => {
       expiresAt: new Date().toISOString()
     };
 
+    const ruleSpecResponse = {
+      gameId: 'game-1',
+      version: 'pdf-20250101000000',
+      createdAt: new Date().toISOString(),
+      rules: [
+        {
+          id: 'atom-1',
+          text: 'Setup: Place pieces; Count: 16',
+          section: 'Table',
+          page: '3',
+          line: null
+        },
+        {
+          id: 'atom-2',
+          text: 'Victory condition: Highest score wins',
+          section: null,
+          page: null,
     const parsedSpec = {
       gameId: 'game-parse',
       version: 'ingest-20240101000000',
@@ -271,6 +295,11 @@ describe('UploadPage', () => {
 
       if (url.endsWith('/games') && method === 'GET') {
         return createJsonResponse([
+          { id: 'game-1', name: 'Terraforming Mars', createdAt: new Date().toISOString() }
+        ]);
+      }
+
+      if (url.includes('/games/game-1/pdfs') && method === 'GET') {
           { id: 'game-parse', name: 'Parse Game', createdAt: new Date().toISOString() }
         ]);
       }
@@ -280,6 +309,11 @@ describe('UploadPage', () => {
       }
 
       if (url.endsWith('/ingest/pdf') && method === 'POST') {
+        return createJsonResponse({ documentId: 'pdf-1', fileName: 'rules.pdf' });
+      }
+
+      if (url.endsWith('/ingest/pdf/pdf-1/rulespec') && method === 'POST') {
+        return createJsonResponse(ruleSpecResponse);
         return createJsonResponse({ documentId: 'pdf-parse', fileName: 'rules.pdf' });
       }
 
@@ -300,6 +334,15 @@ describe('UploadPage', () => {
     const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
     fireEvent.change(fileInput, { target: { files: [file] } });
 
+    fireEvent.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+
+    await waitFor(() => expect(screen.getByText(/Step 2: Parse PDF/i)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: /Parse PDF/i }));
+
+    await waitFor(() => expect(screen.getByText(/Review & Edit Rules/i)).toBeInTheDocument());
+    expect(screen.getByDisplayValue('Setup: Place pieces; Count: 16')).toBeInTheDocument();
+    expect(mockFetch).toHaveBeenCalledWith(expect.stringMatching(/ingest\/pdf\/pdf-1\/rulespec$/), expect.objectContaining({ method: 'POST' }));
     const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
     await waitFor(() => expect(uploadButton).not.toBeDisabled());
     fireEvent.click(uploadButton);

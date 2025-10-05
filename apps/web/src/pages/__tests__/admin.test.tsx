@@ -109,12 +109,16 @@ describe('AdminDashboard', () => {
           responseSnippet: null,
           latencyMs: 210,
           tokenCount: 42,
+          promptTokens: 30,
+          completionTokens: 12,
           confidence: 0.8,
           status: 'Success',
           errorMessage: null,
           ipAddress: '127.0.0.1',
           userAgent: 'jest',
-          createdAt: '2024-01-01T12:00:00.000Z'
+          createdAt: '2024-01-01T12:00:00.000Z',
+          model: 'anthropic/claude-3.5-sonnet',
+          finishReason: 'stop'
         },
         {
           id: '2',
@@ -125,12 +129,16 @@ describe('AdminDashboard', () => {
           responseSnippet: null,
           latencyMs: 150,
           tokenCount: 18,
+          promptTokens: 10,
+          completionTokens: 8,
           confidence: 0.95,
           status: 'Success',
           errorMessage: null,
           ipAddress: '127.0.0.2',
           userAgent: 'jest',
-          createdAt: '2024-01-02T12:00:00.000Z'
+          createdAt: '2024-01-02T12:00:00.000Z',
+          model: 'anthropic/claude-3-haiku',
+          finishReason: 'length'
         }
       ]
     };
@@ -174,6 +182,9 @@ describe('AdminDashboard', () => {
 
     expect(screen.getByText('How do I win?')).toBeInTheDocument();
     expect(screen.getByText('Setup instructions')).toBeInTheDocument();
+    expect(screen.getByText('30')).toBeInTheDocument();
+    expect(screen.getByText('0.80')).toBeInTheDocument();
+    expect(screen.getByText('anthropic/claude-3.5-sonnet (stop)')).toBeInTheDocument();
 
     const user = userEvent.setup();
     const filterInput = screen.getByPlaceholderText(

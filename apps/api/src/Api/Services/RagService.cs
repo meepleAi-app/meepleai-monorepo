@@ -1,5 +1,7 @@
 using Api.Infrastructure;
 using Api.Models;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -111,12 +113,26 @@ ANSWER:";
             }
 
             var answer = llmResult.Response.Trim();
+            var confidence = searchResult.Results.Count > 0
+                ? (double?)searchResult.Results.Max(r => r.Score)
+                : null;
 
             LogInformation(
                 "RAG query answered with {SnippetCount} snippets, LLM generated answer: {AnswerPreview}",
                 snippets.Count, answer.Length > 50 ? answer.Substring(0, 50) + "..." : answer);
 
-            var response = new QaResponse(answer, snippets);
+            var metadata = llmResult.Metadata.Count > 0
+                ? new Dictionary<string, string>(llmResult.Metadata)
+                : null;
+
+            var response = new QaResponse(
+                answer,
+                snippets,
+                llmResult.Usage.PromptTokens,
+                llmResult.Usage.CompletionTokens,
+                llmResult.Usage.TotalTokens,
+                confidence,
+                metadata);
 
             // AI-05: Cache the response for future requests
             await _cache.SetAsync(cacheKey, response, 86400, cancellationToken);
@@ -193,7 +209,19 @@ ANSWER:";
                 "RAG explain generated for topic '{Topic}' with {SectionCount} sections, {CitationCount} citations, ~{Minutes} min read",
                 topic, outline.sections.Count, citations.Count, estimatedMinutes);
 
-            var response = new ExplainResponse(outline, script, citations, estimatedMinutes);
+            var confidence = searchResult.Results.Count > 0
+                ? (double?)searchResult.Results.Max(r => r.Score)
+                : null;
+
+            var response = new ExplainResponse(
+                outline,
+                script,
+                citations,
+                estimatedMinutes,
+                0,
+                0,
+                0,
+                confidence);
 
             // AI-05: Cache the response for future requests
             await _cache.SetAsync(cacheKey, response, 86400, cancellationToken);

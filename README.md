@@ -146,7 +146,8 @@ Accogliamo contributi dalla community! Prima di iniziare:
 - ✅ Health check endpoints
 - ✅ Integrazione con backend API
 
-#### Automazione
+#### Admin & Automazione
+- ✅ Dashboard amministrazione contenuti con log filtrabili, statistiche operative e gestione workflow n8n
 - ✅ n8n workflow engine setup
 - ✅ Webhook n8n per Q&A endpoint
 
@@ -188,7 +189,6 @@ Accogliamo contributi dalla community! Prima di iniziare:
 
 #### UX & Frontend
 - 📋 UI/UX completo per chat interfaccia
-- 📋 Dashboard amministrazione contenuti
 - 📋 Gestione upload PDF con progress tracking
 - 📋 Visualizzazione source documents per risposte
 

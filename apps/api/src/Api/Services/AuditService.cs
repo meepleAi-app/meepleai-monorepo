@@ -60,7 +60,7 @@ public class AuditService
         string? userAgent = null,
         CancellationToken ct = default)
     {
-        var details = $"User from tenant {userTenantId} attempted to access {resource} in tenant {requestedTenantId}";
+        var details = $"User in scope {userScope} attempted to access {resource} requiring scope {requiredScope}";
 
         await LogAsync(
             userId,
@@ -68,7 +68,7 @@ public class AuditService
             resource,
             resourceId,
             "Denied",
-            $"User in scope {userScope} attempted to access {resource} requiring scope {requiredScope}",
+            details,
             ipAddress,
             userAgent,
             ct);

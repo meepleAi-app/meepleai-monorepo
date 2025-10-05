@@ -205,6 +205,11 @@ export default function UploadPage() {
       return;
     }
 
+    if (!documentId) {
+      setMessage('Please upload a PDF before parsing');
+      return;
+    }
+
     setParsing(true);
     setMessage('');
 
@@ -217,6 +222,27 @@ export default function UploadPage() {
       }
 
       setRuleSpec(fetchedRuleSpec);
+      const response = await fetch(`${API_BASE}/ingest/pdf/${documentId}/rulespec`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        let errorMessage = response.statusText;
+        try {
+          const errorBody = await response.json();
+          if (errorBody?.error) {
+            errorMessage = errorBody.error;
+          }
+        } catch (jsonError) {
+          console.warn('Failed to parse error response', jsonError);
+        }
+        throw new Error(errorMessage);
+      }
+
+      const spec = (await response.json()) as RuleSpec;
+
+      setRuleSpec(spec);
       setMessage('✅ PDF parsed successfully!');
       setCurrentStep('review');
     } catch (error) {
@@ -760,18 +786,16 @@ export default function UploadPage() {
             </p>
           </div>
           <button
-            onClick={() => void handleParse()}
-            disabled={parsing || effectiveProcessingStatus !== 'completed'}
+            onClick={handleParse}
+            disabled={parsing || !documentId}
             style={{
               padding: '12px 24px',
-              backgroundColor:
-                parsing || effectiveProcessingStatus !== 'completed' ? '#ccc' : '#0070f3',
+              backgroundColor: parsing || !documentId ? '#ccc' : '#0070f3',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
               fontSize: '16px',
-              cursor:
-                parsing || effectiveProcessingStatus !== 'completed' ? 'not-allowed' : 'pointer',
+              cursor: parsing || !documentId ? 'not-allowed' : 'pointer',
               fontWeight: '500',
               marginRight: '12px'
             }}

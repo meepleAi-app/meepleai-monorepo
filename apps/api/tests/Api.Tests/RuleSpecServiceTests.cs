@@ -5,6 +5,7 @@ using Api.Models;
 using Api.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using Xunit;
 
 namespace Api.Tests;
@@ -221,5 +222,104 @@ public class RuleSpecServiceTests : IDisposable
                 Assert.Equal(1, version.RuleCount);
                 Assert.Equal("Test User", version.CreatedBy);
             });
+    }
+
+    [Fact]
+    public async Task GenerateRuleSpecFromPdfAsync_UsesAtomicRulesWhenPresent()
+    {
+        var user = new UserEntity
+        {
+            Id = "user-atomic",
+            Email = "atomic@example.com",
+            PasswordHash = "hash",
+            Role = UserRole.Admin,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var game = new GameEntity
+        {
+            Id = "game-atomic",
+            Name = "Atomic Game",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var pdf = new PdfDocumentEntity
+        {
+            Id = "pdf-atomic",
+            GameId = game.Id,
+            FileName = "rules.pdf",
+            FilePath = "/tmp/rules.pdf",
+            FileSizeBytes = 1024,
+            UploadedByUserId = user.Id,
+            UploadedAt = DateTime.UtcNow,
+            AtomicRules = JsonSerializer.Serialize(new[]
+            {
+                "[Table on page 3] Setup: Each player draws five cards"
+            })
+        };
+
+        _dbContext.Users.Add(user);
+        _dbContext.Games.Add(game);
+        _dbContext.PdfDocuments.Add(pdf);
+        await _dbContext.SaveChangesAsync();
+
+        var spec = await _service.GenerateRuleSpecFromPdfAsync(pdf.Id);
+
+        Assert.Equal(game.Id, spec.gameId);
+        Assert.StartsWith("ingest-", spec.version, StringComparison.Ordinal);
+        Assert.Single(spec.rules);
+        Assert.Equal("Setup: Each player draws five cards", spec.rules[0].text);
+        Assert.Equal("3", spec.rules[0].page);
+        Assert.Equal("r1", spec.rules[0].id);
+    }
+
+    [Fact]
+    public async Task GenerateRuleSpecFromPdfAsync_FallsBackToExtractedText()
+    {
+        var user = new UserEntity
+        {
+            Id = "user-text",
+            Email = "text@example.com",
+            PasswordHash = "hash",
+            Role = UserRole.Editor,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var game = new GameEntity
+        {
+            Id = "game-text",
+            Name = "Text Game",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var pdf = new PdfDocumentEntity
+        {
+            Id = "pdf-text",
+            GameId = game.Id,
+            FileName = "rules.pdf",
+            FilePath = "/tmp/rules.pdf",
+            FileSizeBytes = 2048,
+            UploadedByUserId = user.Id,
+            UploadedAt = DateTime.UtcNow,
+            ExtractedText = "Rule one applies.\nRule two applies."
+        };
+
+        _dbContext.Users.Add(user);
+        _dbContext.Games.Add(game);
+        _dbContext.PdfDocuments.Add(pdf);
+        await _dbContext.SaveChangesAsync();
+
+        var spec = await _service.GenerateRuleSpecFromPdfAsync(pdf.Id);
+
+        Assert.Equal(2, spec.rules.Count);
+        Assert.Equal("Rule one applies.", spec.rules[0].text);
+        Assert.Equal("Rule two applies.", spec.rules[1].text);
+        Assert.All(spec.rules, atom => Assert.Null(atom.page));
+    }
+
+    [Fact]
+    public async Task GenerateRuleSpecFromPdfAsync_ThrowsWhenNoPdf()
+    {
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GenerateRuleSpecFromPdfAsync("missing"));
     }
 }

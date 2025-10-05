@@ -2,7 +2,11 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Api.Services;
 
@@ -12,6 +16,42 @@ public class RuleSpecService
     public RuleSpecService(MeepleAiDbContext dbContext)
     {
         _dbContext = dbContext;
+    }
+
+    public async Task<RuleSpec> GenerateRuleSpecFromPdfAsync(string pdfId, CancellationToken cancellationToken = default)
+    {
+        var pdf = await _dbContext.PdfDocuments
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == pdfId, cancellationToken);
+
+        if (pdf is null)
+        {
+            throw new InvalidOperationException($"PDF document {pdfId} not found");
+        }
+
+        var rules = ParseAtomicRules(pdf.AtomicRules);
+
+        if (rules.Count == 0)
+        {
+            rules = ParseExtractedText(pdf.ExtractedText);
+        }
+
+        if (rules.Count == 0)
+        {
+            throw new InvalidOperationException($"PDF document {pdfId} does not contain any parsed rules");
+        }
+
+        var atoms = new List<RuleAtom>();
+
+        for (int index = 0; index < rules.Count; index++)
+        {
+            atoms.Add(CreateRuleAtom(rules[index], index + 1));
+        }
+
+        var timestamp = DateTime.UtcNow;
+        var version = $"ingest-{timestamp:yyyyMMddHHmmss}";
+
+        return new RuleSpec(pdf.GameId, version, timestamp, atoms);
     }
 
     // TODO: integra parser PDF (Tabula/Camelot via sidecar) e normalizzazione in RuleSpec
@@ -166,5 +206,60 @@ public class RuleSpecService
             .ToList();
 
         return new RuleSpec(entity.GameId, entity.Version, entity.CreatedAt, atoms);
+    }
+
+    private static List<string> ParseAtomicRules(string? atomicRulesJson)
+    {
+        if (string.IsNullOrWhiteSpace(atomicRulesJson))
+        {
+            return new List<string>();
+        }
+
+        try
+        {
+            var rules = JsonSerializer.Deserialize<List<string>>(atomicRulesJson);
+            return rules?.Where(r => !string.IsNullOrWhiteSpace(r)).Select(r => r.Trim()).ToList() ?? new List<string>();
+        }
+        catch (JsonException)
+        {
+            return new List<string>();
+        }
+    }
+
+    private static List<string> ParseExtractedText(string? extractedText)
+    {
+        if (string.IsNullOrWhiteSpace(extractedText))
+        {
+            return new List<string>();
+        }
+
+        return extractedText
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .ToList();
+    }
+
+    private static RuleAtom CreateRuleAtom(string rawText, int index)
+    {
+        string? page = null;
+        string cleanedText = rawText.Trim();
+
+        var tableMatch = Regex.Match(cleanedText, "^\\[Table on page (?<page>\\d+)\\]\\s*(?<rest>.+)$", RegexOptions.IgnoreCase);
+        if (tableMatch.Success)
+        {
+            page = tableMatch.Groups["page"].Value;
+            cleanedText = tableMatch.Groups["rest"].Value.Trim();
+        }
+        else
+        {
+            var pageMatch = Regex.Match(cleanedText, "page\\s+(?<page>\\d+)", RegexOptions.IgnoreCase);
+            if (pageMatch.Success)
+            {
+                page = pageMatch.Groups["page"].Value;
+            }
+        }
+
+        return new RuleAtom($"r{index}", cleanedText, null, page, null);
     }
 }

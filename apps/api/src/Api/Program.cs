@@ -635,6 +635,32 @@ app.MapGet("/pdfs/{pdfId}/text", async (string pdfId, HttpContext context, Meepl
     return Results.Json(pdf);
 });
 
+app.MapPost("/ingest/pdf/{pdfId}/rulespec", async (string pdfId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation("User {UserId} generating RuleSpec from PDF {PdfId}", session.User.id, pdfId);
+        var ruleSpec = await ruleSpecService.GenerateRuleSpecFromPdfAsync(pdfId, ct);
+        return Results.Json(ruleSpec);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning(ex, "Unable to generate RuleSpec for PDF {PdfId}", pdfId);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
 app.MapGet("/games/{gameId}/rulespec", async (string gameId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)

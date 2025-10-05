@@ -235,5 +235,84 @@ describe('UploadPage', () => {
     } finally {
       jest.useRealTimers();
     }
+  it('parses an uploaded PDF using the rulespec ingest endpoint', async () => {
+    const authResponse = {
+      user: {
+        id: 'user-3',
+        email: 'user3@example.com',
+        role: 'Admin',
+        displayName: 'User Three'
+      },
+      expiresAt: new Date().toISOString()
+    };
+
+    const parsedSpec = {
+      gameId: 'game-parse',
+      version: 'ingest-20240101000000',
+      createdAt: new Date().toISOString(),
+      rules: [
+        {
+          id: 'r1',
+          text: 'Setup: Distribute four cards to each player',
+          section: null,
+          page: '4',
+          line: null
+        }
+      ]
+    };
+
+    mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      const method = init?.method ?? 'GET';
+
+      if (url.endsWith('/auth/me')) {
+        return createJsonResponse(authResponse);
+      }
+
+      if (url.endsWith('/games') && method === 'GET') {
+        return createJsonResponse([
+          { id: 'game-parse', name: 'Parse Game', createdAt: new Date().toISOString() }
+        ]);
+      }
+
+      if (url.includes('/games/game-parse/pdfs')) {
+        return createJsonResponse({ pdfs: [] });
+      }
+
+      if (url.endsWith('/ingest/pdf') && method === 'POST') {
+        return createJsonResponse({ documentId: 'pdf-parse', fileName: 'rules.pdf' });
+      }
+
+      if (url.includes('/ingest/pdf/pdf-parse/rulespec') && method === 'POST') {
+        return createJsonResponse(parsedSpec);
+      }
+
+      throw new Error(`Unexpected fetch call to ${url}`);
+    });
+
+    render(<UploadPage />);
+
+    await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
+
+    const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
+    const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+    await waitFor(() => expect(uploadButton).not.toBeDisabled());
+    fireEvent.click(uploadButton);
+
+    await waitFor(() => expect(screen.getByText(/PDF uploaded successfully/i)).toBeInTheDocument());
+
+    const parseButton = screen.getByRole('button', { name: /Parse PDF/i });
+    await waitFor(() => expect(parseButton).not.toBeDisabled());
+    fireEvent.click(parseButton);
+
+    await waitFor(() => expect(screen.getByText(/PDF parsed successfully/i)).toBeInTheDocument());
+
+    expect(screen.getByDisplayValue('Setup: Distribute four cards to each player')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('4')).toBeInTheDocument();
   });
 });

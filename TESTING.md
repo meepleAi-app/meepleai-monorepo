@@ -2,6 +2,12 @@
 
 This document describes how to run tests and generate coverage reports for the MeepleAI monorepo.
 
+## Prerequisites
+
+- **.NET 8 SDK** — install via your package manager or run `bash dotnet-install.sh --version 8.0.100` from https://dot.net if the CLI is unavailable.
+- **Docker daemon** — required for Testcontainers-based integration tests (`QdrantServiceIntegrationTests`). Without Docker the backend suite will fail before exercising those paths.
+- **Node.js 20.x + npm** — aligns with the versions configured in CI for the frontend.
+
 ## Quick Start
 
 ### Run All Tests with Coverage
@@ -59,7 +65,7 @@ The frontend has a **90% coverage threshold** configured in `jest.config.js`:
 - **Lines**: 90%
 - **Statements**: 90%
 
-Tests will fail if coverage falls below these thresholds.
+Tests will fail if coverage falls below these thresholds. Even when Jest exits with a non-zero status, the LCOV and HTML coverage reports are still generated in `apps/web/coverage/`.
 
 ### Coverage Report Location
 
@@ -81,16 +87,16 @@ apps/web/coverage/lcov-report/index.html
 ```bash
 cd apps/api
 
-# Run all tests
+# Run all tests (requires Docker for Qdrant integration tests)
 dotnet test
 
-# Run tests with coverage
+# Run tests with coverage (produces Cobertura XML under TestResults/)
 dotnet test --collect:"XPlat Code Coverage" --results-directory ./TestResults
 
-# Generate HTML coverage report
-reportgenerator `
-  -reports:"TestResults/**/coverage.cobertura.xml" `
-  -targetdir:"TestResults/CoverageReport" `
+# Generate HTML coverage report (requires dotnet-reportgenerator-globaltool)
+reportgenerator \
+  -reports:"TestResults/**/coverage.cobertura.xml" \
+  -targetdir:"TestResults/CoverageReport" \
   -reporttypes:"Html;TextSummary"
 ```
 
@@ -116,6 +122,8 @@ After running the coverage commands, view the HTML report at:
 ```
 apps/api/TestResults/CoverageReport/index.html
 ```
+
+> **Tip:** When Docker is unavailable the Qdrant Testcontainers suite fails, but Cobertura XML is still generated for the portions that executed. Fix Docker (or point `QDRANT_URL` to a live instance) before relying on the resulting coverage numbers.
 
 ## End-to-End Testing
 

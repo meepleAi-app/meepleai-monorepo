@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { api } from '../lib/api';
 
 interface PdfDocument {
   id: string;
@@ -24,11 +25,36 @@ interface RuleSpec {
   rules: RuleAtom[];
 }
 
+interface GameSummary {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+interface AuthUser {
+  id: string;
+  tenantId: string;
+  email: string;
+  displayName?: string | null;
+  role: string;
+}
+
+interface AuthResponse {
+  user: AuthUser;
+  expiresAt: string;
+}
+
 type WizardStep = 'upload' | 'parse' | 'review' | 'publish';
 
 export default function UploadPage() {
   const [currentStep, setCurrentStep] = useState<WizardStep>('upload');
-  const [gameId, setGameId] = useState('demo');
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [games, setGames] = useState<GameSummary[]>([]);
+  const [loadingGames, setLoadingGames] = useState(true);
+  const [selectedGameId, setSelectedGameId] = useState('');
+  const [confirmedGameId, setConfirmedGameId] = useState<string | null>(null);
+  const [newGameName, setNewGameName] = useState('');
+  const [creatingGame, setCreatingGame] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [parsing, setParsing] = useState(false);
@@ -40,6 +66,68 @@ export default function UploadPage() {
   const [loadingPdfs, setLoadingPdfs] = useState(false);
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+
+  const loadPdfs = async (gameId: string) => {
+    if (!gameId) {
+      return;
+    }
+
+    setLoadingPdfs(true);
+    try {
+      const response = await fetch(`${API_BASE}/games/${gameId}/pdfs`, {
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPdfs(data.pdfs || []);
+      } else {
+        console.error('Failed to load PDFs:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Failed to load PDFs:', error);
+    } finally {
+      setLoadingPdfs(false);
+    }
+  };
+
+  const initialize = async () => {
+    setLoadingGames(true);
+    try {
+      const me = await api.get<AuthResponse>('/auth/me');
+      if (!me) {
+        setAuthUser(null);
+        setGames([]);
+        setSelectedGameId('');
+        setConfirmedGameId(null);
+        return;
+      }
+
+      setAuthUser(me.user);
+      const fetchedGames = (await api.get<GameSummary[]>('/games')) ?? [];
+      setGames(fetchedGames);
+      if (fetchedGames.length > 0) {
+        setSelectedGameId(fetchedGames[0].id);
+      }
+    } catch (error) {
+      console.error('Failed to load games', error);
+      setMessage('❌ Unable to load games. Please refresh and try again.');
+    } finally {
+      setLoadingGames(false);
+    }
+  };
+
+  useEffect(() => {
+    void initialize();
+  }, []);
+
+  useEffect(() => {
+    if (confirmedGameId) {
+      void loadPdfs(confirmedGameId);
+    } else {
+      setPdfs([]);
+    }
+  }, [confirmedGameId]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -56,8 +144,8 @@ export default function UploadPage() {
       return;
     }
 
-    if (!gameId.trim()) {
-      setMessage('Please enter a game ID');
+    if (!confirmedGameId) {
+      setMessage('Please confirm a game before uploading');
       return;
     }
 
@@ -67,7 +155,7 @@ export default function UploadPage() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('gameId', gameId);
+      formData.append('gameId', confirmedGameId);
 
       const response = await fetch(`${API_BASE}/ingest/pdf`, {
         method: 'POST',
@@ -79,7 +167,6 @@ export default function UploadPage() {
         const data = await response.json();
         setDocumentId(data.documentId);
         setMessage(`✅ PDF uploaded successfully! Document ID: ${data.documentId}`);
-        // Move to parse step
         setCurrentStep('parse');
       } else {
         const error = await response.json();
@@ -93,14 +180,17 @@ export default function UploadPage() {
   };
 
   const handleParse = async () => {
+    if (!confirmedGameId) {
+      setMessage('Please confirm a game before parsing');
+      return;
+    }
+
     setParsing(true);
     setMessage('');
 
     try {
-      // TODO: Replace with actual parse endpoint when available
-      // For now, create a mock RuleSpec
       const mockRuleSpec: RuleSpec = {
-        gameId: gameId,
+        gameId: confirmedGameId,
         version: '1.0.0',
         createdAt: new Date().toISOString(),
         rules: [
@@ -128,7 +218,6 @@ export default function UploadPage() {
         ]
       };
 
-      // Simulate parsing delay
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       setRuleSpec(mockRuleSpec);
@@ -142,8 +231,8 @@ export default function UploadPage() {
   };
 
   const handlePublish = async () => {
-    if (!ruleSpec) {
-      setMessage('No RuleSpec to publish');
+    if (!ruleSpec || !confirmedGameId) {
+      setMessage('No RuleSpec or game selected to publish');
       return;
     }
 
@@ -151,7 +240,7 @@ export default function UploadPage() {
     setMessage('');
 
     try {
-      const response = await fetch(`${API_BASE}/games/${gameId}/rulespec`, {
+      const response = await fetch(`${API_BASE}/games/${confirmedGameId}/rulespec`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -209,27 +298,51 @@ export default function UploadPage() {
     setRuleSpec({ ...ruleSpec, rules: [...ruleSpec.rules, newRule] });
   };
 
-  const loadPdfs = async () => {
-    if (!gameId.trim()) {
+  const confirmSelectedGame = () => {
+    if (!selectedGameId) {
+      setMessage('Please choose a game to confirm');
       return;
     }
 
-    setLoadingPdfs(true);
+    setConfirmedGameId(selectedGameId);
+    setMessage('');
+  };
+
+  const handleCreateGame = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!authUser) {
+      setMessage('You must be logged in to create a game');
+      return;
+    }
+
+    const trimmedName = newGameName.trim();
+    if (!trimmedName) {
+      setMessage('Please enter a game name');
+      return;
+    }
+
+    setCreatingGame(true);
+    setMessage('');
+
     try {
-      const response = await fetch(`${API_BASE}/games/${gameId}/pdfs`, {
-        credentials: 'include',
+      const created = await api.post<GameSummary>('/games', {
+        tenantId: authUser.tenantId,
+        name: trimmedName
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setPdfs(data.pdfs || []);
-      } else {
-        console.error('Failed to load PDFs:', response.statusText);
-      }
+      const updatedGames = [...games.filter(game => game.id !== created.id), created].sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
+      setGames(updatedGames);
+      setSelectedGameId(created.id);
+      setConfirmedGameId(created.id);
+      setNewGameName('');
+      setMessage(`✅ Game "${created.name}" created`);
     } catch (error) {
-      console.error('Failed to load PDFs:', error);
+      setMessage(`❌ Failed to create game: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
-      setLoadingPdfs(false);
+      setCreatingGame(false);
     }
   };
 
@@ -247,6 +360,9 @@ export default function UploadPage() {
     const date = new Date(dateString);
     return date.toLocaleString();
   };
+
+  const selectedGame = games.find(game => game.id === selectedGameId) ?? null;
+  const confirmedGame = confirmedGameId ? games.find(game => game.id === confirmedGameId) ?? null : null;
 
   const renderStepIndicator = () => {
     const steps: WizardStep[] = ['upload', 'parse', 'review', 'publish'];
@@ -320,25 +436,138 @@ export default function UploadPage() {
       {currentStep === 'upload' && (
         <div>
           <h2>Step 1: Upload PDF</h2>
+          <div
+            style={{
+              marginTop: '20px',
+              marginBottom: '24px',
+              padding: '16px',
+              border: '1px solid #e0e0e0',
+              borderRadius: '6px',
+              backgroundColor: '#f9fafb'
+            }}
+          >
+            <h3 style={{ marginTop: 0, marginBottom: '12px' }}>Game selection</h3>
+            {loadingGames ? (
+              <p style={{ margin: 0 }}>Loading games…</p>
+            ) : !authUser ? (
+              <p style={{ margin: 0 }}>You need to be logged in to manage games.</p>
+            ) : (
+              <>
+                {games.length > 0 ? (
+                  <div style={{ marginBottom: '16px' }}>
+                    <label htmlFor="gameSelect" style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
+                      Existing games
+                    </label>
+                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <select
+                        id="gameSelect"
+                        value={selectedGameId}
+                        onChange={(e) => {
+                          setSelectedGameId(e.target.value);
+                          setConfirmedGameId(null);
+                        }}
+                        style={{
+                          flex: 1,
+                          minWidth: '220px',
+                          padding: '10px',
+                          border: '1px solid #ccc',
+                          borderRadius: '4px',
+                          fontSize: '15px'
+                        }}
+                      >
+                        {games.map((game) => (
+                          <option key={game.id} value={game.id}>
+                            {game.name}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={confirmSelectedGame}
+                        disabled={!selectedGameId || confirmedGameId === selectedGameId}
+                        style={{
+                          padding: '10px 18px',
+                          backgroundColor:
+                            !selectedGameId || confirmedGameId === selectedGameId ? '#ccc' : '#0070f3',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor:
+                            !selectedGameId || confirmedGameId === selectedGameId ? 'not-allowed' : 'pointer',
+                          fontWeight: 500
+                        }}
+                      >
+                        Confirm selection
+                      </button>
+                    </div>
+                    <p style={{ marginTop: '8px', fontSize: '14px', color: '#555' }}>
+                      {confirmedGame
+                        ? `Confirmed game: ${confirmedGame.name} (${confirmedGame.id})`
+                        : 'Confirm a game to enable uploads.'}
+                    </p>
+                  </div>
+                ) : (
+                  <p style={{ marginBottom: '16px' }}>You don&apos;t have any games yet. Create one to get started.</p>
+                )}
+
+                <form
+                  onSubmit={handleCreateGame}
+                  style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}
+                >
+                  <div style={{ flex: 1, minWidth: '220px' }}>
+                    <label htmlFor="newGameName" style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>
+                      New game name
+                    </label>
+                    <input
+                      id="newGameName"
+                      value={newGameName}
+                      onChange={(e) => setNewGameName(e.target.value)}
+                      placeholder="e.g., Settlers of Catan"
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        fontSize: '15px'
+                      }}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={creatingGame}
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: creatingGame ? '#ccc' : '#34a853',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: creatingGame ? 'not-allowed' : 'pointer',
+                      fontWeight: 500
+                    }}
+                  >
+                    {creatingGame ? 'Creating…' : games.length > 0 ? 'Create another game' : 'Create first game'}
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+
           <form onSubmit={handleUpload} style={{ marginTop: '20px' }}>
             <div style={{ marginBottom: '20px' }}>
-              <label htmlFor="gameId" style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
-                Game ID:
-              </label>
-              <input
-                id="gameId"
-                type="text"
-                value={gameId}
-                onChange={(e) => setGameId(e.target.value)}
-                placeholder="Enter game ID (e.g., demo-chess)"
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Confirmed game</label>
+              <div
                 style={{
-                  width: '100%',
                   padding: '12px',
                   border: '1px solid #ddd',
                   borderRadius: '4px',
-                  fontSize: '16px',
+                  backgroundColor: confirmedGame ? '#fff' : '#f1f3f4',
+                  color: confirmedGame ? '#202124' : '#5f6368'
                 }}
-              />
+              >
+                {confirmedGame
+                  ? `${confirmedGame.name} (${confirmedGame.id})`
+                  : 'No game confirmed yet'}
+              </div>
             </div>
 
             <div style={{ marginBottom: '20px' }}>
@@ -367,20 +596,25 @@ export default function UploadPage() {
 
             <button
               type="submit"
-              disabled={uploading || !file}
+              disabled={uploading || !file || !confirmedGameId}
               style={{
                 padding: '12px 24px',
-                backgroundColor: uploading || !file ? '#ccc' : '#0070f3',
+                backgroundColor: uploading || !file || !confirmedGameId ? '#ccc' : '#0070f3',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
                 fontSize: '16px',
-                cursor: uploading || !file ? 'not-allowed' : 'pointer',
+                cursor: uploading || !file || !confirmedGameId ? 'not-allowed' : 'pointer',
                 fontWeight: '500',
               }}
             >
               {uploading ? 'Uploading...' : 'Upload & Continue'}
             </button>
+            {!confirmedGameId && (
+              <p style={{ marginTop: '8px', fontSize: '13px', color: '#d93025' }}>
+                Confirm a game to enable uploads.
+              </p>
+            )}
           </form>
         </div>
       )}
@@ -576,7 +810,8 @@ export default function UploadPage() {
         <div>
           <h2>Step 4: Published Successfully! ✅</h2>
           <p style={{ marginTop: '16px', marginBottom: '24px', fontSize: '16px' }}>
-            Your RuleSpec for <strong>{gameId}</strong> has been published successfully!
+            Your RuleSpec for <strong>{ruleSpec?.gameId ?? confirmedGameId ?? 'unknown game'}</strong> has been
+            published successfully!
           </p>
           <div style={{ marginTop: '20px' }}>
             <button
@@ -596,7 +831,7 @@ export default function UploadPage() {
               Import Another PDF
             </button>
             <Link
-              href={`/editor?gameId=${gameId}`}
+              href={`/editor?gameId=${ruleSpec?.gameId ?? confirmedGameId ?? ''}`}
               style={{
                 padding: '12px 24px',
                 backgroundColor: '#34a853',

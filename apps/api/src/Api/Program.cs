@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using System.Linq;
 using System.Security.Claims;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -60,6 +61,7 @@ builder.Services.AddScoped<TextChunkingService>();
 // AI-05: AI response caching
 builder.Services.AddSingleton<IAiResponseCacheService, AiResponseCacheService>();
 
+builder.Services.AddScoped<GameService>();
 builder.Services.AddScoped<RuleSpecService>();
 builder.Services.AddScoped<RuleSpecDiffService>();
 builder.Services.AddScoped<RagService>();
@@ -604,6 +606,77 @@ app.MapPost("/ingest/pdf", async (HttpContext context, PdfStorageService pdfStor
 
     logger.LogInformation("PDF uploaded successfully: {PdfId}", result.Document!.Id);
     return Results.Json(new { documentId = result.Document.Id, fileName = result.Document.FileName });
+});
+
+app.MapGet("/games", async (HttpContext context, ITenantContext tenantContext, GameService gameService, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
+    {
+        return Results.Unauthorized();
+    }
+
+    string tenantId;
+    try
+    {
+        tenantId = tenantContext.GetRequiredTenantId();
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return Results.Unauthorized();
+    }
+
+    var games = await gameService.GetGamesForTenantAsync(tenantId, ct);
+    var response = games.Select(g => new GameResponse(g.Id, g.Name, g.CreatedAt)).ToList();
+    return Results.Json(response);
+});
+
+app.MapPost("/games", async (CreateGameRequest? request, HttpContext context, ITenantContext tenantContext, GameService gameService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (request is null)
+    {
+        return Results.BadRequest(new { error = "Request body is required" });
+    }
+
+    string tenantId;
+    try
+    {
+        tenantId = tenantContext.GetRequiredTenantId();
+    }
+    catch (UnauthorizedAccessException)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(request.TenantId, tenantId, StringComparison.Ordinal))
+    {
+        logger.LogWarning(
+            "Tenant mismatch when creating game. Request tenant {RequestTenant} vs session tenant {Tenant}",
+            request.TenantId,
+            tenantId);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        var game = await gameService.CreateGameAsync(tenantId, request.Name, request.GameId, ct);
+        logger.LogInformation("Created game {GameId} for tenant {TenantId}", game.Id, tenantId);
+        return Results.Created($"/games/{game.Id}", new GameResponse(game.Id, game.Name, game.CreatedAt));
+    }
+    catch (ArgumentException ex)
+    {
+        logger.LogWarning(ex, "Invalid game creation request for tenant {TenantId}", tenantId);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning(ex, "Conflict creating game for tenant {TenantId}", tenantId);
+        return Results.Conflict(new { error = ex.Message });
+    }
 });
 
 app.MapGet("/games/{gameId}/pdfs", async (string gameId, HttpContext context, PdfStorageService pdfStorage, CancellationToken ct) =>

@@ -20,6 +20,8 @@ type Message = {
   content: string;
   sources?: Source[];
   feedback?: "helpful" | "not-helpful" | null;
+  endpoint?: string;
+  gameId?: string;
   timestamp: Date;
 };
 
@@ -95,6 +97,8 @@ export default function ChatPage() {
         content: res.answer,
         sources: res.sources,
         feedback: null,
+        endpoint: "qa",
+        gameId: selectedGame,
         timestamp: new Date()
       };
 
@@ -110,15 +114,39 @@ export default function ChatPage() {
     }
   };
 
-  const setFeedback = (messageId: string, feedback: "helpful" | "not-helpful") => {
+  const setFeedback = async (messageId: string, feedback: "helpful" | "not-helpful") => {
+    if (!authUser) {
+      return;
+    }
+
+    const targetMessage = messages.find((msg) => msg.id === messageId);
+    if (!targetMessage) {
+      return;
+    }
+
+    const previousFeedback = targetMessage.feedback ?? null;
+    const nextFeedback = previousFeedback === feedback ? null : feedback;
+    const endpoint = targetMessage.endpoint ?? "qa";
+    const gameId = targetMessage.gameId ?? selectedGame;
+
     setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === messageId ? { ...msg, feedback: msg.feedback === feedback ? null : feedback } : msg
-      )
+      prev.map((msg) => (msg.id === messageId ? { ...msg, feedback: nextFeedback } : msg))
     );
 
-    // In a real implementation, this would also send the feedback to the backend
-    // await api.post("/feedback", { messageId, feedback });
+    try {
+      await api.post("/agents/feedback", {
+        messageId,
+        endpoint,
+        outcome: nextFeedback,
+        userId: authUser.id,
+        gameId
+      });
+    } catch (error) {
+      console.error(error);
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === messageId ? { ...msg, feedback: previousFeedback } : msg))
+      );
+    }
   };
 
   const clearHistory = () => {
@@ -300,7 +328,7 @@ export default function ChatPage() {
               {msg.role === "assistant" && (
                 <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                   <button
-                    onClick={() => setFeedback(msg.id, "helpful")}
+                    onClick={() => void setFeedback(msg.id, "helpful")}
                     style={{
                       padding: "4px 8px",
                       background: msg.feedback === "helpful" ? "#34a853" : "#f1f3f4",
@@ -318,7 +346,7 @@ export default function ChatPage() {
                     👍 Utile
                   </button>
                   <button
-                    onClick={() => setFeedback(msg.id, "not-helpful")}
+                    onClick={() => void setFeedback(msg.id, "not-helpful")}
                     style={{
                       padding: "4px 8px",
                       background: msg.feedback === "not-helpful" ? "#ea4335" : "#f1f3f4",

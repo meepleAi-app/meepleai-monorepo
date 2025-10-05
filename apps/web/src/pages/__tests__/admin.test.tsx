@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AdminDashboard from '../admin';
 
@@ -143,7 +143,12 @@ describe('AdminDashboard', () => {
       endpointCounts: {
         qa: 1,
         explain: 1
-      }
+      },
+      feedbackCounts: {
+        helpful: 1,
+        "not-helpful": 1
+      },
+      totalFeedback: 2
     };
 
     const qaOnlyPayload = {
@@ -166,11 +171,14 @@ describe('AdminDashboard', () => {
     );
 
     expect(await screen.findByText('Admin Dashboard')).toBeInTheDocument();
-    expect(screen.getByText('Total Requests')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
+    const totalRequestsCard = screen.getByText('Total Requests').parentElement as HTMLElement;
+    expect(within(totalRequestsCard).getByText('2')).toBeInTheDocument();
     expect(screen.getByText('180ms')).toBeInTheDocument();
     expect(screen.getByText('60')).toBeInTheDocument();
     expect(screen.getByText('95.0%')).toBeInTheDocument();
+    expect(screen.getByText('Feedback Totali')).toBeInTheDocument();
+    expect(screen.getByText('👍 Utile: 1')).toBeInTheDocument();
+    expect(screen.getByText('👎 Non utile: 1')).toBeInTheDocument();
 
     expect(screen.getByText('How do I win?')).toBeInTheDocument();
     expect(screen.getByText('Setup instructions')).toBeInTheDocument();

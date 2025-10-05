@@ -66,6 +66,7 @@ builder.Services.AddScoped<SetupGuideService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<AiRequestLogService>();
+builder.Services.AddScoped<AgentFeedbackService>();
 builder.Services.AddScoped<RateLimitService>();
 builder.Services.AddScoped<PdfTextExtractionService>();
 builder.Services.AddScoped<PdfTableExtractionService>();
@@ -516,6 +517,49 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
     }
 });
 
+app.MapPost("/agents/feedback", async (AgentFeedbackRequest req, HttpContext context, AgentFeedbackService feedbackService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(req.userId, session.User.id, StringComparison.Ordinal))
+    {
+        return Results.BadRequest(new { error = "Invalid user" });
+    }
+
+    if (string.IsNullOrWhiteSpace(req.messageId) || string.IsNullOrWhiteSpace(req.endpoint))
+    {
+        return Results.BadRequest(new { error = "messageId and endpoint are required" });
+    }
+
+    try
+    {
+        await feedbackService.RecordFeedbackAsync(
+            req.messageId,
+            req.endpoint,
+            session.User.id,
+            string.IsNullOrWhiteSpace(req.outcome) ? null : req.outcome,
+            req.gameId,
+            ct);
+
+        logger.LogInformation(
+            "Recorded feedback {Outcome} for message {MessageId} on endpoint {Endpoint} by user {UserId}",
+            req.outcome ?? "cleared",
+            req.messageId,
+            req.endpoint,
+            session.User.id);
+
+        return Results.Json(new { ok = true });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to record feedback for message {MessageId}", req.messageId);
+        return Results.Problem(detail: "Unable to record feedback", statusCode: 500);
+    }
+});
+
 app.MapPost("/ingest/pdf", async (HttpContext context, PdfStorageService pdfStorage, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
@@ -807,7 +851,7 @@ app.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService lo
     return Results.Json(new { requests });
 });
 
-app.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logService, DateTime? startDate = null, DateTime? endDate = null, string? userId = null, string? gameId = null, CancellationToken ct = default) =>
+app.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logService, AgentFeedbackService feedbackService, DateTime? startDate = null, DateTime? endDate = null, string? userId = null, string? gameId = null, CancellationToken ct = default) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -820,7 +864,19 @@ app.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logSe
     }
 
     var stats = await logService.GetStatsAsync(startDate, endDate, userId, gameId, ct);
-    return Results.Json(stats);
+    var feedbackStats = await feedbackService.GetStatsAsync(null, userId, gameId, startDate, endDate, ct);
+
+    return Results.Json(new
+    {
+        stats.TotalRequests,
+        stats.AvgLatencyMs,
+        stats.TotalTokens,
+        stats.SuccessRate,
+        stats.EndpointCounts,
+        feedbackCounts = feedbackStats.OutcomeCounts,
+        totalFeedback = feedbackStats.TotalFeedback,
+        feedbackByEndpoint = feedbackStats.EndpointOutcomeCounts
+    });
 });
 
 // ADM-02: n8n workflow configuration endpoints

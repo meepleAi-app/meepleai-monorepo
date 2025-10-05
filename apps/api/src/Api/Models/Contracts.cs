@@ -6,6 +6,7 @@ public record Snippet(string text, string source, int page, int line);
 
 public record IngestPdfResponse(string jobId);
 public record SeedRequest(string gameId);
+public record AgentFeedbackRequest(string messageId, string endpoint, string? outcome, string userId, string? gameId);
 
 // AI-02: RAG Explain models
 public record ExplainRequest(string gameId, string topic);

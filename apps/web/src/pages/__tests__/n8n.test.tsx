@@ -1,5 +1,11 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import N8nWorkflowManagement from '../n8n';
+
+const initialApiBaseEnv = process.env.NEXT_PUBLIC_API_BASE;
+if (!process.env.NEXT_PUBLIC_API_BASE) {
+  process.env.NEXT_PUBLIC_API_BASE = 'http://api.test';
+}
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const N8nWorkflowManagement = require('../n8n').default;
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -31,6 +37,7 @@ const getFormInputs = () => ({
 });
 
 describe('N8nWorkflowManagement', () => {
+  const originalApiBase = initialApiBaseEnv;
   const originalFetch = global.fetch;
   const originalConfirm = window.confirm;
   const originalAlert = window.alert;
@@ -55,6 +62,21 @@ describe('N8nWorkflowManagement', () => {
     global.fetch = originalFetch;
     window.confirm = originalConfirm;
     window.alert = originalAlert;
+    if (originalApiBase === undefined) {
+      delete process.env.NEXT_PUBLIC_API_BASE;
+    } else {
+      process.env.NEXT_PUBLIC_API_BASE = originalApiBase;
+    }
+  });
+
+  it('uses default API base when NEXT_PUBLIC_API_BASE is not defined', () => {
+    delete process.env.NEXT_PUBLIC_API_BASE;
+
+    jest.isolateModules(() => {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { apiBase } = require('../n8n');
+      expect(apiBase).toBe('http://localhost:8080');
+    });
   });
 
   it('shows loading state while fetch is pending', async () => {

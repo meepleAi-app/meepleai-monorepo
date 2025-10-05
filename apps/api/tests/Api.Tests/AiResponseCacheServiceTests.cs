@@ -4,6 +4,9 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace Api.Tests;
@@ -148,30 +151,134 @@ public class AiResponseCacheServiceTests
     }
 
     [Fact]
-    public void QaResponse_SerializesWithSourcesAlias()
+    public async Task InvalidateGameAsync_RemovesAllCacheEntriesForGame()
     {
         // Arrange
-        var response = new QaResponse(
-            "Answer",
-            new List<Snippet> { new("Snippet text", "Manuale", 2, 12) }
-        );
+        var cache = new Dictionary<string, string>();
+
+        _mockDatabase.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync((RedisKey key, CommandFlags _) =>
+            {
+                return cache.TryGetValue(key.ToString(), out var value)
+                    ? RedisValue.Unbox(value)
+                    : RedisValue.Null;
+            });
+
+        _mockDatabase.Setup(db => db.StringSetAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<bool>(),
+                It.IsAny<When>(),
+                It.IsAny<CommandFlags>()))
+            .Callback<RedisKey, RedisValue, TimeSpan?, bool, When, CommandFlags>((key, value, _, _, _, _) =>
+            {
+                cache[key.ToString()] = value.ToString();
+            })
+            .ReturnsAsync(true);
+
+        _mockDatabase.Setup(db => db.ScriptEvaluateAsync(
+                It.IsAny<string>(),
+                It.IsAny<RedisKey[]>(),
+                It.IsAny<RedisValue[]>(),
+                It.IsAny<CommandFlags>()))
+            .Returns<string, RedisKey[], RedisValue[], CommandFlags>((_, _, values, _) =>
+            {
+                var pattern = values[0].ToString();
+                var regex = new Regex("^" + Regex.Escape(pattern).Replace("\\*", ".*") + "$");
+                var keysToRemove = cache.Keys.Where(k => regex.IsMatch(k)).ToList();
+                foreach (var key in keysToRemove)
+                {
+                    cache.Remove(key);
+                }
+
+                return Task.FromResult(RedisResult.Create((long)keysToRemove.Count));
+            });
+
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var qaKey = service.GenerateQaCacheKey("game-1", "How many players?");
+        var explainKey = service.GenerateExplainCacheKey("game-1", "setup phase");
+        var setupKey = service.GenerateSetupCacheKey("game-1");
+
+        await service.SetAsync(qaKey, new QaResponse("cached answer", Array.Empty<Snippet>()));
+        await service.SetAsync(explainKey, new ExplainResponse(
+            new ExplainOutline("setup phase", new List<string>()),
+            "cached",
+            new List<Snippet>(),
+            1));
+        await service.SetAsync(setupKey, new SetupGuideResponse("Game", new List<SetupGuideStep>(), 5));
 
         // Act
-        var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
-
-        using var document = JsonDocument.Parse(json);
-        var root = document.RootElement;
+        await service.InvalidateGameAsync("game-1");
 
         // Assert
-        Assert.True(root.TryGetProperty("snippets", out var snippetsProperty));
-        Assert.True(root.TryGetProperty("sources", out var sourcesProperty));
-        Assert.Equal(snippetsProperty.GetArrayLength(), sourcesProperty.GetArrayLength());
-        Assert.Equal(
-            snippetsProperty[0].GetProperty("text").GetString(),
-            sourcesProperty[0].GetProperty("text").GetString());
+        Assert.Null(await service.GetAsync<QaResponse>(qaKey));
+        Assert.Null(await service.GetAsync<ExplainResponse>(explainKey));
+        Assert.Null(await service.GetAsync<SetupGuideResponse>(setupKey));
+    }
+
+    [Fact]
+    public async Task InvalidateEndpointAsync_RemovesOnlyTargetNamespace()
+    {
+        // Arrange
+        var cache = new Dictionary<string, string>();
+
+        _mockDatabase.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync((RedisKey key, CommandFlags _) =>
+            {
+                return cache.TryGetValue(key.ToString(), out var value)
+                    ? RedisValue.Unbox(value)
+                    : RedisValue.Null;
+            });
+
+        _mockDatabase.Setup(db => db.StringSetAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<bool>(),
+                It.IsAny<When>(),
+                It.IsAny<CommandFlags>()))
+            .Callback<RedisKey, RedisValue, TimeSpan?, bool, When, CommandFlags>((key, value, _, _, _, _) =>
+            {
+                cache[key.ToString()] = value.ToString();
+            })
+            .ReturnsAsync(true);
+
+        _mockDatabase.Setup(db => db.ScriptEvaluateAsync(
+                It.IsAny<string>(),
+                It.IsAny<RedisKey[]>(),
+                It.IsAny<RedisValue[]>(),
+                It.IsAny<CommandFlags>()))
+            .Returns<string, RedisKey[], RedisValue[], CommandFlags>((_, _, values, _) =>
+            {
+                var pattern = values[0].ToString();
+                var regex = new Regex("^" + Regex.Escape(pattern).Replace("\\*", ".*") + "$");
+                var keysToRemove = cache.Keys.Where(k => regex.IsMatch(k)).ToList();
+                foreach (var key in keysToRemove)
+                {
+                    cache.Remove(key);
+                }
+
+                return Task.FromResult(RedisResult.Create((long)keysToRemove.Count));
+            });
+
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var qaKey = service.GenerateQaCacheKey("game-2", "How many turns?");
+        var explainKey = service.GenerateExplainCacheKey("game-2", "trading");
+
+        await service.SetAsync(qaKey, new QaResponse("cached", Array.Empty<Snippet>()));
+        await service.SetAsync(explainKey, new ExplainResponse(
+            new ExplainOutline("trading", new List<string>()),
+            "cached",
+            new List<Snippet>(),
+            1));
+
+        // Act
+        await service.InvalidateEndpointAsync("game-2", AiCacheEndpoint.Qa);
+
+        // Assert
+        Assert.Null(await service.GetAsync<QaResponse>(qaKey));
+        Assert.NotNull(await service.GetAsync<ExplainResponse>(explainKey));
     }
 
     [Fact]

@@ -153,6 +153,8 @@ public class SetupGuideServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal("Advanced Strategy Game", result.gameTitle);
         Assert.NotEmpty(result.steps);
+        Assert.NotNull(result.confidence);
+        Assert.Equal(0, result.totalTokens);
 
         // Verify steps have references from RAG
         var stepsWithReferences = result.steps.Where(s => s.references.Count > 0).ToList();

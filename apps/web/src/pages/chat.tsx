@@ -14,15 +14,6 @@ type AuthResponse = {
   expiresAt: string;
 };
 
-type Message = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  snippets?: Snippet[];
-  feedback?: "helpful" | "not-helpful" | null;
-  timestamp: Date;
-};
-
 type Snippet = {
   text: string;
   source: string;
@@ -30,9 +21,36 @@ type Snippet = {
   line?: number | null;
 };
 
-type QAResponse = {
+type Message = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  snippets?: Snippet[];
+  feedback?: "helpful" | "not-helpful" | null;
+  endpoint?: string;
+  gameId?: string;
+  timestamp: Date;
+};
+
+type QaResponse = {
   answer: string;
   snippets?: Snippet[];
+};
+
+const formatSnippets = (snippets?: Snippet[]): Snippet[] =>
+  (snippets ?? []).map(({ text, source, page = null, line = null }) => ({
+    text,
+    source,
+    page,
+    line
+  }));
+
+const getSnippetLabel = (snippet: Snippet): string => {
+  const baseLabel = snippet.source;
+  if (snippet.page !== null && snippet.page !== undefined) {
+    return `${baseLabel} (Pagina ${snippet.page})`;
+  }
+  return baseLabel;
 };
 
 export default function ChatPage() {
@@ -85,7 +103,7 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
-      const res = await api.post<QAResponse>("/agents/qa", {
+      const res = await api.post<QaResponse>("/agents/qa", {
         gameId: selectedGame,
         query: inputValue
       });
@@ -94,8 +112,10 @@ export default function ChatPage() {
         id: `msg-${Date.now()}-assistant`,
         role: "assistant",
         content: res.answer,
-        snippets: res.snippets ?? [],
+        snippets: formatSnippets(res.snippets),
         feedback: null,
+        endpoint: "qa",
+        gameId: selectedGame,
         timestamp: new Date()
       };
 
@@ -111,15 +131,39 @@ export default function ChatPage() {
     }
   };
 
-  const setFeedback = (messageId: string, feedback: "helpful" | "not-helpful") => {
+  const setFeedback = async (messageId: string, feedback: "helpful" | "not-helpful") => {
+    if (!authUser) {
+      return;
+    }
+
+    const targetMessage = messages.find((msg) => msg.id === messageId);
+    if (!targetMessage) {
+      return;
+    }
+
+    const previousFeedback = targetMessage.feedback ?? null;
+    const nextFeedback = previousFeedback === feedback ? null : feedback;
+    const endpoint = targetMessage.endpoint ?? "qa";
+    const gameId = targetMessage.gameId ?? selectedGame;
+
     setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === messageId ? { ...msg, feedback: msg.feedback === feedback ? null : feedback } : msg
-      )
+      prev.map((msg) => (msg.id === messageId ? { ...msg, feedback: nextFeedback } : msg))
     );
 
-    // In a real implementation, this would also send the feedback to the backend
-    // await api.post("/feedback", { messageId, feedback });
+    try {
+      await api.post("/agents/feedback", {
+        messageId,
+        endpoint,
+        outcome: nextFeedback,
+        userId: authUser.id,
+        gameId
+      });
+    } catch (error) {
+      console.error(error);
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === messageId ? { ...msg, feedback: previousFeedback } : msg))
+      );
+    }
   };
 
   const clearHistory = () => {
@@ -275,62 +319,22 @@ export default function ChatPage() {
                     <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8, color: "#5f6368" }}>
                       Fonti:
                     </div>
-                    {msg.snippets.map((snippet, idx) => {
-                      const isExternalLink = /^https?:\/\//.test(snippet.source);
-                      const badgeStyle: CSSProperties = {
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 4,
-                        padding: "2px 8px",
-                        background: "#e8f0fe",
-                        color: "#1a73e8",
-                        borderRadius: 9999,
-                        fontWeight: 500,
-                        fontSize: 11,
-                        textDecoration: "none"
-                      };
-
-                      return (
-                        <div
-                          key={idx}
-                          style={{
-                            marginBottom: 8,
-                            padding: 8,
-                            background: "#ffffff",
-                            border: "1px solid #dadce0",
-                            borderRadius: 4,
-                            fontSize: 12,
-                            display: "flex",
-                            flexDirection: "column",
-                            gap: 6
-                          }}
-                        >
-                          <div style={{ color: "#3c4043", lineHeight: 1.5 }}>{snippet.text}</div>
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                            {snippet.source && (
-                              isExternalLink ? (
-                                <a
-                                  href={snippet.source}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  style={badgeStyle}
-                                >
-                                  {snippet.source}
-                                </a>
-                              ) : (
-                                <span style={badgeStyle}>{snippet.source}</span>
-                              )
-                            )}
-                            {typeof snippet.page === "number" && snippet.page > 0 && (
-                              <span style={badgeStyle}>Pagina {snippet.page}</span>
-                            )}
-                            {typeof snippet.line === "number" && snippet.line > 0 && (
-                              <span style={badgeStyle}>Linea {snippet.line}</span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                      })}
+                    {msg.snippets.map((snippet, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          marginBottom: 8,
+                          padding: 8,
+                          background: "#ffffff",
+                          border: "1px solid #dadce0",
+                          borderRadius: 4,
+                          fontSize: 12
+                        }}
+                      >
+                        <div style={{ fontWeight: 500, marginBottom: 4 }}>{getSnippetLabel(snippet)}</div>
+                        <div style={{ color: "#5f6368", fontSize: 11 }}>{snippet.text}</div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -339,7 +343,7 @@ export default function ChatPage() {
               {msg.role === "assistant" && (
                 <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                   <button
-                    onClick={() => setFeedback(msg.id, "helpful")}
+                    onClick={() => void setFeedback(msg.id, "helpful")}
                     style={{
                       padding: "4px 8px",
                       background: msg.feedback === "helpful" ? "#34a853" : "#f1f3f4",
@@ -357,7 +361,7 @@ export default function ChatPage() {
                     👍 Utile
                   </button>
                   <button
-                    onClick={() => setFeedback(msg.id, "not-helpful")}
+                    onClick={() => void setFeedback(msg.id, "not-helpful")}
                     style={{
                       padding: "4px 8px",
                       background: msg.feedback === "not-helpful" ? "#ea4335" : "#f1f3f4",

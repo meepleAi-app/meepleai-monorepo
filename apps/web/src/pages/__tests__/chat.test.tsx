@@ -43,9 +43,10 @@ describe('ChatPage', () => {
     mockApi.post.mockResolvedValueOnce({
       answer: 'Il gioco supporta fino a 4 giocatori.',
       snippets: [
-        { text: 'Sezione introduttiva', source: 'Manuale Ufficiale', page: 3 }
+        { source: 'PDF:pdf-demo-chess', text: 'Sezione introduttiva', page: 3, line: null }
       ]
     });
+    mockApi.post.mockResolvedValueOnce({ ok: true });
 
     render(<ChatPage />);
 
@@ -58,16 +59,31 @@ describe('ChatPage', () => {
     const sendButton = screen.getByRole('button', { name: /Invia/i });
     await user.click(sendButton);
 
-    await waitFor(() => expect(mockApi.post).toHaveBeenCalledWith('/agents/qa', {
+    await waitFor(() => expect(mockApi.post).toHaveBeenNthCalledWith(1, '/agents/qa', {
       gameId: 'demo-chess',
       query: 'Quanti giocatori possono partecipare?'
     }));
 
     await screen.findByText('Il gioco supporta fino a 4 giocatori.');
+    expect(screen.getByText('PDF:pdf-demo-chess (Pagina 3)')).toBeInTheDocument();
     expect(screen.getByText('Sezione introduttiva')).toBeInTheDocument();
-    expect(screen.getByText('Manuale Ufficiale')).toBeInTheDocument();
-    expect(screen.getByText('Pagina 3')).toBeInTheDocument();
     expect(screen.queryByText(/Errore nella comunicazione/i)).not.toBeInTheDocument();
+
+    const helpfulButton = await screen.findByRole('button', { name: '👍 Utile' });
+    await user.click(helpfulButton);
+
+    await waitFor(() =>
+      expect(mockApi.post).toHaveBeenNthCalledWith(
+        2,
+        '/agents/feedback',
+        expect.objectContaining({
+          endpoint: 'qa',
+          outcome: 'helpful',
+          userId: 'user-1',
+          gameId: 'demo-chess'
+        })
+      )
+    );
   });
 
   it('shows an error and restores state when the agent request fails', async () => {
@@ -90,6 +106,45 @@ describe('ChatPage', () => {
 
     await screen.findByText(/Errore nella comunicazione con l'agente/i);
     await screen.findByText(/Nessun messaggio ancora/i);
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('rolls back feedback selection when the API request fails', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockApi.get.mockResolvedValue(mockAuthResponse);
+    mockApi.post
+      .mockResolvedValueOnce({
+        answer: 'Risposta di prova.',
+        sources: []
+      })
+      .mockRejectedValueOnce(new Error('Feedback error'));
+
+    render(<ChatPage />);
+
+    await screen.findByRole('heading', { name: /MeepleAI Chat/i });
+
+    const user = userEvent.setup();
+    const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
+    await user.type(input, 'Domanda di test');
+
+    const sendButton = screen.getByRole('button', { name: /Invia/i });
+    await user.click(sendButton);
+
+    await screen.findByText('Risposta di prova.');
+
+    const helpfulButton = await screen.findByRole('button', { name: '👍 Utile' });
+    await user.click(helpfulButton);
+
+    await waitFor(() =>
+      expect(mockApi.post).toHaveBeenNthCalledWith(
+        2,
+        '/agents/feedback',
+        expect.objectContaining({ outcome: 'helpful' })
+      )
+    );
+
+    await waitFor(() => expect(helpfulButton).toHaveStyle('background: #f1f3f4'));
 
     consoleErrorSpy.mockRestore();
   });

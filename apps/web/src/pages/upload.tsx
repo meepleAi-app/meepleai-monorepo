@@ -531,7 +531,11 @@ export default function UploadPage() {
       <h1 style={{ marginBottom: '10px' }}>PDF Import Wizard</h1>
       <p style={{ color: '#666', marginBottom: '30px' }}>Upload, parse, review, and publish game rules</p>
 
-      {renderStepIndicator()}
+      {isUnauthorizedRole ? (
+        renderUnauthorizedState()
+      ) : (
+        <>
+          {renderStepIndicator()}
 
       {message && (
         <div
@@ -968,47 +972,49 @@ export default function UploadPage() {
         </div>
       )}
 
-      {currentStep === 'publish' && (
-        <div>
-          <h2>Step 4: Published Successfully! ✅</h2>
-          <p style={{ marginTop: '16px', marginBottom: '24px', fontSize: '16px' }}>
-            Your RuleSpec for <strong>{ruleSpec?.gameId ?? confirmedGameId ?? 'unknown game'}</strong> has been
-            published successfully!
-          </p>
-          <div style={{ marginTop: '20px' }}>
-            <button
-              onClick={resetWizard}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#0070f3',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '16px',
-                cursor: 'pointer',
-                fontWeight: '500',
-                marginRight: '12px'
-              }}
-            >
-              Import Another PDF
-            </button>
-            <Link
-              href={`/editor?gameId=${ruleSpec?.gameId ?? confirmedGameId ?? ''}`}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#34a853',
-                color: 'white',
-                textDecoration: 'none',
-                borderRadius: '4px',
-                fontSize: '16px',
-                fontWeight: '500',
-                display: 'inline-block'
-              }}
-            >
-              Edit in RuleSpec Editor
-            </Link>
-          </div>
-        </div>
+          {currentStep === 'publish' && (
+            <div>
+              <h2>Step 4: Published Successfully! ✅</h2>
+              <p style={{ marginTop: '16px', marginBottom: '24px', fontSize: '16px' }}>
+                Your RuleSpec for <strong>{ruleSpec?.gameId ?? confirmedGameId ?? 'unknown game'}</strong> has been
+                published successfully!
+              </p>
+              <div style={{ marginTop: '20px' }}>
+                <button
+                  onClick={resetWizard}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#0070f3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    marginRight: '12px'
+                  }}
+                >
+                  Import Another PDF
+                </button>
+                <Link
+                  href={`/editor?gameId=${ruleSpec?.gameId ?? confirmedGameId ?? ''}`}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#34a853',
+                    color: 'white',
+                    textDecoration: 'none',
+                    borderRadius: '4px',
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    display: 'inline-block'
+                  }}
+                >
+                  Edit in RuleSpec Editor
+                </Link>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

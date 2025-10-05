@@ -8,6 +8,8 @@ interface PdfDocument {
   fileSizeBytes: number;
   uploadedAt: string;
   uploadedByUserId: string;
+  status?: string | null;
+  logUrl?: string | null;
 }
 
 interface RuleAtom {
@@ -63,6 +65,8 @@ export default function UploadPage() {
   const [ruleSpec, setRuleSpec] = useState<RuleSpec | null>(null);
   const [pdfs, setPdfs] = useState<PdfDocument[]>([]);
   const [loadingPdfs, setLoadingPdfs] = useState(false);
+  const [pdfsError, setPdfsError] = useState<string | null>(null);
+  const [retryingPdfId, setRetryingPdfId] = useState<string | null>(null);
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -72,6 +76,7 @@ export default function UploadPage() {
     }
 
     setLoadingPdfs(true);
+    setPdfsError(null);
     try {
       const response = await fetch(`${API_BASE}/games/${gameId}/pdfs`, {
         credentials: 'include',
@@ -80,11 +85,14 @@ export default function UploadPage() {
       if (response.ok) {
         const data = await response.json();
         setPdfs(data.pdfs || []);
+        setPdfsError(null);
       } else {
         console.error('Failed to load PDFs:', response.statusText);
+        setPdfsError('Unable to load uploaded PDFs. Please try again.');
       }
     } catch (error) {
       console.error('Failed to load PDFs:', error);
+      setPdfsError('Unable to load uploaded PDFs. Please try again.');
     } finally {
       setLoadingPdfs(false);
     }
@@ -125,6 +133,7 @@ export default function UploadPage() {
       void loadPdfs(confirmedGameId);
     } else {
       setPdfs([]);
+      setPdfsError(null);
     }
   }, [confirmedGameId]);
 
@@ -166,6 +175,7 @@ export default function UploadPage() {
         const data = await response.json();
         setDocumentId(data.documentId);
         setMessage(`✅ PDF uploaded successfully! Document ID: ${data.documentId}`);
+        await loadPdfs(confirmedGameId);
         setCurrentStep('parse');
       } else {
         const error = await response.json();
@@ -222,6 +232,9 @@ export default function UploadPage() {
       setRuleSpec(mockRuleSpec);
       setMessage('✅ PDF parsed successfully!');
       setCurrentStep('review');
+      if (confirmedGameId) {
+        await loadPdfs(confirmedGameId);
+      }
     } catch (error) {
       setMessage(`❌ Parse failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
@@ -305,6 +318,41 @@ export default function UploadPage() {
 
     setConfirmedGameId(selectedGameId);
     setMessage('');
+  };
+
+  const handleOpenLog = (pdf: PdfDocument) => {
+    const logUrl = pdf.logUrl || `${API_BASE}/logs/${pdf.id}`;
+    if (typeof window !== 'undefined') {
+      window.open(logUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const handleRetryParsing = async (pdf: PdfDocument) => {
+    if (!confirmedGameId) {
+      setMessage('Please confirm a game before retrying the parse');
+      return;
+    }
+
+    setRetryingPdfId(pdf.id);
+    setMessage('');
+    try {
+      const response = await fetch(`${API_BASE}/ingest/pdf/${pdf.id}/retry`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        setMessage(`✅ Parse re-triggered for ${pdf.fileName}`);
+        await loadPdfs(confirmedGameId);
+      } else {
+        const error = await response.json().catch(() => ({}));
+        setMessage(`❌ Failed to re-trigger parse: ${error.error || response.statusText}`);
+      }
+    } catch (error) {
+      setMessage(`❌ Failed to re-trigger parse: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setRetryingPdfId(null);
+    }
   };
 
   const handleCreateGame = async (e: React.FormEvent) => {
@@ -614,6 +662,103 @@ export default function UploadPage() {
               </p>
             )}
           </form>
+
+          <div
+            style={{
+              marginTop: '32px',
+              padding: '16px',
+              border: '1px solid #e0e0e0',
+              borderRadius: '6px',
+              backgroundColor: '#fff',
+            }}
+          >
+            <h3 style={{ marginTop: 0, marginBottom: '12px' }}>Uploaded PDFs</h3>
+            {!confirmedGameId ? (
+              <p style={{ margin: 0, color: '#5f6368' }}>
+                Confirm a game to review its uploaded PDFs.
+              </p>
+            ) : loadingPdfs ? (
+              <div role="status" aria-live="polite" style={{ display: 'grid', gap: '12px' }}>
+                {Array.from({ length: Math.max(1, Math.min(3, Math.max(pdfs.length, 1))) }).map((_, index) => (
+                  <div
+                    key={`pdf-skeleton-${index}`}
+                    style={{
+                      height: '48px',
+                      borderRadius: '4px',
+                      background: 'linear-gradient(90deg, #f1f3f4 25%, #e0e0e0 37%, #f1f3f4 63%)',
+                      backgroundSize: '200% 100%',
+                    }}
+                  />
+                ))}
+              </div>
+            ) : pdfsError ? (
+              <p style={{ margin: 0, color: '#d93025' }}>{pdfsError}</p>
+            ) : pdfs.length === 0 ? (
+              <p style={{ margin: 0, color: '#5f6368' }}>No PDFs uploaded yet for this game.</p>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table
+                  aria-label="Uploaded PDFs"
+                  style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}
+                >
+                  <thead>
+                    <tr style={{ textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
+                      <th style={{ padding: '8px 12px', fontWeight: 600 }}>File name</th>
+                      <th style={{ padding: '8px 12px', fontWeight: 600 }}>Size</th>
+                      <th style={{ padding: '8px 12px', fontWeight: 600 }}>Uploaded</th>
+                      <th style={{ padding: '8px 12px', fontWeight: 600 }}>Status</th>
+                      <th style={{ padding: '8px 12px', fontWeight: 600 }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pdfs.map((pdf) => (
+                      <tr key={pdf.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
+                        <td style={{ padding: '10px 12px', fontWeight: 500 }}>{pdf.fileName}</td>
+                        <td style={{ padding: '10px 12px' }}>{formatFileSize(pdf.fileSizeBytes)}</td>
+                        <td style={{ padding: '10px 12px' }}>{formatDate(pdf.uploadedAt)}</td>
+                        <td style={{ padding: '10px 12px' }}>{pdf.status ?? 'Pending'}</td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenLog(pdf)}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '4px',
+                                border: '1px solid #0070f3',
+                                backgroundColor: 'white',
+                                color: '#0070f3',
+                                cursor: 'pointer',
+                                fontWeight: 500,
+                              }}
+                            >
+                              Open log
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRetryParsing(pdf)}
+                              disabled={retryingPdfId === pdf.id}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '4px',
+                                border: 'none',
+                                backgroundColor: retryingPdfId === pdf.id ? '#ccc' : '#34a853',
+                                color: 'white',
+                                cursor: retryingPdfId === pdf.id ? 'not-allowed' : 'pointer',
+                                fontWeight: 500,
+                              }}
+                            >
+                              {retryingPdfId === pdf.id ? 'Retrying…' : 'Retry parsing'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

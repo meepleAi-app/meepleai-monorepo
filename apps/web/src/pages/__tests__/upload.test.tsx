@@ -123,4 +123,68 @@ describe('UploadPage', () => {
 
     await waitFor(() => expect(uploadButton).not.toBeDisabled());
   });
+
+  it('renders a list of PDFs returned by the API once a game is confirmed', async () => {
+    const authResponse = {
+      user: {
+        id: 'user-3',
+        email: 'user3@example.com',
+        role: 'Admin',
+        displayName: 'User Three'
+      },
+      expiresAt: new Date().toISOString()
+    };
+
+    const uploadedAt = '2024-01-01T12:00:00.000Z';
+    const pdfResponse = {
+      pdfs: [
+        {
+          id: 'pdf-1',
+          fileName: 'rules.pdf',
+          fileSizeBytes: 12_345,
+          uploadedAt,
+          uploadedByUserId: 'user-3',
+          status: 'Parsed'
+        }
+      ]
+    };
+
+    mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      const method = init?.method ?? 'GET';
+
+      if (url.endsWith('/auth/me')) {
+        return createJsonResponse(authResponse);
+      }
+
+      if (url.endsWith('/games') && method === 'GET') {
+        return createJsonResponse([
+          { id: 'game-1', name: 'Terraforming Mars', createdAt: new Date().toISOString() }
+        ]);
+      }
+
+      if (url.includes('/games/game-1/pdfs')) {
+        return createJsonResponse(pdfResponse);
+      }
+
+      throw new Error(`Unexpected fetch call to ${url}`);
+    });
+
+    render(<UploadPage />);
+
+    await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
+
+    const formattedDate = new Date(uploadedAt).toLocaleString();
+
+    await waitFor(() => expect(screen.getByRole('table', { name: /Uploaded PDFs/i })).toBeInTheDocument());
+
+    expect(screen.getByText('rules.pdf')).toBeInTheDocument();
+    expect(screen.getByText('12.1 KB')).toBeInTheDocument();
+    expect(screen.getByText(formattedDate)).toBeInTheDocument();
+    expect(screen.getByText('Parsed')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Open log/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Retry parsing/i })).toBeInTheDocument();
+  });
 });

@@ -1,7 +1,16 @@
+using System.Collections.Generic;
+
 namespace Api.Models;
 
 public record QaRequest(string gameId, string query);
-public record QaResponse(string answer, IReadOnlyList<Snippet> snippets);
+public record QaResponse(
+    string answer,
+    IReadOnlyList<Snippet> snippets,
+    int promptTokens = 0,
+    int completionTokens = 0,
+    int totalTokens = 0,
+    double? confidence = null,
+    IReadOnlyDictionary<string, string>? metadata = null);
 public record Snippet(string text, string source, int page, int line);
 
 public record IngestPdfResponse(string jobId);
@@ -13,8 +22,11 @@ public record ExplainResponse(
     ExplainOutline outline,
     string script,
     IReadOnlyList<Snippet> citations,
-    int estimatedReadingTimeMinutes
-);
+    int estimatedReadingTimeMinutes,
+    int promptTokens = 0,
+    int completionTokens = 0,
+    int totalTokens = 0,
+    double? confidence = null);
 public record ExplainOutline(
     string mainTopic,
     IReadOnlyList<string> sections
@@ -25,8 +37,11 @@ public record SetupGuideRequest(string gameId);
 public record SetupGuideResponse(
     string gameTitle,
     IReadOnlyList<SetupGuideStep> steps,
-    int estimatedSetupTimeMinutes
-);
+    int estimatedSetupTimeMinutes,
+    int promptTokens = 0,
+    int completionTokens = 0,
+    int totalTokens = 0,
+    double? confidence = null);
 public record SetupGuideStep(
     int stepNumber,
     string title,

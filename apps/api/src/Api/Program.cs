@@ -333,6 +333,21 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
 
         logger.LogInformation("QA response delivered for game {GameId}", req.gameId);
 
+        string? model = null;
+        string? finishReason = null;
+        if (resp.metadata != null)
+        {
+            if (resp.metadata.TryGetValue("model", out var metadataModel))
+            {
+                model = metadataModel;
+            }
+
+            if (resp.metadata.TryGetValue("finish_reason", out var metadataFinish))
+            {
+                finishReason = metadataFinish;
+            }
+        }
+
         // ADM-01: Log AI request
         await aiLog.LogRequestAsync(
             session.User.id,
@@ -341,12 +356,16 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
             req.query,
             resp.answer?.Length > 500 ? resp.answer.Substring(0, 500) : resp.answer,
             latencyMs,
-            null, // Token count not available yet
-            null, // Confidence not available yet
+            resp.totalTokens,
+            resp.confidence,
             "Success",
             null,
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString(),
+            resp.promptTokens,
+            resp.completionTokens,
+            model,
+            finishReason,
             ct);
 
         return Results.Json(resp);
@@ -407,12 +426,16 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
             req.topic,
             resp.script?.Length > 500 ? resp.script.Substring(0, 500) : resp.script,
             latencyMs,
-            null,
-            null,
+            resp.totalTokens,
+            resp.confidence,
             "Success",
             null,
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString(),
+            resp.promptTokens,
+            resp.completionTokens,
+            null,
+            null,
             ct);
 
         return Results.Json(resp);
@@ -482,12 +505,16 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
             "setup_guide",
             responseSnippet,
             latencyMs,
-            null,
-            null,
+            resp.totalTokens,
+            resp.confidence,
             "Success",
             null,
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString(),
+            resp.promptTokens,
+            resp.completionTokens,
+            null,
+            null,
             ct);
 
         return Results.Json(resp);

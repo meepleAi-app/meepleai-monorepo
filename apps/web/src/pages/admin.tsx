@@ -9,13 +9,17 @@ type AiRequest = {
   query: string | null;
   responseSnippet: string | null;
   latencyMs: number;
-  tokenCount: number | null;
+  tokenCount: number;
+  promptTokens: number;
+  completionTokens: number;
   confidence: number | null;
   status: string;
   errorMessage: string | null;
   ipAddress: string | null;
   userAgent: string | null;
   createdAt: string;
+  model: string | null;
+  finishReason: string | null;
 };
 
 type Stats = {
@@ -75,13 +79,32 @@ export default function AdminDashboard() {
   };
 
   const exportToCSV = () => {
-    const headers = ["Timestamp", "Endpoint", "Query", "Latency (ms)", "Tokens", "Status", "User ID", "Game ID"];
+    const headers = [
+      "Timestamp",
+      "Endpoint",
+      "Query",
+      "Latency (ms)",
+      "Total Tokens",
+      "Prompt Tokens",
+      "Completion Tokens",
+      "Confidence",
+      "Model",
+      "Finish Reason",
+      "Status",
+      "User ID",
+      "Game ID"
+    ];
     const rows = requests.map(req => [
       new Date(req.createdAt).toISOString(),
       req.endpoint,
       req.query || "",
       req.latencyMs.toString(),
-      req.tokenCount?.toString() || "",
+      req.tokenCount.toString(),
+      req.promptTokens.toString(),
+      req.completionTokens.toString(),
+      req.confidence !== null && req.confidence !== undefined ? req.confidence.toFixed(2) : "",
+      req.model || "",
+      req.finishReason || "",
       req.status,
       req.userId || "",
       req.gameId || ""
@@ -270,7 +293,7 @@ export default function AdminDashboard() {
             background: "#f8f9fa",
             borderBottom: "1px solid #dadce0",
             display: "grid",
-            gridTemplateColumns: "140px 80px 100px 80px 80px 1fr 100px",
+            gridTemplateColumns: "140px 80px 100px 80px 90px 110px 90px 100px 160px 1fr 100px",
             gap: 16,
             fontSize: 12,
             fontWeight: 600,
@@ -282,7 +305,11 @@ export default function AdminDashboard() {
           <div>Endpoint</div>
           <div>Game ID</div>
           <div>Latency</div>
-          <div>Tokens</div>
+          <div>Prompt</div>
+          <div>Completion</div>
+          <div>Total</div>
+          <div>Confidence</div>
+          <div>Model</div>
           <div>Query</div>
           <div>Status</div>
         </div>
@@ -299,7 +326,7 @@ export default function AdminDashboard() {
                 padding: 16,
                 borderBottom: "1px solid #f0f0f0",
                 display: "grid",
-                gridTemplateColumns: "140px 80px 100px 80px 80px 1fr 100px",
+                gridTemplateColumns: "140px 80px 100px 80px 90px 110px 90px 100px 160px 1fr 100px",
                 gap: 16,
                 fontSize: 13,
                 alignItems: "start"
@@ -322,7 +349,19 @@ export default function AdminDashboard() {
               </div>
               <div style={{ fontSize: 12, fontFamily: "monospace" }}>{req.latencyMs}ms</div>
               <div style={{ fontSize: 12, fontFamily: "monospace", color: "#5f6368" }}>
-                {req.tokenCount || "-"}
+                {req.promptTokens}
+              </div>
+              <div style={{ fontSize: 12, fontFamily: "monospace", color: "#5f6368" }}>
+                {req.completionTokens}
+              </div>
+              <div style={{ fontSize: 12, fontFamily: "monospace", color: "#5f6368" }}>
+                {req.tokenCount}
+              </div>
+              <div style={{ fontSize: 12, fontFamily: "monospace", color: "#5f6368" }}>
+                {req.confidence !== null && req.confidence !== undefined ? req.confidence.toFixed(2) : "-"}
+              </div>
+              <div style={{ fontSize: 12, color: "#5f6368" }}>
+                {req.model ? `${req.model}${req.finishReason ? ` (${req.finishReason})` : ""}` : "-"}
               </div>
               <div style={{ fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {req.query || "-"}

@@ -3,7 +3,6 @@ namespace Api.Infrastructure.Entities;
 public class AuditLogEntity
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
-    public string TenantId { get; set; } = default!;
     public string? UserId { get; set; }
     public string Action { get; set; } = default!;
     public string Resource { get; set; } = default!;

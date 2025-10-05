@@ -1,7 +1,6 @@
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace Api.Services;
 
@@ -9,13 +8,10 @@ public class AuditService
 {
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<AuditService> _logger;
-    private readonly string _tenantId;
-
-    public AuditService(MeepleAiDbContext db, ILogger<AuditService> logger, IOptions<SingleTenantOptions> tenantOptions)
+    public AuditService(MeepleAiDbContext db, ILogger<AuditService> logger)
     {
         _db = db;
         _logger = logger;
-        _tenantId = (tenantOptions?.Value ?? new SingleTenantOptions()).GetTenantId();
     }
 
     public async Task LogAsync(
@@ -33,7 +29,6 @@ public class AuditService
         {
             var auditLog = new AuditLogEntity
             {
-                TenantId = _tenantId,
                 UserId = userId,
                 Action = action,
                 Resource = resource,
@@ -55,9 +50,9 @@ public class AuditService
         }
     }
 
-    public async Task LogTenantAccessDeniedAsync(
-        string userTenantId,
-        string requestedTenantId,
+    public async Task LogAccessDeniedAsync(
+        string userScope,
+        string requiredScope,
         string userId,
         string resource,
         string? resourceId = null,
@@ -71,13 +66,13 @@ public class AuditService
             resource,
             resourceId,
             "Denied",
-            $"User from tenant {userTenantId} attempted to access {resource} in tenant {requestedTenantId}",
+            $"User in scope {userScope} attempted to access {resource} requiring scope {requiredScope}",
             ipAddress,
             userAgent,
             ct);
 
         _logger.LogWarning(
-            "Tenant access denied: User {UserId} from tenant {UserTenantId} attempted to access {Resource} in tenant {RequestedTenantId}",
-            userId, userTenantId, resource, requestedTenantId);
+            "Access denied: User {UserId} in scope {UserScope} attempted to access {Resource} requiring scope {RequiredScope}",
+            userId, userScope, resource, requiredScope);
     }
 }

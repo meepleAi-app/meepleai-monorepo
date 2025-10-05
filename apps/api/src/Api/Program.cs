@@ -395,11 +395,11 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
             null,
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString(),
-            resp.promptTokens,
-            resp.completionTokens,
-            model,
-            finishReason,
-            ct);
+            promptTokens: resp.promptTokens,
+            completionTokens: resp.completionTokens,
+            model: model,
+            finishReason: finishReason,
+            ct: ct);
 
         return Results.Json(resp);
     }
@@ -463,11 +463,11 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
             null,
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString(),
-            resp.promptTokens,
-            resp.completionTokens,
-            null,
-            null,
-            ct);
+            promptTokens: resp.promptTokens,
+            completionTokens: resp.completionTokens,
+            model: null,
+            finishReason: null,
+            ct: ct);
 
         return Results.Json(resp);
     }
@@ -540,11 +540,11 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
             null,
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString(),
-            resp.promptTokens,
-            resp.completionTokens,
-            null,
-            null,
-            ct);
+            promptTokens: resp.promptTokens,
+            completionTokens: resp.completionTokens,
+            model: null,
+            finishReason: null,
+            ct: ct);
 
         return Results.Json(resp);
     }

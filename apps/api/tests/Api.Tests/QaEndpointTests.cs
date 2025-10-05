@@ -1,5 +1,6 @@
 using Api.Infrastructure;
 using Api.Services;
+using System.Collections.Generic;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Http;
@@ -25,7 +26,16 @@ public class QaEndpointTests
         }
 
         await using var dbContext = new MeepleAiDbContext(options);
-        var ruleService = new RuleSpecService(dbContext);
+
+        var cacheServiceMock = new Mock<IAiResponseCacheService>();
+        cacheServiceMock
+            .Setup(x => x.InvalidateGameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        cacheServiceMock
+            .Setup(x => x.InvalidateEndpointAsync(It.IsAny<string>(), It.IsAny<AiCacheEndpoint>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var ruleService = new RuleSpecService(dbContext, cacheServiceMock.Object);
 
         // Mock dependencies for RagService (AI-01 mocked to avoid external API calls)
         var configMock = new Mock<Microsoft.Extensions.Configuration.IConfiguration>();
@@ -62,12 +72,14 @@ public class QaEndpointTests
         var llmServiceMock = new Mock<ILlmService>();
 
         // Configure LLM mock to return successful completion
-        var llmResult = LlmCompletionResult.CreateSuccess("Two players.");
+        var llmResult = LlmCompletionResult.CreateSuccess(
+            "Two players.",
+            new LlmUsage(6, 4, 10),
+            new Dictionary<string, string> { { "model", "anthropic/claude-3.5-sonnet" } });
         llmServiceMock
             .Setup(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(llmResult);
 
-        var cacheServiceMock = new Mock<IAiResponseCacheService>();
         var ragService = new RagService(dbContext, embeddingServiceMock.Object, qdrantServiceMock.Object, llmServiceMock.Object, cacheServiceMock.Object, ragLoggerMock);
 
         var gameId = "demo-chess";
@@ -83,5 +95,8 @@ public class QaEndpointTests
         Assert.Single(response.snippets);
         Assert.Equal("Two players.", response.snippets[0].text);
         Assert.Equal("PDF:pdf-demo-chess", response.snippets[0].source);
+        Assert.Equal(6, response.promptTokens);
+        Assert.Equal(4, response.completionTokens);
+        Assert.Equal(10, response.totalTokens);
     }
 }

@@ -3,6 +3,7 @@ using System;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Api.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251101000000_AddLlmUsageMetadataToAiRequestLogs")]
+    partial class AddLlmUsageMetadataToAiRequestLogs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -80,11 +83,11 @@ namespace Api.Migrations
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)");
 
-                    b.Property<string>("GameId")
+                    b.Property<string>("FinishReason")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.Property<string>("FinishReason")
+                    b.Property<string>("GameId")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
@@ -139,56 +142,6 @@ namespace Api.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("ai_request_logs", (string)null);
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.AgentFeedbackEntity", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Endpoint")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
-                    b.Property<string>("GameId")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<string>("MessageId")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
-                    b.Property<string>("Outcome")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Endpoint");
-
-                    b.HasIndex("GameId");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("MessageId", "UserId")
-                        .IsUnique();
-
-                    b.ToTable("agent_feedback", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AuditLogEntity", b =>

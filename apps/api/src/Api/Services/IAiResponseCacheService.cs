@@ -47,4 +47,29 @@ public interface IAiResponseCacheService
     /// <param name="gameId">Game ID</param>
     /// <returns>Cache key</returns>
     string GenerateSetupCacheKey(string gameId);
+
+    /// <summary>
+    /// Invalidate all cached responses for a specific game across every AI endpoint.
+    /// </summary>
+    /// <param name="gameId">Game ID</param>
+    /// <param name="ct">Cancellation token</param>
+    Task InvalidateGameAsync(string gameId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Invalidate cached responses for a specific AI endpoint (QA, Explain, Setup) for a game.
+    /// </summary>
+    /// <param name="gameId">Game ID</param>
+    /// <param name="endpoint">Target endpoint namespace</param>
+    /// <param name="ct">Cancellation token</param>
+    Task InvalidateEndpointAsync(string gameId, AiCacheEndpoint endpoint, CancellationToken ct = default);
+}
+
+/// <summary>
+/// Namespaces for AI cache entries.
+/// </summary>
+public enum AiCacheEndpoint
+{
+    Qa,
+    Explain,
+    Setup
 }

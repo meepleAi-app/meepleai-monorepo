@@ -1,14 +1,48 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import LogsPage from '../logs';
+import { api } from '../../lib/api';
+
+jest.mock('../../lib/api', () => ({
+  api: {
+    get: jest.fn()
+  }
+}));
 
 describe('LogsPage', () => {
+  const mockLogs = [
+    {
+      timestamp: new Date('2024-01-01T10:00:00Z').toISOString(),
+      level: 'INFO',
+      message: 'Application started',
+      requestId: 'req-001'
+    },
+    {
+      timestamp: new Date('2024-01-01T10:05:00Z').toISOString(),
+      level: 'INFO',
+      message: 'User logged in successfully',
+      requestId: 'req-002',
+      userId: 'user-123'
+    }
+  ];
+
+  const mockGet = api.get as jest.MockedFunction<typeof api.get>;
+
+  beforeEach(() => {
+    mockGet.mockResolvedValue(mockLogs);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('renders default logs and allows filtering by user id', async () => {
     const user = userEvent.setup();
 
     render(<LogsPage />);
 
     await screen.findByText(/Application started/i);
+    expect(mockGet).toHaveBeenCalledWith('/logs');
     expect(screen.getByText(/User logged in successfully/i)).toBeInTheDocument();
 
     const filterInput = screen.getByPlaceholderText(/Filter logs/i);

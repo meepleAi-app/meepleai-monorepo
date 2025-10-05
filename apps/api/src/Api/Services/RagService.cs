@@ -1,6 +1,7 @@
 using Api.Infrastructure;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Api.Services;
 
@@ -45,7 +46,7 @@ public class RagService
         var cachedResponse = await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken);
         if (cachedResponse != null)
         {
-            _logger.LogInformation("Returning cached QA response for game {GameId}", gameId);
+            LogInformation("Returning cached QA response for game {GameId}", gameId);
             return cachedResponse;
         }
 
@@ -66,7 +67,7 @@ public class RagService
 
             if (!searchResult.Success || searchResult.Results.Count == 0)
             {
-                _logger.LogInformation("No vector results found for query in game {GameId}", gameId);
+                LogInformation("No vector results found for query in game {GameId}", gameId);
                 return new QaResponse("Not specified", Array.Empty<Snippet>());
             }
 
@@ -111,7 +112,7 @@ ANSWER:";
 
             var answer = llmResult.Response.Trim();
 
-            _logger.LogInformation(
+            LogInformation(
                 "RAG query answered with {SnippetCount} snippets, LLM generated answer: {AnswerPreview}",
                 snippets.Count, answer.Length > 50 ? answer.Substring(0, 50) + "..." : answer);
 
@@ -145,7 +146,7 @@ ANSWER:";
         var cachedResponse = await _cache.GetAsync<ExplainResponse>(cacheKey, cancellationToken);
         if (cachedResponse != null)
         {
-            _logger.LogInformation("Returning cached Explain response for game {GameId}, topic: {Topic}", gameId, topic);
+            LogInformation("Returning cached Explain response for game {GameId}, topic: {Topic}", gameId, topic);
             return cachedResponse;
         }
 
@@ -166,7 +167,7 @@ ANSWER:";
 
             if (!searchResult.Success || searchResult.Results.Count == 0)
             {
-                _logger.LogInformation("No vector results found for topic {Topic} in game {GameId}", topic, gameId);
+                LogInformation("No vector results found for topic {Topic} in game {GameId}", topic, gameId);
                 return CreateEmptyExplainResponse($"No relevant information found about '{topic}' in the rulebook.");
             }
 
@@ -188,7 +189,7 @@ ANSWER:";
             var wordCount = script.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
             var estimatedMinutes = Math.Max(1, (int)Math.Ceiling(wordCount / 200.0));
 
-            _logger.LogInformation(
+            LogInformation(
                 "RAG explain generated for topic '{Topic}' with {SectionCount} sections, {CitationCount} citations, ~{Minutes} min read",
                 topic, outline.sections.Count, citations.Count, estimatedMinutes);
 
@@ -236,6 +237,14 @@ ANSWER:";
         }
 
         return new ExplainOutline(topic, sections);
+    }
+
+    private void LogInformation(string message, params object?[] args)
+    {
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(message, args);
+        }
     }
 
     private string BuildScript(string topic, IReadOnlyList<SearchResultItem> results)

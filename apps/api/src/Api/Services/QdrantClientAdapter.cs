@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -28,9 +29,10 @@ public class QdrantClientAdapter : IQdrantClientAdapter
         _logger.LogInformation("Qdrant client initialized for {Host}:{Port} (HTTPS: {UseHttps})", host, grpcPort, useHttps);
     }
 
-    public Task<IEnumerable<string>> ListCollectionsAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<string>> ListCollectionsAsync(CancellationToken cancellationToken = default)
     {
-        return _client.ListCollectionsAsync(cancellationToken: cancellationToken);
+        var collections = await _client.ListCollectionsAsync(cancellationToken: cancellationToken);
+        return collections.ToList();
     }
 
     public Task CreateCollectionAsync(
@@ -52,25 +54,27 @@ public class QdrantClientAdapter : IQdrantClientAdapter
 
     public Task UpsertAsync(
         string collectionName,
-        IEnumerable<PointStruct> points,
+        IReadOnlyList<PointStruct> points,
         CancellationToken cancellationToken = default)
     {
-        return _client.UpsertAsync(collectionName, points, cancellationToken: cancellationToken);
+        return _client.UpsertAsync(collectionName, points.ToList(), cancellationToken: cancellationToken);
     }
 
-    public Task<IEnumerable<ScoredPoint>> SearchAsync(
+    public async Task<IReadOnlyList<ScoredPoint>> SearchAsync(
         string collectionName,
         float[] vector,
         Filter? filter = default,
         ulong? limit = null,
         CancellationToken cancellationToken = default)
     {
-        return _client.SearchAsync(
+        var results = await _client.SearchAsync(
             collectionName: collectionName,
             vector: vector,
             filter: filter,
             limit: limit ?? 10,
             cancellationToken: cancellationToken);
+
+        return results.ToList();
     }
 
     public Task DeleteAsync(

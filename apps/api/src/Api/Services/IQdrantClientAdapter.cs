@@ -7,7 +7,7 @@ namespace Api.Services;
 
 public interface IQdrantClientAdapter
 {
-    Task<IEnumerable<string>> ListCollectionsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> ListCollectionsAsync(CancellationToken cancellationToken = default);
     Task CreateCollectionAsync(
         string collectionName,
         VectorParams vectorsConfig,
@@ -19,9 +19,9 @@ public interface IQdrantClientAdapter
         CancellationToken cancellationToken = default);
     Task UpsertAsync(
         string collectionName,
-        IEnumerable<PointStruct> points,
+        IReadOnlyList<PointStruct> points,
         CancellationToken cancellationToken = default);
-    Task<IEnumerable<ScoredPoint>> SearchAsync(
+    Task<IReadOnlyList<ScoredPoint>> SearchAsync(
         string collectionName,
         float[] vector,
         Filter? filter = default,

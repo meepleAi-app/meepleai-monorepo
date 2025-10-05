@@ -44,25 +44,25 @@ Ogni servizio espone un healthcheck nel `docker-compose.yml`, per cui `docker co
   Se stai aggiungendo una nuova migrazione, usa `dotnet ef migrations add <NomeMigrazione>` specificando `--project` e `--startup-project` se lavori da una directory diversa.
 - Le migrazioni generate sono versionate nella cartella `apps/api/src/Api/Migrations/`, così da avere commit tracciabili insieme al codice applicativo.
 
-### Modello dati single-tenant
+### Modello dati condiviso
 
-MeepleAI ora opera in modalità **single-tenant**: l'applicazione conserva ancora le colonne `tenant_id` per retro-compatibilità, ma l'orchestrazione crea e utilizza automaticamente un unico tenant predefinito (`meepleai`).
+MeepleAI adotta ora un modello dati completamente condiviso: tutte le entità applicative risiedono nello stesso contesto e non richiedono più identificatori di partizione.
 
-- Le entità principali (`users`, `games`, `rule_specs`, `agents`, `chats`, `chat_logs`, `audit_logs`) condividono lo stesso identificatore di tenant e vengono filtrate dal contesto applicativo attraverso un valore statico.
-- Le chiavi e gli indici rimangono invariati (incluso l'uso di `(tenant_id, ...)`) per consentire eventuali evoluzioni future verso scenari multi-tenant, ma non è più necessario creare o gestire tenant multipli durante lo sviluppo.
-- Migrazioni e validazioni schema continuano a garantire vincoli di `NOT NULL`/FK sulle colonne `tenant_id`, assicurando coerenza dei dati anche in modalità single-tenant.
+- Tabelle come `users`, `games`, `rule_specs`, `agents`, `chats`, `chat_logs` e `audit_logs` sono indicizzate sulle chiavi naturali specifiche del dominio (ad esempio `user_id`, `game_id`, `rule_spec_id`).
+- I servizi applicativi non valorizzano più campi di isolamento nelle query o negli eventi; l'accesso ai dati è governato esclusivamente da permessi applicativi e relazioni tra entità.
+- Le migrazioni recenti hanno rimosso le vecchie dipendenze da ID di partizione e consolidato i vincoli `NOT NULL`/FK sulle chiavi di dominio effettive, mantenendo inalterata la coerenza del database.
 
 ### Seed demo e dati iniziali
 
 - L'endpoint `POST /admin/seed` popola (o rigenera) una demo di regole di gioco tramite `RuleSpecService`, utile per validare rapidamente lo stack QA; lo script `scripts/seed-demo.ps1` lo invoca automaticamente contro le API locali.
-- I dati demo vengono creati automaticamente per il tenant unico `meepleai`, con gioco di esempio `demo-chess`; non è più necessario impostare variabili d'ambiente lato web per forzare l'ID tenant.
-- Le chat continuano a referenziare `game_id` e `rule_spec_id`, ma non è previsto alcun cambio di tenant durante il normale utilizzo. Quando si applicano nuove migrazioni verificare che le FK mantengano `ON DELETE CASCADE` o strategie equivalenti.
+- I dati demo vengono creati automaticamente per il contesto condiviso, con gioco di esempio `demo-chess`; non è necessario configurare identificatori aggiuntivi lato web o API.
+- Le chat continuano a referenziare `game_id` e `rule_spec_id`; quando si applicano nuove migrazioni verificare che le FK mantengano `ON DELETE CASCADE` o strategie equivalenti.
 
 ## Autenticazione e ruoli
 
-- Le API espongono gli endpoint `POST /auth/register`, `POST /auth/login`, `POST /auth/logout` e `GET /auth/me`. La registrazione utilizza sempre il tenant predefinito (`meepleai`) e assegna un ruolo (`Admin`, `Editor`, `User`).
+- Le API espongono gli endpoint `POST /auth/register`, `POST /auth/login`, `POST /auth/logout` e `GET /auth/me`. La registrazione opera direttamente sul contesto globale e assegna un ruolo (`Admin`, `Editor`, `User`).
 - Le sessioni sono persistite in tabella `user_sessions` con token casuali hashati; il token è inviato al client tramite cookie `HttpOnly`.
-- Gli endpoint protetti (`/agents/qa`, `/ingest/pdf`, `/admin/seed`) richiedono una sessione valida e rispettano i permessi: solo Admin può eseguire il seed, Admin/Editor possono accedere a ingest, tutti i ruoli autenticati possono usare il QA per i giochi disponibili nel tenant unico.
+- Gli endpoint protetti (`/agents/qa`, `/ingest/pdf`, `/admin/seed`) richiedono una sessione valida e rispettano i permessi: solo Admin può eseguire il seed, Admin/Editor possono accedere a ingest, tutti i ruoli autenticati possono usare il QA per i giochi disponibili nel catalogo condiviso.
 
 ## Struttura
 
@@ -131,7 +131,7 @@ Accogliamo contributi dalla community! Prima di iniziare:
 
 #### Backend (.NET 8)
 - ✅ API REST con minimal APIs
-- ✅ Modalità single-tenant con contesto applicativo statico
+- ✅ Modello dati condiviso senza partizioni dedicate
 - ✅ Autenticazione basata su sessioni con cookie HttpOnly
 - ✅ Autorizzazione role-based (Admin, Editor, User)
 - ✅ Integrazione PostgreSQL con EF Core migrations

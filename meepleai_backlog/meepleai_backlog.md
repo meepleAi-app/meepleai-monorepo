@@ -6,7 +6,7 @@
 | INF-02 | CI/CD base GitHub Actions | Infra | Task | P0 | 3 | area/infra,kind/ci | MVP | INF-01 |
 | SEC-01 | Gestione secrets .env e rotazione chiavi | Security | Task | P0 | 2 | area/security,kind/policy | MVP | INF-01 |
 | AUTH-01 | Autenticazione e ruoli (Admin/Editor/User) | Auth | Feature | P0 | 5 | area/auth,kind/feature | MVP | INF-01 |
-| AUTH-02 | Single-tenant baseline | Auth | Feature | P0 | 5 | area/auth,kind/feature | V1 | AUTH-01,DB-01 |
+| AUTH-02 | Baseline accessi in contesto condiviso | Auth | Feature | P0 | 5 | area/auth,kind/feature | V1 | AUTH-01,DB-01 |
 | DB-01 | Schema database iniziale | DB | Task | P0 | 3 | area/db,kind/schema | MVP | INF-01 |
 | RULE-01 | Definizione formale RuleSpec v0 | RuleSpec | Feature | P0 | 3 | area/rulespec,kind/spec | MVP | DB-01 |
 | RULE-02 | Versioning e diff RuleSpec | RuleSpec | Feature | P1 | 3 | area/rulespec,kind/feature | V1 | RULE-01,DB-01 |

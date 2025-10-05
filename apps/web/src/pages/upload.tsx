@@ -33,7 +33,6 @@ interface GameSummary {
 
 interface AuthUser {
   id: string;
-  tenantId: string;
   email: string;
   displayName?: string | null;
   role: string;
@@ -327,7 +326,6 @@ export default function UploadPage() {
 
     try {
       const created = await api.post<GameSummary>('/games', {
-        tenantId: authUser.tenantId,
         name: trimmedName
       });
 

@@ -25,7 +25,6 @@ describe('UploadPage', () => {
     const authResponse = {
       user: {
         id: 'user-1',
-        tenantId: 'tenant-1',
         email: 'user@example.com',
         role: 'Admin',
         displayName: 'User'
@@ -78,7 +77,6 @@ describe('UploadPage', () => {
     const authResponse = {
       user: {
         id: 'user-2',
-        tenantId: 'tenant-2',
         email: 'user2@example.com',
         role: 'Admin',
         displayName: 'User Two'

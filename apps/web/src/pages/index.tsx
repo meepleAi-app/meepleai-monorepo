@@ -4,7 +4,6 @@ import { api } from "../lib/api";
 
 type AuthUser = {
   id: string;
-  tenantId: string;
   email: string;
   displayName?: string | null;
   role: string;
@@ -15,23 +14,18 @@ type AuthResponse = {
   expiresAt: string;
 };
 
-const DEFAULT_TENANT = process.env.NEXT_PUBLIC_TENANT_ID || "dev";
-
 export default function Home() {
   const [answer, setAnswer] = useState<string>("");
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [registerForm, setRegisterForm] = useState({
-    tenantId: DEFAULT_TENANT,
-    tenantName: "",
     email: "",
     password: "",
     displayName: "",
     role: "User"
   });
   const [loginForm, setLoginForm] = useState({
-    tenantId: DEFAULT_TENANT,
     email: "",
     password: ""
   });
@@ -69,7 +63,6 @@ export default function Home() {
     setIsLoading(true);
     try {
       const res = await api.post<{ answer: string }>("/agents/qa", {
-        tenantId: authUser.tenantId,
         gameId: "demo-chess",
         query: "How many players?"
       });
@@ -88,8 +81,6 @@ export default function Home() {
     setErrorMessage("");
     try {
       const payload = {
-        tenantId: registerForm.tenantId,
-        tenantName: registerForm.tenantName || undefined,
         email: registerForm.email,
         password: registerForm.password,
         displayName: registerForm.displayName || undefined,
@@ -99,8 +90,6 @@ export default function Home() {
       setAuthUser(res.user);
       setStatusMessage("Registrazione completata. Sei connesso!");
       setRegisterForm({
-        tenantId: registerForm.tenantId,
-        tenantName: "",
         email: "",
         password: "",
         displayName: "",
@@ -117,13 +106,12 @@ export default function Home() {
     setErrorMessage("");
     try {
       const res = await api.post<AuthResponse>("/auth/login", {
-        tenantId: loginForm.tenantId,
         email: loginForm.email,
         password: loginForm.password
       });
       setAuthUser(res.user);
       setStatusMessage("Accesso eseguito.");
-      setLoginForm({ tenantId: loginForm.tenantId, email: "", password: "" });
+      setLoginForm({ email: "", password: "" });
     } catch (err: any) {
       console.error(err);
       setErrorMessage(err?.message || "Accesso non riuscito.");
@@ -211,23 +199,6 @@ export default function Home() {
         <form onSubmit={handleRegister} style={{ flex: "1 1 320px", border: "1px solid #ccc", padding: 16, borderRadius: 8 }}>
           <h2>Registrazione</h2>
           <label style={{ display: "block", marginBottom: 8 }}>
-            Tenant ID
-            <input
-              value={registerForm.tenantId}
-              onChange={(e) => setRegisterForm({ ...registerForm, tenantId: e.target.value })}
-              style={{ width: "100%" }}
-              required
-            />
-          </label>
-          <label style={{ display: "block", marginBottom: 8 }}>
-            Nome Tenant
-            <input
-              value={registerForm.tenantName}
-              onChange={(e) => setRegisterForm({ ...registerForm, tenantName: e.target.value })}
-              style={{ width: "100%" }}
-            />
-          </label>
-          <label style={{ display: "block", marginBottom: 8 }}>
             Email
             <input
               type="email"
@@ -274,15 +245,6 @@ export default function Home() {
         <form onSubmit={handleLogin} style={{ flex: "1 1 320px", border: "1px solid #ccc", padding: 16, borderRadius: 8 }}>
           <h2>Accesso</h2>
           <label style={{ display: "block", marginBottom: 8 }}>
-            Tenant ID
-            <input
-              value={loginForm.tenantId}
-              onChange={(e) => setLoginForm({ ...loginForm, tenantId: e.target.value })}
-              style={{ width: "100%" }}
-              required
-            />
-          </label>
-          <label style={{ display: "block", marginBottom: 8 }}>
             Email
             <input
               type="email"
@@ -315,9 +277,6 @@ export default function Home() {
           <div style={{ border: "1px solid #ccc", padding: 16, borderRadius: 8 }}>
             <p>
               <strong>Email:</strong> {authUser.email}
-            </p>
-            <p>
-              <strong>Tenant:</strong> {authUser.tenantId}
             </p>
             <p>
               <strong>Ruolo:</strong> {authUser.role}

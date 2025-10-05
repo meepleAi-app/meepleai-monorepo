@@ -304,6 +304,8 @@ public class PdfStorageServiceTests
             scopeMock.Setup(s => s.Dispose());
             scopeFactoryMock.Setup(s => s.CreateScope()).Returns(scopeMock.Object);
 
+            var cacheMock = new Mock<IAiResponseCacheService>();
+
             var textExtractionMock = new Mock<PdfTextExtractionService>(
                 MockBehavior.Strict,
                 Mock.Of<ILogger<PdfTextExtractionService>>());
@@ -374,11 +376,12 @@ public class PdfStorageServiceTests
                 storagePath,
                 backgroundMock,
                 scopeFactoryMock,
-                textExtractionService: textExtractionMock.Object,
-                tableExtractionService: tableExtractionMock.Object,
-                textChunkingService: chunkingMock.Object,
-                embeddingService: embeddingMock.Object,
-                qdrantService: qdrantMock.Object);
+                cacheMock,
+                textExtractionMock.Object,
+                tableExtractionMock.Object,
+                chunkingMock.Object,
+                embeddingMock.Object,
+                qdrantMock.Object);
 
             var file = CreateFormFile("rules.pdf", "application/pdf", new byte[] { 1, 2, 3, 4 });
             var uploadResult = await service.UploadPdfAsync("game-1", "user", file, CancellationToken.None);

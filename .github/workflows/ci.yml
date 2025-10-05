@@ -32,13 +32,7 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
       - name: Test
-        run: pnpm test -- --ci --coverage
-      - name: Upload frontend coverage
-        uses: codecov/codecov-action@v4
-        with:
-          files: apps/web/coverage/coverage-final.json
-          flags: frontend
-          name: frontend-coverage
+        run: pnpm test -- --ci
 
   ci-api:
     name: API - Build and Test
@@ -96,21 +90,4 @@ jobs:
           OPENROUTER_API_KEY: test-key-for-ci
           QDRANT_URL: http://127.0.0.1:6333
           ConnectionStrings__Postgres: Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass
-        run: dotnet test --collect:"XPlat Code Coverage"
-      - name: Generate coverage report
-        run: |
-          dotnet tool install -g dotnet-reportgenerator-globaltool
-          reportgenerator -reports:"tests/Api.Tests/TestResults/*/coverage.cobertura.xml" -targetdir:"TestResults/CoverageReport" -reporttypes:"Html;TextSummary"
-      - name: Display coverage summary
-        run: cat TestResults/CoverageReport/Summary.txt
-      - name: Upload backend coverage
-        uses: codecov/codecov-action@v4
-        with:
-          files: apps/api/tests/Api.Tests/TestResults/*/coverage.cobertura.xml
-          flags: backend
-          name: backend-coverage
-      - name: Upload coverage report artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-coverage-report
-          path: apps/api/TestResults/CoverageReport/
+        run: dotnet test

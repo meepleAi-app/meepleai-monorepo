@@ -1,9 +1,9 @@
 # Coverage Progress Report
 
-## 📊 Snapshot — 2025-10-05
+## 📊 Snapshot — 2025-10-12 (stale)
 
-- **Backend (`apps/api`)**: 38.00% line coverage and 39.20% branch coverage from the latest `dotnet test --collect:"XPlat Code Coverage"` run (200 tests executed — 192 passed, 8 failed because Qdrant Testcontainers could not reach a Docker daemon).
-- **Frontend (`apps/web`)**: 14.22% statements / 15.06% branches / 11.49% functions / 14.13% lines from `npm run test -- --coverage` (1 suite, 2 tests executed; Jest exits non-zero because the project-wide 90% thresholds are not met).
+- **Backend (`apps/api`)**: Last recorded numbers remain at 38.00% line coverage and 39.20% branch coverage (`dotnet test --collect:"XPlat Code Coverage"`, 200 tests executed — 192 passed, 8 failed because Qdrant Testcontainers could not reach a Docker daemon). New unit suites for `AiRequestLogService`, `GameService`, and `LlmService` have landed since this run, so an updated measurement is required to reflect their impact.
+- **Frontend (`apps/web`)**: Previously captured at 14.22% statements / 15.06% branches / 11.49% functions / 14.13% lines from `npm run test -- --coverage` (1 suite, 2 tests executed with Jest exiting non-zero due to the 90% global threshold). Dedicated coverage suites now exist for the `chat`, `editor`, `logs`, and `upload` pages; rerun coverage to surface the new totals.
 
 ## 🧪 Latest Commands Executed
 
@@ -14,15 +14,15 @@
 
 ### Backend focus areas
 
-- **Docker-dependent integration tests**: `QdrantServiceIntegrationTests` rely on local Docker; without it the suite fails early and the Qdrant collection helpers remain unverified.
-- **Zero-coverage services**: `AiRequestLogService`, `GameService`, `LlmService` and their generated state-machine types all report 0% line coverage in the Cobertura report (55 classes total).
-- **Low coverage utilities**: `PdfTableExtractionService` (~2.9% lines) and asynchronous helpers in `QdrantService` (~11.9% lines) are still effectively untested.
+- **Docker-dependent integration tests**: `QdrantServiceIntegrationTests` still require a reachable Docker daemon; without it the suite fails early and the Qdrant collection helpers remain unverified.
+- **Refresh Cobertura snapshot**: Re-run coverage to capture the new unit tests for `AiRequestLogService`, `GameService`, and `LlmService`, and confirm whether any remaining generated state-machine types stay uncovered.
+- **Low coverage utilities**: `PdfTableExtractionService` (~2.9% lines in the previous report) and asynchronous helpers in `QdrantService` (~11.9% lines) remain effectively untested until new coverage is recorded.
 
 ### Frontend focus areas
 
-- **Pages without tests**: `src/pages/admin.tsx`, `chat.tsx`, `editor.tsx`, `index.tsx`, `logs.tsx`, `n8n.tsx`, and `versions.tsx` each remain at 0% across all metrics.
-- **API routes**: `src/pages/api/health.ts` is generated in coverage but has no dedicated test, leaving line coverage at 0%.
-- **Upload workflow**: `src/pages/upload.tsx` receives partial coverage (~48% lines) from the existing tests; multi-step flows and error branches remain uncovered.
+- **Pages without tests**: `src/pages/admin.tsx`, `index.tsx`, `n8n.tsx`, and `versions.tsx` remain without suites; add coverage to bring them above the 90% Jest threshold.
+- **API routes**: `src/pages/api/health.ts` is still uncovered and should gain at least a smoke test.
+- **Upload workflow**: Even with the refreshed tests, `src/pages/upload.tsx` still has uncovered multi-step flows and error branches—target these when updating the suite.
 
 ## 📂 Coverage Artifacts
 

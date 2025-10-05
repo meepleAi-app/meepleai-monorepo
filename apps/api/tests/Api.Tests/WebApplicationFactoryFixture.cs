@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using StackExchange.Redis;
 
@@ -28,7 +29,9 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
             var descriptors = services.Where(d =>
                 d.ServiceType == typeof(DbContextOptions<MeepleAiDbContext>) ||
                 d.ServiceType == typeof(IConnectionMultiplexer) ||
-                d.ServiceType == typeof(QdrantService)
+                d.ServiceType == typeof(QdrantService) ||
+                d.ServiceType == typeof(IQdrantService) ||
+                d.ServiceType == typeof(IQdrantClientAdapter)
             ).ToList();
 
             foreach (var descriptor in descriptors)
@@ -60,8 +63,11 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
                 })
                 .Build();
 
-            services.AddSingleton(sp => new QdrantService(
+            services.AddSingleton<IQdrantClientAdapter>(_ => new QdrantClientAdapter(
                 qdrantConfig,
+                NullLogger<QdrantClientAdapter>.Instance));
+            services.AddSingleton<IQdrantService>(sp => new QdrantService(
+                sp.GetRequiredService<IQdrantClientAdapter>(),
                 sp.GetRequiredService<ILogger<QdrantService>>()
             ));
 

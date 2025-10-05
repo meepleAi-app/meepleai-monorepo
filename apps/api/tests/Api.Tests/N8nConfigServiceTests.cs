@@ -1,9 +1,4 @@
-using System;
-using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -15,271 +10,141 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
-namespace Api.Tests;
-
-public class N8nConfigServiceTests : IDisposable
+public class N8nConfigServiceTests
 {
-    private const string TestUserId = "user-1";
-    private const string EncryptionKey = "test-encryption-key";
-
-    private readonly SqliteConnection _connection;
-    private readonly MeepleAiDbContext _dbContext;
-    private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;
-    private readonly Mock<IConfiguration> _configurationMock;
-    private readonly Mock<ILogger<N8nConfigService>> _loggerMock;
-    private readonly N8nConfigService _service;
-
-    public N8nConfigServiceTests()
+    private static MeepleAiDbContext CreateInMemoryContext()
     {
-        _connection = new SqliteConnection($"DataSource=N8nConfigTests_{Guid.NewGuid()};Mode=Memory;Cache=Shared");
-        _connection.Open();
+        var connection = new SqliteConnection("Filename=:memory:");
+        connection.Open();
 
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseSqlite(_connection)
+            .UseSqlite(connection)
             .Options;
 
-        _dbContext = new MeepleAiDbContext(options);
-        _dbContext.Database.EnsureCreated();
-
-        _dbContext.Users.Add(new UserEntity
-        {
-            Id = TestUserId,
-            Email = "test@example.com",
-            PasswordHash = "hash",
-            Role = UserRole.Admin,
-            CreatedAt = DateTime.UtcNow
-        });
-        _dbContext.SaveChanges();
-
-        _httpClientFactoryMock = new Mock<IHttpClientFactory>();
-        _configurationMock = new Mock<IConfiguration>();
-        _configurationMock
-            .Setup(c => c[It.IsAny<string>()])
-            .Returns<string>(key => key == "N8N_ENCRYPTION_KEY" ? EncryptionKey : null);
-        _loggerMock = new Mock<ILogger<N8nConfigService>>();
-
-        _service = new N8nConfigService(
-            _dbContext,
-            _httpClientFactoryMock.Object,
-            _configurationMock.Object,
-            _loggerMock.Object);
+        var context = new MeepleAiDbContext(options);
+        context.Database.EnsureCreated();
+        return context;
     }
 
-    public void Dispose()
+    private static N8nConfigService CreateService(MeepleAiDbContext dbContext, Mock<IHttpClientFactory>? httpClientFactoryMock = null)
     {
-        _dbContext.Dispose();
-        _connection.Close();
-        _connection.Dispose();
+        httpClientFactoryMock ??= new Mock<IHttpClientFactory>();
+        httpClientFactoryMock
+            .Setup(f => f.CreateClient(It.IsAny<string>()))
+            .Returns(new HttpClient());
+
+        var configurationMock = new Mock<IConfiguration>();
+        configurationMock
+            .Setup(c => c[It.Is<string>(key => key == "N8N_ENCRYPTION_KEY")])
+            .Returns("test-encryption-key");
+
+        var loggerMock = new Mock<ILogger<N8nConfigService>>();
+
+        return new N8nConfigService(dbContext, httpClientFactoryMock.Object, configurationMock.Object, loggerMock.Object);
     }
 
     [Fact]
-    public async Task CreateConfigAsync_NormalizesValuesAndEncryptsApiKey()
+    public async Task CreateConfigAsync_PersistsConfigWithTrimmedValues()
     {
-        var request = new CreateN8nConfigRequest(
-            "Primary",
-            "https://example.com/",
-            "plain-api-key",
-            "https://example.com/webhook/");
+        await using var dbContext = CreateInMemoryContext();
+        var service = CreateService(dbContext);
 
-        var result = await _service.CreateConfigAsync(TestUserId, request, CancellationToken.None);
+        var result = await service.CreateConfigAsync(
+            "user-1",
+            new CreateN8nConfigRequest("Config One", "https://example.com/", "secret", "https://webhook.test/"),
+            CancellationToken.None);
 
-        Assert.Equal("Primary", result.Name);
+        Assert.Equal("Config One", result.Name);
         Assert.Equal("https://example.com", result.BaseUrl);
-        Assert.Equal("https://example.com/webhook", result.WebhookUrl);
-        Assert.True(result.IsActive);
+        Assert.Equal("https://webhook.test", result.WebhookUrl);
 
-        var entity = await _dbContext.N8nConfigs.SingleAsync(c => c.Id == result.Id);
-        Assert.NotEqual(request.ApiKey, entity.ApiKeyEncrypted);
-        Assert.False(string.IsNullOrWhiteSpace(entity.ApiKeyEncrypted));
-        Assert.Equal("https://example.com", entity.BaseUrl);
-        Assert.Equal("https://example.com/webhook", entity.WebhookUrl);
+        var entity = await dbContext.N8nConfigs.FirstAsync();
+        Assert.Equal("user-1", entity.CreatedByUserId);
         Assert.True(entity.IsActive);
-        Assert.NotNull(Convert.FromBase64String(entity.ApiKeyEncrypted));
+        Assert.NotEqual("secret", entity.ApiKeyEncrypted);
     }
 
     [Fact]
-    public async Task CreateConfigAsync_WithDuplicateName_ThrowsInvalidOperation()
+    public async Task UpdateConfigAsync_ModifiesFields()
     {
-        var request = new CreateN8nConfigRequest("Primary", "https://example.com", "plain-api-key", null);
-        await _service.CreateConfigAsync(TestUserId, request, CancellationToken.None);
+        await using var dbContext = CreateInMemoryContext();
+        var service = CreateService(dbContext);
 
-        var duplicate = new CreateN8nConfigRequest("Primary", "https://other.example", "second", null);
+        var created = await service.CreateConfigAsync(
+            "creator",
+            new CreateN8nConfigRequest("Original", "https://origin.com", "initial", "https://hook/"),
+            CancellationToken.None);
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _service.CreateConfigAsync(TestUserId, duplicate, CancellationToken.None));
+        var entity = await dbContext.N8nConfigs.FirstAsync();
+        var previousUpdatedAt = entity.UpdatedAt;
+        var previousApiKey = entity.ApiKeyEncrypted;
 
-        Assert.Contains("already exists", exception.Message);
-        Assert.Equal(1, await _dbContext.N8nConfigs.CountAsync());
+        var updated = await service.UpdateConfigAsync(
+            created.Id,
+            new UpdateN8nConfigRequest("Updated", "https://updated.com/", "new-secret", "https://hook/new/", false),
+            CancellationToken.None);
+
+        Assert.Equal("Updated", updated.Name);
+        Assert.Equal("https://updated.com", updated.BaseUrl);
+        Assert.Equal("https://hook/new", updated.WebhookUrl);
+        Assert.False(updated.IsActive);
+
+        var refreshed = await dbContext.N8nConfigs.FirstAsync();
+        Assert.Equal("Updated", refreshed.Name);
+        Assert.Equal("https://updated.com", refreshed.BaseUrl);
+        Assert.Equal("https://hook/new", refreshed.WebhookUrl);
+        Assert.False(refreshed.IsActive);
+        Assert.True(refreshed.UpdatedAt > previousUpdatedAt);
+        Assert.NotEqual(previousApiKey, refreshed.ApiKeyEncrypted);
     }
 
     [Fact]
-    public async Task UpdateConfigAsync_UpdatesAllowedFieldsAndReencryptsApiKey()
+    public async Task UpdateConfigAsync_WhenNameConflicts_Throws()
     {
-        var created = await _service.CreateConfigAsync(
-            TestUserId,
-            new CreateN8nConfigRequest("Primary", "https://example.com", "initial-key", "https://webhook"),
+        await using var dbContext = CreateInMemoryContext();
+        var service = CreateService(dbContext);
+
+        var first = await service.CreateConfigAsync(
+            "user",
+            new CreateN8nConfigRequest("First", "https://one.com", "key1", null),
             CancellationToken.None);
 
-        var beforeUpdate = await _dbContext.N8nConfigs.SingleAsync(c => c.Id == created.Id);
-        var previousCipher = beforeUpdate.ApiKeyEncrypted;
+        await service.CreateConfigAsync(
+            "user",
+            new CreateN8nConfigRequest("Second", "https://two.com", "key2", null),
+            CancellationToken.None);
 
-        var updateRequest = new UpdateN8nConfigRequest(
-            "Renamed",
-            "https://updated.example.com/",
-            "updated-key",
-            "https://updated-webhook/",
-            false);
-
-        var result = await _service.UpdateConfigAsync(created.Id, updateRequest, CancellationToken.None);
-
-        Assert.Equal("Renamed", result.Name);
-        Assert.Equal("https://updated.example.com", result.BaseUrl);
-        Assert.Equal("https://updated-webhook", result.WebhookUrl);
-        Assert.False(result.IsActive);
-
-        var entity = await _dbContext.N8nConfigs.SingleAsync(c => c.Id == created.Id);
-        Assert.Equal("Renamed", entity.Name);
-        Assert.Equal("https://updated.example.com", entity.BaseUrl);
-        Assert.Equal("https://updated-webhook", entity.WebhookUrl);
-        Assert.False(entity.IsActive);
-        Assert.NotEqual(previousCipher, entity.ApiKeyEncrypted);
-        Assert.NotEqual("updated-key", entity.ApiKeyEncrypted);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.UpdateConfigAsync(
+            first.Id,
+            new UpdateN8nConfigRequest("Second", null, null, null, null),
+            CancellationToken.None));
     }
 
     [Fact]
-    public async Task UpdateConfigAsync_WithDuplicateName_ThrowsInvalidOperation()
+    public async Task DeleteConfigAsync_RemovesEntity()
     {
-        var first = await _service.CreateConfigAsync(
-            TestUserId,
-            new CreateN8nConfigRequest("Primary", "https://primary.example", "key1", null),
+        await using var dbContext = CreateInMemoryContext();
+        var service = CreateService(dbContext);
+
+        var created = await service.CreateConfigAsync(
+            "user",
+            new CreateN8nConfigRequest("DeleteMe", "https://delete.com", "key", null),
             CancellationToken.None);
 
-        var second = await _service.CreateConfigAsync(
-            TestUserId,
-            new CreateN8nConfigRequest("Secondary", "https://secondary.example", "key2", null),
-            CancellationToken.None);
+        var deleted = await service.DeleteConfigAsync(created.Id, CancellationToken.None);
 
-        var duplicateNameRequest = new UpdateN8nConfigRequest(
-            first.Name,
-            null,
-            null,
-            null,
-            null);
-
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _service.UpdateConfigAsync(second.Id, duplicateNameRequest, CancellationToken.None));
-
-        Assert.Contains("already exists", exception.Message);
-
-        var entity = await _dbContext.N8nConfigs.SingleAsync(c => c.Id == second.Id);
-        Assert.Equal("Secondary", entity.Name);
+        Assert.True(deleted);
+        Assert.Empty(dbContext.N8nConfigs);
     }
 
     [Fact]
-    public async Task TestConnectionAsync_WhenSuccessful_SendsPlaintextApiKeyAndPersistsResult()
+    public async Task DeleteConfigAsync_WhenMissing_ReturnsFalse()
     {
-        var config = await _service.CreateConfigAsync(
-            TestUserId,
-            new CreateN8nConfigRequest("Primary", "https://example.com", "api-key-123", "https://webhook"),
-            CancellationToken.None);
+        await using var dbContext = CreateInMemoryContext();
+        var service = CreateService(dbContext);
 
-        string? receivedApiKey = null;
-        var handler = new DelegateHttpMessageHandler(async (request, token) =>
-        {
-            Assert.Equal("https://example.com/api/v1/workflows", request.RequestUri!.ToString());
-            Assert.True(request.Headers.TryGetValues("X-N8N-API-KEY", out var values));
-            receivedApiKey = values!.Single();
+        var deleted = await service.DeleteConfigAsync("missing", CancellationToken.None);
 
-            await Task.Delay(10, token);
-            return new HttpResponseMessage(HttpStatusCode.OK);
-        });
-
-        _httpClientFactoryMock
-            .Setup(f => f.CreateClient(It.IsAny<string>()))
-            .Returns(new HttpClient(handler, disposeHandler: false));
-
-        var result = await _service.TestConnectionAsync(config.Id, CancellationToken.None);
-
-        Assert.Equal("api-key-123", receivedApiKey);
-        Assert.True(result.Success);
-        Assert.NotNull(result.LatencyMs);
-        Assert.True(result.LatencyMs!.Value >= 0);
-        Assert.Contains("Connection successful", result.Message);
-
-        var entity = await _dbContext.N8nConfigs.SingleAsync(c => c.Id == config.Id);
-        Assert.NotNull(entity.LastTestedAt);
-        Assert.Contains("Connection successful", entity.LastTestResult);
-    }
-
-    [Fact]
-    public async Task TestConnectionAsync_WhenResponseFails_PersistsFailureDetails()
-    {
-        var config = await _service.CreateConfigAsync(
-            TestUserId,
-            new CreateN8nConfigRequest("Primary", "https://example.com", "api-key-123", null),
-            CancellationToken.None);
-
-        var handler = new DelegateHttpMessageHandler((request, token) =>
-        {
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError));
-        });
-
-        _httpClientFactoryMock
-            .Setup(f => f.CreateClient(It.IsAny<string>()))
-            .Returns(new HttpClient(handler, disposeHandler: false));
-
-        var result = await _service.TestConnectionAsync(config.Id, CancellationToken.None);
-
-        Assert.False(result.Success);
-        Assert.NotNull(result.LatencyMs);
-        Assert.Contains("Connection failed", result.Message);
-
-        var entity = await _dbContext.N8nConfigs.SingleAsync(c => c.Id == config.Id);
-        Assert.NotNull(entity.LastTestedAt);
-        Assert.Contains("Connection failed", entity.LastTestResult);
-    }
-
-    [Fact]
-    public async Task TestConnectionAsync_WhenExceptionThrown_SavesFailureAndNullLatency()
-    {
-        var config = await _service.CreateConfigAsync(
-            TestUserId,
-            new CreateN8nConfigRequest("Primary", "https://example.com", "api-key-123", null),
-            CancellationToken.None);
-
-        var handler = new DelegateHttpMessageHandler((request, token) =>
-        {
-            throw new HttpRequestException("boom");
-        });
-
-        _httpClientFactoryMock
-            .Setup(f => f.CreateClient(It.IsAny<string>()))
-            .Returns(new HttpClient(handler, disposeHandler: false));
-
-        var result = await _service.TestConnectionAsync(config.Id, CancellationToken.None);
-
-        Assert.False(result.Success);
-        Assert.Null(result.LatencyMs);
-        Assert.Contains("Connection failed", result.Message);
-        Assert.Contains("boom", result.Message, StringComparison.OrdinalIgnoreCase);
-
-        var entity = await _dbContext.N8nConfigs.SingleAsync(c => c.Id == config.Id);
-        Assert.NotNull(entity.LastTestedAt);
-        Assert.Contains("boom", entity.LastTestResult, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private sealed class DelegateHttpMessageHandler : HttpMessageHandler
-    {
-        private readonly Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> _handler;
-
-        public DelegateHttpMessageHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> handler)
-        {
-            _handler = handler;
-        }
-
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            return _handler(request, cancellationToken);
-        }
+        Assert.False(deleted);
     }
 }

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
 
@@ -8,25 +9,15 @@ namespace Api.Services;
 /// </summary>
 public class QdrantService : IQdrantService
 {
-    private readonly QdrantClient _client;
+    private readonly IQdrantClientAdapter _clientAdapter;
     private readonly ILogger<QdrantService> _logger;
     private const string CollectionName = "meepleai_documents";
     private const uint VectorSize = 1536; // text-embedding-3-small dimensions
 
-    public QdrantService(IConfiguration config, ILogger<QdrantService> logger)
+    public QdrantService(IQdrantClientAdapter clientAdapter, ILogger<QdrantService> logger)
     {
+        _clientAdapter = clientAdapter;
         _logger = logger;
-        var qdrantUrl = config["QDRANT_URL"] ?? "http://localhost:6333";
-
-        // Parse URL to extract host and scheme
-        // Qdrant client uses gRPC which runs on port 6334, not the HTTP REST API port (6333)
-        var uri = new Uri(qdrantUrl);
-        var host = uri.Host;
-        var grpcPort = 6334; // Qdrant gRPC port
-        var useHttps = uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
-
-        _client = new QdrantClient(host, grpcPort, useHttps);
-        _logger.LogInformation("Qdrant client initialized for {Host}:{Port} (HTTPS: {UseHttps})", host, grpcPort, useHttps);
     }
 
     /// <summary>
@@ -36,7 +27,7 @@ public class QdrantService : IQdrantService
     {
         try
         {
-            var collectionsResponse = await _client.ListCollectionsAsync(cancellationToken: ct);
+            var collectionsResponse = await _clientAdapter.ListCollectionsAsync(ct);
             var exists = collectionsResponse.Any(c => c == CollectionName);
 
             if (exists)
@@ -47,7 +38,7 @@ public class QdrantService : IQdrantService
 
             _logger.LogInformation("Creating collection {CollectionName}", CollectionName);
 
-            await _client.CreateCollectionAsync(
+            await _clientAdapter.CreateCollectionAsync(
                 collectionName: CollectionName,
                 vectorsConfig: new VectorParams
                 {
@@ -58,14 +49,14 @@ public class QdrantService : IQdrantService
             );
 
             // Create payload indexes for filtering
-            await _client.CreatePayloadIndexAsync(
+            await _clientAdapter.CreatePayloadIndexAsync(
                 collectionName: CollectionName,
                 fieldName: "game_id",
                 schemaType: PayloadSchemaType.Keyword,
                 cancellationToken: ct
             );
 
-            await _client.CreatePayloadIndexAsync(
+            await _clientAdapter.CreatePayloadIndexAsync(
                 collectionName: CollectionName,
                 fieldName: "pdf_id",
                 schemaType: PayloadSchemaType.Keyword,
@@ -128,7 +119,7 @@ public class QdrantService : IQdrantService
                 points.Add(point);
             }
 
-            await _client.UpsertAsync(
+            await _clientAdapter.UpsertAsync(
                 collectionName: CollectionName,
                 points: points,
                 cancellationToken: ct
@@ -172,7 +163,7 @@ public class QdrantService : IQdrantService
                 }
             };
 
-            var searchResults = await _client.SearchAsync(
+            var searchResults = await _clientAdapter.SearchAsync(
                 collectionName: CollectionName,
                 vector: queryEmbedding,
                 filter: filter,
@@ -223,7 +214,7 @@ public class QdrantService : IQdrantService
                 }
             };
 
-            await _client.DeleteAsync(
+            await _clientAdapter.DeleteAsync(
                 collectionName: CollectionName,
                 filter: filter,
                 cancellationToken: ct

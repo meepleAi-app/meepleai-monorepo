@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Api.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -52,11 +54,18 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
         }
 
         // Create QdrantService with Qdrant connection (works for both CI and local)
-        var configMock = new Mock<IConfiguration>();
-        configMock.Setup(c => c["QDRANT_URL"]).Returns(_qdrantUrl);
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["QDRANT_URL"] = _qdrantUrl
+            })
+            .Build();
+
+        var adapterLogger = new Mock<ILogger<QdrantClientAdapter>>();
+        var clientAdapter = new QdrantClientAdapter(configuration, adapterLogger.Object);
 
         var loggerMock = new Mock<ILogger<QdrantService>>();
-        QdrantService = new QdrantService(configMock.Object, loggerMock.Object);
+        QdrantService = new QdrantService(clientAdapter, loggerMock.Object);
 
         // Ensure collection exists for tests
         await QdrantService.EnsureCollectionExistsAsync();

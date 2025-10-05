@@ -1,244 +1,213 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Api.Services;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Qdrant.Client.Grpc;
 using Xunit;
 
 namespace Api.Tests;
 
-/// <summary>
-/// Unit tests for QdrantService
-/// Note: Full integration tests with real Qdrant instance are recommended
-/// for comprehensive testing of gRPC operations.
-/// </summary>
 public class QdrantServiceTests
 {
-    private readonly Mock<IConfiguration> _configMock;
-    private readonly Mock<ILogger<QdrantService>> _loggerMock;
+    private const string CollectionName = "meepleai_documents";
+
+    private readonly Mock<IQdrantClientAdapter> _clientAdapterMock = new();
+    private readonly Mock<ILogger<QdrantService>> _loggerMock = new();
+    private readonly QdrantService _sut;
 
     public QdrantServiceTests()
     {
-        _configMock = new Mock<IConfiguration>();
-        _loggerMock = new Mock<ILogger<QdrantService>>();
+        _sut = new QdrantService(_clientAdapterMock.Object, _loggerMock.Object);
     }
 
     [Fact]
-    public void Constructor_WithValidConfiguration_InitializesSuccessfully()
+    public async Task EnsureCollectionExistsAsync_WhenCollectionExists_DoesNotCreateCollection()
     {
-        // Arrange
-        _configMock.Setup(c => c["QDRANT_URL"]).Returns("http://localhost:6333");
+        _clientAdapterMock
+            .Setup(x => x.ListCollectionsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { CollectionName });
 
-        // Act
-        var service = new QdrantService(_configMock.Object, _loggerMock.Object);
+        await _sut.EnsureCollectionExistsAsync();
 
-        // Assert
-        Assert.NotNull(service);
+        _clientAdapterMock.Verify(x => x.CreateCollectionAsync(It.IsAny<string>(), It.IsAny<VectorParams>(), It.IsAny<CancellationToken>()), Times.Never);
+        _clientAdapterMock.Verify(x => x.CreatePayloadIndexAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PayloadSchemaType>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public void Constructor_WithHttpsUrl_InitializesSuccessfully()
+    public async Task EnsureCollectionExistsAsync_WhenCollectionMissing_CreatesCollectionAndIndexes()
     {
-        // Arrange
-        _configMock.Setup(c => c["QDRANT_URL"]).Returns("https://qdrant.example.com:6333");
+        _clientAdapterMock
+            .Setup(x => x.ListCollectionsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { "another_collection" });
 
-        // Act
-        var service = new QdrantService(_configMock.Object, _loggerMock.Object);
+        _clientAdapterMock
+            .Setup(x => x.CreateCollectionAsync(CollectionName, It.IsAny<VectorParams>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask)
+            .Verifiable();
 
-        // Assert
-        Assert.NotNull(service);
+        _clientAdapterMock
+            .Setup(x => x.CreatePayloadIndexAsync(CollectionName, "game_id", PayloadSchemaType.Keyword, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask)
+            .Verifiable();
+
+        _clientAdapterMock
+            .Setup(x => x.CreatePayloadIndexAsync(CollectionName, "pdf_id", PayloadSchemaType.Keyword, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask)
+            .Verifiable();
+
+        await _sut.EnsureCollectionExistsAsync();
+
+        _clientAdapterMock.Verify(x => x.CreateCollectionAsync(CollectionName,
+            It.Is<VectorParams>(v => v.Size == 1536 && v.Distance == Distance.Cosine),
+            It.IsAny<CancellationToken>()), Times.Once);
+
+        _clientAdapterMock.Verify(x => x.CreatePayloadIndexAsync(CollectionName, "game_id", PayloadSchemaType.Keyword, It.IsAny<CancellationToken>()), Times.Once);
+        _clientAdapterMock.Verify(x => x.CreatePayloadIndexAsync(CollectionName, "pdf_id", PayloadSchemaType.Keyword, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public void Constructor_WithoutQdrantUrl_UsesDefaultLocalhost()
+    public async Task IndexDocumentChunksAsync_WithValidChunks_MapsPayloadAndUpserts()
     {
-        // Arrange
-        _configMock.Setup(c => c["QDRANT_URL"]).Returns((string?)null);
+        var chunks = new List<DocumentChunk>
+        {
+            new()
+            {
+                Text = "Chunk 1",
+                Embedding = Enumerable.Repeat(0.1f, 1536).ToArray(),
+                Page = 2,
+                CharStart = 10,
+                CharEnd = 30
+            }
+        };
 
-        // Act
-        var service = new QdrantService(_configMock.Object, _loggerMock.Object);
+        IEnumerable<PointStruct>? capturedPoints = null;
+        _clientAdapterMock
+            .Setup(x => x.UpsertAsync(CollectionName, It.IsAny<IEnumerable<PointStruct>>(), It.IsAny<CancellationToken>()))
+            .Callback<string, IEnumerable<PointStruct>, CancellationToken>((_, points, _) => capturedPoints = points.ToList())
+            .Returns(Task.CompletedTask);
 
-        // Assert
-        Assert.NotNull(service);
-        // Service should use default localhost:6333
+        var result = await _sut.IndexDocumentChunksAsync("game-1", "pdf-1", chunks);
+
+        Assert.True(result.Success);
+        Assert.Equal(1, result.IndexedCount);
+        Assert.Null(result.ErrorMessage);
+
+        Assert.NotNull(capturedPoints);
+        var point = Assert.Single(capturedPoints!);
+        Assert.Equal("game-1", point.Payload["game_id"].StringValue);
+        Assert.Equal("pdf-1", point.Payload["pdf_id"].StringValue);
+        Assert.Equal(0, point.Payload["chunk_index"].IntegerValue);
+        Assert.Equal("Chunk 1", point.Payload["text"].StringValue);
+        Assert.Equal(2, point.Payload["page"].IntegerValue);
+        Assert.Equal(10, point.Payload["char_start"].IntegerValue);
+        Assert.Equal(30, point.Payload["char_end"].IntegerValue);
+        Assert.True(point.Payload.ContainsKey("indexed_at"));
     }
 
     [Fact]
-    public async Task IndexDocumentChunksAsync_NullChunks_ReturnsFailure()
+    public async Task IndexDocumentChunksAsync_WhenUpsertThrows_ReturnsFailure()
     {
-        // Arrange
-        _configMock.Setup(c => c["QDRANT_URL"]).Returns("http://localhost:6333");
-        var service = new QdrantService(_configMock.Object, _loggerMock.Object);
+        var chunks = new List<DocumentChunk>
+        {
+            new()
+            {
+                Text = "Chunk",
+                Embedding = Enumerable.Repeat(0.1f, 1536).ToArray(),
+                Page = 1,
+                CharStart = 0,
+                CharEnd = 10
+            }
+        };
 
-        // Act
-        var result = await service.IndexDocumentChunksAsync(
-            "game-1",
-            "pdf-1",
-            null!);
+        _clientAdapterMock
+            .Setup(x => x.UpsertAsync(CollectionName, It.IsAny<IEnumerable<PointStruct>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("boom"));
 
-        // Assert
+        var result = await _sut.IndexDocumentChunksAsync("game-1", "pdf-1", chunks);
+
+        Assert.False(result.Success);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Contains("boom", result.ErrorMessage);
+        Assert.Equal(0, result.IndexedCount);
+    }
+
+    [Fact]
+    public async Task IndexDocumentChunksAsync_WithNoChunks_ReturnsFailure()
+    {
+        var result = await _sut.IndexDocumentChunksAsync("game-1", "pdf-1", new List<DocumentChunk>());
+
         Assert.False(result.Success);
         Assert.Equal("No chunks to index", result.ErrorMessage);
-        Assert.Equal(0, result.IndexedCount);
     }
 
     [Fact]
-    public async Task IndexDocumentChunksAsync_EmptyChunks_ReturnsFailure()
+    public async Task SearchAsync_WhenClientReturnsResults_MapsPayload()
     {
-        // Arrange
-        _configMock.Setup(c => c["QDRANT_URL"]).Returns("http://localhost:6333");
-        var service = new QdrantService(_configMock.Object, _loggerMock.Object);
+        var scoredPoint = new ScoredPoint
+        {
+            Score = 0.9f
+        };
+        scoredPoint.Payload.Add("text", new Value { StringValue = "Answer" });
+        scoredPoint.Payload.Add("pdf_id", new Value { StringValue = "pdf-123" });
+        scoredPoint.Payload.Add("page", new Value { IntegerValue = 3 });
+        scoredPoint.Payload.Add("chunk_index", new Value { IntegerValue = 2 });
 
-        // Act
-        var result = await service.IndexDocumentChunksAsync(
-            "game-1",
-            "pdf-1",
-            new List<DocumentChunk>());
+        _clientAdapterMock
+            .Setup(x => x.SearchAsync(CollectionName, It.IsAny<float[]>(), It.IsAny<Filter>(), It.IsAny<ulong?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { scoredPoint });
 
-        // Assert
-        Assert.False(result.Success);
-        Assert.Equal("No chunks to index", result.ErrorMessage);
-        Assert.Equal(0, result.IndexedCount);
-    }
+        var embedding = Enumerable.Repeat(0.2f, 1536).ToArray();
 
-    [Fact]
-    public void IndexResult_CreateSuccess_ReturnsSuccessfulResult()
-    {
-        // Act
-        var result = IndexResult.CreateSuccess(10);
+        var result = await _sut.SearchAsync("game-1", embedding, limit: 5);
 
-        // Assert
         Assert.True(result.Success);
-        Assert.Null(result.ErrorMessage);
-        Assert.Equal(10, result.IndexedCount);
-    }
-
-    [Fact]
-    public void IndexResult_CreateFailure_ReturnsFailedResult()
-    {
-        // Act
-        var result = IndexResult.CreateFailure("Test error");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Equal("Test error", result.ErrorMessage);
-        Assert.Equal(0, result.IndexedCount);
-    }
-
-    [Fact]
-    public void SearchResult_CreateSuccess_ReturnsSuccessfulResult()
-    {
-        // Arrange
-        var items = new List<SearchResultItem>
-        {
-            new() { Score = 0.95f, Text = "Test text", PdfId = "pdf-1", Page = 1, ChunkIndex = 0 }
-        };
-
-        // Act
-        var result = SearchResult.CreateSuccess(items);
-
-        // Assert
-        Assert.True(result.Success);
-        Assert.Null(result.ErrorMessage);
-        Assert.Single(result.Results);
-        Assert.Equal(0.95f, result.Results[0].Score);
-    }
-
-    [Fact]
-    public void SearchResult_CreateFailure_ReturnsFailedResult()
-    {
-        // Act
-        var result = SearchResult.CreateFailure("Search failed");
-
-        // Assert
-        Assert.False(result.Success);
-        Assert.Equal("Search failed", result.ErrorMessage);
-        Assert.Empty(result.Results);
-    }
-
-    [Fact]
-    public void DocumentChunk_WithValidData_CreatesCorrectly()
-    {
-        // Arrange
-        var embedding = new float[1536];
-        for (int i = 0; i < embedding.Length; i++)
-        {
-            embedding[i] = 0.1f;
-        }
-
-        // Act
-        var chunk = new DocumentChunk
-        {
-            Text = "Test chunk text",
-            Embedding = embedding,
-            Page = 1,
-            CharStart = 0,
-            CharEnd = 15
-        };
-
-        // Assert
-        Assert.Equal("Test chunk text", chunk.Text);
-        Assert.Equal(1536, chunk.Embedding.Length);
-        Assert.Equal(1, chunk.Page);
-        Assert.Equal(0, chunk.CharStart);
-        Assert.Equal(15, chunk.CharEnd);
-    }
-
-    [Fact]
-    public void SearchResultItem_WithValidData_CreatesCorrectly()
-    {
-        // Act
-        var item = new SearchResultItem
-        {
-            Score = 0.95f,
-            Text = "Test result",
-            PdfId = "pdf-123",
-            Page = 5,
-            ChunkIndex = 3
-        };
-
-        // Assert
-        Assert.Equal(0.95f, item.Score);
-        Assert.Equal("Test result", item.Text);
+        var item = Assert.Single(result.Results);
+        Assert.Equal(0.9f, item.Score);
+        Assert.Equal("Answer", item.Text);
         Assert.Equal("pdf-123", item.PdfId);
-        Assert.Equal(5, item.Page);
-        Assert.Equal(3, item.ChunkIndex);
+        Assert.Equal(3, item.Page);
+        Assert.Equal(2, item.ChunkIndex);
     }
 
-    [Theory]
-    [InlineData("scope-1", "game-1", "pdf-1")]
-    [InlineData("scope-abc", "demo-chess", "pdf-xyz-123")]
-    [InlineData("dev", "catan", "12345")]
-    public void DocumentChunk_WithVariousScopeGamePdfIds_HandlesCorrectly(
-        string scopeId,
-        string gameId,
-        string pdfId)
+    [Fact]
+    public async Task SearchAsync_WhenClientThrows_ReturnsFailure()
     {
-        // This test verifies that the data structures support various ID formats
-        var chunk = new DocumentChunk
-        {
-            Text = $"Chunk for {scopeId}/{gameId}/{pdfId}",
-            Embedding = new float[1536],
-            Page = 1,
-            CharStart = 0,
-            CharEnd = 10
-        };
+        _clientAdapterMock
+            .Setup(x => x.SearchAsync(CollectionName, It.IsAny<float[]>(), It.IsAny<Filter>(), It.IsAny<ulong?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("search failed"));
 
-        Assert.NotNull(chunk);
-        Assert.Contains(scopeId, chunk.Text);
+        var result = await _sut.SearchAsync("game-1", Enumerable.Repeat(0.1f, 1536).ToArray());
+
+        Assert.False(result.Success);
+        Assert.NotNull(result.ErrorMessage);
+        Assert.Contains("search failed", result.ErrorMessage);
     }
 
-    // Note: Testing actual Qdrant operations (EnsureCollectionExistsAsync, IndexDocumentChunksAsync,
-    // SearchAsync, DeleteDocumentAsync) requires integration tests with a real Qdrant instance.
-    // The QdrantClient uses gRPC and is not easily mockable without significant infrastructure.
-    //
-    // For comprehensive testing, consider:
-    // 1. Integration tests with Qdrant running in Docker
-    // 2. E2E tests that verify the full indexing and search pipeline
-    // 3. Manual testing with the development environment
-    //
-    // These unit tests focus on:
-    // - Constructor initialization
-    // - Input validation
-    // - Data structure correctness
-    // - Result object creation
+    [Fact]
+    public async Task DeleteDocumentAsync_WhenClientSucceeds_ReturnsTrue()
+    {
+        _clientAdapterMock
+            .Setup(x => x.DeleteAsync(CollectionName, It.IsAny<Filter>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var result = await _sut.DeleteDocumentAsync("pdf-1");
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task DeleteDocumentAsync_WhenClientThrows_ReturnsFalse()
+    {
+        _clientAdapterMock
+            .Setup(x => x.DeleteAsync(CollectionName, It.IsAny<Filter>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Exception("delete failed"));
+
+        var result = await _sut.DeleteDocumentAsync("pdf-1");
+
+        Assert.False(result);
+    }
 }

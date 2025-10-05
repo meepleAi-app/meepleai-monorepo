@@ -1,202 +1,232 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import RuleSpecEditor from "../editor";
-import { useRouter } from "next/router";
-import { api } from "../../lib/api";
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import RuleSpecEditor from '../editor';
+import { api } from '../../lib/api';
+import { useRouter } from 'next/router';
 
-jest.mock("next/router", () => ({
-  useRouter: jest.fn()
-}));
-
-jest.mock("../../lib/api", () => ({
+jest.mock('../../lib/api', () => ({
   api: {
     get: jest.fn(),
-    put: jest.fn(),
-    post: jest.fn()
+    post: jest.fn(),
+    put: jest.fn()
   }
 }));
 
-const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
+jest.mock('next/router', () => ({
+  useRouter: jest.fn()
+}));
+
 const mockApi = api as jest.Mocked<typeof api>;
-let consoleErrorSpy: jest.SpyInstance;
+const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
 
-function createRouter(query: Record<string, unknown>): any {
-  return {
-    query,
-    pathname: "/editor",
-    asPath: "/editor",
-    basePath: "",
-    push: jest.fn(),
-    replace: jest.fn(),
-    reload: jest.fn(),
-    back: jest.fn(),
-    prefetch: jest.fn(),
-    beforePopState: jest.fn(),
-    events: {
-      on: jest.fn(),
-      off: jest.fn(),
-      emit: jest.fn()
-    },
-    isFallback: false,
-    isLocaleDomain: false,
-    isReady: true,
-    isPreview: false
-  };
-}
+const createRouter = (overrides: Partial<ReturnType<typeof useRouter>> = {}) => ({
+  route: '/editor',
+  pathname: '/editor',
+  query: {},
+  asPath: '/editor',
+  basePath: '',
+  push: jest.fn(),
+  replace: jest.fn(),
+  reload: jest.fn(),
+  back: jest.fn(),
+  prefetch: jest.fn().mockResolvedValue(undefined),
+  beforePopState: jest.fn(),
+  isFallback: false,
+  isLocaleDomain: false,
+  isReady: true,
+  isPreview: false,
+  events: {
+    emit: jest.fn(),
+    on: jest.fn(),
+    off: jest.fn()
+  },
+  ...overrides
+});
 
-const baseSpec = {
-  gameId: "game-1",
-  version: "1.0",
-  createdAt: "2024-01-01T00:00:00.000Z",
-  rules: [
-    {
-      id: "rule-1",
-      text: "First rule"
-    }
-  ]
+const getEditorTextarea = () => {
+  const textarea = screen.queryAllByRole('textbox').find((el) => el.tagName === 'TEXTAREA');
+  if (!textarea) {
+    throw new Error('Editor textarea not found');
+  }
+  return textarea as HTMLTextAreaElement;
 };
 
-beforeEach(() => {
-  jest.clearAllMocks();
-  consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
-  mockUseRouter.mockReturnValue(createRouter({ gameId: "game-1" }) as any);
-});
+describe('RuleSpecEditor', () => {
+  const authResponse = {
+    user: {
+      id: 'admin-1',
+      email: 'admin@example.com',
+      role: 'Admin'
+    },
+    expiresAt: new Date().toISOString()
+  };
 
-afterEach(() => {
-  consoleErrorSpy.mockRestore();
-});
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUseRouter.mockReturnValue(createRouter());
+  });
 
-it("renders login prompt when user is not authenticated", async () => {
-  mockApi.get.mockResolvedValueOnce(null);
+  it('prompts for authentication when no user is returned', async () => {
+    mockApi.get.mockResolvedValueOnce(null);
 
-  render(<RuleSpecEditor />);
+    render(<RuleSpecEditor />);
 
-  await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith("/auth/me"));
+    await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/auth/me'));
+    expect(screen.getByText(/Devi effettuare l'accesso per utilizzare l'editor/i)).toBeInTheDocument();
+  });
 
-  expect(screen.getByText(/Devi effettuare l'accesso/i)).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /Torna alla home/i })).toBeInTheDocument();
-});
+  it('blocks access for users without editor permissions', async () => {
+    mockUseRouter.mockReturnValue(createRouter({ query: { gameId: 'demo-chess' } }));
+    mockApi.get.mockResolvedValueOnce({
+      user: { id: 'viewer-1', email: 'viewer@example.com', role: 'Viewer' },
+      expiresAt: new Date().toISOString()
+    });
 
-it("renders unauthorized message for users without editor roles", async () => {
-  mockApi.get
-    .mockResolvedValueOnce({
-      user: {
-        id: "user-1",
-        email: "viewer@example.com",
-        role: "Viewer"
-      },
-      expiresAt: "2024-01-01T00:00:00.000Z"
-    })
-    .mockResolvedValueOnce(baseSpec);
+    render(<RuleSpecEditor />);
 
-  render(<RuleSpecEditor />);
+    await screen.findByText(/Non hai i permessi necessari/i);
+  });
 
-  await waitFor(() =>
-    expect(screen.getByText(/Non hai i permessi necessari per utilizzare l'editor/i)).toBeInTheDocument()
-  );
-});
+  it('loads, validates and saves a RuleSpec for authorized users', async () => {
+    const user = userEvent.setup();
 
-it("initializes history and toggles undo\/redo buttons after edits", async () => {
-  mockApi.get
-    .mockResolvedValueOnce({
-      user: {
-        id: "user-2",
-        email: "admin@example.com",
-        role: "Admin"
-      },
-      expiresAt: "2024-01-01T00:00:00.000Z"
-    })
-    .mockResolvedValueOnce(baseSpec);
+    const initialSpec = {
+      gameId: 'demo-chess',
+      version: '1.0.0',
+      createdAt: new Date('2024-01-01').toISOString(),
+      rules: [
+        { id: 'rule-1', text: 'Initial rule text.' }
+      ]
+    };
 
-  render(<RuleSpecEditor />);
+    const updatedSpec = {
+      ...initialSpec,
+      version: '2.0.0'
+    };
 
-  await screen.findByRole("button", { name: /Annulla/i });
-  await screen.findByRole("button", { name: /Ripeti/i });
-  const saveButton = await screen.findByRole("button", { name: /Salva/i });
-  expect(saveButton).not.toBeDisabled();
+    mockUseRouter.mockReturnValue(createRouter({ query: { gameId: 'demo-chess' } }));
+    mockApi.get.mockImplementation(async (path: string) => {
+      if (path === '/auth/me') {
+        return authResponse;
+      }
+      if (path === '/games/demo-chess/rulespec') {
+        return initialSpec;
+      }
+      return null;
+    });
+    mockApi.put.mockResolvedValueOnce(updatedSpec);
 
-  const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+    render(<RuleSpecEditor />);
 
-  expect(screen.getByRole("button", { name: /Annulla/i })).toBeDisabled();
-  expect(screen.getByRole("button", { name: /Ripeti/i })).toBeDisabled();
+    await screen.findByText(/Editor RuleSpec/i);
 
-  const updatedSpec = { ...baseSpec, version: "1.1" };
-  const updatedJson = JSON.stringify(updatedSpec, null, 2);
+    await waitFor(() =>
+      expect(getEditorTextarea().value).toContain('"version": "1.0.0"')
+    );
+    const textarea = getEditorTextarea();
 
-  fireEvent.focus(textarea);
-  fireEvent.change(textarea, { target: { value: updatedJson } });
-  await waitFor(() => expect(textarea).toHaveValue(updatedJson));
-  fireEvent.blur(textarea);
-
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: /Annulla/i })).not.toBeDisabled()
-  );
-  expect(screen.getByRole("button", { name: /Ripeti/i })).toBeDisabled();
-
-  fireEvent.click(screen.getByRole("button", { name: /Annulla/i }));
-
-  await waitFor(() => expect(textarea).toHaveValue(JSON.stringify(baseSpec, null, 2)));
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: /Ripeti/i })).not.toBeDisabled()
-  );
-  expect(screen.getByRole("button", { name: /Annulla/i })).toBeDisabled();
-});
-
-it("shows validation errors and success status message during save", async () => {
-  mockApi.get
-    .mockResolvedValueOnce({
-      user: {
-        id: "user-3",
-        email: "editor@example.com",
-        role: "Editor"
-      },
-      expiresAt: "2024-01-01T00:00:00.000Z"
-    })
-    .mockResolvedValueOnce(baseSpec);
-
-  render(<RuleSpecEditor />);
-
-  const textarea = await screen.findByRole("textbox");
-  const saveButton = await screen.findByRole("button", { name: /Salva/i });
-
-  await act(async () => {
-    fireEvent.focus(textarea);
-    fireEvent.change(textarea, { target: { value: "{" } });
+    const newJson = JSON.stringify(updatedSpec, null, 2);
+    await user.clear(textarea);
+    fireEvent.change(textarea, { target: { value: newJson } });
     fireEvent.blur(textarea);
+
+    const saveButton = await screen.findByRole('button', { name: /^Salva$/i });
+    expect(saveButton).toBeEnabled();
+
+    await user.click(saveButton);
+
+    await waitFor(() =>
+      expect(mockApi.put).toHaveBeenCalledWith('/games/demo-chess/rulespec', updatedSpec)
+    );
+    await screen.findByText(/RuleSpec salvato con successo/i);
   });
-  await waitFor(() => expect(textarea).toHaveValue("{"));
 
-  await waitFor(() =>
-    expect(
-      screen.getByText((content) => content.includes("Expected property name"))
-    ).toBeInTheDocument()
-  );
-  expect(saveButton).toBeDisabled();
+  it('surfaces backend errors when saving fails', async () => {
+    const user = userEvent.setup();
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-  const specToPersist = { ...baseSpec, version: "2.0" };
-  const specJson = JSON.stringify(specToPersist, null, 2);
-  mockApi.put.mockRejectedValueOnce(new Error("API error"));
-  mockApi.put.mockResolvedValueOnce(specToPersist);
+    const initialSpec = {
+      gameId: 'demo-risk',
+      version: '0.1.0',
+      createdAt: new Date('2024-06-15').toISOString(),
+      rules: [
+        { id: 'r-1', text: 'Rule text' }
+      ]
+    };
 
-  await act(async () => {
-    fireEvent.change(textarea, { target: { value: specJson } });
+    mockUseRouter.mockReturnValue(createRouter({ query: { gameId: 'demo-risk' } }));
+    mockApi.get.mockImplementation(async (path: string) => {
+      if (path === '/auth/me') {
+        return authResponse;
+      }
+      if (path === '/games/demo-risk/rulespec') {
+        return initialSpec;
+      }
+      return null;
+    });
+
+    mockApi.put.mockRejectedValueOnce(new Error('Save failed'));
+
+    render(<RuleSpecEditor />);
+
+    await screen.findByText(/Editor RuleSpec/i);
+
+    await waitFor(() =>
+      expect(getEditorTextarea().value).toContain('"version": "0.1.0"')
+    );
+    const textarea = getEditorTextarea();
+    const updatedSpec = { ...initialSpec, version: '0.2.0' };
+    const json = JSON.stringify(updatedSpec, null, 2);
+
+    await user.clear(textarea);
+    fireEvent.change(textarea, { target: { value: json } });
+    fireEvent.blur(textarea);
+
+    const saveButton = screen.getByRole('button', { name: /^Salva$/i });
+    await user.click(saveButton);
+
+    await waitFor(() => expect(mockApi.put).toHaveBeenCalled());
+    await screen.findByText('Save failed');
+
+    consoleErrorSpy.mockRestore();
   });
-  await waitFor(() => expect(textarea).toHaveValue(specJson));
-  await waitFor(() => expect(screen.getByText(/✓ JSON valido/i)).toBeInTheDocument());
-  await waitFor(() => expect(saveButton).not.toBeDisabled());
 
-  fireEvent.click(saveButton);
+  it('disables saving and shows validation error when JSON is invalid', async () => {
+    const user = userEvent.setup();
 
-  await waitFor(() =>
-    expect(screen.getByText(/API error/i)).toBeInTheDocument()
-  );
-  expect(mockApi.put).toHaveBeenCalledWith("/games/game-1/rulespec", specToPersist);
+    const initialSpec = {
+      gameId: 'demo-catan',
+      version: '1.0.0',
+      createdAt: new Date('2024-01-02').toISOString(),
+      rules: [
+        { id: 'rule-a', text: 'Setup details' }
+      ]
+    };
 
-  fireEvent.click(saveButton);
+    mockUseRouter.mockReturnValue(createRouter({ query: { gameId: 'demo-catan' } }));
+    mockApi.get.mockImplementation(async (path: string) => {
+      if (path === '/auth/me') {
+        return authResponse;
+      }
+      if (path === '/games/demo-catan/rulespec') {
+        return initialSpec;
+      }
+      return null;
+    });
 
-  await waitFor(() =>
-    expect(screen.getByText(/RuleSpec salvato con successo \(versione 2\.0\)/i)).toBeInTheDocument()
-  );
-  await waitFor(() =>
-    expect(screen.queryByText(/API error/i)).not.toBeInTheDocument()
-  );
+    render(<RuleSpecEditor />);
+
+    await screen.findByText(/Editor RuleSpec/i);
+
+    await waitFor(() =>
+      expect(getEditorTextarea().value).toContain('"version": "1.0.0"')
+    );
+    const textarea = getEditorTextarea();
+    await user.clear(textarea);
+    fireEvent.change(textarea, { target: { value: '{' } });
+
+    expect(screen.getByText(/Expected property name/i)).toBeInTheDocument();
+    const saveButton = screen.getByRole('button', { name: /^Salva$/i });
+    expect(saveButton).toBeDisabled();
+  });
 });

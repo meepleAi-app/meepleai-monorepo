@@ -49,6 +49,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IBackgroundTaskService, BackgroundTaskService>();
 
 // AI-01: Vector search services
+builder.Services.AddSingleton<IQdrantClientAdapter, QdrantClientAdapter>();
 builder.Services.AddSingleton<IQdrantService, QdrantService>();
 builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
 builder.Services.AddScoped<ILlmService, LlmService>();

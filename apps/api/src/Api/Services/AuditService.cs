@@ -60,13 +60,15 @@ public class AuditService
         string? userAgent = null,
         CancellationToken ct = default)
     {
+        var details = $"User in scope {userScope} attempted to access {resource} requiring scope {requiredScope}";
+
         await LogAsync(
             userId,
             "ACCESS_DENIED",
             resource,
             resourceId,
             "Denied",
-            $"User in scope {userScope} attempted to access {resource} requiring scope {requiredScope}",
+            details,
             ipAddress,
             userAgent,
             ct);

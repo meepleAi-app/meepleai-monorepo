@@ -14,26 +14,43 @@ type AuthResponse = {
   expiresAt: string;
 };
 
+type Snippet = {
+  text: string;
+  source: string;
+  page?: number | null;
+  line?: number | null;
+};
+
 type Message = {
   id: string;
   role: "user" | "assistant";
   content: string;
-  sources?: Source[];
+  snippets?: Snippet[];
   feedback?: "helpful" | "not-helpful" | null;
   endpoint?: string;
   gameId?: string;
   timestamp: Date;
 };
 
-type Source = {
-  title: string;
-  snippet: string;
-  page?: number;
+type QaResponse = {
+  answer: string;
+  snippets?: Snippet[];
 };
 
-type QAResponse = {
-  answer: string;
-  sources?: Source[];
+const formatSnippets = (snippets?: Snippet[]): Snippet[] =>
+  (snippets ?? []).map(({ text, source, page = null, line = null }) => ({
+    text,
+    source,
+    page,
+    line
+  }));
+
+const getSnippetLabel = (snippet: Snippet): string => {
+  const baseLabel = snippet.source;
+  if (snippet.page !== null && snippet.page !== undefined) {
+    return `${baseLabel} (Pagina ${snippet.page})`;
+  }
+  return baseLabel;
 };
 
 export default function ChatPage() {
@@ -86,7 +103,7 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
-      const res = await api.post<QAResponse>("/agents/qa", {
+      const res = await api.post<QaResponse>("/agents/qa", {
         gameId: selectedGame,
         query: inputValue
       });
@@ -95,7 +112,7 @@ export default function ChatPage() {
         id: `msg-${Date.now()}-assistant`,
         role: "assistant",
         content: res.answer,
-        sources: res.sources,
+        snippets: formatSnippets(res.snippets),
         feedback: null,
         endpoint: "qa",
         gameId: selectedGame,
@@ -297,12 +314,12 @@ export default function ChatPage() {
                 <div style={{ whiteSpace: "pre-wrap" }}>{msg.content}</div>
 
                 {/* Sources */}
-                {msg.sources && msg.sources.length > 0 && (
+                {msg.snippets && msg.snippets.length > 0 && (
                   <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #dadce0" }}>
                     <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8, color: "#5f6368" }}>
                       Fonti:
                     </div>
-                    {msg.sources.map((source, idx) => (
+                    {msg.snippets.map((snippet, idx) => (
                       <div
                         key={idx}
                         style={{
@@ -314,10 +331,8 @@ export default function ChatPage() {
                           fontSize: 12
                         }}
                       >
-                        <div style={{ fontWeight: 500, marginBottom: 4 }}>
-                          {source.title} {source.page !== undefined && `(Pagina ${source.page})`}
-                        </div>
-                        <div style={{ color: "#5f6368", fontSize: 11 }}>{source.snippet}</div>
+                        <div style={{ fontWeight: 500, marginBottom: 4 }}>{getSnippetLabel(snippet)}</div>
+                        <div style={{ color: "#5f6368", fontSize: 11 }}>{snippet.text}</div>
                       </div>
                     ))}
                   </div>

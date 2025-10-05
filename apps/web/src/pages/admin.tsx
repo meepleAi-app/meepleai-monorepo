@@ -28,6 +28,8 @@ type Stats = {
   totalTokens: number;
   successRate: number;
   endpointCounts: Record<string, number>;
+  feedbackCounts: Record<string, number>;
+  totalFeedback: number;
 };
 
 export default function AdminDashboard() {
@@ -69,7 +71,11 @@ export default function AdminDashboard() {
       }
 
       const statsData = await statsRes.json();
-      setStats(statsData);
+      setStats({
+        ...statsData,
+        feedbackCounts: statsData.feedbackCounts ?? {},
+        totalFeedback: statsData.totalFeedback ?? 0
+      });
 
       setLoading(false);
     } catch (err) {
@@ -130,6 +136,9 @@ export default function AdminDashboard() {
       req.userId?.toLowerCase().includes(filter.toLowerCase()) ||
       req.gameId?.toLowerCase().includes(filter.toLowerCase())
   );
+
+  const helpfulCount = stats?.feedbackCounts?.["helpful"] ?? 0;
+  const notHelpfulCount = stats?.feedbackCounts?.["not-helpful"] ?? 0;
 
   const getStatusColor = (status: string) => {
     return status === "Success" ? "#0f9d58" : "#d93025";
@@ -207,7 +216,7 @@ export default function AdminDashboard() {
 
       {/* Statistics Cards */}
       {stats && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
           <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
             <div style={{ fontSize: 12, color: "#5f6368", marginBottom: 8 }}>Total Requests</div>
             <div style={{ fontSize: 32, fontWeight: 600 }}>{stats.totalRequests}</div>
@@ -223,6 +232,14 @@ export default function AdminDashboard() {
           <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
             <div style={{ fontSize: 12, color: "#5f6368", marginBottom: 8 }}>Success Rate</div>
             <div style={{ fontSize: 32, fontWeight: 600 }}>{(stats.successRate * 100).toFixed(1)}%</div>
+          </div>
+          <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
+            <div style={{ fontSize: 12, color: "#5f6368", marginBottom: 8 }}>Feedback Totali</div>
+            <div style={{ fontSize: 32, fontWeight: 600 }}>{stats.totalFeedback}</div>
+            <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
+              <span style={{ color: "#34a853", fontWeight: 600 }}>👍 Utile: {helpfulCount}</span>
+              <span style={{ color: "#ea4335", fontWeight: 600 }}>👎 Non utile: {notHelpfulCount}</span>
+            </div>
           </div>
         </div>
       )}

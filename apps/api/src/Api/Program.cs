@@ -53,7 +53,7 @@ builder.Services.AddSingleton<IQdrantClientAdapter, QdrantClientAdapter>();
 builder.Services.AddSingleton<IQdrantService, QdrantService>();
 builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
 builder.Services.AddScoped<ILlmService, LlmService>();
-builder.Services.AddScoped<TextChunkingService>();
+builder.Services.AddScoped<ITextChunkingService, TextChunkingService>();
 
 // AI-05: AI response caching
 builder.Services.AddSingleton<IAiResponseCacheService, AiResponseCacheService>();

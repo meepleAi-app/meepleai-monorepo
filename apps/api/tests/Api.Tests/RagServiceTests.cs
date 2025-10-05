@@ -231,6 +231,66 @@ public class RagServiceTests
     }
 
     [Fact]
+    public async Task AskAsync_ReturnsCachedResponse()
+    {
+        // Arrange
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>(MockBehavior.Strict);
+        var mockQdrant = new Mock<IQdrantService>(MockBehavior.Strict);
+        var mockLlm = new Mock<ILlmService>(MockBehavior.Strict);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        const string gameId = "game1";
+        const string query = "How many players?";
+        const string cacheKey = "qa::game1::players";
+        var cachedResponse = new QaResponse(
+            "Cached answer",
+            new List<Snippet> { new("Cached snippet", "PDF:cached", 1, 0) }
+        );
+
+        mockCache
+            .Setup(x => x.GenerateQaCacheKey(gameId, query))
+            .Returns(cacheKey);
+        mockCache
+            .Setup(x => x.GetAsync<QaResponse>(cacheKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cachedResponse);
+
+        _mockLogger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+
+        var ragService = new RagService(
+            dbContext,
+            mockEmbedding.Object,
+            mockQdrant.Object,
+            mockLlm.Object,
+            mockCache.Object,
+            _mockLogger.Object);
+
+        // Act
+        var result = await ragService.AskAsync(gameId, query, CancellationToken.None);
+
+        // Assert
+        Assert.Same(cachedResponse, result);
+
+        mockCache.Verify(x => x.GenerateQaCacheKey(gameId, query), Times.Once);
+        mockCache.Verify(x => x.GetAsync<QaResponse>(cacheKey, It.IsAny<CancellationToken>()), Times.Once);
+        mockCache.VerifyNoOtherCalls();
+
+        mockEmbedding.VerifyNoOtherCalls();
+        mockQdrant.VerifyNoOtherCalls();
+        mockLlm.VerifyNoOtherCalls();
+
+        _mockLogger.Verify(x => x.IsEnabled(LogLevel.Information), Times.Once);
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("Returning cached QA response for game game1")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+        _mockLogger.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public async Task ExplainAsync_WithEmptyTopic_ReturnsErrorMessage()
     {
         // Arrange
@@ -291,6 +351,99 @@ public class RagServiceTests
         Assert.Contains("# Explanation: game setup", result.script);
         Assert.Equal(2, result.citations.Count);
         Assert.True(result.estimatedReadingTimeMinutes > 0);
+    }
+
+    [Fact]
+    public async Task ExplainAsync_WithCacheMiss_CachesResponseAndReturnsSnippets()
+    {
+        // Arrange
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
+
+        var searchResults = new List<SearchResultItem>
+        {
+            new() { Text = "Move your token up to 3 spaces.", PdfId = "pdf-1", Page = 1, Score = 0.95f },
+            new() { Text = "You may not move through walls.", PdfId = "pdf-1", Page = 2, Score = 0.90f }
+        };
+
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
+            .Setup(x => x.SearchAsync(
+                It.IsAny<string>(),
+                It.IsAny<float[]>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
+
+        var mockLlm = new Mock<ILlmService>(MockBehavior.Strict);
+        var mockCache = new Mock<IAiResponseCacheService>();
+        const string gameId = "game1";
+        const string topic = "movement rules";
+        const string cacheKey = "explain::game1::movement";
+
+        mockCache
+            .Setup(x => x.GenerateExplainCacheKey(gameId, topic))
+            .Returns(cacheKey);
+        mockCache
+            .Setup(x => x.GetAsync<ExplainResponse>(cacheKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ExplainResponse?)null);
+
+        _mockLogger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+
+        var ragService = new RagService(
+            dbContext,
+            mockEmbedding.Object,
+            mockQdrant.Object,
+            mockLlm.Object,
+            mockCache.Object,
+            _mockLogger.Object);
+
+        // Act
+        var result = await ragService.ExplainAsync(gameId, topic, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(topic, result.outline.mainTopic);
+        Assert.Collection(
+            result.citations,
+            snippet => Assert.Equal("Move your token up to 3 spaces.", snippet.text),
+            snippet => Assert.Equal("You may not move through walls.", snippet.text));
+
+        mockCache.Verify(x => x.GenerateExplainCacheKey(gameId, topic), Times.Once);
+        mockCache.Verify(x => x.GetAsync<ExplainResponse>(cacheKey, It.IsAny<CancellationToken>()), Times.Once);
+        mockCache.Verify(
+            x => x.SetAsync(
+                cacheKey,
+                It.Is<ExplainResponse>(response =>
+                    response.citations.Count == 2 &&
+                    response.citations[0].text == "Move your token up to 3 spaces." &&
+                    response.citations[1].text == "You may not move through walls."),
+                86400,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        mockCache.VerifyNoOtherCalls();
+
+        mockEmbedding.Verify(x => x.GenerateEmbeddingAsync(topic, It.IsAny<CancellationToken>()), Times.Once);
+        mockEmbedding.VerifyNoOtherCalls();
+        mockQdrant.Verify(
+            x => x.SearchAsync(gameId, embedding, 5, It.IsAny<CancellationToken>()),
+            Times.Once);
+        mockQdrant.VerifyNoOtherCalls();
+        mockLlm.VerifyNoOtherCalls();
+
+        _mockLogger.Verify(x => x.IsEnabled(LogLevel.Information), Times.Once);
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("RAG explain generated for topic 'movement rules'")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+        _mockLogger.VerifyNoOtherCalls();
     }
 
     [Fact]

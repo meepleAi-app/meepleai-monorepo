@@ -21,7 +21,7 @@ public class PdfTableExtractionService
     /// <summary>
     /// Extracts tables and structured content from a PDF file
     /// </summary>
-    public async Task<PdfStructuredExtractionResult> ExtractStructuredContentAsync(
+    public virtual async Task<PdfStructuredExtractionResult> ExtractStructuredContentAsync(
         string filePath,
         CancellationToken ct = default)
     {

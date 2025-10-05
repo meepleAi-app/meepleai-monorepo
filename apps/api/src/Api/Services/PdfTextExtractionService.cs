@@ -23,7 +23,7 @@ public class PdfTextExtractionService
     /// <param name="filePath">Path to the PDF file</param>
     /// <param name="ct">Cancellation token</param>
     /// <returns>Extraction result containing normalized text and metadata</returns>
-    public async Task<PdfTextExtractionResult> ExtractTextAsync(string filePath, CancellationToken ct = default)
+    public virtual async Task<PdfTextExtractionResult> ExtractTextAsync(string filePath, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(filePath))
         {

@@ -139,14 +139,17 @@ Accogliamo contributi dalla community! Prima di iniziare:
 - ✅ RAG (Retrieval-Augmented Generation) con Qdrant
 - ✅ PDF extraction service (Docnet + tabelle)
 - ✅ Seed demo data per testing
+- ✅ Storico versioni, diff e ripristino delle RuleSpec disponibili via API `GET /rulespecs/{id}/versions` e interfaccia `/versions`
 
 #### Frontend (Next.js)
 - ✅ Interfaccia web React/TypeScript
 - ✅ API client con gestione errori
 - ✅ Health check endpoints
 - ✅ Integrazione con backend API
+- ✅ Gestione upload PDF con wizard multi-step con tracking avanzato dei progressi, connesso agli endpoint backend `/ingest/pdf` e `/games/{id}/pdfs`
 
-#### Automazione
+#### Admin & Automazione
+- ✅ Dashboard amministrazione contenuti con log filtrabili, statistiche operative e gestione workflow n8n
 - ✅ n8n workflow engine setup
 - ✅ Webhook n8n per Q&A endpoint
 
@@ -159,7 +162,7 @@ Accogliamo contributi dalla community! Prima di iniziare:
 #### Testing & CI
 - ✅ PDF extraction in CI (libgdiplus, Docnet runtime Linux)
 - ✅ Integration tests con TestContainers (PostgreSQL + Qdrant)
-- ✅ Tutti i test di integrazione abilitati (294 test passing)
+- ✅ Suite test automatizzata attiva (75 backend, 11 unit frontend, 5 E2E; totale 91) — dettagli in `TEST-SUMMARY.md`
 - ✅ Coverage reporting automatico
 
 ### 🚧 In corso
@@ -181,9 +184,6 @@ Accogliamo contributi dalla community! Prima di iniziare:
   - Follow-up questions intelligenti
 
 - 📋 **Gestione avanzata rule specs**
-  - Versioning documenti
-  - Diff tra versioni
-  - Publishing workflow
   - Retention policy per vecchie versioni
 
 #### UX & Frontend

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { api } from "../lib/api";
@@ -94,17 +94,7 @@ export default function VersionHistory() {
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [showOnlyChanges, setShowOnlyChanges] = useState<boolean>(true);
 
-  useEffect(() => {
-    void loadCurrentUser();
-  }, []);
-
-  useEffect(() => {
-    if (authUser && gameId && typeof gameId === "string") {
-      void loadHistory(gameId);
-    }
-  }, [authUser, gameId]);
-
-  const loadCurrentUser = async () => {
+  const loadCurrentUser = useCallback(async () => {
     try {
       const res = await api.get<AuthResponse>("/auth/me");
       if (res) {
@@ -115,9 +105,9 @@ export default function VersionHistory() {
     } catch {
       setAuthUser(null);
     }
-  };
+  }, []);
 
-  const loadHistory = async (gId: string) => {
+  const loadHistory = useCallback(async (gId: string) => {
     setIsLoadingHistory(true);
     setErrorMessage("");
     try {
@@ -136,9 +126,9 @@ export default function VersionHistory() {
     } finally {
       setIsLoadingHistory(false);
     }
-  };
+  }, []);
 
-  const loadDiff = async () => {
+  const loadDiff = useCallback(async () => {
     if (!gameId || typeof gameId !== "string" || !selectedFromVersion || !selectedToVersion) {
       return;
     }
@@ -159,7 +149,17 @@ export default function VersionHistory() {
     } finally {
       setIsLoadingDiff(false);
     }
-  };
+  }, [gameId, selectedFromVersion, selectedToVersion]);
+
+  useEffect(() => {
+    void loadCurrentUser();
+  }, [loadCurrentUser]);
+
+  useEffect(() => {
+    if (authUser && gameId && typeof gameId === "string") {
+      void loadHistory(gameId);
+    }
+  }, [authUser, gameId, loadHistory]);
 
   const handleRestoreVersion = async (version: string) => {
     if (!gameId || typeof gameId !== "string") {
@@ -200,7 +200,7 @@ export default function VersionHistory() {
     if (selectedFromVersion && selectedToVersion) {
       void loadDiff();
     }
-  }, [selectedFromVersion, selectedToVersion]);
+  }, [loadDiff, selectedFromVersion, selectedToVersion]);
 
   if (!authUser) {
     return (

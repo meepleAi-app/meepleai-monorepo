@@ -25,21 +25,6 @@ interface PdfProcessingResponse {
   processingError?: string | null;
 }
 
-type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed';
-
-interface PdfTextResponse {
-  id: string;
-  fileName: string;
-  extractedText?: string | null;
-  processingStatus: ProcessingStatus;
-  processedAt?: string | null;
-  pageCount?: number | null;
-  characterCount?: number | null;
-  processingError?: string | null;
-}
-
-const POLLING_INTERVAL_MS = 2000;
-
 interface RuleAtom {
   id: string;
   text: string;
@@ -93,8 +78,6 @@ export default function UploadPage() {
   const [ruleSpec, setRuleSpec] = useState<RuleSpec | null>(null);
   const [pdfs, setPdfs] = useState<PdfDocument[]>([]);
   const [loadingPdfs, setLoadingPdfs] = useState(false);
-  const [pdfsError, setPdfsError] = useState<string | null>(null);
-  const [retryingPdfId, setRetryingPdfId] = useState<string | null>(null);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [pollingError, setPollingError] = useState<string | null>(null);
@@ -102,7 +85,7 @@ export default function UploadPage() {
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
-  const loadPdfs = async (gameId: string) => {
+  const loadPdfs = useCallback(async (gameId: string) => {
     if (!gameId) {
       return;
     }
@@ -128,9 +111,9 @@ export default function UploadPage() {
     } finally {
       setLoadingPdfs(false);
     }
-  };
+  }, [API_BASE]);
 
-  const initialize = async () => {
+  const initialize = useCallback(async () => {
     setLoadingGames(true);
     try {
       const me = await api.get<AuthResponse>('/auth/me');
@@ -154,11 +137,11 @@ export default function UploadPage() {
     } finally {
       setLoadingGames(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void initialize();
-  }, []);
+  }, [initialize]);
 
   useEffect(() => {
     if (confirmedGameId) {
@@ -167,7 +150,7 @@ export default function UploadPage() {
       setPdfs([]);
       setPdfsError(null);
     }
-  }, [confirmedGameId]);
+  }, [confirmedGameId, loadPdfs]);
 
   useEffect(() => {
     if (currentStep !== 'parse' || !documentId) {
@@ -338,7 +321,6 @@ export default function UploadPage() {
         setProcessingMetadata(null);
         autoAdvanceRef.current = false;
         setMessage(`✅ PDF uploaded successfully! Document ID: ${data.documentId}`);
-        await loadPdfs(confirmedGameId);
         setProcessingStatus('pending');
         setProcessingError(null);
         setPollingError(null);
@@ -379,27 +361,6 @@ export default function UploadPage() {
       }
 
       setRuleSpec(fetchedRuleSpec);
-      const response = await fetch(`${API_BASE}/ingest/pdf/${documentId}/rulespec`, {
-        method: 'POST',
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        let errorMessage = response.statusText;
-        try {
-          const errorBody = await response.json();
-          if (errorBody?.error) {
-            errorMessage = errorBody.error;
-          }
-        } catch (jsonError) {
-          console.warn('Failed to parse error response', jsonError);
-        }
-        throw new Error(errorMessage);
-      }
-
-      const spec = (await response.json()) as RuleSpec;
-
-      setRuleSpec(spec);
       setMessage('✅ PDF parsed successfully!');
       setCurrentStep('review');
       if (confirmedGameId) {
@@ -676,22 +637,6 @@ export default function UploadPage() {
   };
   const effectiveProcessingStatus: ProcessingStatus = processingStatus ?? 'pending';
   const processingProgress = statusProgress[effectiveProcessingStatus];
-
-  const progressPercent = processingStatus === 'completed'
-    ? 100
-    : processingStatus === 'processing'
-      ? 70
-      : processingStatus === 'pending'
-        ? 35
-        : processingStatus === 'failed'
-          ? 100
-          : 0;
-
-  const statusLabel = processingStatus
-    ? processingStatus.charAt(0).toUpperCase() + processingStatus.slice(1)
-    : 'Waiting to start';
-
-  const isParseButtonDisabled = parsing || processingStatus !== 'completed';
 
   const renderStepIndicator = () => {
     const steps: WizardStep[] = ['upload', 'parse', 'review', 'publish'];
@@ -1103,16 +1048,18 @@ export default function UploadPage() {
             </p>
           </div>
           <button
-            onClick={handleParse}
-            disabled={parsing || !documentId}
+            onClick={() => void handleParse()}
+            disabled={parsing || effectiveProcessingStatus !== 'completed'}
             style={{
               padding: '12px 24px',
-              backgroundColor: parsing || !documentId ? '#ccc' : '#0070f3',
+              backgroundColor:
+                parsing || effectiveProcessingStatus !== 'completed' ? '#ccc' : '#0070f3',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
               fontSize: '16px',
-              cursor: parsing || !documentId ? 'not-allowed' : 'pointer',
+              cursor:
+                parsing || effectiveProcessingStatus !== 'completed' ? 'not-allowed' : 'pointer',
               fontWeight: '500',
               marginRight: '12px'
             }}

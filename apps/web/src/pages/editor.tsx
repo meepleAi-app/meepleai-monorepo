@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { api } from "../lib/api";
@@ -53,17 +53,50 @@ export default function RuleSpecEditor() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
-  useEffect(() => {
-    void loadCurrentUser();
+  const initializeHistory = useCallback((content: string) => {
+    const entry: HistoryEntry = { content, timestamp: Date.now() };
+    setHistory([entry]);
+    setHistoryIndex(0);
   }, []);
 
-  useEffect(() => {
-    if (authUser && gameId && typeof gameId === "string") {
-      void loadRuleSpec(gameId);
-    }
-  }, [authUser, gameId]);
+  const validateJson = useCallback((content: string) => {
+    try {
+      const parsed = JSON.parse(content);
 
-  const loadCurrentUser = async () => {
+      // Basic validation against RuleSpec schema
+      if (!parsed.gameId || typeof parsed.gameId !== "string") {
+        throw new Error("gameId è richiesto e deve essere una stringa");
+      }
+      if (!parsed.version || typeof parsed.version !== "string") {
+        throw new Error("version è richiesto e deve essere una stringa");
+      }
+      if (!parsed.createdAt || typeof parsed.createdAt !== "string") {
+        throw new Error("createdAt è richiesto e deve essere una stringa");
+      }
+      if (!Array.isArray(parsed.rules)) {
+        throw new Error("rules deve essere un array");
+      }
+
+      // Validate each rule atom
+      for (let i = 0; i < parsed.rules.length; i++) {
+        const rule = parsed.rules[i];
+        if (!rule.id || typeof rule.id !== "string") {
+          throw new Error(`rules[${i}].id è richiesto e deve essere una stringa`);
+        }
+        if (!rule.text || typeof rule.text !== "string") {
+          throw new Error(`rules[${i}].text è richiesto e deve essere una stringa`);
+        }
+      }
+
+      setIsValid(true);
+      setValidationError("");
+    } catch (err: any) {
+      setIsValid(false);
+      setValidationError(err?.message || "JSON non valido");
+    }
+  }, []);
+
+  const loadCurrentUser = useCallback(async () => {
     try {
       const res = await api.get<AuthResponse>("/auth/me");
       if (res) {
@@ -74,35 +107,42 @@ export default function RuleSpecEditor() {
     } catch {
       setAuthUser(null);
     }
-  };
+  }, []);
 
-  const loadRuleSpec = async (gId: string) => {
-    setIsLoading(true);
-    setErrorMessage("");
-    try {
-      const spec = await api.get<RuleSpec>(`/games/${gId}/rulespec`);
-      if (spec) {
-        setRuleSpec(spec);
-        const formatted = JSON.stringify(spec, null, 2);
-        setJsonContent(formatted);
-        initializeHistory(formatted);
-        validateJson(formatted);
-      } else {
-        setErrorMessage("RuleSpec non trovato per questo gioco.");
+  const loadRuleSpec = useCallback(
+    async (gId: string) => {
+      setIsLoading(true);
+      setErrorMessage("");
+      try {
+        const spec = await api.get<RuleSpec>(`/games/${gId}/rulespec`);
+        if (spec) {
+          setRuleSpec(spec);
+          const formatted = JSON.stringify(spec, null, 2);
+          setJsonContent(formatted);
+          initializeHistory(formatted);
+          validateJson(formatted);
+        } else {
+          setErrorMessage("RuleSpec non trovato per questo gioco.");
+        }
+      } catch (err: any) {
+        console.error(err);
+        setErrorMessage(err?.message || "Impossibile caricare RuleSpec.");
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err: any) {
-      console.error(err);
-      setErrorMessage(err?.message || "Impossibile caricare RuleSpec.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    [initializeHistory, validateJson]
+  );
 
-  const initializeHistory = (content: string) => {
-    const entry: HistoryEntry = { content, timestamp: Date.now() };
-    setHistory([entry]);
-    setHistoryIndex(0);
-  };
+  useEffect(() => {
+    void loadCurrentUser();
+  }, [loadCurrentUser]);
+
+  useEffect(() => {
+    if (authUser && gameId && typeof gameId === "string") {
+      void loadRuleSpec(gameId);
+    }
+  }, [authUser, gameId, loadRuleSpec]);
 
   const addToHistory = (content: string) => {
     // Remove any history entries after the current index
@@ -142,43 +182,6 @@ export default function RuleSpecEditor() {
     // Add to history when user finishes editing (on blur)
     if (history.length === 0 || jsonContent !== history[historyIndex].content) {
       addToHistory(jsonContent);
-    }
-  };
-
-  const validateJson = (content: string) => {
-    try {
-      const parsed = JSON.parse(content);
-
-      // Basic validation against RuleSpec schema
-      if (!parsed.gameId || typeof parsed.gameId !== "string") {
-        throw new Error("gameId è richiesto e deve essere una stringa");
-      }
-      if (!parsed.version || typeof parsed.version !== "string") {
-        throw new Error("version è richiesto e deve essere una stringa");
-      }
-      if (!parsed.createdAt || typeof parsed.createdAt !== "string") {
-        throw new Error("createdAt è richiesto e deve essere una stringa");
-      }
-      if (!Array.isArray(parsed.rules)) {
-        throw new Error("rules deve essere un array");
-      }
-
-      // Validate each rule atom
-      for (let i = 0; i < parsed.rules.length; i++) {
-        const rule = parsed.rules[i];
-        if (!rule.id || typeof rule.id !== "string") {
-          throw new Error(`rules[${i}].id è richiesto e deve essere una stringa`);
-        }
-        if (!rule.text || typeof rule.text !== "string") {
-          throw new Error(`rules[${i}].text è richiesto e deve essere una stringa`);
-        }
-      }
-
-      setIsValid(true);
-      setValidationError("");
-    } catch (err: any) {
-      setIsValid(false);
-      setValidationError(err?.message || "JSON non valido");
     }
   };
 

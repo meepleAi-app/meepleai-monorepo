@@ -85,21 +85,17 @@ scripts/, tools/, schemas/ ...
 
 Per altre linee guida consulta `agents.md` e i README specifici nelle rispettive app.
 
-## PDF Import Wizard
+## 📄 PDF Import Wizard
 
-L'interfaccia `PDF Import Wizard` (pagina `/upload`) guida l'utente attraverso l'ingestione di un nuovo regolamento in tre
-passaggi:
+Il wizard di import dei PDF (pagina `/upload`) guida editor e admin nell'intero flusso:
 
-1. **Upload** – Seleziona o crea un gioco, quindi carica il PDF. Il backend restituisce un `documentId` che identifica
-   l'elaborazione asincrona del file.
-2. **Parse** – Il frontend interroga automaticamente l'endpoint `/pdfs/{documentId}/text` ogni 2 secondi e mostra una barra di
-   avanzamento dello stato (`pending → processing → completed/failed`). Finché lo stato non è `completed` il pulsante di
-   parsing resta disabilitato; al completamento, il wizard carica la `RuleSpec` reale del gioco e prosegue da solo alla fase di
-   review. Eventuali errori (`failed` o problemi di polling) vengono mostrati direttamente nella UI.
-3. **Review & Publish** – Una volta caricata la `RuleSpec`, l'utente può modificare gli `RuleAtom`, pubblicare le modifiche o
-   tornare indietro.
+1. **Selezione gioco** – scegli un gioco esistente e premi “Confirm selection”, oppure creane uno nuovo. L'upload resta disabilitato finché non c'è una conferma.
+2. **Upload PDF** – seleziona un file `.pdf` e premi “Upload & Continue”. L'app invia il file a `/ingest/pdf` e salva l'`documentId` restituito.
+3. **Parsing asincrono** – la fase “Parse” esegue polling automatico su `/pdfs/{documentId}/text` ogni pochi secondi, mostra la barra di avanzamento e rende visibili eventuali errori (`processingError`). Il pulsante di continuazione rimane disabilitato finché lo stato non diventa `completed`.
+4. **Review automatica** – non appena il backend segnala `processingStatus: completed`, il wizard carica la RuleSpec reale (`GET /games/{gameId}/rulespec`) e passa alla fase di review senza intervento manuale.
+5. **Pubblicazione** – dopo aver eventualmente modificato le regole estratte, premi “Publish RuleSpec” per inviare l'aggiornamento alle API.
 
-In caso di errore di parsing è possibile riavviare il flusso con **Start Over** e ripetere l'upload.
+Se l'elaborazione fallisce (`processingStatus: failed`), il wizard mostra l'errore restituito e invita a ripartire dall'upload.
 
 ## Contribuire
 
@@ -130,6 +126,7 @@ Accogliamo contributi dalla community! Prima di iniziare:
 - I file `infra/env/*.env.dev` restano fuori dal versionamento (`.gitignore`) e sono pensati solo per lo sviluppo locale. Usa i template `*.env.dev.example` come base e mantieni le credenziali nel tuo password manager.
 - Per la CI utilizza variabili sicure (GitHub Secrets/Environments) che popolano file `infra/env/*.env.ci` o variabili d'ambiente equivalenti. I template `*.env.ci.example` elencano i nomi richiesti senza fornire valori sensibili.
 - **Rotazione OpenRouter API key:** genera una chiave dedicata per MeepleAI, ruotala almeno ogni 90 giorni o immediatamente in caso di sospetta fuga, aggiorna il secret GitHub `OPENROUTER_API_KEY` e invalida la chiave precedente dal pannello OpenRouter.
+- **N8N_ENCRYPTION_KEY obbligatoria:** imposta una chiave unica e robusta (32 byte suggeriti) tramite variabile d'ambiente/secret sia in locale sia in CI. L'API rifiuterà l'avvio se il valore manca o corrisponde al placeholder dei file `.env.example`.
 - **Rotazione GitHub PAT (per n8n o automazioni):** usa PAT con scope minimi, memorizzalo come secret GitHub (`GITHUB_TOKEN`/`N8N_GITHUB_PAT`), ruotalo ogni 90 giorni e revoca immediatamente i token inutilizzati.
 - Configura gli hook di sicurezza come descritto nella sezione precedente: il gancio `detect-secrets` blocca la maggior parte dei leak accidentali; aggiorna il baseline con `detect-secrets scan > .secrets.baseline` solo dopo aver verificato che non siano presenti segreti reali.
 
@@ -163,6 +160,7 @@ Accogliamo contributi dalla community! Prima di iniziare:
 - ✅ Health check endpoints
 - ✅ Integrazione con backend API
 - ✅ Gestione upload PDF con wizard multi-step con tracking avanzato dei progressi, connesso agli endpoint backend `/ingest/pdf` e `/games/{id}/pdfs`
+- ✅ Polling automatico dello stato di parsing (`/pdfs/{documentId}/text`) con barra di avanzamento e avanzamento automatico alla review
 
 #### Admin & Automazione
 - ✅ Dashboard amministrazione contenuti con log filtrabili, statistiche operative e gestione workflow n8n

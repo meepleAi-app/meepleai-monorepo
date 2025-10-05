@@ -50,6 +50,8 @@ public class LlmServiceTests
         {
             var payload = new
             {
+                id = "resp_123",
+                model = "anthropic/claude-3.5-sonnet",
                 choices = new[]
                 {
                     new
@@ -57,8 +59,15 @@ public class LlmServiceTests
                         message = new
                         {
                             content = "Generated response"
-                        }
+                        },
+                        finish_reason = "stop"
                     }
+                },
+                usage = new
+                {
+                    prompt_tokens = 12,
+                    completion_tokens = 8,
+                    total_tokens = 20
                 }
             };
 
@@ -76,6 +85,12 @@ public class LlmServiceTests
         // Assert
         Assert.True(result.Success);
         Assert.Equal("Generated response", result.Response);
+        Assert.Equal(12, result.Usage.PromptTokens);
+        Assert.Equal(8, result.Usage.CompletionTokens);
+        Assert.Equal(20, result.Usage.TotalTokens);
+        Assert.Equal("anthropic/claude-3.5-sonnet", result.Metadata["model"]);
+        Assert.Equal("stop", result.Metadata["finish_reason"]);
+        Assert.Equal("resp_123", result.Metadata["response_id"]);
 
         var request = Assert.Single(handler.Requests);
         AssertRequestHeaders(request);

@@ -129,9 +129,125 @@ describe('UploadPage', () => {
     await waitFor(() => expect(uploadButton).not.toBeDisabled());
   });
 
-  it('polls PDF status and advances to review when processing completes', async () => {
+  it('parses an uploaded PDF using the ingest endpoint', async () => {
+    const authResponse = {
+      user: {
+        id: 'user-parse',
+        email: 'parse@example.com',
+        role: 'Admin',
+        displayName: 'Parser'
+  it('polls PDF processing status and auto advances to review when completed', async () => {
     jest.useFakeTimers();
 
+    try {
+      const authResponse = {
+        user: {
+          id: 'user-3',
+          email: 'user3@example.com',
+          role: 'Admin',
+          displayName: 'User Three'
+        },
+        expiresAt: new Date().toISOString()
+      };
+
+      const ruleSpecResponse = {
+        gameId: 'game-1',
+        version: 'v1',
+        createdAt: new Date().toISOString(),
+        rules: [
+          { id: 'r1', text: 'Auto generated rule', section: 'Intro', page: '1', line: '1' }
+        ]
+      };
+
+      const statusSequence: Array<{ processingStatus: string; processingError?: string | null }> = [
+        { processingStatus: 'processing' },
+        { processingStatus: 'completed' }
+      ];
+
+      mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/auth/me')) {
+          return createJsonResponse(authResponse);
+        }
+
+        if (url.endsWith('/games') && method === 'GET') {
+          return createJsonResponse([
+            { id: 'game-1', name: 'Terraforming Mars', createdAt: new Date().toISOString() }
+          ]);
+        }
+
+        if (url.includes('/games/game-1/pdfs')) {
+          return createJsonResponse({ pdfs: [] });
+        }
+
+        if (url.endsWith('/ingest/pdf')) {
+          return createJsonResponse({ documentId: 'pdf-123', fileName: 'rules.pdf' });
+        }
+
+        if (url.endsWith('/pdfs/pdf-123/text')) {
+          const nextStatus = statusSequence.shift() ?? { processingStatus: 'completed' };
+          return createJsonResponse({
+            id: 'pdf-123',
+            fileName: 'rules.pdf',
+            processingStatus: nextStatus.processingStatus,
+            processingError: nextStatus.processingError ?? null
+          });
+        }
+
+        if (url.endsWith('/games/game-1/rulespec')) {
+          return createJsonResponse(ruleSpecResponse);
+        }
+
+        throw new Error(`Unexpected fetch call to ${url}`);
+      });
+
+      render(<UploadPage />);
+
+      await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
+
+      const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
+      const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+      const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
+
+      fireEvent.change(fileInput, { target: { files: [file] } });
+      await waitFor(() => expect(uploadButton).not.toBeDisabled());
+
+      fireEvent.click(uploadButton);
+
+      await waitFor(() => expect(screen.getByText(/Processing status/i)).toBeInTheDocument());
+      expect(screen.getByText(/Processing status/i)).toHaveTextContent(/Processing status: (Pending|Processing)/i);
+
+      const continueButton = screen.getByRole('button', { name: /Waiting for processing/i });
+      expect(continueButton).toBeDisabled();
+
+      await waitFor(() =>
+        expect(screen.getByText(/Processing status/i)).toHaveTextContent('Processing')
+      );
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      await waitFor(() =>
+        expect(screen.getByRole('heading', { name: /Step 3: Review & Edit Rules/i })).toBeInTheDocument()
+      );
+
+      await waitFor(() =>
+        expect(mockFetch).toHaveBeenCalledWith(
+          expect.stringContaining('/games/game-1/rulespec'),
+          expect.objectContaining({ method: 'GET' })
+        )
+      );
+
+      await waitFor(() => expect(screen.getByText(/Auto generated rule/i)).toBeInTheDocument());
+    } finally {
+      jest.useRealTimers();
+    }
+  it('parses an uploaded PDF using the rulespec ingest endpoint', async () => {
     const authResponse = {
       user: {
         id: 'user-3',
@@ -142,12 +258,37 @@ describe('UploadPage', () => {
       expiresAt: new Date().toISOString()
     };
 
-    const pollResponses = [
-      { processingStatus: 'pending' as const },
-      { processingStatus: 'processing' as const, pageCount: 12, characterCount: 3456 },
-      { processingStatus: 'completed' as const, pageCount: 12, characterCount: 3456 }
-    ];
-    let pollCallCount = 0;
+    const ruleSpecResponse = {
+      gameId: 'game-1',
+      version: 'pdf-20250101000000',
+      createdAt: new Date().toISOString(),
+      rules: [
+        {
+          id: 'atom-1',
+          text: 'Setup: Place pieces; Count: 16',
+          section: 'Table',
+          page: '3',
+          line: null
+        },
+        {
+          id: 'atom-2',
+          text: 'Victory condition: Highest score wins',
+          section: null,
+          page: null,
+    const parsedSpec = {
+      gameId: 'game-parse',
+      version: 'ingest-20240101000000',
+      createdAt: new Date().toISOString(),
+      rules: [
+        {
+          id: 'r1',
+          text: 'Setup: Distribute four cards to each player',
+          section: null,
+          page: '4',
+          line: null
+        }
+      ]
+    };
 
     mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === 'string' ? input : input.toString();
@@ -163,35 +304,26 @@ describe('UploadPage', () => {
         ]);
       }
 
-      if (url.includes('/games/game-1/pdfs')) {
+      if (url.includes('/games/game-1/pdfs') && method === 'GET') {
+          { id: 'game-parse', name: 'Parse Game', createdAt: new Date().toISOString() }
+        ]);
+      }
+
+      if (url.includes('/games/game-parse/pdfs')) {
         return createJsonResponse({ pdfs: [] });
       }
 
       if (url.endsWith('/ingest/pdf') && method === 'POST') {
-        return createJsonResponse({ documentId: 'doc-1' });
+        return createJsonResponse({ documentId: 'pdf-1', fileName: 'rules.pdf' });
       }
 
-      if (url.endsWith('/pdfs/doc-1/text')) {
-        const response = pollResponses[Math.min(pollCallCount, pollResponses.length - 1)];
-        pollCallCount += 1;
-        return createJsonResponse({
-          id: 'doc-1',
-          fileName: 'rules.pdf',
-          processingStatus: response.processingStatus,
-          pageCount: response.pageCount ?? null,
-          characterCount: response.characterCount ?? null
-        });
+      if (url.endsWith('/ingest/pdf/pdf-1/rulespec') && method === 'POST') {
+        return createJsonResponse(ruleSpecResponse);
+        return createJsonResponse({ documentId: 'pdf-parse', fileName: 'rules.pdf' });
       }
 
-      if (url.endsWith('/games/game-1/rulespec')) {
-        return createJsonResponse({
-          gameId: 'game-1',
-          version: 'v1',
-          createdAt: new Date().toISOString(),
-          rules: [
-            { id: 'r1', text: 'Sample rule', section: 'Setup', page: '1', line: '1' }
-          ]
-        });
+      if (url.includes('/ingest/pdf/pdf-parse/rulespec') && method === 'POST') {
+        return createJsonResponse(parsedSpec);
       }
 
       throw new Error(`Unexpected fetch call to ${url}`);
@@ -203,50 +335,32 @@ describe('UploadPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
-    const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
     const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
     const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
-
     fireEvent.change(fileInput, { target: { files: [file] } });
 
-    await waitFor(() => expect(uploadButton).not.toBeDisabled());
+    fireEvent.click(screen.getByRole('button', { name: /Upload & Continue/i }));
 
+    await waitFor(() => expect(screen.getByText(/Step 2: Parse PDF/i)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: /Parse PDF/i }));
+
+    await waitFor(() => expect(screen.getByText(/Review & Edit Rules/i)).toBeInTheDocument());
+    expect(screen.getByDisplayValue('Setup: Place pieces; Count: 16')).toBeInTheDocument();
+    expect(mockFetch).toHaveBeenCalledWith(expect.stringMatching(/ingest\/pdf\/pdf-1\/rulespec$/), expect.objectContaining({ method: 'POST' }));
+    const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+    await waitFor(() => expect(uploadButton).not.toBeDisabled());
     fireEvent.click(uploadButton);
 
-    await waitFor(() => expect(screen.getByRole('heading', { name: /Step 2: Parse PDF/i })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/PDF uploaded successfully/i)).toBeInTheDocument());
 
-    const loadButton = screen.getByRole('button', { name: /Load RuleSpec/i });
-    expect(loadButton).toBeDisabled();
+    const parseButton = screen.getByRole('button', { name: /Parse PDF/i });
+    await waitFor(() => expect(parseButton).not.toBeDisabled());
+    fireEvent.click(parseButton);
 
-    await act(async () => {
-      jest.advanceTimersByTime(2000);
-    });
+    await waitFor(() => expect(screen.getByText(/PDF parsed successfully/i)).toBeInTheDocument());
 
-    await waitFor(() =>
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/pdfs/doc-1/text'),
-        expect.objectContaining({ credentials: 'include' })
-      )
-    );
-
-    await waitFor(() =>
-      expect(screen.getByText(/Processing status:/i, { selector: 'p' })).toHaveTextContent('Processing status: Processing')
-    );
-
-    await act(async () => {
-      jest.advanceTimersByTime(2000);
-    });
-
-    await waitFor(() =>
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/games/game-1/rulespec'),
-        expect.objectContaining({ credentials: 'include' })
-      )
-    );
-
-    await waitFor(() => expect(screen.getByRole('heading', { name: /Step 3: Review & Edit Rules/i })).toBeInTheDocument());
-    const versionParagraph = screen.getByText('Version:', { selector: 'strong' }).parentElement;
-    expect(versionParagraph).not.toBeNull();
-    expect(versionParagraph as HTMLElement).toHaveTextContent(/Version:\s*v1/i);
+    expect(screen.getByDisplayValue('Setup: Distribute four cards to each player')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('4')).toBeInTheDocument();
   });
 });

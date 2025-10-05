@@ -40,7 +40,10 @@ public class N8nConfigServiceTests
         await dbContext.SaveChangesAsync();
     }
 
-    private static N8nConfigService CreateService(MeepleAiDbContext dbContext, Mock<IHttpClientFactory>? httpClientFactoryMock = null)
+    private static N8nConfigService CreateService(
+        MeepleAiDbContext dbContext,
+        Mock<IHttpClientFactory>? httpClientFactoryMock = null,
+        string? encryptionKey = "test-encryption-key")
     {
         httpClientFactoryMock ??= new Mock<IHttpClientFactory>();
         httpClientFactoryMock
@@ -50,11 +53,44 @@ public class N8nConfigServiceTests
         var configurationMock = new Mock<IConfiguration>();
         configurationMock
             .Setup(c => c[It.Is<string>(key => key == "N8N_ENCRYPTION_KEY")])
-            .Returns("test-encryption-key");
+            .Returns(encryptionKey);
 
         var loggerMock = new Mock<ILogger<N8nConfigService>>();
 
         return new N8nConfigService(dbContext, httpClientFactoryMock.Object, configurationMock.Object, loggerMock.Object);
+    }
+
+    [Fact]
+    public async Task CreateConfigAsync_WhenEncryptionKeyMissing_Throws()
+    {
+        await using var dbContext = CreateInMemoryContext();
+        await SeedUserAsync(dbContext, "user");
+
+        var service = CreateService(dbContext, encryptionKey: null);
+
+        var act = () => service.CreateConfigAsync(
+            "user",
+            new CreateN8nConfigRequest("NoKey", "https://example.com", "secret", null),
+            CancellationToken.None);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(act);
+    }
+
+    [Fact]
+    public async Task CreateConfigAsync_WhenEncryptionKeyIsPlaceholder_Throws()
+    {
+        await using var dbContext = CreateInMemoryContext();
+        await SeedUserAsync(dbContext, "user");
+
+        const string placeholder = "changeme-replace-with-32-byte-key-in-production";
+        var service = CreateService(dbContext, encryptionKey: placeholder);
+
+        var act = () => service.CreateConfigAsync(
+            "user",
+            new CreateN8nConfigRequest("Placeholder", "https://example.com", "secret", null),
+            CancellationToken.None);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(act);
     }
 
     [Fact]

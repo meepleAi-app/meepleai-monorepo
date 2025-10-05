@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using System;
 using System.Linq;
 using System.Security.Claims;
 using Api.Infrastructure.Entities;
@@ -221,6 +222,37 @@ app.Use(async (context, next) =>
 });
 
 app.MapGet("/", () => Results.Json(new { ok = true, name = "MeepleAgentAI" }));
+
+app.MapGet("/logs", async (AiRequestLogService logService, CancellationToken ct) =>
+{
+    var entries = await logService.GetRequestsAsync(limit: 100, ct: ct);
+
+    var response = entries
+        .Select(log =>
+        {
+            var level = string.Equals(log.Status, "Error", StringComparison.OrdinalIgnoreCase)
+                ? "ERROR"
+                : "INFO";
+
+            var message = !string.IsNullOrWhiteSpace(log.ResponseSnippet)
+                ? log.ResponseSnippet!
+                : !string.IsNullOrWhiteSpace(log.Query)
+                    ? log.Query!
+                    : $"{log.Endpoint} request ({log.Status})";
+
+            return new LogEntryResponse(
+                log.CreatedAt,
+                level,
+                message,
+                log.Id,
+                log.UserId,
+                log.GameId
+            );
+        })
+        .ToList();
+
+    return Results.Json(response);
+});
 
 app.MapPost("/auth/register", async (RegisterPayload payload, HttpContext context, AuthService auth, ILogger<Program> logger, CancellationToken ct) =>
 {

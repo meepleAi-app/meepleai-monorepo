@@ -184,42 +184,36 @@ export default function UploadPage() {
       return;
     }
 
+    if (!documentId) {
+      setMessage('Please upload a PDF before parsing');
+      return;
+    }
+
     setParsing(true);
     setMessage('');
 
     try {
-      const mockRuleSpec: RuleSpec = {
-        gameId: confirmedGameId,
-        version: '1.0.0',
-        createdAt: new Date().toISOString(),
-        rules: [
-          {
-            id: '1',
-            text: 'Chess is played on a square board of eight rows and eight columns.',
-            section: 'Setup',
-            page: '1',
-            line: '1'
-          },
-          {
-            id: '2',
-            text: 'The game is played by two players, one controlling the white pieces and the other controlling the black pieces.',
-            section: 'Setup',
-            page: '1',
-            line: '3'
-          },
-          {
-            id: '3',
-            text: 'Each player begins the game with 16 pieces: one king, one queen, two rooks, two knights, two bishops, and eight pawns.',
-            section: 'Setup',
-            page: '1',
-            line: '5'
+      const response = await fetch(`${API_BASE}/ingest/pdf/${documentId}/rulespec`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        let errorMessage = response.statusText;
+        try {
+          const errorBody = await response.json();
+          if (errorBody?.error) {
+            errorMessage = errorBody.error;
           }
-        ]
-      };
+        } catch (jsonError) {
+          console.warn('Failed to parse error response', jsonError);
+        }
+        throw new Error(errorMessage);
+      }
 
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const spec = (await response.json()) as RuleSpec;
 
-      setRuleSpec(mockRuleSpec);
+      setRuleSpec(spec);
       setMessage('✅ PDF parsed successfully!');
       setCurrentStep('review');
     } catch (error) {
@@ -628,15 +622,15 @@ export default function UploadPage() {
           </p>
           <button
             onClick={handleParse}
-            disabled={parsing}
+            disabled={parsing || !documentId}
             style={{
               padding: '12px 24px',
-              backgroundColor: parsing ? '#ccc' : '#0070f3',
+              backgroundColor: parsing || !documentId ? '#ccc' : '#0070f3',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
               fontSize: '16px',
-              cursor: parsing ? 'not-allowed' : 'pointer',
+              cursor: parsing || !documentId ? 'not-allowed' : 'pointer',
               fontWeight: '500',
               marginRight: '12px'
             }}

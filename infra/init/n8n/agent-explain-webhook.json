@@ -17,7 +17,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const requestId = $('Webhook Trigger').first().json.headers['x-correlation-id'] || \n  `n8n-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;\n\nconst body = $('Webhook Trigger').first().json.body;\n\nreturn {\n  requestId,\n  tenantId: body.tenantId,\n  gameId: body.gameId,\n  topic: body.topic,\n  timestamp: new Date().toISOString()\n};"
+        "jsCode": "const requestId = $('Webhook Trigger').first().json.headers['x-correlation-id'] || \n  `n8n-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;\n\nconst body = $('Webhook Trigger').first().json.body;\n\nreturn {\n  requestId,\n  gameId: body.gameId,\n  topic: body.topic,\n  timestamp: new Date().toISOString()\n};"
       },
       "id": "prepare-request",
       "name": "Prepare Request",
@@ -32,10 +32,6 @@
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            {
-              "name": "tenantId",
-              "value": "={{ $json.tenantId }}"
-            },
             {
               "name": "gameId",
               "value": "={{ $json.gameId }}"
@@ -153,7 +149,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const requestData = $('Prepare Request').first().json;\nconst apiCall = $('Call Backend API').first();\nconst isSuccess = !apiCall.json.error;\n\nconsole.log(JSON.stringify({\n  level: isSuccess ? 'info' : 'error',\n  requestId: requestData.requestId,\n  timestamp: requestData.timestamp,\n  tenantId: requestData.tenantId,\n  gameId: requestData.gameId,\n  topic: requestData.topic,\n  success: isSuccess,\n  responseTime: Date.now() - new Date(requestData.timestamp).getTime(),\n  error: isSuccess ? null : (apiCall.json.error?.message || 'Unknown error')\n}));\n\nreturn {};"
+        "jsCode": "const requestData = $('Prepare Request').first().json;\nconst apiCall = $('Call Backend API').first();\nconst isSuccess = !apiCall.json.error;\n\nconsole.log(JSON.stringify({\n  level: isSuccess ? 'info' : 'error',\n  requestId: requestData.requestId,\n  timestamp: requestData.timestamp,\n  gameId: requestData.gameId,\n  topic: requestData.topic,\n  success: isSuccess,\n  responseTime: Date.now() - new Date(requestData.timestamp).getTime(),\n  error: isSuccess ? null : (apiCall.json.error?.message || 'Unknown error')\n}));\n\nreturn {};"
       },
       "id": "log-request",
       "name": "Log Request",

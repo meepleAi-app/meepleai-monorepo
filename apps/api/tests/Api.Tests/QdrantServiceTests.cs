@@ -87,7 +87,7 @@ public class QdrantServiceTests
         IReadOnlyList<PointStruct>? capturedPoints = null;
         _clientAdapterMock
             .Setup(x => x.UpsertAsync(CollectionName, It.IsAny<IReadOnlyList<PointStruct>>(), It.IsAny<CancellationToken>()))
-            .Callback<string, IReadOnlyList<PointStruct>, CancellationToken>((_, points, _) => capturedPoints = points.ToList())
+            .Callback<string, IReadOnlyList<PointStruct>, CancellationToken>((_, points, _) => capturedPoints = points)
             .Returns(Task.CompletedTask);
 
         var result = await _sut.IndexDocumentChunksAsync("game-1", "pdf-1", chunks);

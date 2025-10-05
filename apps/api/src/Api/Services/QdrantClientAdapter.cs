@@ -29,10 +29,9 @@ public class QdrantClientAdapter : IQdrantClientAdapter
         _logger.LogInformation("Qdrant client initialized for {Host}:{Port} (HTTPS: {UseHttps})", host, grpcPort, useHttps);
     }
 
-    public async Task<IReadOnlyList<string>> ListCollectionsAsync(CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<string>> ListCollectionsAsync(CancellationToken cancellationToken = default)
     {
-        var collections = await _client.ListCollectionsAsync(cancellationToken: cancellationToken);
-        return collections.ToList();
+        return _client.ListCollectionsAsync(cancellationToken: cancellationToken);
     }
 
     public Task CreateCollectionAsync(
@@ -60,21 +59,19 @@ public class QdrantClientAdapter : IQdrantClientAdapter
         return _client.UpsertAsync(collectionName, points.ToList(), cancellationToken: cancellationToken);
     }
 
-    public async Task<IReadOnlyList<ScoredPoint>> SearchAsync(
+    public Task<IReadOnlyList<ScoredPoint>> SearchAsync(
         string collectionName,
         float[] vector,
         Filter? filter = default,
         ulong? limit = null,
         CancellationToken cancellationToken = default)
     {
-        var results = await _client.SearchAsync(
+        return _client.SearchAsync(
             collectionName: collectionName,
             vector: vector,
             filter: filter,
             limit: limit ?? 10,
             cancellationToken: cancellationToken);
-
-        return results.ToList();
     }
 
     public Task DeleteAsync(

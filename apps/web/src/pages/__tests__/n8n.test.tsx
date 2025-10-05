@@ -4,7 +4,6 @@ const initialApiBaseEnv = process.env.NEXT_PUBLIC_API_BASE;
 if (!process.env.NEXT_PUBLIC_API_BASE) {
   process.env.NEXT_PUBLIC_API_BASE = 'http://api.test';
 }
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const N8nWorkflowManagement = require('../n8n').default;
 
 type Deferred<T> = {
@@ -73,7 +72,6 @@ describe('N8nWorkflowManagement', () => {
     delete process.env.NEXT_PUBLIC_API_BASE;
 
     jest.isolateModules(() => {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { apiBase } = require('../n8n');
       expect(apiBase).toBe('http://localhost:8080');
     });

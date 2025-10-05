@@ -271,7 +271,7 @@ public class PdfStorageService
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var chunkingService = scope.ServiceProvider.GetRequiredService<TextChunkingService>();
         var embeddingService = scope.ServiceProvider.GetRequiredService<EmbeddingService>();
-        var qdrantService = scope.ServiceProvider.GetRequiredService<QdrantService>();
+        var qdrantService = scope.ServiceProvider.GetRequiredService<IQdrantService>();
 
         try
         {

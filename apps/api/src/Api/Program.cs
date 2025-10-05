@@ -49,6 +49,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IBackgroundTaskService, BackgroundTaskService>();
 
 // AI-01: Vector search services
+builder.Services.AddSingleton<IQdrantClientAdapter, QdrantClientAdapter>();
 builder.Services.AddSingleton<IQdrantService, QdrantService>();
 builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
 builder.Services.AddScoped<ILlmService, LlmService>();
@@ -106,7 +107,7 @@ using (var scope = app.Services.CreateScope())
         db.Database.Migrate();
 
         // AI-01: Initialize Qdrant collection
-        var qdrant = scope.ServiceProvider.GetRequiredService<QdrantService>();
+        var qdrant = scope.ServiceProvider.GetRequiredService<IQdrantService>();
         await qdrant.EnsureCollectionExistsAsync();
     }
 }

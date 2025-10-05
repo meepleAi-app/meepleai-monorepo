@@ -46,9 +46,7 @@ public class QaEndpointTests
             .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(embeddingResult);
 
-        var qdrantServiceMock = new Mock<QdrantService>(
-            Mock.Of<Microsoft.Extensions.Configuration.IConfiguration>(),
-            Mock.Of<ILogger<QdrantService>>());
+        var qdrantServiceMock = new Mock<IQdrantService>();
 
         // Configure mock to return successful search result with expected answer
         var searchResults = new List<SearchResultItem>

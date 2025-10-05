@@ -1,0 +1,13 @@
+# Files and directories to ignore in Docker build context
+node_modules
+npm-debug.log
+Dockerfile
+.dockerignore
+.git
+.gitignore
+.next
+out
+coverage
+.vscode
+.env
+.env.*

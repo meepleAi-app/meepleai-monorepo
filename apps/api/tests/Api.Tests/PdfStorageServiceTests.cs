@@ -55,12 +55,27 @@ public class PdfStorageServiceTests
             backgroundTaskMock.Object);
     }
 
+    private static async Task SeedUserAsync(MeepleAiDbContext dbContext, string userId)
+    {
+        dbContext.Users.Add(new UserEntity
+        {
+            Id = userId,
+            Email = $"{userId}@example.com",
+            PasswordHash = "hashed-password",
+            Role = UserRole.User,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        await dbContext.SaveChangesAsync();
+    }
+
     [Fact]
     public async Task UploadPdfAsync_WithNullFile_ReturnsFailure()
     {
         await using var dbContext = CreateInMemoryContext();
         dbContext.Games.Add(new GameEntity { Id = "game-1", Name = "Game" });
         await dbContext.SaveChangesAsync();
+        await SeedUserAsync(dbContext, "user");
 
         var storagePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         try
@@ -89,6 +104,7 @@ public class PdfStorageServiceTests
         await using var dbContext = CreateInMemoryContext();
         dbContext.Games.Add(new GameEntity { Id = "game-1", Name = "Game" });
         await dbContext.SaveChangesAsync();
+        await SeedUserAsync(dbContext, "user");
 
         var storagePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         try
@@ -122,6 +138,7 @@ public class PdfStorageServiceTests
         await using var dbContext = CreateInMemoryContext();
         dbContext.Games.Add(new GameEntity { Id = "game-1", Name = "Game" });
         await dbContext.SaveChangesAsync();
+        await SeedUserAsync(dbContext, "user");
 
         var storagePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         try
@@ -153,6 +170,7 @@ public class PdfStorageServiceTests
     public async Task UploadPdfAsync_WhenGameMissing_ReturnsFailure()
     {
         await using var dbContext = CreateInMemoryContext();
+        await SeedUserAsync(dbContext, "user");
 
         var storagePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         try
@@ -183,6 +201,7 @@ public class PdfStorageServiceTests
         await using var dbContext = CreateInMemoryContext();
         dbContext.Games.Add(new GameEntity { Id = "game-1", Name = "Game" });
         await dbContext.SaveChangesAsync();
+        await SeedUserAsync(dbContext, "user");
 
         var storagePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         Func<Task>? scheduledTask = null;

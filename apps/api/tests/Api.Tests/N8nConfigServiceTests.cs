@@ -26,6 +26,20 @@ public class N8nConfigServiceTests
         return context;
     }
 
+    private static async Task SeedUserAsync(MeepleAiDbContext dbContext, string userId)
+    {
+        dbContext.Users.Add(new UserEntity
+        {
+            Id = userId,
+            Email = $"{userId}@example.com",
+            PasswordHash = "hashed-password",
+            Role = UserRole.User,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        await dbContext.SaveChangesAsync();
+    }
+
     private static N8nConfigService CreateService(MeepleAiDbContext dbContext, Mock<IHttpClientFactory>? httpClientFactoryMock = null)
     {
         httpClientFactoryMock ??= new Mock<IHttpClientFactory>();
@@ -47,6 +61,7 @@ public class N8nConfigServiceTests
     public async Task CreateConfigAsync_PersistsConfigWithTrimmedValues()
     {
         await using var dbContext = CreateInMemoryContext();
+        await SeedUserAsync(dbContext, "user-1");
         var service = CreateService(dbContext);
 
         var result = await service.CreateConfigAsync(
@@ -68,6 +83,7 @@ public class N8nConfigServiceTests
     public async Task UpdateConfigAsync_ModifiesFields()
     {
         await using var dbContext = CreateInMemoryContext();
+        await SeedUserAsync(dbContext, "creator");
         var service = CreateService(dbContext);
 
         var created = await service.CreateConfigAsync(
@@ -102,6 +118,7 @@ public class N8nConfigServiceTests
     public async Task UpdateConfigAsync_WhenNameConflicts_Throws()
     {
         await using var dbContext = CreateInMemoryContext();
+        await SeedUserAsync(dbContext, "user");
         var service = CreateService(dbContext);
 
         var first = await service.CreateConfigAsync(
@@ -124,6 +141,7 @@ public class N8nConfigServiceTests
     public async Task DeleteConfigAsync_RemovesEntity()
     {
         await using var dbContext = CreateInMemoryContext();
+        await SeedUserAsync(dbContext, "user");
         var service = CreateService(dbContext);
 
         var created = await service.CreateConfigAsync(
@@ -141,6 +159,7 @@ public class N8nConfigServiceTests
     public async Task DeleteConfigAsync_WhenMissing_ReturnsFalse()
     {
         await using var dbContext = CreateInMemoryContext();
+        await SeedUserAsync(dbContext, "user");
         var service = CreateService(dbContext);
 
         var deleted = await service.DeleteConfigAsync("missing", CancellationToken.None);

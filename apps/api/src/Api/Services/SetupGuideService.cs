@@ -1,6 +1,8 @@
 using Api.Infrastructure;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Api.Services;
 
@@ -71,6 +73,7 @@ public class SetupGuideService
             };
 
             var allSteps = new List<SetupGuideStep>();
+            var confidences = new List<double>();
             var stepNumber = 1;
 
             foreach (var query in setupQueries)
@@ -88,6 +91,11 @@ public class SetupGuideService
 
                     allSteps.Add(step);
                 }
+
+                if (setupInfo.confidence.HasValue)
+                {
+                    confidences.Add(setupInfo.confidence.Value);
+                }
             }
 
             // If no steps found via RAG, create default steps
@@ -103,10 +111,16 @@ public class SetupGuideService
                 "Generated setup guide for game {GameId} with {StepCount} steps",
                 gameId, allSteps.Count);
 
+            var confidence = confidences.Count > 0 ? (double?)confidences.Max() : null;
+
             var response = new SetupGuideResponse(
                 game.Name,
                 allSteps,
-                estimatedTime
+                estimatedTime,
+                0,
+                0,
+                0,
+                confidence
             );
 
             // AI-05: Cache the response for future requests
@@ -124,7 +138,7 @@ public class SetupGuideService
     /// <summary>
     /// Query RAG system for setup-related information
     /// </summary>
-    private async Task<(string answer, List<Snippet> snippets)> QuerySetupInformationAsync(
+    private async Task<(string answer, List<Snippet> snippets, double? confidence)> QuerySetupInformationAsync(
         string gameId,
         string query,
         CancellationToken cancellationToken)
@@ -135,7 +149,7 @@ public class SetupGuideService
             var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
             if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
             {
-                return (string.Empty, new List<Snippet>());
+                return (string.Empty, new List<Snippet>(), null);
             }
 
             var queryEmbedding = embeddingResult.Embeddings[0];
@@ -149,7 +163,7 @@ public class SetupGuideService
 
             if (!searchResult.Success || searchResult.Results.Count == 0)
             {
-                return (string.Empty, new List<Snippet>());
+                return (string.Empty, new List<Snippet>(), null);
             }
 
             // Build snippets from results
@@ -163,12 +177,14 @@ public class SetupGuideService
             // Use top result as the answer
             var answer = searchResult.Results[0].Text;
 
-            return (answer, snippets);
+            var confidence = (double?)searchResult.Results.Max(r => r.Score);
+
+            return (answer, snippets, confidence);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Error querying setup information for: {Query}", query);
-            return (string.Empty, new List<Snippet>());
+            return (string.Empty, new List<Snippet>(), null);
         }
     }
 

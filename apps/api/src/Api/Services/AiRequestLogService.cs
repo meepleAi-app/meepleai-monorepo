@@ -27,6 +27,10 @@ public class AiRequestLogService
         string? errorMessage = null,
         string? ipAddress = null,
         string? userAgent = null,
+        int? promptTokens = null,
+        int? completionTokens = null,
+        string? model = null,
+        string? finishReason = null,
         CancellationToken ct = default)
     {
         try
@@ -39,12 +43,16 @@ public class AiRequestLogService
                 Query = query,
                 ResponseSnippet = responseSnippet,
                 LatencyMs = latencyMs,
-                TokenCount = tokenCount,
+                TokenCount = tokenCount ?? 0,
+                PromptTokens = promptTokens ?? 0,
+                CompletionTokens = completionTokens ?? 0,
                 Confidence = confidence,
                 Status = status,
                 ErrorMessage = errorMessage,
                 IpAddress = ipAddress,
                 UserAgent = userAgent,
+                Model = model,
+                FinishReason = finishReason,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -133,7 +141,7 @@ public class AiRequestLogService
 
         var totalRequests = await query.CountAsync(ct);
         var avgLatency = await query.AverageAsync(log => (double?)log.LatencyMs, ct) ?? 0;
-        var totalTokens = await query.SumAsync(log => log.TokenCount ?? 0, ct);
+        var totalTokens = await query.SumAsync(log => log.TokenCount, ct);
         var successCount = await query.CountAsync(log => log.Status == "Success", ct);
 
         var endpointCounts = await query

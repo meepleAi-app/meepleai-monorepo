@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Api.Infrastructure;
@@ -34,17 +36,27 @@ public class PdfStorageServiceTests
         MeepleAiDbContext dbContext,
         string storagePath,
         Mock<IBackgroundTaskService> backgroundTaskMock,
-        Mock<IServiceScopeFactory>? scopeFactoryMock = null)
+        Mock<IServiceScopeFactory>? scopeFactoryMock = null,
+        Mock<IAiResponseCacheService>? cacheMock = null)
+        PdfTextExtractionService? textExtractionService = null,
+        PdfTableExtractionService? tableExtractionService = null,
+        ITextChunkingService? textChunkingService = null,
+        IEmbeddingService? embeddingService = null,
+        IQdrantService? qdrantService = null)
     {
         var configurationMock = new Mock<IConfiguration>();
         configurationMock.Setup(c => c[It.Is<string>(key => key == "PDF_STORAGE_PATH")]).Returns(storagePath);
 
         scopeFactoryMock ??= new Mock<IServiceScopeFactory>(MockBehavior.Strict);
+        cacheMock ??= new Mock<IAiResponseCacheService>();
+        cacheMock
+            .Setup(x => x.InvalidateGameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        cacheMock
+            .Setup(x => x.InvalidateEndpointAsync(It.IsAny<string>(), It.IsAny<AiCacheEndpoint>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         var loggerMock = new Mock<ILogger<PdfStorageService>>();
-        var textExtractionService = new PdfTextExtractionService(Mock.Of<ILogger<PdfTextExtractionService>>());
-        var tableExtractionService = new PdfTableExtractionService(Mock.Of<ILogger<PdfTableExtractionService>>());
-
         return new PdfStorageService(
             dbContext,
             scopeFactoryMock.Object,
@@ -52,7 +64,14 @@ public class PdfStorageServiceTests
             loggerMock.Object,
             textExtractionService,
             tableExtractionService,
-            backgroundTaskMock.Object);
+            backgroundTaskMock.Object,
+            cacheMock.Object);
+            textExtractionService ?? new PdfTextExtractionService(Mock.Of<ILogger<PdfTextExtractionService>>()),
+            tableExtractionService ?? new PdfTableExtractionService(Mock.Of<ILogger<PdfTableExtractionService>>()),
+            backgroundTaskMock.Object,
+            textChunkingService,
+            embeddingService,
+            qdrantService);
     }
 
     private static async Task SeedUserAsync(MeepleAiDbContext dbContext, string userId)
@@ -213,8 +232,9 @@ public class PdfStorageServiceTests
                 .Callback<Func<Task>>(task => scheduledTask = task);
 
             var scopeFactoryMock = new Mock<IServiceScopeFactory>(MockBehavior.Strict);
+            var cacheMock = new Mock<IAiResponseCacheService>();
 
-            var service = CreateService(dbContext, storagePath, backgroundMock, scopeFactoryMock);
+            var service = CreateService(dbContext, storagePath, backgroundMock, scopeFactoryMock, cacheMock);
 
             var file = CreateFormFile("rules.pdf", "application/pdf", new byte[] { 1, 2, 3, 4 });
 
@@ -234,6 +254,162 @@ public class PdfStorageServiceTests
             Assert.Equal("user", stored.UploadedByUserId);
 
             Assert.NotNull(scheduledTask);
+
+            cacheMock.Verify(x => x.InvalidateGameAsync("game-1", It.IsAny<CancellationToken>()), Times.Once);
+        }
+        finally
+        {
+            if (Directory.Exists(storagePath))
+            {
+                Directory.Delete(storagePath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task IndexVectorsAsync_UsesOverridesWhenProvided()
+    {
+        await using var dbContext = CreateInMemoryContext();
+        dbContext.Games.Add(new GameEntity { Id = "game-1", Name = "Game" });
+        await dbContext.SaveChangesAsync();
+        await SeedUserAsync(dbContext, "user");
+
+        var storagePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var scheduledTasks = new List<Func<Task>>();
+
+        try
+        {
+            var backgroundMock = new Mock<IBackgroundTaskService>();
+            backgroundMock
+                .Setup(b => b.Execute(It.IsAny<Func<Task>>()))
+                .Callback<Func<Task>>(task => scheduledTasks.Add(task));
+
+            var scopeFactoryMock = new Mock<IServiceScopeFactory>();
+            var serviceProviderMock = new Mock<IServiceProvider>(MockBehavior.Strict);
+            serviceProviderMock
+                .Setup(sp => sp.GetService(typeof(MeepleAiDbContext)))
+                .Returns(dbContext);
+            serviceProviderMock
+                .Setup(sp => sp.GetService(typeof(PdfTableExtractionService)))
+                .Returns(null);
+            serviceProviderMock
+                .Setup(sp => sp.GetService(typeof(ITextChunkingService)))
+                .Throws(new InvalidOperationException("Scope chunking should not be used"));
+            serviceProviderMock
+                .Setup(sp => sp.GetService(typeof(IEmbeddingService)))
+                .Throws(new InvalidOperationException("Scope embedding should not be used"));
+            serviceProviderMock
+                .Setup(sp => sp.GetService(typeof(IQdrantService)))
+                .Throws(new InvalidOperationException("Scope Qdrant should not be used"));
+
+            var scopeMock = new Mock<IServiceScope>();
+            scopeMock.SetupGet(s => s.ServiceProvider).Returns(serviceProviderMock.Object);
+            scopeMock.Setup(s => s.Dispose());
+            scopeFactoryMock.Setup(s => s.CreateScope()).Returns(scopeMock.Object);
+
+            var textExtractionMock = new Mock<PdfTextExtractionService>(
+                MockBehavior.Strict,
+                Mock.Of<ILogger<PdfTextExtractionService>>());
+            textExtractionMock
+                .Setup(s => s.ExtractTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(PdfTextExtractionResult.CreateSuccess("chunk-one\nchunk-two", 1, 18));
+
+            var tableExtractionMock = new Mock<PdfTableExtractionService>(
+                MockBehavior.Strict,
+                Mock.Of<ILogger<PdfTableExtractionService>>());
+            tableExtractionMock
+                .Setup(s => s.ExtractStructuredContentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(PdfStructuredExtractionResult.CreateSuccess(
+                    new List<PdfTable>(),
+                    new List<PdfDiagram>(),
+                    new List<string>()));
+
+            var chunkingMock = new Mock<ITextChunkingService>(MockBehavior.Strict);
+            var chunkInputs = new List<DocumentChunkInput>
+            {
+                new() { Text = "chunk-one", Page = 1, CharStart = 0, CharEnd = 8 },
+                new() { Text = "chunk-two", Page = 1, CharStart = 9, CharEnd = 17 }
+            };
+            chunkingMock
+                .Setup(c => c.PrepareForEmbedding(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+                .Returns<string, int, int>((text, _, _) =>
+                {
+                    Assert.Equal("chunk-one\nchunk-two", text);
+                    return chunkInputs;
+                });
+
+            var embeddingMock = new Mock<IEmbeddingService>(MockBehavior.Strict);
+            var embeddings = new List<float[]>
+            {
+                new float[] { 0.1f, 0.2f },
+                new float[] { 0.3f, 0.4f }
+            };
+            embeddingMock
+                .Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((List<string> texts, CancellationToken _) =>
+                {
+                    Assert.Equal(chunkInputs.Select(c => c.Text), texts);
+                    return EmbeddingResult.CreateSuccess(embeddings);
+                });
+
+            var qdrantMock = new Mock<IQdrantService>(MockBehavior.Strict);
+            qdrantMock
+                .Setup(q => q.IndexDocumentChunksAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<List<DocumentChunk>>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string gameId, string pdfId, List<DocumentChunk> chunks, CancellationToken _) =>
+                {
+                    Assert.Equal("game-1", gameId);
+                    Assert.Equal(chunkInputs.Count, chunks.Count);
+                    for (var i = 0; i < chunks.Count; i++)
+                    {
+                        Assert.Equal(chunkInputs[i].Text, chunks[i].Text);
+                        Assert.Equal(embeddings[i], chunks[i].Embedding);
+                    }
+
+                    return IndexResult.CreateSuccess(chunks.Count);
+                });
+
+            var service = CreateService(
+                dbContext,
+                storagePath,
+                backgroundMock,
+                scopeFactoryMock,
+                textExtractionMock.Object,
+                tableExtractionMock.Object,
+                chunkingMock.Object,
+                embeddingMock.Object,
+                qdrantMock.Object);
+
+            var file = CreateFormFile("rules.pdf", "application/pdf", new byte[] { 1, 2, 3, 4 });
+            var uploadResult = await service.UploadPdfAsync("game-1", "user", file, CancellationToken.None);
+
+            Assert.True(uploadResult.Success);
+            Assert.Single(scheduledTasks);
+
+            var extractionTask = scheduledTasks.Single();
+            await extractionTask();
+
+            Assert.Equal(2, scheduledTasks.Count);
+
+            var indexingTask = scheduledTasks[1];
+            await indexingTask();
+
+            chunkingMock.Verify(
+                c => c.PrepareForEmbedding(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()),
+                Times.Once);
+            embeddingMock.Verify(
+                e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()),
+                Times.Once);
+            qdrantMock.Verify(
+                q => q.IndexDocumentChunksAsync(
+                    "game-1",
+                    It.IsAny<string>(),
+                    It.IsAny<List<DocumentChunk>>(),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
         }
         finally
         {

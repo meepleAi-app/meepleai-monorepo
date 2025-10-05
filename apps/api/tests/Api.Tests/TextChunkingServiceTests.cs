@@ -101,6 +101,34 @@ public class TextChunkingServiceTests
     }
 
     [Fact]
+    public void ChunkText_WithOverlap_PreservesOverlappingCharacters()
+    {
+        var text = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        var chunkSize = 20;
+        var overlap = 5;
+
+        var result = _service.ChunkText(text, chunkSize: chunkSize, overlap: overlap);
+
+        Assert.True(result.Count > 1, "Expected multiple chunks for overlap verification");
+
+        for (int i = 0; i < result.Count - 1; i++)
+        {
+            var current = result[i];
+            var next = result[i + 1];
+
+            var currentOverlapStart = Math.Max(current.CharEnd - overlap, current.CharStart);
+            var overlapLength = Math.Min(overlap, Math.Min(current.CharEnd - currentOverlapStart, next.CharEnd - next.CharStart));
+
+            Assert.True(overlapLength > 0, "Chunks should share overlapping characters");
+
+            var expectedOverlap = text.Substring(currentOverlapStart, overlapLength);
+            var actualOverlap = text.Substring(next.CharStart, overlapLength);
+
+            Assert.Equal(expectedOverlap, actualOverlap);
+        }
+    }
+
+    [Fact]
     public void ChunkText_AssignsIncrementalIndexes()
     {
         var text = "Sentence one. Sentence two. Sentence three. Sentence four. Sentence five.";

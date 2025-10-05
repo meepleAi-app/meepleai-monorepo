@@ -44,6 +44,10 @@ public class AiRequestLogServiceTests
             errorMessage: null,
             ipAddress: "127.0.0.1",
             userAgent: "agent",
+            promptTokens: 300,
+            completionTokens: 200,
+            model: "anthropic/claude-3.5-sonnet",
+            finishReason: "stop",
             ct: CancellationToken.None);
 
         var logs = await dbContext.AiRequestLogs.ToListAsync();
@@ -57,10 +61,14 @@ public class AiRequestLogServiceTests
         Assert.Equal("Setup details...", log.ResponseSnippet);
         Assert.Equal(120, log.LatencyMs);
         Assert.Equal(500, log.TokenCount);
+        Assert.Equal(300, log.PromptTokens);
+        Assert.Equal(200, log.CompletionTokens);
         Assert.Equal(0.9, log.Confidence);
         Assert.Equal("Success", log.Status);
         Assert.Equal("127.0.0.1", log.IpAddress);
         Assert.Equal("agent", log.UserAgent);
+        Assert.Equal("anthropic/claude-3.5-sonnet", log.Model);
+        Assert.Equal("stop", log.FinishReason);
         Assert.True(log.CreatedAt > DateTime.UtcNow.AddMinutes(-5));
     }
 

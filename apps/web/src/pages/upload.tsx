@@ -185,7 +185,7 @@ export default function UploadPage() {
     }
 
     if (!documentId) {
-      setMessage('Upload a PDF before parsing');
+      setMessage('Please upload a PDF before parsing');
       return;
     }
 
@@ -193,41 +193,27 @@ export default function UploadPage() {
     setMessage('');
 
     try {
-      const response = await fetch(`${API_BASE}/ingest/pdf/parse`, {
+      const response = await fetch(`${API_BASE}/ingest/pdf/${documentId}/rulespec`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          gameId: confirmedGameId,
-          documentId
-        })
+        credentials: 'include'
       });
 
       if (!response.ok) {
-        let errorDetail = response.statusText || `HTTP ${response.status}`;
+        let errorMessage = response.statusText;
         try {
-          const errorData = await response.json();
-          if (errorData && typeof errorData === 'object') {
-            if ('error' in errorData && errorData.error) {
-              errorDetail = String(errorData.error);
-            } else {
-              errorDetail = JSON.stringify(errorData);
-            }
+          const errorBody = await response.json();
+          if (errorBody?.error) {
+            errorMessage = errorBody.error;
           }
-        } catch {
-          // Ignore JSON parsing errors for error responses
+        } catch (jsonError) {
+          console.warn('Failed to parse error response', jsonError);
         }
-
-        if (response.status === 404) {
-          errorDetail = 'Parsing service not available. Please contact an administrator.';
-        }
-
-        throw new Error(errorDetail || 'Failed to parse PDF');
+        throw new Error(errorMessage);
       }
 
-      const parsedSpec = (await response.json()) as RuleSpec;
+      const spec = (await response.json()) as RuleSpec;
 
-      setRuleSpec(parsedSpec);
+      setRuleSpec(spec);
       setMessage('✅ PDF parsed successfully!');
       setCurrentStep('review');
     } catch (error) {

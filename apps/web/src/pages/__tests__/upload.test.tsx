@@ -124,23 +124,29 @@ describe('UploadPage', () => {
     await waitFor(() => expect(uploadButton).not.toBeDisabled());
   });
 
-  it('parses an uploaded PDF using the backend and shows review data', async () => {
+  it('parses an uploaded PDF using the rulespec ingest endpoint', async () => {
     const authResponse = {
       user: {
         id: 'user-3',
         email: 'user3@example.com',
-        role: 'Editor',
+        role: 'Admin',
         displayName: 'User Three'
       },
       expiresAt: new Date().toISOString()
     };
 
-    const ruleSpecResponse = {
-      gameId: 'game-1',
-      version: 'v1.2.3',
+    const parsedSpec = {
+      gameId: 'game-parse',
+      version: 'ingest-20240101000000',
       createdAt: new Date().toISOString(),
       rules: [
-        { id: 'r-1', text: 'Always draw five cards.', section: 'Setup', page: '2', line: '10' }
+        {
+          id: 'r1',
+          text: 'Setup: Distribute four cards to each player',
+          section: null,
+          page: '4',
+          line: null
+        }
       ]
     };
 
@@ -154,20 +160,20 @@ describe('UploadPage', () => {
 
       if (url.endsWith('/games') && method === 'GET') {
         return createJsonResponse([
-          { id: 'game-1', name: 'Terraforming Mars', createdAt: new Date().toISOString() }
+          { id: 'game-parse', name: 'Parse Game', createdAt: new Date().toISOString() }
         ]);
       }
 
-      if (url.includes('/games/game-1/pdfs')) {
+      if (url.includes('/games/game-parse/pdfs')) {
         return createJsonResponse({ pdfs: [] });
       }
 
       if (url.endsWith('/ingest/pdf') && method === 'POST') {
-        return createJsonResponse({ documentId: 'doc-123', fileName: 'rules.pdf' });
+        return createJsonResponse({ documentId: 'pdf-parse', fileName: 'rules.pdf' });
       }
 
-      if (url.endsWith('/ingest/pdf/parse') && method === 'POST') {
-        return createJsonResponse(ruleSpecResponse);
+      if (url.includes('/ingest/pdf/pdf-parse/rulespec') && method === 'POST') {
+        return createJsonResponse(parsedSpec);
       }
 
       throw new Error(`Unexpected fetch call to ${url}`);
@@ -175,7 +181,7 @@ describe('UploadPage', () => {
 
     render(<UploadPage />);
 
-    await waitFor(() => expect(screen.getByRole('button', { name: /Confirm selection/i })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
@@ -185,33 +191,17 @@ describe('UploadPage', () => {
 
     const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
     await waitFor(() => expect(uploadButton).not.toBeDisabled());
-
     fireEvent.click(uploadButton);
 
-    await waitFor(() =>
-      expect(screen.getByRole('heading', { name: 'Step 2: Parse PDF' })).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByText(/PDF uploaded successfully/i)).toBeInTheDocument());
 
-    fireEvent.click(screen.getByRole('button', { name: /Parse PDF/i }));
+    const parseButton = screen.getByRole('button', { name: /Parse PDF/i });
+    await waitFor(() => expect(parseButton).not.toBeDisabled());
+    fireEvent.click(parseButton);
 
-    await waitFor(() =>
-      expect(screen.getByRole('heading', { name: /Step 3: Review & Edit Rules/i })).toBeInTheDocument()
-    );
+    await waitFor(() => expect(screen.getByText(/PDF parsed successfully/i)).toBeInTheDocument());
 
-    const gameIdRow = screen.getByText(/Game ID:/i).closest('p');
-    const versionRow = screen.getByText(/Version:/i).closest('p');
-    expect(gameIdRow).toHaveTextContent('Game ID: game-1');
-    expect(versionRow).toHaveTextContent('Version: v1.2.3');
-    expect(screen.getByDisplayValue('Always draw five cards.')).toBeInTheDocument();
-
-    const parseCall = mockFetch.mock.calls.find(([request]) => {
-      const url = typeof request === 'string' ? request : request.toString();
-      return url.endsWith('/ingest/pdf/parse');
-    });
-
-    expect(parseCall).toBeDefined();
-    const [, parseInit] = parseCall!;
-    expect(parseInit?.method).toBe('POST');
-    expect(parseInit?.body).toBe(JSON.stringify({ gameId: 'game-1', documentId: 'doc-123' }));
+    expect(screen.getByDisplayValue('Setup: Distribute four cards to each player')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('4')).toBeInTheDocument();
   });
 });

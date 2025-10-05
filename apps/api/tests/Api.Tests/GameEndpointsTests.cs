@@ -29,10 +29,7 @@ public class GameEndpointsTests : IClassFixture<WebApplicationFactoryFixture>
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/games")
         {
-            Content = JsonContent.Create(new
-            {
-                name = "Terraforming Mars"
-            })
+            Content = JsonContent.Create(new CreateGameRequest("Terraforming Mars", "terraforming-mars"))
         };
 
         foreach (var cookie in cookies)
@@ -54,17 +51,17 @@ public class GameEndpointsTests : IClassFixture<WebApplicationFactoryFixture>
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var entity = await db.Games.FirstOrDefaultAsync(g => g.Id == game.Id);
         Assert.NotNull(entity);
+        Assert.Equal("terraforming-mars", entity!.Id);
+        Assert.Equal("Terraforming Mars", entity.Name);
     }
 
     private async Task<List<string>> RegisterAndAuthenticateAsync(string email)
     {
-        var registerRequest = new
-        {
+        var registerRequest = new RegisterPayload(
             email,
-            password = "Password123!",
-            displayName = "Test User",
-            role = "Admin"
-        };
+            "Password123!",
+            "Test User",
+            "Admin");
 
         var response = await _client.PostAsJsonAsync("/auth/register", registerRequest);
         response.EnsureSuccessStatusCode();

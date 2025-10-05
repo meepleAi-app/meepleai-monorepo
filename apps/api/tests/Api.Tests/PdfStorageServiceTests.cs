@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -26,6 +29,11 @@ public class PdfStorageServiceTests : IDisposable
     private readonly Mock<IBackgroundTaskService> _backgroundTaskMock;
     private readonly List<Func<Task>> _capturedTasks = new();
     private readonly string _storagePath;
+    private readonly ServiceProvider _scopeServiceProvider;
+    private readonly FakePdfTextExtractionService _fakeTextExtractionService;
+    private readonly FakePdfTableExtractionService _fakeTableExtractionService;
+    private readonly FakeEmbeddingService _fakeEmbeddingService;
+    private readonly FakeQdrantService _fakeQdrantService;
 
     public PdfStorageServiceTests()
     {
@@ -48,31 +56,44 @@ public class PdfStorageServiceTests : IDisposable
             })
             .Build();
 
+        _fakeTextExtractionService = new FakePdfTextExtractionService();
+        _fakeTableExtractionService = new FakePdfTableExtractionService();
+        _fakeEmbeddingService = new FakeEmbeddingService();
+        _fakeQdrantService = new FakeQdrantService();
+
+        var scopeServices = new ServiceCollection();
+        scopeServices.AddScoped(_ => _dbContext);
+        scopeServices.AddSingleton<ITextChunkingService>(
+            new TextChunkingService(NullLogger<TextChunkingService>.Instance));
+        scopeServices.AddSingleton<IEmbeddingService>(_fakeEmbeddingService);
+        scopeServices.AddSingleton<IQdrantService>(_fakeQdrantService);
+        scopeServices.AddSingleton<PdfTableExtractionService>(_fakeTableExtractionService);
+
+        _scopeServiceProvider = scopeServices.BuildServiceProvider();
+
         var scopeFactoryMock = new Mock<IServiceScopeFactory>();
         scopeFactoryMock
             .Setup(factory => factory.CreateScope())
-            .Returns(Mock.Of<IServiceScope>());
+            .Returns(() => _scopeServiceProvider.CreateScope());
 
         _backgroundTaskMock = new Mock<IBackgroundTaskService>();
         _backgroundTaskMock
             .Setup(service => service.Execute(It.IsAny<Func<Task>>()))
             .Callback<Func<Task>>(task => _capturedTasks.Add(task));
 
-        var textExtraction = new PdfTextExtractionService(NullLogger<PdfTextExtractionService>.Instance);
-        var tableExtraction = new PdfTableExtractionService(NullLogger<PdfTableExtractionService>.Instance);
-
         _service = new PdfStorageService(
             _dbContext,
             scopeFactoryMock.Object,
             configuration,
             NullLogger<PdfStorageService>.Instance,
-            textExtraction,
-            tableExtraction,
+            _fakeTextExtractionService,
+            _fakeTableExtractionService,
             _backgroundTaskMock.Object);
     }
 
     public void Dispose()
     {
+        _scopeServiceProvider.Dispose();
         _dbContext.Dispose();
         _connection.Dispose();
 
@@ -188,9 +209,62 @@ public class PdfStorageServiceTests : IDisposable
         Assert.StartsWith(savedDocument.Id, Path.GetFileNameWithoutExtension(savedDocument.FilePath));
         Assert.Equal("Test_Rules_.pdf", savedDocument.FileName);
         Assert.True(File.Exists(savedDocument.FilePath));
+        Assert.Equal("pending", savedDocument.ProcessingStatus);
 
         Assert.Single(_capturedTasks);
-        _backgroundTaskMock.Verify(service => service.Execute(It.IsAny<Func<Task>>()), Times.Once);
+
+        var processedIndex = 0;
+        while (processedIndex < _capturedTasks.Count)
+        {
+            var task = _capturedTasks[processedIndex];
+            processedIndex++;
+            await task();
+        }
+
+        Assert.Equal(2, _capturedTasks.Count);
+        _backgroundTaskMock.Verify(service => service.Execute(It.IsAny<Func<Task>>()), Times.Exactly(2));
+
+        await _dbContext.Entry(savedDocument).ReloadAsync();
+        Assert.Equal("completed", savedDocument.ProcessingStatus);
+        Assert.Equal(_fakeTextExtractionService.ExtractedText, savedDocument.ExtractedText);
+        Assert.Equal(_fakeTextExtractionService.PageCount, savedDocument.PageCount);
+        Assert.Equal(_fakeTextExtractionService.CharacterCount, savedDocument.CharacterCount);
+        Assert.NotNull(savedDocument.ProcessedAt);
+        Assert.True(_fakeTextExtractionService.Called);
+
+        Assert.True(_fakeTableExtractionService.Called);
+        var expectedTablesJson = JsonSerializer.Serialize(_fakeTableExtractionService.Tables);
+        var expectedDiagramsJson = JsonSerializer.Serialize(_fakeTableExtractionService.Diagrams.Select(d => new
+        {
+            d.PageNumber,
+            d.DiagramType,
+            d.Description,
+            d.Width,
+            d.Height
+        }));
+        var expectedAtomicRulesJson = JsonSerializer.Serialize(_fakeTableExtractionService.AtomicRules);
+
+        Assert.Equal(expectedTablesJson, savedDocument.ExtractedTables);
+        Assert.Equal(expectedDiagramsJson, savedDocument.ExtractedDiagrams);
+        Assert.Equal(expectedAtomicRulesJson, savedDocument.AtomicRules);
+        Assert.Equal(_fakeTableExtractionService.Tables.Count, savedDocument.TableCount);
+        Assert.Equal(_fakeTableExtractionService.Diagrams.Count, savedDocument.DiagramCount);
+        Assert.Equal(_fakeTableExtractionService.AtomicRules.Count, savedDocument.AtomicRuleCount);
+
+        Assert.Single(_fakeEmbeddingService.RequestedTexts);
+        Assert.All(_fakeEmbeddingService.RequestedTexts.Single(), text => Assert.False(string.IsNullOrWhiteSpace(text)));
+
+        Assert.NotNull(_fakeQdrantService.LastChunks);
+        Assert.Equal(_fakeEmbeddingService.RequestedTexts.Single().Count, _fakeQdrantService.LastChunks!.Count);
+        Assert.Equal(game.Id, _fakeQdrantService.LastGameId);
+        Assert.Equal(savedDocument.Id, _fakeQdrantService.LastPdfId);
+
+        var vectorDoc = await _dbContext.VectorDocuments.SingleAsync();
+        Assert.Equal(savedDocument.Id, vectorDoc.PdfDocumentId);
+        Assert.Equal(game.Id, vectorDoc.GameId);
+        Assert.Equal("completed", vectorDoc.IndexingStatus);
+        Assert.Equal(_fakeQdrantService.LastChunks!.Count, vectorDoc.ChunkCount);
+        Assert.NotNull(vectorDoc.IndexedAt);
     }
 
     [Fact]
@@ -278,5 +352,120 @@ public class PdfStorageServiceTests : IDisposable
         };
 
         return formFile;
+    }
+
+    private class FakePdfTextExtractionService : PdfTextExtractionService
+    {
+        public FakePdfTextExtractionService()
+            : base(NullLogger<PdfTextExtractionService>.Instance)
+        {
+        }
+
+        public bool Called { get; private set; }
+        public string ExtractedText { get; } = "Fake extracted text for testing.";
+        public int PageCount { get; } = 1;
+        public int CharacterCount => ExtractedText.Length;
+
+        public override Task<PdfTextExtractionResult> ExtractTextAsync(string filePath, CancellationToken ct = default)
+        {
+            Called = true;
+            return Task.FromResult(PdfTextExtractionResult.CreateSuccess(ExtractedText, PageCount, CharacterCount));
+        }
+    }
+
+    private class FakePdfTableExtractionService : PdfTableExtractionService
+    {
+        public FakePdfTableExtractionService()
+            : base(NullLogger<PdfTableExtractionService>.Instance)
+        {
+        }
+
+        public bool Called { get; private set; }
+        public List<PdfTable> Tables { get; } = new()
+        {
+            new PdfTable
+            {
+                PageNumber = 1,
+                StartLine = 0,
+                Headers = new List<string> { "Column A", "Column B" },
+                Rows = new List<string[]>
+                {
+                    new[] { "A1", "B1" }
+                },
+                ColumnCount = 2,
+                RowCount = 1
+            }
+        };
+
+        public List<PdfDiagram> Diagrams { get; } = new()
+        {
+            new PdfDiagram
+            {
+                PageNumber = 1,
+                DiagramType = "Flowchart",
+                Description = "Sample diagram",
+                Width = 100,
+                Height = 50
+            }
+        };
+
+        public List<string> AtomicRules { get; } = new() { "If A then B" };
+
+        public override Task<PdfStructuredExtractionResult> ExtractStructuredContentAsync(
+            string filePath,
+            CancellationToken ct = default)
+        {
+            Called = true;
+            return Task.FromResult(PdfStructuredExtractionResult.CreateSuccess(Tables, Diagrams, AtomicRules));
+        }
+    }
+
+    private class FakeEmbeddingService : IEmbeddingService
+    {
+        public List<List<string>> RequestedTexts { get; } = new();
+
+        public Task<EmbeddingResult> GenerateEmbeddingsAsync(List<string> texts, CancellationToken ct = default)
+        {
+            RequestedTexts.Add(new List<string>(texts));
+            var embeddings = texts.Select(_ => new float[] { 0.1f, 0.2f }).ToList();
+            return Task.FromResult(EmbeddingResult.CreateSuccess(embeddings));
+        }
+
+        public Task<EmbeddingResult> GenerateEmbeddingAsync(string text, CancellationToken ct = default)
+        {
+            return GenerateEmbeddingsAsync(new List<string> { text }, ct);
+        }
+    }
+
+    private class FakeQdrantService : IQdrantService
+    {
+        public string? LastGameId { get; private set; }
+        public string? LastPdfId { get; private set; }
+        public List<DocumentChunk>? LastChunks { get; private set; }
+
+        public Task EnsureCollectionExistsAsync(CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task<IndexResult> IndexDocumentChunksAsync(
+            string gameId,
+            string pdfId,
+            List<DocumentChunk> chunks,
+            CancellationToken ct = default)
+        {
+            LastGameId = gameId;
+            LastPdfId = pdfId;
+            LastChunks = chunks;
+            return Task.FromResult(IndexResult.CreateSuccess(chunks.Count));
+        }
+
+        public Task<SearchResult> SearchAsync(
+            string gameId,
+            float[] queryEmbedding,
+            int limit = 5,
+            CancellationToken ct = default)
+        {
+            return Task.FromResult(SearchResult.CreateSuccess(new List<SearchResultItem>()));
+        }
+
+        public Task<bool> DeleteDocumentAsync(string pdfId, CancellationToken ct = default) => Task.FromResult(true);
     }
 }

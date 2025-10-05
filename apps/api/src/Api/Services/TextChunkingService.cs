@@ -3,7 +3,7 @@ namespace Api.Services;
 /// <summary>
 /// Service for chunking text documents into smaller segments for embedding
 /// </summary>
-public class TextChunkingService
+public class TextChunkingService : ITextChunkingService
 {
     private readonly ILogger<TextChunkingService> _logger;
     private const int DefaultChunkSize = 512; // characters

@@ -188,7 +188,7 @@ Accogliamo contributi dalla community! Prima di iniziare:
 
 #### UX & Frontend
 - 📋 UI/UX completo per chat interfaccia
-- 📋 Dashboard amministrazione tenant
+- 📋 Dashboard amministrazione contenuti
 - 📋 Gestione upload PDF con progress tracking
 - 📋 Visualizzazione source documents per risposte
 
@@ -198,7 +198,7 @@ Accogliamo contributi dalla community! Prima di iniziare:
 - 📋 API pubblica per integrazioni terze parti
 
 #### Performance & Scale
-- 📋 Caching avanzato strategie (per query, per tenant)
+- 📋 Caching avanzato strategie (per query e profilo utente)
 - 📋 Ottimizzazione vector search con filtri pre-compute
 - 📋 Monitoring e observability (OpenTelemetry)
 

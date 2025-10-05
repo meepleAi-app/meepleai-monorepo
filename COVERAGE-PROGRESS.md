@@ -260,11 +260,11 @@ Significant progress made toward 90% coverage goal:
    - Page/line number parsing (valid, null, invalid)
    - Achieved **100% coverage** (from 74.1%)
 
-2. ✅ Created TenantContextTests with 10 comprehensive tests
+2. ✅ Created RequestContextTests with 10 comprehensive tests
    - Null context scenarios
    - Missing claims handling
-   - Valid tenant extraction
-   - GetRequiredTenantId validation
+   - Valid context extraction
+   - GetRequiredContextId validation
    - Edge cases (empty, whitespace)
    - Achieved **100% coverage** (from 46.1%)
 
@@ -308,7 +308,7 @@ Significant progress made toward 90% coverage goal:
 - **Overall**: ~40% → **~50%** (+10 percentage points)
 - Program.cs: 65.1% → **78.4%** (+13.3 pp) ✅ Exceeded 75% target
 - RuleSpecService: 74.1% → **100%** (+25.9 pp)
-- TenantContext: 46.1% → **100%** (+53.9 pp)
+- RequestContext: 46.1% → **100%** (+53.9 pp)
 - editor.tsx: 0% → **61.47%** (+61.47 pp)
 - RagService: 26.4% → **43.5%** (+17.1 pp, via integration tests)
 
@@ -371,9 +371,9 @@ Significant progress made toward 90% coverage goal:
    - Test now validates disabled state during upload + success message, not re-enable
 
 2. ✅ Fixed logs.test.tsx failure - "displays log metadata correctly"
-   - Component had tenantId in data but wasn't rendering it
-   - Added Tenant ID column to logs table header
-   - Added tenantId rendering in data rows
+   - Component had context metadata in data but wasn't rendering it
+   - Added Context column to logs table header
+   - Added metadata rendering in data rows
    - logs.tsx coverage maintained at 83.33%
 
 **Test Results**:
@@ -400,7 +400,7 @@ Significant progress made toward 90% coverage goal:
 
 **Files Modified**:
 - `apps/web/src/pages/upload.test.tsx` - Fixed 6 tests with correct expectations
-- `apps/web/src/pages/logs.tsx` - Added tenantId column rendering
+- `apps/web/src/pages/logs.tsx` - Added context metadata column rendering
 
 ---
 

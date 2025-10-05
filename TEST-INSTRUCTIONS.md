@@ -7,7 +7,7 @@
 - ✅ PostgreSQL with all migrations applied
 - ✅ Qdrant collection `meepleai_documents` created (1536-dim vectors, Cosine distance)
 - ✅ Redis cache running
-- ✅ Test user registered: `test@dev.com` (tenant: `dev`)
+- ✅ Test user registered: `test@dev.com`
 - ✅ Demo game created: `catan`
 - ✅ Authentication working (session cookie saved in `/tmp/meeple_test_cookies.txt`)
 
@@ -66,7 +66,6 @@ curl -X POST http://localhost:8080/agents/qa \
   -H 'Content-Type: application/json' \
   -b /tmp/meeple_test_cookies.txt \
   -d '{
-    "tenantId": "dev",
     "gameId": "catan",
     "query": "What is this document about?"
   }'
@@ -113,7 +112,7 @@ cd infra && docker compose -p meepleai restart api
 - [ ] Text extraction completes without errors
 - [ ] Vector indexing completes (check Qdrant point count > 0)
 - [ ] RAG query returns relevant snippets from the PDF
-- [ ] Tenant/game filtering works (only returns results for "dev"/"catan")
+- [ ] Game filtering works (only returns results for "catan")
 
 ### Architecture Verified:
 ```

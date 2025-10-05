@@ -264,7 +264,7 @@ public class RuleSpecServiceTests : IDisposable
     [Fact]
     public async Task GetRuleSpecAsync_ReturnsNull_WhenNotExists()
     {
-        var result = await _service.GetRuleSpecAsync("tenant", "game");
+        var result = await _service.GetRuleSpecAsync("game");
         Assert.Null(result);
     }
 

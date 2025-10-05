@@ -34,6 +34,8 @@ public class PdfStorageServiceTests : IDisposable
     private readonly FakePdfTableExtractionService _fakeTableExtractionService;
     private readonly FakeEmbeddingService _fakeEmbeddingService;
     private readonly FakeQdrantService _fakeQdrantService;
+    private readonly IConfiguration _configuration;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public PdfStorageServiceTests()
     {
@@ -49,7 +51,7 @@ public class PdfStorageServiceTests : IDisposable
 
         _storagePath = Path.Combine(Path.GetTempPath(), $"pdf-storage-tests-{Guid.NewGuid():N}");
 
-        var configuration = new ConfigurationBuilder()
+        _configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["PDF_STORAGE_PATH"] = _storagePath
@@ -75,6 +77,7 @@ public class PdfStorageServiceTests : IDisposable
         scopeFactoryMock
             .Setup(factory => factory.CreateScope())
             .Returns(() => _scopeServiceProvider.CreateScope());
+        _scopeFactory = scopeFactoryMock.Object;
 
         _backgroundTaskMock = new Mock<IBackgroundTaskService>();
         _backgroundTaskMock
@@ -83,8 +86,8 @@ public class PdfStorageServiceTests : IDisposable
 
         _service = new PdfStorageService(
             _dbContext,
-            scopeFactoryMock.Object,
-            configuration,
+            _scopeFactory,
+            _configuration,
             NullLogger<PdfStorageService>.Instance,
             _fakeTextExtractionService,
             _fakeTableExtractionService,
@@ -213,13 +216,7 @@ public class PdfStorageServiceTests : IDisposable
 
         Assert.Single(_capturedTasks);
 
-        var processedIndex = 0;
-        while (processedIndex < _capturedTasks.Count)
-        {
-            var task = _capturedTasks[processedIndex];
-            processedIndex++;
-            await task();
-        }
+        await ExecuteBackgroundTasksAsync();
 
         Assert.Equal(2, _capturedTasks.Count);
         _backgroundTaskMock.Verify(service => service.Execute(It.IsAny<Func<Task>>()), Times.Exactly(2));
@@ -265,6 +262,81 @@ public class PdfStorageServiceTests : IDisposable
         Assert.Equal("completed", vectorDoc.IndexingStatus);
         Assert.Equal(_fakeQdrantService.LastChunks!.Count, vectorDoc.ChunkCount);
         Assert.NotNull(vectorDoc.IndexedAt);
+    }
+
+    [Fact]
+    public async Task UploadPdfAsync_WhenExtractionFails_UpdatesDocumentWithError()
+    {
+        var game = new GameEntity
+        {
+            Id = "game-fail-extraction",
+            Name = "Failure Game",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _dbContext.Games.Add(game);
+        await _dbContext.SaveChangesAsync();
+
+        var failingExtractionService = new FailingPdfTextExtractionService("Extraction error");
+        var service = CreateService(textExtractionService: failingExtractionService);
+
+        var pdfBytes = Encoding.UTF8.GetBytes("%PDF-1.4 test content");
+        using var stream = new MemoryStream(pdfBytes);
+        var formFile = CreateFormFile(stream, stream.Length, "error.pdf", "application/pdf");
+
+        var result = await service.UploadPdfAsync(game.Id, "user-2", formFile);
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.Document);
+
+        await ExecuteBackgroundTasksAsync();
+
+        var savedDocument = await _dbContext.PdfDocuments.SingleAsync();
+        Assert.Equal("failed", savedDocument.ProcessingStatus);
+        Assert.Equal("Extraction error", savedDocument.ProcessingError);
+        Assert.Null(savedDocument.ExtractedText);
+        Assert.Null(savedDocument.PageCount);
+        Assert.Null(savedDocument.CharacterCount);
+        Assert.False(_fakeTableExtractionService.Called);
+        Assert.Empty(_fakeEmbeddingService.RequestedTexts);
+        Assert.Null(_fakeQdrantService.LastChunks);
+        Assert.Empty(_dbContext.VectorDocuments);
+    }
+
+    [Fact]
+    public async Task UploadPdfAsync_WhenVectorIndexingFails_SetsVectorDocumentToFailed()
+    {
+        var game = new GameEntity
+        {
+            Id = "game-vector-fail",
+            Name = "Vector Failure Game",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _dbContext.Games.Add(game);
+        await _dbContext.SaveChangesAsync();
+
+        var failingQdrant = new FailingQdrantService();
+        var service = CreateService(qdrantServiceOverride: failingQdrant);
+
+        var pdfBytes = Encoding.UTF8.GetBytes("%PDF-1.4 test content");
+        using var stream = new MemoryStream(pdfBytes);
+        var formFile = CreateFormFile(stream, stream.Length, "vector.pdf", "application/pdf");
+
+        var result = await service.UploadPdfAsync(game.Id, "user-3", formFile);
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.Document);
+
+        await ExecuteBackgroundTasksAsync();
+
+        var vectorDoc = await _dbContext.VectorDocuments.SingleAsync();
+        Assert.Equal("failed", vectorDoc.IndexingStatus);
+        Assert.Equal(FailingQdrantService.ExpectedCapturedError, vectorDoc.IndexingError);
+        Assert.NotNull(vectorDoc.IndexedAt);
+        Assert.Equal(result.Document!.Id, vectorDoc.PdfDocumentId);
+        Assert.Equal(game.Id, vectorDoc.GameId);
+        Assert.Equal(0, vectorDoc.ChunkCount);
     }
 
     [Fact]
@@ -341,6 +413,38 @@ public class PdfStorageServiceTests : IDisposable
                 Assert.Equal(10, third.FileSizeBytes);
                 Assert.Equal("user-a", third.UploadedByUserId);
             });
+    }
+
+    private PdfStorageService CreateService(
+        PdfTextExtractionService? textExtractionService = null,
+        PdfTableExtractionService? tableExtractionService = null,
+        IBackgroundTaskService? backgroundTaskService = null,
+        ITextChunkingService? textChunkingServiceOverride = null,
+        IEmbeddingService? embeddingServiceOverride = null,
+        IQdrantService? qdrantServiceOverride = null)
+    {
+        return new PdfStorageService(
+            _dbContext,
+            _scopeFactory,
+            _configuration,
+            NullLogger<PdfStorageService>.Instance,
+            textExtractionService ?? _fakeTextExtractionService,
+            tableExtractionService ?? _fakeTableExtractionService,
+            backgroundTaskService ?? _backgroundTaskMock.Object,
+            textChunkingServiceOverride,
+            embeddingServiceOverride,
+            qdrantServiceOverride);
+    }
+
+    private async Task ExecuteBackgroundTasksAsync()
+    {
+        var processedIndex = 0;
+        while (processedIndex < _capturedTasks.Count)
+        {
+            var task = _capturedTasks[processedIndex];
+            processedIndex++;
+            await task();
+        }
     }
 
     private static FormFile CreateFormFile(Stream stream, long length, string fileName, string contentType)
@@ -420,6 +524,22 @@ public class PdfStorageServiceTests : IDisposable
         }
     }
 
+    private class FailingPdfTextExtractionService : PdfTextExtractionService
+    {
+        private readonly string _errorMessage;
+
+        public FailingPdfTextExtractionService(string errorMessage)
+            : base(NullLogger<PdfTextExtractionService>.Instance)
+        {
+            _errorMessage = errorMessage;
+        }
+
+        public override Task<PdfTextExtractionResult> ExtractTextAsync(string filePath, CancellationToken ct = default)
+        {
+            return Task.FromResult(PdfTextExtractionResult.CreateFailure(_errorMessage));
+        }
+    }
+
     private class FakeEmbeddingService : IEmbeddingService
     {
         public List<List<string>> RequestedTexts { get; } = new();
@@ -434,6 +554,33 @@ public class PdfStorageServiceTests : IDisposable
         public Task<EmbeddingResult> GenerateEmbeddingAsync(string text, CancellationToken ct = default)
         {
             return GenerateEmbeddingsAsync(new List<string> { text }, ct);
+        }
+    }
+
+    private class FailingQdrantService : IQdrantService
+    {
+        private const string FailureMessage = "Unable to index document";
+        public static readonly string ExpectedCapturedError = $"Qdrant indexing failed: {FailureMessage}";
+
+        public Task EnsureCollectionExistsAsync(CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task<IndexResult> IndexDocumentChunksAsync(
+            string gameId,
+            string pdfId,
+            List<DocumentChunk> chunks,
+            CancellationToken ct = default)
+        {
+            return Task.FromResult(IndexResult.CreateFailure(FailureMessage));
+        }
+
+        public Task<SearchResult> SearchAsync(string gameId, float[] queryEmbedding, int limit = 5, CancellationToken ct = default)
+        {
+            return Task.FromResult(SearchResult.CreateSuccess(new List<SearchResultItem>()));
+        }
+
+        public Task<bool> DeleteDocumentAsync(string pdfId, CancellationToken ct = default)
+        {
+            return Task.FromResult(true);
         }
     }
 

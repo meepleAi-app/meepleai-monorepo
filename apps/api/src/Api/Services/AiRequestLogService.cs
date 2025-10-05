@@ -63,6 +63,7 @@ public class AiRequestLogService
         int offset = 0,
         string? endpoint = null,
         string? userId = null,
+        string? gameId = null,
         DateTime? startDate = null,
         DateTime? endDate = null,
         CancellationToken ct = default)
@@ -77,6 +78,11 @@ public class AiRequestLogService
         if (!string.IsNullOrWhiteSpace(userId))
         {
             query = query.Where(log => log.UserId == userId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(gameId))
+        {
+            query = query.Where(log => log.GameId == gameId);
         }
 
         if (startDate.HasValue)
@@ -99,6 +105,8 @@ public class AiRequestLogService
     public async Task<AiRequestStats> GetStatsAsync(
         DateTime? startDate = null,
         DateTime? endDate = null,
+        string? userId = null,
+        string? gameId = null,
         CancellationToken ct = default)
     {
         var query = _db.AiRequestLogs.AsQueryable();
@@ -111,6 +119,16 @@ public class AiRequestLogService
         if (endDate.HasValue)
         {
             query = query.Where(log => log.CreatedAt <= endDate.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(userId))
+        {
+            query = query.Where(log => log.UserId == userId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(gameId))
+        {
+            query = query.Where(log => log.GameId == gameId);
         }
 
         var totalRequests = await query.CountAsync(ct);

@@ -26,7 +26,7 @@ public class RateLimitService
     /// Check if a request is allowed under the rate limit.
     /// Uses token bucket algorithm with Redis for distributed rate limiting.
     /// </summary>
-    /// <param name="key">Unique identifier for rate limit (e.g., IP address, tenant ID)</param>
+    /// <param name="key">Unique identifier for rate limit (e.g., IP address or user ID)</param>
     /// <param name="maxTokens">Maximum tokens in bucket (burst capacity)</param>
     /// <param name="refillRate">Tokens added per second</param>
     /// <param name="ct">Cancellation token</param>
@@ -121,7 +121,7 @@ public class RateLimitService
     }
 
     /// <summary>
-    /// Get rate limit configuration based on tenant role or defaults.
+    /// Get rate limit configuration based on role or defaults.
     /// </summary>
     public static RateLimitConfig GetConfigForRole(string? role)
     {

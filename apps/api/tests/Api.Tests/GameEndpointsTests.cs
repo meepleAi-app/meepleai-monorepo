@@ -22,17 +22,15 @@ public class GameEndpointsTests : IClassFixture<WebApplicationFactoryFixture>
     }
 
     [Fact]
-    public async Task PostGames_CreatesGameForTenant()
+    public async Task PostGames_CreatesGame()
     {
         // Arrange
-        var tenantId = "tenant-games";
-        var cookies = await RegisterAndAuthenticateAsync(tenantId, "creator@example.com");
+        var cookies = await RegisterAndAuthenticateAsync("creator@example.com");
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/games")
         {
             Content = JsonContent.Create(new
             {
-                tenantId,
                 name = "Terraforming Mars"
             })
         };
@@ -54,43 +52,14 @@ public class GameEndpointsTests : IClassFixture<WebApplicationFactoryFixture>
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var entity = await db.Games.FirstOrDefaultAsync(g => g.Id == game.Id && g.TenantId == tenantId);
+        var entity = await db.Games.FirstOrDefaultAsync(g => g.Id == game.Id);
         Assert.NotNull(entity);
     }
 
-    [Fact]
-    public async Task PostGames_ReturnsForbidden_WhenTenantMismatch()
-    {
-        // Arrange
-        var cookies = await RegisterAndAuthenticateAsync("tenant-alpha", "alpha@example.com");
-
-        var request = new HttpRequestMessage(HttpMethod.Post, "/games")
-        {
-            Content = JsonContent.Create(new
-            {
-                tenantId = "tenant-beta",
-                name = "Forbidden Game"
-            })
-        };
-
-        foreach (var cookie in cookies)
-        {
-            request.Headers.Add("Cookie", cookie);
-        }
-
-        // Act
-        var response = await _client.SendAsync(request);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    private async Task<List<string>> RegisterAndAuthenticateAsync(string tenantId, string email)
+    private async Task<List<string>> RegisterAndAuthenticateAsync(string email)
     {
         var registerRequest = new
         {
-            tenantId,
-            tenantName = tenantId,
             email,
             password = "Password123!",
             displayName = "Test User",

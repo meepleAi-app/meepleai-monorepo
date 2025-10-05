@@ -205,18 +205,18 @@ public class QdrantServiceTests
     }
 
     [Theory]
-    [InlineData("tenant-1", "game-1", "pdf-1")]
-    [InlineData("tenant-abc", "demo-chess", "pdf-xyz-123")]
+    [InlineData("scope-1", "game-1", "pdf-1")]
+    [InlineData("scope-abc", "demo-chess", "pdf-xyz-123")]
     [InlineData("dev", "catan", "12345")]
-    public void DocumentChunk_WithVariousTenantGamePdfIds_HandlesCorrectly(
-        string tenantId,
+    public void DocumentChunk_WithVariousScopeGamePdfIds_HandlesCorrectly(
+        string scopeId,
         string gameId,
         string pdfId)
     {
         // This test verifies that the data structures support various ID formats
         var chunk = new DocumentChunk
         {
-            Text = $"Chunk for {tenantId}/{gameId}/{pdfId}",
+            Text = $"Chunk for {scopeId}/{gameId}/{pdfId}",
             Embedding = new float[1536],
             Page = 1,
             CharStart = 0,
@@ -224,7 +224,7 @@ public class QdrantServiceTests
         };
 
         Assert.NotNull(chunk);
-        Assert.Contains(tenantId, chunk.Text);
+        Assert.Contains(scopeId, chunk.Text);
     }
 
     // Note: Testing actual Qdrant operations (EnsureCollectionExistsAsync, IndexDocumentChunksAsync,

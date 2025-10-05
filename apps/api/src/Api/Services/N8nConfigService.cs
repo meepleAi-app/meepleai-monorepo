@@ -13,7 +13,6 @@ public class N8nConfigService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<N8nConfigService> _logger;
-
     public N8nConfigService(
         MeepleAiDbContext db,
         IHttpClientFactory httpClientFactory,

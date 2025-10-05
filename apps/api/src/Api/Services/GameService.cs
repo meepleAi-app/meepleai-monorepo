@@ -12,7 +12,6 @@ public class GameService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
-
     public GameService(MeepleAiDbContext dbContext, TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext;

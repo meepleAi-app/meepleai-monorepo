@@ -72,10 +72,9 @@ public class QaEndpointTests
         var cacheServiceMock = new Mock<IAiResponseCacheService>();
         var ragService = new RagService(dbContext, embeddingServiceMock.Object, qdrantServiceMock.Object, llmServiceMock.Object, cacheServiceMock.Object, ragLoggerMock);
 
-        var tenantId = "tenant-test";
         var gameId = "demo-chess";
 
-        var spec = await ruleService.GetOrCreateDemoAsync(tenantId, gameId);
+        var spec = await ruleService.GetOrCreateDemoAsync(gameId);
 
         Assert.Equal(gameId, spec.gameId);
         Assert.Equal(2, spec.rules.Count);

@@ -781,7 +781,7 @@ app.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, Rule
 });
 
 // ADM-01: Admin dashboard endpoints
-app.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService logService, int limit = 100, int offset = 0, string? endpoint = null, string? userId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default) =>
+app.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService logService, int limit = 100, int offset = 0, string? endpoint = null, string? userId = null, string? gameId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -798,6 +798,7 @@ app.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService lo
         offset,
         endpoint,
         userId,
+        gameId,
         startDate,
         endDate,
         ct);
@@ -805,7 +806,7 @@ app.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService lo
     return Results.Json(new { requests });
 });
 
-app.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logService, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default) =>
+app.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logService, DateTime? startDate = null, DateTime? endDate = null, string? userId = null, string? gameId = null, CancellationToken ct = default) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -817,7 +818,7 @@ app.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logSe
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    var stats = await logService.GetStatsAsync(startDate, endDate, ct);
+    var stats = await logService.GetStatsAsync(startDate, endDate, userId, gameId, ct);
     return Results.Json(stats);
 });
 

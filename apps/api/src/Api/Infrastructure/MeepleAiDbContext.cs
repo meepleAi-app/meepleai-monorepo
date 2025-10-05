@@ -59,10 +59,6 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.IpAddress).HasMaxLength(64);
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.ExpiresAt).IsRequired();
-            entity.HasOne(e => e.User)
-                .WithMany(u => u.Sessions)
-                .HasForeignKey(e => e.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => e.TokenHash).IsUnique();
             entity.HasIndex(e => e.UserId);
         });
@@ -87,7 +83,7 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.GameId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.CreatedByUserId).HasMaxLength(64);
             entity.HasOne(e => e.Game)
-                .WithMany(g => g.RuleSpecs)
+                .WithMany()
                 .HasForeignKey(e => e.GameId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.CreatedBy)
@@ -156,8 +152,8 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.ChatId).IsRequired();
             entity.Property(e => e.Level).IsRequired().HasMaxLength(16);
             entity.Property(e => e.Message).IsRequired();
+            entity.Property(e => e.MetadataJson).HasMaxLength(2048);
             entity.Property(e => e.CreatedAt).IsRequired();
-            entity.Property(e => e.MetadataJson).HasColumnName("metadata");
             entity.HasOne(e => e.Chat)
                 .WithMany(c => c.Logs)
                 .HasForeignKey(e => e.ChatId)
@@ -172,12 +168,17 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.Id).HasMaxLength(64);
             entity.Property(e => e.GameId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.FileName).IsRequired().HasMaxLength(256);
-            entity.Property(e => e.FilePath).IsRequired().HasMaxLength(512);
+            entity.Property(e => e.FilePath).IsRequired().HasMaxLength(1024);
             entity.Property(e => e.FileSizeBytes).IsRequired();
-            entity.Property(e => e.ContentType).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.ContentType).IsRequired().HasMaxLength(128);
             entity.Property(e => e.UploadedByUserId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.UploadedAt).IsRequired();
-            entity.Property(e => e.Metadata).HasColumnType("text");
+            entity.Property(e => e.Metadata).HasMaxLength(2048);
+            entity.Property(e => e.ProcessingStatus).IsRequired().HasMaxLength(32);
+            entity.Property(e => e.ProcessingError).HasMaxLength(1024);
+            entity.Property(e => e.ExtractedTables).HasMaxLength(8192);
+            entity.Property(e => e.ExtractedDiagrams).HasMaxLength(8192);
+            entity.Property(e => e.AtomicRules).HasMaxLength(8192);
             entity.HasOne(e => e.Game)
                 .WithMany()
                 .HasForeignKey(e => e.GameId)
@@ -228,7 +229,7 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.UserAgent).HasMaxLength(256);
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.HasIndex(e => e.CreatedAt);
-            entity.HasIndex(e => new { e.UserId, e.CreatedAt });
+            entity.HasIndex(e => e.UserId);
         });
 
         modelBuilder.Entity<AiRequestLogEntity>(entity =>
@@ -250,8 +251,9 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.UserAgent).HasMaxLength(256);
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.HasIndex(e => e.CreatedAt);
-            entity.HasIndex(e => new { e.Endpoint, e.CreatedAt });
-            entity.HasIndex(e => new { e.UserId, e.CreatedAt });
+            entity.HasIndex(e => e.Endpoint);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.GameId);
         });
 
         modelBuilder.Entity<N8nConfigEntity>(entity =>

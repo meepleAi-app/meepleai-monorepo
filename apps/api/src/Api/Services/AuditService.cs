@@ -50,9 +50,9 @@ public class AuditService
         }
     }
 
-    public async Task LogTenantAccessDeniedAsync(
-        string userTenantId,
-        string requestedTenantId,
+    public async Task LogAccessDeniedAsync(
+        string userScope,
+        string requiredScope,
         string userId,
         string resource,
         string? resourceId = null,
@@ -68,13 +68,13 @@ public class AuditService
             resource,
             resourceId,
             "Denied",
-            details,
+            $"User in scope {userScope} attempted to access {resource} requiring scope {requiredScope}",
             ipAddress,
             userAgent,
             ct);
 
         _logger.LogWarning(
-            "Tenant access denied: User {UserId} from tenant {UserTenantId} attempted to access {Resource} in tenant {RequestedTenantId}",
-            userId, userTenantId, resource, requestedTenantId);
+            "Access denied: User {UserId} in scope {UserScope} attempted to access {Resource} requiring scope {RequiredScope}",
+            userId, userScope, resource, requiredScope);
     }
 }

@@ -274,9 +274,19 @@ public class N8nConfigService
         return Encoding.UTF8.GetString(plainBytes);
     }
 
+    private const string EncryptionKeyConfigName = "N8N_ENCRYPTION_KEY";
+    private const string EncryptionKeyPlaceholder = "changeme-replace-with-32-byte-key-in-production";
+
     private byte[] GetEncryptionKey()
     {
-        var key = _configuration["N8N_ENCRYPTION_KEY"] ?? "changeme-replace-with-32-byte-key-in-production";
+        var key = _configuration[EncryptionKeyConfigName]?.Trim();
+
+        if (string.IsNullOrWhiteSpace(key) || key == EncryptionKeyPlaceholder)
+        {
+            throw new InvalidOperationException(
+                $"Missing or invalid n8n encryption key. Set the {EncryptionKeyConfigName} environment variable to a secure value.");
+        }
+
         using var sha256 = SHA256.Create();
         return sha256.ComputeHash(Encoding.UTF8.GetBytes(key));
     }

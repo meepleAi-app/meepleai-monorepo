@@ -8,6 +8,8 @@ interface PdfDocument {
   fileSizeBytes: number;
   uploadedAt: string;
   uploadedByUserId: string;
+  status?: string | null;
+  logUrl?: string | null;
 }
 
 type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed';
@@ -89,6 +91,7 @@ export default function UploadPage() {
     }
 
     setLoadingPdfs(true);
+    setPdfsError(null);
     try {
       const response = await fetch(`${API_BASE}/games/${gameId}/pdfs`, {
         credentials: 'include',
@@ -97,11 +100,14 @@ export default function UploadPage() {
       if (response.ok) {
         const data = await response.json();
         setPdfs(data.pdfs || []);
+        setPdfsError(null);
       } else {
         console.error('Failed to load PDFs:', response.statusText);
+        setPdfsError('Unable to load uploaded PDFs. Please try again.');
       }
     } catch (error) {
       console.error('Failed to load PDFs:', error);
+      setPdfsError('Unable to load uploaded PDFs. Please try again.');
     } finally {
       setLoadingPdfs(false);
     }
@@ -142,8 +148,136 @@ export default function UploadPage() {
       void loadPdfs(confirmedGameId);
     } else {
       setPdfs([]);
+      setPdfsError(null);
     }
   }, [confirmedGameId, loadPdfs]);
+
+  useEffect(() => {
+    if (currentStep !== 'parse' || !documentId) {
+      return;
+    }
+
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const pollStatus = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/pdfs/${documentId}/text`, {
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          let errorMessage = response.statusText || 'Request failed';
+          try {
+            const errorBody = await response.json();
+            if (errorBody && typeof errorBody.error === 'string') {
+              errorMessage = errorBody.error;
+            }
+          } catch {
+            // Ignore JSON parse errors for error responses
+          }
+
+          throw new Error(errorMessage);
+        }
+
+        const data = (await response.json()) as PdfTextResponse;
+        if (cancelled) {
+          return;
+        }
+
+        const status = data.processingStatus;
+        setProcessingStatus(status);
+        setProcessingMetadata({
+          pageCount: data.pageCount ?? null,
+          characterCount: data.characterCount ?? null,
+        });
+
+        if (status === 'failed') {
+          const errorMessage = data.processingError || 'Unknown error';
+          setProcessingError(errorMessage);
+          setMessage(`❌ PDF processing failed: ${errorMessage}`);
+          setIsPolling(false);
+          return;
+        }
+
+        setProcessingError(null);
+
+        if (status === 'completed') {
+          setIsPolling(false);
+          setMessage('✅ PDF processing completed. Loading RuleSpec…');
+          return;
+        }
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        setProcessingError(errorMessage);
+        setMessage(`❌ Unable to poll PDF status: ${errorMessage}`);
+        setIsPolling(false);
+        return;
+      }
+
+      if (!cancelled) {
+        timeoutId = setTimeout(pollStatus, POLLING_INTERVAL_MS);
+      }
+    };
+
+    setIsPolling(true);
+    pollStatus();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [API_BASE, currentStep, documentId]);
+
+  const handleParse = useCallback(async () => {
+    if (!confirmedGameId) {
+      setMessage('Please confirm a game before parsing');
+      return;
+    }
+
+    if (!documentId) {
+      setMessage('No document to parse. Please upload a PDF first.');
+      return;
+    }
+
+    autoAdvanceRef.current = true;
+    setParsing(true);
+    setMessage('');
+
+    try {
+      const fetchedRuleSpec = await api.get<RuleSpec>(`/games/${confirmedGameId}/rulespec`);
+
+      if (!fetchedRuleSpec) {
+        setMessage('❌ Failed to load RuleSpec: unauthorized');
+        return;
+      }
+
+      setRuleSpec(fetchedRuleSpec);
+      setMessage('✅ RuleSpec loaded successfully!');
+      setCurrentStep('review');
+    } catch (error) {
+      setMessage(`❌ Failed to load RuleSpec: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setParsing(false);
+    }
+  }, [confirmedGameId, documentId]);
+
+  useEffect(() => {
+    if (currentStep !== 'parse') {
+      return;
+    }
+
+    if (processingStatus === 'completed' && !autoAdvanceRef.current) {
+      autoAdvanceRef.current = true;
+      void handleParse();
+    }
+  }, [currentStep, handleParse, processingStatus]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -182,6 +316,10 @@ export default function UploadPage() {
       if (response.ok) {
         const data = await response.json();
         setDocumentId(data.documentId);
+        setProcessingStatus('pending');
+        setProcessingError(null);
+        setProcessingMetadata(null);
+        autoAdvanceRef.current = false;
         setMessage(`✅ PDF uploaded successfully! Document ID: ${data.documentId}`);
         setProcessingStatus('pending');
         setProcessingError(null);
@@ -205,8 +343,14 @@ export default function UploadPage() {
       return;
     }
 
+    if (!documentId) {
+      setMessage('Please upload a PDF before parsing');
+      return;
+    }
+
     setParsing(true);
     setMessage('');
+    setRuleSpec(null);
 
     try {
       const fetchedRuleSpec = await api.get<RuleSpec>(`/games/${confirmedGameId}/rulespec`);
@@ -219,6 +363,9 @@ export default function UploadPage() {
       setRuleSpec(fetchedRuleSpec);
       setMessage('✅ PDF parsed successfully!');
       setCurrentStep('review');
+      if (confirmedGameId) {
+        await loadPdfs(confirmedGameId);
+      }
     } catch (error) {
       setMessage(`❌ Parse failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
@@ -336,6 +483,11 @@ export default function UploadPage() {
     setFile(null);
     setDocumentId('');
     setRuleSpec(null);
+    setProcessingStatus(null);
+    setProcessingError(null);
+    setProcessingMetadata(null);
+    setIsPolling(false);
+    autoAdvanceRef.current = false;
     setMessage('');
     setProcessingStatus(null);
     setProcessingError(null);
@@ -380,6 +532,41 @@ export default function UploadPage() {
 
     setConfirmedGameId(selectedGameId);
     setMessage('');
+  };
+
+  const handleOpenLog = (pdf: PdfDocument) => {
+    const logUrl = pdf.logUrl || `${API_BASE}/logs/${pdf.id}`;
+    if (typeof window !== 'undefined') {
+      window.open(logUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const handleRetryParsing = async (pdf: PdfDocument) => {
+    if (!confirmedGameId) {
+      setMessage('Please confirm a game before retrying the parse');
+      return;
+    }
+
+    setRetryingPdfId(pdf.id);
+    setMessage('');
+    try {
+      const response = await fetch(`${API_BASE}/ingest/pdf/${pdf.id}/retry`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        setMessage(`✅ Parse re-triggered for ${pdf.fileName}`);
+        await loadPdfs(confirmedGameId);
+      } else {
+        const error = await response.json().catch(() => ({}));
+        setMessage(`❌ Failed to re-trigger parse: ${error.error || response.statusText}`);
+      }
+    } catch (error) {
+      setMessage(`❌ Failed to re-trigger parse: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setRetryingPdfId(null);
+    }
   };
 
   const handleCreateGame = async (e: React.FormEvent) => {
@@ -504,7 +691,11 @@ export default function UploadPage() {
       <h1 style={{ marginBottom: '10px' }}>PDF Import Wizard</h1>
       <p style={{ color: '#666', marginBottom: '30px' }}>Upload, parse, review, and publish game rules</p>
 
-      {renderStepIndicator()}
+      {isUnauthorizedRole ? (
+        renderUnauthorizedState()
+      ) : (
+        <>
+          {renderStepIndicator()}
 
       {message && (
         <div
@@ -703,6 +894,103 @@ export default function UploadPage() {
               </p>
             )}
           </form>
+
+          <div
+            style={{
+              marginTop: '32px',
+              padding: '16px',
+              border: '1px solid #e0e0e0',
+              borderRadius: '6px',
+              backgroundColor: '#fff',
+            }}
+          >
+            <h3 style={{ marginTop: 0, marginBottom: '12px' }}>Uploaded PDFs</h3>
+            {!confirmedGameId ? (
+              <p style={{ margin: 0, color: '#5f6368' }}>
+                Confirm a game to review its uploaded PDFs.
+              </p>
+            ) : loadingPdfs ? (
+              <div role="status" aria-live="polite" style={{ display: 'grid', gap: '12px' }}>
+                {Array.from({ length: Math.max(1, Math.min(3, Math.max(pdfs.length, 1))) }).map((_, index) => (
+                  <div
+                    key={`pdf-skeleton-${index}`}
+                    style={{
+                      height: '48px',
+                      borderRadius: '4px',
+                      background: 'linear-gradient(90deg, #f1f3f4 25%, #e0e0e0 37%, #f1f3f4 63%)',
+                      backgroundSize: '200% 100%',
+                    }}
+                  />
+                ))}
+              </div>
+            ) : pdfsError ? (
+              <p style={{ margin: 0, color: '#d93025' }}>{pdfsError}</p>
+            ) : pdfs.length === 0 ? (
+              <p style={{ margin: 0, color: '#5f6368' }}>No PDFs uploaded yet for this game.</p>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table
+                  aria-label="Uploaded PDFs"
+                  style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}
+                >
+                  <thead>
+                    <tr style={{ textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
+                      <th style={{ padding: '8px 12px', fontWeight: 600 }}>File name</th>
+                      <th style={{ padding: '8px 12px', fontWeight: 600 }}>Size</th>
+                      <th style={{ padding: '8px 12px', fontWeight: 600 }}>Uploaded</th>
+                      <th style={{ padding: '8px 12px', fontWeight: 600 }}>Status</th>
+                      <th style={{ padding: '8px 12px', fontWeight: 600 }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pdfs.map((pdf) => (
+                      <tr key={pdf.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
+                        <td style={{ padding: '10px 12px', fontWeight: 500 }}>{pdf.fileName}</td>
+                        <td style={{ padding: '10px 12px' }}>{formatFileSize(pdf.fileSizeBytes)}</td>
+                        <td style={{ padding: '10px 12px' }}>{formatDate(pdf.uploadedAt)}</td>
+                        <td style={{ padding: '10px 12px' }}>{pdf.status ?? 'Pending'}</td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenLog(pdf)}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '4px',
+                                border: '1px solid #0070f3',
+                                backgroundColor: 'white',
+                                color: '#0070f3',
+                                cursor: 'pointer',
+                                fontWeight: 500,
+                              }}
+                            >
+                              Open log
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRetryParsing(pdf)}
+                              disabled={retryingPdfId === pdf.id}
+                              style={{
+                                padding: '6px 12px',
+                                borderRadius: '4px',
+                                border: 'none',
+                                backgroundColor: retryingPdfId === pdf.id ? '#ccc' : '#34a853',
+                                color: 'white',
+                                cursor: retryingPdfId === pdf.id ? 'not-allowed' : 'pointer',
+                                fontWeight: 500,
+                              }}
+                            >
+                              {retryingPdfId === pdf.id ? 'Retrying…' : 'Retry parsing'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -943,47 +1231,49 @@ export default function UploadPage() {
         </div>
       )}
 
-      {currentStep === 'publish' && (
-        <div>
-          <h2>Step 4: Published Successfully! ✅</h2>
-          <p style={{ marginTop: '16px', marginBottom: '24px', fontSize: '16px' }}>
-            Your RuleSpec for <strong>{ruleSpec?.gameId ?? confirmedGameId ?? 'unknown game'}</strong> has been
-            published successfully!
-          </p>
-          <div style={{ marginTop: '20px' }}>
-            <button
-              onClick={resetWizard}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#0070f3',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '16px',
-                cursor: 'pointer',
-                fontWeight: '500',
-                marginRight: '12px'
-              }}
-            >
-              Import Another PDF
-            </button>
-            <Link
-              href={`/editor?gameId=${ruleSpec?.gameId ?? confirmedGameId ?? ''}`}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#34a853',
-                color: 'white',
-                textDecoration: 'none',
-                borderRadius: '4px',
-                fontSize: '16px',
-                fontWeight: '500',
-                display: 'inline-block'
-              }}
-            >
-              Edit in RuleSpec Editor
-            </Link>
-          </div>
-        </div>
+          {currentStep === 'publish' && (
+            <div>
+              <h2>Step 4: Published Successfully! ✅</h2>
+              <p style={{ marginTop: '16px', marginBottom: '24px', fontSize: '16px' }}>
+                Your RuleSpec for <strong>{ruleSpec?.gameId ?? confirmedGameId ?? 'unknown game'}</strong> has been
+                published successfully!
+              </p>
+              <div style={{ marginTop: '20px' }}>
+                <button
+                  onClick={resetWizard}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#0070f3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    marginRight: '12px'
+                  }}
+                >
+                  Import Another PDF
+                </button>
+                <Link
+                  href={`/editor?gameId=${ruleSpec?.gameId ?? confirmedGameId ?? ''}`}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#34a853',
+                    color: 'white',
+                    textDecoration: 'none',
+                    borderRadius: '4px',
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    display: 'inline-block'
+                  }}
+                >
+                  Edit in RuleSpec Editor
+                </Link>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -5,8 +5,12 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Api.Tests;
@@ -111,6 +115,71 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         Assert.True(document.RootElement.TryGetProperty("ok", out var okElement) && okElement.GetBoolean());
         Assert.True(document.RootElement.TryGetProperty("spec", out var specElement));
         Assert.Equal("terraforming-mars", specElement.GetProperty("gameId").GetString());
+    }
+
+    [Fact]
+    public async Task GenerateRuleSpecFromPdf_ReturnsStructuredSpec()
+    {
+        using var client = _factory.CreateClient();
+        var email = "pdf-parser@example.com";
+        var cookies = await RegisterAndAuthenticateAsync(client, email, role: "Admin");
+
+        var pdfId = "pdf-integration";
+        var gameId = "game-integration";
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var user = await db.Users.SingleAsync(u => u.Email == email);
+
+            if (!await db.Games.AnyAsync(g => g.Id == gameId))
+            {
+                db.Games.Add(new GameEntity
+                {
+                    Id = gameId,
+                    Name = "Integration Game",
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
+            db.PdfDocuments.Add(new PdfDocumentEntity
+            {
+                Id = pdfId,
+                GameId = gameId,
+                FileName = "rules.pdf",
+                FilePath = "/tmp/rules.pdf",
+                FileSizeBytes = 1024,
+                UploadedByUserId = user.Id,
+                UploadedAt = DateTime.UtcNow,
+                ProcessingStatus = "completed",
+                ProcessedAt = DateTime.UtcNow,
+                AtomicRules = JsonSerializer.Serialize(new[]
+                {
+                    "[Table on page 2] Setup: Place pieces; Count: 16",
+                    "Victory condition: Highest score wins"
+                })
+            });
+
+            await db.SaveChangesAsync();
+        }
+
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/ingest/pdf/{pdfId}/rulespec");
+        foreach (var cookie in cookies)
+        {
+            request.Headers.TryAddWithoutValidation("Cookie", cookie);
+        }
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var json = await response.Content.ReadAsStringAsync();
+        var ruleSpec = JsonSerializer.Deserialize<RuleSpec>(json, JsonOptions);
+
+        Assert.NotNull(ruleSpec);
+        Assert.Equal(gameId, ruleSpec!.gameId);
+        Assert.True(ruleSpec.rules.Count >= 2);
+        Assert.Contains(ruleSpec.rules, atom => atom.page == "2");
     }
 
     private async Task RegisterUserAsync(string email, string role = "Admin")

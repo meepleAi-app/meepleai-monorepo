@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { api } from "../lib/api";
 
 type LogEntry = {
   timestamp: string;
@@ -12,26 +13,38 @@ type LogEntry = {
 export default function LogsPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filter, setFilter] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // In a real implementation, this would fetch logs from the backend
-    // For now, we'll show a placeholder UI
-    const sampleLogs: LogEntry[] = [
-      {
-        timestamp: new Date().toISOString(),
-        level: "INFO",
-        message: "Application started",
-        requestId: "req-001"
-      },
-      {
-        timestamp: new Date().toISOString(),
-        level: "INFO",
-        message: "User logged in successfully",
-        requestId: "req-002",
-        userId: "user-123"
+    let isMounted = true;
+    const loadLogs = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await api.get<LogEntry[]>("/logs");
+        if (isMounted) {
+          setLogs(response ?? []);
+        }
+      } catch (err) {
+        if (!isMounted) {
+          return;
+        }
+        console.error("Failed to load logs", err);
+        setError("Unable to load logs from the server. Please try again later.");
+        setLogs([]);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-    ];
-    setLogs(sampleLogs);
+    };
+
+    void loadLogs();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const filteredLogs = logs.filter(
@@ -116,7 +129,15 @@ export default function LogsPage() {
           <div>Message</div>
         </div>
 
-        {filteredLogs.length === 0 ? (
+        {isLoading ? (
+          <div style={{ padding: 48, textAlign: "center", color: "#5f6368" }}>
+            <p>Loading logs...</p>
+          </div>
+        ) : error ? (
+          <div style={{ padding: 48, textAlign: "center", color: "#d93025" }}>
+            <p>{error}</p>
+          </div>
+        ) : filteredLogs.length === 0 ? (
           <div style={{ padding: 48, textAlign: "center", color: "#5f6368" }}>
             <p>No logs found. Start using the application to generate logs.</p>
             <p style={{ fontSize: 12, marginTop: 16 }}>

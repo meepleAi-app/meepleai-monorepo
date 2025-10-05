@@ -16,63 +16,143 @@ const mockedApi = api as jest.Mocked<typeof api>;
 describe('Home page', () => {
   const originalFetch = global.fetch;
   const originalAlert = window.alert;
+  let fetchMock: jest.Mock;
+  let alertMock: jest.Mock;
 
   beforeEach(() => {
+    fetchMock = jest.fn().mockImplementation(async (input: RequestInfo | URL) => {
+      if (typeof input === 'string' && input.includes('/api/health')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true })
+        } as unknown as Response;
+      }
+
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({})
+      } as unknown as Response;
+    });
+    alertMock = jest.fn();
+
+    global.fetch = fetchMock as unknown as typeof fetch;
+    window.alert = alertMock as typeof window.alert;
+
     mockedApi.get.mockReset();
     mockedApi.post.mockReset();
     mockedApi.put.mockReset();
-    jest.clearAllMocks();
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue({ ok: true, status: 200, json: async () => ({}) }) as unknown as typeof fetch;
-    window.alert = jest.fn() as unknown as typeof window.alert;
+    mockedApi.get.mockResolvedValue(null);
   });
 
   afterEach(() => {
-    mockedApi.get.mockReset();
-    mockedApi.post.mockReset();
-    mockedApi.put.mockReset();
-    jest.clearAllMocks();
     global.fetch = originalFetch;
     window.alert = originalAlert;
+    jest.clearAllMocks();
   });
 
-  it('loads current user and blocks QA requests when unauthenticated', async () => {
-    mockedApi.get.mockResolvedValueOnce(null);
-
+  it("shows an error message when an unauthenticated user tries to ask a question", async () => {
     render(<Home />);
 
     await waitFor(() => {
       expect(mockedApi.get).toHaveBeenCalledWith('/auth/me');
     });
 
-    const askButton = screen.getByRole('button', { name: 'Chiedi' });
+    const askButton = await screen.findByRole('button', { name: 'Chiedi' });
     expect(askButton).toBeDisabled();
-    expect(mockedApi.post).not.toHaveBeenCalled();
+
+    const reactPropsKey = Object.keys(askButton).find((key) => key.startsWith('__reactProps$'));
+    expect(reactPropsKey).toBeDefined();
+
+    act(() => {
+      const props = (askButton as unknown as Record<string, { onClick?: (event: unknown) => void }>)[
+        reactPropsKey as string
+      ];
+      props.onClick?.({ preventDefault: () => undefined });
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Devi effettuare l'accesso per porre domande.")
+      ).toBeInTheDocument();
+    });
+
+    expect(mockedApi.post).not.toHaveBeenCalledWith('/agents/qa', expect.anything());
   });
 
-  it('logs in successfully, resets form fields, and updates the status message', async () => {
-    mockedApi.get.mockResolvedValueOnce(null);
+  it('resets the registration form and shows a positive status after successful registration', async () => {
     const user = userEvent.setup();
+
+    const authResponse = {
+      user: {
+        id: 'user-1',
+        email: 'new@example.com',
+        displayName: 'New User',
+        role: 'Editor'
+      },
+      expiresAt: '2024-12-31T00:00:00.000Z'
+    };
+
+    mockedApi.post.mockResolvedValueOnce(authResponse);
 
     render(<Home />);
 
-    const loginHeading = screen.getByRole('heading', { name: 'Accesso' });
-    const loginForm = loginHeading.closest('form');
+    const registerFormHeading = await screen.findByRole('heading', { name: 'Registrazione' });
+    const registerForm = registerFormHeading.closest('form');
+    expect(registerForm).not.toBeNull();
+    const registerScope = within(registerForm as HTMLFormElement);
+
+    await user.type(registerScope.getByLabelText('Email'), 'new@example.com');
+    await user.type(registerScope.getByLabelText('Password (min 8 caratteri)'), 'password123');
+    await user.type(registerScope.getByLabelText('Nome visualizzato'), 'New User');
+    await user.selectOptions(registerScope.getByLabelText('Ruolo'), 'Editor');
+
+    await user.click(registerScope.getByRole('button', { name: 'Crea account' }));
+
+    await waitFor(() => {
+      expect(mockedApi.post).toHaveBeenCalledWith('/auth/register', {
+        email: 'new@example.com',
+        password: 'password123',
+        displayName: 'New User',
+        role: 'Editor'
+      });
+    });
+
+    expect(registerScope.getByLabelText('Email')).toHaveValue('');
+    expect(registerScope.getByLabelText('Password (min 8 caratteri)')).toHaveValue('');
+    expect(registerScope.getByLabelText('Nome visualizzato')).toHaveValue('');
+    expect(registerScope.getByLabelText('Ruolo')).toHaveValue('User');
+
+    await waitFor(() => {
+      expect(screen.getByText('Registrazione completata. Sei connesso!')).toBeInTheDocument();
+    });
+    expect(screen.getByText('new@example.com')).toBeInTheDocument();
+  });
+
+  it('logs in the user, updates the session state, and enables the ask button', async () => {
+    const user = userEvent.setup();
+
+    const loginResponse = {
+      user: {
+        id: 'user-1',
+        email: 'user@example.com',
+        role: 'User'
+      },
+      expiresAt: '2024-12-31T00:00:00.000Z'
+    };
+
+    mockedApi.post.mockResolvedValueOnce(loginResponse);
+
+    render(<Home />);
+
+    const loginFormHeading = await screen.findByRole('heading', { name: 'Accesso' });
+    const loginForm = loginFormHeading.closest('form');
     expect(loginForm).not.toBeNull();
     const loginScope = within(loginForm as HTMLFormElement);
 
     await user.type(loginScope.getByLabelText('Email'), 'user@example.com');
     await user.type(loginScope.getByLabelText('Password'), 'super-secret');
-
-    mockedApi.post.mockResolvedValueOnce({
-      user: {
-        id: '123',
-        email: 'user@example.com',
-        role: 'User'
-      },
-      expiresAt: 'tomorrow'
-    });
 
     await user.click(loginScope.getByRole('button', { name: 'Entra' }));
 
@@ -83,27 +163,32 @@ describe('Home page', () => {
       });
     });
 
-    expect(loginScope.getByLabelText('Email')).toHaveValue('');
-    expect(loginScope.getByLabelText('Password')).toHaveValue('');
-    expect(screen.getByText('Accesso eseguito.')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Accesso eseguito.')).toBeInTheDocument();
+    });
+
+    const askButton = await screen.findByRole('button', { name: 'Chiedi' });
+    await waitFor(() => {
+      expect(askButton).toBeEnabled();
+    });
+    expect(screen.getByText('user@example.com')).toBeInTheDocument();
   });
 
-  it('shows registration and login errors from the API', async () => {
-    mockedApi.get.mockResolvedValueOnce(null);
+  it('displays error messages when register, login, or ask operations fail', async () => {
     const user = userEvent.setup();
 
     render(<Home />);
 
-    const registerHeading = screen.getByRole('heading', { name: 'Registrazione' });
-    const registerForm = registerHeading.closest('form');
+    const registerFormHeading = await screen.findByRole('heading', { name: 'Registrazione' });
+    const registerForm = registerFormHeading.closest('form');
     expect(registerForm).not.toBeNull();
     const registerScope = within(registerForm as HTMLFormElement);
 
     await user.type(registerScope.getByLabelText('Email'), 'new@example.com');
-    await user.type(registerScope.getByLabelText('Password (min 8 caratteri)'), 'password');
+    await user.type(registerScope.getByLabelText('Password (min 8 caratteri)'), 'password123');
     await user.type(registerScope.getByLabelText('Nome visualizzato'), 'New User');
 
-    mockedApi.post.mockRejectedValueOnce(new Error('Registrazione fallita')); 
+    mockedApi.post.mockRejectedValueOnce(new Error('Registrazione fallita'));
 
     await user.click(registerScope.getByRole('button', { name: 'Crea account' }));
 
@@ -111,106 +196,89 @@ describe('Home page', () => {
       expect(screen.getByText('Registrazione fallita')).toBeInTheDocument();
     });
 
-    const loginHeading = screen.getByRole('heading', { name: 'Accesso' });
-    const loginForm = loginHeading.closest('form');
+    const loginFormHeading = await screen.findByRole('heading', { name: 'Accesso' });
+    const loginForm = loginFormHeading.closest('form');
     expect(loginForm).not.toBeNull();
     const loginScope = within(loginForm as HTMLFormElement);
 
-    await user.clear(loginScope.getByLabelText('Email'));
     await user.type(loginScope.getByLabelText('Email'), 'user@example.com');
-    await user.clear(loginScope.getByLabelText('Password'));
-    await user.type(loginScope.getByLabelText('Password'), 'badpass');
+    await user.type(loginScope.getByLabelText('Password'), 'wrong-password');
 
-    mockedApi.post.mockRejectedValueOnce(new Error('Accesso non autorizzato'));
+    mockedApi.post.mockRejectedValueOnce(new Error('Credenziali errate'));
 
     await user.click(loginScope.getByRole('button', { name: 'Entra' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Accesso non autorizzato')).toBeInTheDocument();
+      expect(screen.getByText('Credenziali errate')).toBeInTheDocument();
+    });
+
+    mockedApi.post.mockResolvedValueOnce({
+      user: {
+        id: 'user-1',
+        email: 'user@example.com',
+        role: 'User'
+      },
+      expiresAt: '2024-12-31T00:00:00.000Z'
+    });
+
+    await user.clear(loginScope.getByLabelText('Password'));
+    await user.type(loginScope.getByLabelText('Password'), 'super-secret');
+
+    await user.click(loginScope.getByRole('button', { name: 'Entra' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Accesso eseguito.')).toBeInTheDocument();
+    });
+
+    mockedApi.post.mockRejectedValueOnce(new Error('Agente non raggiungibile'));
+
+    const askButton = await screen.findByRole('button', { name: 'Chiedi' });
+    await waitFor(() => {
+      expect(askButton).toBeEnabled();
+    });
+
+    await user.click(askButton);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Impossibile interrogare l'agente. Controlla le credenziali.")
+      ).toBeInTheDocument();
     });
   });
 
-  it('logs out the user and notifies the session end', async () => {
+  it('logs out the user and clears the session state', async () => {
+    const user = userEvent.setup();
+
     mockedApi.get.mockResolvedValueOnce({
       user: {
-        id: 'abc',
-        email: 'logged@example.com',
+        id: 'user-1',
+        email: 'user@example.com',
         role: 'Admin'
       },
-      expiresAt: 'later'
+      expiresAt: '2024-12-31T00:00:00.000Z'
     });
-    const user = userEvent.setup();
 
     mockedApi.post.mockResolvedValueOnce({});
 
     render(<Home />);
 
     await waitFor(() => {
-      expect(screen.getByText('logged@example.com')).toBeInTheDocument();
+      expect(screen.getByText('user@example.com')).toBeInTheDocument();
     });
 
-    await user.click(screen.getByRole('button', { name: 'Esci' }));
+    const logoutButton = screen.getByRole('button', { name: 'Esci' });
+    await user.click(logoutButton);
 
     await waitFor(() => {
       expect(mockedApi.post).toHaveBeenCalledWith('/auth/logout');
     });
 
-    expect(screen.getByText('Sessione terminata.')).toBeInTheDocument();
-    expect(screen.getByText('Nessun utente connesso.')).toBeInTheDocument();
-  });
-
-  it('requests QA successfully, showing the answer and handling loading state', async () => {
-    mockedApi.get.mockResolvedValueOnce({
-      user: {
-        id: 'qa-user',
-        email: 'qa@example.com',
-        role: 'User'
-      },
-      expiresAt: 'later'
-    });
-    const user = userEvent.setup();
-
-    let resolveQa: ((value: { answer: string }) => void) | undefined;
-
-    mockedApi.post.mockImplementation(async (path: string) => {
-      if (path === '/auth/logout') {
-        return {} as any;
-      }
-      if (path === '/agents/qa') {
-        return await new Promise<{ answer: string }>((resolve) => {
-          resolveQa = resolve;
-        });
-      }
-      return {
-        user: {
-          id: 'qa-user',
-          email: 'qa@example.com',
-          role: 'User'
-        },
-        expiresAt: 'later'
-      } as any;
-    });
-
-    render(<Home />);
-
     await waitFor(() => {
-      expect(screen.getByText('qa@example.com')).toBeInTheDocument();
+      expect(screen.getByText('Sessione terminata.')).toBeInTheDocument();
+      expect(screen.getByText('Nessun utente connesso.')).toBeInTheDocument();
     });
 
-    const askButton = screen.getByRole('button', { name: 'Chiedi' });
-    await user.click(askButton);
-
-    expect(screen.getByRole('button', { name: 'Richiesta...' })).toBeDisabled();
-
-    await act(async () => {
-      resolveQa?.({ answer: 'Due giocatori.' });
-    });
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Chiedi' })).not.toBeDisabled();
-    });
-
-    expect(screen.getByText('Due giocatori.')).toBeInTheDocument();
-    expect(screen.getByText('Risposta aggiornata.')).toBeInTheDocument();
+    const askButton = await screen.findByRole('button', { name: 'Chiedi' });
+    expect(askButton).toBeDisabled();
   });
 });

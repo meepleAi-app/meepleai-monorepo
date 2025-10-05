@@ -125,7 +125,11 @@ public class RuleSpecService
         return specEntity is null ? null : ToModel(specEntity);
     }
 
-    public async Task<RuleSpec> UpdateRuleSpecAsync(string gameId, RuleSpec ruleSpec, CancellationToken cancellationToken = default)
+    public async Task<RuleSpec> UpdateRuleSpecAsync(
+        string gameId,
+        RuleSpec ruleSpec,
+        string userId,
+        CancellationToken cancellationToken = default)
     {
         // Ensure game exists
         var game = await _dbContext.Games
@@ -136,12 +140,46 @@ public class RuleSpecService
             throw new InvalidOperationException($"Game {gameId} not found");
         }
 
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            throw new ArgumentException("UserId is required", nameof(userId));
+        }
+
+        var userExists = await _dbContext.Users
+            .AnyAsync(u => u.Id == userId, cancellationToken);
+
+        if (!userExists)
+        {
+            throw new InvalidOperationException($"User {userId} not found");
+        }
+
+        var incomingVersion = ruleSpec.version?.Trim();
+        var versionProvided = !string.IsNullOrWhiteSpace(incomingVersion);
+
+        var version = incomingVersion ?? string.Empty;
+
+        if (!versionProvided)
+        {
+            version = await GenerateNextVersionAsync(gameId, cancellationToken);
+        }
+        else
+        {
+            var duplicate = await _dbContext.RuleSpecs
+                .AnyAsync(r => r.GameId == gameId && r.Version == version, cancellationToken);
+
+            if (duplicate)
+            {
+                throw new InvalidOperationException($"Version {version} already exists for game {gameId}");
+            }
+        }
+
         // Create new RuleSpec version
         var specEntity = new RuleSpecEntity
         {
             GameId = gameId,
-            Version = ruleSpec.version,
+            Version = version,
             CreatedAt = DateTime.UtcNow,
+            CreatedByUserId = userId,
         };
 
         int sortOrder = 1;
@@ -163,6 +201,64 @@ public class RuleSpecService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return ToModel(specEntity);
+    }
+
+    private async Task<string> GenerateNextVersionAsync(string gameId, CancellationToken cancellationToken)
+    {
+        var versions = await _dbContext.RuleSpecs
+            .Where(r => r.GameId == gameId)
+            .Select(r => r.Version)
+            .ToListAsync(cancellationToken);
+
+        var numericVersions = versions
+            .Select(TryParseNumericVersion)
+            .Where(v => v.HasValue)
+            .Select(v => v!.Value)
+            .ToList();
+
+        int? nextNumeric = null;
+
+        if (numericVersions.Count > 0)
+        {
+            nextNumeric = numericVersions.Max() + 1;
+        }
+
+        string candidate = nextNumeric.HasValue
+            ? $"v{nextNumeric.Value}"
+            : $"v{DateTime.UtcNow:yyyyMMddHHmmss}";
+
+        while (await _dbContext.RuleSpecs
+            .AnyAsync(r => r.GameId == gameId && r.Version == candidate, cancellationToken))
+        {
+            if (nextNumeric.HasValue)
+            {
+                nextNumeric++;
+                candidate = $"v{nextNumeric.Value}";
+            }
+            else
+            {
+                candidate = $"v{DateTime.UtcNow:yyyyMMddHHmmssfff}";
+            }
+        }
+
+        return candidate;
+    }
+
+    private static int? TryParseNumericVersion(string? version)
+    {
+        if (string.IsNullOrWhiteSpace(version))
+        {
+            return null;
+        }
+
+        var trimmed = version.Trim();
+
+        if (trimmed.StartsWith("v", StringComparison.OrdinalIgnoreCase))
+        {
+            trimmed = trimmed[1..];
+        }
+
+        return int.TryParse(trimmed, out var number) ? number : null;
     }
 
     public async Task<RuleSpecHistory> GetVersionHistoryAsync(string gameId, CancellationToken cancellationToken = default)

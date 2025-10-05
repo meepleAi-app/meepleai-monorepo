@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RuleSpecEditor from '../editor';
 import { api } from '../../lib/api';
-import { useRouter } from 'next/router';
+import { useRouter, type NextRouter } from 'next/router';
 
 jest.mock('../../lib/api', () => ({
   api: {
@@ -19,30 +19,48 @@ jest.mock('next/router', () => ({
 const mockApi = api as jest.Mocked<typeof api>;
 const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
 
-const createRouter = (overrides: Partial<ReturnType<typeof useRouter>> = {}) => ({
-  route: '/editor',
-  pathname: '/editor',
-  query: {},
-  asPath: '/editor',
-  basePath: '',
-  push: jest.fn(),
-  replace: jest.fn(),
-  reload: jest.fn(),
-  back: jest.fn(),
-  prefetch: jest.fn().mockResolvedValue(undefined),
-  beforePopState: jest.fn(),
-  isFallback: false,
-  isLocaleDomain: false,
-  isReady: true,
-  isPreview: false,
-  forward: jest.fn(),
-  events: {
-    emit: jest.fn(),
-    on: jest.fn(),
-    off: jest.fn()
-  },
-  ...overrides
-});
+const createRouter = (overrides: Partial<NextRouter> = {}): NextRouter => {
+  const router: NextRouter = {
+    route: '/editor',
+    pathname: '/editor',
+    query: {},
+    asPath: '/editor',
+    basePath: '',
+    push: jest
+      .fn<ReturnType<NextRouter['push']>, Parameters<NextRouter['push']>>()
+      .mockResolvedValue(true),
+    replace: jest
+      .fn<ReturnType<NextRouter['replace']>, Parameters<NextRouter['replace']>>()
+      .mockResolvedValue(true),
+    reload: jest.fn<ReturnType<NextRouter['reload']>, Parameters<NextRouter['reload']>>(),
+    back: jest.fn<ReturnType<NextRouter['back']>, Parameters<NextRouter['back']>>(),
+    forward: jest.fn<ReturnType<NextRouter['forward']>, Parameters<NextRouter['forward']>>(),
+    prefetch: jest
+      .fn<ReturnType<NextRouter['prefetch']>, Parameters<NextRouter['prefetch']>>()
+      .mockResolvedValue(undefined),
+    beforePopState: jest
+      .fn<
+        ReturnType<NextRouter['beforePopState']>,
+        Parameters<NextRouter['beforePopState']>
+      >(),
+    isFallback: false,
+    isLocaleDomain: false,
+    isReady: true,
+    isPreview: false,
+    locale: undefined,
+    locales: undefined,
+    defaultLocale: undefined,
+    domainLocales: undefined,
+    events: {
+      emit: jest.fn(),
+      on: jest.fn(),
+      off: jest.fn()
+    },
+    ...overrides
+  };
+
+  return router;
+};
 
 const getEditorTextarea = () => {
   const textarea = screen.queryAllByRole('textbox').find((el) => el.tagName === 'TEXTAREA');

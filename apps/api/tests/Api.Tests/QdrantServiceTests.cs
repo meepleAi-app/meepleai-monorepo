@@ -84,10 +84,10 @@ public class QdrantServiceTests
             }
         };
 
-        IEnumerable<PointStruct>? capturedPoints = null;
+        IReadOnlyList<PointStruct>? capturedPoints = null;
         _clientAdapterMock
-            .Setup(x => x.UpsertAsync(CollectionName, It.IsAny<IEnumerable<PointStruct>>(), It.IsAny<CancellationToken>()))
-            .Callback<string, IEnumerable<PointStruct>, CancellationToken>((_, points, _) => capturedPoints = points.ToList())
+            .Setup(x => x.UpsertAsync(CollectionName, It.IsAny<IReadOnlyList<PointStruct>>(), It.IsAny<CancellationToken>()))
+            .Callback<string, IReadOnlyList<PointStruct>, CancellationToken>((_, points, _) => capturedPoints = points)
             .Returns(Task.CompletedTask);
 
         var result = await _sut.IndexDocumentChunksAsync("game-1", "pdf-1", chunks);
@@ -124,7 +124,7 @@ public class QdrantServiceTests
         };
 
         _clientAdapterMock
-            .Setup(x => x.UpsertAsync(CollectionName, It.IsAny<IEnumerable<PointStruct>>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.UpsertAsync(CollectionName, It.IsAny<IReadOnlyList<PointStruct>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("boom"));
 
         var result = await _sut.IndexDocumentChunksAsync("game-1", "pdf-1", chunks);

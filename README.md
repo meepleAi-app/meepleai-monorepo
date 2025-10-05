@@ -85,6 +85,22 @@ scripts/, tools/, schemas/ ...
 
 Per altre linee guida consulta `agents.md` e i README specifici nelle rispettive app.
 
+## PDF Import Wizard
+
+L'interfaccia `PDF Import Wizard` (pagina `/upload`) guida l'utente attraverso l'ingestione di un nuovo regolamento in tre
+passaggi:
+
+1. **Upload** – Seleziona o crea un gioco, quindi carica il PDF. Il backend restituisce un `documentId` che identifica
+   l'elaborazione asincrona del file.
+2. **Parse** – Il frontend interroga automaticamente l'endpoint `/pdfs/{documentId}/text` ogni 2 secondi e mostra una barra di
+   avanzamento dello stato (`pending → processing → completed/failed`). Finché lo stato non è `completed` il pulsante di
+   parsing resta disabilitato; al completamento, il wizard carica la `RuleSpec` reale del gioco e prosegue da solo alla fase di
+   review. Eventuali errori (`failed` o problemi di polling) vengono mostrati direttamente nella UI.
+3. **Review & Publish** – Una volta caricata la `RuleSpec`, l'utente può modificare gli `RuleAtom`, pubblicare le modifiche o
+   tornare indietro.
+
+In caso di errore di parsing è possibile riavviare il flusso con **Start Over** e ripetere l'upload.
+
 ## Contribuire
 
 Accogliamo contributi dalla community! Prima di iniziare:

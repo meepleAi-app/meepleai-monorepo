@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 
 type AiRequest = {
@@ -34,11 +34,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, [endpointFilter]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -72,7 +68,11 @@ export default function AdminDashboard() {
       setError(err instanceof Error ? err.message : "An error occurred");
       setLoading(false);
     }
-  };
+  }, [endpointFilter]);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
 
   const exportToCSV = () => {
     const headers = ["Timestamp", "Endpoint", "Query", "Latency (ms)", "Tokens", "Status", "User ID", "Game ID"];

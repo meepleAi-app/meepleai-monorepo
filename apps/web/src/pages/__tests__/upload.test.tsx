@@ -214,7 +214,7 @@ describe('UploadPage', () => {
       await waitFor(() => expect(screen.getByText(/Processing status/i)).toBeInTheDocument());
       expect(screen.getByText(/Processing status/i)).toHaveTextContent(/Processing status: (Pending|Processing)/i);
 
-      const continueButton = screen.getByRole('button', { name: /Waiting for processing/i });
+      const continueButton = screen.getByRole('button', { name: /Parse PDF/i });
       expect(continueButton).toBeDisabled();
 
       await waitFor(() =>

@@ -37,7 +37,7 @@ public class PdfStorageServiceTests
         string storagePath,
         Mock<IBackgroundTaskService> backgroundTaskMock,
         Mock<IServiceScopeFactory>? scopeFactoryMock = null,
-        Mock<IAiResponseCacheService>? cacheMock = null)
+        Mock<IAiResponseCacheService>? cacheMock = null,
         PdfTextExtractionService? textExtractionService = null,
         PdfTableExtractionService? tableExtractionService = null,
         ITextChunkingService? textChunkingService = null,
@@ -62,13 +62,10 @@ public class PdfStorageServiceTests
             scopeFactoryMock.Object,
             configurationMock.Object,
             loggerMock.Object,
-            textExtractionService,
-            tableExtractionService,
-            backgroundTaskMock.Object,
-            cacheMock.Object);
             textExtractionService ?? new PdfTextExtractionService(Mock.Of<ILogger<PdfTextExtractionService>>()),
             tableExtractionService ?? new PdfTableExtractionService(Mock.Of<ILogger<PdfTableExtractionService>>()),
             backgroundTaskMock.Object,
+            cacheMock.Object,
             textChunkingService,
             embeddingService,
             qdrantService);

@@ -523,7 +523,8 @@ export default function UploadPage() {
   };
   const effectiveProcessingStatus: ProcessingStatus = processingStatus ?? 'pending';
   const processingProgress = statusProgress[effectiveProcessingStatus];
-  const isUnauthorizedRole = Boolean(authUser && !AUTHORIZED_ROLES.has(authUser.role));
+  const normalizedRole = authUser?.role?.toLowerCase().trim();
+  const isUnauthorizedRole = Boolean(authUser && (!normalizedRole || !AUTHORIZED_ROLES.has(normalizedRole)));
 
   const renderUnauthorizedState = () => (
     <div

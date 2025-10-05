@@ -85,6 +85,18 @@ scripts/, tools/, schemas/ ...
 
 Per altre linee guida consulta `agents.md` e i README specifici nelle rispettive app.
 
+## 📄 PDF Import Wizard
+
+Il wizard di import dei PDF (pagina `/upload`) guida editor e admin nell'intero flusso:
+
+1. **Selezione gioco** – scegli un gioco esistente e premi “Confirm selection”, oppure creane uno nuovo. L'upload resta disabilitato finché non c'è una conferma.
+2. **Upload PDF** – seleziona un file `.pdf` e premi “Upload & Continue”. L'app invia il file a `/ingest/pdf` e salva l'`documentId` restituito.
+3. **Parsing asincrono** – la fase “Parse” esegue polling automatico su `/pdfs/{documentId}/text` ogni pochi secondi, mostra la barra di avanzamento e rende visibili eventuali errori (`processingError`). Il pulsante di continuazione rimane disabilitato finché lo stato non diventa `completed`.
+4. **Review automatica** – non appena il backend segnala `processingStatus: completed`, il wizard carica la RuleSpec reale (`GET /games/{gameId}/rulespec`) e passa alla fase di review senza intervento manuale.
+5. **Pubblicazione** – dopo aver eventualmente modificato le regole estratte, premi “Publish RuleSpec” per inviare l'aggiornamento alle API.
+
+Se l'elaborazione fallisce (`processingStatus: failed`), il wizard mostra l'errore restituito e invita a ripartire dall'upload.
+
 ## Contribuire
 
 Accogliamo contributi dalla community! Prima di iniziare:
@@ -147,6 +159,7 @@ Accogliamo contributi dalla community! Prima di iniziare:
 - ✅ Health check endpoints
 - ✅ Integrazione con backend API
 - ✅ Gestione upload PDF con wizard multi-step con tracking avanzato dei progressi, connesso agli endpoint backend `/ingest/pdf` e `/games/{id}/pdfs`
+- ✅ Polling automatico dello stato di parsing (`/pdfs/{documentId}/text`) con barra di avanzamento e avanzamento automatico alla review
 
 #### Admin & Automazione
 - ✅ Dashboard amministrazione contenuti con log filtrabili, statistiche operative e gestione workflow n8n

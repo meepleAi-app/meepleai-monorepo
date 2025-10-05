@@ -333,6 +333,9 @@ OPENROUTER_API_KEY=your-api-key-here
 
 # Qdrant connection (default: http://localhost:6333)
 QDRANT_URL=http://qdrant:6333
+# Optional: override gRPC port if Qdrant is exposed on a non-default port
+# (leave unset to use 6334 when QDRANT_URL points to the default HTTP port)
+# QDRANT_GRPC_PORT=6334
 ```
 
 **Optional**:
@@ -396,8 +399,9 @@ await qdrant.EnsureCollectionExistsAsync();
 ### Issue: Qdrant connection fails
 **Check**:
 1. Qdrant is running (`docker compose ps`)
-2. `QDRANT_URL` points to correct host
-3. Port 6334 (gRPC) is accessible
+2. `QDRANT_URL` points to correct host (and HTTPS if TLS is enabled)
+3. The gRPC port is accessible (defaults to 6334 when using the standard REST port,
+   or the value of `QDRANT_GRPC_PORT` when set)
 
 **Logs**:
 ```

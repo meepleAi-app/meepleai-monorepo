@@ -63,6 +63,38 @@ export default function UploadPage() {
   const [ruleSpec, setRuleSpec] = useState<RuleSpec | null>(null);
   const [pdfs, setPdfs] = useState<PdfDocument[]>([]);
   const [loadingPdfs, setLoadingPdfs] = useState(false);
+  const isUnauthorizedRole = authUser !== null && authUser.role !== 'Admin' && authUser.role !== 'Editor';
+
+  const renderUnauthorizedState = () => (
+    <div
+      style={{
+        padding: '32px',
+        borderRadius: '8px',
+        border: '1px solid #f0cfcf',
+        backgroundColor: '#fff5f5'
+      }}
+    >
+      <h2 style={{ marginTop: 0, marginBottom: '12px' }}>Accesso negato</h2>
+      <p style={{ marginBottom: '20px', color: '#444', lineHeight: 1.5 }}>
+        Solo gli utenti con ruolo <strong>Admin</strong> o <strong>Editor</strong> possono utilizzare il wizard di
+        importazione dei PDF.
+      </p>
+      <Link
+        href="/"
+        style={{
+          display: 'inline-block',
+          padding: '10px 18px',
+          backgroundColor: '#0070f3',
+          color: '#fff',
+          borderRadius: '4px',
+          textDecoration: 'none',
+          fontWeight: 500
+        }}
+      >
+        Torna alla home
+      </Link>
+    </div>
+  );
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -415,7 +447,11 @@ export default function UploadPage() {
       <h1 style={{ marginBottom: '10px' }}>PDF Import Wizard</h1>
       <p style={{ color: '#666', marginBottom: '30px' }}>Upload, parse, review, and publish game rules</p>
 
-      {renderStepIndicator()}
+      {isUnauthorizedRole ? (
+        renderUnauthorizedState()
+      ) : (
+        <>
+          {renderStepIndicator()}
 
       {message && (
         <div
@@ -804,47 +840,49 @@ export default function UploadPage() {
         </div>
       )}
 
-      {currentStep === 'publish' && (
-        <div>
-          <h2>Step 4: Published Successfully! ✅</h2>
-          <p style={{ marginTop: '16px', marginBottom: '24px', fontSize: '16px' }}>
-            Your RuleSpec for <strong>{ruleSpec?.gameId ?? confirmedGameId ?? 'unknown game'}</strong> has been
-            published successfully!
-          </p>
-          <div style={{ marginTop: '20px' }}>
-            <button
-              onClick={resetWizard}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#0070f3',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '16px',
-                cursor: 'pointer',
-                fontWeight: '500',
-                marginRight: '12px'
-              }}
-            >
-              Import Another PDF
-            </button>
-            <Link
-              href={`/editor?gameId=${ruleSpec?.gameId ?? confirmedGameId ?? ''}`}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#34a853',
-                color: 'white',
-                textDecoration: 'none',
-                borderRadius: '4px',
-                fontSize: '16px',
-                fontWeight: '500',
-                display: 'inline-block'
-              }}
-            >
-              Edit in RuleSpec Editor
-            </Link>
-          </div>
-        </div>
+          {currentStep === 'publish' && (
+            <div>
+              <h2>Step 4: Published Successfully! ✅</h2>
+              <p style={{ marginTop: '16px', marginBottom: '24px', fontSize: '16px' }}>
+                Your RuleSpec for <strong>{ruleSpec?.gameId ?? confirmedGameId ?? 'unknown game'}</strong> has been
+                published successfully!
+              </p>
+              <div style={{ marginTop: '20px' }}>
+                <button
+                  onClick={resetWizard}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#0070f3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    marginRight: '12px'
+                  }}
+                >
+                  Import Another PDF
+                </button>
+                <Link
+                  href={`/editor?gameId=${ruleSpec?.gameId ?? confirmedGameId ?? ''}`}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#34a853',
+                    color: 'white',
+                    textDecoration: 'none',
+                    borderRadius: '4px',
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    display: 'inline-block'
+                  }}
+                >
+                  Edit in RuleSpec Editor
+                </Link>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

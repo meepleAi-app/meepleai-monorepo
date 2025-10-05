@@ -123,4 +123,38 @@ describe('UploadPage', () => {
 
     await waitFor(() => expect(uploadButton).not.toBeDisabled());
   });
+
+  it('mostra un messaggio di accesso negato per ruoli non autorizzati', async () => {
+    const authResponse = {
+      user: {
+        id: 'user-3',
+        email: 'user3@example.com',
+        role: 'User',
+        displayName: 'Player'
+      },
+      expiresAt: new Date().toISOString()
+    };
+
+    mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      const method = init?.method ?? 'GET';
+
+      if (url.endsWith('/auth/me')) {
+        return createJsonResponse(authResponse);
+      }
+
+      if (url.endsWith('/games') && method === 'GET') {
+        return createJsonResponse([]);
+      }
+
+      throw new Error(`Unexpected fetch call to ${url}`);
+    });
+
+    render(<UploadPage />);
+
+    await waitFor(() => expect(screen.getByText(/Accesso negato/i)).toBeInTheDocument());
+
+    expect(screen.queryByRole('button', { name: /Upload & Continue/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Torna alla home/i })).toBeInTheDocument();
+  });
 });

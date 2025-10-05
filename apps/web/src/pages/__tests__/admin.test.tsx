@@ -2,61 +2,102 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AdminDashboard from '../admin';
 
+type FetchMock = jest.MockedFunction<typeof fetch>;
+
 describe('AdminDashboard', () => {
   const originalFetch = global.fetch;
-  const originalApiBase = process.env.NEXT_PUBLIC_API_BASE;
+  const boundCreateElement = document.createElement.bind(document) as typeof document.createElement;
   const originalCreateObjectURL = URL.createObjectURL;
   const originalRevokeObjectURL = URL.revokeObjectURL;
-  let fetchMock: jest.Mock;
+  let fetchMock: FetchMock;
+  let createObjectURLMock: jest.Mock;
+  let revokeObjectURLMock: jest.Mock;
+  let createElementSpy: jest.SpyInstance;
+  let clickSpy: jest.SpyInstance;
+  const apiBase = 'https://api.example.com';
 
   const createJsonResponse = (data: unknown, ok = true) =>
-    Promise.resolve({
+    ({
       ok,
-      json: () => Promise.resolve(data)
-    } as Response);
+      json: async () => data
+    } as unknown as Response);
 
   beforeAll(() => {
-    process.env.NEXT_PUBLIC_API_BASE = 'https://api.example.com';
-  });
+    fetchMock = jest.fn() as FetchMock;
+    global.fetch = fetchMock;
 
-  beforeEach(() => {
-    fetchMock = jest.fn();
-    global.fetch = fetchMock as unknown as typeof fetch;
-  });
+    createObjectURLMock = jest.fn().mockReturnValue('blob:mock-url');
+    revokeObjectURLMock = jest.fn();
 
-  afterEach(() => {
-    global.fetch = originalFetch;
-    jest.clearAllMocks();
-    URL.createObjectURL = originalCreateObjectURL;
-    URL.revokeObjectURL = originalRevokeObjectURL;
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      writable: true,
+      value: createObjectURLMock
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      writable: true,
+      value: revokeObjectURLMock
+    });
+
+    createElementSpy = jest.spyOn(document, 'createElement');
+    clickSpy = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
   });
 
   afterAll(() => {
-    process.env.NEXT_PUBLIC_API_BASE = originalApiBase;
+    global.fetch = originalFetch;
+
+    if (originalCreateObjectURL) {
+      Object.defineProperty(URL, 'createObjectURL', {
+        configurable: true,
+        writable: true,
+        value: originalCreateObjectURL
+      });
+    } else {
+      delete (URL as unknown as { createObjectURL?: unknown }).createObjectURL;
+    }
+
+    if (originalRevokeObjectURL) {
+      Object.defineProperty(URL, 'revokeObjectURL', {
+        configurable: true,
+        writable: true,
+        value: originalRevokeObjectURL
+      });
+    } else {
+      delete (URL as unknown as { revokeObjectURL?: unknown }).revokeObjectURL;
+    }
+
+    createElementSpy.mockRestore();
+    clickSpy.mockRestore();
   });
 
-  it('renders loading state while data is being fetched', () => {
-    fetchMock.mockReturnValue(new Promise(() => {}));
-
-    render(<AdminDashboard />);
-
-    expect(screen.getByRole('heading', { name: /loading/i })).toBeInTheDocument();
-  });
-
-  it('renders error state when requests fetch fails', async () => {
-    fetchMock.mockResolvedValueOnce(createJsonResponse({}, false));
-
-    render(<AdminDashboard />);
-
-    await screen.findByRole('heading', { name: /error/i });
-    expect(screen.getByText(/failed to fetch requests/i)).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledWith(
-      'https://api.example.com/admin/requests?limit=100',
-      expect.objectContaining({ credentials: 'include' })
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_API_BASE = apiBase;
+    fetchMock.mockReset();
+    createObjectURLMock.mockClear();
+    revokeObjectURLMock.mockClear();
+    clickSpy.mockClear();
+    createElementSpy.mockImplementation((...args: Parameters<typeof boundCreateElement>) =>
+      boundCreateElement(...args)
     );
   });
 
-  it('renders data, filters requests, and fetches filtered endpoint data', async () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+    createElementSpy.mockImplementation((...args: Parameters<typeof boundCreateElement>) =>
+      boundCreateElement(...args)
+    );
+  });
+
+  it('renders loading state while data is being fetched', () => {
+    fetchMock.mockImplementation(() => new Promise(() => {}));
+
+    render(<AdminDashboard />);
+
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+  });
+
+  it('renders requests and stats, filters, refetches by endpoint, and exports CSV', async () => {
     const requestsPayload = {
       requests: [
         {
@@ -64,147 +105,130 @@ describe('AdminDashboard', () => {
           userId: 'user-1',
           gameId: 'game-1',
           endpoint: 'qa',
-          query: 'How to win?',
-          responseSnippet: 'Win tips',
-          latencyMs: 120,
-          tokenCount: 45,
-          confidence: 0.9,
+          query: 'How do I win?',
+          responseSnippet: null,
+          latencyMs: 210,
+          tokenCount: 42,
+          confidence: 0.8,
           status: 'Success',
           errorMessage: null,
           ipAddress: '127.0.0.1',
           userAgent: 'jest',
-          createdAt: new Date('2024-01-01T10:00:00Z').toISOString()
+          createdAt: '2024-01-01T12:00:00.000Z'
         },
         {
           id: '2',
           userId: 'user-2',
           gameId: 'game-2',
-          endpoint: 'setup',
+          endpoint: 'explain',
           query: 'Setup instructions',
-          responseSnippet: 'Setup tips',
-          latencyMs: 300,
-          tokenCount: 80,
-          confidence: 0.75,
-          status: 'Error',
-          errorMessage: 'Boom',
-          ipAddress: '127.0.0.1',
+          responseSnippet: null,
+          latencyMs: 150,
+          tokenCount: 18,
+          confidence: 0.95,
+          status: 'Success',
+          errorMessage: null,
+          ipAddress: '127.0.0.2',
           userAgent: 'jest',
-          createdAt: new Date('2024-01-02T10:00:00Z').toISOString()
+          createdAt: '2024-01-02T12:00:00.000Z'
         }
       ]
     };
 
     const statsPayload = {
       totalRequests: 2,
-      avgLatencyMs: 210,
-      totalTokens: 125,
-      successRate: 0.5,
+      avgLatencyMs: 180,
+      totalTokens: 60,
+      successRate: 0.95,
       endpointCounts: {
         qa: 1,
-        setup: 1
+        explain: 1
       }
+    };
+
+    const qaOnlyPayload = {
+      requests: [requestsPayload.requests[0]]
     };
 
     fetchMock
       .mockResolvedValueOnce(createJsonResponse(requestsPayload))
       .mockResolvedValueOnce(createJsonResponse(statsPayload))
-      .mockResolvedValueOnce(createJsonResponse(requestsPayload))
+      .mockResolvedValueOnce(createJsonResponse(qaOnlyPayload))
       .mockResolvedValueOnce(createJsonResponse(statsPayload));
 
     render(<AdminDashboard />);
 
-    await screen.findByRole('heading', { name: /admin dashboard/i });
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        `${apiBase}/admin/requests?limit=100`,
+        expect.objectContaining({ credentials: 'include' })
+      )
+    );
+
+    expect(await screen.findByText('Admin Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Total Requests')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText(/setup instructions/i)).toBeInTheDocument();
+    expect(screen.getByText('180ms')).toBeInTheDocument();
+    expect(screen.getByText('60')).toBeInTheDocument();
+    expect(screen.getByText('95.0%')).toBeInTheDocument();
+
+    expect(screen.getByText('How do I win?')).toBeInTheDocument();
+    expect(screen.getByText('Setup instructions')).toBeInTheDocument();
 
     const user = userEvent.setup();
-    const textFilter = screen.getByPlaceholderText(/filter by query, endpoint, user id, or game id/i);
-    await user.type(textFilter, 'setup');
+    const filterInput = screen.getByPlaceholderText(
+      'Filter by query, endpoint, user ID, or game ID...'
+    );
+    await user.clear(filterInput);
+    await user.type(filterInput, 'setup');
 
+    await waitFor(() => expect(screen.queryByText('How do I win?')).not.toBeInTheDocument());
+    expect(screen.getByText('Setup instructions')).toBeInTheDocument();
+
+    await user.clear(filterInput);
     await waitFor(() => {
-      expect(screen.getByText(/setup instructions/i)).toBeInTheDocument();
-      expect(screen.queryByText(/how to win/i)).not.toBeInTheDocument();
+      expect(screen.getByText('How do I win?')).toBeInTheDocument();
+      expect(screen.getByText('Setup instructions')).toBeInTheDocument();
     });
 
     const endpointSelect = screen.getByRole('combobox');
     await user.selectOptions(endpointSelect, 'qa');
 
-    await waitFor(() => {
+    await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
-        'https://api.example.com/admin/requests?limit=100&endpoint=qa',
+        `${apiBase}/admin/requests?limit=100&endpoint=qa`,
         expect.objectContaining({ credentials: 'include' })
-      );
+      )
+    );
+
+    await waitFor(() => expect(screen.getByText('How do I win?')).toBeInTheDocument());
+    expect(screen.queryByText('Setup instructions')).not.toBeInTheDocument();
+
+    const anchor = boundCreateElement('a') as HTMLAnchorElement;
+    createElementSpy.mockImplementation((tagName: string, ...rest: unknown[]) => {
+      if (tagName === 'a') {
+        return anchor;
+      }
+      return boundCreateElement(tagName as keyof HTMLElementTagNameMap, ...(rest as [ElementCreationOptions?]));
     });
+
+    const exportButton = screen.getByRole('button', { name: 'Export CSV' });
+    await user.click(exportButton);
+
+    expect(createObjectURLMock).toHaveBeenCalledWith(expect.any(Blob));
+    expect(anchor.download).toMatch(/^ai_requests_/);
+    expect(anchor.href).toBe('blob:mock-url');
+    expect(clickSpy).toHaveBeenCalled();
+    expect(revokeObjectURLMock).toHaveBeenCalledWith('blob:mock-url');
   });
 
-  it('exports data to CSV using an object URL and synthetic anchor click', async () => {
-    const requestsPayload = {
-      requests: [
-        {
-          id: '1',
-          userId: 'user-1',
-          gameId: 'game-1',
-          endpoint: 'qa',
-          query: 'How to win?',
-          responseSnippet: 'Win tips',
-          latencyMs: 120,
-          tokenCount: 45,
-          confidence: 0.9,
-          status: 'Success',
-          errorMessage: null,
-          ipAddress: '127.0.0.1',
-          userAgent: 'jest',
-          createdAt: new Date('2024-01-01T10:00:00Z').toISOString()
-        }
-      ]
-    };
-
-    const statsPayload = {
-      totalRequests: 1,
-      avgLatencyMs: 120,
-      totalTokens: 45,
-      successRate: 1,
-      endpointCounts: {
-        qa: 1
-      }
-    };
-
-    fetchMock
-      .mockResolvedValueOnce(createJsonResponse(requestsPayload))
-      .mockResolvedValueOnce(createJsonResponse(statsPayload));
-
-    const createObjectURLMock = jest.fn(() => 'blob:mock-url');
-    const revokeObjectURLMock = jest.fn();
-    URL.createObjectURL = createObjectURLMock as unknown as typeof URL.createObjectURL;
-    URL.revokeObjectURL = revokeObjectURLMock as unknown as typeof URL.revokeObjectURL;
-
-    const anchor = document.createElement('a');
-    const clickSpy = jest.spyOn(anchor, 'click').mockImplementation(() => {});
-    const realCreateElement = document.createElement.bind(document);
-    const createElementSpy = jest
-      .spyOn(document, 'createElement')
-      .mockImplementation((tagName: string, options?: ElementCreationOptions) => {
-        if (tagName === 'a') {
-          return anchor;
-        }
-
-        return realCreateElement(tagName, options);
-      });
+  it('renders error state when the API responds with an error', async () => {
+    fetchMock.mockResolvedValueOnce(createJsonResponse({}, false));
 
     render(<AdminDashboard />);
 
-    await screen.findByRole('heading', { name: /admin dashboard/i });
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /export csv/i }));
-
-    expect(createObjectURLMock).toHaveBeenCalledTimes(1);
-    expect(createObjectURLMock.mock.calls[0][0]).toBeInstanceOf(Blob);
-    expect(anchor.download).toMatch(/ai_requests_.*\.csv/);
-    expect(clickSpy).toHaveBeenCalled();
-    expect(revokeObjectURLMock).toHaveBeenCalledWith('blob:mock-url');
-
-    createElementSpy.mockRestore();
-    clickSpy.mockRestore();
+    expect(await screen.findByText('Error')).toBeInTheDocument();
+    expect(screen.getByText('Failed to fetch requests')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back to Home' })).toBeInTheDocument();
   });
 });

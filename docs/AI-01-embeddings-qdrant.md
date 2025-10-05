@@ -208,6 +208,43 @@ Upload and automatically index a PDF document.
 
 ---
 
+### POST `/ingest/pdf/parse`
+Convert a previously uploaded PDF into a structured `RuleSpec` document once the parsing service is available.
+
+**Authentication**: Required (Admin or Editor role)
+**Request**:
+```json
+{
+  "gameId": "demo-chess",
+  "documentId": "abc123"
+}
+```
+
+**Response**:
+```json
+{
+  "gameId": "demo-chess",
+  "version": "v1.0.0",
+  "createdAt": "2025-01-01T12:00:00Z",
+  "rules": [
+    {
+      "id": "r1",
+      "text": "Two players.",
+      "section": "Basics",
+      "page": "1",
+      "line": "1"
+    }
+  ]
+}
+```
+
+**Notes**:
+- Returns `404` when the parsing service is not deployed yet; the frontend surfaces this as "Parsing service not available".
+- Other non-2xx responses include a JSON `{ "error": "..." }` payload that is shown to the operator.
+- The returned `RuleSpec` can be edited and published via `PUT /games/{gameId}/rulespec`.
+
+---
+
 ### POST `/agents/qa`
 Query the knowledge base using semantic search.
 

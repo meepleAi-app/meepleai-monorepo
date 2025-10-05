@@ -333,6 +333,21 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
 
         logger.LogInformation("QA response delivered for game {GameId}", req.gameId);
 
+        string? model = null;
+        string? finishReason = null;
+        if (resp.metadata != null)
+        {
+            if (resp.metadata.TryGetValue("model", out var metadataModel))
+            {
+                model = metadataModel;
+            }
+
+            if (resp.metadata.TryGetValue("finish_reason", out var metadataFinish))
+            {
+                finishReason = metadataFinish;
+            }
+        }
+
         // ADM-01: Log AI request
         await aiLog.LogRequestAsync(
             session.User.id,
@@ -341,12 +356,16 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
             req.query,
             resp.answer?.Length > 500 ? resp.answer.Substring(0, 500) : resp.answer,
             latencyMs,
-            null, // Token count not available yet
-            null, // Confidence not available yet
+            resp.totalTokens,
+            resp.confidence,
             "Success",
             null,
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString(),
+            resp.promptTokens,
+            resp.completionTokens,
+            model,
+            finishReason,
             ct);
 
         return Results.Json(resp);
@@ -407,12 +426,16 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
             req.topic,
             resp.script?.Length > 500 ? resp.script.Substring(0, 500) : resp.script,
             latencyMs,
-            null,
-            null,
+            resp.totalTokens,
+            resp.confidence,
             "Success",
             null,
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString(),
+            resp.promptTokens,
+            resp.completionTokens,
+            null,
+            null,
             ct);
 
         return Results.Json(resp);
@@ -482,12 +505,16 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
             "setup_guide",
             responseSnippet,
             latencyMs,
-            null,
-            null,
+            resp.totalTokens,
+            resp.confidence,
             "Success",
             null,
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString(),
+            resp.promptTokens,
+            resp.completionTokens,
+            null,
+            null,
             ct);
 
         return Results.Json(resp);
@@ -635,6 +662,32 @@ app.MapGet("/pdfs/{pdfId}/text", async (string pdfId, HttpContext context, Meepl
     return Results.Json(pdf);
 });
 
+app.MapPost("/ingest/pdf/{pdfId}/rulespec", async (string pdfId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation("User {UserId} generating RuleSpec from PDF {PdfId}", session.User.id, pdfId);
+        var ruleSpec = await ruleSpecService.GenerateRuleSpecFromPdfAsync(pdfId, ct);
+        return Results.Json(ruleSpec);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning(ex, "Unable to generate RuleSpec for PDF {PdfId}", pdfId);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
 app.MapGet("/games/{gameId}/rulespec", async (string gameId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
@@ -676,7 +729,7 @@ app.MapPut("/games/{gameId}/rulespec", async (string gameId, RuleSpec ruleSpec, 
     try
     {
         logger.LogInformation("User {UserId} updating RuleSpec for game {GameId}", session.User.id, gameId);
-        var updated = await ruleSpecService.UpdateRuleSpecAsync(gameId, ruleSpec, ct);
+        var updated = await ruleSpecService.UpdateRuleSpecAsync(gameId, ruleSpec, session.User.id, ct);
         logger.LogInformation("RuleSpec updated successfully for game {GameId}, version {Version}", gameId, updated.version);
 
         // Audit trail for RuleSpec changes

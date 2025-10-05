@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -6,6 +7,7 @@ using Api.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Moq;
+using System.Text.Json;
 using Xunit;
 
 namespace Api.Tests;
@@ -128,7 +130,18 @@ public class RuleSpecServiceTests : IDisposable
             CreatedAt = DateTime.UtcNow
         };
 
+        var user = new UserEntity
+        {
+            Id = "author-1",
+            Email = "author@example.com",
+            DisplayName = "Author",
+            PasswordHash = "hash",
+            Role = UserRole.Admin,
+            CreatedAt = DateTime.UtcNow
+        };
+
         _dbContext.Games.Add(game);
+        _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync();
 
         var model = new RuleSpec(
@@ -141,7 +154,7 @@ public class RuleSpecServiceTests : IDisposable
                 new RuleAtom("a2", "Second rule", "Setup", "1", "2")
             });
 
-        var result = await _service.UpdateRuleSpecAsync(game.Id, model);
+        var result = await _service.UpdateRuleSpecAsync(game.Id, model, user.Id);
 
         Assert.Equal(game.Id, result.gameId);
         Assert.Equal("v2", result.version);
@@ -154,6 +167,121 @@ public class RuleSpecServiceTests : IDisposable
         Assert.Contains(entity.Atoms, a => a.Key == "a2" && a.Text == "Second rule");
 
         _cacheMock.Verify(x => x.InvalidateGameAsync(game.Id, It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal(user.Id, entity.CreatedByUserId);
+
+        var history = await _service.GetVersionHistoryAsync(game.Id);
+        Assert.Equal("Author", history.Versions.First().CreatedBy);
+    }
+
+    [Fact]
+    public async Task UpdateRuleSpecAsync_WhenVersionMissing_GeneratesSequentialVersionAndTracksAuthor()
+    {
+        var game = new GameEntity
+        {
+            Id = "game-2",
+            Name = "Sequential Game",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var user = new UserEntity
+        {
+            Id = "author-2",
+            Email = "author2@example.com",
+            DisplayName = "Second Author",
+            PasswordHash = "hash",
+            Role = UserRole.Editor,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var existingSpec = new RuleSpecEntity
+        {
+            GameId = game.Id,
+            Version = "v1",
+            CreatedAt = DateTime.UtcNow.AddMinutes(-5),
+            CreatedByUserId = user.Id
+        };
+        existingSpec.Atoms.Add(new RuleAtomEntity
+        {
+            RuleSpec = existingSpec,
+            Key = "ex1",
+            Text = "Existing",
+            Section = "Intro",
+            SortOrder = 1
+        });
+
+        _dbContext.Games.Add(game);
+        _dbContext.Users.Add(user);
+        _dbContext.RuleSpecs.Add(existingSpec);
+        await _dbContext.SaveChangesAsync();
+
+        var model = new RuleSpec(
+            game.Id,
+            string.Empty,
+            DateTime.UtcNow,
+            new[]
+            {
+                new RuleAtom("b1", "Generated", "Setup", "1", "1"),
+            });
+
+        var result = await _service.UpdateRuleSpecAsync(game.Id, model, user.Id);
+
+        Assert.Equal(game.Id, result.gameId);
+        Assert.Equal("v2", result.version);
+
+        var saved = await _dbContext.RuleSpecs
+            .SingleAsync(r => r.GameId == game.Id && r.Version == "v2");
+        Assert.Equal(user.Id, saved.CreatedByUserId);
+
+        var history = await _service.GetVersionHistoryAsync(game.Id);
+        Assert.Equal(2, history.TotalVersions);
+        Assert.Equal("Second Author", history.Versions.First().CreatedBy);
+        Assert.Equal("v2", history.Versions.First().Version);
+    }
+
+    [Fact]
+    public async Task UpdateRuleSpecAsync_WhenVersionAlreadyExists_Throws()
+    {
+        var game = new GameEntity
+        {
+            Id = "game-duplicate",
+            Name = "Duplicate Game",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var user = new UserEntity
+        {
+            Id = "author-dup",
+            Email = "dup@example.com",
+            DisplayName = "Duplicate Author",
+            PasswordHash = "hash",
+            Role = UserRole.Admin,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var spec = new RuleSpecEntity
+        {
+            GameId = game.Id,
+            Version = "v1",
+            CreatedAt = DateTime.UtcNow.AddMinutes(-2),
+            CreatedByUserId = user.Id
+        };
+
+        _dbContext.Games.Add(game);
+        _dbContext.Users.Add(user);
+        _dbContext.RuleSpecs.Add(spec);
+        await _dbContext.SaveChangesAsync();
+
+        var model = new RuleSpec(
+            game.Id,
+            "v1",
+            DateTime.UtcNow,
+            new[]
+            {
+                new RuleAtom("dup", "Duplicate", "Intro", "1", "1"),
+            });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.UpdateRuleSpecAsync(game.Id, model, user.Id));
     }
 
     [Fact]
@@ -232,5 +360,104 @@ public class RuleSpecServiceTests : IDisposable
                 Assert.Equal(1, version.RuleCount);
                 Assert.Equal("Test User", version.CreatedBy);
             });
+    }
+
+    [Fact]
+    public async Task GenerateRuleSpecFromPdfAsync_UsesAtomicRulesWhenPresent()
+    {
+        var user = new UserEntity
+        {
+            Id = "user-atomic",
+            Email = "atomic@example.com",
+            PasswordHash = "hash",
+            Role = UserRole.Admin,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var game = new GameEntity
+        {
+            Id = "game-atomic",
+            Name = "Atomic Game",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var pdf = new PdfDocumentEntity
+        {
+            Id = "pdf-atomic",
+            GameId = game.Id,
+            FileName = "rules.pdf",
+            FilePath = "/tmp/rules.pdf",
+            FileSizeBytes = 1024,
+            UploadedByUserId = user.Id,
+            UploadedAt = DateTime.UtcNow,
+            AtomicRules = JsonSerializer.Serialize(new[]
+            {
+                "[Table on page 3] Setup: Each player draws five cards"
+            })
+        };
+
+        _dbContext.Users.Add(user);
+        _dbContext.Games.Add(game);
+        _dbContext.PdfDocuments.Add(pdf);
+        await _dbContext.SaveChangesAsync();
+
+        var spec = await _service.GenerateRuleSpecFromPdfAsync(pdf.Id);
+
+        Assert.Equal(game.Id, spec.gameId);
+        Assert.StartsWith("ingest-", spec.version, StringComparison.Ordinal);
+        Assert.Single(spec.rules);
+        Assert.Equal("Setup: Each player draws five cards", spec.rules[0].text);
+        Assert.Equal("3", spec.rules[0].page);
+        Assert.Equal("r1", spec.rules[0].id);
+    }
+
+    [Fact]
+    public async Task GenerateRuleSpecFromPdfAsync_FallsBackToExtractedText()
+    {
+        var user = new UserEntity
+        {
+            Id = "user-text",
+            Email = "text@example.com",
+            PasswordHash = "hash",
+            Role = UserRole.Editor,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var game = new GameEntity
+        {
+            Id = "game-text",
+            Name = "Text Game",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var pdf = new PdfDocumentEntity
+        {
+            Id = "pdf-text",
+            GameId = game.Id,
+            FileName = "rules.pdf",
+            FilePath = "/tmp/rules.pdf",
+            FileSizeBytes = 2048,
+            UploadedByUserId = user.Id,
+            UploadedAt = DateTime.UtcNow,
+            ExtractedText = "Rule one applies.\nRule two applies."
+        };
+
+        _dbContext.Users.Add(user);
+        _dbContext.Games.Add(game);
+        _dbContext.PdfDocuments.Add(pdf);
+        await _dbContext.SaveChangesAsync();
+
+        var spec = await _service.GenerateRuleSpecFromPdfAsync(pdf.Id);
+
+        Assert.Equal(2, spec.rules.Count);
+        Assert.Equal("Rule one applies.", spec.rules[0].text);
+        Assert.Equal("Rule two applies.", spec.rules[1].text);
+        Assert.All(spec.rules, atom => Assert.Null(atom.page));
+    }
+
+    [Fact]
+    public async Task GenerateRuleSpecFromPdfAsync_ThrowsWhenNoPdf()
+    {
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GenerateRuleSpecFromPdfAsync("missing"));
     }
 }

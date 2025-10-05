@@ -292,9 +292,12 @@ public class PdfStorageService
         // Create new scope for background task to avoid disposed DbContext
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var chunkingService = scope.ServiceProvider.GetRequiredService<TextChunkingService>();
-        var embeddingService = scope.ServiceProvider.GetRequiredService<EmbeddingService>();
-        var qdrantService = scope.ServiceProvider.GetRequiredService<IQdrantService>();
+        var chunkingService = _textChunkingServiceOverride
+            ?? scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
+        var embeddingService = _embeddingServiceOverride
+            ?? scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
+        var qdrantService = _qdrantServiceOverride
+            ?? scope.ServiceProvider.GetRequiredService<IQdrantService>();
 
         try
         {

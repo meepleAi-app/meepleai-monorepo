@@ -243,12 +243,16 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.Query).HasMaxLength(2048);
             entity.Property(e => e.ResponseSnippet).HasMaxLength(1024);
             entity.Property(e => e.LatencyMs).IsRequired();
-            entity.Property(e => e.TokenCount);
+            entity.Property(e => e.TokenCount).HasDefaultValue(0);
+            entity.Property(e => e.PromptTokens).HasDefaultValue(0);
+            entity.Property(e => e.CompletionTokens).HasDefaultValue(0);
             entity.Property(e => e.Confidence);
             entity.Property(e => e.Status).IsRequired().HasMaxLength(32);
             entity.Property(e => e.ErrorMessage).HasMaxLength(1024);
             entity.Property(e => e.IpAddress).HasMaxLength(64);
             entity.Property(e => e.UserAgent).HasMaxLength(256);
+            entity.Property(e => e.Model).HasMaxLength(128);
+            entity.Property(e => e.FinishReason).HasMaxLength(64);
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.HasIndex(e => e.CreatedAt);
             entity.HasIndex(e => e.Endpoint);

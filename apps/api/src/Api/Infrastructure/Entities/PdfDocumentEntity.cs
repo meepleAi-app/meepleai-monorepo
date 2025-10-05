@@ -3,7 +3,6 @@ namespace Api.Infrastructure.Entities;
 public class PdfDocumentEntity
 {
     public string Id { get; set; } = default!;
-    public string TenantId { get; set; } = default!;
     public string GameId { get; set; } = default!;
     public string FileName { get; set; } = default!;
     public string FilePath { get; set; } = default!;
@@ -29,7 +28,6 @@ public class PdfDocumentEntity
     public int? DiagramCount { get; set; }
     public int? AtomicRuleCount { get; set; }
 
-    public TenantEntity Tenant { get; set; } = default!;
     public GameEntity Game { get; set; } = default!;
     public UserEntity UploadedBy { get; set; } = default!;
 }

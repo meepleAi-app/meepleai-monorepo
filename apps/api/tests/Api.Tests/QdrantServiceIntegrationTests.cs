@@ -115,7 +115,7 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
 
         await QdrantService.IndexDocumentChunksAsync(
             gameId: "game-1",
-            pdfId: "pdf-tenant-test",
+            pdfId: "pdf-shared-test",
             chunks: chunks);
 
         // Act - Search
@@ -124,7 +124,7 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
             queryEmbedding: embedding,
             limit: 5);
 
-        // Assert - Results are returned regardless of tenant context
+        // Assert - Results are returned regardless of global context
         Assert.True(searchResult.Success);
         Assert.NotEmpty(searchResult.Results);
     }

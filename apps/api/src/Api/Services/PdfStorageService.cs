@@ -87,11 +87,11 @@ public class PdfStorageService
         {
             // Generate unique file path
             var fileId = Guid.NewGuid().ToString("N");
-            var tenantDir = Path.Combine(_storageBasePath, game.TenantId, gameId);
-            Directory.CreateDirectory(tenantDir);
+            var gameDir = Path.Combine(_storageBasePath, gameId);
+            Directory.CreateDirectory(gameDir);
 
             var sanitizedFileName = SanitizeFileName(fileName);
-            var filePath = Path.Combine(tenantDir, $"{fileId}_{sanitizedFileName}");
+            var filePath = Path.Combine(gameDir, $"{fileId}_{sanitizedFileName}");
 
             // Save file to disk
             using (var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
@@ -105,7 +105,6 @@ public class PdfStorageService
             var pdfDoc = new PdfDocumentEntity
             {
                 Id = fileId,
-                TenantId = game.TenantId,
                 GameId = gameId,
                 FileName = sanitizedFileName,
                 FilePath = filePath,
@@ -285,8 +284,6 @@ public class PdfStorageService
                 return;
             }
 
-            var tenantId = pdfDoc.TenantId;
-
             // Create or update vector document record
             var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId);
             if (vectorDoc == null)
@@ -294,7 +291,6 @@ public class PdfStorageService
                 vectorDoc = new VectorDocumentEntity
                 {
                     Id = Guid.NewGuid().ToString("N"),
-                    TenantId = tenantId,
                     GameId = gameId,
                     PdfDocumentId = pdfId,
                     IndexingStatus = "processing"

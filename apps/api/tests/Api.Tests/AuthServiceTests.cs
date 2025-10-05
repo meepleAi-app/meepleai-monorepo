@@ -3,7 +3,6 @@ using Api.Models;
 using Api.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Xunit;
 
 public class AuthServiceTests
@@ -23,11 +22,9 @@ public class AuthServiceTests
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        var tenantOptions = Options.Create(new SingleTenantOptions { TenantId = "tenant-test", TenantName = "Tenant Test" });
-
-        await using var dbContext = new MeepleAiDbContext(options, tenantOptions);
+        await using var dbContext = new MeepleAiDbContext(options);
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new AuthService(dbContext, tenantOptions, timeProvider);
+        var authService = new AuthService(dbContext, timeProvider);
 
         var register = await authService.RegisterAsync(new RegisterCommand(
             "user@example.com",

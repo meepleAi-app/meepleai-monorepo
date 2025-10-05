@@ -6,7 +6,6 @@ using Api.Models;
 using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Events;
 using StackExchange.Redis;
@@ -45,9 +44,6 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 
 // Configure HttpClient for EmbeddingService
 builder.Services.AddHttpClient();
-
-// Single-tenant configuration
-builder.Services.Configure<SingleTenantOptions>(builder.Configuration.GetSection("Tenant"));
 
 // Background task execution
 builder.Services.AddSingleton<IBackgroundTaskService, BackgroundTaskService>();
@@ -608,17 +604,15 @@ app.MapGet("/games/{gameId}/pdfs", async (string gameId, HttpContext context, Pd
     return Results.Json(new { pdfs });
 });
 
-app.MapGet("/pdfs/{pdfId}/text", async (string pdfId, HttpContext context, MeepleAiDbContext db, IOptions<SingleTenantOptions> tenantOptions, CancellationToken ct) =>
+app.MapGet("/pdfs/{pdfId}/text", async (string pdfId, HttpContext context, MeepleAiDbContext db, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
         return Results.Unauthorized();
     }
 
-    var tenantId = tenantOptions.Value.GetTenantId();
-
     var pdf = await db.PdfDocuments
-        .Where(p => p.Id == pdfId && p.TenantId == tenantId)
+        .Where(p => p.Id == pdfId)
         .Select(p => new
         {
             p.Id,
@@ -787,7 +781,7 @@ app.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, Rule
 });
 
 // ADM-01: Admin dashboard endpoints
-app.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService logService, int limit = 100, int offset = 0, string? endpoint = null, string? userId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default) =>
+app.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService logService, int limit = 100, int offset = 0, string? endpoint = null, string? userId = null, string? gameId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -804,6 +798,7 @@ app.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService lo
         offset,
         endpoint,
         userId,
+        gameId,
         startDate,
         endDate,
         ct);
@@ -811,7 +806,7 @@ app.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService lo
     return Results.Json(new { requests });
 });
 
-app.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logService, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default) =>
+app.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logService, DateTime? startDate = null, DateTime? endDate = null, string? userId = null, string? gameId = null, CancellationToken ct = default) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -823,7 +818,7 @@ app.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logSe
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    var stats = await logService.GetStatsAsync(startDate, endDate, ct);
+    var stats = await logService.GetStatsAsync(startDate, endDate, userId, gameId, ct);
     return Results.Json(stats);
 });
 

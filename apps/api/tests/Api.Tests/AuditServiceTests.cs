@@ -3,7 +3,6 @@ using Api.Infrastructure.Entities;
 using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -14,22 +13,18 @@ public class AuditServiceTests : IDisposable
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<ILogger<AuditService>> _loggerMock;
     private readonly AuditService _service;
-    private readonly SingleTenantOptions _tenantOptions;
-
     public AuditServiceTests()
     {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseSqlite("DataSource=:memory:")
             .Options;
 
-        _tenantOptions = new SingleTenantOptions { TenantId = "tenant-test" };
-
-        _dbContext = new MeepleAiDbContext(options, Options.Create(_tenantOptions));
+        _dbContext = new MeepleAiDbContext(options);
         _dbContext.Database.OpenConnection();
         _dbContext.Database.EnsureCreated();
 
         _loggerMock = new Mock<ILogger<AuditService>>();
-        _service = new AuditService(_dbContext, _loggerMock.Object, Options.Create(_tenantOptions));
+        _service = new AuditService(_dbContext, _loggerMock.Object);
     }
 
     public void Dispose()
@@ -59,7 +54,6 @@ public class AuditServiceTests : IDisposable
         // Assert
         var logs = await _dbContext.AuditLogs.ToListAsync();
         Assert.Single(logs);
-        Assert.Equal(_tenantOptions.GetTenantId(), logs[0].TenantId);
         Assert.Equal(userId, logs[0].UserId);
         Assert.Equal(action, logs[0].Action);
         Assert.Equal(resource, logs[0].Resource);
@@ -96,30 +90,29 @@ public class AuditServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task LogTenantAccessDeniedAsync_CreatesLog()
+    public async Task LogAccessDeniedAsync_CreatesLog()
     {
         // Arrange
-        var userTenantId = "tenant-1";
-        var requestedTenantId = "tenant-2";
+        var userScope = "scope-1";
+        var requiredScope = "scope-2";
         var userId = "user-123";
         var resource = "Game";
 
         // Act
-        await _service.LogTenantAccessDeniedAsync(
-            userTenantId,
-            requestedTenantId,
+        await _service.LogAccessDeniedAsync(
+            userScope,
+            requiredScope,
             userId,
             resource);
 
         // Assert
         var logs = await _dbContext.AuditLogs.ToListAsync();
         Assert.Single(logs);
-        Assert.Equal(_tenantOptions.GetTenantId(), logs[0].TenantId);
         Assert.Equal(userId, logs[0].UserId);
         Assert.Equal("ACCESS_DENIED", logs[0].Action);
         Assert.Equal(resource, logs[0].Resource);
         Assert.Equal("Denied", logs[0].Result);
-        Assert.Contains(requestedTenantId, logs[0].Details);
+        Assert.Contains(requiredScope, logs[0].Details);
     }
 
     [Fact]
@@ -147,16 +140,16 @@ public class AuditServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task LogTenantAccessDeniedAsync_WithIpAddressAndUserAgent_SavesMetadata()
+    public async Task LogAccessDeniedAsync_WithIpAddressAndUserAgent_SavesMetadata()
     {
         // Arrange
         var ipAddress = "10.0.0.1";
         var userAgent = "Chrome/91.0";
 
         // Act
-        await _service.LogTenantAccessDeniedAsync(
-            "tenant-1",
-            "tenant-2",
+        await _service.LogAccessDeniedAsync(
+            "scope-1",
+            "scope-2",
             "user-123",
             "Game",
             "game-456",

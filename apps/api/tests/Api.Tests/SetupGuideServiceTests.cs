@@ -51,7 +51,6 @@ public class SetupGuideServiceTests : IDisposable
     public async Task GenerateSetupGuideAsync_WithNonExistentGame_ReturnsDefaultGuide()
     {
         // Arrange
-        var tenantId = "tenant1";
         var gameId = "nonexistent";
 
         // Act
@@ -68,23 +67,12 @@ public class SetupGuideServiceTests : IDisposable
     public async Task GenerateSetupGuideAsync_WithValidGame_ReturnsSetupGuide()
     {
         // Arrange
-        var tenantId = "tenant1";
         var gameId = "game1";
-
-        // Create test tenant
-        var tenant = new TenantEntity
-        {
-            Id = tenantId,
-            Name = "Test Tenant",
-            CreatedAt = DateTime.UtcNow
-        };
-        _dbContext.Tenants.Add(tenant);
 
         // Create test game
         var game = new GameEntity
         {
             Id = gameId,
-            TenantId = tenantId,
             Name = "Test Board Game",
             CreatedAt = DateTime.UtcNow
         };
@@ -120,22 +108,11 @@ public class SetupGuideServiceTests : IDisposable
     public async Task GenerateSetupGuideAsync_WithRAGData_ReturnsEnrichedSteps()
     {
         // Arrange
-        var tenantId = "tenant1";
         var gameId = "game1";
-
-        // Create test data
-        var tenant = new TenantEntity
-        {
-            Id = tenantId,
-            Name = "Test Tenant",
-            CreatedAt = DateTime.UtcNow
-        };
-        _dbContext.Tenants.Add(tenant);
 
         var game = new GameEntity
         {
             Id = gameId,
-            TenantId = tenantId,
             Name = "Advanced Strategy Game",
             CreatedAt = DateTime.UtcNow
         };
@@ -215,21 +192,11 @@ public class SetupGuideServiceTests : IDisposable
     public async Task SetupGuideResponse_CalculatesEstimatedTime()
     {
         // Arrange
-        var tenantId = "tenant1";
         var gameId = "game1";
-
-        var tenant = new TenantEntity
-        {
-            Id = tenantId,
-            Name = "Test Tenant",
-            CreatedAt = DateTime.UtcNow
-        };
-        _dbContext.Tenants.Add(tenant);
 
         var game = new GameEntity
         {
             Id = gameId,
-            TenantId = tenantId,
             Name = "Quick Game",
             CreatedAt = DateTime.UtcNow
         };

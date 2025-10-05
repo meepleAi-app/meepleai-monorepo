@@ -121,7 +121,7 @@ public class QdrantService : IQdrantService
 
             await _clientAdapter.UpsertAsync(
                 collectionName: CollectionName,
-                points: points,
+                points: points.AsReadOnly(),
                 cancellationToken: ct
             );
 

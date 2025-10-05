@@ -184,42 +184,50 @@ export default function UploadPage() {
       return;
     }
 
+    if (!documentId) {
+      setMessage('Upload a PDF before parsing');
+      return;
+    }
+
     setParsing(true);
     setMessage('');
 
     try {
-      const mockRuleSpec: RuleSpec = {
-        gameId: confirmedGameId,
-        version: '1.0.0',
-        createdAt: new Date().toISOString(),
-        rules: [
-          {
-            id: '1',
-            text: 'Chess is played on a square board of eight rows and eight columns.',
-            section: 'Setup',
-            page: '1',
-            line: '1'
-          },
-          {
-            id: '2',
-            text: 'The game is played by two players, one controlling the white pieces and the other controlling the black pieces.',
-            section: 'Setup',
-            page: '1',
-            line: '3'
-          },
-          {
-            id: '3',
-            text: 'Each player begins the game with 16 pieces: one king, one queen, two rooks, two knights, two bishops, and eight pawns.',
-            section: 'Setup',
-            page: '1',
-            line: '5'
+      const response = await fetch(`${API_BASE}/ingest/pdf/parse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          gameId: confirmedGameId,
+          documentId
+        })
+      });
+
+      if (!response.ok) {
+        let errorDetail = response.statusText || `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (errorData && typeof errorData === 'object') {
+            if ('error' in errorData && errorData.error) {
+              errorDetail = String(errorData.error);
+            } else {
+              errorDetail = JSON.stringify(errorData);
+            }
           }
-        ]
-      };
+        } catch {
+          // Ignore JSON parsing errors for error responses
+        }
 
-      await new Promise(resolve => setTimeout(resolve, 2000));
+        if (response.status === 404) {
+          errorDetail = 'Parsing service not available. Please contact an administrator.';
+        }
 
-      setRuleSpec(mockRuleSpec);
+        throw new Error(errorDetail || 'Failed to parse PDF');
+      }
+
+      const parsedSpec = (await response.json()) as RuleSpec;
+
+      setRuleSpec(parsedSpec);
       setMessage('✅ PDF parsed successfully!');
       setCurrentStep('review');
     } catch (error) {
@@ -628,15 +636,15 @@ export default function UploadPage() {
           </p>
           <button
             onClick={handleParse}
-            disabled={parsing}
+            disabled={parsing || !documentId}
             style={{
               padding: '12px 24px',
-              backgroundColor: parsing ? '#ccc' : '#0070f3',
+              backgroundColor: parsing || !documentId ? '#ccc' : '#0070f3',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
               fontSize: '16px',
-              cursor: parsing ? 'not-allowed' : 'pointer',
+              cursor: parsing || !documentId ? 'not-allowed' : 'pointer',
               fontWeight: '500',
               marginRight: '12px'
             }}

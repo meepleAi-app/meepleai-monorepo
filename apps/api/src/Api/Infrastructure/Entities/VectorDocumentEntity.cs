@@ -6,7 +6,6 @@ namespace Api.Infrastructure.Entities;
 public class VectorDocumentEntity
 {
     public string Id { get; set; } = default!;
-    public string TenantId { get; set; } = default!;
     public string GameId { get; set; } = default!;
     public string PdfDocumentId { get; set; } = default!; // FK to PdfDocumentEntity
 
@@ -21,7 +20,6 @@ public class VectorDocumentEntity
     public int EmbeddingDimensions { get; set; } = 1536;
 
     // Navigation properties
-    public TenantEntity Tenant { get; set; } = default!;
     public GameEntity Game { get; set; } = default!;
     public PdfDocumentEntity PdfDocument { get; set; } = default!;
 }

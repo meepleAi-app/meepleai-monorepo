@@ -14,7 +14,6 @@ public class AuthService
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromDays(7);
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
-
     public AuthService(MeepleAiDbContext db, TimeProvider? timeProvider = null)
     {
         _db = db;
@@ -23,35 +22,18 @@ public class AuthService
 
     public async Task<AuthResult> RegisterAsync(RegisterCommand command, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(command.tenantId))
-            throw new ArgumentException("TenantId is required", nameof(command.tenantId));
         if (string.IsNullOrWhiteSpace(command.email))
             throw new ArgumentException("Email is required", nameof(command.email));
         if (string.IsNullOrWhiteSpace(command.password) || command.password.Length < 8)
             throw new ArgumentException("Password must be at least 8 characters", nameof(command.password));
 
-        var normalizedTenantId = command.tenantId.Trim();
         var email = command.email.Trim().ToLowerInvariant();
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        var tenant = await _db.Tenants.FirstOrDefaultAsync(t => t.Id == normalizedTenantId, ct);
-        if (tenant == null)
-        {
-            tenant = new TenantEntity
-            {
-                Id = normalizedTenantId,
-                Name = string.IsNullOrWhiteSpace(command.tenantName)
-                    ? normalizedTenantId
-                    : command.tenantName!.Trim(),
-                CreatedAt = now
-            };
-            _db.Tenants.Add(tenant);
-        }
-
-        var existingUser = await _db.Users.FirstOrDefaultAsync(u => u.TenantId == normalizedTenantId && u.Email == email, ct);
+        var existingUser = await _db.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
         if (existingUser != null)
         {
-            throw new InvalidOperationException("Email is already registered for this tenant");
+            throw new InvalidOperationException("Email is already registered");
         }
 
         var role = ParseRole(command.role);
@@ -59,13 +41,11 @@ public class AuthService
         var user = new UserEntity
         {
             Id = Guid.NewGuid().ToString("N"),
-            TenantId = normalizedTenantId,
             Email = email,
             DisplayName = command.displayName?.Trim(),
             PasswordHash = HashPassword(command.password),
             Role = role,
-            CreatedAt = now,
-            Tenant = tenant
+            CreatedAt = now
         };
         _db.Users.Add(user);
 
@@ -79,17 +59,15 @@ public class AuthService
 
     public async Task<AuthResult?> LoginAsync(LoginCommand command, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(command.tenantId) || string.IsNullOrWhiteSpace(command.email) ||
-            string.IsNullOrWhiteSpace(command.password))
+        if (string.IsNullOrWhiteSpace(command.email) || string.IsNullOrWhiteSpace(command.password))
         {
             return null;
         }
 
-        var tenantId = command.tenantId.Trim();
         var email = command.email.Trim().ToLowerInvariant();
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.TenantId == tenantId && u.Email == email, ct);
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
         if (user == null)
         {
             return null;
@@ -159,7 +137,6 @@ public class AuthService
         var entity = new UserSessionEntity
         {
             Id = Guid.NewGuid().ToString("N"),
-            TenantId = user.TenantId,
             UserId = user.Id,
             TokenHash = HashToken(token),
             CreatedAt = now,
@@ -167,7 +144,6 @@ public class AuthService
             LastSeenAt = now,
             IpAddress = ipAddress,
             UserAgent = userAgent,
-            Tenant = user.Tenant,
             User = user
         };
 
@@ -222,7 +198,6 @@ public class AuthService
 
     private static AuthUser ToDto(UserEntity user) => new(
         user.Id,
-        user.TenantId,
         user.Email,
         user.DisplayName,
         user.Role.ToString());

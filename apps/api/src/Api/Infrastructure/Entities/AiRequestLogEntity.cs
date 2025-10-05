@@ -3,7 +3,6 @@ namespace Api.Infrastructure.Entities;
 public class AiRequestLogEntity
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
-    public string TenantId { get; set; } = default!;
     public string? UserId { get; set; }
     public string? GameId { get; set; }
     public string Endpoint { get; set; } = default!; // "qa", "explain", "setup"

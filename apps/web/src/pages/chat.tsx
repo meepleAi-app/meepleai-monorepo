@@ -4,7 +4,6 @@ import { api } from "../lib/api";
 
 type AuthUser = {
   id: string;
-  tenantId: string;
   email: string;
   displayName?: string | null;
   role: string;
@@ -86,7 +85,6 @@ export default function ChatPage() {
 
     try {
       const res = await api.post<QAResponse>("/agents/qa", {
-        tenantId: authUser.tenantId,
         gameId: selectedGame,
         query: inputValue
       });

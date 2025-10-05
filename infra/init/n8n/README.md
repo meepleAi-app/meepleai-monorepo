@@ -22,7 +22,6 @@ This directory contains n8n workflow definitions for MeepleAI agent webhooks. Th
 **Request Payload**:
 ```json
 {
-  "tenantId": "string",
   "gameId": "string",
   "topic": "string"
 }
@@ -73,7 +72,6 @@ This directory contains n8n workflow definitions for MeepleAI agent webhooks. Th
 **Request Payload**:
 ```json
 {
-  "tenantId": "string",
   "gameId": "string",
   "query": "string"
 }
@@ -132,7 +130,6 @@ For production environments, configure your reverse proxy to route requests to t
 curl -X POST http://localhost:5678/webhook/agent/explain \
   -H "Content-Type: application/json" \
   -d '{
-    "tenantId": "dev",
     "gameId": "catan",
     "topic": "setup phase"
   }'
@@ -143,7 +140,6 @@ curl -X POST http://localhost:5678/webhook/agent/explain \
 curl -X POST http://localhost:5678/webhook/agent/qa \
   -H "Content-Type: application/json" \
   -d '{
-    "tenantId": "dev",
     "gameId": "catan",
     "query": "How do I win the game?"
   }'
@@ -173,7 +169,6 @@ Each workflow follows this pattern:
 All workflows log the following information:
 - Request ID (correlation ID)
 - Timestamp
-- Tenant ID
 - Game ID
 - Request parameters
 - Success/failure status

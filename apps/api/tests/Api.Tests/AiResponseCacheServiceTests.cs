@@ -28,17 +28,16 @@ public class AiResponseCacheServiceTests
     {
         // Arrange
         var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
-        var tenantId = "tenant1";
         var gameId = "catan";
         var query = "How many resources can I hold?";
 
         // Act
-        var key1 = service.GenerateQaCacheKey(tenantId, gameId, query);
-        var key2 = service.GenerateQaCacheKey(tenantId, gameId, query);
+        var key1 = service.GenerateQaCacheKey(gameId, query);
+        var key2 = service.GenerateQaCacheKey(gameId, query);
 
         // Assert
         Assert.Equal(key1, key2);
-        Assert.StartsWith("ai:qa:tenant1:catan:", key1);
+        Assert.StartsWith("ai:qa:catan:", key1);
     }
 
     [Fact]
@@ -46,12 +45,11 @@ public class AiResponseCacheServiceTests
     {
         // Arrange
         var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
-        var tenantId = "tenant1";
         var gameId = "catan";
 
         // Act
-        var key1 = service.GenerateQaCacheKey(tenantId, gameId, "How many cards?");
-        var key2 = service.GenerateQaCacheKey(tenantId, gameId, "HOW MANY CARDS?");
+        var key1 = service.GenerateQaCacheKey(gameId, "How many cards?");
+        var key2 = service.GenerateQaCacheKey(gameId, "HOW MANY CARDS?");
 
         // Assert - Same query different case should produce same key
         Assert.Equal(key1, key2);
@@ -62,12 +60,11 @@ public class AiResponseCacheServiceTests
     {
         // Arrange
         var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
-        var tenantId = "tenant1";
         var gameId = "catan";
 
         // Act
-        var key1 = service.GenerateQaCacheKey(tenantId, gameId, "How many cards?");
-        var key2 = service.GenerateQaCacheKey(tenantId, gameId, "  How many cards?  ");
+        var key1 = service.GenerateQaCacheKey(gameId, "How many cards?");
+        var key2 = service.GenerateQaCacheKey(gameId, "  How many cards?  ");
 
         // Assert - Whitespace should not affect hash
         Assert.Equal(key1, key2);
@@ -80,10 +77,10 @@ public class AiResponseCacheServiceTests
         var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
 
         // Act
-        var key = service.GenerateExplainCacheKey("tenant1", "catan", "Trading Phase");
+        var key = service.GenerateExplainCacheKey("catan", "Trading Phase");
 
         // Assert
-        Assert.StartsWith("ai:explain:tenant1:catan:", key);
+        Assert.StartsWith("ai:explain:catan:", key);
     }
 
     [Fact]
@@ -93,10 +90,10 @@ public class AiResponseCacheServiceTests
         var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
 
         // Act
-        var key = service.GenerateSetupCacheKey("tenant1", "catan");
+        var key = service.GenerateSetupCacheKey("catan");
 
         // Assert
-        Assert.Equal("ai:setup:tenant1:catan", key);
+        Assert.Equal("ai:setup:catan", key);
     }
 
     [Fact]
@@ -202,7 +199,7 @@ public class AiResponseCacheServiceTests
         for (int i = 0; i < totalRequests; i++)
         {
             var query = queries[i % queries.Length];
-            var cacheKey = service.GenerateQaCacheKey("tenant1", "catan", query);
+            var cacheKey = service.GenerateQaCacheKey("catan", query);
 
             // Try to get from cache
             var cached = await service.GetAsync<QaResponse>(cacheKey);
@@ -291,7 +288,7 @@ public class AiResponseCacheServiceTests
         {
             foreach (var query in popularQueries)
             {
-                var cacheKey = service.GenerateQaCacheKey("tenant1", "catan", query);
+                var cacheKey = service.GenerateQaCacheKey("catan", query);
                 var cached = await service.GetAsync<QaResponse>(cacheKey);
 
                 if (cached != null)
@@ -312,7 +309,7 @@ public class AiResponseCacheServiceTests
         {
             foreach (var query in uncommonQueries)
             {
-                var cacheKey = service.GenerateQaCacheKey("tenant1", "catan", query);
+                var cacheKey = service.GenerateQaCacheKey("catan", query);
                 var cached = await service.GetAsync<QaResponse>(cacheKey);
 
                 if (cached != null)

@@ -8,7 +8,6 @@ public class AiRequestLogService
 {
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<AiRequestLogService> _logger;
-
     public AiRequestLogService(MeepleAiDbContext db, ILogger<AiRequestLogService> logger)
     {
         _db = db;
@@ -16,7 +15,6 @@ public class AiRequestLogService
     }
 
     public async Task LogRequestAsync(
-        string tenantId,
         string? userId,
         string? gameId,
         string endpoint,
@@ -35,7 +33,6 @@ public class AiRequestLogService
         {
             var log = new AiRequestLogEntity
             {
-                TenantId = tenantId,
                 UserId = userId,
                 GameId = gameId,
                 Endpoint = endpoint,
@@ -62,17 +59,16 @@ public class AiRequestLogService
     }
 
     public async Task<List<AiRequestLogEntity>> GetRequestsAsync(
-        string tenantId,
         int limit = 100,
         int offset = 0,
         string? endpoint = null,
         string? userId = null,
+        string? gameId = null,
         DateTime? startDate = null,
         DateTime? endDate = null,
         CancellationToken ct = default)
     {
-        var query = _db.AiRequestLogs
-            .Where(log => log.TenantId == tenantId);
+        var query = _db.AiRequestLogs.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(endpoint))
         {
@@ -82,6 +78,11 @@ public class AiRequestLogService
         if (!string.IsNullOrWhiteSpace(userId))
         {
             query = query.Where(log => log.UserId == userId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(gameId))
+        {
+            query = query.Where(log => log.GameId == gameId);
         }
 
         if (startDate.HasValue)
@@ -102,13 +103,13 @@ public class AiRequestLogService
     }
 
     public async Task<AiRequestStats> GetStatsAsync(
-        string tenantId,
         DateTime? startDate = null,
         DateTime? endDate = null,
+        string? userId = null,
+        string? gameId = null,
         CancellationToken ct = default)
     {
-        var query = _db.AiRequestLogs
-            .Where(log => log.TenantId == tenantId);
+        var query = _db.AiRequestLogs.AsQueryable();
 
         if (startDate.HasValue)
         {
@@ -118,6 +119,16 @@ public class AiRequestLogService
         if (endDate.HasValue)
         {
             query = query.Where(log => log.CreatedAt <= endDate.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(userId))
+        {
+            query = query.Where(log => log.UserId == userId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(gameId))
+        {
+            query = query.Where(log => log.GameId == gameId);
         }
 
         var totalRequests = await query.CountAsync(ct);

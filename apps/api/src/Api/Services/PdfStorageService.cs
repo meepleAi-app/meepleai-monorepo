@@ -46,7 +46,6 @@ public class PdfStorageService
     }
 
     public async Task<PdfUploadResult> UploadPdfAsync(
-        string tenantId,
         string gameId,
         string userId,
         IFormFile file,
@@ -74,9 +73,9 @@ public class PdfStorageService
             return new PdfUploadResult(false, "Invalid file name", null);
         }
 
-        // Verify game exists and belongs to tenant
+        // Verify game exists
         var game = await _db.Games
-            .Where(g => g.Id == gameId && g.TenantId == tenantId)
+            .Where(g => g.Id == gameId)
             .FirstOrDefaultAsync(ct);
 
         if (game == null)
@@ -88,11 +87,11 @@ public class PdfStorageService
         {
             // Generate unique file path
             var fileId = Guid.NewGuid().ToString("N");
-            var tenantDir = Path.Combine(_storageBasePath, tenantId, gameId);
-            Directory.CreateDirectory(tenantDir);
+            var gameDir = Path.Combine(_storageBasePath, gameId);
+            Directory.CreateDirectory(gameDir);
 
             var sanitizedFileName = SanitizeFileName(fileName);
-            var filePath = Path.Combine(tenantDir, $"{fileId}_{sanitizedFileName}");
+            var filePath = Path.Combine(gameDir, $"{fileId}_{sanitizedFileName}");
 
             // Save file to disk
             using (var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
@@ -106,7 +105,6 @@ public class PdfStorageService
             var pdfDoc = new PdfDocumentEntity
             {
                 Id = fileId,
-                TenantId = tenantId,
                 GameId = gameId,
                 FileName = sanitizedFileName,
                 FilePath = filePath,
@@ -141,10 +139,10 @@ public class PdfStorageService
         }
     }
 
-    public async Task<List<PdfDocumentDto>> GetPdfsByGameAsync(string tenantId, string gameId, CancellationToken ct = default)
+    public async Task<List<PdfDocumentDto>> GetPdfsByGameAsync(string gameId, CancellationToken ct = default)
     {
         var pdfs = await _db.PdfDocuments
-            .Where(p => p.TenantId == tenantId && p.GameId == gameId)
+            .Where(p => p.GameId == gameId)
             .OrderByDescending(p => p.UploadedAt)
             .Select(p => new PdfDocumentDto
             {
@@ -228,7 +226,7 @@ public class PdfStorageService
                 await db.SaveChangesAsync();
 
                 // AI-01: Trigger vector indexing in background
-                _backgroundTaskService.Execute(() => IndexVectorsAsync(pdfDoc.TenantId, pdfDoc.GameId, pdfId, result.ExtractedText));
+                _backgroundTaskService.Execute(() => IndexVectorsAsync(pdfDoc.GameId, pdfId, result.ExtractedText));
             }
             else
             {
@@ -266,7 +264,7 @@ public class PdfStorageService
     /// <summary>
     /// AI-01: Index PDF text as vectors in Qdrant
     /// </summary>
-    private async Task IndexVectorsAsync(string tenantId, string gameId, string pdfId, string extractedText)
+    private async Task IndexVectorsAsync(string gameId, string pdfId, string extractedText)
     {
         // Create new scope for background task to avoid disposed DbContext
         using var scope = _scopeFactory.CreateScope();
@@ -279,6 +277,13 @@ public class PdfStorageService
         {
             _logger.LogInformation("Starting vector indexing for PDF {PdfId}", pdfId);
 
+            var pdfDoc = await db.PdfDocuments.FirstOrDefaultAsync(p => p.Id == pdfId);
+            if (pdfDoc == null)
+            {
+                _logger.LogWarning("PDF document {PdfId} not found when attempting to index vectors", pdfId);
+                return;
+            }
+
             // Create or update vector document record
             var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId);
             if (vectorDoc == null)
@@ -286,7 +291,6 @@ public class PdfStorageService
                 vectorDoc = new VectorDocumentEntity
                 {
                     Id = Guid.NewGuid().ToString("N"),
-                    TenantId = tenantId,
                     GameId = gameId,
                     PdfDocumentId = pdfId,
                     IndexingStatus = "processing"
@@ -332,7 +336,7 @@ public class PdfStorageService
             }
 
             // Step 4: Index in Qdrant
-            var indexResult = await qdrantService.IndexDocumentChunksAsync(tenantId, gameId, pdfId, documentChunks);
+            var indexResult = await qdrantService.IndexDocumentChunksAsync(gameId, pdfId, documentChunks);
 
             if (!indexResult.Success)
             {

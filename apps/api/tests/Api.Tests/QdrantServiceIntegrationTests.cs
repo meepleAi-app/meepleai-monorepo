@@ -49,7 +49,6 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
 
         // Act
         var result = await QdrantService.IndexDocumentChunksAsync(
-            tenantId: "test-tenant",
             gameId: "test-game",
             pdfId: "test-pdf-1",
             chunks: chunks);
@@ -78,14 +77,12 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
         };
 
         await QdrantService.IndexDocumentChunksAsync(
-            tenantId: "tenant-search",
             gameId: "game-search",
             pdfId: "pdf-search-1",
             chunks: chunks);
 
         // Act - Search with similar embedding
         var searchResult = await QdrantService.SearchAsync(
-            tenantId: "tenant-search",
             gameId: "game-search",
             queryEmbedding: embedding,
             limit: 5);
@@ -100,9 +97,9 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
     }
 
     [Fact]
-    public async Task SearchAsync_WithDifferentTenant_ReturnsNoResults()
+    public async Task SearchAsync_WithoutTenantFilter_ReturnsResults()
     {
-        // Arrange - Index chunks for one tenant
+        // Arrange - Index chunks for one game (tenancy is global)
         var embedding = CreateRandomEmbedding();
         var chunks = new List<DocumentChunk>
         {
@@ -117,21 +114,19 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
         };
 
         await QdrantService.IndexDocumentChunksAsync(
-            tenantId: "tenant-a",
             gameId: "game-1",
-            pdfId: "pdf-tenant-test",
+            pdfId: "pdf-shared-test",
             chunks: chunks);
 
-        // Act - Search with different tenant
+        // Act - Search
         var searchResult = await QdrantService.SearchAsync(
-            tenantId: "tenant-b",
             gameId: "game-1",
             queryEmbedding: embedding,
             limit: 5);
 
-        // Assert - Should find no results due to tenant isolation
+        // Assert - Results are returned regardless of global context
         Assert.True(searchResult.Success);
-        Assert.Empty(searchResult.Results);
+        Assert.NotEmpty(searchResult.Results);
     }
 
     [Fact]
@@ -152,14 +147,12 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
         };
 
         await QdrantService.IndexDocumentChunksAsync(
-            tenantId: "tenant-game-test",
             gameId: "chess",
             pdfId: "pdf-game-test",
             chunks: chunks);
 
         // Act - Search with different game
         var searchResult = await QdrantService.SearchAsync(
-            tenantId: "tenant-game-test",
             gameId: "monopoly",
             queryEmbedding: embedding,
             limit: 5);
@@ -188,14 +181,12 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
 
         const string pdfId = "pdf-to-delete";
         await QdrantService.IndexDocumentChunksAsync(
-            tenantId: "tenant-delete",
             gameId: "game-delete",
             pdfId: pdfId,
             chunks: chunks);
 
         // Verify it was indexed
         var searchBefore = await QdrantService.SearchAsync(
-            tenantId: "tenant-delete",
             gameId: "game-delete",
             queryEmbedding: embedding,
             limit: 5);
@@ -209,7 +200,6 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
 
         // Verify it was deleted
         var searchAfter = await QdrantService.SearchAsync(
-            tenantId: "tenant-delete",
             gameId: "game-delete",
             queryEmbedding: embedding,
             limit: 5);
@@ -238,7 +228,6 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
 
         // Act
         var result = await QdrantService.IndexDocumentChunksAsync(
-            tenantId: "tenant-multipage",
             gameId: "game-multipage",
             pdfId: "pdf-multipage",
             chunks: chunks);
@@ -249,7 +238,6 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
 
         // Verify we can search and get results from different pages
         var searchResult = await QdrantService.SearchAsync(
-            tenantId: "tenant-multipage",
             gameId: "game-multipage",
             queryEmbedding: chunks[0].Embedding,
             limit: 10);
@@ -278,14 +266,12 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
         }
 
         await QdrantService.IndexDocumentChunksAsync(
-            tenantId: "tenant-limit",
             gameId: "game-limit",
             pdfId: "pdf-limit",
             chunks: chunks);
 
         // Act - Search with limit of 3
         var searchResult = await QdrantService.SearchAsync(
-            tenantId: "tenant-limit",
             gameId: "game-limit",
             queryEmbedding: baseEmbedding,
             limit: 3);

@@ -8,7 +8,6 @@ public class AuditService
 {
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<AuditService> _logger;
-
     public AuditService(MeepleAiDbContext db, ILogger<AuditService> logger)
     {
         _db = db;
@@ -16,7 +15,6 @@ public class AuditService
     }
 
     public async Task LogAsync(
-        string tenantId,
         string? userId,
         string action,
         string resource,
@@ -31,7 +29,6 @@ public class AuditService
         {
             var auditLog = new AuditLogEntity
             {
-                TenantId = tenantId,
                 UserId = userId,
                 Action = action,
                 Resource = resource,
@@ -53,9 +50,9 @@ public class AuditService
         }
     }
 
-    public async Task LogTenantAccessDeniedAsync(
-        string userTenantId,
-        string requestedTenantId,
+    public async Task LogAccessDeniedAsync(
+        string userScope,
+        string requiredScope,
         string userId,
         string resource,
         string? resourceId = null,
@@ -63,20 +60,21 @@ public class AuditService
         string? userAgent = null,
         CancellationToken ct = default)
     {
+        var details = $"User in scope {userScope} attempted to access {resource} requiring scope {requiredScope}";
+
         await LogAsync(
-            userTenantId,
             userId,
             "ACCESS_DENIED",
             resource,
             resourceId,
             "Denied",
-            $"User from tenant {userTenantId} attempted to access {resource} in tenant {requestedTenantId}",
+            details,
             ipAddress,
             userAgent,
             ct);
 
         _logger.LogWarning(
-            "Tenant access denied: User {UserId} from tenant {UserTenantId} attempted to access {Resource} in tenant {RequestedTenantId}",
-            userId, userTenantId, resource, requestedTenantId);
+            "Access denied: User {UserId} in scope {UserScope} attempted to access {Resource} requiring scope {RequiredScope}",
+            userId, userScope, resource, requiredScope);
     }
 }

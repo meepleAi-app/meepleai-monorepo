@@ -1,6 +1,7 @@
+using System;
 using Api.Infrastructure;
-using Api.Infrastructure.Entities;
 using Api.Services;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -10,18 +11,21 @@ namespace Api.Tests;
 
 public class AuditServiceTests : IDisposable
 {
+    private readonly SqliteConnection _connection;
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<ILogger<AuditService>> _loggerMock;
     private readonly AuditService _service;
 
     public AuditServiceTests()
     {
+        _connection = new SqliteConnection("Filename=:memory:");
+        _connection.Open();
+
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseSqlite("DataSource=:memory:")
+            .UseSqlite(_connection)
             .Options;
 
         _dbContext = new MeepleAiDbContext(options);
-        _dbContext.Database.OpenConnection();
         _dbContext.Database.EnsureCreated();
 
         _loggerMock = new Mock<ILogger<AuditService>>();
@@ -30,15 +34,14 @@ public class AuditServiceTests : IDisposable
 
     public void Dispose()
     {
-        _dbContext.Database.CloseConnection();
         _dbContext.Dispose();
+        _connection.Dispose();
     }
 
     [Fact]
-    public async Task LogAsync_CreatesAuditLog()
+    public async Task LogAsync_CreatesAuditLogWithGlobalFields()
     {
         // Arrange
-        var tenantId = "test-tenant";
         var userId = "user-123";
         var action = "TestAction";
         var resource = "TestResource";
@@ -46,7 +49,6 @@ public class AuditServiceTests : IDisposable
 
         // Act
         await _service.LogAsync(
-            tenantId,
             userId,
             action,
             resource,
@@ -57,23 +59,26 @@ public class AuditServiceTests : IDisposable
         // Assert
         var logs = await _dbContext.AuditLogs.ToListAsync();
         Assert.Single(logs);
-        Assert.Equal(tenantId, logs[0].TenantId);
-        Assert.Equal(userId, logs[0].UserId);
-        Assert.Equal(action, logs[0].Action);
-        Assert.Equal(resource, logs[0].Resource);
-        Assert.Equal(resourceId, logs[0].ResourceId);
-        Assert.Equal("Success", logs[0].Result);
-        Assert.Equal("Test details", logs[0].Details);
+        var log = logs[0];
+        Assert.False(string.IsNullOrWhiteSpace(log.Id));
+        Assert.Equal(userId, log.UserId);
+        Assert.Equal(action, log.Action);
+        Assert.Equal(resource, log.Resource);
+        Assert.Equal(resourceId, log.ResourceId);
+        Assert.Equal("Success", log.Result);
+        Assert.Equal("Test details", log.Details);
+        Assert.Null(log.IpAddress);
+        Assert.Null(log.UserAgent);
+        Assert.True(log.CreatedAt <= DateTime.UtcNow);
     }
 
     [Fact]
-    public async Task LogAsync_SetsTimestamp()
+    public async Task LogAsync_SetsTimestampWithinExpectedRange()
     {
-        // Arrange
         var before = DateTime.UtcNow.AddSeconds(-1);
 
         // Act
-        await _service.LogAsync("tenant", "user", "action", "resource", "id", "Success");
+        await _service.LogAsync("user", "action", "resource", "id", "Success");
 
         var after = DateTime.UtcNow.AddSeconds(1);
 
@@ -86,7 +91,7 @@ public class AuditServiceTests : IDisposable
     public async Task LogAsync_HandlesNullDetails()
     {
         // Act
-        await _service.LogAsync("tenant", "user", "action", "resource", "id", "Success", null);
+        await _service.LogAsync("user", "action", "resource", "id", "Success", null);
 
         // Assert
         var log = await _dbContext.AuditLogs.FirstAsync();
@@ -94,30 +99,30 @@ public class AuditServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task LogTenantAccessDeniedAsync_CreatesLog()
+    public async Task LogAccessDeniedAsync_CreatesLog()
     {
         // Arrange
-        var userTenantId = "tenant-1";
-        var requestedTenantId = "tenant-2";
+        var userScope = "scope-1";
+        var requiredScope = "scope-2";
         var userId = "user-123";
         var resource = "Game";
 
         // Act
-        await _service.LogTenantAccessDeniedAsync(
-            userTenantId,
-            requestedTenantId,
+        await _service.LogAccessDeniedAsync(
+            userScope,
+            requiredScope,
             userId,
             resource);
 
         // Assert
         var logs = await _dbContext.AuditLogs.ToListAsync();
         Assert.Single(logs);
-        Assert.Equal(userTenantId, logs[0].TenantId);
         Assert.Equal(userId, logs[0].UserId);
         Assert.Equal("ACCESS_DENIED", logs[0].Action);
         Assert.Equal(resource, logs[0].Resource);
         Assert.Equal("Denied", logs[0].Result);
-        Assert.Contains(requestedTenantId, logs[0].Details);
+        Assert.Contains(requiredScope, logs[0].Details);
+        Assert.Contains(userScope, logs[0].Details);
     }
 
     [Fact]
@@ -129,7 +134,6 @@ public class AuditServiceTests : IDisposable
 
         // Act
         await _service.LogAsync(
-            "tenant",
             "user",
             "action",
             "resource",
@@ -146,16 +150,16 @@ public class AuditServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task LogTenantAccessDeniedAsync_WithIpAddressAndUserAgent_SavesMetadata()
+    public async Task LogAccessDeniedAsync_WithIpAddressAndUserAgent_SavesMetadata()
     {
         // Arrange
         var ipAddress = "10.0.0.1";
         var userAgent = "Chrome/91.0";
 
         // Act
-        await _service.LogTenantAccessDeniedAsync(
-            "tenant-1",
-            "tenant-2",
+        await _service.LogAccessDeniedAsync(
+            "scope-1",
+            "scope-2",
             "user-123",
             "Game",
             "game-456",
@@ -173,7 +177,7 @@ public class AuditServiceTests : IDisposable
     public async Task LogAsync_HandlesNullUserId()
     {
         // Act
-        await _service.LogAsync("tenant", null, "action", "resource", "id", "Success");
+        await _service.LogAsync(null, "action", "resource", "id", "Success");
 
         // Assert
         var log = await _dbContext.AuditLogs.FirstAsync();

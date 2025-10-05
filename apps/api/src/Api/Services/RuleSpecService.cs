@@ -9,44 +9,29 @@ namespace Api.Services;
 public class RuleSpecService
 {
     private readonly MeepleAiDbContext _dbContext;
-
     public RuleSpecService(MeepleAiDbContext dbContext)
     {
         _dbContext = dbContext;
     }
 
     // TODO: integra parser PDF (Tabula/Camelot via sidecar) e normalizzazione in RuleSpec
-    public async Task<RuleSpec> GetOrCreateDemoAsync(string tenantId, string gameId, CancellationToken cancellationToken = default)
+    public async Task<RuleSpec> GetOrCreateDemoAsync(string gameId, CancellationToken cancellationToken = default)
     {
         var specEntity = await _dbContext.RuleSpecs
             .Include(r => r.Atoms)
-            .Where(r => r.TenantId == tenantId && r.GameId == gameId)
+            .Where(r => r.GameId == gameId)
             .OrderByDescending(r => r.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (specEntity is null)
         {
-            var tenant = await _dbContext.Tenants
-                .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
-            if (tenant is null)
-            {
-                tenant = new TenantEntity
-                {
-                    Id = tenantId,
-                    Name = tenantId,
-                    CreatedAt = DateTime.UtcNow,
-                };
-                _dbContext.Tenants.Add(tenant);
-            }
-
             var game = await _dbContext.Games
-                .FirstOrDefaultAsync(g => g.Id == gameId && g.TenantId == tenantId, cancellationToken);
+                .FirstOrDefaultAsync(g => g.Id == gameId, cancellationToken);
             if (game is null)
             {
                 game = new GameEntity
                 {
                     Id = gameId,
-                    TenantId = tenantId,
                     Name = gameId,
                     CreatedAt = DateTime.UtcNow,
                 };
@@ -55,7 +40,6 @@ public class RuleSpecService
 
             specEntity = new RuleSpecEntity
             {
-                TenantId = tenantId,
                 GameId = gameId,
                 Version = "v0-demo",
                 CreatedAt = DateTime.UtcNow,
@@ -90,32 +74,31 @@ public class RuleSpecService
         return ToModel(specEntity);
     }
 
-    public async Task<RuleSpec?> GetRuleSpecAsync(string tenantId, string gameId, CancellationToken cancellationToken = default)
+    public async Task<RuleSpec?> GetRuleSpecAsync(string gameId, CancellationToken cancellationToken = default)
     {
         var specEntity = await _dbContext.RuleSpecs
             .Include(r => r.Atoms)
-            .Where(r => r.TenantId == tenantId && r.GameId == gameId)
+            .Where(r => r.GameId == gameId)
             .OrderByDescending(r => r.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
         return specEntity is null ? null : ToModel(specEntity);
     }
 
-    public async Task<RuleSpec> UpdateRuleSpecAsync(string tenantId, string gameId, RuleSpec ruleSpec, CancellationToken cancellationToken = default)
+    public async Task<RuleSpec> UpdateRuleSpecAsync(string gameId, RuleSpec ruleSpec, CancellationToken cancellationToken = default)
     {
         // Ensure game exists
         var game = await _dbContext.Games
-            .FirstOrDefaultAsync(g => g.Id == gameId && g.TenantId == tenantId, cancellationToken);
+            .FirstOrDefaultAsync(g => g.Id == gameId, cancellationToken);
 
         if (game is null)
         {
-            throw new InvalidOperationException($"Game {gameId} not found for tenant {tenantId}");
+            throw new InvalidOperationException($"Game {gameId} not found");
         }
 
         // Create new RuleSpec version
         var specEntity = new RuleSpecEntity
         {
-            TenantId = tenantId,
             GameId = gameId,
             Version = ruleSpec.version,
             CreatedAt = DateTime.UtcNow,
@@ -142,12 +125,12 @@ public class RuleSpecService
         return ToModel(specEntity);
     }
 
-    public async Task<RuleSpecHistory> GetVersionHistoryAsync(string tenantId, string gameId, CancellationToken cancellationToken = default)
+    public async Task<RuleSpecHistory> GetVersionHistoryAsync(string gameId, CancellationToken cancellationToken = default)
     {
         var versions = await _dbContext.RuleSpecs
             .Include(r => r.Atoms)
             .Include(r => r.CreatedBy)
-            .Where(r => r.TenantId == tenantId && r.GameId == gameId)
+            .Where(r => r.GameId == gameId)
             .OrderByDescending(r => r.CreatedAt)
             .Select(r => new RuleSpecVersion(
                 r.Version,
@@ -160,11 +143,11 @@ public class RuleSpecService
         return new RuleSpecHistory(gameId, versions, versions.Count);
     }
 
-    public async Task<RuleSpec?> GetVersionAsync(string tenantId, string gameId, string version, CancellationToken cancellationToken = default)
+    public async Task<RuleSpec?> GetVersionAsync(string gameId, string version, CancellationToken cancellationToken = default)
     {
         var specEntity = await _dbContext.RuleSpecs
             .Include(r => r.Atoms)
-            .Where(r => r.TenantId == tenantId && r.GameId == gameId && r.Version == version)
+            .Where(r => r.GameId == gameId && r.Version == version)
             .FirstOrDefaultAsync(cancellationToken);
 
         return specEntity is null ? null : ToModel(specEntity);

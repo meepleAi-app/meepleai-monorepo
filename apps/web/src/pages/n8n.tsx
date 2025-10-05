@@ -3,7 +3,6 @@ import Link from "next/link";
 
 type N8nConfig = {
   id: string;
-  tenantId: string;
   name: string;
   baseUrl: string;
   webhookUrl: string | null;

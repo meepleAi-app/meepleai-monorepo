@@ -1,3 +1,4 @@
+using System;
 using Api.Infrastructure;
 using Api.Models;
 using Api.Services;
@@ -13,22 +14,16 @@ public class AuthServiceTests
         await using var connection = new SqliteConnection("Filename=:memory:");
         await connection.OpenAsync();
 
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseSqlite(connection)
-            .Options;
-
-        await using (var setupContext = new MeepleAiDbContext(options))
+        await using (var setupContext = CreateContext(connection))
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = new MeepleAiDbContext(options);
+        await using var dbContext = CreateContext(connection);
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new AuthService(dbContext, timeProvider);
 
         var register = await authService.RegisterAsync(new RegisterCommand(
-            "tenant-test",
-            "Tenant Test",
             "user@example.com",
             "Password!1",
             "Test User",
@@ -36,36 +31,45 @@ public class AuthServiceTests
             "127.0.0.1",
             "unit-tests"));
 
-        Assert.Equal("tenant-test", register.User.tenantId);
+        Assert.False(string.IsNullOrWhiteSpace(register.User.id));
+        Assert.Equal("user@example.com", register.User.email);
+        Assert.Equal("Test User", register.User.displayName);
         Assert.Equal("Admin", register.User.role);
         Assert.False(string.IsNullOrWhiteSpace(register.SessionToken));
 
         var active = await authService.ValidateSessionAsync(register.SessionToken);
         Assert.NotNull(active);
-        Assert.Equal(register.User.email, active!.User.email);
+        Assert.Equal(register.User, active!.User);
 
         await authService.LogoutAsync(register.SessionToken);
         var afterLogout = await authService.ValidateSessionAsync(register.SessionToken);
         Assert.Null(afterLogout);
 
         var login = await authService.LoginAsync(new LoginCommand(
-            "tenant-test",
             "user@example.com",
             "Password!1",
             null,
             null));
 
         Assert.NotNull(login);
-        Assert.Equal(register.User.id, login!.User.id);
+        Assert.Equal(register.User, login!.User);
         Assert.NotEqual(register.SessionToken, login.SessionToken);
 
         var failedLogin = await authService.LoginAsync(new LoginCommand(
-            "tenant-test",
             "user@example.com",
             "wrong",
             null,
             null));
         Assert.Null(failedLogin);
+    }
+
+    private static MeepleAiDbContext CreateContext(SqliteConnection connection)
+    {
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        return new MeepleAiDbContext(options);
     }
 
     private sealed class FixedTimeProvider : TimeProvider

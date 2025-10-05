@@ -44,82 +44,25 @@ Ogni servizio espone un healthcheck nel `docker-compose.yml`, per cui `docker co
   Se stai aggiungendo una nuova migrazione, usa `dotnet ef migrations add <NomeMigrazione>` specificando `--project` e `--startup-project` se lavori da una directory diversa.
 - Le migrazioni generate sono versionate nella cartella `apps/api/src/Api/Migrations/`, così da avere commit tracciabili insieme al codice applicativo.
 
-### Modello ER multi-tenant
+### Modello dati condiviso
 
-```mermaid
-erDiagram
-    TENANTS {
-        string tenant_id PK
-        string name
-        timestamptz created_at
-    }
-    USERS {
-        string user_id PK
-        string tenant_id FK
-        string email
-        string role
-    }
-    GAMES {
-        string game_id PK
-        string tenant_id FK
-        string rule_spec_id FK
-        string status
-    }
-    RULE_SPECS {
-        string rule_spec_id PK
-        string tenant_id FK
-        string version
-        timestamptz published_at
-    }
-    AGENTS {
-        string agent_id PK
-        string tenant_id FK
-        string kind
-        string display_name
-    }
-    CHATS {
-        string chat_id PK
-        string tenant_id FK
-        string game_id FK
-        string rule_spec_id FK
-        string agent_id FK
-        timestamptz started_at
-    }
-    CHAT_LOGS {
-        string log_id PK
-        string tenant_id FK
-        string chat_id FK
-        string speaker
-        text body
-    }
+MeepleAI adotta ora un modello dati completamente condiviso: tutte le entità applicative risiedono nello stesso contesto e non richiedono più identificatori di partizione.
 
-    TENANTS ||--o{ USERS : "PK tenant_id"
-    TENANTS ||--o{ GAMES : "PK tenant_id"
-    TENANTS ||--o{ RULE_SPECS : "PK tenant_id"
-    TENANTS ||--o{ AGENTS : "PK tenant_id"
-    TENANTS ||--o{ CHATS : "PK tenant_id"
-    TENANTS ||--o{ CHAT_LOGS : "PK tenant_id"
-    RULE_SPECS ||--o{ GAMES : "FK rule_spec_id"
-    RULE_SPECS ||--o{ CHATS : "FK rule_spec_id"
-    GAMES ||--o{ CHATS : "FK game_id"
-    AGENTS ||--o{ CHATS : "FK agent_id"
-    CHATS ||--o{ CHAT_LOGS : "FK chat_id"
-```
+- Tabelle come `users`, `games`, `rule_specs`, `agents`, `chats`, `chat_logs` e `audit_logs` sono indicizzate sulle chiavi naturali specifiche del dominio (ad esempio `user_id`, `game_id`, `rule_spec_id`).
+- I servizi applicativi non valorizzano più campi di isolamento nelle query o negli eventi; l'accesso ai dati è governato esclusivamente da permessi applicativi e relazioni tra entità.
+- Le migrazioni recenti hanno rimosso le vecchie dipendenze da ID di partizione e consolidato i vincoli `NOT NULL`/FK sulle chiavi di dominio effettive, mantenendo inalterata la coerenza del database.
 
-> Multi-tenant indexing: oltre alle chiavi primarie, ogni tabella deve avere almeno un indice composto su `(tenant_id, <chiave_naturale>)` e indici aggiuntivi su `(tenant_id, game_id)` per `chats` e `(tenant_id, published_at)` per `rule_specs` per supportare filtri e retention richiesti da DB-01.
-
-### Seed demo e vincoli di tenancy
+### Seed demo e dati iniziali
 
 - L'endpoint `POST /admin/seed` popola (o rigenera) una demo di regole di gioco tramite `RuleSpecService`, utile per validare rapidamente lo stack QA; lo script `scripts/seed-demo.ps1` lo invoca automaticamente contro le API locali.
-- Il front-end si connette usando `NEXT_PUBLIC_TENANT_ID=dev`, quindi i dati demo devono sempre essere creati con `tenant_id = "dev"` e `game_id = "demo-chess"` per permettere alle chiamate `/agents/qa` di funzionare senza configurazione aggiuntiva.
-- Le chat devono referenziare sia il gioco (`game_id`) sia il modello di regole (`rule_spec_id`) per il tenant corrente; la cancellazione di un tenant deve propagare tramite cascade verso utenti, giochi, agenti, chat e log per evitare orfani e mantenere l'isolamento. Quando si applicano nuove migrazioni verificare che tutte le FK abbiano `ON DELETE CASCADE` o strategie equivalenti compatibili con RLS.
-- Per la verifica di DB-01 assicurarsi che: (1) tutte le tabelle includano `tenant_id NOT NULL`, (2) gli indici multi-tenant siano presenti, e (3) i dati seed rispettino l'isolamento (nessun record cross-tenant, chat/log sempre filtrati per `tenant_id` e `game_id`).
+- I dati demo vengono creati automaticamente per il contesto condiviso, con gioco di esempio `demo-chess`; non è necessario configurare identificatori aggiuntivi lato web o API.
+- Le chat continuano a referenziare `game_id` e `rule_spec_id`; quando si applicano nuove migrazioni verificare che le FK mantengano `ON DELETE CASCADE` o strategie equivalenti.
 
 ## Autenticazione e ruoli
 
-- Le API espongono gli endpoint `POST /auth/register`, `POST /auth/login`, `POST /auth/logout` e `GET /auth/me`. La registrazione crea automaticamente il tenant se non esiste e assegna un ruolo (`Admin`, `Editor`, `User`).
+- Le API espongono gli endpoint `POST /auth/register`, `POST /auth/login`, `POST /auth/logout` e `GET /auth/me`. La registrazione opera direttamente sul contesto globale e assegna un ruolo (`Admin`, `Editor`, `User`).
 - Le sessioni sono persistite in tabella `user_sessions` con token casuali hashati; il token è inviato al client tramite cookie `HttpOnly`.
-- Gli endpoint protetti (`/agents/qa`, `/ingest/pdf`, `/admin/seed`) richiedono una sessione valida e rispettano i permessi: solo Admin può eseguire il seed, Admin/Editor possono accedere a ingest, tutti i ruoli autenticati possono usare il QA sul proprio tenant.
+- Gli endpoint protetti (`/agents/qa`, `/ingest/pdf`, `/admin/seed`) richiedono una sessione valida e rispettano i permessi: solo Admin può eseguire il seed, Admin/Editor possono accedere a ingest, tutti i ruoli autenticati possono usare il QA per i giochi disponibili nel catalogo condiviso.
 
 ## Struttura
 
@@ -188,7 +131,7 @@ Accogliamo contributi dalla community! Prima di iniziare:
 
 #### Backend (.NET 8)
 - ✅ API REST con minimal APIs
-- ✅ Sistema multi-tenant con isolamento dati
+- ✅ Modello dati condiviso senza partizioni dedicate
 - ✅ Autenticazione basata su sessioni con cookie HttpOnly
 - ✅ Autorizzazione role-based (Admin, Editor, User)
 - ✅ Integrazione PostgreSQL con EF Core migrations
@@ -245,7 +188,7 @@ Accogliamo contributi dalla community! Prima di iniziare:
 
 #### UX & Frontend
 - 📋 UI/UX completo per chat interfaccia
-- 📋 Dashboard amministrazione tenant
+- 📋 Dashboard amministrazione contenuti
 - 📋 Gestione upload PDF con progress tracking
 - 📋 Visualizzazione source documents per risposte
 
@@ -255,7 +198,7 @@ Accogliamo contributi dalla community! Prima di iniziare:
 - 📋 API pubblica per integrazioni terze parti
 
 #### Performance & Scale
-- 📋 Caching avanzato strategie (per query, per tenant)
+- 📋 Caching avanzato strategie (per query e profilo utente)
 - 📋 Ottimizzazione vector search con filtri pre-compute
 - 📋 Monitoring e observability (OpenTelemetry)
 

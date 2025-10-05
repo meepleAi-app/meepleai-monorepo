@@ -20,7 +20,6 @@ type RuleSpec = {
 
 type AuthUser = {
   id: string;
-  tenantId: string;
   email: string;
   displayName?: string | null;
   role: string;

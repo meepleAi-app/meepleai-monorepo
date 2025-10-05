@@ -12,8 +12,10 @@ AI-01 implements the core vector search infrastructure for MeepleAI, enabling se
 
 - **Text embedding generation** via OpenRouter API
 - **Vector storage and retrieval** using Qdrant
-- **Multi-tenant isolation** with automatic filtering
+- **Contesto dati condiviso** (nessun campo di partizione richiesto)
 - **Automatic indexing pipeline** from PDF upload to searchable vectors
+
+> **Nota**: gli esempi aggiornati omettono campi di partizione; assicurati che eventuali payload legacy vengano adeguati prima del deploy.
 
 ## Architecture
 
@@ -104,12 +106,12 @@ Manages vector storage and retrieval in Qdrant.
 - **Collection Name**: `meepleai_documents`
 - **Vector Size**: 1536 dimensions
 - **Distance Metric**: Cosine similarity
-- **Indexed Fields**: `tenant_id`, `game_id`, `pdf_id`
+- **Indexed Fields**: `game_id`, `pdf_id`
 
 **Features**:
 - Automatic collection initialization on startup
 - Payload indexing for fast filtering
-- Multi-tenant isolation via filters
+- Scoped filtering per gioco/documento
 - Batch upsert operations
 - Document deletion by PDF ID
 
@@ -133,11 +135,11 @@ var chunks = new List<DocumentChunk>
     }
 };
 var result = await qdrantService.IndexDocumentChunksAsync(
-    "tenant-1", "demo-chess", "pdf-123", chunks, ct);
+    "demo-chess", "pdf-123", chunks, ct);
 
 // Search with filters
 var searchResult = await qdrantService.SearchAsync(
-    "tenant-1", "demo-chess", queryEmbedding, limit: 5, ct);
+    "demo-chess", queryEmbedding, limit: 5, ct);
 
 if (searchResult.Success)
 {
@@ -159,13 +161,13 @@ Orchestrates the RAG (Retrieval-Augmented Generation) query pipeline.
 
 **Flow**:
 1. Generate embedding for user query
-2. Search Qdrant for similar chunks (filtered by tenant/game)
+2. Search Qdrant for similar chunks (filtered by game)
 3. Return top results as snippets
 
 **Usage**:
 ```csharp
 var ragService = serviceProvider.GetRequiredService<RagService>();
-var response = await ragService.AskAsync("tenant-1", "demo-chess", "How many players?", ct);
+var response = await ragService.AskAsync("demo-chess", "How many players?", ct);
 
 Console.WriteLine(response.answer); // "Two players."
 foreach (var snippet in response.snippets)
@@ -213,7 +215,6 @@ Query the knowledge base using semantic search.
 **Request**:
 ```json
 {
-  "tenantId": "tenant-1",
   "gameId": "demo-chess",
   "query": "How many players can play?"
 }
@@ -244,7 +245,6 @@ Tracks vector indexing status for each PDF.
 ```sql
 CREATE TABLE vector_documents (
     id TEXT PRIMARY KEY,
-    tenant_id TEXT NOT NULL,
     game_id TEXT NOT NULL,
     pdf_document_id TEXT NOT NULL REFERENCES pdf_documents(id),
     chunk_count INTEGER,
@@ -268,7 +268,6 @@ CREATE TABLE vector_documents (
 **Payload Schema**:
 ```json
 {
-  "tenant_id": "string (indexed)",
   "game_id": "string (indexed)",
   "pdf_id": "string (indexed)",
   "chunk_index": "integer",
@@ -281,9 +280,7 @@ CREATE TABLE vector_documents (
 ```
 
 **Filters**:
-All searches are automatically filtered by:
-- `tenant_id` (must match authenticated user's tenant)
-- `game_id` (specified in query)
+All searches are automatically filtered by the `game_id` specified in query parameters.
 
 ---
 
@@ -418,13 +415,13 @@ docker compose restart qdrant
 **Check**:
 1. Vector document status: `SELECT * FROM vector_documents WHERE indexing_status = 'completed'`
 2. Qdrant collection has points: `curl http://localhost:6333/collections/meepleai_documents`
-3. Tenant/game IDs match exactly
+3. Game IDs match exactly
 
 **Debug**:
 ```csharp
 // Check if vectors exist for game
 var searchResult = await qdrantService.SearchAsync(
-    tenantId, gameId, queryEmbedding, limit: 10);
+    gameId, queryEmbedding, limit: 10);
 Console.WriteLine($"Found {searchResult.Results.Count} results");
 ```
 
@@ -466,8 +463,8 @@ Console.WriteLine($"Found {searchResult.Results.Count} results");
 ## Acceptance Criteria
 
 ✅ **Servizio embeddings HTTP**: EmbeddingService implemented with OpenRouter integration
-✅ **Indicizzazione chunk per game/tenant**: QdrantService with multi-tenant filtering
-✅ **Query vettoriali filtrate**: SearchAsync with tenant_id and game_id filters
+✅ **Indicizzazione chunk per gioco**: QdrantService with scoped filtering
+✅ **Query vettoriali filtrate**: SearchAsync con filtro su `game_id`
 ✅ **Test coverage**: 34 unit tests + 1 E2E test passing
 ✅ **Documentation**: This file
 

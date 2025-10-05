@@ -14,8 +14,7 @@
 #>
 
 param(
-    [string]$ApiBase = "http://localhost:8080",
-    [string]$TenantId = "e2e-test"
+    [string]$ApiBase = "http://localhost:8080"
 )
 
 $ErrorActionPreference = "Stop"
@@ -57,7 +56,6 @@ Write-Host "  MeepleAI E2E Authentication Tests" -ForegroundColor Magenta
 Write-Host "========================================`n" -ForegroundColor Magenta
 
 Write-Info "API Base: $ApiBase"
-Write-Info "Tenant ID: $TenantId"
 Write-Info "Timestamp: $timestamp`n"
 
 # Test 1: Health check
@@ -81,8 +79,6 @@ Write-Test "`nTest 2: User Registration (Admin, Editor, User)"
 foreach ($user in $testUsers) {
     try {
         $body = @{
-            tenantId = $TenantId
-            tenantName = "E2E Test Tenant"
             email = $user.Email
             password = $user.Password
             displayName = $user.DisplayName
@@ -140,7 +136,6 @@ Write-Test "`nTest 4: User Login"
 foreach ($user in $testUsers) {
     try {
         $body = @{
-            tenantId = $TenantId
             email = $user.Email
             password = $user.Password
         } | ConvertTo-Json
@@ -194,7 +189,6 @@ foreach ($user in $testUsers) {
 Write-Test "`nTest 6: Login with Wrong Password (should fail)"
 try {
     $body = @{
-        tenantId = $TenantId
         email = $testUsers[0].Email
         password = "WrongPassword123!"
     } | ConvertTo-Json
@@ -217,7 +211,6 @@ try {
 Write-Test "`nTest 7: Access Protected Endpoint Without Auth (should fail)"
 try {
     $body = @{
-        tenantId = $TenantId
         gameId = "demo-chess"
         query = "How many players?"
     } | ConvertTo-Json
@@ -244,7 +237,6 @@ Write-Info "Testing /admin/seed endpoint (Admin only)"
 try {
     $userSession = $sessionCookies[$testUsers[2].Email]
     $body = @{
-        tenantId = $TenantId
         gameId = "test-game"
     } | ConvertTo-Json
 
@@ -266,7 +258,6 @@ try {
 try {
     $adminSession = $sessionCookies[$testUsers[0].Email]
     $body = @{
-        tenantId = $TenantId
         gameId = "test-game"
     } | ConvertTo-Json
 

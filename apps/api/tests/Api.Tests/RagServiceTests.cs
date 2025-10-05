@@ -37,7 +37,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.AskAsync("tenant1", "game1", "", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "", CancellationToken.None);
 
         // Assert
         Assert.Equal("Please provide a question.", result.answer);
@@ -56,7 +56,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.AskAsync("tenant1", "game1", "   ", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "   ", CancellationToken.None);
 
         // Assert
         Assert.Equal("Please provide a question.", result.answer);
@@ -79,7 +79,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.AskAsync("tenant1", "game1", "test query", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "test query", CancellationToken.None);
 
         // Assert
         Assert.Equal("Unable to process query.", result.answer);
@@ -102,7 +102,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.AskAsync("tenant1", "game1", "test query", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "test query", CancellationToken.None);
 
         // Assert
         Assert.Equal("Unable to process query.", result.answer);
@@ -124,7 +124,6 @@ public class RagServiceTests
         mockQdrant
             .Setup(x => x.SearchAsync(
                 It.IsAny<string>(),
-                It.IsAny<string>(),
                 It.IsAny<float[]>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
@@ -135,7 +134,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.AskAsync("tenant1", "game1", "test query", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "test query", CancellationToken.None);
 
         // Assert
         Assert.Equal("Not specified", result.answer);
@@ -164,7 +163,6 @@ public class RagServiceTests
         mockQdrant
             .Setup(x => x.SearchAsync(
                 It.IsAny<string>(),
-                It.IsAny<string>(),
                 It.IsAny<float[]>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
@@ -179,7 +177,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.AskAsync("tenant1", "game1", "How many players?", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "How many players?", CancellationToken.None);
 
         // Assert
         Assert.Equal("This game supports 2-4 players.", result.answer);
@@ -210,7 +208,6 @@ public class RagServiceTests
         mockQdrant
             .Setup(x => x.SearchAsync(
                 It.IsAny<string>(),
-                It.IsAny<string>(),
                 It.IsAny<float[]>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
@@ -226,7 +223,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.AskAsync("tenant1", "game1", "What is the recommended age for this game?", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "What is the recommended age for this game?", CancellationToken.None);
 
         // Assert
         Assert.Equal("Not specified", result.answer);
@@ -245,7 +242,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.ExplainAsync("tenant1", "game1", "", CancellationToken.None);
+        var result = await ragService.ExplainAsync("game1", "", CancellationToken.None);
 
         // Assert
         Assert.Equal("Please provide a topic to explain.", result.script);
@@ -275,7 +272,6 @@ public class RagServiceTests
         mockQdrant
             .Setup(x => x.SearchAsync(
                 It.IsAny<string>(),
-                It.IsAny<string>(),
                 It.IsAny<float[]>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
@@ -286,7 +282,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.ExplainAsync("tenant1", "game1", "game setup", CancellationToken.None);
+        var result = await ragService.ExplainAsync("game1", "game setup", CancellationToken.None);
 
         // Assert
         Assert.NotNull(result.outline);
@@ -309,7 +305,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.ExplainAsync("tenant1", "game1", "   ", CancellationToken.None);
+        var result = await ragService.ExplainAsync("game1", "   ", CancellationToken.None);
 
         // Assert
         Assert.Equal("Please provide a topic to explain.", result.script);
@@ -334,7 +330,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.ExplainAsync("tenant1", "game1", "test topic", CancellationToken.None);
+        var result = await ragService.ExplainAsync("game1", "test topic", CancellationToken.None);
 
         // Assert
         Assert.Equal("Unable to process topic.", result.script);
@@ -358,7 +354,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.ExplainAsync("tenant1", "game1", "test topic", CancellationToken.None);
+        var result = await ragService.ExplainAsync("game1", "test topic", CancellationToken.None);
 
         // Assert
         Assert.Equal("Unable to process topic.", result.script);
@@ -380,7 +376,6 @@ public class RagServiceTests
         mockQdrant
             .Setup(x => x.SearchAsync(
                 It.IsAny<string>(),
-                It.IsAny<string>(),
                 It.IsAny<float[]>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
@@ -391,7 +386,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.ExplainAsync("tenant1", "game1", "test topic", CancellationToken.None);
+        var result = await ragService.ExplainAsync("game1", "test topic", CancellationToken.None);
 
         // Assert
         Assert.Equal("No relevant information found about 'test topic' in the rulebook.", result.script);
@@ -413,7 +408,6 @@ public class RagServiceTests
         mockQdrant
             .Setup(x => x.SearchAsync(
                 It.IsAny<string>(),
-                It.IsAny<string>(),
                 It.IsAny<float[]>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
@@ -424,7 +418,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.ExplainAsync("tenant1", "game1", "test topic", CancellationToken.None);
+        var result = await ragService.ExplainAsync("game1", "test topic", CancellationToken.None);
 
         // Assert
         Assert.Equal("No relevant information found about 'test topic' in the rulebook.", result.script);
@@ -446,7 +440,6 @@ public class RagServiceTests
         mockQdrant
             .Setup(x => x.SearchAsync(
                 It.IsAny<string>(),
-                It.IsAny<string>(),
                 It.IsAny<float[]>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
@@ -457,7 +450,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.AskAsync("tenant1", "game1", "test query", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "test query", CancellationToken.None);
 
         // Assert
         Assert.Equal("Not specified", result.answer);
@@ -485,7 +478,6 @@ public class RagServiceTests
         mockQdrant
             .Setup(x => x.SearchAsync(
                 It.IsAny<string>(),
-                It.IsAny<string>(),
                 It.IsAny<float[]>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
@@ -496,7 +488,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.ExplainAsync("tenant1", "game1", "test topic", CancellationToken.None);
+        var result = await ragService.ExplainAsync("game1", "test topic", CancellationToken.None);
 
         // Assert
         Assert.Single(result.outline.sections);
@@ -530,7 +522,6 @@ public class RagServiceTests
         mockQdrant
             .Setup(x => x.SearchAsync(
                 It.IsAny<string>(),
-                It.IsAny<string>(),
                 It.IsAny<float[]>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
@@ -541,7 +532,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.ExplainAsync("tenant1", "game1", "test topic", CancellationToken.None);
+        var result = await ragService.ExplainAsync("game1", "test topic", CancellationToken.None);
 
         // Assert
         Assert.Equal(5, result.outline.sections.Count); // Max 5 sections
@@ -564,7 +555,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.AskAsync("tenant1", "game1", "test query", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "test query", CancellationToken.None);
 
         // Assert
         Assert.Equal("An error occurred while processing your question.", result.answer);
@@ -587,7 +578,7 @@ public class RagServiceTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
-        var result = await ragService.ExplainAsync("tenant1", "game1", "test topic", CancellationToken.None);
+        var result = await ragService.ExplainAsync("game1", "test topic", CancellationToken.None);
 
         // Assert
         Assert.Equal("An error occurred while generating the explanation.", result.script);

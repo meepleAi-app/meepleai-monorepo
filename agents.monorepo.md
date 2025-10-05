@@ -57,7 +57,7 @@
 
 ## 3) GitHub Flow Operativo (single-dev)
 
-1. **Crea/Seleziona Issue** (o Audit → Issue). Aggiungi labels (`area`, `type`, `priority`, `tenant`).
+1. **Crea/Seleziona Issue** (o Audit → Issue). Aggiungi labels (`area`, `type`, `priority`); utilizza `area/data` per lavori su schema o gestione del dato condiviso.
 2. **Branch:** `feature/<scope>-<desc>` collegata all’issue (`Fixes #ID`).
 3. **Implementazione locale:**
    - Sincronizza `main` → rebase.
@@ -86,7 +86,7 @@
 - [ ] Unit test verdi (TS/C#) con copertura ≥ 80% sul delta.
 - [ ] E2E/UX test passano (puppeteer/playwright per web; http e2e per API).
 - [ ] Nessun secret in diff; `.env` aggiornato nei template `.env.dev.example`/`.env.ci.example` se serve.
-- [ ] Multi-tenant: test RLS/permessi aggiornati.
+- [ ] Modello dati condiviso verificato (nessun campo di partizione richiesto; log coerenti).
 - [ ] Performance: no regressioni note.
 - [ ] Docs aggiornate.
 
@@ -101,7 +101,7 @@
 ### 6.2 Integration & E2E
 - **API TS/C#:** avvia stack via Docker Compose; usa supertest/REST client o xUnit + WebApplicationFactory.
 - **Web E2E & UX:** **Puppeteer** (o Playwright) per flussi utente critici; screenshot su failure.
-- **Data:** seme deterministico, fixture per tenant multipli.
+- **Data:** seme deterministico basato sul dataset condiviso.
 
 ### 6.3 Qualità continua
 - GitHub Actions: job separati `lint`, `build`, `test`, `e2e`, `security` (SCA + trivy su immagini).
@@ -182,10 +182,10 @@ Output: patch ai md, con sommario delle modifiche.
 
 ---
 
-## 10) Standard Tenancy & Dati
-- Ogni record ha `tenant_id` obbligatorio. Query **devono** filtrare per `tenant_id`.
-- Indici: per `tenant_id`, `game_id`, e chiavi di ricerca testuali.
-- Qdrant esterno consigliato per dataset grandi; HNSW `M=32, ef=96` come default pragmatico.
+## 10) Standard dati condivisi
+- Il database opera in un unico spazio condiviso; le entità (`users`, `games`, `rule_specs`, `agents`, `chats`, ecc.) sono correlate tramite chiavi di dominio.
+- Le query non richiedono identificatori di partizione: i servizi applicativi delegano l'accesso a permessi e relazioni.
+- Qdrant esterno resta consigliato per dataset grandi; HNSW `M=32, ef=96` è il default pragmatico.
 
 ---
 
@@ -197,7 +197,7 @@ Output: patch ai md, con sommario delle modifiche.
 ---
 
 ## 12) Rischi & Failure Modes (e Mitigazioni)
-- **RLS errata / tenant leak:** test E2E obbligatori, revisione query, policy DB.
+- **Regressioni dati condivisi:** garantire che i client non richiedano identificatori di partizione e che gli audit log riflettano correttamente gli attori coinvolti.
 - **Secrets leakage:** `.env` non committato; variables in CI masked; rotate keys.
 - **Rate limit insufficiente:** Redis token bucket; backoff.
 - **Timeout workflow n8n:** job asincroni o retry con soglia; notifiche.

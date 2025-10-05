@@ -1,22 +1,15 @@
 using Api.Infrastructure.Entities;
-using Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Infrastructure;
 
 public class MeepleAiDbContext : DbContext
 {
-    private readonly ITenantContext? _tenantContext;
-
-    public MeepleAiDbContext(DbContextOptions<MeepleAiDbContext> options, ITenantContext? tenantContext = null) : base(options)
+    public MeepleAiDbContext(DbContextOptions<MeepleAiDbContext> options)
+        : base(options)
     {
-        _tenantContext = tenantContext;
     }
 
-    // Property for global query filter - evaluated at query time
-    private string? CurrentTenantId => _tenantContext?.TenantId;
-
-    public DbSet<TenantEntity> Tenants => Set<TenantEntity>();
     public DbSet<UserEntity> Users => Set<UserEntity>();
     public DbSet<UserSessionEntity> UserSessions => Set<UserSessionEntity>();
     public DbSet<GameEntity> Games => Set<GameEntity>();
@@ -35,15 +28,6 @@ public class MeepleAiDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<TenantEntity>(entity =>
-        {
-            entity.ToTable("tenants");
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).HasMaxLength(64);
-            entity.Property(e => e.Name).IsRequired().HasMaxLength(128);
-            entity.Property(e => e.CreatedAt).IsRequired();
-        });
-
         modelBuilder.Entity<UserEntity>(entity =>
         {
             entity.ToTable("users");
@@ -57,16 +41,11 @@ public class MeepleAiDbContext : DbContext
                 .HasMaxLength(32)
                 .IsRequired();
             entity.Property(e => e.CreatedAt).IsRequired();
-            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
-            entity.HasOne(e => e.Tenant)
-                .WithMany(t => t.Users)
-                .HasForeignKey(e => e.TenantId)
-                .OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(e => e.Sessions)
                 .WithOne(s => s.User)
                 .HasForeignKey(s => s.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
-            entity.HasIndex(e => new { e.TenantId, e.Email }).IsUnique();
+            entity.HasIndex(e => e.Email).IsUnique();
         });
 
         modelBuilder.Entity<UserSessionEntity>(entity =>
@@ -74,19 +53,14 @@ public class MeepleAiDbContext : DbContext
             entity.ToTable("user_sessions");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasMaxLength(64);
-            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.UserId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.TokenHash).IsRequired().HasMaxLength(128);
             entity.Property(e => e.UserAgent).HasMaxLength(256);
             entity.Property(e => e.IpAddress).HasMaxLength(64);
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.ExpiresAt).IsRequired();
-            entity.HasOne(e => e.Tenant)
-                .WithMany(t => t.Sessions)
-                .HasForeignKey(e => e.TenantId)
-                .OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => e.TokenHash).IsUnique();
-            entity.HasIndex(e => new { e.TenantId, e.UserId });
+            entity.HasIndex(e => e.UserId);
         });
 
         modelBuilder.Entity<GameEntity>(entity =>
@@ -96,12 +70,7 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.Id).HasMaxLength(64);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(128);
             entity.Property(e => e.CreatedAt).IsRequired();
-            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
-            entity.HasOne(e => e.Tenant)
-                .WithMany(t => t.Games)
-                .HasForeignKey(e => e.TenantId)
-                .OnDelete(DeleteBehavior.Cascade);
-            entity.HasIndex(e => new { e.TenantId, e.Name }).IsUnique();
+            entity.HasIndex(e => e.Name).IsUnique();
         });
 
         modelBuilder.Entity<RuleSpecEntity>(entity =>
@@ -111,22 +80,17 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.Id).HasMaxLength(64);
             entity.Property(e => e.Version).IsRequired().HasMaxLength(32);
             entity.Property(e => e.CreatedAt).IsRequired();
-            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.GameId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.CreatedByUserId).HasMaxLength(64);
-            entity.HasOne(e => e.Tenant)
-                .WithMany(t => t.RuleSpecs)
-                .HasForeignKey(e => e.TenantId)
-                .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Game)
-                .WithMany(g => g.RuleSpecs)
+                .WithMany()
                 .HasForeignKey(e => e.GameId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.CreatedBy)
                 .WithMany()
                 .HasForeignKey(e => e.CreatedByUserId)
                 .OnDelete(DeleteBehavior.SetNull);
-            entity.HasIndex(e => new { e.TenantId, e.GameId, e.Version }).IsUnique();
+            entity.HasIndex(e => new { e.GameId, e.Version }).IsUnique();
         });
 
         modelBuilder.Entity<RuleAtomEntity>(entity =>
@@ -153,17 +117,12 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.Name).IsRequired().HasMaxLength(128);
             entity.Property(e => e.Kind).IsRequired().HasMaxLength(32);
             entity.Property(e => e.CreatedAt).IsRequired();
-            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.GameId).IsRequired().HasMaxLength(64);
-            entity.HasOne(e => e.Tenant)
-                .WithMany(t => t.Agents)
-                .HasForeignKey(e => e.TenantId)
-                .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Game)
                 .WithMany(g => g.Agents)
                 .HasForeignKey(e => e.GameId)
                 .OnDelete(DeleteBehavior.Cascade);
-            entity.HasIndex(e => new { e.TenantId, e.GameId, e.Name });
+            entity.HasIndex(e => new { e.GameId, e.Name });
         });
 
         modelBuilder.Entity<ChatEntity>(entity =>
@@ -171,14 +130,9 @@ public class MeepleAiDbContext : DbContext
             entity.ToTable("chats");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasMaxLength(64);
-            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.GameId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.AgentId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.StartedAt).IsRequired();
-            entity.HasOne(e => e.Tenant)
-                .WithMany(t => t.Chats)
-                .HasForeignKey(e => e.TenantId)
-                .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Game)
                 .WithMany(g => g.Chats)
                 .HasForeignKey(e => e.GameId)
@@ -187,7 +141,7 @@ public class MeepleAiDbContext : DbContext
                 .WithMany(a => a.Chats)
                 .HasForeignKey(e => e.AgentId)
                 .OnDelete(DeleteBehavior.Cascade);
-            entity.HasIndex(e => new { e.TenantId, e.GameId, e.StartedAt });
+            entity.HasIndex(e => new { e.GameId, e.StartedAt });
         });
 
         modelBuilder.Entity<ChatLogEntity>(entity =>
@@ -195,20 +149,16 @@ public class MeepleAiDbContext : DbContext
             entity.ToTable("chat_logs");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasMaxLength(64);
-            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.ChatId).IsRequired();
             entity.Property(e => e.Level).IsRequired().HasMaxLength(16);
             entity.Property(e => e.Message).IsRequired();
+            entity.Property(e => e.MetadataJson).HasMaxLength(2048);
             entity.Property(e => e.CreatedAt).IsRequired();
-            entity.Property(e => e.MetadataJson).HasColumnName("metadata");
-            entity.HasOne(e => e.Tenant)
-                .WithMany(t => t.ChatLogs)
-                .HasForeignKey(e => e.TenantId)
-                .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Chat)
                 .WithMany(c => c.Logs)
                 .HasForeignKey(e => e.ChatId)
                 .OnDelete(DeleteBehavior.Cascade);
-            entity.HasIndex(e => new { e.TenantId, e.ChatId, e.CreatedAt });
+            entity.HasIndex(e => new { e.ChatId, e.CreatedAt });
         });
 
         modelBuilder.Entity<PdfDocumentEntity>(entity =>
@@ -216,19 +166,19 @@ public class MeepleAiDbContext : DbContext
             entity.ToTable("pdf_documents");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasMaxLength(64);
-            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.GameId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.FileName).IsRequired().HasMaxLength(256);
-            entity.Property(e => e.FilePath).IsRequired().HasMaxLength(512);
+            entity.Property(e => e.FilePath).IsRequired().HasMaxLength(1024);
             entity.Property(e => e.FileSizeBytes).IsRequired();
-            entity.Property(e => e.ContentType).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.ContentType).IsRequired().HasMaxLength(128);
             entity.Property(e => e.UploadedByUserId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.UploadedAt).IsRequired();
-            entity.Property(e => e.Metadata).HasColumnType("text");
-            entity.HasOne(e => e.Tenant)
-                .WithMany()
-                .HasForeignKey(e => e.TenantId)
-                .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(e => e.Metadata).HasMaxLength(2048);
+            entity.Property(e => e.ProcessingStatus).IsRequired().HasMaxLength(32);
+            entity.Property(e => e.ProcessingError).HasMaxLength(1024);
+            entity.Property(e => e.ExtractedTables).HasMaxLength(8192);
+            entity.Property(e => e.ExtractedDiagrams).HasMaxLength(8192);
+            entity.Property(e => e.AtomicRules).HasMaxLength(8192);
             entity.HasOne(e => e.Game)
                 .WithMany()
                 .HasForeignKey(e => e.GameId)
@@ -237,7 +187,7 @@ public class MeepleAiDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.UploadedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
-            entity.HasIndex(e => new { e.TenantId, e.GameId, e.UploadedAt });
+            entity.HasIndex(e => new { e.GameId, e.UploadedAt });
         });
 
         modelBuilder.Entity<VectorDocumentEntity>(entity =>
@@ -245,7 +195,6 @@ public class MeepleAiDbContext : DbContext
             entity.ToTable("vector_documents");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasMaxLength(64);
-            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.GameId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.PdfDocumentId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.ChunkCount).IsRequired();
@@ -253,10 +202,6 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.IndexingStatus).IsRequired().HasMaxLength(32);
             entity.Property(e => e.EmbeddingModel).IsRequired().HasMaxLength(128);
             entity.Property(e => e.EmbeddingDimensions).IsRequired();
-            entity.HasOne(e => e.Tenant)
-                .WithMany()
-                .HasForeignKey(e => e.TenantId)
-                .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Game)
                 .WithMany()
                 .HasForeignKey(e => e.GameId)
@@ -265,7 +210,7 @@ public class MeepleAiDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.PdfDocumentId)
                 .OnDelete(DeleteBehavior.Cascade);
-            entity.HasIndex(e => new { e.TenantId, e.GameId });
+            entity.HasIndex(e => e.GameId);
             entity.HasIndex(e => e.PdfDocumentId).IsUnique();
         });
 
@@ -274,7 +219,6 @@ public class MeepleAiDbContext : DbContext
             entity.ToTable("audit_logs");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasMaxLength(64);
-            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.UserId).HasMaxLength(64);
             entity.Property(e => e.Action).IsRequired().HasMaxLength(64);
             entity.Property(e => e.Resource).IsRequired().HasMaxLength(128);
@@ -284,8 +228,8 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.IpAddress).HasMaxLength(64);
             entity.Property(e => e.UserAgent).HasMaxLength(256);
             entity.Property(e => e.CreatedAt).IsRequired();
-            entity.HasIndex(e => new { e.TenantId, e.CreatedAt });
-            entity.HasIndex(e => new { e.UserId, e.CreatedAt });
+            entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => e.UserId);
         });
 
         modelBuilder.Entity<AiRequestLogEntity>(entity =>
@@ -293,7 +237,6 @@ public class MeepleAiDbContext : DbContext
             entity.ToTable("ai_request_logs");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasMaxLength(64);
-            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.UserId).HasMaxLength(64);
             entity.Property(e => e.GameId).HasMaxLength(64);
             entity.Property(e => e.Endpoint).IsRequired().HasMaxLength(32);
@@ -307,9 +250,10 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.IpAddress).HasMaxLength(64);
             entity.Property(e => e.UserAgent).HasMaxLength(256);
             entity.Property(e => e.CreatedAt).IsRequired();
-            entity.HasIndex(e => new { e.TenantId, e.CreatedAt });
-            entity.HasIndex(e => new { e.TenantId, e.Endpoint, e.CreatedAt });
-            entity.HasIndex(e => new { e.UserId, e.CreatedAt });
+            entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => e.Endpoint);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.GameId);
         });
 
         modelBuilder.Entity<N8nConfigEntity>(entity =>
@@ -317,7 +261,6 @@ public class MeepleAiDbContext : DbContext
             entity.ToTable("n8n_configs");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasMaxLength(64);
-            entity.Property(e => e.TenantId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.Name).IsRequired().HasMaxLength(128);
             entity.Property(e => e.BaseUrl).IsRequired().HasMaxLength(512);
             entity.Property(e => e.ApiKeyEncrypted).IsRequired().HasMaxLength(512);
@@ -328,31 +271,11 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.UpdatedAt).IsRequired();
             entity.Property(e => e.CreatedByUserId).IsRequired().HasMaxLength(64);
-            entity.HasOne(e => e.Tenant)
-                .WithMany()
-                .HasForeignKey(e => e.TenantId)
-                .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.CreatedBy)
                 .WithMany()
                 .HasForeignKey(e => e.CreatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
-            entity.HasIndex(e => new { e.TenantId, e.Name }).IsUnique();
+            entity.HasIndex(e => e.Name).IsUnique();
         });
-
-        // AUTH-02: Global query filters for tenant isolation
-        // Automatically filter all queries by current tenant using the CurrentTenantId property
-        // Note: When CurrentTenantId is null, all data is returned (for migrations, admin operations, etc.)
-        modelBuilder.Entity<UserEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
-        modelBuilder.Entity<UserSessionEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
-        modelBuilder.Entity<GameEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
-        modelBuilder.Entity<RuleSpecEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
-        modelBuilder.Entity<AgentEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
-        modelBuilder.Entity<ChatEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
-        modelBuilder.Entity<ChatLogEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
-        modelBuilder.Entity<PdfDocumentEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
-        modelBuilder.Entity<VectorDocumentEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
-        modelBuilder.Entity<AuditLogEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
-        modelBuilder.Entity<AiRequestLogEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
-        modelBuilder.Entity<N8nConfigEntity>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
     }
 }

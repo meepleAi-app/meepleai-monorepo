@@ -3,7 +3,6 @@ import Link from "next/link";
 
 type AiRequest = {
   id: string;
-  tenantId: string;
   userId: string | null;
   gameId: string | null;
   endpoint: string;

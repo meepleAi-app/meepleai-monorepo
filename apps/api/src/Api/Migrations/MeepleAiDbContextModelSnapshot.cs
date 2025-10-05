@@ -46,16 +46,11 @@ namespace Api.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("GameId");
 
-                    b.HasIndex("TenantId", "GameId", "Name");
+                    b.HasIndex("GameId", "Name");
 
                     b.ToTable("agents", (string)null);
                 });
@@ -105,11 +100,6 @@ namespace Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
                     b.Property<int?>("TokenCount")
                         .HasColumnType("integer");
 
@@ -123,11 +113,11 @@ namespace Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId", "CreatedAt");
-
                     b.HasIndex("UserId", "CreatedAt");
 
-                    b.HasIndex("TenantId", "Endpoint", "CreatedAt");
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Endpoint", "CreatedAt");
 
                     b.ToTable("ai_request_logs", (string)null);
                 });
@@ -168,11 +158,6 @@ namespace Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
                     b.Property<string>("UserAgent")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -183,9 +168,9 @@ namespace Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId", "CreatedAt");
-
                     b.HasIndex("UserId", "CreatedAt");
+
+                    b.HasIndex("CreatedAt");
 
                     b.ToTable("audit_logs", (string)null);
                 });
@@ -210,18 +195,13 @@ namespace Api.Migrations
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AgentId");
 
                     b.HasIndex("GameId");
 
-                    b.HasIndex("TenantId", "GameId", "StartedAt");
+                    b.HasIndex("GameId", "StartedAt");
 
                     b.ToTable("chats", (string)null);
                 });
@@ -252,16 +232,11 @@ namespace Api.Migrations
                         .HasColumnType("text")
                         .HasColumnName("metadata");
 
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("ChatId");
 
-                    b.HasIndex("TenantId", "ChatId", "CreatedAt");
+                    b.HasIndex("ChatId", "CreatedAt");
 
                     b.ToTable("chat_logs", (string)null);
                 });
@@ -280,14 +255,9 @@ namespace Api.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId", "Name")
+                    b.HasIndex("Name")
                         .IsUnique();
 
                     b.ToTable("games", (string)null);
@@ -332,11 +302,6 @@ namespace Api.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -348,7 +313,7 @@ namespace Api.Migrations
 
                     b.HasIndex("CreatedByUserId");
 
-                    b.HasIndex("TenantId", "Name")
+                    b.HasIndex("Name")
                         .IsUnique();
 
                     b.ToTable("n8n_configs", (string)null);
@@ -423,11 +388,6 @@ namespace Api.Migrations
                     b.Property<int?>("TableCount")
                         .HasColumnType("integer");
 
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
                     b.Property<DateTime>("UploadedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -442,7 +402,7 @@ namespace Api.Migrations
 
                     b.HasIndex("UploadedByUserId");
 
-                    b.HasIndex("TenantId", "GameId", "UploadedAt");
+                    b.HasIndex("GameId", "UploadedAt");
 
                     b.ToTable("pdf_documents", (string)null);
                 });
@@ -505,11 +465,6 @@ namespace Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
                     b.Property<string>("Version")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -521,29 +476,10 @@ namespace Api.Migrations
 
                     b.HasIndex("GameId");
 
-                    b.HasIndex("TenantId", "GameId", "Version")
+                    b.HasIndex("GameId", "Version")
                         .IsUnique();
 
                     b.ToTable("rule_specs", (string)null);
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.TenantEntity", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("tenants", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserEntity", b =>
@@ -573,14 +509,9 @@ namespace Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId", "Email")
+                    b.HasIndex("Email")
                         .IsUnique();
 
                     b.ToTable("users", (string)null);
@@ -608,11 +539,6 @@ namespace Api.Migrations
                     b.Property<DateTime?>("RevokedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
                     b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasMaxLength(128)
@@ -633,8 +559,6 @@ namespace Api.Migrations
                         .IsUnique();
 
                     b.HasIndex("UserId");
-
-                    b.HasIndex("TenantId", "UserId");
 
                     b.ToTable("user_sessions", (string)null);
                 });
@@ -677,11 +601,6 @@ namespace Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.Property<string>("TenantId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
                     b.Property<int>("TotalCharacters")
                         .HasColumnType("integer");
 
@@ -692,7 +611,7 @@ namespace Api.Migrations
                     b.HasIndex("PdfDocumentId")
                         .IsUnique();
 
-                    b.HasIndex("TenantId", "GameId");
+                    b.HasIndex("GameId");
 
                     b.ToTable("vector_documents", (string)null);
                 });
@@ -705,15 +624,7 @@ namespace Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Api.Infrastructure.Entities.TenantEntity", "Tenant")
-                        .WithMany("Agents")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("Game");
-
-                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.ChatEntity", b =>
@@ -730,17 +641,9 @@ namespace Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Api.Infrastructure.Entities.TenantEntity", "Tenant")
-                        .WithMany("Chats")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("Agent");
 
                     b.Navigation("Game");
-
-                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.ChatLogEntity", b =>
@@ -751,26 +654,7 @@ namespace Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Api.Infrastructure.Entities.TenantEntity", "Tenant")
-                        .WithMany("ChatLogs")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("Chat");
-
-                    b.Navigation("Tenant");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.GameEntity", b =>
-                {
-                    b.HasOne("Api.Infrastructure.Entities.TenantEntity", "Tenant")
-                        .WithMany("Games")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.N8nConfigEntity", b =>
@@ -781,15 +665,7 @@ namespace Api.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Api.Infrastructure.Entities.TenantEntity", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("CreatedBy");
-
-                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.PdfDocumentEntity", b =>
@@ -800,12 +676,6 @@ namespace Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Api.Infrastructure.Entities.TenantEntity", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", "UploadedBy")
                         .WithMany()
                         .HasForeignKey("UploadedByUserId")
@@ -813,8 +683,6 @@ namespace Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Game");
-
-                    b.Navigation("Tenant");
 
                     b.Navigation("UploadedBy");
                 });
@@ -843,45 +711,22 @@ namespace Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Api.Infrastructure.Entities.TenantEntity", "Tenant")
-                        .WithMany("RuleSpecs")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("CreatedBy");
 
                     b.Navigation("Game");
-
-                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.TenantEntity", "Tenant")
-                        .WithMany("Users")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserSessionEntity", b =>
                 {
-                    b.HasOne("Api.Infrastructure.Entities.TenantEntity", "Tenant")
-                        .WithMany("Sessions")
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
                         .WithMany("Sessions")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Tenant");
 
                     b.Navigation("User");
                 });
@@ -900,17 +745,9 @@ namespace Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Api.Infrastructure.Entities.TenantEntity", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("Game");
 
                     b.Navigation("PdfDocument");
-
-                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AgentEntity", b =>
@@ -935,23 +772,6 @@ namespace Api.Migrations
             modelBuilder.Entity("Api.Infrastructure.Entities.RuleSpecEntity", b =>
                 {
                     b.Navigation("Atoms");
-                });
-
-            modelBuilder.Entity("Api.Infrastructure.Entities.TenantEntity", b =>
-                {
-                    b.Navigation("Agents");
-
-                    b.Navigation("ChatLogs");
-
-                    b.Navigation("Chats");
-
-                    b.Navigation("Games");
-
-                    b.Navigation("RuleSpecs");
-
-                    b.Navigation("Sessions");
-
-                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserEntity", b =>

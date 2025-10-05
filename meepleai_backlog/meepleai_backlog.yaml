@@ -356,3 +356,113 @@
   Milestone: V1
   Dependencies: SEC-01
   AcceptanceCriteria: File presenti e linkati.
+- ID: API-01
+  Title: API REST giochi e regole
+  Description: Implementa endpoint REST per giochi, rule spec e chat con validazioni e versioning.
+  Component: API
+  Type: Feature
+  Priority: P0
+  Effort: 3
+  Labels: area/api,kind/feature
+  Milestone: MVP
+  Dependencies: AUTH-01,DB-01
+  AcceptanceCriteria: Endpoint CRUD coperti da integration test; schema OpenAPI aggiornato.
+- ID: API-02
+  Title: Streaming explain RAG
+  Description: Aggiunge streaming SSE/WebSocket per explain RAG con aggiornamenti di stato e fallback.
+  Component: API
+  Type: Feature
+  Priority: P1
+  Effort: 3
+  Labels: area/api,kind/feature
+  Milestone: V1
+  Dependencies: API-01,AI-02
+  AcceptanceCriteria: Streaming restituisce chunk progressivi; test E2E verificano fallback e timeout.
+- ID: API-03
+  Title: Gestione API key e quote
+  Description: Gestisce chiavi API per partner, rotazione, quota e integrazione con rate limiting centralizzato.
+  Component: API
+  Type: Feature
+  Priority: P1
+  Effort: 3
+  Labels: area/api,area/security,kind/feature
+  Milestone: V1
+  Dependencies: API-01,PERF-01
+  AcceptanceCriteria: Admin può creare/ruotare chiavi; quota applicata e loggata; test E2E passano.
+- ID: DB-02
+  Title: Seed dataset demo
+  Description: Crea migrazioni seed per giochi, utenti e rule spec demo utili a onboarding e test.
+  Component: DB
+  Type: Task
+  Priority: P1
+  Effort: 2
+  Labels: area/db,kind/data
+  Milestone: MVP
+  Dependencies: DB-01
+  AcceptanceCriteria: Migrazioni idempotenti generano dataset demo; test confermano presenza dati base.
+- ID: DB-03
+  Title: Indici full-text PDF/RuleSpec
+  Description: Configura indici full-text e vettoriali per ricerche su PDF e RuleSpec in Postgres/Qdrant.
+  Component: DB
+  Type: Task
+  Priority: P1
+  Effort: 3
+  Labels: area/db,kind/perf
+  Milestone: V1
+  Dependencies: PDF-02,AI-01
+  AcceptanceCriteria: Query di ricerca su dataset demo <200ms; test coprono fallback e mantenimento indici.
+- ID: AI-06
+  Title: Valutazione RAG offline
+  Description: Costruisce harness di valutazione per RAG con dataset di domande e metriche (precision@k, latency).
+  Component: AI
+  Type: Task
+  Priority: P1
+  Effort: 3
+  Labels: area/ai,kind/test
+  Milestone: V1
+  Dependencies: AI-02
+  AcceptanceCriteria: Report metriche generato in CI; soglia minima definita per merge.
+- ID: AI-07
+  Title: Versioning prompt e chain
+  Description: Versiona prompt LLM e catene con storage centralizzato, rollout sicuro e audit log.
+  Component: AI
+  Type: Feature
+  Priority: P1
+  Effort: 2
+  Labels: area/ai,kind/feature
+  Milestone: V1
+  Dependencies: AI-02
+  AcceptanceCriteria: Prompts versionati con possibilità di rollback; audit log disponibile; test unitari presenti.
+- ID: UI-04
+  Title: Timeline conversazioni RAG
+  Description: Introduce timeline conversazione multi-pane con eventi RAG, citazioni e stato recupero.
+  Component: UI
+  Type: Feature
+  Priority: P1
+  Effort: 3
+  Labels: area/ui,kind/feature
+  Milestone: V1
+  Dependencies: UI-01,API-01
+  AcceptanceCriteria: Timeline mostra eventi con riferimenti; test E2E verificano sincronizzazione e filtri.
+- ID: UI-05
+  Title: Audit accessibilità baseline
+  Description: Esegue audit accessibilità (WCAG AA) su UI principale con fix per tastiera e screen reader.
+  Component: UI
+  Type: Task
+  Priority: P1
+  Effort: 2
+  Labels: area/ui,kind/a11y
+  Milestone: V1
+  Dependencies: UI-01
+  AcceptanceCriteria: Audit axe senza errori bloccanti; documentazione checklist aggiornata.
+- ID: SEC-03
+  Title: SAST e dependency scanning
+  Description: Integra SAST e dependency scanning in CI con soglie di severità e report archiviati.
+  Component: Security
+  Type: Task
+  Priority: P0
+  Effort: 3
+  Labels: area/security,kind/ci
+  Milestone: MVP
+  Dependencies: INF-02
+  AcceptanceCriteria: Pipeline fallisce su vulnerabilità High; report disponibile come artefatto CI.

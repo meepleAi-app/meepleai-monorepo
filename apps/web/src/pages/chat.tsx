@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { api } from "../lib/api";
 
@@ -14,24 +14,43 @@ type AuthResponse = {
   expiresAt: string;
 };
 
+type Snippet = {
+  text: string;
+  source: string;
+  page?: number | null;
+  line?: number | null;
+};
+
 type Message = {
   id: string;
   role: "user" | "assistant";
   content: string;
-  sources?: Source[];
+  snippets?: Snippet[];
   feedback?: "helpful" | "not-helpful" | null;
+  endpoint?: string;
+  gameId?: string;
   timestamp: Date;
 };
 
-type Source = {
-  title: string;
-  snippet: string;
-  page?: number;
+type QaResponse = {
+  answer: string;
+  snippets?: Snippet[];
 };
 
-type QAResponse = {
-  answer: string;
-  sources?: Source[];
+const formatSnippets = (snippets?: Snippet[]): Snippet[] =>
+  (snippets ?? []).map(({ text, source, page = null, line = null }) => ({
+    text,
+    source,
+    page,
+    line
+  }));
+
+const getSnippetLabel = (snippet: Snippet): string => {
+  const baseLabel = snippet.source;
+  if (snippet.page !== null && snippet.page !== undefined) {
+    return `${baseLabel} (Pagina ${snippet.page})`;
+  }
+  return baseLabel;
 };
 
 export default function ChatPage() {
@@ -84,7 +103,7 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
-      const res = await api.post<QAResponse>("/agents/qa", {
+      const res = await api.post<QaResponse>("/agents/qa", {
         gameId: selectedGame,
         query: inputValue
       });
@@ -93,8 +112,10 @@ export default function ChatPage() {
         id: `msg-${Date.now()}-assistant`,
         role: "assistant",
         content: res.answer,
-        sources: res.sources,
+        snippets: formatSnippets(res.snippets),
         feedback: null,
+        endpoint: "qa",
+        gameId: selectedGame,
         timestamp: new Date()
       };
 
@@ -110,15 +131,39 @@ export default function ChatPage() {
     }
   };
 
-  const setFeedback = (messageId: string, feedback: "helpful" | "not-helpful") => {
+  const setFeedback = async (messageId: string, feedback: "helpful" | "not-helpful") => {
+    if (!authUser) {
+      return;
+    }
+
+    const targetMessage = messages.find((msg) => msg.id === messageId);
+    if (!targetMessage) {
+      return;
+    }
+
+    const previousFeedback = targetMessage.feedback ?? null;
+    const nextFeedback = previousFeedback === feedback ? null : feedback;
+    const endpoint = targetMessage.endpoint ?? "qa";
+    const gameId = targetMessage.gameId ?? selectedGame;
+
     setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === messageId ? { ...msg, feedback: msg.feedback === feedback ? null : feedback } : msg
-      )
+      prev.map((msg) => (msg.id === messageId ? { ...msg, feedback: nextFeedback } : msg))
     );
 
-    // In a real implementation, this would also send the feedback to the backend
-    // await api.post("/feedback", { messageId, feedback });
+    try {
+      await api.post("/agents/feedback", {
+        messageId,
+        endpoint,
+        outcome: nextFeedback,
+        userId: authUser.id,
+        gameId
+      });
+    } catch (error) {
+      console.error(error);
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === messageId ? { ...msg, feedback: previousFeedback } : msg))
+      );
+    }
   };
 
   const clearHistory = () => {
@@ -269,12 +314,12 @@ export default function ChatPage() {
                 <div style={{ whiteSpace: "pre-wrap" }}>{msg.content}</div>
 
                 {/* Sources */}
-                {msg.sources && msg.sources.length > 0 && (
+                {msg.snippets && msg.snippets.length > 0 && (
                   <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #dadce0" }}>
                     <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8, color: "#5f6368" }}>
                       Fonti:
                     </div>
-                    {msg.sources.map((source, idx) => (
+                    {msg.snippets.map((snippet, idx) => (
                       <div
                         key={idx}
                         style={{
@@ -286,10 +331,8 @@ export default function ChatPage() {
                           fontSize: 12
                         }}
                       >
-                        <div style={{ fontWeight: 500, marginBottom: 4 }}>
-                          {source.title} {source.page !== undefined && `(Pagina ${source.page})`}
-                        </div>
-                        <div style={{ color: "#5f6368", fontSize: 11 }}>{source.snippet}</div>
+                        <div style={{ fontWeight: 500, marginBottom: 4 }}>{getSnippetLabel(snippet)}</div>
+                        <div style={{ color: "#5f6368", fontSize: 11 }}>{snippet.text}</div>
                       </div>
                     ))}
                   </div>
@@ -300,7 +343,7 @@ export default function ChatPage() {
               {msg.role === "assistant" && (
                 <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                   <button
-                    onClick={() => setFeedback(msg.id, "helpful")}
+                    onClick={() => void setFeedback(msg.id, "helpful")}
                     style={{
                       padding: "4px 8px",
                       background: msg.feedback === "helpful" ? "#34a853" : "#f1f3f4",
@@ -318,7 +361,7 @@ export default function ChatPage() {
                     👍 Utile
                   </button>
                   <button
-                    onClick={() => setFeedback(msg.id, "not-helpful")}
+                    onClick={() => void setFeedback(msg.id, "not-helpful")}
                     style={{
                       padding: "4px 8px",
                       background: msg.feedback === "not-helpful" ? "#ea4335" : "#f1f3f4",

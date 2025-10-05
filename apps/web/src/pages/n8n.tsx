@@ -19,6 +19,8 @@ type TestResult = {
   latencyMs: number | null;
 };
 
+export const apiBase = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+
 export default function N8nWorkflowManagement() {
   const [configs, setConfigs] = useState<N8nConfig[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +43,7 @@ export default function N8nWorkflowManagement() {
   const fetchConfigs = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/admin/n8n`, {
+      const res = await fetch(`${apiBase}/admin/n8n`, {
         credentials: "include"
       });
 
@@ -63,8 +65,8 @@ export default function N8nWorkflowManagement() {
 
     try {
       const url = editingConfig
-        ? `${process.env.NEXT_PUBLIC_API_BASE}/admin/n8n/${editingConfig.id}`
-        : `${process.env.NEXT_PUBLIC_API_BASE}/admin/n8n`;
+        ? `${apiBase}/admin/n8n/${editingConfig.id}`
+        : `${apiBase}/admin/n8n`;
 
       const method = editingConfig ? "PUT" : "POST";
 
@@ -120,7 +122,7 @@ export default function N8nWorkflowManagement() {
     }
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/admin/n8n/${configId}`, {
+      const res = await fetch(`${apiBase}/admin/n8n/${configId}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -138,7 +140,7 @@ export default function N8nWorkflowManagement() {
   const handleTest = async (configId: string) => {
     setTesting(configId);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/admin/n8n/${configId}/test`, {
+      const res = await fetch(`${apiBase}/admin/n8n/${configId}/test`, {
         method: "POST",
         credentials: "include",
       });
@@ -159,7 +161,7 @@ export default function N8nWorkflowManagement() {
 
   const handleToggleActive = async (config: N8nConfig) => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/admin/n8n/${config.id}`, {
+      const res = await fetch(`${apiBase}/admin/n8n/${config.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using System;
 using System.Linq;
 using System.Security.Claims;
 using Api.Infrastructure.Entities;
@@ -66,6 +67,7 @@ builder.Services.AddScoped<SetupGuideService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<AiRequestLogService>();
+builder.Services.AddScoped<AgentFeedbackService>();
 builder.Services.AddScoped<RateLimitService>();
 builder.Services.AddScoped<PdfTextExtractionService>();
 builder.Services.AddScoped<PdfTableExtractionService>();
@@ -222,6 +224,37 @@ app.Use(async (context, next) =>
 
 app.MapGet("/", () => Results.Json(new { ok = true, name = "MeepleAgentAI" }));
 
+app.MapGet("/logs", async (AiRequestLogService logService, CancellationToken ct) =>
+{
+    var entries = await logService.GetRequestsAsync(limit: 100, ct: ct);
+
+    var response = entries
+        .Select(log =>
+        {
+            var level = string.Equals(log.Status, "Error", StringComparison.OrdinalIgnoreCase)
+                ? "ERROR"
+                : "INFO";
+
+            var message = !string.IsNullOrWhiteSpace(log.ResponseSnippet)
+                ? log.ResponseSnippet!
+                : !string.IsNullOrWhiteSpace(log.Query)
+                    ? log.Query!
+                    : $"{log.Endpoint} request ({log.Status})";
+
+            return new LogEntryResponse(
+                log.CreatedAt,
+                level,
+                message,
+                log.Id,
+                log.UserId,
+                log.GameId
+            );
+        })
+        .ToList();
+
+    return Results.Json(response);
+});
+
 app.MapPost("/auth/register", async (RegisterPayload payload, HttpContext context, AuthService auth, ILogger<Program> logger, CancellationToken ct) =>
 {
     try
@@ -333,6 +366,21 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
 
         logger.LogInformation("QA response delivered for game {GameId}", req.gameId);
 
+        string? model = null;
+        string? finishReason = null;
+        if (resp.metadata != null)
+        {
+            if (resp.metadata.TryGetValue("model", out var metadataModel))
+            {
+                model = metadataModel;
+            }
+
+            if (resp.metadata.TryGetValue("finish_reason", out var metadataFinish))
+            {
+                finishReason = metadataFinish;
+            }
+        }
+
         // ADM-01: Log AI request
         await aiLog.LogRequestAsync(
             session.User.id,
@@ -341,12 +389,16 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
             req.query,
             resp.answer?.Length > 500 ? resp.answer.Substring(0, 500) : resp.answer,
             latencyMs,
-            null, // Token count not available yet
-            null, // Confidence not available yet
+            resp.totalTokens,
+            resp.confidence,
             "Success",
             null,
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString(),
+            resp.promptTokens,
+            resp.completionTokens,
+            model,
+            finishReason,
             ct);
 
         return Results.Json(resp);
@@ -407,12 +459,16 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
             req.topic,
             resp.script?.Length > 500 ? resp.script.Substring(0, 500) : resp.script,
             latencyMs,
-            null,
-            null,
+            resp.totalTokens,
+            resp.confidence,
             "Success",
             null,
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString(),
+            resp.promptTokens,
+            resp.completionTokens,
+            null,
+            null,
             ct);
 
         return Results.Json(resp);
@@ -482,12 +538,16 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
             "setup_guide",
             responseSnippet,
             latencyMs,
-            null,
-            null,
+            resp.totalTokens,
+            resp.confidence,
             "Success",
             null,
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString(),
+            resp.promptTokens,
+            resp.completionTokens,
+            null,
+            null,
             ct);
 
         return Results.Json(resp);
@@ -513,6 +573,49 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
             ct);
 
         throw;
+    }
+});
+
+app.MapPost("/agents/feedback", async (AgentFeedbackRequest req, HttpContext context, AgentFeedbackService feedbackService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(req.userId, session.User.id, StringComparison.Ordinal))
+    {
+        return Results.BadRequest(new { error = "Invalid user" });
+    }
+
+    if (string.IsNullOrWhiteSpace(req.messageId) || string.IsNullOrWhiteSpace(req.endpoint))
+    {
+        return Results.BadRequest(new { error = "messageId and endpoint are required" });
+    }
+
+    try
+    {
+        await feedbackService.RecordFeedbackAsync(
+            req.messageId,
+            req.endpoint,
+            session.User.id,
+            string.IsNullOrWhiteSpace(req.outcome) ? null : req.outcome,
+            req.gameId,
+            ct);
+
+        logger.LogInformation(
+            "Recorded feedback {Outcome} for message {MessageId} on endpoint {Endpoint} by user {UserId}",
+            req.outcome ?? "cleared",
+            req.messageId,
+            req.endpoint,
+            session.User.id);
+
+        return Results.Json(new { ok = true });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to record feedback for message {MessageId}", req.messageId);
+        return Results.Problem(detail: "Unable to record feedback", statusCode: 500);
     }
 });
 
@@ -635,6 +738,32 @@ app.MapGet("/pdfs/{pdfId}/text", async (string pdfId, HttpContext context, Meepl
     return Results.Json(pdf);
 });
 
+app.MapPost("/ingest/pdf/{pdfId}/rulespec", async (string pdfId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation("User {UserId} generating RuleSpec from PDF {PdfId}", session.User.id, pdfId);
+        var ruleSpec = await ruleSpecService.GenerateRuleSpecFromPdfAsync(pdfId, ct);
+        return Results.Json(ruleSpec);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning(ex, "Unable to generate RuleSpec for PDF {PdfId}", pdfId);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
 app.MapGet("/games/{gameId}/rulespec", async (string gameId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
@@ -676,7 +805,7 @@ app.MapPut("/games/{gameId}/rulespec", async (string gameId, RuleSpec ruleSpec, 
     try
     {
         logger.LogInformation("User {UserId} updating RuleSpec for game {GameId}", session.User.id, gameId);
-        var updated = await ruleSpecService.UpdateRuleSpecAsync(gameId, ruleSpec, ct);
+        var updated = await ruleSpecService.UpdateRuleSpecAsync(gameId, ruleSpec, session.User.id, ct);
         logger.LogInformation("RuleSpec updated successfully for game {GameId}, version {Version}", gameId, updated.version);
 
         // Audit trail for RuleSpec changes
@@ -807,7 +936,7 @@ app.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService lo
     return Results.Json(new { requests });
 });
 
-app.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logService, DateTime? startDate = null, DateTime? endDate = null, string? userId = null, string? gameId = null, CancellationToken ct = default) =>
+app.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logService, AgentFeedbackService feedbackService, DateTime? startDate = null, DateTime? endDate = null, string? userId = null, string? gameId = null, CancellationToken ct = default) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -820,7 +949,19 @@ app.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logSe
     }
 
     var stats = await logService.GetStatsAsync(startDate, endDate, userId, gameId, ct);
-    return Results.Json(stats);
+    var feedbackStats = await feedbackService.GetStatsAsync(null, userId, gameId, startDate, endDate, ct);
+
+    return Results.Json(new
+    {
+        stats.TotalRequests,
+        stats.AvgLatencyMs,
+        stats.TotalTokens,
+        stats.SuccessRate,
+        stats.EndpointCounts,
+        feedbackCounts = feedbackStats.OutcomeCounts,
+        totalFeedback = feedbackStats.TotalFeedback,
+        feedbackByEndpoint = feedbackStats.EndpointOutcomeCounts
+    });
 });
 
 // ADM-02: n8n workflow configuration endpoints

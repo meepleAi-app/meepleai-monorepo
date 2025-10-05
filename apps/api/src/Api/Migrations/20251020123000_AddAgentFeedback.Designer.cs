@@ -3,6 +3,7 @@ using System;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Api.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    partial class MeepleAiDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251020123000_AddAgentFeedback")]
+    partial class AddAgentFeedback
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -64,10 +66,6 @@ namespace Api.Migrations
                     b.Property<double?>("Confidence")
                         .HasColumnType("double precision");
 
-                    b.Property<int>("CompletionTokens")
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -84,10 +82,6 @@ namespace Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.Property<string>("FinishReason")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
                     b.Property<string>("IpAddress")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
@@ -95,17 +89,9 @@ namespace Api.Migrations
                     b.Property<int>("LatencyMs")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Model")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
-
                     b.Property<string>("Query")
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)");
-
-                    b.Property<int>("PromptTokens")
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
 
                     b.Property<string>("ResponseSnippet")
                         .HasMaxLength(1024)
@@ -116,9 +102,8 @@ namespace Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
-                    b.Property<int>("TokenCount")
-                        .HasColumnType("integer")
-                        .HasDefaultValue(0);
+                    b.Property<int?>("TokenCount")
+                        .HasColumnType("integer");
 
                     b.Property<string>("UserAgent")
                         .HasMaxLength(256)

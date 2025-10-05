@@ -22,6 +22,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<VectorDocumentEntity> VectorDocuments => Set<VectorDocumentEntity>();
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
     public DbSet<AiRequestLogEntity> AiRequestLogs => Set<AiRequestLogEntity>();
+    public DbSet<AgentFeedbackEntity> AgentFeedbacks => Set<AgentFeedbackEntity>();
     public DbSet<N8nConfigEntity> N8nConfigs => Set<N8nConfigEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -243,14 +244,36 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.Query).HasMaxLength(2048);
             entity.Property(e => e.ResponseSnippet).HasMaxLength(1024);
             entity.Property(e => e.LatencyMs).IsRequired();
-            entity.Property(e => e.TokenCount);
+            entity.Property(e => e.TokenCount).HasDefaultValue(0);
+            entity.Property(e => e.PromptTokens).HasDefaultValue(0);
+            entity.Property(e => e.CompletionTokens).HasDefaultValue(0);
             entity.Property(e => e.Confidence);
             entity.Property(e => e.Status).IsRequired().HasMaxLength(32);
             entity.Property(e => e.ErrorMessage).HasMaxLength(1024);
             entity.Property(e => e.IpAddress).HasMaxLength(64);
             entity.Property(e => e.UserAgent).HasMaxLength(256);
+            entity.Property(e => e.Model).HasMaxLength(128);
+            entity.Property(e => e.FinishReason).HasMaxLength(64);
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => e.Endpoint);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.GameId);
+        });
+
+        modelBuilder.Entity<AgentFeedbackEntity>(entity =>
+        {
+            entity.ToTable("agent_feedback");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
+            entity.Property(e => e.MessageId).IsRequired().HasMaxLength(128);
+            entity.Property(e => e.Endpoint).IsRequired().HasMaxLength(32);
+            entity.Property(e => e.GameId).HasMaxLength(64);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.Outcome).IsRequired().HasMaxLength(32);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.UpdatedAt).IsRequired();
+            entity.HasIndex(e => new { e.MessageId, e.UserId }).IsUnique();
             entity.HasIndex(e => e.Endpoint);
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.GameId);

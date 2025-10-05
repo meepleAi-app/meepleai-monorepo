@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import UploadPage from '../upload';
 
 describe('UploadPage', () => {
@@ -9,6 +9,7 @@ describe('UploadPage', () => {
     Promise.resolve({
       ok: status >= 200 && status < 300,
       status,
+      statusText: status >= 200 && status < 300 ? 'OK' : 'Error',
       json: () => Promise.resolve(data)
     } as Response);
 
@@ -19,6 +20,10 @@ describe('UploadPage', () => {
 
   afterAll(() => {
     global.fetch = originalFetch;
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('keeps upload disabled until a game is confirmed', async () => {
@@ -122,5 +127,118 @@ describe('UploadPage', () => {
     fireEvent.change(fileInput, { target: { files: [file] } });
 
     await waitFor(() => expect(uploadButton).not.toBeDisabled());
+  });
+
+  it('polls PDF processing status and auto advances to review when completed', async () => {
+    jest.useFakeTimers();
+
+    try {
+      const authResponse = {
+        user: {
+          id: 'user-3',
+          email: 'user3@example.com',
+          role: 'Admin',
+          displayName: 'User Three'
+        },
+        expiresAt: new Date().toISOString()
+      };
+
+      const ruleSpecResponse = {
+        gameId: 'game-1',
+        version: 'v1',
+        createdAt: new Date().toISOString(),
+        rules: [
+          { id: 'r1', text: 'Auto generated rule', section: 'Intro', page: '1', line: '1' }
+        ]
+      };
+
+      const statusSequence: Array<{ processingStatus: string; processingError?: string | null }> = [
+        { processingStatus: 'processing' },
+        { processingStatus: 'completed' }
+      ];
+
+      mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/auth/me')) {
+          return createJsonResponse(authResponse);
+        }
+
+        if (url.endsWith('/games') && method === 'GET') {
+          return createJsonResponse([
+            { id: 'game-1', name: 'Terraforming Mars', createdAt: new Date().toISOString() }
+          ]);
+        }
+
+        if (url.includes('/games/game-1/pdfs')) {
+          return createJsonResponse({ pdfs: [] });
+        }
+
+        if (url.endsWith('/ingest/pdf')) {
+          return createJsonResponse({ documentId: 'pdf-123', fileName: 'rules.pdf' });
+        }
+
+        if (url.endsWith('/pdfs/pdf-123/text')) {
+          const nextStatus = statusSequence.shift() ?? { processingStatus: 'completed' };
+          return createJsonResponse({
+            id: 'pdf-123',
+            fileName: 'rules.pdf',
+            processingStatus: nextStatus.processingStatus,
+            processingError: nextStatus.processingError ?? null
+          });
+        }
+
+        if (url.endsWith('/games/game-1/rulespec')) {
+          return createJsonResponse(ruleSpecResponse);
+        }
+
+        throw new Error(`Unexpected fetch call to ${url}`);
+      });
+
+      render(<UploadPage />);
+
+      await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
+
+      const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
+      const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+      const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
+
+      fireEvent.change(fileInput, { target: { files: [file] } });
+      await waitFor(() => expect(uploadButton).not.toBeDisabled());
+
+      fireEvent.click(uploadButton);
+
+      await waitFor(() => expect(screen.getByText(/Processing status/i)).toBeInTheDocument());
+      expect(screen.getByText(/Processing status/i)).toHaveTextContent(/Processing status: (Pending|Processing)/i);
+
+      const continueButton = screen.getByRole('button', { name: /Waiting for processing/i });
+      expect(continueButton).toBeDisabled();
+
+      await waitFor(() =>
+        expect(screen.getByText(/Processing status/i)).toHaveTextContent('Processing')
+      );
+
+      await act(async () => {
+        jest.advanceTimersByTime(2000);
+      });
+
+      await waitFor(() =>
+        expect(screen.getByRole('heading', { name: /Step 3: Review & Edit Rules/i })).toBeInTheDocument()
+      );
+
+      await waitFor(() =>
+        expect(mockFetch).toHaveBeenCalledWith(
+          expect.stringContaining('/games/game-1/rulespec'),
+          expect.objectContaining({ method: 'GET' })
+        )
+      );
+
+      await waitFor(() => expect(screen.getByText(/Auto generated rule/i)).toBeInTheDocument());
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

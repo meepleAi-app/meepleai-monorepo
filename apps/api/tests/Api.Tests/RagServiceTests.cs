@@ -26,6 +26,18 @@ public class RagServiceTests
         return context;
     }
 
+    private static Mock<IAiResponseCacheService> CreateCacheMock()
+    {
+        var mock = new Mock<IAiResponseCacheService>();
+        mock
+            .Setup(x => x.InvalidateGameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        mock
+            .Setup(x => x.InvalidateEndpointAsync(It.IsAny<string>(), It.IsAny<AiCacheEndpoint>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        return mock;
+    }
+
     [Fact]
     public async Task AskAsync_WithEmptyQuery_ReturnsErrorMessage()
     {
@@ -34,7 +46,7 @@ public class RagServiceTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
@@ -53,7 +65,7 @@ public class RagServiceTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
@@ -76,7 +88,7 @@ public class RagServiceTests
 
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
@@ -99,7 +111,7 @@ public class RagServiceTests
 
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
@@ -131,7 +143,7 @@ public class RagServiceTests
             .ReturnsAsync(SearchResult.CreateFailure("Search failed"));
 
         var mockLlm = new Mock<ILlmService>();
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
@@ -177,7 +189,7 @@ public class RagServiceTests
                 new LlmUsage(12, 8, 20),
                 new Dictionary<string, string> { { "model", "anthropic/claude-3.5-sonnet" } }));
 
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
@@ -227,7 +239,7 @@ public class RagServiceTests
             .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Not specified"));
 
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
@@ -246,7 +258,7 @@ public class RagServiceTests
         var mockEmbedding = new Mock<IEmbeddingService>(MockBehavior.Strict);
         var mockQdrant = new Mock<IQdrantService>(MockBehavior.Strict);
         var mockLlm = new Mock<ILlmService>(MockBehavior.Strict);
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         const string gameId = "game1";
         const string query = "How many players?";
         const string cacheKey = "qa::game1::players";
@@ -306,7 +318,7 @@ public class RagServiceTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
@@ -346,7 +358,7 @@ public class RagServiceTests
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         var mockLlm = new Mock<ILlmService>();
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
@@ -388,7 +400,7 @@ public class RagServiceTests
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         var mockLlm = new Mock<ILlmService>(MockBehavior.Strict);
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         const string gameId = "game1";
         const string topic = "movement rules";
         const string cacheKey = "explain::game1::movement";
@@ -462,7 +474,7 @@ public class RagServiceTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
@@ -487,7 +499,7 @@ public class RagServiceTests
 
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
@@ -511,7 +523,7 @@ public class RagServiceTests
 
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
@@ -543,7 +555,7 @@ public class RagServiceTests
             .ReturnsAsync(SearchResult.CreateFailure("Search failed"));
 
         var mockLlm = new Mock<ILlmService>();
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
@@ -575,7 +587,7 @@ public class RagServiceTests
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>()));
 
         var mockLlm = new Mock<ILlmService>();
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
@@ -607,7 +619,7 @@ public class RagServiceTests
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>()));
 
         var mockLlm = new Mock<ILlmService>();
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
@@ -645,7 +657,7 @@ public class RagServiceTests
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         var mockLlm = new Mock<ILlmService>();
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
@@ -689,7 +701,7 @@ public class RagServiceTests
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         var mockLlm = new Mock<ILlmService>();
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act
@@ -712,7 +724,7 @@ public class RagServiceTests
 
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
-        var mockCache = new Mock<IAiResponseCacheService>();
+        var mockCache = CreateCacheMock();
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // Act

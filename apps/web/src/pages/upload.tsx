@@ -1,5 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import {
+  type ChangeEvent,
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useState
+} from 'react';
 import { api } from '../lib/api';
 
 interface PdfDocument {
@@ -17,12 +23,12 @@ type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed';
 interface PdfProcessingResponse {
   id: string;
   fileName: string;
-  extractedText?: string | null;
   processingStatus: ProcessingStatus;
-  processedAt?: string | null;
-  pageCount?: number | null;
-  characterCount?: number | null;
   processingError?: string | null;
+}
+
+interface PdfListResponse {
+  pdfs?: PdfDocument[];
 }
 
 interface RuleAtom {
@@ -60,6 +66,10 @@ interface AuthResponse {
 
 type WizardStep = 'upload' | 'parse' | 'review' | 'publish';
 
+const AUTHORIZED_ROLES = new Set(['admin', 'editor']);
+const POLL_INTERVAL_MS = 2000;
+const POLL_RETRY_MS = 4000;
+
 export default function UploadPage() {
   const [currentStep, setCurrentStep] = useState<WizardStep>('upload');
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -74,44 +84,50 @@ export default function UploadPage() {
   const [parsing, setParsing] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [message, setMessage] = useState('');
-  const [documentId, setDocumentId] = useState<string>('');
+  const [documentId, setDocumentId] = useState('');
   const [ruleSpec, setRuleSpec] = useState<RuleSpec | null>(null);
   const [pdfs, setPdfs] = useState<PdfDocument[]>([]);
   const [loadingPdfs, setLoadingPdfs] = useState(false);
+  const [pdfsError, setPdfsError] = useState<string | null>(null);
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [pollingError, setPollingError] = useState<string | null>(null);
   const [autoAdvanceTriggered, setAutoAdvanceTriggered] = useState(false);
+  const [retryingPdfId, setRetryingPdfId] = useState<string | null>(null);
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
-  const loadPdfs = useCallback(async (gameId: string) => {
-    if (!gameId) {
-      return;
-    }
-
-    setLoadingPdfs(true);
-    setPdfsError(null);
-    try {
-      const response = await fetch(`${API_BASE}/games/${gameId}/pdfs`, {
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPdfs(data.pdfs || []);
-        setPdfsError(null);
-      } else {
-        console.error('Failed to load PDFs:', response.statusText);
-        setPdfsError('Unable to load uploaded PDFs. Please try again.');
+  const loadPdfs = useCallback(
+    async (gameId: string) => {
+      if (!gameId) {
+        return;
       }
-    } catch (error) {
-      console.error('Failed to load PDFs:', error);
-      setPdfsError('Unable to load uploaded PDFs. Please try again.');
-    } finally {
-      setLoadingPdfs(false);
-    }
-  }, [API_BASE]);
+
+      setLoadingPdfs(true);
+      setPdfsError(null);
+
+      try {
+        const response = await fetch(`${API_BASE}/games/${gameId}/pdfs`, {
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          console.error('Failed to load PDFs:', response.statusText);
+          setPdfsError('Unable to load uploaded PDFs. Please try again.');
+          return;
+        }
+
+        const data: PdfListResponse = await response.json();
+        setPdfs(data.pdfs ?? []);
+      } catch (error) {
+        console.error('Failed to load PDFs:', error);
+        setPdfsError('Unable to load uploaded PDFs. Please try again.');
+      } finally {
+        setLoadingPdfs(false);
+      }
+    },
+    [API_BASE]
+  );
 
   const initialize = useCallback(async () => {
     setLoadingGames(true);
@@ -158,79 +174,55 @@ export default function UploadPage() {
     }
 
     let cancelled = false;
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
 
     const pollStatus = async () => {
       try {
         const response = await fetch(`${API_BASE}/pdfs/${documentId}/text`, {
-          credentials: 'include',
+          credentials: 'include'
         });
 
         if (!response.ok) {
-          let errorMessage = response.statusText || 'Request failed';
-          try {
-            const errorBody = await response.json();
-            if (errorBody && typeof errorBody.error === 'string') {
-              errorMessage = errorBody.error;
-            }
-          } catch {
-            // Ignore JSON parse errors for error responses
+          const errorBody = await response.json().catch(() => null);
+          if (!cancelled) {
+            setPollingError(errorBody?.error ?? response.statusText);
+            timeout = setTimeout(pollStatus, POLL_RETRY_MS);
           }
-
-          throw new Error(errorMessage);
+          return;
         }
 
-        const data = (await response.json()) as PdfTextResponse;
+        const data: PdfProcessingResponse = await response.json();
         if (cancelled) {
           return;
         }
 
-        const status = data.processingStatus;
-        setProcessingStatus(status);
-        setProcessingMetadata({
-          pageCount: data.pageCount ?? null,
-          characterCount: data.characterCount ?? null,
-        });
+        setProcessingStatus(data.processingStatus);
+        setProcessingError(data.processingError ?? null);
+        setPollingError(null);
 
-        if (status === 'failed') {
-          const errorMessage = data.processingError || 'Unknown error';
-          setProcessingError(errorMessage);
-          setMessage(`❌ PDF processing failed: ${errorMessage}`);
-          setIsPolling(false);
+        if (data.processingStatus === 'failed') {
+          setMessage(`❌ Parse failed: ${data.processingError ?? 'Processing failed. Please try again.'}`);
           return;
         }
 
-        setProcessingError(null);
-
-        if (status === 'completed') {
-          setIsPolling(false);
-          setMessage('✅ PDF processing completed. Loading RuleSpec…');
-          return;
+        if (data.processingStatus !== 'completed') {
+          timeout = setTimeout(pollStatus, POLL_INTERVAL_MS);
         }
       } catch (error) {
         if (cancelled) {
           return;
         }
-
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        setProcessingError(errorMessage);
-        setMessage(`❌ Unable to poll PDF status: ${errorMessage}`);
-        setIsPolling(false);
-        return;
-      }
-
-      if (!cancelled) {
-        timeoutId = setTimeout(pollStatus, POLLING_INTERVAL_MS);
+        setPollingError(error instanceof Error ? error.message : 'Unknown error');
+        timeout = setTimeout(pollStatus, POLL_RETRY_MS);
       }
     };
 
-    setIsPolling(true);
-    pollStatus();
+    void pollStatus();
 
     return () => {
       cancelled = true;
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+      if (timeout) {
+        clearTimeout(timeout);
       }
     };
   }, [API_BASE, currentStep, documentId]);
@@ -242,52 +234,55 @@ export default function UploadPage() {
     }
 
     if (!documentId) {
-      setMessage('No document to parse. Please upload a PDF first.');
+      setMessage('Please upload a PDF before parsing');
       return;
     }
 
-    autoAdvanceRef.current = true;
+    setAutoAdvanceTriggered(true);
     setParsing(true);
     setMessage('');
+    setRuleSpec(null);
 
     try {
       const fetchedRuleSpec = await api.get<RuleSpec>(`/games/${confirmedGameId}/rulespec`);
 
       if (!fetchedRuleSpec) {
-        setMessage('❌ Failed to load RuleSpec: unauthorized');
+        setMessage('❌ Parse failed: Unable to load RuleSpec.');
         return;
       }
 
       setRuleSpec(fetchedRuleSpec);
-      setMessage('✅ RuleSpec loaded successfully!');
+      setMessage('✅ PDF parsed successfully!');
       setCurrentStep('review');
+
+      await loadPdfs(confirmedGameId);
     } catch (error) {
-      setMessage(`❌ Failed to load RuleSpec: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setMessage(`❌ Parse failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setParsing(false);
     }
-  }, [confirmedGameId, documentId]);
+  }, [confirmedGameId, documentId, loadPdfs]);
 
   useEffect(() => {
-    if (currentStep !== 'parse') {
-      return;
-    }
-
-    if (processingStatus === 'completed' && !autoAdvanceRef.current) {
-      autoAdvanceRef.current = true;
+    if (
+      currentStep === 'parse' &&
+      documentId &&
+      processingStatus === 'completed' &&
+      !autoAdvanceTriggered
+    ) {
       void handleParse();
     }
-  }, [currentStep, handleParse, processingStatus]);
+  }, [autoAdvanceTriggered, currentStep, documentId, handleParse, processingStatus]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setFile(event.target.files[0]);
       setMessage('');
     }
   };
 
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleUpload = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
 
     if (!file) {
       setMessage('Please select a PDF file');
@@ -310,142 +305,30 @@ export default function UploadPage() {
       const response = await fetch(`${API_BASE}/ingest/pdf`, {
         method: 'POST',
         body: formData,
-        credentials: 'include',
+        credentials: 'include'
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setDocumentId(data.documentId);
-        setProcessingStatus('pending');
-        setProcessingError(null);
-        setProcessingMetadata(null);
-        autoAdvanceRef.current = false;
-        setMessage(`✅ PDF uploaded successfully! Document ID: ${data.documentId}`);
-        setProcessingStatus('pending');
-        setProcessingError(null);
-        setPollingError(null);
-        setAutoAdvanceTriggered(false);
-        setCurrentStep('parse');
-      } else {
-        const error = await response.json();
-        setMessage(`❌ Upload failed: ${error.error || response.statusText}`);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        setMessage(`❌ Upload failed: ${error.error ?? response.statusText}`);
+        return;
       }
+
+      const data = (await response.json()) as { documentId: string };
+      setDocumentId(data.documentId);
+      setProcessingStatus('pending');
+      setProcessingError(null);
+      setPollingError(null);
+      setAutoAdvanceTriggered(false);
+      setRuleSpec(null);
+      setMessage(`✅ PDF uploaded successfully! Document ID: ${data.documentId}`);
+      setCurrentStep('parse');
     } catch (error) {
       setMessage(`❌ Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setUploading(false);
     }
   };
-
-  const handleParse = useCallback(async () => {
-    if (!confirmedGameId) {
-      setMessage('Please confirm a game before parsing');
-      return;
-    }
-
-    if (!documentId) {
-      setMessage('Please upload a PDF before parsing');
-      return;
-    }
-
-    setParsing(true);
-    setMessage('');
-    setRuleSpec(null);
-
-    try {
-      const fetchedRuleSpec = await api.get<RuleSpec>(`/games/${confirmedGameId}/rulespec`);
-
-      if (!fetchedRuleSpec) {
-        setMessage('❌ Parse failed: Unable to load RuleSpec.');
-        return;
-      }
-
-      setRuleSpec(fetchedRuleSpec);
-      setMessage('✅ PDF parsed successfully!');
-      setCurrentStep('review');
-      if (confirmedGameId) {
-        await loadPdfs(confirmedGameId);
-      }
-    } catch (error) {
-      setMessage(`❌ Parse failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setParsing(false);
-    }
-  }, [confirmedGameId]);
-
-  useEffect(() => {
-    if (currentStep !== 'parse' || !documentId) {
-      return;
-    }
-
-    let cancelled = false;
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-
-    const pollStatus = async () => {
-      try {
-        const response = await fetch(`${API_BASE}/pdfs/${documentId}/text`, {
-          credentials: 'include'
-        });
-
-        if (!response.ok) {
-          const errorBody = await response.json().catch(() => null);
-          if (!cancelled) {
-            setPollingError(errorBody?.error ?? response.statusText);
-          }
-          if (!cancelled) {
-            timeout = setTimeout(pollStatus, 4000);
-          }
-          return;
-        }
-
-        const data: PdfProcessingResponse = await response.json();
-        if (cancelled) {
-          return;
-        }
-
-        setProcessingStatus(data.processingStatus);
-        setProcessingError(data.processingError ?? null);
-        setPollingError(null);
-
-        if (data.processingStatus === 'failed') {
-          setMessage(`❌ Parse failed: ${data.processingError ?? 'Processing failed. Please try again.'}`);
-          return;
-        }
-
-        if (data.processingStatus === 'completed') {
-          return;
-        }
-
-        timeout = setTimeout(pollStatus, 2000);
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-        setPollingError(error instanceof Error ? error.message : 'Unknown error');
-        timeout = setTimeout(pollStatus, 4000);
-      }
-    };
-
-    pollStatus();
-
-    return () => {
-      cancelled = true;
-      if (timeout) {
-        clearTimeout(timeout);
-      }
-    };
-  }, [API_BASE, currentStep, documentId]);
-
-  useEffect(() => {
-    if (currentStep !== 'parse') {
-      return;
-    }
-
-    if (processingStatus === 'completed' && !autoAdvanceTriggered) {
-      setAutoAdvanceTriggered(true);
-      void handleParse();
-    }
-  }, [autoAdvanceTriggered, currentStep, handleParse, processingStatus]);
 
   const handlePublish = async () => {
     if (!ruleSpec || !confirmedGameId) {
@@ -464,13 +347,14 @@ export default function UploadPage() {
         body: JSON.stringify(ruleSpec)
       });
 
-      if (response.ok) {
-        setMessage('✅ RuleSpec published successfully!');
-        setCurrentStep('publish');
-      } else {
-        const error = await response.json();
-        setMessage(`❌ Publish failed: ${error.error || response.statusText}`);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        setMessage(`❌ Publish failed: ${error.error ?? response.statusText}`);
+        return;
       }
+
+      setMessage('✅ RuleSpec published successfully!');
+      setCurrentStep('publish');
     } catch (error) {
       setMessage(`❌ Publish failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
@@ -485,35 +369,37 @@ export default function UploadPage() {
     setRuleSpec(null);
     setProcessingStatus(null);
     setProcessingError(null);
-    setProcessingMetadata(null);
-    setIsPolling(false);
-    autoAdvanceRef.current = false;
-    setMessage('');
-    setProcessingStatus(null);
-    setProcessingError(null);
     setPollingError(null);
     setAutoAdvanceTriggered(false);
-    const fileInput = document.getElementById('fileInput') as HTMLInputElement;
+    setRetryingPdfId(null);
+    setMessage('');
+    const fileInput = document.getElementById('fileInput') as HTMLInputElement | null;
     if (fileInput) {
       fileInput.value = '';
     }
   };
 
   const updateRuleAtom = (index: number, field: keyof RuleAtom, value: string) => {
-    if (!ruleSpec) return;
+    if (!ruleSpec) {
+      return;
+    }
     const updatedRules = [...ruleSpec.rules];
     updatedRules[index] = { ...updatedRules[index], [field]: value };
     setRuleSpec({ ...ruleSpec, rules: updatedRules });
   };
 
   const deleteRuleAtom = (index: number) => {
-    if (!ruleSpec) return;
+    if (!ruleSpec) {
+      return;
+    }
     const updatedRules = ruleSpec.rules.filter((_, i) => i !== index);
     setRuleSpec({ ...ruleSpec, rules: updatedRules });
   };
 
   const addRuleAtom = () => {
-    if (!ruleSpec) return;
+    if (!ruleSpec) {
+      return;
+    }
     const newRule: RuleAtom = {
       id: String(ruleSpec.rules.length + 1),
       text: '',
@@ -552,16 +438,17 @@ export default function UploadPage() {
     try {
       const response = await fetch(`${API_BASE}/ingest/pdf/${pdf.id}/retry`, {
         method: 'POST',
-        credentials: 'include',
+        credentials: 'include'
       });
 
-      if (response.ok) {
-        setMessage(`✅ Parse re-triggered for ${pdf.fileName}`);
-        await loadPdfs(confirmedGameId);
-      } else {
+      if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        setMessage(`❌ Failed to re-trigger parse: ${error.error || response.statusText}`);
+        setMessage(`❌ Failed to re-trigger parse: ${error.error ?? response.statusText}`);
+        return;
       }
+
+      setMessage(`✅ Parse re-triggered for ${pdf.fileName}`);
+      await loadPdfs(confirmedGameId);
     } catch (error) {
       setMessage(`❌ Failed to re-trigger parse: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
@@ -569,8 +456,8 @@ export default function UploadPage() {
     }
   };
 
-  const handleCreateGame = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateGame = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
 
     if (!authUser) {
       setMessage('You must be logged in to create a game');
@@ -608,12 +495,12 @@ export default function UploadPage() {
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) {
-      return bytes + ' B';
+      return `${bytes} B`;
     }
     if (bytes < 1024 * 1024) {
-      return (bytes / 1024).toFixed(1) + ' KB';
+      return `${(bytes / 1024).toFixed(1)} KB`;
     }
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   const formatDate = (dateString: string) => {
@@ -621,7 +508,6 @@ export default function UploadPage() {
     return date.toLocaleString();
   };
 
-  const selectedGame = games.find(game => game.id === selectedGameId) ?? null;
   const confirmedGame = confirmedGameId ? games.find(game => game.id === confirmedGameId) ?? null : null;
   const statusLabels: Record<ProcessingStatus, string> = {
     pending: 'Pending',
@@ -637,10 +523,29 @@ export default function UploadPage() {
   };
   const effectiveProcessingStatus: ProcessingStatus = processingStatus ?? 'pending';
   const processingProgress = statusProgress[effectiveProcessingStatus];
+  const isUnauthorizedRole = Boolean(authUser && !AUTHORIZED_ROLES.has(authUser.role));
+
+  const renderUnauthorizedState = () => (
+    <div
+      style={{
+        padding: '24px',
+        border: '1px solid #e0e0e0',
+        borderRadius: '6px',
+        backgroundColor: '#fff4f4'
+      }}
+    >
+      <h2 style={{ marginTop: 0 }}>Access restricted</h2>
+      <p style={{ marginBottom: '12px' }}>
+        You need an Editor or Admin role to manage PDF ingestion. Please contact an administrator to request
+        access.
+      </p>
+      <p style={{ marginBottom: 0 }}>You can still view published rules from the home page.</p>
+    </div>
+  );
 
   const renderStepIndicator = () => {
     const steps: WizardStep[] = ['upload', 'parse', 'review', 'publish'];
-    const stepLabels = {
+    const stepLabels: Record<WizardStep, string> = {
       upload: '1. Upload',
       parse: '2. Parse',
       review: '3. Review',
@@ -697,546 +602,545 @@ export default function UploadPage() {
         <>
           {renderStepIndicator()}
 
-      {message && (
-        <div
-          style={{
-            padding: '16px',
-            backgroundColor: message.startsWith('✅') ? '#e8f5e9' : '#ffebee',
-            borderRadius: '4px',
-            marginBottom: '20px',
-            fontSize: '14px',
-          }}
-        >
-          {message}
-        </div>
-      )}
+          {message && (
+            <div
+              style={{
+                padding: '16px',
+                backgroundColor: message.startsWith('✅') ? '#e8f5e9' : '#ffebee',
+                borderRadius: '4px',
+                marginBottom: '20px',
+                fontSize: '14px'
+              }}
+            >
+              {message}
+            </div>
+          )}
 
-      {currentStep === 'upload' && (
-        <div>
-          <h2>Step 1: Upload PDF</h2>
-          <div
-            style={{
-              marginTop: '20px',
-              marginBottom: '24px',
-              padding: '16px',
-              border: '1px solid #e0e0e0',
-              borderRadius: '6px',
-              backgroundColor: '#f9fafb'
-            }}
-          >
-            <h3 style={{ marginTop: 0, marginBottom: '12px' }}>Game selection</h3>
-            {loadingGames ? (
-              <p style={{ margin: 0 }}>Loading games…</p>
-            ) : !authUser ? (
-              <p style={{ margin: 0 }}>You need to be logged in to manage games.</p>
-            ) : (
-              <>
-                {games.length > 0 ? (
-                  <div style={{ marginBottom: '16px' }}>
-                    <label htmlFor="gameSelect" style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
-                      Existing games
-                    </label>
-                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                      <select
-                        id="gameSelect"
-                        value={selectedGameId}
-                        onChange={(e) => {
-                          setSelectedGameId(e.target.value);
-                          setConfirmedGameId(null);
-                        }}
-                        style={{
-                          flex: 1,
-                          minWidth: '220px',
-                          padding: '10px',
-                          border: '1px solid #ccc',
-                          borderRadius: '4px',
-                          fontSize: '15px'
-                        }}
-                      >
-                        {games.map((game) => (
-                          <option key={game.id} value={game.id}>
-                            {game.name}
-                          </option>
-                        ))}
-                      </select>
+          {currentStep === 'upload' && (
+            <div>
+              <h2>Step 1: Upload PDF</h2>
+              <div
+                style={{
+                  marginTop: '20px',
+                  marginBottom: '24px',
+                  padding: '16px',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '6px',
+                  backgroundColor: '#f9fafb'
+                }}
+              >
+                <h3 style={{ marginTop: 0, marginBottom: '12px' }}>Game selection</h3>
+                {loadingGames ? (
+                  <p style={{ margin: 0 }}>Loading games…</p>
+                ) : !authUser ? (
+                  <p style={{ margin: 0 }}>You need to be logged in to manage games.</p>
+                ) : (
+                  <>
+                    {games.length > 0 ? (
+                      <div style={{ marginBottom: '16px' }}>
+                        <label htmlFor="gameSelect" style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
+                          Existing games
+                        </label>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <select
+                            id="gameSelect"
+                            value={selectedGameId}
+                            onChange={event => {
+                              setSelectedGameId(event.target.value);
+                              setConfirmedGameId(null);
+                            }}
+                            style={{
+                              flex: 1,
+                              minWidth: '220px',
+                              padding: '10px',
+                              border: '1px solid #ccc',
+                              borderRadius: '4px',
+                              fontSize: '15px'
+                            }}
+                          >
+                            {games.map(game => (
+                              <option key={game.id} value={game.id}>
+                                {game.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={confirmSelectedGame}
+                            disabled={!selectedGameId || confirmedGameId === selectedGameId}
+                            style={{
+                              padding: '10px 18px',
+                              backgroundColor:
+                                !selectedGameId || confirmedGameId === selectedGameId ? '#ccc' : '#0070f3',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor:
+                                !selectedGameId || confirmedGameId === selectedGameId ? 'not-allowed' : 'pointer',
+                              fontWeight: 500
+                            }}
+                          >
+                            Confirm selection
+                          </button>
+                        </div>
+                        <p style={{ marginTop: '8px', fontSize: '14px', color: '#555' }}>
+                          {confirmedGame
+                            ? `Confirmed game: ${confirmedGame.name} (${confirmedGame.id})`
+                            : 'Confirm a game to enable uploads.'}
+                        </p>
+                      </div>
+                    ) : (
+                      <p style={{ marginBottom: '16px' }}>
+                        You don&apos;t have any games yet. Create one to get started.
+                      </p>
+                    )}
+
+                    <form
+                      onSubmit={handleCreateGame}
+                      style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}
+                    >
+                      <div style={{ flex: 1, minWidth: '220px' }}>
+                        <label htmlFor="newGameName" style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>
+                          New game name
+                        </label>
+                        <input
+                          id="newGameName"
+                          value={newGameName}
+                          onChange={event => setNewGameName(event.target.value)}
+                          placeholder="e.g., Settlers of Catan"
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid #ccc',
+                            borderRadius: '4px',
+                            fontSize: '15px'
+                          }}
+                        />
+                      </div>
                       <button
-                        type="button"
-                        onClick={confirmSelectedGame}
-                        disabled={!selectedGameId || confirmedGameId === selectedGameId}
+                        type="submit"
+                        disabled={creatingGame}
                         style={{
-                          padding: '10px 18px',
-                          backgroundColor:
-                            !selectedGameId || confirmedGameId === selectedGameId ? '#ccc' : '#0070f3',
+                          padding: '10px 20px',
+                          backgroundColor: creatingGame ? '#ccc' : '#34a853',
                           color: 'white',
                           border: 'none',
                           borderRadius: '4px',
-                          cursor:
-                            !selectedGameId || confirmedGameId === selectedGameId ? 'not-allowed' : 'pointer',
+                          cursor: creatingGame ? 'not-allowed' : 'pointer',
                           fontWeight: 500
                         }}
                       >
-                        Confirm selection
+                        {creatingGame ? 'Creating…' : games.length > 0 ? 'Create another game' : 'Create first game'}
                       </button>
-                    </div>
-                    <p style={{ marginTop: '8px', fontSize: '14px', color: '#555' }}>
-                      {confirmedGame
-                        ? `Confirmed game: ${confirmedGame.name} (${confirmedGame.id})`
-                        : 'Confirm a game to enable uploads.'}
-                    </p>
-                  </div>
-                ) : (
-                  <p style={{ marginBottom: '16px' }}>You don&apos;t have any games yet. Create one to get started.</p>
+                    </form>
+                  </>
                 )}
-
-                <form
-                  onSubmit={handleCreateGame}
-                  style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}
-                >
-                  <div style={{ flex: 1, minWidth: '220px' }}>
-                    <label htmlFor="newGameName" style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>
-                      New game name
-                    </label>
-                    <input
-                      id="newGameName"
-                      value={newGameName}
-                      onChange={(e) => setNewGameName(e.target.value)}
-                      placeholder="e.g., Settlers of Catan"
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        border: '1px solid #ccc',
-                        borderRadius: '4px',
-                        fontSize: '15px'
-                      }}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={creatingGame}
-                    style={{
-                      padding: '10px 20px',
-                      backgroundColor: creatingGame ? '#ccc' : '#34a853',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: creatingGame ? 'not-allowed' : 'pointer',
-                      fontWeight: 500
-                    }}
-                  >
-                    {creatingGame ? 'Creating…' : games.length > 0 ? 'Create another game' : 'Create first game'}
-                  </button>
-                </form>
-              </>
-            )}
-          </div>
-
-          <form onSubmit={handleUpload} style={{ marginTop: '20px' }}>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>Confirmed game</label>
-              <div
-                style={{
-                  padding: '12px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  backgroundColor: confirmedGame ? '#fff' : '#f1f3f4',
-                  color: confirmedGame ? '#202124' : '#5f6368'
-                }}
-              >
-                {confirmedGame
-                  ? `${confirmedGame.name} (${confirmedGame.id})`
-                  : 'No game confirmed yet'}
               </div>
-            </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label htmlFor="fileInput" style={{ display: 'block', marginBottom: '8px', fontWeight: '500' }}>
-                PDF File:
-              </label>
-              <input
-                id="fileInput"
-                type="file"
-                accept="application/pdf"
-                onChange={handleFileChange}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  fontSize: '16px',
-                }}
-              />
-              {file && (
-                <p style={{ marginTop: '8px', fontSize: '14px', color: '#666' }}>
-                  Selected: {file.name} ({formatFileSize(file.size)})
-                </p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={uploading || !file || !confirmedGameId}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: uploading || !file || !confirmedGameId ? '#ccc' : '#0070f3',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '16px',
-                cursor: uploading || !file || !confirmedGameId ? 'not-allowed' : 'pointer',
-                fontWeight: '500',
-              }}
-            >
-              {uploading ? 'Uploading...' : 'Upload & Continue'}
-            </button>
-            {!confirmedGameId && (
-              <p style={{ marginTop: '8px', fontSize: '13px', color: '#d93025' }}>
-                Confirm a game to enable uploads.
-              </p>
-            )}
-          </form>
-
-          <div
-            style={{
-              marginTop: '32px',
-              padding: '16px',
-              border: '1px solid #e0e0e0',
-              borderRadius: '6px',
-              backgroundColor: '#fff',
-            }}
-          >
-            <h3 style={{ marginTop: 0, marginBottom: '12px' }}>Uploaded PDFs</h3>
-            {!confirmedGameId ? (
-              <p style={{ margin: 0, color: '#5f6368' }}>
-                Confirm a game to review its uploaded PDFs.
-              </p>
-            ) : loadingPdfs ? (
-              <div role="status" aria-live="polite" style={{ display: 'grid', gap: '12px' }}>
-                {Array.from({ length: Math.max(1, Math.min(3, Math.max(pdfs.length, 1))) }).map((_, index) => (
+              <form onSubmit={handleUpload} style={{ marginTop: '20px' }}>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Confirmed game</label>
                   <div
-                    key={`pdf-skeleton-${index}`}
                     style={{
-                      height: '48px',
-                      borderRadius: '4px',
-                      background: 'linear-gradient(90deg, #f1f3f4 25%, #e0e0e0 37%, #f1f3f4 63%)',
-                      backgroundSize: '200% 100%',
-                    }}
-                  />
-                ))}
-              </div>
-            ) : pdfsError ? (
-              <p style={{ margin: 0, color: '#d93025' }}>{pdfsError}</p>
-            ) : pdfs.length === 0 ? (
-              <p style={{ margin: 0, color: '#5f6368' }}>No PDFs uploaded yet for this game.</p>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table
-                  aria-label="Uploaded PDFs"
-                  style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}
-                >
-                  <thead>
-                    <tr style={{ textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
-                      <th style={{ padding: '8px 12px', fontWeight: 600 }}>File name</th>
-                      <th style={{ padding: '8px 12px', fontWeight: 600 }}>Size</th>
-                      <th style={{ padding: '8px 12px', fontWeight: 600 }}>Uploaded</th>
-                      <th style={{ padding: '8px 12px', fontWeight: 600 }}>Status</th>
-                      <th style={{ padding: '8px 12px', fontWeight: 600 }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pdfs.map((pdf) => (
-                      <tr key={pdf.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
-                        <td style={{ padding: '10px 12px', fontWeight: 500 }}>{pdf.fileName}</td>
-                        <td style={{ padding: '10px 12px' }}>{formatFileSize(pdf.fileSizeBytes)}</td>
-                        <td style={{ padding: '10px 12px' }}>{formatDate(pdf.uploadedAt)}</td>
-                        <td style={{ padding: '10px 12px' }}>{pdf.status ?? 'Pending'}</td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenLog(pdf)}
-                              style={{
-                                padding: '6px 12px',
-                                borderRadius: '4px',
-                                border: '1px solid #0070f3',
-                                backgroundColor: 'white',
-                                color: '#0070f3',
-                                cursor: 'pointer',
-                                fontWeight: 500,
-                              }}
-                            >
-                              Open log
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleRetryParsing(pdf)}
-                              disabled={retryingPdfId === pdf.id}
-                              style={{
-                                padding: '6px 12px',
-                                borderRadius: '4px',
-                                border: 'none',
-                                backgroundColor: retryingPdfId === pdf.id ? '#ccc' : '#34a853',
-                                color: 'white',
-                                cursor: retryingPdfId === pdf.id ? 'not-allowed' : 'pointer',
-                                fontWeight: 500,
-                              }}
-                            >
-                              {retryingPdfId === pdf.id ? 'Retrying…' : 'Retry parsing'}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {currentStep === 'parse' && (
-        <div>
-          <h2>Step 2: Parse PDF</h2>
-          <p style={{ marginTop: '16px', marginBottom: '24px', color: '#666' }}>
-            Document ID: <strong>{documentId}</strong>
-          </p>
-          <div style={{ marginBottom: '24px' }}>
-            <div
-              role="progressbar"
-              aria-label="PDF processing progress"
-              aria-valuenow={processingProgress}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              style={{
-                width: '100%',
-                backgroundColor: '#e5e7eb',
-                borderRadius: '999px',
-                height: '12px',
-                overflow: 'hidden',
-                marginBottom: '12px'
-              }}
-            >
-              <div
-                style={{
-                  width: `${processingProgress}%`,
-                  transition: 'width 0.6s ease',
-                  backgroundColor:
-                    effectiveProcessingStatus === 'completed'
-                      ? '#34a853'
-                      : effectiveProcessingStatus === 'failed'
-                        ? '#d93025'
-                        : '#0070f3',
-                  height: '100%'
-                }}
-              />
-            </div>
-            <p style={{ marginBottom: '8px', color: '#444' }}>
-              Processing status: <strong>{statusLabels[effectiveProcessingStatus]}</strong>
-            </p>
-            {pollingError && (
-              <p style={{ color: '#d93025', marginBottom: '8px' }}>
-                Status refresh failed: {pollingError}
-              </p>
-            )}
-            {processingError && effectiveProcessingStatus === 'failed' && (
-              <p style={{ color: '#d93025', marginBottom: '8px' }}>
-                Processing error: {processingError}
-              </p>
-            )}
-            <p style={{ marginBottom: '0', color: '#666' }}>
-              The wizard will automatically continue once processing is completed.
-            </p>
-          </div>
-          <button
-            onClick={() => void handleParse()}
-            disabled={parsing || effectiveProcessingStatus !== 'completed'}
-            style={{
-              padding: '12px 24px',
-              backgroundColor:
-                parsing || effectiveProcessingStatus !== 'completed' ? '#ccc' : '#0070f3',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '16px',
-              cursor:
-                parsing || effectiveProcessingStatus !== 'completed' ? 'not-allowed' : 'pointer',
-              fontWeight: '500',
-              marginRight: '12px'
-            }}
-          >
-            {effectiveProcessingStatus !== 'completed'
-              ? 'Waiting for processing...'
-              : parsing
-                ? 'Loading rules...'
-                : 'Continue to review'}
-          </button>
-          <button
-            onClick={resetWizard}
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#666',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '16px',
-              cursor: 'pointer',
-              fontWeight: '500',
-            }}
-          >
-            Start Over
-          </button>
-        </div>
-      )}
-
-      {currentStep === 'review' && ruleSpec && (
-        <div>
-          <h2>Step 3: Review & Edit Rules</h2>
-          <div style={{ marginTop: '20px', marginBottom: '20px', padding: '16px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-            <p><strong>Game ID:</strong> {ruleSpec.gameId}</p>
-            <p><strong>Version:</strong> {ruleSpec.version}</p>
-            <p><strong>Total Rules:</strong> {ruleSpec.rules.length}</p>
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            {ruleSpec.rules.map((rule, index) => (
-              <div key={index} style={{ marginBottom: '20px', padding: '16px', border: '1px solid #ddd', borderRadius: '4px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                  <h4 style={{ margin: 0 }}>Rule {index + 1}</h4>
-                  <button
-                    onClick={() => deleteRuleAtom(index)}
-                    style={{
-                      padding: '4px 12px',
-                      backgroundColor: '#d93025',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>Text:</label>
-                  <textarea
-                    value={rule.text}
-                    onChange={(e) => updateRuleAtom(index, 'text', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px',
+                      padding: '12px',
                       border: '1px solid #ddd',
                       borderRadius: '4px',
-                      fontSize: '14px',
-                      minHeight: '60px'
+                      backgroundColor: confirmedGame ? '#fff' : '#f1f3f4',
+                      color: confirmedGame ? '#202124' : '#5f6368'
+                    }}
+                  >
+                    {confirmedGame
+                      ? `${confirmedGame.name} (${confirmedGame.id})`
+                      : 'No game confirmed yet'}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label htmlFor="fileInput" style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
+                    PDF File
+                  </label>
+                  <input
+                    id="fileInput"
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleFileChange}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: '16px'
+                    }}
+                  />
+                  {file && (
+                    <p style={{ marginTop: '8px', fontSize: '14px', color: '#666' }}>
+                      Selected: {file.name} ({formatFileSize(file.size)})
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={uploading || !file || !confirmedGameId}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: uploading || !file || !confirmedGameId ? '#ccc' : '#0070f3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '16px',
+                    cursor: uploading || !file || !confirmedGameId ? 'not-allowed' : 'pointer',
+                    fontWeight: 500
+                  }}
+                >
+                  {uploading ? 'Uploading…' : 'Upload & Continue'}
+                </button>
+                {!confirmedGameId && (
+                  <p style={{ marginTop: '8px', fontSize: '13px', color: '#d93025' }}>
+                    Confirm a game to enable uploads.
+                  </p>
+                )}
+              </form>
+
+              <div
+                style={{
+                  marginTop: '32px',
+                  padding: '16px',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '6px',
+                  backgroundColor: '#fff'
+                }}
+              >
+                <h3 style={{ marginTop: 0, marginBottom: '12px' }}>Uploaded PDFs</h3>
+                {!confirmedGameId ? (
+                  <p style={{ margin: 0, color: '#5f6368' }}>
+                    Confirm a game to review its uploaded PDFs.
+                  </p>
+                ) : loadingPdfs ? (
+                  <div role="status" aria-live="polite" style={{ display: 'grid', gap: '12px' }}>
+                    {Array.from({ length: Math.max(1, Math.min(3, Math.max(pdfs.length, 1))) }).map((_, index) => (
+                      <div
+                        key={`pdf-skeleton-${index}`}
+                        style={{
+                          height: '48px',
+                          borderRadius: '4px',
+                          background: 'linear-gradient(90deg, #f1f3f4 25%, #e0e0e0 37%, #f1f3f4 63%)',
+                          backgroundSize: '200% 100%'
+                        }}
+                      />
+                    ))}
+                  </div>
+                ) : pdfsError ? (
+                  <p style={{ margin: 0, color: '#d93025' }}>{pdfsError}</p>
+                ) : pdfs.length === 0 ? (
+                  <p style={{ margin: 0, color: '#5f6368' }}>No PDFs uploaded yet for this game.</p>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table aria-label="Uploaded PDFs" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                      <thead>
+                        <tr style={{ textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
+                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>File name</th>
+                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>Size</th>
+                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>Uploaded</th>
+                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>Status</th>
+                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pdfs.map(pdf => (
+                          <tr key={pdf.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
+                            <td style={{ padding: '10px 12px', fontWeight: 500 }}>{pdf.fileName}</td>
+                            <td style={{ padding: '10px 12px' }}>{formatFileSize(pdf.fileSizeBytes)}</td>
+                            <td style={{ padding: '10px 12px' }}>{formatDate(pdf.uploadedAt)}</td>
+                            <td style={{ padding: '10px 12px' }}>{pdf.status ?? 'Pending'}</td>
+                            <td style={{ padding: '10px 12px' }}>
+                              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenLog(pdf)}
+                                  style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '4px',
+                                    border: '1px solid #0070f3',
+                                    backgroundColor: 'white',
+                                    color: '#0070f3',
+                                    cursor: 'pointer',
+                                    fontWeight: 500
+                                  }}
+                                >
+                                  Open log
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRetryParsing(pdf)}
+                                  disabled={retryingPdfId === pdf.id}
+                                  style={{
+                                    padding: '6px 12px',
+                                    borderRadius: '4px',
+                                    border: 'none',
+                                    backgroundColor: retryingPdfId === pdf.id ? '#ccc' : '#34a853',
+                                    color: 'white',
+                                    cursor: retryingPdfId === pdf.id ? 'not-allowed' : 'pointer',
+                                    fontWeight: 500
+                                  }}
+                                >
+                                  {retryingPdfId === pdf.id ? 'Retrying…' : 'Retry parsing'}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {currentStep === 'parse' && (
+            <div>
+              <h2>Step 2: Parse PDF</h2>
+              <p style={{ marginTop: '16px', marginBottom: '24px', color: '#666' }}>
+                Document ID: <strong>{documentId}</strong>
+              </p>
+              <div style={{ marginBottom: '24px' }}>
+                <div
+                  role="progressbar"
+                  aria-label="PDF processing progress"
+                  aria-valuenow={processingProgress}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  style={{
+                    width: '100%',
+                    backgroundColor: '#e5e7eb',
+                    borderRadius: '999px',
+                    height: '12px',
+                    overflow: 'hidden',
+                    marginBottom: '12px'
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${processingProgress}%`,
+                      transition: 'width 0.6s ease',
+                      backgroundColor:
+                        effectiveProcessingStatus === 'completed'
+                          ? '#34a853'
+                          : effectiveProcessingStatus === 'failed'
+                            ? '#d93025'
+                            : '#0070f3',
+                      height: '100%'
                     }}
                   />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>Section:</label>
-                    <input
-                      value={rule.section || ''}
-                      onChange={(e) => updateRuleAtom(index, 'section', e.target.value)}
-                      style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>Page:</label>
-                    <input
-                      value={rule.page || ''}
-                      onChange={(e) => updateRuleAtom(index, 'page', e.target.value)}
-                      style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: '500' }}>Line:</label>
-                    <input
-                      value={rule.line || ''}
-                      onChange={(e) => updateRuleAtom(index, 'line', e.target.value)}
-                      style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px' }}
-                    />
-                  </div>
-                </div>
+                <p style={{ marginBottom: '8px', color: '#444' }}>
+                  Processing status: <strong>{statusLabels[effectiveProcessingStatus]}</strong>
+                </p>
+                {pollingError && (
+                  <p style={{ color: '#d93025', marginBottom: '8px' }}>
+                    Status refresh failed: {pollingError}
+                  </p>
+                )}
+                {processingError && effectiveProcessingStatus === 'failed' && (
+                  <p style={{ color: '#d93025', marginBottom: '8px' }}>
+                    Processing error: {processingError}
+                  </p>
+                )}
+                <p style={{ marginBottom: 0, color: '#666' }}>
+                  The wizard will automatically continue once processing is completed.
+                </p>
               </div>
-            ))}
-          </div>
+              <button
+                onClick={() => void handleParse()}
+                disabled={parsing || effectiveProcessingStatus !== 'completed'}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: parsing || effectiveProcessingStatus !== 'completed' ? '#ccc' : '#0070f3',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '16px',
+                  cursor: parsing || effectiveProcessingStatus !== 'completed' ? 'not-allowed' : 'pointer',
+                  fontWeight: 500,
+                  marginRight: '12px'
+                }}
+              >
+                {parsing ? 'Loading rules…' : 'Parse PDF'}
+              </button>
+              <button
+                onClick={resetWizard}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#666',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  fontWeight: 500
+                }}
+              >
+                Start Over
+              </button>
+            </div>
+          )}
 
-          <button
-            onClick={addRuleAtom}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#34a853',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '14px',
-              cursor: 'pointer',
-              marginBottom: '20px'
-            }}
-          >
-            + Add Rule
-          </button>
+          {currentStep === 'review' && ruleSpec && (
+            <div>
+              <h2>Step 3: Review &amp; Edit Rules</h2>
+              <div style={{ marginTop: '20px', marginBottom: '20px', padding: '16px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+                <p>
+                  <strong>Game ID:</strong> {ruleSpec.gameId}
+                </p>
+                <p>
+                  <strong>Version:</strong> {ruleSpec.version}
+                </p>
+                <p>
+                  <strong>Total Rules:</strong> {ruleSpec.rules.length}
+                </p>
+              </div>
 
-          <div style={{ marginTop: '20px' }}>
-            <button
-              onClick={handlePublish}
-              disabled={publishing}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: publishing ? '#ccc' : '#0070f3',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '16px',
-                cursor: publishing ? 'not-allowed' : 'pointer',
-                fontWeight: '500',
-                marginRight: '12px'
-              }}
-            >
-              {publishing ? 'Publishing...' : 'Publish RuleSpec'}
-            </button>
-            <button
-              onClick={() => setCurrentStep('parse')}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#666',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '16px',
-                cursor: 'pointer',
-                fontWeight: '500',
-                marginRight: '12px'
-              }}
-            >
-              ← Back
-            </button>
-            <button
-              onClick={resetWizard}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: '#d93025',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '16px',
-                cursor: 'pointer',
-                fontWeight: '500',
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
+              <div style={{ marginBottom: '20px' }}>
+                {ruleSpec.rules.map((rule, index) => (
+                  <div key={rule.id ?? index} style={{ marginBottom: '20px', padding: '16px', border: '1px solid #ddd', borderRadius: '4px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      <h4 style={{ margin: 0 }}>Rule {index + 1}</h4>
+                      <button
+                        onClick={() => deleteRuleAtom(index)}
+                        style={{
+                          padding: '4px 12px',
+                          backgroundColor: '#d93025',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    <div style={{ marginBottom: '12px' }}>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: 500 }}>Text</label>
+                      <textarea
+                        value={rule.text}
+                        onChange={event => updateRuleAtom(index, 'text', event.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px',
+                          fontSize: '14px',
+                          minHeight: '60px'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: 500 }}>Section</label>
+                        <input
+                          value={rule.section ?? ''}
+                          onChange={event => updateRuleAtom(index, 'section', event.target.value)}
+                          style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: 500 }}>Page</label>
+                        <input
+                          value={rule.page ?? ''}
+                          onChange={event => updateRuleAtom(index, 'page', event.target.value)}
+                          style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '4px', fontSize: '14px', fontWeight: 500 }}>Line</label>
+                        <input
+                          value={rule.line ?? ''}
+                          onChange={event => updateRuleAtom(index, 'line', event.target.value)}
+                          style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '14px' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={addRuleAtom}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#34a853',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  marginBottom: '20px'
+                }}
+              >
+                + Add Rule
+              </button>
+
+              <div style={{ marginTop: '20px' }}>
+                <button
+                  onClick={handlePublish}
+                  disabled={publishing}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: publishing ? '#ccc' : '#0070f3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '16px',
+                    cursor: publishing ? 'not-allowed' : 'pointer',
+                    fontWeight: 500,
+                    marginRight: '12px'
+                  }}
+                >
+                  {publishing ? 'Publishing…' : 'Publish RuleSpec'}
+                </button>
+                <button
+                  onClick={() => setCurrentStep('parse')}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#666',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                    fontWeight: 500,
+                    marginRight: '12px'
+                  }}
+                >
+                  ← Back
+                </button>
+                <button
+                  onClick={resetWizard}
+                  style={{
+                    padding: '12px 24px',
+                    backgroundColor: '#d93025',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                    fontWeight: 500
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
 
           {currentStep === 'publish' && (
             <div>
               <h2>Step 4: Published Successfully! ✅</h2>
               <p style={{ marginTop: '16px', marginBottom: '24px', fontSize: '16px' }}>
-                Your RuleSpec for <strong>{ruleSpec?.gameId ?? confirmedGameId ?? 'unknown game'}</strong> has been
-                published successfully!
+                Your RuleSpec for <strong>{ruleSpec?.gameId ?? confirmedGameId ?? 'unknown game'}</strong> has been published
+                successfully!
               </p>
               <div style={{ marginTop: '20px' }}>
                 <button
@@ -1249,7 +1153,7 @@ export default function UploadPage() {
                     borderRadius: '4px',
                     fontSize: '16px',
                     cursor: 'pointer',
-                    fontWeight: '500',
+                    fontWeight: 500,
                     marginRight: '12px'
                   }}
                 >
@@ -1264,7 +1168,7 @@ export default function UploadPage() {
                     textDecoration: 'none',
                     borderRadius: '4px',
                     fontSize: '16px',
-                    fontWeight: '500',
+                    fontWeight: 500,
                     display: 'inline-block'
                   }}
                 >

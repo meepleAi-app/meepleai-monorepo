@@ -159,7 +159,7 @@ Accogliamo contributi dalla community! Prima di iniziare:
 #### Testing & CI
 - ✅ PDF extraction in CI (libgdiplus, Docnet runtime Linux)
 - ✅ Integration tests con TestContainers (PostgreSQL + Qdrant)
-- ✅ Tutti i test di integrazione abilitati (294 test passing)
+- ✅ Suite test automatizzata attiva (75 backend, 11 unit frontend, 5 E2E; totale 91) — dettagli in `TEST-SUMMARY.md`
 - ✅ Coverage reporting automatico
 
 ### 🚧 In corso

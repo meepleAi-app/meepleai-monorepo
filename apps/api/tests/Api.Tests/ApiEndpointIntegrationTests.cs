@@ -52,11 +52,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         Assert.Contains(cookies, cookie => cookie.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal));
 
         using var document = JsonDocument.Parse(json);
-        Assert.False(document.RootElement.TryGetProperty("tenantId", out _));
-        Assert.False(document.RootElement.TryGetProperty("tenantName", out _));
-        Assert.True(document.RootElement.TryGetProperty("user", out var userElement));
-        Assert.False(userElement.TryGetProperty("tenantId", out _));
-        Assert.False(userElement.TryGetProperty("tenantName", out _));
+        AssertAuthResponsePayload(document.RootElement);
     }
 
     [Fact]
@@ -86,11 +82,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         Assert.Contains(cookies, cookie => cookie.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal));
 
         using var document = JsonDocument.Parse(json);
-        Assert.False(document.RootElement.TryGetProperty("tenantId", out _));
-        Assert.False(document.RootElement.TryGetProperty("tenantName", out _));
-        Assert.True(document.RootElement.TryGetProperty("user", out var userElement));
-        Assert.False(userElement.TryGetProperty("tenantId", out _));
-        Assert.False(userElement.TryGetProperty("tenantName", out _));
+        AssertAuthResponsePayload(document.RootElement);
     }
 
     [Fact]
@@ -151,5 +143,32 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         return values
             .Select(value => value.Split(';')[0])
             .ToList();
+    }
+
+    private static void AssertAuthResponsePayload(JsonElement root)
+    {
+        var topLevelProperties = root.EnumerateObject()
+            .Select(property => property.Name)
+            .OrderBy(name => name)
+            .ToList();
+
+        Assert.Equal(new[] { "expiresAt", "user" }, topLevelProperties);
+
+        var expiresAt = root.GetProperty("expiresAt");
+        Assert.Equal(JsonValueKind.String, expiresAt.ValueKind);
+        Assert.True(DateTime.TryParse(expiresAt.GetString(), out _));
+
+        var userElement = root.GetProperty("user");
+
+        var userProperties = userElement.EnumerateObject()
+            .Select(property => property.Name)
+            .OrderBy(name => name)
+            .ToList();
+
+        Assert.Equal(new[] { "displayName", "email", "id", "role" }, userProperties);
+
+        Assert.False(string.IsNullOrWhiteSpace(userElement.GetProperty("id").GetString()));
+        Assert.Equal(JsonValueKind.String, userElement.GetProperty("email").ValueKind);
+        Assert.Equal(JsonValueKind.String, userElement.GetProperty("role").ValueKind);
     }
 }

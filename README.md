@@ -145,6 +145,7 @@ Accogliamo contributi dalla community! Prima di iniziare:
 - ✅ API client con gestione errori
 - ✅ Health check endpoints
 - ✅ Integrazione con backend API
+- ✅ Gestione upload PDF con wizard multi-step con tracking avanzato dei progressi, connesso agli endpoint backend `/ingest/pdf` e `/games/{id}/pdfs`
 
 #### Automazione
 - ✅ n8n workflow engine setup
@@ -189,7 +190,6 @@ Accogliamo contributi dalla community! Prima di iniziare:
 #### UX & Frontend
 - 📋 UI/UX completo per chat interfaccia
 - 📋 Dashboard amministrazione contenuti
-- 📋 Gestione upload PDF con progress tracking
 - 📋 Visualizzazione source documents per risposte
 
 #### Integrazioni

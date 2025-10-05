@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using Xunit;
 
 namespace Api.Tests;
@@ -221,5 +223,111 @@ public class RuleSpecServiceTests : IDisposable
                 Assert.Equal(1, version.RuleCount);
                 Assert.Equal("Test User", version.CreatedBy);
             });
+    }
+
+    [Fact]
+    public async Task GenerateRuleSpecFromPdfAsync_WithAtomicRules_ParsesStructuredRules()
+    {
+        var game = new GameEntity
+        {
+            Id = "game-pdf",
+            Name = "PDF Game",
+            CreatedAt = DateTime.UtcNow
+        };
+        var user = new UserEntity
+        {
+            Id = "user-atom",
+            Email = "atom@example.com",
+            PasswordHash = "hash",
+            Role = UserRole.Admin,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var processedAt = new DateTime(2025, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+        var pdf = new PdfDocumentEntity
+        {
+            Id = "pdf-1",
+            GameId = game.Id,
+            FileName = "rules.pdf",
+            FilePath = "/tmp/rules.pdf",
+            FileSizeBytes = 1234,
+            UploadedByUserId = user.Id,
+            UploadedAt = DateTime.UtcNow.AddMinutes(-5),
+            ProcessingStatus = "completed",
+            ProcessedAt = processedAt,
+            AtomicRules = JsonSerializer.Serialize(new[]
+            {
+                "[Table on page 3] Setup: Place pieces; Count: 16",
+                "Victory condition: Highest score wins"
+            }),
+            ExtractedText = "Fallback paragraph should not be used"
+        };
+
+        _dbContext.Games.Add(game);
+        _dbContext.Users.Add(user);
+        _dbContext.PdfDocuments.Add(pdf);
+        await _dbContext.SaveChangesAsync();
+
+        var result = await _service.GenerateRuleSpecFromPdfAsync(pdf.Id);
+
+        Assert.Equal(game.Id, result.gameId);
+        Assert.Equal($"pdf-{processedAt:yyyyMMddHHmmss}", result.version);
+        Assert.Equal(2, result.rules.Count);
+        Assert.Equal("atom-1", result.rules[0].id);
+        Assert.Equal("Table", result.rules[0].section);
+        Assert.Equal("3", result.rules[0].page);
+        Assert.Equal("Setup: Place pieces; Count: 16", result.rules[0].text);
+        Assert.Equal("Victory condition: Highest score wins", result.rules[1].text);
+    }
+
+    [Fact]
+    public async Task GenerateRuleSpecFromPdfAsync_WhenAtomicRulesMissing_UsesExtractedText()
+    {
+        var game = new GameEntity
+        {
+            Id = "game-text",
+            Name = "Text Game",
+            CreatedAt = DateTime.UtcNow
+        };
+        var user = new UserEntity
+        {
+            Id = "user-text",
+            Email = "text@example.com",
+            PasswordHash = "hash",
+            Role = UserRole.Admin,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var pdf = new PdfDocumentEntity
+        {
+            Id = "pdf-2",
+            GameId = game.Id,
+            FileName = "rules.pdf",
+            FilePath = "/tmp/rules.pdf",
+            FileSizeBytes = 4321,
+            UploadedByUserId = user.Id,
+            UploadedAt = DateTime.UtcNow.AddMinutes(-10),
+            ProcessingStatus = "completed",
+            ExtractedText = "Rule one describes setup.\n\nRule two explains gameplay.\nRule three covers scoring."
+        };
+
+        _dbContext.Games.Add(game);
+        _dbContext.Users.Add(user);
+        _dbContext.PdfDocuments.Add(pdf);
+        await _dbContext.SaveChangesAsync();
+
+        var result = await _service.GenerateRuleSpecFromPdfAsync(pdf.Id);
+
+        Assert.Equal(game.Id, result.gameId);
+        Assert.True(result.rules.Count >= 2);
+        Assert.Contains(result.rules, atom => atom.text.Contains("Rule one", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.rules, atom => atom.text.Contains("Rule two", StringComparison.OrdinalIgnoreCase));
+        Assert.All(result.rules, atom => Assert.Null(atom.section));
+    }
+
+    [Fact]
+    public async Task GenerateRuleSpecFromPdfAsync_WhenPdfMissing_Throws()
+    {
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => _service.GenerateRuleSpecFromPdfAsync("missing"));
     }
 }

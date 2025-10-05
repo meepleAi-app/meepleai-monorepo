@@ -184,42 +184,41 @@ export default function UploadPage() {
       return;
     }
 
+    if (!documentId) {
+      setMessage('Please upload a PDF before parsing');
+      return;
+    }
+
     setParsing(true);
     setMessage('');
+    setRuleSpec(null);
 
     try {
-      const mockRuleSpec: RuleSpec = {
-        gameId: confirmedGameId,
-        version: '1.0.0',
-        createdAt: new Date().toISOString(),
-        rules: [
-          {
-            id: '1',
-            text: 'Chess is played on a square board of eight rows and eight columns.',
-            section: 'Setup',
-            page: '1',
-            line: '1'
-          },
-          {
-            id: '2',
-            text: 'The game is played by two players, one controlling the white pieces and the other controlling the black pieces.',
-            section: 'Setup',
-            page: '1',
-            line: '3'
-          },
-          {
-            id: '3',
-            text: 'Each player begins the game with 16 pieces: one king, one queen, two rooks, two knights, two bishops, and eight pawns.',
-            section: 'Setup',
-            page: '1',
-            line: '5'
+      const response = await fetch(`${API_BASE}/ingest/pdf/${documentId}/rulespec`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        let errorMessage = response.statusText;
+        try {
+          const errorBody = await response.json();
+          if (errorBody && typeof errorBody === 'object' && 'error' in errorBody) {
+            errorMessage = String(errorBody.error);
           }
-        ]
+        } catch (error) {
+          // Ignore JSON parsing errors and use status text
+        }
+        throw new Error(errorMessage);
+      }
+
+      const parsed = (await response.json()) as RuleSpec;
+      const normalized: RuleSpec = {
+        ...parsed,
+        rules: Array.isArray(parsed.rules) ? parsed.rules : []
       };
 
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      setRuleSpec(mockRuleSpec);
+      setRuleSpec(normalized);
       setMessage('✅ PDF parsed successfully!');
       setCurrentStep('review');
     } catch (error) {

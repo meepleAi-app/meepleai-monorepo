@@ -318,30 +318,16 @@ app.MapGet("/auth/me", (HttpContext context) =>
     return Results.Unauthorized();
 });
 
-app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService rag, AuditService audit, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService rag, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(req.tenantId, session.User.tenantId, StringComparison.Ordinal))
+    if (string.IsNullOrWhiteSpace(req.gameId))
     {
-        await audit.LogTenantAccessDeniedAsync(
-            session.User.tenantId,
-            req.tenantId,
-            session.User.id,
-            "qa_endpoint",
-            req.gameId,
-            context.Connection.RemoteIpAddress?.ToString(),
-            context.Request.Headers.UserAgent.ToString(),
-            ct);
-        return Results.StatusCode(StatusCodes.Status403Forbidden);
-    }
-
-    if (string.IsNullOrWhiteSpace(req.tenantId) || string.IsNullOrWhiteSpace(req.gameId))
-    {
-        return Results.BadRequest(new { error = "tenantId and gameId are required" });
+        return Results.BadRequest(new { error = "gameId is required" });
     }
 
     var startTime = DateTime.UtcNow;
@@ -350,14 +336,14 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
 
     try
     {
-        var resp = await rag.AskAsync(req.tenantId, req.gameId, req.query, ct);
+        var resp = await rag.AskAsync(req.gameId, req.query, ct);
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
         logger.LogInformation("QA response delivered for game {GameId}", req.gameId);
 
         // ADM-01: Log AI request
         await aiLog.LogRequestAsync(
-            req.tenantId,
+            session.User.tenantId,
             session.User.id,
             req.gameId,
             "qa",
@@ -380,7 +366,7 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
 
         // ADM-01: Log failed AI request
         await aiLog.LogRequestAsync(
-            req.tenantId,
+            session.User.tenantId,
             session.User.id,
             req.gameId,
             "qa",
@@ -399,30 +385,16 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
     }
 });
 
-app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, RagService rag, AuditService audit, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, RagService rag, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(req.tenantId, session.User.tenantId, StringComparison.Ordinal))
+    if (string.IsNullOrWhiteSpace(req.gameId))
     {
-        await audit.LogTenantAccessDeniedAsync(
-            session.User.tenantId,
-            req.tenantId,
-            session.User.id,
-            "explain_endpoint",
-            req.gameId,
-            context.Connection.RemoteIpAddress?.ToString(),
-            context.Request.Headers.UserAgent.ToString(),
-            ct);
-        return Results.StatusCode(StatusCodes.Status403Forbidden);
-    }
-
-    if (string.IsNullOrWhiteSpace(req.tenantId) || string.IsNullOrWhiteSpace(req.gameId))
-    {
-        return Results.BadRequest(new { error = "tenantId and gameId are required" });
+        return Results.BadRequest(new { error = "gameId is required" });
     }
 
     var startTime = DateTime.UtcNow;
@@ -431,7 +403,7 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
 
     try
     {
-        var resp = await rag.ExplainAsync(req.tenantId, req.gameId, req.topic, ct);
+        var resp = await rag.ExplainAsync(req.gameId, req.topic, ct);
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
         logger.LogInformation("Explain response delivered for game {GameId}, estimated {Minutes} min read",
@@ -439,7 +411,7 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
 
         // ADM-01: Log AI request
         await aiLog.LogRequestAsync(
-            req.tenantId,
+            session.User.tenantId,
             session.User.id,
             req.gameId,
             "explain",
@@ -462,7 +434,7 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
 
         // ADM-01: Log failed AI request
         await aiLog.LogRequestAsync(
-            req.tenantId,
+            session.User.tenantId,
             session.User.id,
             req.gameId,
             "explain",
@@ -482,30 +454,16 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
 });
 
 // AI-03: RAG Setup Guide endpoint
-app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, SetupGuideService setupGuide, AuditService audit, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, SetupGuideService setupGuide, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(req.tenantId, session.User.tenantId, StringComparison.Ordinal))
+    if (string.IsNullOrWhiteSpace(req.gameId))
     {
-        await audit.LogTenantAccessDeniedAsync(
-            session.User.tenantId,
-            req.tenantId,
-            session.User.id,
-            "setup_endpoint",
-            req.gameId,
-            context.Connection.RemoteIpAddress?.ToString(),
-            context.Request.Headers.UserAgent.ToString(),
-            ct);
-        return Results.StatusCode(StatusCodes.Status403Forbidden);
-    }
-
-    if (string.IsNullOrWhiteSpace(req.tenantId) || string.IsNullOrWhiteSpace(req.gameId))
-    {
-        return Results.BadRequest(new { error = "tenantId and gameId are required" });
+        return Results.BadRequest(new { error = "gameId is required" });
     }
 
     var startTime = DateTime.UtcNow;
@@ -514,7 +472,7 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
 
     try
     {
-        var resp = await setupGuide.GenerateSetupGuideAsync(req.tenantId, req.gameId, ct);
+        var resp = await setupGuide.GenerateSetupGuideAsync(req.gameId, ct);
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
         logger.LogInformation("Setup guide delivered for game {GameId}, {StepCount} steps, estimated {Minutes} min",
@@ -530,7 +488,7 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
         }
 
         await aiLog.LogRequestAsync(
-            req.tenantId,
+            session.User.tenantId,
             session.User.id,
             req.gameId,
             "setup",
@@ -553,7 +511,7 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
 
         // ADM-01: Log failed AI request
         await aiLog.LogRequestAsync(
-            req.tenantId,
+            session.User.tenantId,
             session.User.id,
             req.gameId,
             "setup",
@@ -596,7 +554,7 @@ app.MapPost("/ingest/pdf", async (HttpContext context, PdfStorageService pdfStor
 
     logger.LogInformation("User {UserId} uploading PDF for game {GameId}", session.User.id, gameId);
 
-    var result = await pdfStorage.UploadPdfAsync(session.User.tenantId, gameId, session.User.id, file!, ct);
+    var result = await pdfStorage.UploadPdfAsync(gameId, session.User.id, file!, ct);
 
     if (!result.Success)
     {
@@ -625,7 +583,7 @@ app.MapGet("/games", async (HttpContext context, ITenantContext tenantContext, G
         return Results.Unauthorized();
     }
 
-    var games = await gameService.GetGamesForTenantAsync(tenantId, ct);
+    var games = await gameService.GetGamesAsync(ct);
     var response = games.Select(g => new GameResponse(g.Id, g.Name, g.CreatedAt)).ToList();
     return Results.Json(response);
 });
@@ -663,7 +621,7 @@ app.MapPost("/games", async (CreateGameRequest? request, HttpContext context, IT
 
     try
     {
-        var game = await gameService.CreateGameAsync(tenantId, request.Name, request.GameId, ct);
+        var game = await gameService.CreateGameAsync(request.Name, request.GameId, ct);
         logger.LogInformation("Created game {GameId} for tenant {TenantId}", game.Id, tenantId);
         return Results.Created($"/games/{game.Id}", new GameResponse(game.Id, game.Name, game.CreatedAt));
     }
@@ -686,7 +644,7 @@ app.MapGet("/games/{gameId}/pdfs", async (string gameId, HttpContext context, Pd
         return Results.Unauthorized();
     }
 
-    var pdfs = await pdfStorage.GetPdfsByGameAsync(session.User.tenantId, gameId, ct);
+    var pdfs = await pdfStorage.GetPdfsByGameAsync(gameId, ct);
     return Results.Json(new { pdfs });
 });
 
@@ -857,17 +815,12 @@ app.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, Rule
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    if (!string.Equals(session.User.tenantId, request.tenantId, StringComparison.Ordinal))
+    if (string.IsNullOrWhiteSpace(request.gameId))
     {
-        return Results.StatusCode(StatusCodes.Status403Forbidden);
+        return Results.BadRequest(new { error = "gameId is required" });
     }
 
-    if (string.IsNullOrWhiteSpace(request.tenantId) || string.IsNullOrWhiteSpace(request.gameId))
-    {
-        return Results.BadRequest(new { error = "tenantId and gameId are required" });
-    }
-
-    var spec = await rules.GetOrCreateDemoAsync(request.tenantId, request.gameId, ct);
+    var spec = await rules.GetOrCreateDemoAsync(session.User.tenantId, request.gameId, ct);
     return Results.Json(new { ok = true, spec });
 });
 
@@ -926,7 +879,7 @@ app.MapGet("/admin/n8n", async (HttpContext context, N8nConfigService n8nService
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    var configs = await n8nService.GetConfigsAsync(session.User.tenantId, ct);
+    var configs = await n8nService.GetConfigsAsync(ct);
     return Results.Json(new { configs });
 });
 
@@ -942,7 +895,7 @@ app.MapGet("/admin/n8n/{configId}", async (string configId, HttpContext context,
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    var config = await n8nService.GetConfigAsync(session.User.tenantId, configId, ct);
+    var config = await n8nService.GetConfigAsync(configId, ct);
 
     if (config == null)
     {
@@ -967,7 +920,7 @@ app.MapPost("/admin/n8n", async (CreateN8nConfigRequest request, HttpContext con
     try
     {
         logger.LogInformation("Admin {UserId} creating n8n config: {Name}", session.User.id, request.Name);
-        var config = await n8nService.CreateConfigAsync(session.User.tenantId, session.User.id, request, ct);
+        var config = await n8nService.CreateConfigAsync(session.User.id, request, ct);
         logger.LogInformation("n8n config {ConfigId} created successfully", config.Id);
         return Results.Json(config);
     }
@@ -993,7 +946,7 @@ app.MapPut("/admin/n8n/{configId}", async (string configId, UpdateN8nConfigReque
     try
     {
         logger.LogInformation("Admin {UserId} updating n8n config {ConfigId}", session.User.id, configId);
-        var config = await n8nService.UpdateConfigAsync(session.User.tenantId, configId, request, ct);
+        var config = await n8nService.UpdateConfigAsync(configId, request, ct);
         logger.LogInformation("n8n config {ConfigId} updated successfully", config.Id);
         return Results.Json(config);
     }
@@ -1017,7 +970,7 @@ app.MapDelete("/admin/n8n/{configId}", async (string configId, HttpContext conte
     }
 
     logger.LogInformation("Admin {UserId} deleting n8n config {ConfigId}", session.User.id, configId);
-    var deleted = await n8nService.DeleteConfigAsync(session.User.tenantId, configId, ct);
+    var deleted = await n8nService.DeleteConfigAsync(configId, ct);
 
     if (!deleted)
     {
@@ -1043,7 +996,7 @@ app.MapPost("/admin/n8n/{configId}/test", async (string configId, HttpContext co
     try
     {
         logger.LogInformation("Admin {UserId} testing n8n config {ConfigId}", session.User.id, configId);
-        var result = await n8nService.TestConnectionAsync(session.User.tenantId, configId, ct);
+        var result = await n8nService.TestConnectionAsync(configId, ct);
         logger.LogInformation("n8n config {ConfigId} test result: {Success}", configId, result.Success);
         return Results.Json(result);
     }

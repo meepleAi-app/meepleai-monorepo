@@ -67,22 +67,22 @@ public class AiResponseCacheService : IAiResponseCacheService
         }
     }
 
-    public string GenerateQaCacheKey(string tenantId, string gameId, string query)
+    public string GenerateQaCacheKey(string gameId, string query)
     {
         var queryHash = ComputeSha256Hash(query.Trim().ToLowerInvariant());
-        return $"ai:qa:{tenantId}:{gameId}:{queryHash}";
+        return $"ai:qa:{gameId}:{queryHash}";
     }
 
-    public string GenerateExplainCacheKey(string tenantId, string gameId, string topic)
+    public string GenerateExplainCacheKey(string gameId, string topic)
     {
         var topicHash = ComputeSha256Hash(topic.Trim().ToLowerInvariant());
-        return $"ai:explain:{tenantId}:{gameId}:{topicHash}";
+        return $"ai:explain:{gameId}:{topicHash}";
     }
 
-    public string GenerateSetupCacheKey(string tenantId, string gameId)
+    public string GenerateSetupCacheKey(string gameId)
     {
-        // Setup doesn't have variable parameters, so key is just tenant + game
-        return $"ai:setup:{tenantId}:{gameId}";
+        // Setup doesn't have variable parameters, so key is just the game
+        return $"ai:setup:{gameId}";
     }
 
     private static string ComputeSha256Hash(string input)

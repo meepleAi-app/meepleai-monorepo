@@ -60,13 +60,6 @@ public class QdrantService : IQdrantService
             // Create payload indexes for filtering
             await _client.CreatePayloadIndexAsync(
                 collectionName: CollectionName,
-                fieldName: "tenant_id",
-                schemaType: PayloadSchemaType.Keyword,
-                cancellationToken: ct
-            );
-
-            await _client.CreatePayloadIndexAsync(
-                collectionName: CollectionName,
                 fieldName: "game_id",
                 schemaType: PayloadSchemaType.Keyword,
                 cancellationToken: ct
@@ -92,7 +85,6 @@ public class QdrantService : IQdrantService
     /// Index document chunks with embeddings
     /// </summary>
     public async Task<IndexResult> IndexDocumentChunksAsync(
-        string tenantId,
         string gameId,
         string pdfId,
         List<DocumentChunk> chunks,
@@ -116,7 +108,6 @@ public class QdrantService : IQdrantService
 
                 var payload = new Dictionary<string, Value>
                 {
-                    ["tenant_id"] = tenantId,
                     ["game_id"] = gameId,
                     ["pdf_id"] = pdfId,
                     ["chunk_index"] = i,
@@ -154,10 +145,9 @@ public class QdrantService : IQdrantService
     }
 
     /// <summary>
-    /// Search for similar chunks with tenant/game filtering
+    /// Search for similar chunks filtered by game identifier
     /// </summary>
     public virtual async Task<SearchResult> SearchAsync(
-        string tenantId,
         string gameId,
         float[] queryEmbedding,
         int limit = 5,
@@ -165,20 +155,12 @@ public class QdrantService : IQdrantService
     {
         try
         {
-            _logger.LogInformation("Searching in tenant {TenantId}, game {GameId}, limit {Limit}", tenantId, gameId, limit);
+            _logger.LogInformation("Searching in game {GameId}, limit {Limit}", gameId, limit);
 
             var filter = new Filter
             {
                 Must =
                 {
-                    new Condition
-                    {
-                        Field = new FieldCondition
-                        {
-                            Key = "tenant_id",
-                            Match = new Match { Keyword = tenantId }
-                        }
-                    },
                     new Condition
                     {
                         Field = new FieldCondition
@@ -212,7 +194,7 @@ public class QdrantService : IQdrantService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Search failed for tenant {TenantId}, game {GameId}", tenantId, gameId);
+            _logger.LogError(ex, "Search failed for game {GameId}", gameId);
             return SearchResult.CreateFailure($"Search failed: {ex.Message}");
         }
     }

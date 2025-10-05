@@ -55,7 +55,7 @@ public class SetupGuideServiceTests : IDisposable
         var gameId = "nonexistent";
 
         // Act
-        var result = await _service.GenerateSetupGuideAsync(tenantId, gameId);
+        var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
         Assert.NotNull(result);
@@ -101,7 +101,7 @@ public class SetupGuideServiceTests : IDisposable
             });
 
         // Act
-        var result = await _service.GenerateSetupGuideAsync(tenantId, gameId);
+        var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
         Assert.NotNull(result);
@@ -155,7 +155,6 @@ public class SetupGuideServiceTests : IDisposable
         _mockQdrantService
             .Setup(x => x.SearchAsync(
                 It.IsAny<string>(),
-                It.IsAny<string>(),
                 It.IsAny<float[]>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
@@ -171,7 +170,7 @@ public class SetupGuideServiceTests : IDisposable
             }));
 
         // Act
-        var result = await _service.GenerateSetupGuideAsync(tenantId, gameId);
+        var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
         Assert.NotNull(result);
@@ -242,7 +241,7 @@ public class SetupGuideServiceTests : IDisposable
             .ReturnsAsync(new EmbeddingResult { Success = false, Embeddings = new List<float[]>() });
 
         // Act
-        var result = await _service.GenerateSetupGuideAsync(tenantId, gameId);
+        var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
         Assert.True(result.estimatedSetupTimeMinutes > 0);

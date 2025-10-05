@@ -225,7 +225,7 @@ public class PdfStorageServiceTests : IDisposable
         var userId = "user1";
 
         // Act
-        var result = await service.UploadPdfAsync(tenantId, gameId, userId, null!);
+        var result = await service.UploadPdfAsync(gameId, userId, null!);
 
         // Assert
         Assert.False(result.Success);
@@ -244,7 +244,7 @@ public class PdfStorageServiceTests : IDisposable
         var fileMock = CreateMockFormFile("test.pdf", "application/pdf", 0);
 
         // Act
-        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+        var result = await service.UploadPdfAsync(gameId, userId, fileMock.Object);
 
         // Assert
         Assert.False(result.Success);
@@ -263,7 +263,7 @@ public class PdfStorageServiceTests : IDisposable
         var fileMock = CreateMockFormFile("test.pdf", "application/pdf", 51 * 1024 * 1024); // 51 MB
 
         // Act
-        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+        var result = await service.UploadPdfAsync(gameId, userId, fileMock.Object);
 
         // Assert
         Assert.False(result.Success);
@@ -282,7 +282,7 @@ public class PdfStorageServiceTests : IDisposable
         var fileMock = CreateMockFormFile("test.txt", "text/plain", 1024);
 
         // Act
-        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+        var result = await service.UploadPdfAsync(gameId, userId, fileMock.Object);
 
         // Assert
         Assert.False(result.Success);
@@ -301,7 +301,7 @@ public class PdfStorageServiceTests : IDisposable
         var fileMock = CreateMockFormFile("", "application/pdf", 1024);
 
         // Act
-        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+        var result = await service.UploadPdfAsync(gameId, userId, fileMock.Object);
 
         // Assert
         Assert.False(result.Success);
@@ -320,7 +320,7 @@ public class PdfStorageServiceTests : IDisposable
         var fileMock = CreateMockFormFile("   ", "application/pdf", 1024);
 
         // Act
-        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+        var result = await service.UploadPdfAsync(gameId, userId, fileMock.Object);
 
         // Assert
         Assert.False(result.Success);
@@ -339,7 +339,7 @@ public class PdfStorageServiceTests : IDisposable
         var fileMock = CreateMockFormFile("test.pdf", "application/pdf", 1024, "test content");
 
         // Act
-        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+        var result = await service.UploadPdfAsync(gameId, userId, fileMock.Object);
 
         // Assert
         Assert.False(result.Success);
@@ -348,20 +348,19 @@ public class PdfStorageServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task UploadPdfAsync_ReturnsFailure_WhenGameBelongsToDifferentTenant()
+    public async Task UploadPdfAsync_UsesExistingGameTenant()
     {
         // Arrange
         var (service, dbContext) = CreateService();
         await CreateTestGameAsync(dbContext, "tenant1", "game1");
         var fileMock = CreateMockFormFile("test.pdf", "application/pdf", 1024, "test content");
 
-        // Act - try to access with different tenant
-        var result = await service.UploadPdfAsync("tenant2", "game1", "user1", fileMock.Object);
+        // Act - upload without providing tenant context explicitly
+        var result = await service.UploadPdfAsync("game1", "user1", fileMock.Object);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("Game not found or access denied", result.Message);
-        Assert.Null(result.Document);
+        Assert.True(result.Success);
+        Assert.NotNull(result.Document);
     }
 
     // === Successful Upload Tests ===
@@ -378,7 +377,7 @@ public class PdfStorageServiceTests : IDisposable
         var fileMock = CreateMockFormFile("test.pdf", "application/pdf", 1024, "test content");
 
         // Act
-        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+        var result = await service.UploadPdfAsync(gameId, userId, fileMock.Object);
 
         // Assert
         Assert.True(result.Success, $"Upload failed: {result.Message}");
@@ -402,7 +401,7 @@ public class PdfStorageServiceTests : IDisposable
         var fileMock = CreateMockFormFile("test.pdf", "application/pdf", 1024, "test content");
 
         // Act
-        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+        var result = await service.UploadPdfAsync(gameId, userId, fileMock.Object);
 
         // Wait for background tasks to start
         await Task.Delay(50);
@@ -428,7 +427,7 @@ public class PdfStorageServiceTests : IDisposable
         var fileMock = CreateMockFormFile("test.pdf", "application/pdf", 1024, "test file content");
 
         // Act
-        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+        var result = await service.UploadPdfAsync(gameId, userId, fileMock.Object);
 
         // Assert
         var pdfDoc = await dbContext.PdfDocuments.FirstOrDefaultAsync(p => p.Id == result.Document!.Id);
@@ -452,7 +451,7 @@ public class PdfStorageServiceTests : IDisposable
         var fileMock = CreateMockFormFile("test<>file?.pdf", "application/pdf", 1024, "test content");
 
         // Act
-        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+        var result = await service.UploadPdfAsync(gameId, userId, fileMock.Object);
 
         // Assert
         Assert.True(result.Success);
@@ -476,7 +475,7 @@ public class PdfStorageServiceTests : IDisposable
         var fileMock = CreateMockFormFile(longFileName, "application/pdf", 1024, "test content");
 
         // Act
-        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+        var result = await service.UploadPdfAsync(gameId, userId, fileMock.Object);
 
         // Assert
         Assert.True(result.Success);
@@ -515,7 +514,7 @@ public class PdfStorageServiceTests : IDisposable
 
         // Upload a PDF
         var fileMock = CreateMockFormFile("test.pdf", "application/pdf", 1024, "test content");
-        await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+        await service.UploadPdfAsync(gameId, userId, fileMock.Object);
 
         // Wait for background tasks to start
         await Task.Delay(50);
@@ -543,8 +542,8 @@ public class PdfStorageServiceTests : IDisposable
         var file1Mock = CreateMockFormFile("test1.pdf", "application/pdf", 1024, "content1");
         var file2Mock = CreateMockFormFile("test2.pdf", "application/pdf", 2048, "content2");
 
-        await service.UploadPdfAsync(tenantId, "game1", userId, file1Mock.Object);
-        await service.UploadPdfAsync(tenantId, "game2", userId, file2Mock.Object);
+        await service.UploadPdfAsync("game1", userId, file1Mock.Object);
+        await service.UploadPdfAsync("game2", userId, file2Mock.Object);
 
         // Act
         var result = await service.GetPdfsByGameAsync(tenantId, "game1");
@@ -568,8 +567,8 @@ public class PdfStorageServiceTests : IDisposable
         var file1Mock = CreateMockFormFile("test1.pdf", "application/pdf", 1024, "content1");
         var file2Mock = CreateMockFormFile("test2.pdf", "application/pdf", 2048, "content2");
 
-        await service1.UploadPdfAsync("tenant1", "game1", userId, file1Mock.Object);
-        await service2.UploadPdfAsync("tenant2", "game2", userId, file2Mock.Object);
+        await service1.UploadPdfAsync("game1", userId, file1Mock.Object);
+        await service2.UploadPdfAsync("game2", userId, file2Mock.Object);
 
         // Act
         var result = await service1.GetPdfsByGameAsync("tenant1", "game1");
@@ -591,17 +590,17 @@ public class PdfStorageServiceTests : IDisposable
 
         // Upload multiple PDFs with small delays
         var file1Mock = CreateMockFormFile("first.pdf", "application/pdf", 1024, "content1");
-        await service.UploadPdfAsync(tenantId, gameId, userId, file1Mock.Object);
+        await service.UploadPdfAsync(gameId, userId, file1Mock.Object);
 
         await Task.Delay(10);
 
         var file2Mock = CreateMockFormFile("second.pdf", "application/pdf", 2048, "content2");
-        await service.UploadPdfAsync(tenantId, gameId, userId, file2Mock.Object);
+        await service.UploadPdfAsync(gameId, userId, file2Mock.Object);
 
         await Task.Delay(10);
 
         var file3Mock = CreateMockFormFile("third.pdf", "application/pdf", 3072, "content3");
-        await service.UploadPdfAsync(tenantId, gameId, userId, file3Mock.Object);
+        await service.UploadPdfAsync(gameId, userId, file3Mock.Object);
 
         // Act
         var result = await service.GetPdfsByGameAsync(tenantId, gameId);
@@ -634,7 +633,7 @@ public class PdfStorageServiceTests : IDisposable
             .ThrowsAsync(new IOException("Disk full"));
 
         // Act
-        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+        var result = await service.UploadPdfAsync(gameId, userId, fileMock.Object);
 
         // Assert
         Assert.False(result.Success);

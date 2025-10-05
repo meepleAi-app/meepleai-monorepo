@@ -169,7 +169,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var registerResponse = await _client.PostAsJsonAsync("/auth/register", registerRequest);
         var cookies = registerResponse.Headers.GetValues("Set-Cookie").ToList();
 
-        var seedRequest = new SeedRequest("demo-tenant", "demo-game");
+        var seedRequest = new SeedRequest("demo-game");
 
         // Act - Send seed request with authentication
         var request = new HttpRequestMessage(HttpMethod.Post, "/admin/seed")
@@ -202,7 +202,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
     public async Task QA_WithoutAuthentication_ReturnsUnauthorized()
     {
         // Arrange
-        var qaRequest = new QaRequest("test-tenant", "test-game", "How many players?");
+        var qaRequest = new QaRequest("test-game", "How many players?");
 
         // Act
         var response = await _client.PostAsJsonAsync("/agents/qa", qaRequest);
@@ -316,7 +316,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // Seed demo data
         var seedRequest = new HttpRequestMessage(HttpMethod.Post, "/admin/seed")
         {
-            Content = JsonContent.Create(new SeedRequest("qa-tenant", "qa-game"))
+            Content = JsonContent.Create(new SeedRequest("qa-game"))
         };
         foreach (var cookie in cookies)
         {
@@ -327,7 +327,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // Act
         var qaRequest = new HttpRequestMessage(HttpMethod.Post, "/agents/qa")
         {
-            Content = JsonContent.Create(new QaRequest("qa-tenant", "qa-game", "How many players?"))
+            Content = JsonContent.Create(new QaRequest("qa-game", "How many players?"))
         };
         foreach (var cookie in cookies)
         {
@@ -341,7 +341,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
     }
 
     [Fact]
-    public async Task QA_WithDifferentTenantId_ReturnsForbidden()
+    public async Task QA_WithDifferentTenantId_ReturnsSuccess()
     {
         // Arrange - Create user in one tenant
         var registerRequest = new
@@ -360,7 +360,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // Act - Try to access different tenant's data
         var qaRequest = new HttpRequestMessage(HttpMethod.Post, "/agents/qa")
         {
-            Content = JsonContent.Create(new QaRequest("tenant-b", "some-game", "test query"))
+            Content = JsonContent.Create(new QaRequest("some-game", "test query"))
         };
         foreach (var cookie in cookies)
         {
@@ -370,7 +370,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var response = await _client.SendAsync(qaRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
@@ -393,7 +393,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // Act
         var qaRequest = new HttpRequestMessage(HttpMethod.Post, "/agents/qa")
         {
-            Content = JsonContent.Create(new QaRequest("test-tenant", "", "test query"))
+            Content = JsonContent.Create(new QaRequest("", "test query"))
         };
         foreach (var cookie in cookies)
         {
@@ -444,7 +444,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // Seed demo data
         var seedRequest = new HttpRequestMessage(HttpMethod.Post, "/admin/seed")
         {
-            Content = JsonContent.Create(new SeedRequest("explain-tenant", "explain-game"))
+            Content = JsonContent.Create(new SeedRequest("explain-game"))
         };
         foreach (var cookie in cookies)
         {
@@ -503,7 +503,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // Seed demo data
         var seedRequest = new HttpRequestMessage(HttpMethod.Post, "/admin/seed")
         {
-            Content = JsonContent.Create(new SeedRequest("rulespec-tenant", "rulespec-game"))
+            Content = JsonContent.Create(new SeedRequest("rulespec-game"))
         };
         foreach (var cookie in cookies)
         {
@@ -587,7 +587,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
         var seedRequest = new HttpRequestMessage(HttpMethod.Post, "/admin/seed")
         {
-            Content = JsonContent.Create(new SeedRequest("update-tenant", "update-game"))
+            Content = JsonContent.Create(new SeedRequest("update-game"))
         };
         foreach (var cookie in adminCookies)
         {
@@ -764,7 +764,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // Act
         var seedRequest = new HttpRequestMessage(HttpMethod.Post, "/admin/seed")
         {
-            Content = JsonContent.Create(new SeedRequest("test-tenant", "test-game"))
+            Content = JsonContent.Create(new SeedRequest("test-game"))
         };
         foreach (var cookie in cookies)
         {
@@ -778,7 +778,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
     }
 
     [Fact]
-    public async Task Seed_WithDifferentTenantId_ReturnsForbidden()
+    public async Task Seed_WithDifferentTenantId_ReturnsSuccess()
     {
         // Arrange
         var registerRequest = new
@@ -797,7 +797,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // Act - Try to seed different tenant
         var seedRequest = new HttpRequestMessage(HttpMethod.Post, "/admin/seed")
         {
-            Content = JsonContent.Create(new SeedRequest("tenant-b", "some-game"))
+            Content = JsonContent.Create(new SeedRequest("some-game"))
         };
         foreach (var cookie in cookies)
         {
@@ -807,7 +807,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var response = await _client.SendAsync(seedRequest);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
@@ -830,7 +830,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // Act
         var seedRequest = new HttpRequestMessage(HttpMethod.Post, "/admin/seed")
         {
-            Content = JsonContent.Create(new SeedRequest("test-tenant", ""))
+            Content = JsonContent.Create(new SeedRequest(""))
         };
         foreach (var cookie in cookies)
         {

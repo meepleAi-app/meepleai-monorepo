@@ -12,19 +12,18 @@ public class GameService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
+    private readonly ITenantContext _tenantContext;
 
-    public GameService(MeepleAiDbContext dbContext, TimeProvider? timeProvider = null)
+    public GameService(MeepleAiDbContext dbContext, ITenantContext tenantContext, TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext;
+        _tenantContext = tenantContext;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public async Task<GameEntity> CreateGameAsync(string tenantId, string name, string? requestedGameId, CancellationToken ct = default)
+    public async Task<GameEntity> CreateGameAsync(string name, string? requestedGameId, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(tenantId))
-        {
-            throw new ArgumentException("TenantId is required", nameof(tenantId));
-        }
+        var tenantId = _tenantContext.GetRequiredTenantId();
 
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -68,8 +67,9 @@ public class GameService
         return entity;
     }
 
-    public async Task<IReadOnlyList<GameEntity>> GetGamesForTenantAsync(string tenantId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<GameEntity>> GetGamesAsync(CancellationToken ct = default)
     {
+        var tenantId = _tenantContext.TenantId;
         if (string.IsNullOrWhiteSpace(tenantId))
         {
             return Array.Empty<GameEntity>();

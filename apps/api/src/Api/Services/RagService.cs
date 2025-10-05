@@ -33,7 +33,7 @@ public class RagService
     /// AI-04: Answer question using RAG with LLM generation and anti-hallucination
     /// AI-05: Now with caching support for reduced latency
     /// </summary>
-    public async Task<QaResponse> AskAsync(string tenantId, string gameId, string query, CancellationToken cancellationToken = default)
+    public async Task<QaResponse> AskAsync(string gameId, string query, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
@@ -41,7 +41,7 @@ public class RagService
         }
 
         // AI-05: Check cache first
-        var cacheKey = _cache.GenerateQaCacheKey(tenantId, gameId, query);
+        var cacheKey = _cache.GenerateQaCacheKey(gameId, query);
         var cachedResponse = await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken);
         if (cachedResponse != null)
         {
@@ -62,7 +62,7 @@ public class RagService
             var queryEmbedding = embeddingResult.Embeddings[0];
 
             // Step 2: Search Qdrant for similar chunks
-            var searchResult = await _qdrantService.SearchAsync(tenantId, gameId, queryEmbedding, limit: 3, cancellationToken);
+            var searchResult = await _qdrantService.SearchAsync(gameId, queryEmbedding, limit: 3, cancellationToken);
 
             if (!searchResult.Success || searchResult.Results.Count == 0)
             {
@@ -133,7 +133,7 @@ ANSWER:";
     /// AI-02: Generate structured explanation with outline, script, and citations
     /// AI-05: Now with caching support for reduced latency
     /// </summary>
-    public async Task<ExplainResponse> ExplainAsync(string tenantId, string gameId, string topic, CancellationToken cancellationToken = default)
+    public async Task<ExplainResponse> ExplainAsync(string gameId, string topic, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(topic))
         {
@@ -141,7 +141,7 @@ ANSWER:";
         }
 
         // AI-05: Check cache first
-        var cacheKey = _cache.GenerateExplainCacheKey(tenantId, gameId, topic);
+        var cacheKey = _cache.GenerateExplainCacheKey(gameId, topic);
         var cachedResponse = await _cache.GetAsync<ExplainResponse>(cacheKey, cancellationToken);
         if (cachedResponse != null)
         {
@@ -162,7 +162,7 @@ ANSWER:";
             var topicEmbedding = embeddingResult.Embeddings[0];
 
             // Step 2: Search Qdrant for relevant chunks (get more for comprehensive explanation)
-            var searchResult = await _qdrantService.SearchAsync(tenantId, gameId, topicEmbedding, limit: 5, cancellationToken);
+            var searchResult = await _qdrantService.SearchAsync(gameId, topicEmbedding, limit: 5, cancellationToken);
 
             if (!searchResult.Success || searchResult.Results.Count == 0)
             {

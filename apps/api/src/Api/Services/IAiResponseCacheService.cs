@@ -28,26 +28,23 @@ public interface IAiResponseCacheService
     /// <summary>
     /// Generate cache key for QA endpoint.
     /// </summary>
-    /// <param name="tenantId">Tenant ID</param>
     /// <param name="gameId">Game ID</param>
     /// <param name="query">User query</param>
     /// <returns>Cache key</returns>
-    string GenerateQaCacheKey(string tenantId, string gameId, string query);
+    string GenerateQaCacheKey(string gameId, string query);
 
     /// <summary>
     /// Generate cache key for Explain endpoint.
     /// </summary>
-    /// <param name="tenantId">Tenant ID</param>
     /// <param name="gameId">Game ID</param>
     /// <param name="topic">Topic to explain</param>
     /// <returns>Cache key</returns>
-    string GenerateExplainCacheKey(string tenantId, string gameId, string topic);
+    string GenerateExplainCacheKey(string gameId, string topic);
 
     /// <summary>
     /// Generate cache key for Setup endpoint.
     /// </summary>
-    /// <param name="tenantId">Tenant ID</param>
     /// <param name="gameId">Game ID</param>
     /// <returns>Cache key</returns>
-    string GenerateSetupCacheKey(string tenantId, string gameId);
+    string GenerateSetupCacheKey(string gameId);
 }

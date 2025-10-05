@@ -71,7 +71,6 @@ public class QdrantServiceTests
 
         // Act
         var result = await service.IndexDocumentChunksAsync(
-            "tenant-1",
             "game-1",
             "pdf-1",
             null!);
@@ -91,7 +90,6 @@ public class QdrantServiceTests
 
         // Act
         var result = await service.IndexDocumentChunksAsync(
-            "tenant-1",
             "game-1",
             "pdf-1",
             new List<DocumentChunk>());

@@ -35,12 +35,11 @@ public class SetupGuideService
     /// AI-05: Now with caching support for reduced latency
     /// </summary>
     public async Task<SetupGuideResponse> GenerateSetupGuideAsync(
-        string tenantId,
         string gameId,
         CancellationToken cancellationToken = default)
     {
         // AI-05: Check cache first
-        var cacheKey = _cache.GenerateSetupCacheKey(tenantId, gameId);
+        var cacheKey = _cache.GenerateSetupCacheKey(gameId);
         var cachedResponse = await _cache.GetAsync<SetupGuideResponse>(cacheKey, cancellationToken);
         if (cachedResponse != null)
         {
@@ -52,12 +51,12 @@ public class SetupGuideService
         {
             // Get game information
             var game = await _dbContext.Games
-                .Where(g => g.Id == gameId && g.TenantId == tenantId)
+                .Where(g => g.Id == gameId)
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (game == null)
             {
-                _logger.LogWarning("Game not found: {GameId} for tenant {TenantId}", gameId, tenantId);
+                _logger.LogWarning("Game not found: {GameId}", gameId);
                 return CreateEmptySetupGuide("Unknown Game");
             }
 
@@ -76,7 +75,7 @@ public class SetupGuideService
 
             foreach (var query in setupQueries)
             {
-                var setupInfo = await QuerySetupInformationAsync(tenantId, gameId, query, cancellationToken);
+                var setupInfo = await QuerySetupInformationAsync(gameId, query, cancellationToken);
 
                 if (setupInfo.snippets.Count > 0)
                 {
@@ -126,7 +125,6 @@ public class SetupGuideService
     /// Query RAG system for setup-related information
     /// </summary>
     private async Task<(string answer, List<Snippet> snippets)> QuerySetupInformationAsync(
-        string tenantId,
         string gameId,
         string query,
         CancellationToken cancellationToken)
@@ -144,7 +142,6 @@ public class SetupGuideService
 
             // Search Qdrant for similar chunks
             var searchResult = await _qdrantService.SearchAsync(
-                tenantId,
                 gameId,
                 queryEmbedding,
                 limit: 2,

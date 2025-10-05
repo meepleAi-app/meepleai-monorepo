@@ -57,7 +57,7 @@ public class QaEndpointTests
         };
         var searchResult = SearchResult.CreateSuccess(searchResults);
         qdrantServiceMock
-            .Setup(q => q.SearchAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(q => q.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(searchResult);
 
         var ragLoggerMock = Mock.Of<ILogger<RagService>>();
@@ -80,7 +80,7 @@ public class QaEndpointTests
         Assert.Equal(gameId, spec.gameId);
         Assert.Equal(2, spec.rules.Count);
 
-        var response = await ragService.AskAsync(tenantId, gameId, "How many players?");
+        var response = await ragService.AskAsync(gameId, "How many players?");
 
         Assert.Equal("Two players.", response.answer);
         Assert.Single(response.snippets);

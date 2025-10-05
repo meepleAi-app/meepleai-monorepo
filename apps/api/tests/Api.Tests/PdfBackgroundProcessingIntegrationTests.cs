@@ -239,7 +239,7 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
         var fileMock = CreateMockFormFile("test.pdf", "application/pdf", pdfBytes);
 
         // Act
-        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+        var result = await service.UploadPdfAsync(gameId, userId, fileMock.Object);
 
         // Assert - upload succeeded
         Assert.True(result.Success, $"Upload failed: {result.Message}");
@@ -275,7 +275,7 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
         var fileMock = CreateMockFormFile("multipage.pdf", "application/pdf", pdfBytes);
 
         // Act
-        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+        var result = await service.UploadPdfAsync(gameId, userId, fileMock.Object);
 
         // Wait for background processing
         var completedPdf = await WaitForProcessingCompletionAsync(result.Document!.Id);
@@ -306,7 +306,7 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
         var beforeUpload = DateTime.UtcNow;
 
         // Act
-        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+        var result = await service.UploadPdfAsync(gameId, userId, fileMock.Object);
 
         // Wait for background processing
         var completedPdf = await WaitForProcessingCompletionAsync(result.Document!.Id);
@@ -365,7 +365,7 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
         var fileMock = CreateMockFormFile("empty.pdf", "application/pdf", pdfBytes);
 
         // Act
-        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+        var result = await service.UploadPdfAsync(gameId, userId, fileMock.Object);
 
         // Wait for background processing
         var completedPdf = await WaitForProcessingCompletionAsync(result.Document!.Id);
@@ -399,7 +399,7 @@ public class PdfBackgroundProcessingIntegrationTests : PostgresIntegrationTestBa
         var fileMock = CreateMockFormFile("corrupt.pdf", "application/pdf", corruptPdfBytes);
 
         // Act
-        var result = await service.UploadPdfAsync(tenantId, gameId, userId, fileMock.Object);
+        var result = await service.UploadPdfAsync(gameId, userId, fileMock.Object);
 
         // Wait for background processing to attempt and fail
         var processedPdf = await WaitForProcessingCompletionAsync(result.Document!.Id);

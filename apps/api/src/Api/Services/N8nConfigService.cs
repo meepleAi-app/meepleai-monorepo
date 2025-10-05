@@ -13,29 +13,38 @@ public class N8nConfigService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<N8nConfigService> _logger;
+    private readonly ITenantContext _tenantContext;
 
     public N8nConfigService(
         MeepleAiDbContext db,
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
-        ILogger<N8nConfigService> logger)
+        ILogger<N8nConfigService> logger,
+        ITenantContext tenantContext)
     {
         _db = db;
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
         _logger = logger;
+        _tenantContext = tenantContext;
     }
 
-    public async Task<List<N8nConfigDto>> GetConfigsAsync(string tenantId, CancellationToken ct)
+    public async Task<List<N8nConfigDto>> GetConfigsAsync(CancellationToken ct)
     {
-        var configs = await _db.N8nConfigs
-            .Where(c => c.TenantId == tenantId)
+        var tenantId = _tenantContext.TenantId;
+        var query = _db.N8nConfigs.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(tenantId))
+        {
+            query = query.Where(c => c.TenantId == tenantId);
+        }
+
+        var configs = await query
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync(ct);
 
         return configs.Select(c => new N8nConfigDto(
             c.Id,
-            c.TenantId,
             c.Name,
             c.BaseUrl,
             c.WebhookUrl,
@@ -47,10 +56,18 @@ public class N8nConfigService
         )).ToList();
     }
 
-    public async Task<N8nConfigDto?> GetConfigAsync(string tenantId, string configId, CancellationToken ct)
+    public async Task<N8nConfigDto?> GetConfigAsync(string configId, CancellationToken ct)
     {
-        var config = await _db.N8nConfigs
-            .FirstOrDefaultAsync(c => c.Id == configId && c.TenantId == tenantId, ct);
+        var tenantId = _tenantContext.TenantId;
+        var query = _db.N8nConfigs.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(tenantId))
+        {
+            query = query.Where(c => c.TenantId == tenantId);
+        }
+
+        var config = await query
+            .FirstOrDefaultAsync(c => c.Id == configId, ct);
 
         if (config == null)
         {
@@ -59,7 +76,6 @@ public class N8nConfigService
 
         return new N8nConfigDto(
             config.Id,
-            config.TenantId,
             config.Name,
             config.BaseUrl,
             config.WebhookUrl,
@@ -72,11 +88,12 @@ public class N8nConfigService
     }
 
     public async Task<N8nConfigDto> CreateConfigAsync(
-        string tenantId,
         string userId,
         CreateN8nConfigRequest request,
         CancellationToken ct)
     {
+        var tenantId = _tenantContext.GetRequiredTenantId();
+
         var existingConfig = await _db.N8nConfigs
             .FirstOrDefaultAsync(c => c.TenantId == tenantId && c.Name == request.Name, ct);
 
@@ -104,7 +121,6 @@ public class N8nConfigService
 
         return new N8nConfigDto(
             config.Id,
-            config.TenantId,
             config.Name,
             config.BaseUrl,
             config.WebhookUrl,
@@ -117,11 +133,11 @@ public class N8nConfigService
     }
 
     public async Task<N8nConfigDto> UpdateConfigAsync(
-        string tenantId,
         string configId,
         UpdateN8nConfigRequest request,
         CancellationToken ct)
     {
+        var tenantId = _tenantContext.GetRequiredTenantId();
         var config = await _db.N8nConfigs
             .FirstOrDefaultAsync(c => c.Id == configId && c.TenantId == tenantId, ct);
 
@@ -169,7 +185,6 @@ public class N8nConfigService
 
         return new N8nConfigDto(
             config.Id,
-            config.TenantId,
             config.Name,
             config.BaseUrl,
             config.WebhookUrl,
@@ -181,8 +196,9 @@ public class N8nConfigService
         );
     }
 
-    public async Task<bool> DeleteConfigAsync(string tenantId, string configId, CancellationToken ct)
+    public async Task<bool> DeleteConfigAsync(string configId, CancellationToken ct)
     {
+        var tenantId = _tenantContext.GetRequiredTenantId();
         var config = await _db.N8nConfigs
             .FirstOrDefaultAsync(c => c.Id == configId && c.TenantId == tenantId, ct);
 
@@ -197,8 +213,9 @@ public class N8nConfigService
         return true;
     }
 
-    public async Task<N8nTestResult> TestConnectionAsync(string tenantId, string configId, CancellationToken ct)
+    public async Task<N8nTestResult> TestConnectionAsync(string configId, CancellationToken ct)
     {
+        var tenantId = _tenantContext.GetRequiredTenantId();
         var config = await _db.N8nConfigs
             .FirstOrDefaultAsync(c => c.Id == configId && c.TenantId == tenantId, ct);
 

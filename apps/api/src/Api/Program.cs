@@ -415,13 +415,11 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
             req.query,
             null,
             latencyMs,
-            null,
-            null,
-            "Error",
-            ex.Message,
-            context.Connection.RemoteIpAddress?.ToString(),
-            context.Request.Headers.UserAgent.ToString(),
-            ct);
+            status: "Error",
+            errorMessage: ex.Message,
+            ipAddress: context.Connection.RemoteIpAddress?.ToString(),
+            userAgent: context.Request.Headers.UserAgent.ToString(),
+            ct: ct);
 
         throw;
     }
@@ -485,13 +483,11 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
             req.topic,
             null,
             latencyMs,
-            null,
-            null,
-            "Error",
-            ex.Message,
-            context.Connection.RemoteIpAddress?.ToString(),
-            context.Request.Headers.UserAgent.ToString(),
-            ct);
+            status: "Error",
+            errorMessage: ex.Message,
+            ipAddress: context.Connection.RemoteIpAddress?.ToString(),
+            userAgent: context.Request.Headers.UserAgent.ToString(),
+            ct: ct);
 
         throw;
     }
@@ -564,13 +560,11 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
             "setup_guide",
             null,
             latencyMs,
-            null,
-            null,
-            "Error",
-            ex.Message,
-            context.Connection.RemoteIpAddress?.ToString(),
-            context.Request.Headers.UserAgent.ToString(),
-            ct);
+            status: "Error",
+            errorMessage: ex.Message,
+            ipAddress: context.Connection.RemoteIpAddress?.ToString(),
+            userAgent: context.Request.Headers.UserAgent.ToString(),
+            ct: ct);
 
         throw;
     }

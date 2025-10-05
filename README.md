@@ -139,6 +139,7 @@ Accogliamo contributi dalla community! Prima di iniziare:
 - ✅ RAG (Retrieval-Augmented Generation) con Qdrant
 - ✅ PDF extraction service (Docnet + tabelle)
 - ✅ Seed demo data per testing
+- ✅ Storico versioni, diff e ripristino delle RuleSpec disponibili via API `GET /rulespecs/{id}/versions` e interfaccia `/versions`
 
 #### Frontend (Next.js)
 - ✅ Interfaccia web React/TypeScript
@@ -181,9 +182,6 @@ Accogliamo contributi dalla community! Prima di iniziare:
   - Follow-up questions intelligenti
 
 - 📋 **Gestione avanzata rule specs**
-  - Versioning documenti
-  - Diff tra versioni
-  - Publishing workflow
   - Retention policy per vecchie versioni
 
 #### UX & Frontend

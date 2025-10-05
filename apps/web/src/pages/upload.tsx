@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '../lib/api';
 
@@ -8,6 +8,19 @@ interface PdfDocument {
   fileSizeBytes: number;
   uploadedAt: string;
   uploadedByUserId: string;
+}
+
+type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+interface PdfProcessingResponse {
+  id: string;
+  fileName: string;
+  extractedText?: string | null;
+  processingStatus: ProcessingStatus;
+  processedAt?: string | null;
+  pageCount?: number | null;
+  characterCount?: number | null;
+  processingError?: string | null;
 }
 
 interface RuleAtom {
@@ -63,6 +76,10 @@ export default function UploadPage() {
   const [ruleSpec, setRuleSpec] = useState<RuleSpec | null>(null);
   const [pdfs, setPdfs] = useState<PdfDocument[]>([]);
   const [loadingPdfs, setLoadingPdfs] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
+  const [processingError, setProcessingError] = useState<string | null>(null);
+  const [pollingError, setPollingError] = useState<string | null>(null);
+  const [autoAdvanceTriggered, setAutoAdvanceTriggered] = useState(false);
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -166,6 +183,10 @@ export default function UploadPage() {
         const data = await response.json();
         setDocumentId(data.documentId);
         setMessage(`✅ PDF uploaded successfully! Document ID: ${data.documentId}`);
+        setProcessingStatus('pending');
+        setProcessingError(null);
+        setPollingError(null);
+        setAutoAdvanceTriggered(false);
         setCurrentStep('parse');
       } else {
         const error = await response.json();
@@ -178,7 +199,7 @@ export default function UploadPage() {
     }
   };
 
-  const handleParse = async () => {
+  const handleParse = useCallback(async () => {
     if (!confirmedGameId) {
       setMessage('Please confirm a game before parsing');
       return;
@@ -194,6 +215,14 @@ export default function UploadPage() {
     setRuleSpec(null);
 
     try {
+      const fetchedRuleSpec = await api.get<RuleSpec>(`/games/${confirmedGameId}/rulespec`);
+
+      if (!fetchedRuleSpec) {
+        setMessage('❌ Parse failed: Unable to load RuleSpec.');
+        return;
+      }
+
+      setRuleSpec(fetchedRuleSpec);
       const response = await fetch(`${API_BASE}/ingest/pdf/${documentId}/rulespec`, {
         method: 'POST',
         credentials: 'include'
@@ -203,22 +232,18 @@ export default function UploadPage() {
         let errorMessage = response.statusText;
         try {
           const errorBody = await response.json();
-          if (errorBody && typeof errorBody === 'object' && 'error' in errorBody) {
-            errorMessage = String(errorBody.error);
+          if (errorBody?.error) {
+            errorMessage = errorBody.error;
           }
-        } catch (error) {
-          // Ignore JSON parsing errors and use status text
+        } catch (jsonError) {
+          console.warn('Failed to parse error response', jsonError);
         }
         throw new Error(errorMessage);
       }
 
-      const parsed = (await response.json()) as RuleSpec;
-      const normalized: RuleSpec = {
-        ...parsed,
-        rules: Array.isArray(parsed.rules) ? parsed.rules : []
-      };
+      const spec = (await response.json()) as RuleSpec;
 
-      setRuleSpec(normalized);
+      setRuleSpec(spec);
       setMessage('✅ PDF parsed successfully!');
       setCurrentStep('review');
     } catch (error) {
@@ -226,7 +251,81 @@ export default function UploadPage() {
     } finally {
       setParsing(false);
     }
-  };
+  }, [confirmedGameId]);
+
+  useEffect(() => {
+    if (currentStep !== 'parse' || !documentId) {
+      return;
+    }
+
+    let cancelled = false;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+
+    const pollStatus = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/pdfs/${documentId}/text`, {
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => null);
+          if (!cancelled) {
+            setPollingError(errorBody?.error ?? response.statusText);
+          }
+          if (!cancelled) {
+            timeout = setTimeout(pollStatus, 4000);
+          }
+          return;
+        }
+
+        const data: PdfProcessingResponse = await response.json();
+        if (cancelled) {
+          return;
+        }
+
+        setProcessingStatus(data.processingStatus);
+        setProcessingError(data.processingError ?? null);
+        setPollingError(null);
+
+        if (data.processingStatus === 'failed') {
+          setMessage(`❌ Parse failed: ${data.processingError ?? 'Processing failed. Please try again.'}`);
+          return;
+        }
+
+        if (data.processingStatus === 'completed') {
+          return;
+        }
+
+        timeout = setTimeout(pollStatus, 2000);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setPollingError(error instanceof Error ? error.message : 'Unknown error');
+        timeout = setTimeout(pollStatus, 4000);
+      }
+    };
+
+    pollStatus();
+
+    return () => {
+      cancelled = true;
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    };
+  }, [API_BASE, currentStep, documentId]);
+
+  useEffect(() => {
+    if (currentStep !== 'parse') {
+      return;
+    }
+
+    if (processingStatus === 'completed' && !autoAdvanceTriggered) {
+      setAutoAdvanceTriggered(true);
+      void handleParse();
+    }
+  }, [autoAdvanceTriggered, currentStep, handleParse, processingStatus]);
 
   const handlePublish = async () => {
     if (!ruleSpec || !confirmedGameId) {
@@ -265,6 +364,10 @@ export default function UploadPage() {
     setDocumentId('');
     setRuleSpec(null);
     setMessage('');
+    setProcessingStatus(null);
+    setProcessingError(null);
+    setPollingError(null);
+    setAutoAdvanceTriggered(false);
     const fileInput = document.getElementById('fileInput') as HTMLInputElement;
     if (fileInput) {
       fileInput.value = '';
@@ -360,6 +463,20 @@ export default function UploadPage() {
 
   const selectedGame = games.find(game => game.id === selectedGameId) ?? null;
   const confirmedGame = confirmedGameId ? games.find(game => game.id === confirmedGameId) ?? null : null;
+  const statusLabels: Record<ProcessingStatus, string> = {
+    pending: 'Pending',
+    processing: 'Processing',
+    completed: 'Completed',
+    failed: 'Failed'
+  };
+  const statusProgress: Record<ProcessingStatus, number> = {
+    pending: 20,
+    processing: 65,
+    completed: 100,
+    failed: 100
+  };
+  const effectiveProcessingStatus: ProcessingStatus = processingStatus ?? 'pending';
+  const processingProgress = statusProgress[effectiveProcessingStatus];
 
   const renderStepIndicator = () => {
     const steps: WizardStep[] = ['upload', 'parse', 'review', 'publish'];
@@ -622,25 +739,73 @@ export default function UploadPage() {
           <p style={{ marginTop: '16px', marginBottom: '24px', color: '#666' }}>
             Document ID: <strong>{documentId}</strong>
           </p>
-          <p style={{ marginBottom: '24px' }}>
-            Click the button below to parse the PDF and extract rules.
-          </p>
+          <div style={{ marginBottom: '24px' }}>
+            <div
+              role="progressbar"
+              aria-label="PDF processing progress"
+              aria-valuenow={processingProgress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              style={{
+                width: '100%',
+                backgroundColor: '#e5e7eb',
+                borderRadius: '999px',
+                height: '12px',
+                overflow: 'hidden',
+                marginBottom: '12px'
+              }}
+            >
+              <div
+                style={{
+                  width: `${processingProgress}%`,
+                  transition: 'width 0.6s ease',
+                  backgroundColor:
+                    effectiveProcessingStatus === 'completed'
+                      ? '#34a853'
+                      : effectiveProcessingStatus === 'failed'
+                        ? '#d93025'
+                        : '#0070f3',
+                  height: '100%'
+                }}
+              />
+            </div>
+            <p style={{ marginBottom: '8px', color: '#444' }}>
+              Processing status: <strong>{statusLabels[effectiveProcessingStatus]}</strong>
+            </p>
+            {pollingError && (
+              <p style={{ color: '#d93025', marginBottom: '8px' }}>
+                Status refresh failed: {pollingError}
+              </p>
+            )}
+            {processingError && effectiveProcessingStatus === 'failed' && (
+              <p style={{ color: '#d93025', marginBottom: '8px' }}>
+                Processing error: {processingError}
+              </p>
+            )}
+            <p style={{ marginBottom: '0', color: '#666' }}>
+              The wizard will automatically continue once processing is completed.
+            </p>
+          </div>
           <button
             onClick={handleParse}
-            disabled={parsing}
+            disabled={parsing || !documentId}
             style={{
               padding: '12px 24px',
-              backgroundColor: parsing ? '#ccc' : '#0070f3',
+              backgroundColor: parsing || !documentId ? '#ccc' : '#0070f3',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
               fontSize: '16px',
-              cursor: parsing ? 'not-allowed' : 'pointer',
+              cursor: parsing || !documentId ? 'not-allowed' : 'pointer',
               fontWeight: '500',
               marginRight: '12px'
             }}
           >
-            {parsing ? 'Parsing...' : 'Parse PDF'}
+            {effectiveProcessingStatus !== 'completed'
+              ? 'Waiting for processing...'
+              : parsing
+                ? 'Loading rules...'
+                : 'Continue to review'}
           </button>
           <button
             onClick={resetWizard}

@@ -15,18 +15,57 @@ public class QdrantClientAdapter : IQdrantClientAdapter
     private readonly QdrantClient _client;
     private readonly ILogger<QdrantClientAdapter> _logger;
 
-    public QdrantClientAdapter(IConfiguration configuration, ILogger<QdrantClientAdapter> logger)
+    public QdrantClientAdapter(
+        IConfiguration configuration,
+        ILogger<QdrantClientAdapter> logger,
+        Func<string, int, bool, QdrantClient>? clientFactory = null)
     {
         _logger = logger;
         var qdrantUrl = configuration["QDRANT_URL"] ?? "http://localhost:6333";
 
-        var uri = new Uri(qdrantUrl);
-        var host = uri.Host;
-        var grpcPort = 6334;
-        var useHttps = uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
+        if (!Uri.TryCreate(qdrantUrl, UriKind.Absolute, out var uri))
+        {
+            throw new InvalidOperationException($"Invalid QDRANT_URL value: {qdrantUrl}");
+        }
 
-        _client = new QdrantClient(host, grpcPort, useHttps);
+        var host = uri.Host;
+        var useHttps = uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
+        var grpcPort = ResolveGrpcPort(configuration, uri, useHttps, logger);
+
+        var factory = clientFactory ?? ((h, p, https) => new QdrantClient(h, p, https));
+        _client = factory(host, grpcPort, useHttps);
         _logger.LogInformation("Qdrant client initialized for {Host}:{Port} (HTTPS: {UseHttps})", host, grpcPort, useHttps);
+    }
+
+    private static int ResolveGrpcPort(
+        IConfiguration configuration,
+        Uri uri,
+        bool useHttps,
+        ILogger logger)
+    {
+        var grpcPortSetting = configuration["QDRANT_GRPC_PORT"];
+        if (!string.IsNullOrWhiteSpace(grpcPortSetting))
+        {
+            if (int.TryParse(grpcPortSetting, out var explicitPort) && explicitPort > 0)
+            {
+                return explicitPort;
+            }
+
+            logger.LogWarning("Invalid QDRANT_GRPC_PORT value '{Value}', falling back to URI/default port.", grpcPortSetting);
+        }
+
+        if (!uri.IsDefaultPort)
+        {
+            if (uri.Port == 6333)
+            {
+                // Default REST port maps to 6334 for gRPC unless explicitly overridden
+                return 6334;
+            }
+
+            return uri.Port;
+        }
+
+        return useHttps ? 6334 : 6334;
     }
 
     public Task<IReadOnlyList<string>> ListCollectionsAsync(CancellationToken cancellationToken = default)

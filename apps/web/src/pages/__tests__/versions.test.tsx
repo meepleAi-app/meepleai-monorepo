@@ -201,6 +201,10 @@ describe('VersionHistory page', () => {
       expect(toSelect.value).toBe('2.0.0');
     });
 
+    expect(screen.getByText('2.0.0')).toBeInTheDocument();
+    expect(screen.getByText('1.5.0')).toBeInTheDocument();
+    expect(screen.getByText('1.0.0')).toBeInTheDocument();
+
     const summary = screen.getByText(/Riepilogo Modifiche/i).parentElement;
     expect(summary).not.toBeNull();
     const summaryWithin = within(summary as HTMLElement);
@@ -218,6 +222,61 @@ describe('VersionHistory page', () => {
 
     expect(showOnlyChangesToggle).not.toBeChecked();
     expect(screen.getByText(/Modifiche \(4\)/i)).toBeInTheDocument();
+  });
+
+  it('does not restore when the confirmation dialog is rejected', async () => {
+    const user = userEvent.setup();
+    setGameId('demo-chess');
+    confirmSpy.mockReturnValue(false);
+
+    const historyResponse = {
+      gameId: 'demo-chess',
+      totalVersions: 2,
+      versions: [
+        { version: '2.0.0', createdAt: '2024-03-10T12:00:00Z', ruleCount: 12 },
+        { version: '1.5.0', createdAt: '2024-02-15T12:00:00Z', ruleCount: 11 }
+      ]
+    };
+
+    const diffResponse = {
+      gameId: 'demo-chess',
+      fromVersion: '1.5.0',
+      toVersion: '2.0.0',
+      fromCreatedAt: '2024-02-15T12:00:00Z',
+      toCreatedAt: '2024-03-10T12:00:00Z',
+      summary: {
+        totalChanges: 0,
+        added: 0,
+        modified: 0,
+        deleted: 0,
+        unchanged: 0
+      },
+      changes: []
+    };
+
+    mockApi.get.mockImplementation(async (path: string) => {
+      if (path === '/auth/me') {
+        return authResponse;
+      }
+      if (path === '/games/demo-chess/rulespec/history') {
+        return historyResponse;
+      }
+      if (path.startsWith('/games/demo-chess/rulespec/diff')) {
+        return diffResponse;
+      }
+      return null;
+    });
+
+    render(<VersionHistory />);
+
+    const restoreButtons = await screen.findAllByRole('button', { name: /Ripristina/i });
+    await user.click(restoreButtons[1]);
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      'Sei sicuro di voler ripristinare la versione 1.5.0? Questo creerà una nuova versione.'
+    );
+    expect(mockApi.get).not.toHaveBeenCalledWith('/games/demo-chess/rulespec/versions/1.5.0');
+    expect(mockApi.put).not.toHaveBeenCalled();
   });
 
   it('restores a version when confirmed and surfaces success feedback', async () => {
@@ -286,6 +345,10 @@ describe('VersionHistory page', () => {
 
     const restoreButtons = await screen.findAllByRole('button', { name: /Ripristina/i });
     await user.click(restoreButtons[1]);
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      'Sei sicuro di voler ripristinare la versione 1.5.0? Questo creerà una nuova versione.'
+    );
 
     await waitFor(() =>
       expect(mockApi.get).toHaveBeenCalledWith('/games/demo-chess/rulespec/versions/1.5.0')

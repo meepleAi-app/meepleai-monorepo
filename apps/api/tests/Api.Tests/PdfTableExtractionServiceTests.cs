@@ -1,3 +1,6 @@
+using System;
+using System.IO;
+using System.Linq;
 using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -140,5 +143,28 @@ public class PdfTableExtractionServiceTests
         Assert.Equal(0, diagram.Width);
         Assert.Equal(0, diagram.Height);
         Assert.Null(diagram.ImageData);
+    }
+
+    [Fact]
+    public async Task ExtractStructuredContentAsync_WithStructuredPdf_ReturnsTablesAndDiagrams()
+    {
+        // Arrange
+        var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "sample_table.pdf");
+
+        // Act
+        var result = await _service.ExtractStructuredContentAsync(fixturePath);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(1, result.TableCount);
+        Assert.Equal(result.TableCount, result.Tables.Count);
+        var table = Assert.Single(result.Tables);
+        Assert.Equal(new[] { "Name", "Value" }, table.Headers);
+        Assert.Equal(3, table.RowCount);
+        Assert.Equal(3, result.AtomicRuleCount);
+        Assert.Contains(result.AtomicRules, rule => rule.Contains("Name: Alpha", StringComparison.OrdinalIgnoreCase));
+        Assert.NotEmpty(result.Diagrams);
+        Assert.Equal(result.Diagrams.Count, result.DiagramCount);
+        Assert.All(result.Diagrams, diagram => Assert.Equal("Image", diagram.DiagramType));
     }
 }

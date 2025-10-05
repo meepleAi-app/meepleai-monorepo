@@ -11,6 +11,37 @@
 - ✅ Demo game created: `catan`
 - ✅ Authentication working (session cookie saved in `/tmp/meeple_test_cookies.txt`)
 
+### Automated Coverage Prerequisites
+
+Before running the automated coverage commands, make sure the local environment mimics the CI services:
+
+1. **Start PostgreSQL** (if it is not already running):
+   ```bash
+   sudo service postgresql start
+   sudo -u postgres psql -c "DROP DATABASE IF EXISTS meepleai_test;"
+   sudo -u postgres psql -c "CREATE DATABASE meepleai_test OWNER meeple;"
+   ```
+2. **Start Qdrant** (re-using the container/service that CI exposes). On machines with Docker you can run `docker run -d -p 6333:6333 qdrant/qdrant:v1.12.4`; otherwise, when using the downloaded binary located in `/tmp/qdrant`, launch it in a dedicated shell:
+   ```bash
+   cd /tmp/qdrant
+   ./qdrant
+   ```
+3. **Export the integration variables so the tests reuse the pre-started services instead of spinning Testcontainers**:
+   ```bash
+   export CI=1
+   export QDRANT_URL=http://localhost:6333
+   export ConnectionStrings__Postgres="Host=localhost;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass"
+   ```
+4. **Run coverage with the updated fixtures/log capture**:
+   ```bash
+   cd apps/api
+   dotnet test --collect:"XPlat Code Coverage" | tee ../../docs/coverage-logs/<date>-dotnet-test.log
+   ```
+   ```bash
+   cd ../web
+   npm run test -- --coverage | tee ../../docs/coverage-logs/<date>-npm-test.log
+   ```
+
 ### What Needs Manual Testing:
 
 #### Step 1: Get a PDF File

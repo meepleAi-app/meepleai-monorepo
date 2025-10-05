@@ -7,8 +7,9 @@
 
 ## 🧪 Latest Commands Executed
 
-- `dotnet test --collect:"XPlat Code Coverage"` (inside `apps/api`)
-- `npm run test -- --coverage` (inside `apps/web`)
+- `dotnet test --collect:"XPlat Code Coverage"` (inside `apps/api`) — attempted 2025-10-05, the run hung after executing the integration suites; see `docs/coverage-logs/2025-10-05-dotnet-test.log`.
+- `dotnet test /p:CollectCoverage=true ...` (inside `apps/api`) — coverlet fallback attempted, but long-running suites prevented completion in the sandbox.
+- `npm run test -- --runTestsByPath src/pages/api/__tests__/health.test.ts` (inside `apps/web`) — new smoke test added, full coverage run pending once the backend suite is stabilised.
 
 ## 🔍 Coverage Gaps & Untested Areas
 
@@ -21,7 +22,7 @@
 ### Frontend focus areas
 
 - **Pages without tests**: `src/pages/admin.tsx`, `index.tsx`, `n8n.tsx`, and `versions.tsx` remain without suites; add coverage to bring them above the 90% Jest threshold.
-- **API routes**: `src/pages/api/health.ts` is still uncovered and should gain at least a smoke test.
+- **API routes**: `src/pages/api/health.ts` now has a dedicated smoke test; expand coverage to the remaining `/api/*` routes when the Jest global threshold can be satisfied.
 - **Upload workflow**: Even with the refreshed tests, `src/pages/upload.tsx` still has uncovered multi-step flows and error branches—target these when updating the suite.
 
 ## 📂 Coverage Artifacts

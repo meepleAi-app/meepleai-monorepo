@@ -3,10 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using Api.Services;
-using iText.IO.Image;
-using iText.Kernel.Pdf;
-using iText.Layout;
-using iText.Layout.Element;
 using Microsoft.Extensions.Logging;
 using Moq;
 using QuestPDF.Fluent;
@@ -15,8 +11,6 @@ using QuestPDF.Infrastructure;
 using Xunit;
 
 using QuestPdfDocument = QuestPDF.Fluent.Document;
-using ITextDocument = iText.Layout.Document;
-using ITextImage = iText.Layout.Element.Image;
 
 namespace Api.Tests;
 
@@ -60,6 +54,8 @@ public class PdfTableExtractionServiceTests : IDisposable
 
     private void CreateStructuredPdf(string filePath)
     {
+        // Generates a QuestPDF document that includes both a table and an image placeholder so the
+        // structured extraction tests exercise table parsing and diagram detection without relying on iText.
         QuestPdfDocument.Create(container =>
         {
             container.Page(page =>
@@ -112,54 +108,25 @@ public class PdfTableExtractionServiceTests : IDisposable
     public async Task ExtractStructuredContentAsync_WithPdfContainingTableAndImage_PopulatesStructuredCollections()
     {
         // Arrange
-        var tempFilePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.pdf");
+        var pdfPath = CreateTempPdfPath();
+        CreateStructuredPdf(pdfPath);
 
-        try
-        {
-            using (var writer = new PdfWriter(tempFilePath))
-            using (var pdfDocument = new PdfDocument(writer))
-            using (var document = new ITextDocument(pdfDocument))
-            {
-                var table = new Table(2);
-                table.AddHeaderCell("Header 1");
-                table.AddHeaderCell("Header 2");
-                table.AddCell("Row 1 Column 1");
-                table.AddCell("Row 1 Column 2");
-                table.AddCell("Row 2 Column 1");
-                table.AddCell("Row 2 Column 2");
-                document.Add(table);
+        // Act
+        var result = await _service.ExtractStructuredContentAsync(pdfPath);
 
-                var imageBytes = Convert.FromBase64String(
-                    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=");
-                var imageData = ImageDataFactory.Create(imageBytes);
-                var image = new ITextImage(imageData).ScaleToFit(50, 50);
-                document.Add(image);
-            }
+        // Assert
+        Assert.True(result.Success);
+        Assert.NotEmpty(result.Tables);
 
-            // Act
-            var result = await _service.ExtractStructuredContentAsync(tempFilePath);
+        var table = result.Tables.First();
+        Assert.Equal(new[] { "Phase", "Task", "Count" }, table.Headers);
+        Assert.Equal(table.ColumnCount, table.Headers.Count);
+        Assert.True(table.RowCount >= 1);
+        Assert.True(result.AtomicRules.Count >= table.RowCount);
+        Assert.Contains(result.AtomicRules, rule => rule.Contains("Setup", StringComparison.OrdinalIgnoreCase));
 
-            // Assert
-            Assert.True(result.Success);
-            Assert.NotEmpty(result.Tables);
-
-            var firstTable = result.Tables.First();
-            Assert.True(firstTable.ColumnCount >= 2);
-            Assert.True(firstTable.RowCount >= 2);
-
-            Assert.True(result.AtomicRules.Count >= firstTable.RowCount);
-            Assert.Contains(result.AtomicRules, rule => rule.Contains("Row 1 Column 1", StringComparison.OrdinalIgnoreCase));
-
-            Assert.NotEmpty(result.Diagrams);
-            Assert.Contains(result.Diagrams, diagram => diagram.Width > 0 && diagram.Height > 0);
-        }
-        finally
-        {
-            if (File.Exists(tempFilePath))
-            {
-                File.Delete(tempFilePath);
-            }
-        }
+        Assert.NotEmpty(result.Diagrams);
+        Assert.Contains(result.Diagrams, diagram => diagram.Width > 0 && diagram.Height > 0);
     }
 
     [Fact]

@@ -9,6 +9,7 @@ using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Events;
@@ -166,10 +167,9 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-    // Use EnsureCreated for testing, Migrate for production
-    if (app.Environment.IsEnvironment("Testing"))
+    if (ShouldSkipMigrations(app, db))
     {
-        // Test environment: database is already created by WebApplicationFactory
+        // Test or in-memory environments create the schema elsewhere.
     }
     else
     {
@@ -404,6 +404,42 @@ app.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, Au
         return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 });
+
+static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)
+{
+    if (app.Environment.IsEnvironment("Testing"))
+    {
+        return true;
+    }
+
+    if (app.Configuration.GetValue<bool?>("SkipMigrations") == true)
+    {
+        return true;
+    }
+
+    var providerName = db.Database.ProviderName;
+    if (providerName != null && providerName.Contains("Sqlite", StringComparison.OrdinalIgnoreCase))
+    {
+        var connection = db.Database.GetDbConnection();
+        var connectionString = connection?.ConnectionString;
+        var dataSource = connection?.DataSource;
+
+        if (!string.IsNullOrWhiteSpace(connectionString) &&
+            (connectionString.Contains(":memory:", StringComparison.OrdinalIgnoreCase) ||
+             connectionString.Contains("Mode=Memory", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(dataSource) &&
+            dataSource.Contains(":memory:", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 app.MapPost("/auth/logout", async (HttpContext context, AuthService auth, CancellationToken ct) =>
 {

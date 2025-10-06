@@ -107,6 +107,7 @@ public class PdfTableExtractionService
         var currentRows = new List<string[]>();
         List<ColumnBoundary>? currentBoundaries = null;
         var tableStartLine = -1;
+        var lastLineWasBlank = false;
 
         for (int i = 0; i < lines.Count; i++)
         {
@@ -118,12 +119,32 @@ public class PdfTableExtractionService
                 if (currentBoundaries != null && currentBoundaries.Count > 0 && currentRows.Count > 0)
                 {
                     currentRows.Add(Enumerable.Repeat(string.Empty, currentBoundaries.Count).ToArray());
-                    continue;
+                }
+                else
+                {
+                    FinalizeCurrentTable();
                 }
 
-                FinalizeCurrentTable();
+                lastLineWasBlank = true;
                 continue;
             }
+
+            if (currentBoundaries != null && lastLineWasBlank)
+            {
+                var previewSplit = SplitIntoColumns(line, null);
+                var previewColumnCount = Math.Max(previewSplit.Columns.Count, previewSplit.Boundaries.Count);
+
+                if (previewColumnCount > 0 && previewColumnCount < currentBoundaries.Count)
+                {
+                    TrimTrailingEmptyRows();
+                    FinalizeCurrentTable();
+                    i--;
+                    lastLineWasBlank = false;
+                    continue;
+                }
+            }
+
+            lastLineWasBlank = false;
 
             if (currentBoundaries == null)
             {
@@ -195,6 +216,8 @@ public class PdfTableExtractionService
 
         void FinalizeCurrentTable()
         {
+            TrimTrailingEmptyRows();
+
             if (currentRows.Count > 1 && currentBoundaries != null)
             {
                 tables.Add(CreateTableFromRows(
@@ -207,6 +230,15 @@ public class PdfTableExtractionService
             currentRows.Clear();
             currentBoundaries = null;
             tableStartLine = -1;
+            lastLineWasBlank = false;
+        }
+
+        void TrimTrailingEmptyRows()
+        {
+            while (currentRows.Count > 0 && currentRows[^1].All(value => string.IsNullOrWhiteSpace(value)))
+            {
+                currentRows.RemoveAt(currentRows.Count - 1);
+            }
         }
     }
 

@@ -132,7 +132,7 @@ public class PdfTableExtractionServiceTests : IDisposable
     }
 
     [Fact]
-    public void DetectTablesInPage_WithIrregularColumnsAndEndOfPage_ReturnsExpectedTables()
+    public void DetectTablesInPage_WithIrregularColumnsSeparatedByBlankLine_ReturnsSeparateTables()
     {
         // Arrange
         var pageText = """
@@ -140,8 +140,8 @@ Header 1   Header 2   Header 3
 Value 1    Value 2    Value 3
 Value 4    Value 5
 
-Another Header 1   Another Header 2
-Row A1             Row A2
+Next Header 1   Next Header 2
+Row A1          Row A2
 """;
 
         // Act
@@ -152,12 +152,17 @@ Row A1             Row A2
 
         var firstTable = tables[0];
         Assert.Equal(3, firstTable.ColumnCount);
+        Assert.Equal(new[] { "Header 1", "Header 2", "Header 3" }, firstTable.Headers);
         Assert.Equal(2, firstTable.RowCount);
-        Assert.Equal(2, firstTable.Rows[1].Length); // Irregular columns handled
+        Assert.DoesNotContain(firstTable.Rows, row => row.All(string.IsNullOrWhiteSpace));
+        Assert.Equal(string.Empty, firstTable.Rows[1][2]);
 
         var secondTable = tables[1];
         Assert.Equal(2, secondTable.ColumnCount);
+        Assert.Equal(new[] { "Next Header 1", "Next Header 2" }, secondTable.Headers);
         Assert.Equal(1, secondTable.RowCount);
+        Assert.Equal("Row A1", secondTable.Rows[0][0]);
+        Assert.Equal("Row A2", secondTable.Rows[0][1]);
     }
 
     [Fact]

@@ -1,17 +1,5 @@
 import { test, expect } from '@playwright/test';
 
-type N8nConfig = {
-  id: string;
-  name: string;
-  baseUrl: string;
-  webhookUrl: string | null;
-  isActive: boolean;
-  lastTestedAt: string | null;
-  lastTestResult: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
 const apiBase = 'http://localhost:8080';
 
 type N8nConfig = {

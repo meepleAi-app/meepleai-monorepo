@@ -137,39 +137,36 @@ builder.Services.AddScoped<PdfTableExtractionService>();
 builder.Services.AddScoped<PdfStorageService>();
 builder.Services.AddScoped<N8nConfigService>();
 
-builder.Services.AddCors();
-
-builder.Services.AddOptions<CorsOptions>()
-    .Configure<IConfiguration>((options, configuration) =>
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("web", policy =>
     {
-        options.AddPolicy("web", policy =>
+        var corsOrigins = builder.Configuration
+            .GetSection("Cors:AllowedOrigins")
+            .Get<string[]>() ?? Array.Empty<string>();
+
+        var topLevelOrigins = builder.Configuration
+            .GetSection("AllowedOrigins")
+            .Get<string[]>() ?? Array.Empty<string>();
+
+        var configuredOrigins = corsOrigins
+            .Concat(topLevelOrigins)
+            .Where(origin => !string.IsNullOrWhiteSpace(origin))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (configuredOrigins.Length == 0)
         {
-            var corsOrigins = configuration
-                .GetSection("Cors:AllowedOrigins")
-                .Get<string[]>() ?? Array.Empty<string>();
+            policy.WithOrigins("http://localhost:3000");
+        }
+        else
+        {
+            policy.WithOrigins(configuredOrigins);
+        }
 
-            var topLevelOrigins = configuration
-                .GetSection("AllowedOrigins")
-                .Get<string[]>() ?? Array.Empty<string>();
-
-            var configuredOrigins = corsOrigins
-                .Concat(topLevelOrigins)
-                .Where(origin => !string.IsNullOrWhiteSpace(origin))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToArray();
-
-            if (configuredOrigins.Length == 0)
-            {
-                policy.WithOrigins("http://localhost:3000");
-            }
-            else
-            {
-                policy.WithOrigins(configuredOrigins);
-            }
-
-            policy.AllowAnyHeader().AllowAnyMethod().AllowCredentials();
-        });
+        policy.AllowAnyHeader().AllowAnyMethod().AllowCredentials();
     });
+});
 
 var app = builder.Build();
 

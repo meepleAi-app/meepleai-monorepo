@@ -1,7 +1,9 @@
 using System;
+using System.Collections;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -221,11 +223,72 @@ Row A1             Row A2
 
     private List<PdfTable> InvokeDetectTablesInPage(string pageText, int pageNum)
     {
-        var method = typeof(PdfTableExtractionService).GetMethod(
+        var serviceType = typeof(PdfTableExtractionService);
+        var method = serviceType.GetMethod(
             "DetectTablesInPage",
             BindingFlags.Instance | BindingFlags.NonPublic);
 
-        return (List<PdfTable>)method!.Invoke(_service, new object[] { pageText, pageNum })!;
+        var lineType = serviceType.GetNestedType("PositionedTextLine", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("PositionedTextLine type not found");
+        var characterType = serviceType.GetNestedType("PositionedCharacter", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("PositionedCharacter type not found");
+
+        var addCharacterMethod = lineType.GetMethod("AddCharacter", BindingFlags.Instance | BindingFlags.Public)
+            ?? throw new InvalidOperationException("AddCharacter method not found");
+        var sortCharactersMethod = lineType.GetMethod("SortCharacters", BindingFlags.Instance | BindingFlags.Public)
+            ?? throw new InvalidOperationException("SortCharacters method not found");
+
+        var lineListType = typeof(List<>).MakeGenericType(lineType);
+        var lines = (IList)Activator.CreateInstance(lineListType)!;
+
+        var normalizedText = pageText.Replace("\r\n", "\n");
+        var rows = normalizedText.Split('\n');
+        var baseY = rows.Length * 10f;
+        const float columnSpacing = 120f;
+        const float characterWidth = 10f;
+
+        for (var rowIndex = 0; rowIndex < rows.Length; rowIndex++)
+        {
+            var row = rows[rowIndex];
+            var lineY = baseY - rowIndex * 10f;
+            var line = Activator.CreateInstance(lineType, new object[] { lineY })
+                ?? throw new InvalidOperationException("Failed to create PositionedTextLine instance");
+
+            if (!string.IsNullOrWhiteSpace(row))
+            {
+                var columns = Regex.Split(row.TrimEnd(), "\\s{2,}");
+
+                for (var columnIndex = 0; columnIndex < columns.Length; columnIndex++)
+                {
+                    var columnText = columns[columnIndex];
+
+                    if (string.IsNullOrEmpty(columnText))
+                    {
+                        continue;
+                    }
+
+                    var startX = columnIndex * columnSpacing;
+
+                    for (var charIndex = 0; charIndex < columnText.Length; charIndex++)
+                    {
+                        var characterText = columnText[charIndex].ToString();
+                        var characterX = startX + charIndex * characterWidth;
+                        var character = Activator.CreateInstance(
+                            characterType,
+                            new object[] { characterText, characterX, lineY, characterWidth })
+                            ?? throw new InvalidOperationException("Failed to create PositionedCharacter instance");
+
+                        addCharacterMethod.Invoke(line, new[] { character });
+                    }
+                }
+
+                sortCharactersMethod.Invoke(line, null);
+            }
+
+            lines.Add(line);
+        }
+
+        return (List<PdfTable>)method!.Invoke(_service, new object[] { lines, pageNum })!;
     }
 
     private List<string> InvokeConvertTableToAtomicRules(PdfTable table)

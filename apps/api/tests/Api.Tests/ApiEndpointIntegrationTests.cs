@@ -54,6 +54,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
         var cookies = ExtractCookies(response);
         Assert.Contains(cookies, cookie => cookie.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal));
+        AssertSessionCookieSecure(response);
 
         using var document = JsonDocument.Parse(json);
         AssertAuthResponsePayload(document.RootElement);
@@ -84,6 +85,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
         var cookies = ExtractCookies(response);
         Assert.Contains(cookies, cookie => cookie.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal));
+        AssertSessionCookieSecure(response);
 
         using var document = JsonDocument.Parse(json);
         AssertAuthResponsePayload(document.RootElement);
@@ -186,6 +188,14 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
     {
         using var client = _factory.CreateClient();
         await RegisterAndAuthenticateAsync(client, email, role);
+    }
+
+    private static void AssertSessionCookieSecure(HttpResponseMessage response)
+    {
+        Assert.True(response.Headers.TryGetValues("Set-Cookie", out var values));
+        var sessionCookie = Assert.Single(values.Where(value => value.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal)));
+        Assert.Contains("Secure", sessionCookie);
+        Assert.Contains("SameSite=None", sessionCookie);
     }
 
     private async Task<List<string>> RegisterAndAuthenticateAsync(HttpClient client, string email, string role = "Admin")

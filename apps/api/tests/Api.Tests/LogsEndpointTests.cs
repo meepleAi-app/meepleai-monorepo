@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Http;
 using System.Net.Http.Json;
+using System.Linq;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -59,7 +61,11 @@ public class LogsEndpointTests : IClassFixture<WebApplicationFactoryFixture>
         }
 
         using var client = _factory.CreateClient();
-        var response = await client.GetAsync("/logs");
+        var cookies = await RegisterAndAuthenticateAsync(client, $"admin-logs-{Guid.NewGuid():N}@example.com", "Admin");
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/logs");
+        AddCookies(request, cookies);
+        var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -79,5 +85,64 @@ public class LogsEndpointTests : IClassFixture<WebApplicationFactoryFixture>
         Assert.Equal("req-001", older.RequestId);
         Assert.Equal("INFO", older.Level);
         Assert.Equal("Two players.", older.Message);
+    }
+
+    [Fact]
+    public async Task GetLogs_ReturnsUnauthorizedWhenSessionMissing()
+    {
+        using var client = _factory.CreateClient();
+        var response = await client.GetAsync("/logs");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    public static IEnumerable<object[]> NonAdminRoles => new[]
+    {
+        new object[] { "Editor" },
+        new object[] { "User" }
+    };
+
+    [Theory]
+    [MemberData(nameof(NonAdminRoles))]
+    public async Task GetLogs_ReturnsForbiddenForNonAdminRoles(string role)
+    {
+        using var client = _factory.CreateClient();
+        var cookies = await RegisterAndAuthenticateAsync(client, $"{role.ToLowerInvariant()}-logs-{Guid.NewGuid():N}@example.com", role);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/logs");
+        AddCookies(request, cookies);
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    private static void AddCookies(HttpRequestMessage request, IReadOnlyCollection<string> cookies)
+    {
+        if (cookies.Count == 0)
+        {
+            return;
+        }
+
+        request.Headers.Add("Cookie", string.Join("; ", cookies));
+    }
+
+    private static List<string> ExtractCookies(HttpResponseMessage response)
+    {
+        if (!response.Headers.TryGetValues("Set-Cookie", out var values))
+        {
+            return new List<string>();
+        }
+
+        return values
+            .Select(value => value.Split(';')[0])
+            .ToList();
+    }
+
+    private static async Task<List<string>> RegisterAndAuthenticateAsync(HttpClient client, string email, string role)
+    {
+        var payload = new RegisterPayload(email, "Password123!", "Logs Tester", role);
+        var response = await client.PostAsJsonAsync("/auth/register", payload);
+        response.EnsureSuccessStatusCode();
+        return ExtractCookies(response);
     }
 }

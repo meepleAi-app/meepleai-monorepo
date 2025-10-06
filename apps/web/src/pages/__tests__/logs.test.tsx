@@ -67,4 +67,26 @@ describe('LogsPage', () => {
     expect(screen.getByText(/No logs found/i)).toBeInTheDocument();
     expect(screen.getByText(/basic observability dashboard/i)).toBeInTheDocument();
   });
+
+  it('handles logs without request or user identifiers when filtering', async () => {
+    const logsWithoutIds = [
+      {
+        timestamp: new Date('2024-01-01T11:00:00Z').toISOString(),
+        level: 'INFO',
+        message: 'System maintenance in progress'
+      }
+    ];
+
+    mockGet.mockResolvedValueOnce(logsWithoutIds);
+
+    const user = userEvent.setup();
+
+    render(<LogsPage />);
+
+    const filterInput = await screen.findByPlaceholderText(/Filter logs/i);
+
+    await user.type(filterInput, 'maintenance');
+
+    expect(screen.getByText(/System maintenance in progress/i)).toBeInTheDocument();
+  });
 });

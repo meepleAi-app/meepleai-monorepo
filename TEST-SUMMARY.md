@@ -6,8 +6,9 @@ _Last updated: 2025-10-12 (metrics pending fresh coverage run)_
 
 | Suite | Command | Outcome | Key Notes |
 |-------|---------|---------|-----------|
-| Backend (`apps/api`) | `dotnet test --collect:"XPlat Code Coverage"` | **Failed:** 192 passed / 8 failed (200 total) | Qdrant Testcontainers cannot start without a Docker daemon; coverage artifacts still produced. Rerun required to ingest the new unit tests for `AiRequestLogService`, `GameService`, and `LlmService`. |
-| Frontend (`apps/web`) | `npm run test -- --coverage` | **Failed:** 1 suite, 2 tests passed, coverage thresholds unmet | Jest exits with code 1 because global 90% thresholds are not satisfied; coverage reports are generated. Re-execute to capture the new suites covering `chat`, `editor`, `logs`, and the expanded `upload` flows. |
+| Backend (`apps/api`) | `dotnet test --collect:"XPlat Code Coverage"` | **Blocked:** process hung after integration suites | Local sandbox lacks Docker and long-running integration tests never completed; see `docs/coverage-logs/2025-10-05-dotnet-test.log`. Coverage refresh pending once the suite can terminate cleanly. |
+| Backend (`apps/api`) | `dotnet test /p:CollectCoverage=true ...` | **Blocked:** coverlet run also stalled | Coverlet fallback attempted but the same integration hangs prevented coverage output. |
+| Frontend (`apps/web`) | `npm run test -- --runTestsByPath src/pages/api/__tests__/health.test.ts` | **Passed:** 1 suite (1 test) | Added smoke test for `/api/health`; execute the full `npm run test -- --coverage` flow after backend coverage stabilises. |
 
 ## Coverage Totals
 
@@ -27,7 +28,7 @@ _Last updated: 2025-10-12 (metrics pending fresh coverage run)_
 
 ### Frontend
 - **Next.js pages**: `admin.tsx`, `index.tsx`, `n8n.tsx`, and `versions.tsx` are still missing dedicated coverage.
-- **API routes**: `pages/api/health.ts` remains uncovered.
+- **API routes**: `/api/health` now has a Jest smoke test; extend the pattern to the rest of the API routes.
 - **Upload workflow**: `upload.tsx` now has expanded tests but still misses multi-step error states; keep iterating to meet thresholds.
 
 ## Tooling & Reproduction Checklist
@@ -41,6 +42,7 @@ _Last updated: 2025-10-12 (metrics pending fresh coverage run)_
    ```bash
    cd apps/api
    dotnet test --collect:"XPlat Code Coverage"
+   # (2025-10-05: hangs after integration suites; run alongside a pre-started Postgres + Qdrant service or use CI.)
    # Coverage: apps/api/tests/Api.Tests/TestResults/<timestamp>/coverage.cobertura.xml
    ```
 

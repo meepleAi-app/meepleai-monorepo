@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AdminDashboard from '../admin';
+import { API_BASE_FALLBACK } from '../../lib/api';
 
 type FetchMock = jest.MockedFunction<typeof fetch>;
 
@@ -241,6 +242,60 @@ describe('AdminDashboard', () => {
     expect(revokeObjectURLMock).toHaveBeenCalledWith('blob:mock-url');
   });
 
+  it('handles requests without user or game identifiers when filtering', async () => {
+    const requestsPayload = {
+      requests: [
+        {
+          id: '3',
+          userId: null,
+          gameId: null,
+          endpoint: 'qa',
+          query: null,
+          responseSnippet: null,
+          latencyMs: 120,
+          tokenCount: 24,
+          promptTokens: 12,
+          completionTokens: 12,
+          confidence: null,
+          status: 'Success',
+          errorMessage: null,
+          ipAddress: '127.0.0.3',
+          userAgent: 'jest',
+          createdAt: '2024-01-03T12:00:00.000Z',
+          model: null,
+          finishReason: null
+        }
+      ]
+    };
+
+    const statsPayload = {
+      totalRequests: 1,
+      avgLatencyMs: 120,
+      totalTokens: 24,
+      successRate: 1,
+      endpointCounts: { qa: 1 },
+      feedbackCounts: {},
+      totalFeedback: 0
+    };
+
+    fetchMock
+      .mockResolvedValueOnce(createJsonResponse(requestsPayload))
+      .mockResolvedValueOnce(createJsonResponse(statsPayload));
+
+    const user = userEvent.setup();
+
+    render(<AdminDashboard />);
+
+    expect(await screen.findByText('Admin Dashboard')).toBeInTheDocument();
+
+    const filterInput = screen.getByPlaceholderText('Filter by query, endpoint, user ID, or game ID...');
+
+    await user.type(filterInput, 'qa');
+
+    expect(screen.getAllByText('qa').length).toBeGreaterThan(0);
+    expect(screen.getByText('Success')).toBeInTheDocument();
+  });
+
   it('renders error state when the API responds with an error', async () => {
     fetchMock.mockResolvedValueOnce(createJsonResponse({}, false));
 
@@ -249,5 +304,43 @@ describe('AdminDashboard', () => {
     expect(await screen.findByText('Error')).toBeInTheDocument();
     expect(screen.getByText('Failed to fetch requests')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to Home' })).toBeInTheDocument();
+  });
+
+  it('falls back to the localhost API base when NEXT_PUBLIC_API_BASE is unset', async () => {
+    delete process.env.NEXT_PUBLIC_API_BASE;
+
+    const emptyRequests = { requests: [] };
+    const emptyStats = {
+      totalRequests: 0,
+      avgLatencyMs: 0,
+      totalTokens: 0,
+      successRate: 0,
+      endpointCounts: {},
+      feedbackCounts: {},
+      totalFeedback: 0
+    };
+
+    fetchMock
+      .mockResolvedValueOnce(createJsonResponse(emptyRequests))
+      .mockResolvedValueOnce(createJsonResponse(emptyStats));
+
+    render(<AdminDashboard />);
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        1,
+        `${API_BASE_FALLBACK}/admin/requests?limit=100`,
+        expect.objectContaining({ credentials: 'include' })
+      )
+    );
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        2,
+        `${API_BASE_FALLBACK}/admin/stats`,
+        expect.objectContaining({ credentials: 'include' })
+      )
+    );
+
+    process.env.NEXT_PUBLIC_API_BASE = apiBase;
   });
 });

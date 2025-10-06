@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { API_BASE } from "../lib/api";
 
 type AiRequest = {
   id: string;
@@ -46,7 +47,7 @@ export default function AdminDashboard() {
 
       // Fetch requests
       const endpoint = endpointFilter === "all" ? "" : `&endpoint=${endpointFilter}`;
-      const requestsRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/admin/requests?limit=100${endpoint}`, {
+      const requestsRes = await fetch(`${API_BASE}/admin/requests?limit=100${endpoint}`, {
         credentials: "include"
       });
 
@@ -58,7 +59,7 @@ export default function AdminDashboard() {
       setRequests(requestsData.requests);
 
       // Fetch stats
-      const statsRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/admin/stats`, {
+      const statsRes = await fetch(`${API_BASE}/admin/stats`, {
         credentials: "include"
       });
 

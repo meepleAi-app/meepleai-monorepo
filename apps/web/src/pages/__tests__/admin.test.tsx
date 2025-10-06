@@ -1,8 +1,13 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import AdminDashboard from '../admin';
 
 type FetchMock = jest.MockedFunction<typeof fetch>;
+
+const createJsonResponse = (data: unknown, ok = true) =>
+  ({
+    ok,
+    json: async () => data
+  } as unknown as Response);
 
 describe('AdminDashboard', () => {
   const originalFetch = global.fetch;
@@ -16,11 +21,17 @@ describe('AdminDashboard', () => {
   let clickSpy: jest.SpyInstance;
   const apiBase = 'https://api.example.com';
 
-  const createJsonResponse = (data: unknown, ok = true) =>
-    ({
-      ok,
-      json: async () => data
-    } as unknown as Response);
+  const loadAdminDashboard = () => {
+    const adminPath = require.resolve('../admin');
+    const apiCacheKeys = Object.keys(require.cache).filter((key) => key.includes('lib/api'));
+
+    delete require.cache[adminPath];
+    apiCacheKeys.forEach((key) => {
+      delete require.cache[key];
+    });
+
+    return require('../admin').default;
+  };
 
   beforeAll(() => {
     fetchMock = jest.fn() as FetchMock;
@@ -72,7 +83,6 @@ describe('AdminDashboard', () => {
   });
 
   beforeEach(() => {
-    process.env.NEXT_PUBLIC_API_BASE = apiBase;
     fetchMock.mockReset();
     createObjectURLMock.mockClear();
     revokeObjectURLMock.mockClear();
@@ -83,6 +93,7 @@ describe('AdminDashboard', () => {
   });
 
   afterEach(() => {
+    delete process.env.NEXT_PUBLIC_API_BASE;
     jest.clearAllMocks();
     createElementSpy.mockImplementation((...args: Parameters<typeof boundCreateElement>) =>
       boundCreateElement(...args)
@@ -91,6 +102,9 @@ describe('AdminDashboard', () => {
 
   it('renders loading state while data is being fetched', () => {
     fetchMock.mockImplementation(() => new Promise(() => {}));
+
+    process.env.NEXT_PUBLIC_API_BASE = apiBase;
+    const AdminDashboard = loadAdminDashboard();
 
     render(<AdminDashboard />);
 
@@ -169,11 +183,20 @@ describe('AdminDashboard', () => {
       .mockResolvedValueOnce(createJsonResponse(qaOnlyPayload))
       .mockResolvedValueOnce(createJsonResponse(statsPayload));
 
+    const AdminDashboard = loadAdminDashboard();
+
     render(<AdminDashboard />);
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
         `${apiBase}/admin/requests?limit=100`,
+        expect.objectContaining({ credentials: 'include' })
+      )
+    );
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        `${apiBase}/admin/stats`,
         expect.objectContaining({ credentials: 'include' })
       )
     );
@@ -244,10 +267,38 @@ describe('AdminDashboard', () => {
   it('renders error state when the API responds with an error', async () => {
     fetchMock.mockResolvedValueOnce(createJsonResponse({}, false));
 
+    const AdminDashboard = loadAdminDashboard();
+
     render(<AdminDashboard />);
 
     expect(await screen.findByText('Error')).toBeInTheDocument();
     expect(screen.getByText('Failed to fetch requests')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to Home' })).toBeInTheDocument();
+  });
+
+});
+
+describe('AdminDashboard when NEXT_PUBLIC_API_BASE is not set', () => {
+  const originalApiBase = process.env.NEXT_PUBLIC_API_BASE;
+
+  beforeAll(() => {
+    jest.resetModules();
+    delete process.env.NEXT_PUBLIC_API_BASE;
+    process.env.NEXT_PUBLIC_API_BASE = '';
+  });
+
+  afterAll(() => {
+    jest.resetModules();
+    if (originalApiBase === undefined) {
+      delete process.env.NEXT_PUBLIC_API_BASE;
+    } else {
+      process.env.NEXT_PUBLIC_API_BASE = originalApiBase;
+    }
+  });
+
+  it('falls back to localhost API base when NEXT_PUBLIC_API_BASE is not set', () => {
+    const { API_BASE } = require('../../lib/api');
+    require('../admin');
+    expect(API_BASE).toBe('http://localhost:8080');
   });
 });

@@ -159,6 +159,51 @@ builder.Services.AddCors(options =>
     });
 });
 
+var forwardedHeadersEnabled = forwardedHeadersSection.GetValue<bool?>("Enabled") ?? true;
+
+if (forwardedHeadersEnabled)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+        var forwardLimit = forwardedHeadersSection.GetValue<int?>("ForwardLimit");
+        if (forwardLimit.HasValue)
+        {
+            options.ForwardLimit = forwardLimit;
+        }
+
+        var requireHeaderSymmetry = forwardedHeadersSection.GetValue<bool?>("RequireHeaderSymmetry");
+        if (requireHeaderSymmetry.HasValue)
+        {
+            options.RequireHeaderSymmetry = requireHeaderSymmetry.Value;
+        }
+
+        var knownProxies = forwardedHeadersSection.GetSection("KnownProxies").Get<string[]>() ?? Array.Empty<string>();
+        foreach (var proxy in knownProxies)
+        {
+            if (!string.IsNullOrWhiteSpace(proxy) && IPAddress.TryParse(proxy, out var proxyAddress))
+            {
+                options.KnownProxies.Add(proxyAddress);
+            }
+        }
+
+        var knownNetworks = forwardedHeadersSection.GetSection("KnownNetworks").Get<string[]>() ?? Array.Empty<string>();
+        foreach (var network in knownNetworks)
+        {
+            if (string.IsNullOrWhiteSpace(network))
+            {
+                continue;
+            }
+
+            var parts = network.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var networkAddress) && int.TryParse(parts[1], out var prefixLength))
+            {
+                options.KnownNetworks.Add(new IPNetwork(networkAddress, prefixLength));
+            }
+        }
+    });
+}
 
 var app = builder.Build();
 

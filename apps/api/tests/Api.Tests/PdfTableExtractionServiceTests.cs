@@ -413,6 +413,8 @@ Row A1             Row A2
         Assert.NotEmpty(result.Diagrams);
         Assert.Equal(result.Diagrams.Count, result.DiagramCount);
         Assert.All(result.Diagrams, diagram => Assert.Equal("Image", diagram.DiagramType));
+    
+    [Fact]
     public async Task ExtractStructuredContentAsync_WithStructuredPdfFixture_ParsesTablesDiagramsAndAtomicRules()
     {
         // Arrange

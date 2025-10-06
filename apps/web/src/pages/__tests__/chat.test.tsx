@@ -148,4 +148,95 @@ describe('ChatPage', () => {
 
     consoleErrorSpy.mockRestore();
   });
+
+  it('handles multiple messages in a conversation', async () => {
+    mockApi.get.mockResolvedValue(mockAuthResponse);
+    mockApi.post
+      .mockResolvedValueOnce({
+        answer: 'Prima risposta',
+        snippets: []
+      })
+      .mockResolvedValueOnce({
+        answer: 'Seconda risposta',
+        snippets: []
+      });
+
+    render(<ChatPage />);
+
+    await screen.findByRole('heading', { name: /MeepleAI Chat/i });
+
+    const user = userEvent.setup();
+    const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
+
+    // First message
+    await user.type(input, 'Prima domanda?');
+    await user.click(screen.getByRole('button', { name: /Invia/i }));
+
+    // Wait for first response
+    const firstResponse = await screen.findByText('Prima risposta');
+    expect(firstResponse).toBeInTheDocument();
+
+    // Second message - input should have been cleared
+    await user.type(input, 'Seconda domanda?');
+    await user.click(screen.getByRole('button', { name: /Invia/i }));
+
+    // Wait for second response
+    const secondResponse = await screen.findByText('Seconda risposta');
+    expect(secondResponse).toBeInTheDocument();
+
+    // Both questions and responses should be visible
+    expect(screen.getByText('Prima domanda?')).toBeInTheDocument();
+    expect(screen.getByText('Seconda domanda?')).toBeInTheDocument();
+  });
+
+  it('allows changing the selected game', async () => {
+    mockApi.get.mockResolvedValue(mockAuthResponse);
+    mockApi.post.mockResolvedValueOnce({
+      answer: 'Risposta per nuovo gioco',
+      snippets: []
+    });
+    mockApi.post.mockResolvedValueOnce({ ok: true });
+
+    render(<ChatPage />);
+
+    await screen.findByRole('heading', { name: /MeepleAI Chat/i });
+
+    const user = userEvent.setup();
+    const gameSelect = screen.getByRole('combobox', { name: /Gioco/i });
+
+    // Change game
+    await user.selectOptions(gameSelect, 'demo-chess');
+    expect(gameSelect).toHaveValue('demo-chess');
+
+    // Send message with new game
+    const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
+    await user.type(input, 'Domanda per il gioco selezionato');
+    await user.click(screen.getByRole('button', { name: /Invia/i }));
+
+    await waitFor(() =>
+      expect(mockApi.post).toHaveBeenCalledWith('/agents/qa', {
+        gameId: 'demo-chess',
+        query: 'Domanda per il gioco selezionato'
+      })
+    );
+  });
+
+  it('disables send button while loading', async () => {
+    mockApi.get.mockResolvedValue(mockAuthResponse);
+    mockApi.post.mockImplementation(() => new Promise(() => {})); // Never resolves
+
+    render(<ChatPage />);
+
+    await screen.findByRole('heading', { name: /MeepleAI Chat/i });
+
+    const user = userEvent.setup();
+    const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
+    await user.type(input, 'Test message');
+
+    const sendButton = screen.getByRole('button', { name: /Invia/i });
+    await user.click(sendButton);
+
+    // Button should be disabled while loading
+    expect(sendButton).toBeDisabled();
+  });
 });

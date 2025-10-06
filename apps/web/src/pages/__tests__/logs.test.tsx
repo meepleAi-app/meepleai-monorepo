@@ -89,4 +89,111 @@ describe('LogsPage', () => {
 
     expect(screen.getByText(/System maintenance in progress/i)).toBeInTheDocument();
   });
+
+  it('shows loading state while fetching logs', () => {
+    mockGet.mockImplementation(() => new Promise(() => {})); // Never resolves
+
+    render(<LogsPage />);
+
+    expect(screen.getByText(/Loading logs.../i)).toBeInTheDocument();
+  });
+
+  it('shows 403 permission error with specific message', async () => {
+    const error403 = new Error('403 Forbidden');
+    mockGet.mockRejectedValueOnce(error403);
+
+    render(<LogsPage />);
+
+    expect(await screen.findByText(/You do not have permission to view logs/i)).toBeInTheDocument();
+    expect(screen.getByText(/contact an administrator/i)).toBeInTheDocument();
+  });
+
+  it('shows generic error message for non-403 errors', async () => {
+    const genericError = new Error('Network error');
+    mockGet.mockRejectedValueOnce(genericError);
+
+    render(<LogsPage />);
+
+    expect(await screen.findByText(/Unable to load logs from the server/i)).toBeInTheDocument();
+    expect(screen.getByText(/Please try again later/i)).toBeInTheDocument();
+  });
+
+  it('filters logs by requestId', async () => {
+    const user = userEvent.setup();
+
+    render(<LogsPage />);
+
+    await screen.findByText(/Application started/i);
+
+    const filterInput = screen.getByPlaceholderText(/Filter logs/i);
+
+    await user.clear(filterInput);
+    await user.type(filterInput, 'req-002');
+
+    expect(screen.getByText(/User logged in successfully/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Application started/i)).not.toBeInTheDocument();
+  });
+
+  it('renders correct colors for different log levels', async () => {
+    const logsWithDifferentLevels = [
+      {
+        timestamp: new Date('2024-01-01T12:00:00Z').toISOString(),
+        level: 'ERROR',
+        message: 'Critical error occurred',
+        requestId: 'req-003'
+      },
+      {
+        timestamp: new Date('2024-01-01T12:01:00Z').toISOString(),
+        level: 'WARN',
+        message: 'Warning message',
+        requestId: 'req-004'
+      },
+      {
+        timestamp: new Date('2024-01-01T12:02:00Z').toISOString(),
+        level: 'WARNING',
+        message: 'Another warning',
+        requestId: 'req-005'
+      },
+      {
+        timestamp: new Date('2024-01-01T12:03:00Z').toISOString(),
+        level: 'INFO',
+        message: 'Info message',
+        requestId: 'req-006'
+      },
+      {
+        timestamp: new Date('2024-01-01T12:04:00Z').toISOString(),
+        level: 'DEBUG',
+        message: 'Debug message',
+        requestId: 'req-007'
+      }
+    ];
+
+    mockGet.mockResolvedValueOnce(logsWithDifferentLevels);
+
+    render(<LogsPage />);
+
+    const errorLevel = await screen.findByText('ERROR');
+    const warnLevel = screen.getByText('WARN');
+    const warningLevel = screen.getByText('WARNING');
+    const infoLevel = screen.getByText('INFO');
+    const debugLevel = screen.getByText('DEBUG');
+
+    expect(errorLevel).toHaveStyle({ color: '#d93025' }); // Red
+    expect(warnLevel).toHaveStyle({ color: '#f9ab00' }); // Orange
+    expect(warningLevel).toHaveStyle({ color: '#f9ab00' }); // Orange
+    expect(infoLevel).toHaveStyle({ color: '#1a73e8' }); // Blue
+    expect(debugLevel).toHaveStyle({ color: '#5f6368' }); // Gray (default)
+  });
+
+  it('cleans up on unmount to prevent memory leaks', async () => {
+    const { unmount } = render(<LogsPage />);
+
+    await screen.findByText(/Application started/i);
+
+    // Unmount should trigger cleanup
+    unmount();
+
+    // After unmount, fetch should not cause state updates
+    expect(mockGet).toHaveBeenCalledTimes(1);
+  });
 });

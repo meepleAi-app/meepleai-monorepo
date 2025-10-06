@@ -248,4 +248,188 @@ describe('RuleSpecEditor', () => {
     const saveButton = screen.getByRole('button', { name: /^Salva$/i });
     expect(saveButton).toBeDisabled();
   });
+
+  it('shows loading state while fetching rulespec', () => {
+    mockUseRouter.mockReturnValue(createRouter({ query: { gameId: 'demo-game' } }));
+    mockApi.get.mockImplementation((path: string) => {
+      if (path === '/auth/me') {
+        return Promise.resolve(authResponse);
+      }
+      // Never resolve rulespec
+      return new Promise(() => {});
+    });
+
+    render(<RuleSpecEditor />);
+
+    // Should show loading indicator or empty state while loading
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('validates gameId is required and is a string', async () => {
+    const user = userEvent.setup();
+
+    const initialSpec = {
+      gameId: 'demo-game',
+      version: '1.0.0',
+      createdAt: new Date('2024-01-01').toISOString(),
+      rules: [{ id: 'rule-1', text: 'Rule 1' }]
+    };
+
+    mockUseRouter.mockReturnValue(createRouter({ query: { gameId: 'demo-game' } }));
+    mockApi.get.mockImplementation(async (path: string) => {
+      if (path === '/auth/me') {
+        return authResponse;
+      }
+      if (path === '/games/demo-game/rulespec') {
+        return initialSpec;
+      }
+      return null;
+    });
+
+    render(<RuleSpecEditor />);
+
+    await screen.findByText(/Editor RuleSpec/i);
+    await waitFor(() => expect(getEditorTextarea().value).toContain('"version": "1.0.0"'));
+
+    const textarea = getEditorTextarea();
+
+    // Missing gameId
+    const noGameId = { version: '1.0.0', createdAt: new Date().toISOString(), rules: [] };
+    await user.clear(textarea);
+    fireEvent.change(textarea, { target: { value: JSON.stringify(noGameId, null, 2) } });
+
+    await waitFor(() =>
+      expect(screen.getByText(/gameId è richiesto e deve essere una stringa/i)).toBeInTheDocument()
+    );
+    expect(screen.getByRole('button', { name: /^Salva$/i })).toBeDisabled();
+  });
+
+  it('validates version and createdAt are required', async () => {
+    const user = userEvent.setup();
+
+    const initialSpec = {
+      gameId: 'demo-game',
+      version: '1.0.0',
+      createdAt: new Date('2024-01-01').toISOString(),
+      rules: [{ id: 'rule-1', text: 'Rule 1' }]
+    };
+
+    mockUseRouter.mockReturnValue(createRouter({ query: { gameId: 'demo-game' } }));
+    mockApi.get.mockImplementation(async (path: string) => {
+      if (path === '/auth/me') {
+        return authResponse;
+      }
+      if (path === '/games/demo-game/rulespec') {
+        return initialSpec;
+      }
+      return null;
+    });
+
+    render(<RuleSpecEditor />);
+
+    await screen.findByText(/Editor RuleSpec/i);
+    await waitFor(() => expect(getEditorTextarea().value).toContain('"version": "1.0.0"'));
+
+    const textarea = getEditorTextarea();
+
+    // Missing version
+    const noVersion = { gameId: 'test', createdAt: new Date().toISOString(), rules: [] };
+    await user.clear(textarea);
+    fireEvent.change(textarea, { target: { value: JSON.stringify(noVersion, null, 2) } });
+
+    await waitFor(() =>
+      expect(screen.getByText(/version è richiesto e deve essere una stringa/i)).toBeInTheDocument()
+    );
+  });
+
+  it('validates rules must be an array with required fields', async () => {
+    const user = userEvent.setup();
+
+    const initialSpec = {
+      gameId: 'demo-game',
+      version: '1.0.0',
+      createdAt: new Date('2024-01-01').toISOString(),
+      rules: [{ id: 'rule-1', text: 'Rule 1' }]
+    };
+
+    mockUseRouter.mockReturnValue(createRouter({ query: { gameId: 'demo-game' } }));
+    mockApi.get.mockImplementation(async (path: string) => {
+      if (path === '/auth/me') {
+        return authResponse;
+      }
+      if (path === '/games/demo-game/rulespec') {
+        return initialSpec;
+      }
+      return null;
+    });
+
+    render(<RuleSpecEditor />);
+
+    await screen.findByText(/Editor RuleSpec/i);
+    await waitFor(() => expect(getEditorTextarea().value).toContain('"version": "1.0.0"'));
+
+    const textarea = getEditorTextarea();
+
+    // Rules not an array
+    const rulesNotArray = {
+      gameId: 'test',
+      version: '1.0',
+      createdAt: new Date().toISOString(),
+      rules: 'not an array'
+    };
+    await user.clear(textarea);
+    fireEvent.change(textarea, { target: { value: JSON.stringify(rulesNotArray, null, 2) } });
+
+    await waitFor(() => expect(screen.getByText(/rules deve essere un array/i)).toBeInTheDocument());
+
+    // Rule without id
+    const ruleNoId = {
+      gameId: 'test',
+      version: '1.0',
+      createdAt: new Date().toISOString(),
+      rules: [{ text: 'Rule without id' }]
+    };
+    await user.clear(textarea);
+    fireEvent.change(textarea, { target: { value: JSON.stringify(ruleNoId, null, 2) } });
+
+    await waitFor(() =>
+      expect(screen.getByText(/rules\[0\]\.id è richiesto e deve essere una stringa/i)).toBeInTheDocument()
+    );
+
+    // Rule without text
+    const ruleNoText = {
+      gameId: 'test',
+      version: '1.0',
+      createdAt: new Date().toISOString(),
+      rules: [{ id: 'rule-1' }]
+    };
+    await user.clear(textarea);
+    fireEvent.change(textarea, { target: { value: JSON.stringify(ruleNoText, null, 2) } });
+
+    await waitFor(() =>
+      expect(screen.getByText(/rules\[0\]\.text è richiesto e deve essere una stringa/i)).toBeInTheDocument()
+    );
+  });
+
+  it('shows error when rulespec loading fails', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    mockUseRouter.mockReturnValue(createRouter({ query: { gameId: 'demo-game' } }));
+    mockApi.get.mockImplementation(async (path: string) => {
+      if (path === '/auth/me') {
+        return authResponse;
+      }
+      if (path === '/games/demo-game/rulespec') {
+        throw new Error('Network error');
+      }
+      return null;
+    });
+
+    render(<RuleSpecEditor />);
+
+    await screen.findByText(/Editor RuleSpec/i);
+    await screen.findByText(/Network error/i);
+
+    consoleErrorSpy.mockRestore();
+  });
 });

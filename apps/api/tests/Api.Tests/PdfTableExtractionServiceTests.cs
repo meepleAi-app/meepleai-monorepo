@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Api.Services;
 using iText.IO.Image;
 using iText.Kernel.Pdf;

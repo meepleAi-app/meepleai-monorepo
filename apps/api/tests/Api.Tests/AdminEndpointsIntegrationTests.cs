@@ -46,7 +46,7 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
 
         var seedContext = await SeedDashboardDataAsync(adminUserId, editorUserId);
 
-        var requestUri = $"/admin/requests?limit=10&offset=0&endpoint=qa&userId={adminUserId}&gameId=game-1" +
+        var requestUri = $"/admin/requests?limit=10&offset=0&userId={adminUserId}&gameId=game-1" +
                          $"&startDate={Uri.EscapeDataString(seedContext.StartDate.ToString("O"))}" +
                          $"&endDate={Uri.EscapeDataString(seedContext.EndDate.ToString("O"))}";
 

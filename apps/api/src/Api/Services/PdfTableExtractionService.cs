@@ -684,11 +684,13 @@ public class PdfTableExtractionService
         public float Width { get; }
         public float EndX => X + Width;
         public float CenterX => X + Width / 2f;
+        public int SequenceIndex { get; internal set; } = -1;
     }
 
     private sealed class PositionedTextLine
     {
         private readonly List<PositionedCharacter> _characters = new();
+        private int _nextSequenceIndex;
 
         public PositionedTextLine(float y)
         {
@@ -699,9 +701,23 @@ public class PdfTableExtractionService
 
         public IReadOnlyList<PositionedCharacter> Characters => _characters;
 
-        public void AddCharacter(PositionedCharacter character) => _characters.Add(character);
+        public void AddCharacter(PositionedCharacter character)
+        {
+            character.SequenceIndex = _nextSequenceIndex++;
+            _characters.Add(character);
+        }
 
-        public void SortCharacters() => _characters.Sort((a, b) => a.X.CompareTo(b.X));
+        public void SortCharacters() => _characters.Sort((a, b) =>
+        {
+            var xComparison = a.X.CompareTo(b.X);
+
+            if (xComparison != 0)
+            {
+                return xComparison;
+            }
+
+            return a.SequenceIndex.CompareTo(b.SequenceIndex);
+        });
 
         public string GetText() => string.Concat(_characters.Select(c => c.Text));
 

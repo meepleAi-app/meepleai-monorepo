@@ -320,4 +320,93 @@ describe('Home page', () => {
     const askButton = await screen.findByRole('button', { name: 'Chiedi' });
     expect(askButton).toBeDisabled();
   });
+
+  it('calls ping function and shows alert with health status', async () => {
+    const user = userEvent.setup();
+
+    render(<Home />);
+
+    await waitFor(() => expect(mockedApi.get).toHaveBeenCalled());
+
+    const pingButton = screen.getByRole('button', { name: 'Ping Web' });
+    await user.click(pingButton);
+
+    await waitFor(() => {
+      expect(alertMock).toHaveBeenCalledWith('Web OK: true');
+    });
+  });
+
+  it('successfully asks question when authenticated', async () => {
+    const user = userEvent.setup();
+
+    mockedApi.get.mockResolvedValueOnce({
+      user: {
+        id: 'user-1',
+        email: 'user@example.com',
+        role: 'Admin'
+      },
+      expiresAt: '2024-12-31T00:00:00.000Z'
+    });
+
+    mockedApi.post.mockResolvedValueOnce({ answer: 'There are 2-4 players' });
+
+    render(<Home />);
+
+    await waitFor(() => {
+      expect(screen.getByText('user@example.com')).toBeInTheDocument();
+    });
+
+    const askButton = screen.getByRole('button', { name: 'Chiedi' });
+    await waitFor(() => expect(askButton).toBeEnabled());
+
+    await user.click(askButton);
+
+    await waitFor(() => {
+      expect(mockedApi.post).toHaveBeenCalledWith('/agents/qa', {
+        gameId: 'demo-chess',
+        query: 'How many players?'
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Risposta aggiornata.')).toBeInTheDocument();
+    });
+  });
+
+  it('handles logout error gracefully', async () => {
+    const user = userEvent.setup();
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    mockedApi.get.mockResolvedValueOnce({
+      user: {
+        id: 'user-1',
+        email: 'user@example.com',
+        role: 'Admin'
+      },
+      expiresAt: '2024-12-31T00:00:00.000Z'
+    });
+
+    mockedApi.post.mockRejectedValueOnce(new Error('Logout failed'));
+
+    render(<Home />);
+
+    await waitFor(() => {
+      expect(screen.getByText('user@example.com')).toBeInTheDocument();
+    });
+
+    const logoutButton = screen.getByRole('button', { name: 'Esci' });
+    await user.click(logoutButton);
+
+    await waitFor(() => {
+      expect(mockedApi.post).toHaveBeenCalledWith('/auth/logout');
+    });
+
+    // User should still be logged out even if API call fails
+    await waitFor(() => {
+      expect(screen.getByText('Sessione terminata.')).toBeInTheDocument();
+      expect(screen.getByText('Nessun utente connesso.')).toBeInTheDocument();
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
 });

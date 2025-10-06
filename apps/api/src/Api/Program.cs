@@ -1304,7 +1304,20 @@ static CookieOptions BuildSessionCookieOptions(HttpContext context)
     }
 
     var secure = configuration.Secure ?? isHttps;
+    var secureForced = false;
+
+    if (!secure && !configuration.Secure.HasValue)
+    {
+        secure = true;
+        secureForced = true;
+    }
+
     var sameSite = configuration.SameSite ?? (secure ? SameSiteMode.None : SameSiteMode.Lax);
+
+    if (secureForced && sameSite != SameSiteMode.None)
+    {
+        sameSite = SameSiteMode.None;
+    }
     var path = string.IsNullOrWhiteSpace(configuration.Path) ? "/" : configuration.Path;
 
     var options = new CookieOptions

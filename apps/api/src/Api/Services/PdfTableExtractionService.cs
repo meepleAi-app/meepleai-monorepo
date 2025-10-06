@@ -1,10 +1,11 @@
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 using iText.Kernel.Geom;
 using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Canvas.Parser;
 using iText.Kernel.Pdf.Canvas.Parser.Data;
 using iText.Kernel.Pdf.Canvas.Parser.Listener;
-using System.Text;
-using System.Linq;
 
 namespace Api.Services;
 
@@ -272,22 +273,31 @@ public class PdfTableExtractionService
             return result;
         }
 
-        var boundaries = existingBoundaries != null && existingBoundaries.Count > 0
-            ? existingBoundaries.Select(b => b.Clone()).ToList()
-            : DetectColumnBoundaries(line);
-
-        if (boundaries.Count == 0)
+        if (existingBoundaries == null || existingBoundaries.Count == 0)
         {
-            var text = line.GetTrimmedText();
-            if (!string.IsNullOrWhiteSpace(text))
+            var layout = DetectColumnLayout(line);
+            result.Boundaries = layout.Boundaries;
+            result.Columns = layout.Columns;
+
+            if (result.Columns.Count > 0)
             {
-                result.Columns.Add(text);
+                var text = line.GetTrimmedText();
+                var textualColumns = Regex
+                    .Split(text, "\\s{2,}")
+                    .Select(segment => segment.Trim())
+                    .ToList();
+
+                if (textualColumns.Count == result.Columns.Count && textualColumns.Count > 0)
+                {
+                    result.Columns = textualColumns;
+                }
             }
 
             return result;
         }
 
-        boundaries = boundaries
+        var boundaries = existingBoundaries
+            .Select(b => b.Clone())
             .OrderBy(b => b.Start)
             .ToList();
 
@@ -300,11 +310,7 @@ public class PdfTableExtractionService
 
             if (columnIndex == -1)
             {
-                var newBoundary = new ColumnBoundary
-                {
-                    Start = character.X - tolerance,
-                    End = character.EndX + tolerance
-                };
+                var newBoundary = ColumnBoundary.FromCharacter(character, tolerance);
 
                 var insertIndex = boundaries.FindIndex(b => newBoundary.Start < b.Start);
                 if (insertIndex < 0)
@@ -331,6 +337,69 @@ public class PdfTableExtractionService
         result.Columns = columnTexts.Select(sb => sb.ToString().Trim()).ToList();
 
         return result;
+    }
+
+    private DetectedColumnLayout DetectColumnLayout(PositionedTextLine line)
+    {
+        var layout = new DetectedColumnLayout();
+
+        if (line.Characters.Count == 0)
+        {
+            return layout;
+        }
+
+        var threshold = CalculateGapThreshold(line);
+        var overlapTolerance = CalculateOverlapTolerance(line);
+
+        ColumnBoundary? currentBoundary = null;
+        StringBuilder? currentText = null;
+
+        foreach (var character in line.Characters)
+        {
+            if (currentBoundary == null)
+            {
+                currentBoundary = ColumnBoundary.FromCharacter(character);
+                currentText = new StringBuilder(character.Text);
+                continue;
+            }
+
+            var gap = character.X - currentBoundary.End;
+
+            if (gap > threshold || gap < -overlapTolerance)
+            {
+                CommitCurrent();
+                currentBoundary = ColumnBoundary.FromCharacter(character);
+                currentText = new StringBuilder(character.Text);
+            }
+            else
+            {
+                currentBoundary.ExpandToInclude(character);
+                currentText!.Append(character.Text);
+            }
+        }
+
+        CommitCurrent();
+
+        ApplyPadding(layout.Boundaries, Math.Max(2f, threshold / 3f));
+        EnsureNonOverlappingBoundaries(layout.Boundaries);
+
+        layout.Columns = layout.Columns
+            .Select(text => text.Trim())
+            .ToList();
+
+        return layout;
+
+        void CommitCurrent()
+        {
+            if (currentBoundary != null && currentText != null)
+            {
+                layout.Boundaries.Add(currentBoundary);
+                layout.Columns.Add(currentText.ToString());
+            }
+
+            currentBoundary = null;
+            currentText = null;
+        }
     }
 
     private int FindBoundaryIndex(List<ColumnBoundary> boundaries, PositionedCharacter character, float tolerance)
@@ -419,71 +488,6 @@ public class PdfTableExtractionService
         }
 
         return normalized;
-    }
-
-    private List<ColumnBoundary> DetectColumnBoundaries(PositionedTextLine line)
-    {
-        var boundaries = new List<ColumnBoundary>();
-
-        if (line.Characters.Count == 0)
-        {
-            return boundaries;
-        }
-
-        var threshold = CalculateGapThreshold(line);
-        var overlapTolerance = CalculateOverlapTolerance(line);
-        ColumnBoundary? current = null;
-
-        foreach (var character in line.Characters)
-        {
-            if (current == null)
-            {
-                current = new ColumnBoundary
-                {
-                    Start = character.X,
-                    End = character.EndX
-                };
-                continue;
-            }
-
-            var gap = character.X - current.End;
-
-            if (gap > threshold)
-            {
-                boundaries.Add(current);
-                current = new ColumnBoundary
-                {
-                    Start = character.X,
-                    End = character.EndX
-                };
-            }
-            else if (gap < -overlapTolerance)
-            {
-                var splitPoint = (current.End + character.X) / 2f;
-                current.End = Math.Max(current.Start, splitPoint);
-                boundaries.Add(current);
-                current = new ColumnBoundary
-                {
-                    Start = Math.Min(character.X, splitPoint),
-                    End = character.EndX
-                };
-            }
-            else
-            {
-                current.Start = Math.Min(current.Start, character.X);
-                current.End = Math.Max(current.End, character.EndX);
-            }
-        }
-
-        if (current != null)
-        {
-            boundaries.Add(current);
-        }
-
-        ApplyPadding(boundaries, Math.Max(2f, threshold / 3f));
-        EnsureNonOverlappingBoundaries(boundaries);
-
-        return boundaries;
     }
 
     private static void ApplyPadding(List<ColumnBoundary> boundaries, float padding)
@@ -630,17 +634,49 @@ public class PdfTableExtractionService
         public List<ColumnBoundary> Boundaries { get; set; } = new();
     }
 
+    private sealed class DetectedColumnLayout
+    {
+        public List<ColumnBoundary> Boundaries { get; } = new();
+        public List<string> Columns { get; set; } = new();
+    }
+
     private sealed class ColumnBoundary
     {
         public float Start { get; set; }
         public float End { get; set; }
+        public float ContentStart { get; set; }
+        public float ContentEnd { get; set; }
 
         public float Center => (Start + End) / 2f;
+
+        public static ColumnBoundary FromCharacter(PositionedCharacter character, float tolerance = 0f)
+        {
+            var start = tolerance > 0 ? character.X - tolerance : character.X;
+            var end = tolerance > 0 ? character.EndX + tolerance : character.EndX;
+
+            return new ColumnBoundary
+            {
+                Start = start,
+                End = end,
+                ContentStart = character.X,
+                ContentEnd = character.EndX
+            };
+        }
+
+        public void ExpandToInclude(PositionedCharacter character)
+        {
+            Start = Math.Min(Start, character.X);
+            End = Math.Max(End, character.EndX);
+            ContentStart = Math.Min(ContentStart, character.X);
+            ContentEnd = Math.Max(ContentEnd, character.EndX);
+        }
 
         public ColumnBoundary Clone() => new()
         {
             Start = Start,
-            End = End
+            End = End,
+            ContentStart = ContentStart,
+            ContentEnd = ContentEnd
         };
     }
 

@@ -137,7 +137,6 @@ builder.Services.AddCors(options =>
     });
 });
 
-var forwardedHeadersSection = builder.Configuration.GetSection("ForwardedHeaders");
 var forwardedHeadersEnabled = forwardedHeadersSection.GetValue<bool?>("Enabled") ?? true;
 
 if (forwardedHeadersEnabled)

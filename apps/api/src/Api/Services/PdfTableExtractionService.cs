@@ -549,18 +549,6 @@ public class PdfTableExtractionService
         return Math.Max(1.5f, averageWidth * 0.6f);
     }
 
-    private float CalculateOverlapTolerance(PositionedTextLine line)
-    {
-        var averageWidth = line.GetAverageCharacterWidth();
-
-        if (averageWidth <= 0)
-        {
-            return 1.5f;
-        }
-
-        return Math.Max(1.5f, averageWidth * 0.6f);
-    }
-
     private float CalculateGapThreshold(PositionedTextLine line)
     {
         if (line.Characters.Count < 2)

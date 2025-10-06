@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Testcontainers.Qdrant;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Api.Tests;
 
@@ -59,7 +58,7 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
     {
         if (_skipReason is not null)
         {
-            throw new SkipException(_skipReason);
+            Skip.If(true, _skipReason!);
         }
 
         if (_qdrantContainer != null)
@@ -75,7 +74,7 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
             {
                 _skipReason =
                     $"Qdrant integration tests skipped: failed to start local Testcontainers instance and no QDRANT_URL was provided. {ex.Message}";
-                throw new SkipException(_skipReason);
+                Skip.If(true, _skipReason);
             }
         }
 
@@ -83,7 +82,7 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
         {
             _skipReason =
                 "Qdrant integration tests skipped: no QDRANT_URL configured and Docker/Testcontainers is unavailable.";
-            throw new SkipException(_skipReason);
+            Skip.If(true, _skipReason);
         }
 
         // Create QdrantService with Qdrant connection (works for both CI and local)

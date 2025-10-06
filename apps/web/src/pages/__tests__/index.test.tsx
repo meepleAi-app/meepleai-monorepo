@@ -409,4 +409,163 @@ describe('Home page', () => {
 
     consoleErrorSpy.mockRestore();
   });
+
+  it('handles registration with empty displayName using undefined fallback', async () => {
+    const user = userEvent.setup();
+
+    const authResponse = {
+      user: {
+        id: 'user-1',
+        email: 'new@example.com',
+        displayName: null,
+        role: 'User'
+      },
+      expiresAt: '2024-12-31T00:00:00.000Z'
+    };
+
+    mockedApi.post.mockResolvedValueOnce(authResponse);
+
+    render(<Home />);
+
+    const registerFormHeading = await screen.findByRole('heading', { name: 'Registrazione' });
+    const registerForm = registerFormHeading.closest('form');
+    const registerScope = within(registerForm as HTMLFormElement);
+
+    await user.type(registerScope.getByLabelText('Email'), 'new@example.com');
+    await user.type(registerScope.getByLabelText('Password (min 8 caratteri)'), 'password123');
+
+    await user.click(registerScope.getByRole('button', { name: 'Crea account' }));
+
+    await waitFor(() => {
+      expect(mockedApi.post).toHaveBeenCalledWith('/auth/register', {
+        email: 'new@example.com',
+        password: 'password123',
+        displayName: undefined,
+        role: 'User'
+      });
+    });
+  });
+
+  it('does not redirect when registering on /upload page', async () => {
+    routerMock.pathname = '/upload';
+    const user = userEvent.setup();
+
+    const authResponse = {
+      user: {
+        id: 'user-1',
+        email: 'new@example.com',
+        role: 'Editor'
+      },
+      expiresAt: '2024-12-31T00:00:00.000Z'
+    };
+
+    mockedApi.post.mockResolvedValueOnce(authResponse);
+
+    render(<Home />);
+
+    const registerFormHeading = await screen.findByRole('heading', { name: 'Registrazione' });
+    const registerForm = registerFormHeading.closest('form');
+    const registerScope = within(registerForm as HTMLFormElement);
+
+    await user.type(registerScope.getByLabelText('Email'), 'new@example.com');
+    await user.type(registerScope.getByLabelText('Password (min 8 caratteri)'), 'password123');
+    await user.click(registerScope.getByRole('button', { name: 'Crea account' }));
+
+    await waitFor(() => {
+      expect(mockedApi.post).toHaveBeenCalledWith('/auth/register', expect.any(Object));
+    });
+
+    expect(routerMock.push).not.toHaveBeenCalled();
+  });
+
+  it('does not redirect when logging in on /upload page', async () => {
+    routerMock.pathname = '/upload';
+    const user = userEvent.setup();
+
+    const loginResponse = {
+      user: {
+        id: 'user-1',
+        email: 'user@example.com',
+        role: 'User'
+      },
+      expiresAt: '2024-12-31T00:00:00.000Z'
+    };
+
+    mockedApi.post.mockResolvedValueOnce(loginResponse);
+
+    render(<Home />);
+
+    const loginFormHeading = await screen.findByRole('heading', { name: 'Accesso' });
+    const loginForm = loginFormHeading.closest('form');
+    const loginScope = within(loginForm as HTMLFormElement);
+
+    await user.type(loginScope.getByLabelText('Email'), 'user@example.com');
+    await user.type(loginScope.getByLabelText('Password'), 'super-secret');
+    await user.click(loginScope.getByRole('button', { name: 'Entra' }));
+
+    await waitFor(() => {
+      expect(mockedApi.post).toHaveBeenCalledWith('/auth/login', expect.any(Object));
+    });
+
+    expect(routerMock.push).not.toHaveBeenCalled();
+  });
+
+  it('displays fallback error message when register fails without error message', async () => {
+    const user = userEvent.setup();
+
+    render(<Home />);
+
+    const registerFormHeading = await screen.findByRole('heading', { name: 'Registrazione' });
+    const registerForm = registerFormHeading.closest('form');
+    const registerScope = within(registerForm as HTMLFormElement);
+
+    await user.type(registerScope.getByLabelText('Email'), 'new@example.com');
+    await user.type(registerScope.getByLabelText('Password (min 8 caratteri)'), 'password123');
+
+    mockedApi.post.mockRejectedValueOnce({});
+
+    await user.click(registerScope.getByRole('button', { name: 'Crea account' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Registrazione non riuscita.')).toBeInTheDocument();
+    });
+  });
+
+  it('displays fallback error message when login fails without error message', async () => {
+    const user = userEvent.setup();
+
+    render(<Home />);
+
+    const loginFormHeading = await screen.findByRole('heading', { name: 'Accesso' });
+    const loginForm = loginFormHeading.closest('form');
+    const loginScope = within(loginForm as HTMLFormElement);
+
+    await user.type(loginScope.getByLabelText('Email'), 'user@example.com');
+    await user.type(loginScope.getByLabelText('Password'), 'wrong-password');
+
+    mockedApi.post.mockRejectedValueOnce({});
+
+    await user.click(loginScope.getByRole('button', { name: 'Entra' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Accesso non riuscito.')).toBeInTheDocument();
+    });
+  });
+
+  it('sets authUser to null when loadCurrentUser catches an error', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockedApi.get.mockRejectedValueOnce(new Error('Network failure'));
+
+    render(<Home />);
+
+    await waitFor(() => {
+      expect(mockedApi.get).toHaveBeenCalledWith('/auth/me');
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Nessun utente connesso.')).toBeInTheDocument();
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
 });

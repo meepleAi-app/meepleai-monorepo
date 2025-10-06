@@ -514,4 +514,17 @@ describe('N8nWorkflowManagement', () => {
 
     await waitFor(() => expect(alertMock).toHaveBeenCalledWith('Failed to update configuration'));
   });
+
+  it('handles non-Error objects in catch blocks', async () => {
+    fetchMock.mockImplementation(() => {
+      return Promise.reject('String error');
+    });
+
+    render(<N8nWorkflowManagement />);
+
+    await waitFor(() => {
+      expect(screen.getByText('An error occurred')).toBeInTheDocument();
+    });
+  });
+
 });

@@ -150,7 +150,11 @@ npm run test:e2e:report
 
 E2E tests are located in `apps/web/e2e/`:
 - `home.spec.ts` - Home page functionality
-- `chat.spec.ts` - Chat page authentication
+- `chat.spec.ts` - Chat interface and messaging
+- `authenticated.spec.ts` - Authentication flows
+- `admin.spec.ts` - Admin dashboard functionality
+- `n8n.spec.ts` - n8n integration dashboard
+- `versions.spec.ts` - Version history and management
 
 ### Configuration
 

@@ -373,4 +373,134 @@ describe('AdminDashboard', () => {
 
     process.env.NEXT_PUBLIC_API_BASE = apiBase;
   });
+
+  it('handles stats fetch failure', async () => {
+    process.env.NEXT_PUBLIC_API_BASE = apiBase;
+    const AdminDashboard = loadAdminDashboard();
+
+    const requestsPayload = { requests: [] };
+
+    fetchMock
+      .mockResolvedValueOnce(createJsonResponse(requestsPayload))
+      .mockResolvedValueOnce(createJsonResponse({}, false));
+
+    render(<AdminDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to fetch stats/i)).toBeInTheDocument();
+    });
+  });
+
+  it('renders endpoint colors for all endpoint types including default', async () => {
+    process.env.NEXT_PUBLIC_API_BASE = apiBase;
+    const AdminDashboard = loadAdminDashboard();
+
+    const requestsPayload = {
+      requests: [
+        {
+          id: '1',
+          userId: 'user-1',
+          gameId: 'game-1',
+          endpoint: 'qa',
+          query: 'Test qa',
+          responseSnippet: null,
+          latencyMs: 100,
+          tokenCount: 10,
+          promptTokens: 5,
+          completionTokens: 5,
+          confidence: 0.9,
+          status: 'Success',
+          errorMessage: null,
+          ipAddress: '127.0.0.1',
+          userAgent: 'test',
+          createdAt: new Date().toISOString(),
+          model: 'test-model',
+          finishReason: 'stop'
+        },
+        {
+          id: '2',
+          userId: 'user-2',
+          gameId: 'game-2',
+          endpoint: 'explain',
+          query: 'Test explain',
+          responseSnippet: null,
+          latencyMs: 100,
+          tokenCount: 10,
+          promptTokens: 5,
+          completionTokens: 5,
+          confidence: 0.8,
+          status: 'Success',
+          errorMessage: null,
+          ipAddress: '127.0.0.1',
+          userAgent: 'test',
+          createdAt: new Date().toISOString(),
+          model: 'test-model',
+          finishReason: 'stop'
+        },
+        {
+          id: '3',
+          userId: 'user-3',
+          gameId: 'game-3',
+          endpoint: 'setup',
+          query: 'Test setup',
+          responseSnippet: null,
+          latencyMs: 100,
+          tokenCount: 10,
+          promptTokens: 5,
+          completionTokens: 5,
+          confidence: 0.7,
+          status: 'Success',
+          errorMessage: null,
+          ipAddress: '127.0.0.1',
+          userAgent: 'test',
+          createdAt: new Date().toISOString(),
+          model: 'test-model',
+          finishReason: 'stop'
+        },
+        {
+          id: '4',
+          userId: 'user-4',
+          gameId: 'game-4',
+          endpoint: 'unknown',
+          query: 'Test unknown',
+          responseSnippet: null,
+          latencyMs: 100,
+          tokenCount: 10,
+          promptTokens: 5,
+          completionTokens: 5,
+          confidence: null,
+          status: 'Success',
+          errorMessage: null,
+          ipAddress: '127.0.0.1',
+          userAgent: 'test',
+          createdAt: new Date().toISOString(),
+          model: 'test-model',
+          finishReason: 'stop'
+        }
+      ]
+    };
+
+    const statsPayload = {
+      totalRequests: 4,
+      avgLatencyMs: 100,
+      totalTokens: 40,
+      successRate: 100,
+      endpointCounts: { qa: 1, explain: 1, setup: 1, unknown: 1 },
+      feedbackCounts: {},
+      totalFeedback: 0
+    };
+
+    fetchMock
+      .mockResolvedValueOnce(createJsonResponse(requestsPayload))
+      .mockResolvedValueOnce(createJsonResponse(statsPayload));
+
+    render(<AdminDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Test qa')).toBeInTheDocument();
+      expect(screen.getByText('Test explain')).toBeInTheDocument();
+      expect(screen.getByText('Test setup')).toBeInTheDocument();
+      expect(screen.getByText('Test unknown')).toBeInTheDocument();
+    });
+  });
 });

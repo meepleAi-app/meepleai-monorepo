@@ -424,4 +424,59 @@ describe('VersionHistory page', () => {
 
     consoleErrorSpy.mockRestore();
   });
+
+  it('handles loadCurrentUser error gracefully', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockApi.get.mockRejectedValueOnce(new Error('Auth failed'));
+
+    setGameId('test-game');
+
+    render(<VersionHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Devi effettuare l'accesso/i)).toBeInTheDocument();
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('handles history load error without message property', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockApi.get.mockResolvedValueOnce({ user: { id: '1', email: 'test@example.com', role: 'User' } });
+    mockApi.get.mockRejectedValueOnce({});
+
+    setGameId('test-game');
+
+    render(<VersionHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Impossibile caricare lo storico versioni/i)).toBeInTheDocument();
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('handles diff load error without message property', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    mockApi.get.mockResolvedValueOnce({ user: { id: '1', email: 'test@example.com', role: 'User' } });
+    mockApi.get.mockResolvedValueOnce({
+      gameId: 'test-game',
+      versions: [
+        { version: 'v2', createdAt: '2024-01-02T00:00:00Z', rulesCount: 10 },
+        { version: 'v1', createdAt: '2024-01-01T00:00:00Z', rulesCount: 8 }
+      ]
+    });
+    mockApi.get.mockRejectedValueOnce({});
+
+    setGameId('test-game');
+
+    render(<VersionHistory />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Impossibile caricare il diff/i)).toBeInTheDocument();
+    });
+
+    consoleErrorSpy.mockRestore();
+  });
 });

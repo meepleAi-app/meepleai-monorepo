@@ -411,6 +411,7 @@ public class PdfTableExtractionService
         }
 
         var threshold = CalculateGapThreshold(line);
+        var overlapTolerance = CalculateOverlapTolerance(line);
         ColumnBoundary? current = null;
 
         foreach (var character in line.Characters)
@@ -436,8 +437,18 @@ public class PdfTableExtractionService
                     End = character.EndX
                 };
             }
+            else if (gap < -overlapTolerance)
+            {
+                boundaries.Add(current);
+                current = new ColumnBoundary
+                {
+                    Start = character.X,
+                    End = character.EndX
+                };
+            }
             else
             {
+                current.Start = Math.Min(current.Start, character.X);
                 current.End = Math.Max(current.End, character.EndX);
             }
         }
@@ -456,6 +467,18 @@ public class PdfTableExtractionService
         }
 
         return boundaries;
+    }
+
+    private float CalculateOverlapTolerance(PositionedTextLine line)
+    {
+        var averageWidth = line.GetAverageCharacterWidth();
+
+        if (averageWidth <= 0)
+        {
+            return 1.5f;
+        }
+
+        return Math.Max(1.5f, averageWidth * 0.6f);
     }
 
     private float CalculateGapThreshold(PositionedTextLine line)

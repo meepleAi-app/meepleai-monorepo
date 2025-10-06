@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System;
 using Api.Infrastructure;
 using Api.Services;
 using Microsoft.AspNetCore.Hosting;
@@ -124,5 +125,11 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
                 });
             }
         }
+    public WebApplicationFactory<Program> WithTestServices(Action<IServiceCollection> configureServices)
+    {
+        return WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(configureServices);
+        });
     }
 }

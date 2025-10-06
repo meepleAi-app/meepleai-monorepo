@@ -127,15 +127,9 @@ public class GameEndpointsTests : IClassFixture<WebApplicationFactoryFixture>
         return setCookie.Select(cookie => cookie.Split(';')[0]).ToList();
     }
 
-    private async Task PromoteUserAsync(string email, string role)
+    private async Task PromoteUserAsync(string email, UserRole role)
     {
-        if (string.IsNullOrWhiteSpace(role) ||
-            string.Equals(role, nameof(UserRole.User), StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        if (!Enum.TryParse<UserRole>(role, true, out var parsedRole))
+        if (role == UserRole.User)
         {
             return;
         }
@@ -143,7 +137,7 @@ public class GameEndpointsTests : IClassFixture<WebApplicationFactoryFixture>
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var user = await db.Users.SingleAsync(u => u.Email == email);
-        user.Role = parsedRole;
+        user.Role = role;
         await db.SaveChangesAsync();
     }
 }

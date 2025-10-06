@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Testcontainers.Qdrant;
 using Xunit;
+using Xunit.Sdk;
 
 namespace Api.Tests;
 
@@ -16,7 +17,10 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
 {
     private readonly QdrantContainer? _qdrantContainer;
     private readonly bool _isRunningInCi;
+    private readonly string? _configuredQdrantUrl;
+    private string? _skipReason;
     private string _qdrantUrl;
+    private bool _containerStarted;
 
     protected QdrantService QdrantService { get; private set; } = null!;
     protected string QdrantUrl => _qdrantUrl;
@@ -27,30 +31,59 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
         _isRunningInCi = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")) ||
                          !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GITHUB_ACTIONS"));
 
+        _configuredQdrantUrl = Environment.GetEnvironmentVariable("QDRANT_URL");
+
+        if (!string.IsNullOrWhiteSpace(_configuredQdrantUrl))
+        {
+            _qdrantUrl = _configuredQdrantUrl;
+            _qdrantContainer = null;
+            return;
+        }
+
         if (_isRunningInCi)
         {
-            // In CI: Use service container from environment variable
-            _qdrantUrl = Environment.GetEnvironmentVariable("QDRANT_URL") ?? "http://localhost:6333";
+            _qdrantUrl = "http://localhost:6333";
             _qdrantContainer = null;
+            return;
         }
-        else
-        {
-            // Local: Use TestContainers
-            _qdrantContainer = new QdrantBuilder()
-                .WithImage("qdrant/qdrant:v1.12.4")
-                .WithCleanUp(true)
-                .Build();
-            _qdrantUrl = string.Empty; // Will be set after container starts
-        }
+
+        // Local environment without explicit endpoint: use Testcontainers
+        _qdrantContainer = new QdrantBuilder()
+            .WithImage("qdrant/qdrant:v1.12.4")
+            .WithCleanUp(true)
+            .Build();
+        _qdrantUrl = string.Empty; // Will be set after container starts
     }
 
     public async Task InitializeAsync()
     {
-        if (!_isRunningInCi && _qdrantContainer != null)
+        if (_skipReason is not null)
         {
-            // Start Qdrant container (local development only)
-            await _qdrantContainer.StartAsync();
-            _qdrantUrl = $"http://{_qdrantContainer.Hostname}:{_qdrantContainer.GetMappedPublicPort(6333)}";
+            throw new SkipException(_skipReason);
+        }
+
+        if (_qdrantContainer != null)
+        {
+            try
+            {
+                // Start Qdrant container (local development only)
+                await _qdrantContainer.StartAsync();
+                _containerStarted = true;
+                _qdrantUrl = $"http://{_qdrantContainer.Hostname}:{_qdrantContainer.GetMappedPublicPort(6333)}";
+            }
+            catch (Exception ex) when (string.IsNullOrWhiteSpace(_configuredQdrantUrl))
+            {
+                _skipReason =
+                    $"Qdrant integration tests skipped: failed to start local Testcontainers instance and no QDRANT_URL was provided. {ex.Message}";
+                throw new SkipException(_skipReason);
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(_qdrantUrl))
+        {
+            _skipReason =
+                "Qdrant integration tests skipped: no QDRANT_URL configured and Docker/Testcontainers is unavailable.";
+            throw new SkipException(_skipReason);
         }
 
         // Create QdrantService with Qdrant connection (works for both CI and local)
@@ -73,7 +106,7 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
 
     public virtual async Task DisposeAsync()
     {
-        if (_qdrantContainer != null)
+        if (_containerStarted && _qdrantContainer != null)
         {
             // Stop and remove container (local development only)
             await _qdrantContainer.DisposeAsync();

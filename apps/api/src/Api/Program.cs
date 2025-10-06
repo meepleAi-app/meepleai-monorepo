@@ -754,9 +754,19 @@ app.MapGet("/games", async (HttpContext context, GameService gameService, Cancel
 
 app.MapPost("/games", async (CreateGameRequest? request, HttpContext context, GameService gameService, ILogger<Program> logger, CancellationToken ct) =>
 {
-    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
         return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        logger.LogWarning(
+            "User {UserId} with role {Role} attempted to create a game without permission",
+            session.User.id,
+            session.User.role);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
     if (request is null)

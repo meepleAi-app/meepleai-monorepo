@@ -304,6 +304,8 @@ public class PdfStorageServiceTests
             scopeMock.Setup(s => s.Dispose());
             scopeFactoryMock.Setup(s => s.CreateScope()).Returns(scopeMock.Object);
 
+            var cacheMock = new Mock<IAiResponseCacheService>();
+
             var textExtractionMock = new Mock<PdfTextExtractionService>(
                 MockBehavior.Strict,
                 Mock.Of<ILogger<PdfTextExtractionService>>());
@@ -374,6 +376,7 @@ public class PdfStorageServiceTests
                 storagePath,
                 backgroundMock,
                 scopeFactoryMock,
+                cacheMock,
                 textExtractionMock.Object,
                 tableExtractionMock.Object,
                 chunkingMock.Object,

@@ -18,7 +18,17 @@
       "Bash(gh pr comment:*)",
       "Bash(npm run test:*)",
       "Bash(cat:*)",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(docker compose restart:*)",
+      "Bash(docker compose logs:*)",
+      "Bash(docker compose:*)",
+      "Bash(gh auth:*)",
+      "Bash(powershell:*)",
+      "Bash(docker ps:*)",
+      "Bash(dotnet ef migrations:*)",
+      "Bash(dotnet ef database update:*)",
+      "Bash(docker exec:*)"
     ],
     "deny": [],
     "ask": []

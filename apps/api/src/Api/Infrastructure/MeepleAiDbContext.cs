@@ -60,6 +60,8 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.IpAddress).HasMaxLength(64);
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.ExpiresAt).IsRequired();
+            entity.Property(e => e.LastSeenAt);
+            entity.Property(e => e.RevokedAt);
             entity.HasIndex(e => e.TokenHash).IsUnique();
             entity.HasIndex(e => e.UserId);
         });

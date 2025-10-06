@@ -1,12 +1,15 @@
 using Api.Infrastructure;
 using System;
 using System.Linq;
+using System.Net;
 using System.Security.Claims;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Events;
 using StackExchange.Redis;
@@ -26,6 +29,42 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 builder.Host.UseSerilog();
+
+var forwardedHeadersSection = builder.Configuration.GetSection("ForwardedHeaders");
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+    var knownProxies = forwardedHeadersSection.GetSection("KnownProxies").Get<string[]>() ?? Array.Empty<string>();
+    var knownNetworks = forwardedHeadersSection.GetSection("KnownNetworks").Get<string[]>() ?? Array.Empty<string>();
+
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+
+    foreach (var proxy in knownProxies)
+    {
+        if (IPAddress.TryParse(proxy, out var ipAddress))
+        {
+            options.KnownProxies.Add(ipAddress);
+        }
+    }
+
+    foreach (var network in knownNetworks)
+    {
+        if (IPNetwork.TryParse(network, out var ipNetwork))
+        {
+            options.KnownNetworks.Add(ipNetwork);
+        }
+    }
+
+    var forwardLimit = forwardedHeadersSection.GetValue<int?>("ForwardLimit");
+    if (forwardLimit.HasValue)
+    {
+        options.ForwardLimit = forwardLimit.Value;
+    }
+});
+
+builder.Services.Configure<SessionCookieConfiguration>(builder.Configuration.GetSection("Authentication:SessionCookie"));
 
 var connectionString = builder.Configuration.GetConnectionString("Postgres")
     ?? builder.Configuration["ConnectionStrings__Postgres"]
@@ -113,6 +152,8 @@ using (var scope = app.Services.CreateScope())
         await qdrant.EnsureCollectionExistsAsync();
     }
 }
+
+app.UseForwardedHeaders();
 
 app.UseCors("web");
 
@@ -1135,6 +1176,17 @@ static void WriteSessionCookie(HttpContext context, string token, DateTime expir
 
 static void RemoveSessionCookie(HttpContext context)
 {
+    var options = CreateSessionCookieOptions(context);
+    options.Expires = DateTimeOffset.UnixEpoch;
+
+    context.Response.Cookies.Delete(AuthService.SessionCookieName, options);
+}
+
+static CookieOptions CreateSessionCookieOptions(HttpContext context)
+{
+    var configuration = context.RequestServices.GetService<IOptions<SessionCookieConfiguration>>()?.Value
+                       ?? new SessionCookieConfiguration();
+
     var options = new CookieOptions
     {
         HttpOnly = true,
@@ -1144,6 +1196,55 @@ static void RemoveSessionCookie(HttpContext context)
         Expires = DateTimeOffset.UnixEpoch
     };
 
-    context.Response.Cookies.Delete(AuthService.SessionCookieName, options);
+    if (!string.IsNullOrWhiteSpace(configuration.Domain))
+    {
+        options.Domain = configuration.Domain;
+    }
+
+    return options;
+}
+
+static bool IsSecureRequest(HttpContext context)
+{
+    if (context.Request.IsHttps)
+    {
+        return true;
+    }
+
+    if (context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto) &&
+        forwardedProto.Any(value => string.Equals(value, "https", StringComparison.OrdinalIgnoreCase)))
+    {
+        return true;
+    }
+
+    if (context.Request.Headers.TryGetValue("Forwarded", out var forwardedValues))
+    {
+        foreach (var value in forwardedValues)
+        {
+            var segments = value.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var segment in segments)
+            {
+                var trimmed = segment.Trim();
+                if (trimmed.StartsWith("proto=", StringComparison.OrdinalIgnoreCase))
+                {
+                    var proto = trimmed.Substring("proto=".Length);
+                    if (string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+public sealed class SessionCookieConfiguration
+{
+    public CookieSecurePolicy SecurePolicy { get; set; } = CookieSecurePolicy.SameAsRequest;
+    public SameSiteMode SameSite { get; set; } = SameSiteMode.Strict;
+    public string Path { get; set; } = "/";
+    public string? Domain { get; set; }
 }
 public partial class Program { }

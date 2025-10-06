@@ -1220,11 +1220,14 @@ app.MapPost("/admin/n8n/{configId}/test", async (string configId, HttpContext co
 
 app.Run();
 
-static void WriteSessionCookie(HttpContext context, string token, DateTime expiresAt)
+static CookieOptions CreateSessionCookieOptions(DateTimeOffset expiresAt)
 {
     var options = BuildSessionCookieOptions(context);
     options.Expires = new DateTimeOffset(expiresAt);
 
+static void WriteSessionCookie(HttpContext context, string token, DateTime expiresAt)
+{
+    var options = CreateSessionCookieOptions(new DateTimeOffset(expiresAt));
     context.Response.Cookies.Append(AuthService.SessionCookieName, token, options);
 }
 

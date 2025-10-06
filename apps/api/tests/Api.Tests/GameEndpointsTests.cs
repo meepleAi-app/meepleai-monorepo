@@ -19,7 +19,7 @@ public class GameEndpointsTests : IClassFixture<WebApplicationFactoryFixture>
     public GameEndpointsTests(WebApplicationFactoryFixture factory)
     {
         _factory = factory;
-        _client = factory.CreateClient();
+        _client = factory.CreateHttpsClient();
     }
 
     [Fact]

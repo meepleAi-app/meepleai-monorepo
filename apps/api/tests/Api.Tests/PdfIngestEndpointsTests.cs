@@ -31,7 +31,7 @@ public class PdfIngestEndpointsTests : IClassFixture<WebApplicationFactoryFixtur
     [Fact]
     public async Task PostRulespecIngest_ReturnsGeneratedRuleSpec()
     {
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
         var email = "pdf-ingest@example.com";
         var cookies = await RegisterAndAuthenticateAsync(client, email);
 

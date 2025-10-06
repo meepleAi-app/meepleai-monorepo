@@ -60,7 +60,7 @@ public class LogsEndpointTests : IClassFixture<WebApplicationFactoryFixture>
             await db.SaveChangesAsync();
         }
 
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
         var cookies = await RegisterAndAuthenticateAsync(client, $"admin-logs-{Guid.NewGuid():N}@example.com", "Admin");
 
         var request = new HttpRequestMessage(HttpMethod.Get, "/logs");
@@ -90,7 +90,7 @@ public class LogsEndpointTests : IClassFixture<WebApplicationFactoryFixture>
     [Fact]
     public async Task GetLogs_ReturnsUnauthorizedWhenSessionMissing()
     {
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
         var response = await client.GetAsync("/logs");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -106,7 +106,7 @@ public class LogsEndpointTests : IClassFixture<WebApplicationFactoryFixture>
     [MemberData(nameof(NonAdminRoles))]
     public async Task GetLogs_ReturnsForbiddenForNonAdminRoles(string role)
     {
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
         var cookies = await RegisterAndAuthenticateAsync(client, $"{role.ToLowerInvariant()}-logs-{Guid.NewGuid():N}@example.com", role);
 
         var request = new HttpRequestMessage(HttpMethod.Get, "/logs");

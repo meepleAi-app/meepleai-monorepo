@@ -320,8 +320,18 @@ app.Use(async (context, next) =>
 
 app.MapGet("/", () => Results.Json(new { ok = true, name = "MeepleAgentAI" }));
 
-app.MapGet("/logs", async (AiRequestLogService logService, CancellationToken ct) =>
+app.MapGet("/logs", async (HttpContext context, AiRequestLogService logService, CancellationToken ct) =>
 {
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
     var entries = await logService.GetRequestsAsync(limit: 100, ct: ct);
 
     var response = entries

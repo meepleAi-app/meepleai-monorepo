@@ -31,7 +31,11 @@ export default function LogsPage() {
           return;
         }
         console.error("Failed to load logs", err);
-        setError("Unable to load logs from the server. Please try again later.");
+        const errorMessage =
+          err instanceof Error && err.message.includes("403")
+            ? "You do not have permission to view logs. Please contact an administrator if you believe this is an error."
+            : "Unable to load logs from the server. Please try again later.";
+        setError(errorMessage);
         setLogs([]);
       } finally {
         if (isMounted) {

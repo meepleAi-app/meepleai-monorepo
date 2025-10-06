@@ -147,14 +147,14 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
 
     private sealed class TestClientContext : IDisposable, IAsyncDisposable
     {
-        public TestClientContext(WebApplicationFactoryFixture factory, HttpClient client, TestRateLimitService rateLimitService)
+        public TestClientContext(WebApplicationFactory<Program> factory, HttpClient client, TestRateLimitService rateLimitService)
         {
             Factory = factory;
             Client = client;
             RateLimitService = rateLimitService;
         }
 
-        public WebApplicationFactoryFixture Factory { get; }
+        public WebApplicationFactory<Program> Factory { get; }
         public HttpClient Client { get; }
         public TestRateLimitService RateLimitService { get; }
 

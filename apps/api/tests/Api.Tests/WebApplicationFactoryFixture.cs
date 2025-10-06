@@ -127,9 +127,9 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
         }
     }
 
-    public WebApplicationFactoryFixture WithTestServices(Action<IServiceCollection> configureServices)
+    public WebApplicationFactory<Program> WithTestServices(Action<IServiceCollection> configureServices)
     {
-        return (WebApplicationFactoryFixture)WithWebHostBuilder(builder =>
+        return WithWebHostBuilder(builder =>
         {
             builder.ConfigureTestServices(configureServices);
         });

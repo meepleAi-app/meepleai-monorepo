@@ -288,7 +288,7 @@ public class PdfStorageServiceTests
                 .Returns(dbContext);
             serviceProviderMock
                 .Setup(sp => sp.GetService(typeof(PdfTableExtractionService)))
-                .Returns(null);
+                .Returns((object?)null);
             serviceProviderMock
                 .Setup(sp => sp.GetService(typeof(ITextChunkingService)))
                 .Throws(new InvalidOperationException("Scope chunking should not be used"));

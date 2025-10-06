@@ -337,13 +337,33 @@ public class PdfTableExtractionService
     {
         var center = character.CenterX;
 
+        var candidateIndex = -1;
+        var candidateScore = float.MaxValue;
+
         for (int i = 0; i < boundaries.Count; i++)
         {
             var boundary = boundaries[i];
             if (center >= boundary.Start - tolerance && center <= boundary.End + tolerance)
             {
-                return i;
+                var boundaryCenter = boundary.Center;
+                var distance = Math.Abs(center - boundaryCenter);
+
+                if (center >= boundary.Start && center <= boundary.End)
+                {
+                    distance *= 0.5f;
+                }
+
+                if (distance < candidateScore)
+                {
+                    candidateScore = distance;
+                    candidateIndex = i;
+                }
             }
+        }
+
+        if (candidateIndex != -1)
+        {
+            return candidateIndex;
         }
 
         var closestIndex = -1;
@@ -439,10 +459,12 @@ public class PdfTableExtractionService
             }
             else if (gap < -overlapTolerance)
             {
+                var splitPoint = (current.End + character.X) / 2f;
+                current.End = Math.Max(current.Start, splitPoint);
                 boundaries.Add(current);
                 current = new ColumnBoundary
                 {
-                    Start = character.X,
+                    Start = Math.Min(character.X, splitPoint),
                     End = character.EndX
                 };
             }
@@ -458,15 +480,69 @@ public class PdfTableExtractionService
             boundaries.Add(current);
         }
 
-        var padding = Math.Max(2f, threshold / 3f);
+        ApplyPadding(boundaries, Math.Max(2f, threshold / 3f));
+        EnsureNonOverlappingBoundaries(boundaries);
+
+        return boundaries;
+    }
+
+    private static void ApplyPadding(List<ColumnBoundary> boundaries, float padding)
+    {
+        if (padding <= 0f)
+        {
+            return;
+        }
 
         foreach (var boundary in boundaries)
         {
             boundary.Start -= padding;
             boundary.End += padding;
         }
+    }
 
-        return boundaries;
+    private static void EnsureNonOverlappingBoundaries(List<ColumnBoundary> boundaries)
+    {
+        if (boundaries.Count < 2)
+        {
+            return;
+        }
+
+        boundaries.Sort((a, b) => a.Start.CompareTo(b.Start));
+
+        for (int i = 1; i < boundaries.Count; i++)
+        {
+            var previous = boundaries[i - 1];
+            var current = boundaries[i];
+
+            if (previous.End > current.Start)
+            {
+                var midpoint = (previous.End + current.Start) / 2f;
+                previous.End = midpoint;
+                current.Start = midpoint;
+            }
+
+            if (current.Start > current.End)
+            {
+                current.Start = current.End;
+            }
+
+            if (previous.Start > previous.End)
+            {
+                previous.Start = previous.End;
+            }
+        }
+    }
+
+    private float CalculateOverlapTolerance(PositionedTextLine line)
+    {
+        var averageWidth = line.GetAverageCharacterWidth();
+
+        if (averageWidth <= 0)
+        {
+            return 1.5f;
+        }
+
+        return Math.Max(1.5f, averageWidth * 0.6f);
     }
 
     private float CalculateOverlapTolerance(PositionedTextLine line)

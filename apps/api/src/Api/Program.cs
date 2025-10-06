@@ -831,6 +831,12 @@ app.MapGet("/games/{gameId}/rulespec/history", async (string gameId, HttpContext
         return Results.Unauthorized();
     }
 
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
     logger.LogInformation("Fetching RuleSpec version history for game {GameId}", gameId);
     var history = await ruleSpecService.GetVersionHistoryAsync(gameId, ct);
     return Results.Json(history);
@@ -842,6 +848,12 @@ app.MapGet("/games/{gameId}/rulespec/versions/{version}", async (string gameId, 
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
         return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
     logger.LogInformation("Fetching RuleSpec version {Version} for game {GameId}", version, gameId);
@@ -862,6 +874,12 @@ app.MapGet("/games/{gameId}/rulespec/diff", async (string gameId, string? from, 
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
         return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
     if (string.IsNullOrWhiteSpace(from) || string.IsNullOrWhiteSpace(to))

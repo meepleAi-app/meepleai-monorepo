@@ -80,7 +80,9 @@ scripts/, tools/, schemas/ ...
 
 ## Test locali
 
-- Front-end: `cd apps/web && npm test`
+- Front-end unit: `cd apps/web && npm test`
+- Front-end E2E complete suite: `cd apps/web && npm run test:e2e`
+- Front-end E2E mirati per le nuove dashboard (`admin`, `n8n`, `versions`): `cd apps/web && npm run test:e2e -- admin.spec.ts n8n.spec.ts versions.spec.ts`
 - API: `cd apps/api && dotnet test` (richiede .NET 8 SDK installato in locale)
 
 Per altre linee guida consulta `agents.md` e i README specifici nelle rispettive app.

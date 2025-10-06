@@ -1124,8 +1124,8 @@ static void WriteSessionCookie(HttpContext context, string token, DateTime expir
     var options = new CookieOptions
     {
         HttpOnly = true,
-        Secure = context.Request.IsHttps,
-        SameSite = SameSiteMode.Strict,
+        Secure = true,
+        SameSite = SameSiteMode.None,
         Path = "/",
         Expires = new DateTimeOffset(expiresAt)
     };
@@ -1138,8 +1138,8 @@ static void RemoveSessionCookie(HttpContext context)
     var options = new CookieOptions
     {
         HttpOnly = true,
-        Secure = context.Request.IsHttps,
-        SameSite = SameSiteMode.Strict,
+        Secure = true,
+        SameSite = SameSiteMode.None,
         Path = "/",
         Expires = DateTimeOffset.UnixEpoch
     };

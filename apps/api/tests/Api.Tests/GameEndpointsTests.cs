@@ -26,7 +26,7 @@ public class GameEndpointsTests : IClassFixture<WebApplicationFactoryFixture>
     public async Task PostGames_CreatesGame_ForAdmin()
     {
         // Arrange
-        var cookies = await RegisterAndAuthenticateAsync("creator@example.com", "Admin");
+        var cookies = await RegisterAndAuthenticateAsync("creator@example.com", UserRole.Admin);
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/games")
         {
@@ -60,7 +60,7 @@ public class GameEndpointsTests : IClassFixture<WebApplicationFactoryFixture>
     public async Task PostGames_CreatesGame_ForEditor()
     {
         // Arrange
-        var cookies = await RegisterAndAuthenticateAsync("editor@example.com", "Editor");
+        var cookies = await RegisterAndAuthenticateAsync("editor@example.com", UserRole.Editor);
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/games")
         {
@@ -83,7 +83,7 @@ public class GameEndpointsTests : IClassFixture<WebApplicationFactoryFixture>
     public async Task PostGames_ReturnsForbidden_ForUserRole()
     {
         // Arrange
-        var cookies = await RegisterAndAuthenticateAsync("player@example.com", "User");
+        var cookies = await RegisterAndAuthenticateAsync("player@example.com", UserRole.User);
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/games")
         {
@@ -102,18 +102,21 @@ public class GameEndpointsTests : IClassFixture<WebApplicationFactoryFixture>
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
-    private async Task<List<string>> RegisterAndAuthenticateAsync(string email, string role)
+    private async Task<List<string>> RegisterAndAuthenticateAsync(string email, UserRole role)
     {
         var registerRequest = new RegisterPayload(
             email,
             "Password123!",
             "Test User",
-            role);
+            null);
 
         var response = await _client.PostAsJsonAsync("/auth/register", registerRequest);
         response.EnsureSuccessStatusCode();
 
-        await PromoteUserAsync(email, UserRole.Admin);
+        if (role != UserRole.User)
+        {
+            await PromoteUserAsync(email, role);
+        }
 
         if (!response.Headers.TryGetValues("Set-Cookie", out var setCookie))
         {

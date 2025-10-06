@@ -241,6 +241,60 @@ describe('AdminDashboard', () => {
     expect(revokeObjectURLMock).toHaveBeenCalledWith('blob:mock-url');
   });
 
+  it('handles requests without user or game identifiers when filtering', async () => {
+    const requestsPayload = {
+      requests: [
+        {
+          id: '3',
+          userId: null,
+          gameId: null,
+          endpoint: 'qa',
+          query: null,
+          responseSnippet: null,
+          latencyMs: 120,
+          tokenCount: 24,
+          promptTokens: 12,
+          completionTokens: 12,
+          confidence: null,
+          status: 'Success',
+          errorMessage: null,
+          ipAddress: '127.0.0.3',
+          userAgent: 'jest',
+          createdAt: '2024-01-03T12:00:00.000Z',
+          model: null,
+          finishReason: null
+        }
+      ]
+    };
+
+    const statsPayload = {
+      totalRequests: 1,
+      avgLatencyMs: 120,
+      totalTokens: 24,
+      successRate: 1,
+      endpointCounts: { qa: 1 },
+      feedbackCounts: {},
+      totalFeedback: 0
+    };
+
+    fetchMock
+      .mockResolvedValueOnce(createJsonResponse(requestsPayload))
+      .mockResolvedValueOnce(createJsonResponse(statsPayload));
+
+    const user = userEvent.setup();
+
+    render(<AdminDashboard />);
+
+    expect(await screen.findByText('Admin Dashboard')).toBeInTheDocument();
+
+    const filterInput = screen.getByPlaceholderText('Filter by query, endpoint, user ID, or game ID...');
+
+    await user.type(filterInput, 'qa');
+
+    expect(screen.getAllByText('qa').length).toBeGreaterThan(0);
+    expect(screen.getByText('Success')).toBeInTheDocument();
+  });
+
   it('renders error state when the API responds with an error', async () => {
     fetchMock.mockResolvedValueOnce(createJsonResponse({}, false));
 

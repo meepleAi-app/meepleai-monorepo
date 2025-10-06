@@ -1466,4 +1466,102 @@ describe('UploadPage', () => {
       jest.useRealTimers();
     }
   });
+
+  it('handles error when loading PDFs throws exception', async () => {
+    const authResponse = {
+      user: {
+        id: 'user-19',
+        email: 'user19@example.com',
+        role: 'Admin',
+        displayName: 'User Nineteen'
+      },
+      expiresAt: new Date().toISOString()
+    };
+
+    mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      const method = init?.method ?? 'GET';
+
+      if (url.endsWith('/auth/me')) {
+        return createJsonResponse(authResponse);
+      }
+
+      if (url.endsWith('/games') && method === 'GET') {
+        return createJsonResponse([
+          { id: 'game-1', name: 'Terraforming Mars', createdAt: new Date().toISOString() }
+        ]);
+      }
+
+      if (url.includes('/games/game-1/pdfs')) {
+        return Promise.reject(new Error('Network failure'));
+      }
+
+      throw new Error(`Unexpected fetch call to ${url}`);
+    });
+
+    render(<UploadPage />);
+
+    await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/Unable to load uploaded PDFs\. Please try again\./i)).toBeInTheDocument()
+    );
+  });
+
+  it('handles error when upload request throws exception', async () => {
+    const authResponse = {
+      user: {
+        id: 'user-20',
+        email: 'user20@example.com',
+        role: 'Admin',
+        displayName: 'User Twenty'
+      },
+      expiresAt: new Date().toISOString()
+    };
+
+    mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      const method = init?.method ?? 'GET';
+
+      if (url.endsWith('/auth/me')) {
+        return createJsonResponse(authResponse);
+      }
+
+      if (url.endsWith('/games') && method === 'GET') {
+        return createJsonResponse([
+          { id: 'game-1', name: 'Terraforming Mars', createdAt: new Date().toISOString() }
+        ]);
+      }
+
+      if (url.includes('/games/game-1/pdfs')) {
+        return createJsonResponse({ pdfs: [] });
+      }
+
+      if (url.endsWith('/ingest/pdf')) {
+        return Promise.reject(new Error('Connection timeout'));
+      }
+
+      throw new Error(`Unexpected fetch call to ${url}`);
+    });
+
+    render(<UploadPage />);
+
+    await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
+
+    const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
+    const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+    await waitFor(() => expect(uploadButton).not.toBeDisabled());
+    fireEvent.click(uploadButton);
+
+    await waitFor(() =>
+      expect(screen.getByText(/❌ Upload failed: Connection timeout/i)).toBeInTheDocument()
+    );
+  });
 });

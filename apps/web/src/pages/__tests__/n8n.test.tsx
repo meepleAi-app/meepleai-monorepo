@@ -329,4 +329,189 @@ describe('N8nWorkflowManagement', () => {
       expect(fetchMock.mock.calls.some(([, init]) => (init?.method ?? 'GET') === 'GET')).toBe(true)
     );
   });
+
+  it('handles error when creating configuration fails', async () => {
+    fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      const method = init?.method ?? 'GET';
+
+      if (url === 'http://api.test/admin/n8n' && method === 'GET') {
+        return Promise.resolve(createResponse({ configs: [] }));
+      }
+
+      if (url === 'http://api.test/admin/n8n' && method === 'POST') {
+        return Promise.resolve(createResponse({ error: 'Validation failed' }, false, 400));
+      }
+
+      throw new Error(`Unexpected fetch call: ${method} ${url}`);
+    });
+
+    render(<N8nWorkflowManagement />);
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Add Configuration/i })).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: /Add Configuration/i }));
+
+    const { nameInput, baseUrlInput, apiKeyInput, webhookInput } = getFormInputs();
+    fireEvent.change(nameInput, { target: { value: 'Test' } });
+    fireEvent.change(baseUrlInput, { target: { value: 'http://test.com' } });
+    fireEvent.change(apiKeyInput, { target: { value: 'key' } });
+    fireEvent.change(webhookInput, { target: { value: 'http://test.com/webhook' } });
+
+    fireEvent.submit(screen.getByRole('button', { name: /Create Configuration/i }));
+
+    await waitFor(() => expect(alertMock).toHaveBeenCalledWith('Validation failed'));
+  });
+
+  it('cancels delete when user declines confirmation', async () => {
+    const existingConfig = {
+      id: 'cfg-1',
+      name: 'Production n8n',
+      baseUrl: 'https://n8n.example.com',
+      webhookUrl: null,
+      isActive: true,
+      lastTestedAt: null,
+      lastTestResult: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      const method = init?.method ?? 'GET';
+
+      if (url === 'http://api.test/admin/n8n' && method === 'GET') {
+        return Promise.resolve(createResponse({ configs: [existingConfig] }));
+      }
+
+      throw new Error(`Unexpected fetch call: ${method} ${url}`);
+    });
+
+    confirmMock.mockReturnValue(false);
+
+    render(<N8nWorkflowManagement />);
+
+    await waitFor(() => expect(screen.getByText(existingConfig.name)).toBeInTheDocument());
+
+    fetchMock.mockClear();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+    expect(confirmMock).toHaveBeenCalledWith('Are you sure you want to delete this configuration?');
+    // Verify no DELETE request was made
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('handles error when deleting configuration fails', async () => {
+    const existingConfig = {
+      id: 'cfg-1',
+      name: 'Production n8n',
+      baseUrl: 'https://n8n.example.com',
+      webhookUrl: null,
+      isActive: true,
+      lastTestedAt: null,
+      lastTestResult: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      const method = init?.method ?? 'GET';
+
+      if (url === 'http://api.test/admin/n8n' && method === 'GET') {
+        return Promise.resolve(createResponse({ configs: [existingConfig] }));
+      }
+
+      if (url === `http://api.test/admin/n8n/${existingConfig.id}` && method === 'DELETE') {
+        return Promise.resolve(createResponse({}, false, 500));
+      }
+
+      throw new Error(`Unexpected fetch call: ${method} ${url}`);
+    });
+
+    confirmMock.mockReturnValue(true);
+
+    render(<N8nWorkflowManagement />);
+
+    await waitFor(() => expect(screen.getByText(existingConfig.name)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(alertMock).toHaveBeenCalledWith('Failed to delete configuration'));
+  });
+
+  it('handles error when testing configuration fails', async () => {
+    const existingConfig = {
+      id: 'cfg-1',
+      name: 'Production n8n',
+      baseUrl: 'https://n8n.example.com',
+      webhookUrl: null,
+      isActive: true,
+      lastTestedAt: null,
+      lastTestResult: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      const method = init?.method ?? 'GET';
+
+      if (url === 'http://api.test/admin/n8n' && method === 'GET') {
+        return Promise.resolve(createResponse({ configs: [existingConfig] }));
+      }
+
+      if (url === `http://api.test/admin/n8n/${existingConfig.id}/test` && method === 'POST') {
+        return Promise.resolve(createResponse({}, false, 500));
+      }
+
+      throw new Error(`Unexpected fetch call: ${method} ${url}`);
+    });
+
+    render(<N8nWorkflowManagement />);
+
+    await waitFor(() => expect(screen.getByText(existingConfig.name)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Test' }));
+
+    await waitFor(() => expect(alertMock).toHaveBeenCalledWith('Failed to test configuration'));
+  });
+
+  it('handles error when toggling activation fails', async () => {
+    const existingConfig = {
+      id: 'cfg-1',
+      name: 'Production n8n',
+      baseUrl: 'https://n8n.example.com',
+      webhookUrl: null,
+      isActive: true,
+      lastTestedAt: null,
+      lastTestResult: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      const method = init?.method ?? 'GET';
+
+      if (url === 'http://api.test/admin/n8n' && method === 'GET') {
+        return Promise.resolve(createResponse({ configs: [existingConfig] }));
+      }
+
+      if (url === `http://api.test/admin/n8n/${existingConfig.id}` && method === 'PUT') {
+        return Promise.resolve(createResponse({}, false, 500));
+      }
+
+      throw new Error(`Unexpected fetch call: ${method} ${url}`);
+    });
+
+    render(<N8nWorkflowManagement />);
+
+    await waitFor(() => expect(screen.getByText(existingConfig.name)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: /Deactivate/i }));
+
+    await waitFor(() => expect(alertMock).toHaveBeenCalledWith('Failed to update configuration'));
+  });
 });

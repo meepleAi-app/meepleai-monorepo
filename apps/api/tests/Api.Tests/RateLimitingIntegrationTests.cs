@@ -118,7 +118,7 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
 
     private sealed class TestRateLimitService : RateLimitService
     {
-        private readonly Queue<RedisValue[]> _responses = new();
+        private readonly Queue<RedisResult[]> _responses = new();
         private readonly Mock<IDatabase> _mockDatabase;
         private Exception? _nextException;
 
@@ -132,7 +132,7 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
                     It.IsAny<RedisKey[]>(),
                     It.IsAny<RedisValue[]>(),
                     It.IsAny<CommandFlags>()))
-                .Returns((string _, RedisKey[] _, RedisValue[] values, CommandFlags _) =>
+                .Returns((string script, RedisKey[] keys, RedisValue[] values, CommandFlags _) =>
                 {
                     if (_nextException is { } ex)
                     {
@@ -146,13 +146,23 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
                     }
 
                     var maxTokens = (int)values[0];
-                    return Task.FromResult(RedisResult.Create(new RedisValue[] { 1, maxTokens, 0 }));
+                    return Task.FromResult(RedisResult.Create(new RedisResult[]
+                    {
+                        RedisResult.Create(1),
+                        RedisResult.Create(maxTokens),
+                        RedisResult.Create(0)
+                    }));
                 });
         }
 
         public void EnqueueResponse(bool allowed, int tokensRemaining, int retryAfterSeconds)
         {
-            _responses.Enqueue(new RedisValue[] { allowed ? 1 : 0, tokensRemaining, retryAfterSeconds });
+            _responses.Enqueue(new RedisResult[]
+            {
+                RedisResult.Create(allowed ? 1 : 0),
+                RedisResult.Create(tokensRemaining),
+                RedisResult.Create(retryAfterSeconds)
+            });
         }
 
         public void FailWith(Exception exception)

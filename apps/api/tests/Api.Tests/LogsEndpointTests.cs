@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Linq;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -138,11 +139,32 @@ public class LogsEndpointTests : IClassFixture<WebApplicationFactoryFixture>
             .ToList();
     }
 
-    private static async Task<List<string>> RegisterAndAuthenticateAsync(HttpClient client, string email, string role)
+    private async Task<List<string>> RegisterAndAuthenticateAsync(HttpClient client, string email, string role)
     {
-        var payload = new RegisterPayload(email, "Password123!", "Logs Tester", role);
+        var payload = new RegisterPayload(email, "Password123!", "Logs Tester", null);
         var response = await client.PostAsJsonAsync("/auth/register", payload);
         response.EnsureSuccessStatusCode();
+        await PromoteUserAsync(email, role);
         return ExtractCookies(response);
+    }
+
+    private async Task PromoteUserAsync(string email, string role)
+    {
+        if (string.IsNullOrWhiteSpace(role) ||
+            string.Equals(role, nameof(UserRole.User), StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!Enum.TryParse<UserRole>(role, true, out var parsedRole))
+        {
+            return;
+        }
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var user = await db.Users.SingleAsync(u => u.Email == email);
+        user.Role = parsedRole;
+        await db.SaveChangesAsync();
     }
 }

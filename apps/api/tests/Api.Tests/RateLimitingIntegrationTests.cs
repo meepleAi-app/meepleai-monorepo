@@ -174,10 +174,11 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
         {
             databaseMock = new Mock<IDatabase>();
             var multiplexerMock = new Mock<IConnectionMultiplexer>();
+            var localDatabaseMock = databaseMock;
 
             multiplexerMock
                 .Setup(m => m.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
-                .Returns(() => databaseMock.Object);
+                .Returns(() => localDatabaseMock.Object);
 
             return multiplexerMock.Object;
         }

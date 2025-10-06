@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Events;
 using StackExchange.Redis;
+using AspNetIpNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,7 +60,7 @@ if (forwardedHeadersEnabled)
                 continue;
             }
 
-            if (IPNetwork.TryParse(network, out var ipNetwork))
+            if (AspNetIpNetwork.TryParse(network, out var ipNetwork))
             {
                 options.KnownNetworks.Add(ipNetwork);
                 continue;
@@ -68,7 +69,7 @@ if (forwardedHeadersEnabled)
             var parts = network.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var networkAddress) && int.TryParse(parts[1], out var prefixLength))
             {
-                options.KnownNetworks.Add(new IPNetwork(networkAddress, prefixLength));
+                options.KnownNetworks.Add(new AspNetIpNetwork(networkAddress, prefixLength));
             }
         }
 
@@ -199,7 +200,7 @@ if (forwardedHeadersEnabled)
             var parts = network.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var networkAddress) && int.TryParse(parts[1], out var prefixLength))
             {
-                options.KnownNetworks.Add(new IPNetwork(networkAddress, prefixLength));
+                options.KnownNetworks.Add(new AspNetIpNetwork(networkAddress, prefixLength));
             }
         }
     });

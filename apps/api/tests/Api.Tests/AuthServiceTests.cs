@@ -63,6 +63,42 @@ public class AuthServiceTests
         Assert.Null(failedLogin);
     }
 
+    [Theory]
+    [InlineData("Admin")]
+    [InlineData("Editor")]
+    public async Task RegisterAsync_RejectsElevatedRolesAfterBootstrap(string requestedRole)
+    {
+        await using var connection = new SqliteConnection("Filename=:memory:");
+        await connection.OpenAsync();
+
+        await using (var setupContext = CreateContext(connection))
+        {
+            await setupContext.Database.EnsureCreatedAsync();
+        }
+
+        await using var dbContext = CreateContext(connection);
+        var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
+        var authService = new AuthService(dbContext, timeProvider);
+
+        await authService.RegisterAsync(new RegisterCommand(
+            "bootstrap@example.com",
+            "Password!1",
+            "Bootstrap Admin",
+            "Admin",
+            "127.0.0.1",
+            "unit-tests"));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => authService.RegisterAsync(new RegisterCommand(
+            $"{requestedRole.ToLowerInvariant()}@example.com",
+            "Password!1",
+            $"{requestedRole} User",
+            requestedRole,
+            "127.0.0.1",
+            "unit-tests")));
+
+        Assert.Equal("Only administrators can assign elevated roles.", exception.Message);
+    }
+
     private static MeepleAiDbContext CreateContext(SqliteConnection connection)
     {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()

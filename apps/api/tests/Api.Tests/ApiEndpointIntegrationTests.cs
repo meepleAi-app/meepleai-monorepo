@@ -38,7 +38,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
             "register-user@example.com",
             "Password123!",
             "Register User",
-            "Admin");
+            null);
 
         var response = await client.PostAsJsonAsync("/auth/register", payload);
 
@@ -50,7 +50,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         Assert.NotNull(authResponse);
         Assert.Equal(payload.email, authResponse!.user.email);
         Assert.Equal(payload.displayName, authResponse.user.displayName);
-        Assert.Equal(payload.role, authResponse.user.role);
+        Assert.Equal(UserRole.User.ToString(), authResponse.user.role);
 
         var cookies = ExtractCookies(response);
         Assert.Contains(cookies, cookie => cookie.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal));
@@ -204,12 +204,50 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
             email,
             "Password123!",
             "Test User",
-            role);
+            null);
 
         var response = await client.PostAsJsonAsync("/auth/register", payload);
         response.EnsureSuccessStatusCode();
 
+        if (!string.Equals(role, UserRole.User.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            var parsedRole = Enum.Parse<UserRole>(role, true);
+            await PromoteUserAsync(email, parsedRole);
+        }
+
         return ExtractCookies(response);
+    }
+
+    [Theory]
+    [InlineData("Admin")]
+    [InlineData("Editor")]
+    public async Task Register_ReturnsConflictWhenNonBootstrapRequestsElevatedRole(string requestedRole)
+    {
+        using var client = _factory.CreateClient();
+
+        var initialPayload = new RegisterPayload(
+            $"initial-{Guid.NewGuid():N}@example.com",
+            "Password123!",
+            "Initial User",
+            null);
+
+        var initialResponse = await client.PostAsJsonAsync("/auth/register", initialPayload);
+        initialResponse.EnsureSuccessStatusCode();
+
+        var escalationPayload = new RegisterPayload(
+            $"escalate-{Guid.NewGuid():N}@example.com",
+            "Password123!",
+            "Escalation User",
+            requestedRole);
+
+        var response = await client.PostAsJsonAsync("/auth/register", escalationPayload);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+
+        var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+        Assert.NotNull(body);
+        Assert.True(body!.TryGetValue("error", out var message));
+        Assert.Equal("Only administrators can assign elevated roles.", message);
     }
 
     private static List<string> ExtractCookies(HttpResponseMessage response)
@@ -222,6 +260,15 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         return values
             .Select(value => value.Split(';')[0])
             .ToList();
+    }
+
+    private async Task PromoteUserAsync(string email, UserRole role)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var user = await db.Users.SingleAsync(u => u.Email == email);
+        user.Role = role;
+        await db.SaveChangesAsync();
     }
 
     private static void AssertAuthResponsePayload(JsonElement root)

@@ -410,9 +410,15 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
 
     private async Task<List<string>> RegisterAndAuthenticateAsync(HttpClient client, string email, string role)
     {
-        var payload = new RegisterPayload(email, "Password123!", "Integration Tester", role);
+        var payload = new RegisterPayload(email, "Password123!", "Integration Tester", null);
         var response = await client.PostAsJsonAsync("/auth/register", payload);
         response.EnsureSuccessStatusCode();
+        if (!string.Equals(role, UserRole.User.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            var parsedRole = Enum.Parse<UserRole>(role, true);
+            await PromoteUserAsync(email, parsedRole);
+        }
+
         return ExtractCookies(response);
     }
 
@@ -422,6 +428,15 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var user = await db.Users.SingleAsync(u => u.Email == email);
         return user.Id;
+    }
+
+    private async Task PromoteUserAsync(string email, UserRole role)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var user = await db.Users.SingleAsync(u => u.Email == email);
+        user.Role = role;
+        await db.SaveChangesAsync();
     }
 
     private async Task<DashboardSeedContext> SeedDashboardDataAsync(string adminUserId, string otherUserId)

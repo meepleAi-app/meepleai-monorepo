@@ -1162,8 +1162,14 @@ app.Run();
 
 static void WriteSessionCookie(HttpContext context, string token, DateTime expiresAt)
 {
-    var options = CreateSessionCookieOptions(context);
-    options.Expires = new DateTimeOffset(expiresAt);
+    var options = new CookieOptions
+    {
+        HttpOnly = true,
+        Secure = true,
+        SameSite = SameSiteMode.None,
+        Path = "/",
+        Expires = new DateTimeOffset(expiresAt)
+    };
 
     context.Response.Cookies.Append(AuthService.SessionCookieName, token, options);
 }
@@ -1184,14 +1190,10 @@ static CookieOptions CreateSessionCookieOptions(HttpContext context)
     var options = new CookieOptions
     {
         HttpOnly = true,
-        SameSite = configuration.SameSite,
-        Secure = configuration.SecurePolicy switch
-        {
-            CookieSecurePolicy.Always => true,
-            CookieSecurePolicy.None => false,
-            _ => IsSecureRequest(context)
-        },
-        Path = string.IsNullOrWhiteSpace(configuration.Path) ? "/" : configuration.Path
+        Secure = true,
+        SameSite = SameSiteMode.None,
+        Path = "/",
+        Expires = DateTimeOffset.UnixEpoch
     };
 
     if (!string.IsNullOrWhiteSpace(configuration.Domain))

@@ -1,7 +1,13 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useRouter } from 'next/router';
+import type { NextRouter } from 'next/router';
 import Home from '../index';
 import { api } from '../../lib/api';
+
+jest.mock('next/router', () => ({
+  useRouter: jest.fn()
+}));
 
 jest.mock('../../lib/api', () => ({
   api: {
@@ -12,6 +18,32 @@ jest.mock('../../lib/api', () => ({
 }));
 
 const mockedApi = api as jest.Mocked<typeof api>;
+const useRouterMock = useRouter as jest.MockedFunction<typeof useRouter>;
+
+const createMockRouter = (): jest.Mocked<NextRouter> => ({
+  push: jest.fn(),
+  replace: jest.fn(),
+  reload: jest.fn(),
+  back: jest.fn(),
+  prefetch: jest.fn().mockResolvedValue(undefined),
+  beforePopState: jest.fn(),
+  events: {
+    on: jest.fn(),
+    off: jest.fn(),
+    emit: jest.fn()
+  },
+  isFallback: false,
+  isReady: true,
+  isPreview: false,
+  isLocaleDomain: false,
+  basePath: '',
+  pathname: '/',
+  route: '/',
+  query: {},
+  asPath: '/'
+} as unknown as jest.Mocked<NextRouter>);
+
+let routerMock = createMockRouter();
 
 describe('Home page', () => {
   const originalFetch = global.fetch;
@@ -20,6 +52,9 @@ describe('Home page', () => {
   let alertMock: jest.Mock;
 
   beforeEach(() => {
+    routerMock = createMockRouter();
+    useRouterMock.mockReturnValue(routerMock);
+
     fetchMock = jest.fn().mockImplementation(async (input: RequestInfo | URL) => {
       if (typeof input === 'string' && input.includes('/api/health')) {
         return {
@@ -50,6 +85,7 @@ describe('Home page', () => {
     global.fetch = originalFetch;
     window.alert = originalAlert;
     jest.clearAllMocks();
+    useRouterMock.mockReset();
   });
 
   it("shows an error message when an unauthenticated user tries to ask a question", async () => {
@@ -81,7 +117,7 @@ describe('Home page', () => {
     expect(mockedApi.post).not.toHaveBeenCalledWith('/agents/qa', expect.anything());
   });
 
-  it('resets the registration form and shows a positive status after successful registration', async () => {
+  it('resets the registration form and redirects to the upload page after successful registration', async () => {
     const user = userEvent.setup();
 
     const authResponse = {
@@ -125,12 +161,13 @@ describe('Home page', () => {
     expect(registerScope.getByLabelText('Ruolo')).toHaveValue('User');
 
     await waitFor(() => {
-      expect(screen.getByText('Registrazione completata. Sei connesso!')).toBeInTheDocument();
+      expect(routerMock.push).toHaveBeenCalledWith('/upload');
     });
+    expect(routerMock.push).toHaveBeenCalledTimes(1);
     expect(screen.getByText('new@example.com')).toBeInTheDocument();
   });
 
-  it('logs in the user, updates the session state, and enables the ask button', async () => {
+  it('logs in the user, updates the session state, and redirects to the upload page', async () => {
     const user = userEvent.setup();
 
     const loginResponse = {
@@ -164,8 +201,9 @@ describe('Home page', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Accesso eseguito.')).toBeInTheDocument();
+      expect(routerMock.push).toHaveBeenCalledWith('/upload');
     });
+    expect(routerMock.push).toHaveBeenCalledTimes(1);
 
     const askButton = await screen.findByRole('button', { name: 'Chiedi' });
     await waitFor(() => {
@@ -227,8 +265,9 @@ describe('Home page', () => {
     await user.click(loginScope.getByRole('button', { name: 'Entra' }));
 
     await waitFor(() => {
-      expect(screen.getByText('Accesso eseguito.')).toBeInTheDocument();
+      expect(routerMock.push).toHaveBeenCalledWith('/upload');
     });
+    expect(routerMock.push).toHaveBeenCalledTimes(1);
 
     mockedApi.post.mockRejectedValueOnce(new Error('Agente non raggiungibile'));
 

@@ -1,7 +1,10 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+export const API_BASE_FALLBACK = "http://localhost:8080";
+
+export const getApiBase = (): string => process.env.NEXT_PUBLIC_API_BASE || API_BASE_FALLBACK;
+
 export const api = {
   async get<T>(path: string): Promise<T | null> {
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(`${getApiBase()}${path}`, {
       method: "GET",
       credentials: "include"
     });
@@ -14,7 +17,7 @@ export const api = {
     return res.json();
   },
   async post<T>(path: string, body?: unknown): Promise<T> {
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(`${getApiBase()}${path}`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -29,7 +32,7 @@ export const api = {
     return res.json();
   },
   async put<T>(path: string, body: unknown): Promise<T> {
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(`${getApiBase()}${path}`, {
       method: "PUT",
       credentials: "include",
       headers: { "Content-Type": "application/json" },

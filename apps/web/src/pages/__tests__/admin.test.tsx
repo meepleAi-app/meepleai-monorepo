@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AdminDashboard from '../admin';
+import { API_BASE_FALLBACK } from '../../lib/api';
 
 type FetchMock = jest.MockedFunction<typeof fetch>;
 
@@ -249,5 +250,43 @@ describe('AdminDashboard', () => {
     expect(await screen.findByText('Error')).toBeInTheDocument();
     expect(screen.getByText('Failed to fetch requests')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to Home' })).toBeInTheDocument();
+  });
+
+  it('falls back to the localhost API base when NEXT_PUBLIC_API_BASE is unset', async () => {
+    delete process.env.NEXT_PUBLIC_API_BASE;
+
+    const emptyRequests = { requests: [] };
+    const emptyStats = {
+      totalRequests: 0,
+      avgLatencyMs: 0,
+      totalTokens: 0,
+      successRate: 0,
+      endpointCounts: {},
+      feedbackCounts: {},
+      totalFeedback: 0
+    };
+
+    fetchMock
+      .mockResolvedValueOnce(createJsonResponse(emptyRequests))
+      .mockResolvedValueOnce(createJsonResponse(emptyStats));
+
+    render(<AdminDashboard />);
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        1,
+        `${API_BASE_FALLBACK}/admin/requests?limit=100`,
+        expect.objectContaining({ credentials: 'include' })
+      )
+    );
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        2,
+        `${API_BASE_FALLBACK}/admin/stats`,
+        expect.objectContaining({ credentials: 'include' })
+      )
+    );
+
+    process.env.NEXT_PUBLIC_API_BASE = apiBase;
   });
 });

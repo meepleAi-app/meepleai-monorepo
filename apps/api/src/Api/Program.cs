@@ -115,6 +115,11 @@ builder.Services.AddScoped<N8nConfigService>();
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 
+if (allowedOrigins.Length == 0)
+{
+    allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("web", policy =>

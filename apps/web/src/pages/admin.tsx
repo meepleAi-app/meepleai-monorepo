@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { API_BASE } from "../lib/api";
 
 import { getApiBase } from "../lib/api";
 

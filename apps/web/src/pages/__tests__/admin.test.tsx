@@ -5,6 +5,12 @@ import { API_BASE_FALLBACK } from '../../lib/api';
 
 type FetchMock = jest.MockedFunction<typeof fetch>;
 
+const createJsonResponse = (data: unknown, ok = true) =>
+  ({
+    ok,
+    json: async () => data
+  } as unknown as Response);
+
 describe('AdminDashboard', () => {
   const originalFetch = global.fetch;
   const boundCreateElement = document.createElement.bind(document) as typeof document.createElement;
@@ -17,11 +23,17 @@ describe('AdminDashboard', () => {
   let clickSpy: jest.SpyInstance;
   const apiBase = 'https://api.example.com';
 
-  const createJsonResponse = (data: unknown, ok = true) =>
-    ({
-      ok,
-      json: async () => data
-    } as unknown as Response);
+  const loadAdminDashboard = () => {
+    const adminPath = require.resolve('../admin');
+    const apiCacheKeys = Object.keys(require.cache).filter((key) => key.includes('lib/api'));
+
+    delete require.cache[adminPath];
+    apiCacheKeys.forEach((key) => {
+      delete require.cache[key];
+    });
+
+    return require('../admin').default;
+  };
 
   beforeAll(() => {
     fetchMock = jest.fn() as FetchMock;
@@ -73,7 +85,6 @@ describe('AdminDashboard', () => {
   });
 
   beforeEach(() => {
-    process.env.NEXT_PUBLIC_API_BASE = apiBase;
     fetchMock.mockReset();
     createObjectURLMock.mockClear();
     revokeObjectURLMock.mockClear();
@@ -84,6 +95,7 @@ describe('AdminDashboard', () => {
   });
 
   afterEach(() => {
+    delete process.env.NEXT_PUBLIC_API_BASE;
     jest.clearAllMocks();
     createElementSpy.mockImplementation((...args: Parameters<typeof boundCreateElement>) =>
       boundCreateElement(...args)
@@ -92,6 +104,9 @@ describe('AdminDashboard', () => {
 
   it('renders loading state while data is being fetched', () => {
     fetchMock.mockImplementation(() => new Promise(() => {}));
+
+    process.env.NEXT_PUBLIC_API_BASE = apiBase;
+    const AdminDashboard = loadAdminDashboard();
 
     render(<AdminDashboard />);
 
@@ -170,11 +185,20 @@ describe('AdminDashboard', () => {
       .mockResolvedValueOnce(createJsonResponse(qaOnlyPayload))
       .mockResolvedValueOnce(createJsonResponse(statsPayload));
 
+    const AdminDashboard = loadAdminDashboard();
+
     render(<AdminDashboard />);
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
         `${apiBase}/admin/requests?limit=100`,
+        expect.objectContaining({ credentials: 'include' })
+      )
+    );
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        `${apiBase}/admin/stats`,
         expect.objectContaining({ credentials: 'include' })
       )
     );
@@ -298,6 +322,8 @@ describe('AdminDashboard', () => {
 
   it('renders error state when the API responds with an error', async () => {
     fetchMock.mockResolvedValueOnce(createJsonResponse({}, false));
+
+    const AdminDashboard = loadAdminDashboard();
 
     render(<AdminDashboard />);
 

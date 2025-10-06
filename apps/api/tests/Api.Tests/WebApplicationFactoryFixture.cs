@@ -1,3 +1,6 @@
+using System.Net;
+using System.Net.Http;
+using System.Text;
 using System;
 using Api.Infrastructure;
 using Api.Services;
@@ -24,6 +27,14 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        builder.ConfigureAppConfiguration((_, configuration) =>
+        {
+            configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["N8N_ENCRYPTION_KEY"] = "integration-test-encryption-key"
+            });
+        });
+
         builder.ConfigureTestServices(services =>
         {
             // Remove real services
@@ -72,6 +83,8 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
                 sp.GetRequiredService<ILogger<QdrantService>>()
             ));
 
+            services.AddSingleton<IHttpClientFactory>(_ => new StubHttpClientFactory());
+
             // Ensure database is created
             var sp = services.BuildServiceProvider();
             using var scope = sp.CreateScope();
@@ -92,6 +105,26 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
         base.Dispose(disposing);
     }
 
+    private sealed class StubHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name)
+        {
+            return new HttpClient(new StubHandler())
+            {
+                Timeout = TimeSpan.FromSeconds(2)
+            };
+        }
+
+        private sealed class StubHandler : HttpMessageHandler
+        {
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{}", Encoding.UTF8, "application/json")
+                });
+            }
+        }
     public WebApplicationFactory<Program> WithTestServices(Action<IServiceCollection> configureServices)
     {
         return WithWebHostBuilder(builder =>

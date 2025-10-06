@@ -352,9 +352,14 @@ public class RuleSpecHistoryIntegrationTests : IClassFixture<WebApplicationFacto
     {
         using var client = _factory.CreateClient();
         var email = $"{role.ToLowerInvariant()}-{Guid.NewGuid():N}@example.com";
-        var payload = new RegisterPayload(email, "Password123!", $"{role} User", role);
+        var payload = new RegisterPayload(email, "Password123!", $"{role} User", null);
         var response = await client.PostAsJsonAsync("/auth/register", payload);
         response.EnsureSuccessStatusCode();
+        if (!string.Equals(role, UserRole.User.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            var parsedRole = Enum.Parse<UserRole>(role, true);
+            await PromoteUserAsync(email, parsedRole);
+        }
         return await GetUserIdByEmailAsync(email);
     }
 
@@ -362,10 +367,15 @@ public class RuleSpecHistoryIntegrationTests : IClassFixture<WebApplicationFacto
     {
         var client = _factory.CreateClient();
         var email = $"{role.ToLowerInvariant()}-{Guid.NewGuid():N}@example.com";
-        var payload = new RegisterPayload(email, "Password123!", $"{role} User", role);
+        var payload = new RegisterPayload(email, "Password123!", $"{role} User", null);
         var response = await client.PostAsJsonAsync("/auth/register", payload);
         response.EnsureSuccessStatusCode();
         var cookies = ExtractCookies(response);
+        if (!string.Equals(role, UserRole.User.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            var parsedRole = Enum.Parse<UserRole>(role, true);
+            await PromoteUserAsync(email, parsedRole);
+        }
         var userId = await GetUserIdByEmailAsync(email);
         return new AuthenticatedClient(client, cookies, userId);
     }
@@ -388,6 +398,15 @@ public class RuleSpecHistoryIntegrationTests : IClassFixture<WebApplicationFacto
         return setCookie
             .Select(cookie => cookie.Split(';')[0])
             .ToList();
+    }
+
+    private async Task PromoteUserAsync(string email, UserRole role)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var user = await db.Users.SingleAsync(u => u.Email == email);
+        user.Role = role;
+        await db.SaveChangesAsync();
     }
 
     private static async Task<T?> DeserializeAsync<T>(HttpResponseMessage response)

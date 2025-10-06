@@ -24,8 +24,7 @@ export default function Home() {
   const [registerForm, setRegisterForm] = useState({
     email: "",
     password: "",
-    displayName: "",
-    role: "User"
+    displayName: ""
   });
   const [loginForm, setLoginForm] = useState({
     email: "",
@@ -86,16 +85,14 @@ export default function Home() {
       const payload = {
         email: registerForm.email,
         password: registerForm.password,
-        displayName: registerForm.displayName || undefined,
-        role: registerForm.role
+        displayName: registerForm.displayName || undefined
       };
       const res = await api.post<AuthResponse>("/auth/register", payload);
       setAuthUser(res.user);
       setRegisterForm({
         email: "",
         password: "",
-        displayName: "",
-        role: "User"
+        displayName: ""
       });
       if (router.pathname !== "/upload") {
         void router.push("/upload");
@@ -234,18 +231,6 @@ export default function Home() {
               onChange={(e) => setRegisterForm({ ...registerForm, displayName: e.target.value })}
               style={{ width: "100%" }}
             />
-          </label>
-          <label style={{ display: "block", marginBottom: 12 }}>
-            Ruolo
-            <select
-              value={registerForm.role}
-              onChange={(e) => setRegisterForm({ ...registerForm, role: e.target.value })}
-              style={{ width: "100%" }}
-            >
-              <option value="Admin">Admin</option>
-              <option value="Editor">Editor</option>
-              <option value="User">User</option>
-            </select>
           </label>
           <button type="submit">Crea account</button>
         </form>

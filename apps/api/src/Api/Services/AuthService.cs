@@ -10,6 +10,7 @@ namespace Api.Services;
 public class AuthService
 {
     public const string SessionCookieName = "meeple_session";
+    private const string ElevatedRoleAssignmentError = "Only administrators can assign elevated roles.";
     private const int SessionTokenSize = 32;
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromDays(7);
     private readonly MeepleAiDbContext _db;
@@ -36,7 +37,15 @@ public class AuthService
             throw new InvalidOperationException("Email is already registered");
         }
 
-        var role = ParseRole(command.role);
+        var hasAnyUsers = await _db.Users.AnyAsync(ct);
+        var requestedRole = ParseRole(command.role);
+
+        if (hasAnyUsers && requestedRole != UserRole.User)
+        {
+            throw new InvalidOperationException(ElevatedRoleAssignmentError);
+        }
+
+        var role = hasAnyUsers ? UserRole.User : requestedRole;
 
         var user = new UserEntity
         {

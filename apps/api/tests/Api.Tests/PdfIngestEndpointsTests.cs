@@ -85,16 +85,22 @@ public class PdfIngestEndpointsTests : IClassFixture<WebApplicationFactoryFixtur
         Assert.Equal("4", spec.rules[0].page);
     }
 
-    private static async Task<List<string>> RegisterAndAuthenticateAsync(HttpClient client, string email, string role = "Admin")
+    private async Task<List<string>> RegisterAndAuthenticateAsync(HttpClient client, string email, string role = "Admin")
     {
         var registerRequest = new RegisterPayload(
             email,
             "Password123!",
             "Test User",
-            role);
+            null);
 
         var response = await client.PostAsJsonAsync("/auth/register", registerRequest);
         response.EnsureSuccessStatusCode();
+
+        if (!string.Equals(role, UserRole.User.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            var parsedRole = Enum.Parse<UserRole>(role, true);
+            await PromoteUserAsync(email, parsedRole);
+        }
 
         if (!response.Headers.TryGetValues("Set-Cookie", out var setCookie))
         {
@@ -102,5 +108,14 @@ public class PdfIngestEndpointsTests : IClassFixture<WebApplicationFactoryFixtur
         }
 
         return new List<string>(setCookie.Select(cookie => cookie.Split(';')[0]));
+    }
+
+    private async Task PromoteUserAsync(string email, UserRole role)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var user = await db.Users.SingleAsync(u => u.Email == email);
+        user.Role = role;
+        await db.SaveChangesAsync();
     }
 }

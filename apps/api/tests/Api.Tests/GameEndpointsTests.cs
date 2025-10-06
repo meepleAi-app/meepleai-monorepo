@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -61,10 +62,12 @@ public class GameEndpointsTests : IClassFixture<WebApplicationFactoryFixture>
             email,
             "Password123!",
             "Test User",
-            "Admin");
+            null);
 
         var response = await _client.PostAsJsonAsync("/auth/register", registerRequest);
         response.EnsureSuccessStatusCode();
+
+        await PromoteUserAsync(email, UserRole.Admin);
 
         if (!response.Headers.TryGetValues("Set-Cookie", out var setCookie))
         {
@@ -72,5 +75,14 @@ public class GameEndpointsTests : IClassFixture<WebApplicationFactoryFixture>
         }
 
         return setCookie.Select(cookie => cookie.Split(';')[0]).ToList();
+    }
+
+    private async Task PromoteUserAsync(string email, UserRole role)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var user = await db.Users.SingleAsync(u => u.Email == email);
+        user.Role = role;
+        await db.SaveChangesAsync();
     }
 }

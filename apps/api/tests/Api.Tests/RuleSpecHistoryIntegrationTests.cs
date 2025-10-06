@@ -65,7 +65,7 @@ public class RuleSpecHistoryIntegrationTests : IClassFixture<WebApplicationFacto
         await CreateGameAsync(gameId, "History Unauthorized Game");
         await SeedRuleSpecVersionsAsync(gameId, adminUserId);
 
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
         var response = await client.GetAsync($"/games/{gameId}/rulespec/history");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -142,7 +142,7 @@ public class RuleSpecHistoryIntegrationTests : IClassFixture<WebApplicationFacto
         await CreateGameAsync(gameId, "Versions Unauthorized Game");
         await SeedRuleSpecVersionsAsync(gameId, adminUserId);
 
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
         var response = await client.GetAsync($"/games/{gameId}/rulespec/versions/v1");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -253,7 +253,7 @@ public class RuleSpecHistoryIntegrationTests : IClassFixture<WebApplicationFacto
         await CreateGameAsync(gameId, "Diff Unauthorized Game");
         await SeedRuleSpecVersionsAsync(gameId, adminUserId);
 
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
         var response = await client.GetAsync($"/games/{gameId}/rulespec/diff?from=v1&to=v2");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -350,7 +350,7 @@ public class RuleSpecHistoryIntegrationTests : IClassFixture<WebApplicationFacto
 
     private async Task<string> RegisterUserAsync(string role)
     {
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
         var email = $"{role.ToLowerInvariant()}-{Guid.NewGuid():N}@example.com";
         var payload = new RegisterPayload(email, "Password123!", $"{role} User", null);
         var response = await client.PostAsJsonAsync("/auth/register", payload);
@@ -365,7 +365,7 @@ public class RuleSpecHistoryIntegrationTests : IClassFixture<WebApplicationFacto
 
     private async Task<AuthenticatedClient> CreateAuthenticatedClientAsync(string role)
     {
-        var client = _factory.CreateClient();
+        var client = _factory.CreateHttpsClient();
         var email = $"{role.ToLowerInvariant()}-{Guid.NewGuid():N}@example.com";
         var payload = new RegisterPayload(email, "Password123!", $"{role} User", null);
         var response = await client.PostAsJsonAsync("/auth/register", payload);

@@ -127,11 +127,19 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
         }
     }
 
-    public WebApplicationFactory<Program> WithTestServices(Action<IServiceCollection> configureServices)
+    public WebApplicationFactoryFixture WithTestServices(Action<IServiceCollection> configureServices)
     {
-        return WithWebHostBuilder(builder =>
+        return (WebApplicationFactoryFixture)WithWebHostBuilder(builder =>
         {
             builder.ConfigureTestServices(configureServices);
         });
     }
+
+    public HttpClient CreateHttpsClient(WebApplicationFactoryClientOptions? options = null)
+    {
+        options ??= new WebApplicationFactoryClientOptions();
+        options.HandleCookies = false;
+        options.BaseAddress ??= new Uri("https://localhost");
+        return CreateClient(options);
     }
+}

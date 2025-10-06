@@ -83,7 +83,7 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
             services.AddSingleton<RateLimitService>(sp => sp.GetRequiredService<TestRateLimitService>());
         });
 
-        var client = factory.CreateClient();
+        var client = factory.CreateHttpsClient();
         return new TestClientContext(factory, client, rateLimitService);
     }
 
@@ -98,14 +98,14 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
 
     private sealed class TestClientContext : IDisposable
     {
-        public TestClientContext(WebApplicationFactory<Program> factory, HttpClient client, TestRateLimitService rateLimitService)
+        public TestClientContext(WebApplicationFactoryFixture factory, HttpClient client, TestRateLimitService rateLimitService)
         {
             Factory = factory;
             Client = client;
             RateLimitService = rateLimitService;
         }
 
-        public WebApplicationFactory<Program> Factory { get; }
+        public WebApplicationFactoryFixture Factory { get; }
         public HttpClient Client { get; }
         public TestRateLimitService RateLimitService { get; }
 

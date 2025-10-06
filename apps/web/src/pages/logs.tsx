@@ -50,8 +50,8 @@ export default function LogsPage() {
   const filteredLogs = logs.filter(
     (log) =>
       log.message.toLowerCase().includes(filter.toLowerCase()) ||
-      log.requestId?.toLowerCase().includes(filter.toLowerCase()) ||
-      log.userId?.toLowerCase().includes(filter.toLowerCase())
+      log.requestId?.toLowerCase()?.includes(filter.toLowerCase()) ||
+      log.userId?.toLowerCase()?.includes(filter.toLowerCase())
   );
 
   const getLevelColor = (level: string) => {

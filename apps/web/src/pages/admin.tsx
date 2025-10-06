@@ -131,10 +131,10 @@ export default function AdminDashboard() {
 
   const filteredRequests = requests.filter(
     (req) =>
-      req.query?.toLowerCase().includes(filter.toLowerCase()) ||
+      req.query?.toLowerCase()?.includes(filter.toLowerCase()) ||
       req.endpoint.toLowerCase().includes(filter.toLowerCase()) ||
-      req.userId?.toLowerCase().includes(filter.toLowerCase()) ||
-      req.gameId?.toLowerCase().includes(filter.toLowerCase())
+      req.userId?.toLowerCase()?.includes(filter.toLowerCase()) ||
+      req.gameId?.toLowerCase()?.includes(filter.toLowerCase())
   );
 
   const helpfulCount = stats?.feedbackCounts?.["helpful"] ?? 0;

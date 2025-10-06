@@ -67,4 +67,20 @@ describe('LogsPage', () => {
     expect(screen.getByText(/No logs found/i)).toBeInTheDocument();
     expect(screen.getByText(/basic observability dashboard/i)).toBeInTheDocument();
   });
+
+  it('shows a permission error when the API returns forbidden', async () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockGet.mockRejectedValueOnce(new Error('API /logs 403'));
+
+    render(<LogsPage />);
+
+    expect(
+      await screen.findByText(/You do not have permission to view logs/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Please contact an administrator if you believe this is an error/i)
+    ).toBeInTheDocument();
+
+    consoleSpy.mockRestore();
+  });
 });

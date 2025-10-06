@@ -1119,30 +1119,28 @@ app.MapPost("/admin/n8n/{configId}/test", async (string configId, HttpContext co
 
 app.Run();
 
-static void WriteSessionCookie(HttpContext context, string token, DateTime expiresAt)
+static CookieOptions CreateSessionCookieOptions(DateTimeOffset expiresAt)
 {
-    var options = new CookieOptions
+    return new CookieOptions
     {
         HttpOnly = true,
         Secure = true,
         SameSite = SameSiteMode.None,
         Path = "/",
-        Expires = new DateTimeOffset(expiresAt)
+        Expires = expiresAt
     };
+}
 
+static void WriteSessionCookie(HttpContext context, string token, DateTime expiresAt)
+{
+    var options = CreateSessionCookieOptions(new DateTimeOffset(expiresAt));
     context.Response.Cookies.Append(AuthService.SessionCookieName, token, options);
 }
 
 static void RemoveSessionCookie(HttpContext context)
 {
-    var options = new CookieOptions
-    {
-        HttpOnly = true,
-        Secure = true,
-        SameSite = SameSiteMode.None,
-        Path = "/",
-        Expires = DateTimeOffset.UnixEpoch
-    };
+    var options = CreateSessionCookieOptions(DateTimeOffset.UnixEpoch);
+    options.MaxAge = TimeSpan.Zero;
 
     context.Response.Cookies.Delete(AuthService.SessionCookieName, options);
 }

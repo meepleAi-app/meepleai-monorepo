@@ -2,9 +2,21 @@ import { test, expect } from '@playwright/test';
 
 const apiBase = 'http://localhost:8080';
 
+type N8nConfig = {
+  id: string;
+  name: string;
+  baseUrl: string;
+  webhookUrl: string | null;
+  isActive: boolean;
+  lastTestedAt: string | null;
+  lastTestResult: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 test.describe('n8n workflow management', () => {
   test('allows full lifecycle management of n8n configurations', async ({ page }) => {
-    const configs = [
+    const configs: N8nConfig[] = [
       {
         id: 'cfg-1',
         name: 'Production n8n',
@@ -49,7 +61,7 @@ test.describe('n8n workflow management', () => {
           webhookUrl: string | null;
         };
 
-        const newConfig = {
+        const newConfig: N8nConfig = {
           id: `cfg-${configs.length + 1}`,
           name: body.name,
           baseUrl: body.baseUrl,

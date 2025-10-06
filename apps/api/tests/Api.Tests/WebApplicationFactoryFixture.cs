@@ -125,6 +125,8 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
                 });
             }
         }
+    }
+
     public WebApplicationFactory<Program> WithTestServices(Action<IServiceCollection> configureServices)
     {
         return WithWebHostBuilder(builder =>
@@ -132,4 +134,4 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
             builder.ConfigureTestServices(configureServices);
         });
     }
-}
+    }

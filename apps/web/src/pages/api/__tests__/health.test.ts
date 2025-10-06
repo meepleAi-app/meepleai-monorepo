@@ -1,16 +1,20 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import handler from "../health";
 
-describe("/api/health", () => {
-  it("returns a 200 ok payload", () => {
-    const req = {} as NextApiRequest;
-    const res: Partial<NextApiResponse> = {};
-    res.json = jest.fn();
-    res.status = jest.fn(() => res as NextApiResponse);
+describe("health API handler", () => {
+  it("responds with status 200 and ok true", () => {
+    const status = jest.fn().mockReturnThis();
+    const json = jest.fn();
+    const res = {
+      status,
+      json,
+    } as unknown as NextApiResponse;
 
-    handler(req, res as NextApiResponse);
+    handler({} as NextApiRequest, res);
 
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith({ ok: true });
+    expect(status).toHaveBeenCalledTimes(1);
+    expect(status).toHaveBeenCalledWith(200);
+    expect(json).toHaveBeenCalledTimes(1);
+    expect(json).toHaveBeenCalledWith({ ok: true });
   });
 });

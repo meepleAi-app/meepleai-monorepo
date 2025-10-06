@@ -1,37 +1,36 @@
 # Coverage Progress Report
 
-## 📊 Snapshot — 2025-10-12 (stale)
+## 📊 Snapshot — 2025-10-06
 
-- **Backend (`apps/api`)**: Last recorded numbers remain at 38.00% line coverage and 39.20% branch coverage (`dotnet test --collect:"XPlat Code Coverage"`, 200 tests executed — 192 passed, 8 failed because Qdrant Testcontainers could not reach a Docker daemon). New unit suites for `AiRequestLogService`, `GameService`, and `LlmService` have landed since this run, so an updated measurement is required to reflect their impact.
-- **Frontend (`apps/web`)**: Previously captured at 14.22% statements / 15.06% branches / 11.49% functions / 14.13% lines from `npm run test -- --coverage` (1 suite, 2 tests executed with Jest exiting non-zero due to the 90% global threshold). Dedicated coverage suites now exist for the `chat`, `editor`, `logs`, and `upload` pages; rerun coverage to surface the new totals.
+- **Backend (`apps/api`)**: `dotnet test --collect:"XPlat Code Coverage"` failed during compilation, so no new Cobertura totals were generated. The build stopped at `tests/Api.Tests/PdfStorageServiceTests.cs` (mock signature mismatches) and `tests/Api.Tests/QdrantIntegrationTestBase.cs` (`SkipException` constructor mismatch), leaving both line and branch coverage unchanged (previous snapshot: 38.00% lines / 39.20% branches).
+- **Frontend (`apps/web`)**: `npm run test -- --coverage` completed with coverage at **79.33% statements / 73.22% branches / 80.47% functions / 79.54% lines**. Jest exited non-zero because the configured 90% global thresholds were not met, even though all 10 suites (48 tests) passed.
 
 ## 🧪 Latest Commands Executed
 
-- `dotnet test --collect:"XPlat Code Coverage"` (inside `apps/api`) — attempted 2025-10-05, the run hung after executing the integration suites; see `docs/coverage-logs/2025-10-05-dotnet-test.log`.
-- `dotnet test /p:CollectCoverage=true ...` (inside `apps/api`) — coverlet fallback attempted, but long-running suites prevented completion in the sandbox.
-- `npm run test -- --runTestsByPath src/pages/api/__tests__/health.test.ts` (inside `apps/web`) — new smoke test added, full coverage run pending once the backend suite is stabilised.
+- `dotnet test --collect:"XPlat Code Coverage"` (inside `apps/api`, aborted with compile errors)
+- `npm run test -- --coverage` (inside `apps/web`, finished with threshold failure)
 
-## 🔍 Coverage Gaps & Untested Areas
+## 🔍 Coverage Gaps & Follow-up Items
 
-### Backend focus areas
+### Backend
 
-- **Docker-dependent integration tests**: `QdrantServiceIntegrationTests` still require a reachable Docker daemon; without it the suite fails early and the Qdrant collection helpers remain unverified.
-- **Refresh Cobertura snapshot**: Re-run coverage to capture the new unit tests for `AiRequestLogService`, `GameService`, and `LlmService`, and confirm whether any remaining generated state-machine types stay uncovered.
-- **Low coverage utilities**: `PdfTableExtractionService` (~2.9% lines in the previous report) and asynchronous helpers in `QdrantService` (~11.9% lines) remain effectively untested until new coverage is recorded.
+- **Fix compilation issues first**: Resolve the constructor/type mismatches in `PdfStorageServiceTests` and `QdrantIntegrationTestBase` so the suite can build and emit a Cobertura report.
+- **Service wiring coverage**: Once the build succeeds, confirm the mocked dependencies for `PdfStorageService` and Redis/Qdrant integrations receive coverage to validate their registration logic.
+- **External dependencies**: Re-verify Qdrant/Docker availability before rerunning to avoid future integration skips.
 
-### Frontend focus areas
+### Frontend
 
-- **Pages without tests**: `src/pages/admin.tsx`, `index.tsx`, `n8n.tsx`, and `versions.tsx` remain without suites; add coverage to bring them above the 90% Jest threshold.
-- **API routes**: `src/pages/api/health.ts` now has a dedicated smoke test; expand coverage to the remaining `/api/*` routes when the Jest global threshold can be satisfied.
-- **Upload workflow**: Even with the refreshed tests, `src/pages/upload.tsx` still has uncovered multi-step flows and error branches—target these when updating the suite.
+- **Raise coverage on `upload.tsx`**: Statements (65.01%) and functions (47.91%) are dragging global coverage under the threshold; expand tests around the multi-step upload flow and error branches.
+- **Target branch-heavy pages**: `admin.tsx` (68.33% branches) and `n8n.tsx` (64.63% branches) require additional scenarios to meet the 90% bar.
+- **Silence expected console noise**: Consider mocking `console.error` in tests where failures are intentional to keep output clean.
 
 ## 📂 Coverage Artifacts
 
-- Backend Cobertura report: `apps/api/tests/Api.Tests/TestResults/<timestamp>/coverage.cobertura.xml`
-- Frontend LCOV report: `apps/web/coverage/lcov.info` (HTML report available at `apps/web/coverage/lcov-report/index.html`)
+- Backend Cobertura report: not generated (build failed before coverage instrumentation). Expected path once fixed: `apps/api/tests/Api.Tests/TestResults/<timestamp>/coverage.cobertura.xml`.
+- Frontend LCOV report: `apps/web/coverage/lcov.info` (HTML at `apps/web/coverage/lcov-report/index.html`).
 
 ## ✅ Suggested Next Steps
 
-1. Enable Docker (or point `QDRANT_URL` at a running instance) before executing backend integration tests so the Qdrant suite passes and records meaningful coverage.
-2. Add component tests for the untested Next.js pages and API routes to raise frontend coverage above the global threshold.
-3. Prioritise automated tests for `AiRequestLogService`, `GameService`, `LlmService`, and low-coverage utilities such as `PdfTableExtractionService` to close backend gaps.
+1. Restore backend test compilation by aligning mock constructor signatures and updating `SkipException` usage, then rerun the coverage collection.
+2. Improve frontend coverage for `upload.tsx`, `admin.tsx`, and `n8n.tsx` to satisfy Jest's 90% global thresholds.
+3. Re-run both coverage commands after the above fixes and append the fresh Cobertura/LCOV artifact locations to this log.

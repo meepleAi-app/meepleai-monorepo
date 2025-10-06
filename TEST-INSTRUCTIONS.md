@@ -152,3 +152,23 @@ Embedding (OpenRouter) → Qdrant Indexing → Vector Search (AI-01) → RAG Res
 ```
 
 All components integrated and ready for end-to-end testing! 🎉
+
+## Backend
+
+### Qdrant Setup for Integration Tests
+
+- Start a local Qdrant instance with Docker Compose:
+  ```bash
+  cd infra
+  docker compose up qdrant
+  ```
+  Alternatively, point to an accessible remote Qdrant service.
+- Export the Qdrant endpoint before running tests so that integration tests use the configured instance:
+  ```bash
+  export QDRANT_URL="http://localhost:6333"
+  ```
+- Run the API integration tests with coverage from the `apps/api` directory:
+  ```bash
+  cd apps/api
+  dotnet test --collect:"XPlat Code Coverage"
+  ```

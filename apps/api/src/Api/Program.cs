@@ -1,12 +1,14 @@
 using Api.Infrastructure;
 using System;
 using System.Linq;
+using System.Net;
 using System.Security.Claims;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Serilog;
 using Serilog.Events;
 using StackExchange.Redis;
@@ -93,6 +95,53 @@ builder.Services.AddCors(options =>
     });
 });
 
+var forwardedHeadersSection = builder.Configuration.GetSection("ForwardedHeaders");
+var forwardedHeadersEnabled = forwardedHeadersSection.GetValue<bool?>("Enabled") ?? true;
+
+if (forwardedHeadersEnabled)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+        var forwardLimit = forwardedHeadersSection.GetValue<int?>("ForwardLimit");
+        if (forwardLimit.HasValue)
+        {
+            options.ForwardLimit = forwardLimit;
+        }
+
+        var requireHeaderSymmetry = forwardedHeadersSection.GetValue<bool?>("RequireHeaderSymmetry");
+        if (requireHeaderSymmetry.HasValue)
+        {
+            options.RequireHeaderSymmetry = requireHeaderSymmetry.Value;
+        }
+
+        var knownProxies = forwardedHeadersSection.GetSection("KnownProxies").Get<string[]>() ?? Array.Empty<string>();
+        foreach (var proxy in knownProxies)
+        {
+            if (!string.IsNullOrWhiteSpace(proxy) && IPAddress.TryParse(proxy, out var proxyAddress))
+            {
+                options.KnownProxies.Add(proxyAddress);
+            }
+        }
+
+        var knownNetworks = forwardedHeadersSection.GetSection("KnownNetworks").Get<string[]>() ?? Array.Empty<string>();
+        foreach (var network in knownNetworks)
+        {
+            if (string.IsNullOrWhiteSpace(network))
+            {
+                continue;
+            }
+
+            var parts = network.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var networkAddress) && int.TryParse(parts[1], out var prefixLength))
+            {
+                options.KnownNetworks.Add(new IPNetwork(networkAddress, prefixLength));
+            }
+        }
+    });
+}
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -112,6 +161,11 @@ using (var scope = app.Services.CreateScope())
         var qdrant = scope.ServiceProvider.GetRequiredService<IQdrantService>();
         await qdrant.EnsureCollectionExistsAsync();
     }
+}
+
+if (forwardedHeadersEnabled)
+{
+    app.UseForwardedHeaders();
 }
 
 app.UseCors("web");
@@ -1121,29 +1175,42 @@ app.Run();
 
 static void WriteSessionCookie(HttpContext context, string token, DateTime expiresAt)
 {
-    var options = new CookieOptions
-    {
-        HttpOnly = true,
-        Secure = true,
-        SameSite = SameSiteMode.None,
-        Path = "/",
-        Expires = new DateTimeOffset(expiresAt)
-    };
+    var options = BuildSessionCookieOptions(context);
+    options.Expires = new DateTimeOffset(expiresAt);
 
     context.Response.Cookies.Append(AuthService.SessionCookieName, token, options);
 }
 
 static void RemoveSessionCookie(HttpContext context)
 {
-    var options = new CookieOptions
-    {
-        HttpOnly = true,
-        Secure = true,
-        SameSite = SameSiteMode.None,
-        Path = "/",
-        Expires = DateTimeOffset.UnixEpoch
-    };
+    var options = BuildSessionCookieOptions(context);
+    options.Expires = DateTimeOffset.UnixEpoch;
 
     context.Response.Cookies.Delete(AuthService.SessionCookieName, options);
+}
+
+static CookieOptions BuildSessionCookieOptions(HttpContext context)
+{
+    var isHttps = context.Request.IsHttps;
+
+    if (!isHttps && context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto))
+    {
+        foreach (var proto in forwardedProto)
+        {
+            if (string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase))
+            {
+                isHttps = true;
+                break;
+            }
+        }
+    }
+
+    return new CookieOptions
+    {
+        HttpOnly = true,
+        Secure = isHttps,
+        SameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax,
+        Path = "/"
+    };
 }
 public partial class Program { }

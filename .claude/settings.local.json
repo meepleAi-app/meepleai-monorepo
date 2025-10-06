@@ -17,7 +17,8 @@
       "Bash(gh issue list:*)",
       "Bash(gh pr comment:*)",
       "Bash(npm run test:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(test:*)"
     ],
     "deny": [],
     "ask": []

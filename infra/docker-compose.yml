@@ -1,6 +1,7 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.4-alpine3.20
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-meeple}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-meeplepass}
@@ -20,6 +21,7 @@ services:
 
   qdrant:
     image: qdrant/qdrant:v1.12.4
+    restart: unless-stopped
     ports:
       - "6333:6333"  # HTTP REST API
       - "6334:6334"  # gRPC API
@@ -34,7 +36,8 @@ services:
       - meepleai
 
   redis:
-    image: redis:7-alpine
+    image: redis:7.4.1-alpine3.20
+    restart: unless-stopped
     ports:
       - "6379:6379"
     healthcheck:
@@ -47,6 +50,7 @@ services:
 
   n8n:
     image: n8nio/n8n:1.60.0
+    restart: unless-stopped
     env_file:
       - ./env/n8n.env.dev
     ports:
@@ -61,6 +65,7 @@ services:
     build:
       context: ../apps/api
       dockerfile: ./src/Api/Dockerfile
+    restart: unless-stopped
     env_file:
       - ./env/api.env.dev
     environment:
@@ -90,6 +95,7 @@ services:
     build:
       context: ../apps/web
       dockerfile: ./Dockerfile
+    restart: unless-stopped
     env_file:
       - ./env/web.env.dev
     ports:
@@ -98,7 +104,7 @@ services:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/ || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/ || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 12

@@ -1,0 +1,42 @@
+# Build artifacts and output directories
+**/bin/
+**/obj/
+**/out/
+
+# IDE and editor files
+**/.vs/
+**/.vscode/
+**/.idea/
+**/*.suo
+**/*.user
+**/*.userosscache
+**/*.sln.docstates
+
+# Development environment files
+**/*.Development.json
+**/appsettings.Development.json
+.env
+.env.*
+
+# Test results
+**/TestResults/
+**/*.trx
+**/*.coverage
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+LICENSE
+*.md
+
+# NuGet
+**/packages/
+**/*.nupkg
+
+# Other
+**/.DS_Store
+**/Thumbs.db

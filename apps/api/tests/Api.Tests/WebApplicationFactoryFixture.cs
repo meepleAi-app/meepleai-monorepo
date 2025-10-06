@@ -134,4 +134,12 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
             builder.ConfigureTestServices(configureServices);
         });
     }
+
+    public HttpClient CreateHttpsClient(WebApplicationFactoryClientOptions? options = null)
+    {
+        options ??= new WebApplicationFactoryClientOptions();
+        options.HandleCookies = false;
+        options.BaseAddress ??= new Uri("https://localhost");
+        return CreateClient(options);
     }
+}

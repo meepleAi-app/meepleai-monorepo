@@ -107,6 +107,7 @@ public class PdfTableExtractionService
         var currentRows = new List<string[]>();
         List<ColumnBoundary>? currentBoundaries = null;
         var tableStartLine = -1;
+        var lastLineWasBlank = false;
 
         for (int i = 0; i < lines.Count; i++)
         {
@@ -115,9 +116,35 @@ public class PdfTableExtractionService
 
             if (string.IsNullOrWhiteSpace(trimmedText))
             {
-                FinalizeCurrentTable();
+                if (currentBoundaries != null && currentBoundaries.Count > 0 && currentRows.Count > 0)
+                {
+                    currentRows.Add(Enumerable.Repeat(string.Empty, currentBoundaries.Count).ToArray());
+                }
+                else
+                {
+                    FinalizeCurrentTable();
+                }
+
+                lastLineWasBlank = true;
                 continue;
             }
+
+            if (currentBoundaries != null && lastLineWasBlank)
+            {
+                var previewSplit = SplitIntoColumns(line, null);
+                var previewColumnCount = Math.Max(previewSplit.Columns.Count, previewSplit.Boundaries.Count);
+
+                if (previewColumnCount > 0 && previewColumnCount < currentBoundaries.Count)
+                {
+                    TrimTrailingEmptyRows();
+                    FinalizeCurrentTable();
+                    i--;
+                    lastLineWasBlank = false;
+                    continue;
+                }
+            }
+
+            lastLineWasBlank = false;
 
             if (currentBoundaries == null)
             {
@@ -136,6 +163,25 @@ public class PdfTableExtractionService
             }
             else
             {
+                if (currentBoundaries.Count > 0 && line.Characters.Count > 0)
+                {
+                    var rowStart = line.Characters.Min(c => c.X);
+                    var rowEnd = line.Characters.Max(c => c.EndX);
+                    var firstBoundary = currentBoundaries[0];
+                    var lastBoundary = currentBoundaries[^1];
+                    var driftTolerance = Math.Max(8f, line.GetAverageCharacterWidth() * 3f);
+
+                    var extendsLeft = rowStart < firstBoundary.Start - driftTolerance;
+                    var extendsRight = rowEnd > lastBoundary.End + driftTolerance;
+
+                    if (extendsLeft || extendsRight)
+                    {
+                        FinalizeCurrentTable();
+                        i--;
+                        continue;
+                    }
+                }
+
                 var split = SplitIntoColumns(line, currentBoundaries);
                 var boundariesForRow = split.Boundaries;
                 var columnCount = boundariesForRow.Count;
@@ -170,6 +216,8 @@ public class PdfTableExtractionService
 
         void FinalizeCurrentTable()
         {
+            TrimTrailingEmptyRows();
+
             if (currentRows.Count > 1 && currentBoundaries != null)
             {
                 tables.Add(CreateTableFromRows(
@@ -182,6 +230,15 @@ public class PdfTableExtractionService
             currentRows.Clear();
             currentBoundaries = null;
             tableStartLine = -1;
+            lastLineWasBlank = false;
+        }
+
+        void TrimTrailingEmptyRows()
+        {
+            while (currentRows.Count > 0 && currentRows[^1].All(value => string.IsNullOrWhiteSpace(value)))
+            {
+                currentRows.RemoveAt(currentRows.Count - 1);
+            }
         }
     }
 
@@ -410,17 +467,42 @@ public class PdfTableExtractionService
             }
         }
 
+        var averageWidth = line.GetAverageCharacterWidth();
+        var baseline = Math.Max(6f, averageWidth > 0 ? averageWidth * 2f : 6f);
+
         if (gaps.Count == 0)
         {
-            return Math.Max(6f, line.GetAverageCharacterWidth() * 2.5f);
+            return baseline;
         }
 
         gaps.Sort();
-        var median = gaps[gaps.Count / 2];
-        var averageWidth = line.GetAverageCharacterWidth();
-        var baseline = averageWidth > 0 ? averageWidth * 2f : 6f;
 
-        return Math.Max(median * 1.8f, Math.Max(6f, baseline));
+        var smallGapThreshold = baseline * 1.75f;
+        var smallGaps = gaps.Where(gap => gap <= smallGapThreshold).ToList();
+
+        float threshold;
+
+        if (smallGaps.Count >= 2)
+        {
+            var typicalGap = smallGaps.Average();
+            threshold = typicalGap * 1.5f;
+        }
+        else if (smallGaps.Count == 1 && gaps.Count > 1)
+        {
+            var median = gaps[gaps.Count / 2];
+            threshold = median * 0.9f;
+        }
+        else
+        {
+            var candidate = gaps.Min() * 0.9f;
+            threshold = candidate;
+        }
+
+        var upperBound = baseline * 4f;
+        threshold = Math.Min(threshold, upperBound);
+        threshold = Math.Max(threshold, baseline);
+
+        return threshold;
     }
 
     private List<PositionedTextLine> ExtractPageLines(PdfPage page)

@@ -9,6 +9,7 @@ using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Events;
@@ -136,29 +137,39 @@ builder.Services.AddScoped<PdfTableExtractionService>();
 builder.Services.AddScoped<PdfStorageService>();
 builder.Services.AddScoped<N8nConfigService>();
 
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+builder.Services.AddCors();
 
-if (allowedOrigins.Length == 0)
-{
-    allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
-}
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("web", policy =>
+builder.Services.AddOptions<CorsOptions>()
+    .Configure<IConfiguration>((options, configuration) =>
     {
-        if (allowedOrigins.Length == 0)
+        options.AddPolicy("web", policy =>
         {
-            policy.WithOrigins("http://localhost:3000");
-        }
-        else
-        {
-            policy.WithOrigins(allowedOrigins);
-        }
+            var corsOrigins = configuration
+                .GetSection("Cors:AllowedOrigins")
+                .Get<string[]>() ?? Array.Empty<string>();
 
-        policy.AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+            var topLevelOrigins = configuration
+                .GetSection("AllowedOrigins")
+                .Get<string[]>() ?? Array.Empty<string>();
+
+            var configuredOrigins = corsOrigins
+                .Concat(topLevelOrigins)
+                .Where(origin => !string.IsNullOrWhiteSpace(origin))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            if (configuredOrigins.Length == 0)
+            {
+                policy.WithOrigins("http://localhost:3000");
+            }
+            else
+            {
+                policy.WithOrigins(configuredOrigins);
+            }
+
+            policy.AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+        });
     });
-});
 
 var app = builder.Build();
 
@@ -166,10 +177,9 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-    // Use EnsureCreated for testing, Migrate for production
-    if (app.Environment.IsEnvironment("Testing"))
+    if (ShouldSkipMigrations(app, db))
     {
-        // Test environment: database is already created by WebApplicationFactory
+        // Test or in-memory environments create the schema elsewhere.
     }
     else
     {
@@ -404,6 +414,42 @@ app.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, Au
         return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 });
+
+static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)
+{
+    if (app.Environment.IsEnvironment("Testing"))
+    {
+        return true;
+    }
+
+    if (app.Configuration.GetValue<bool?>("SkipMigrations") == true)
+    {
+        return true;
+    }
+
+    var providerName = db.Database.ProviderName;
+    if (providerName != null && providerName.Contains("Sqlite", StringComparison.OrdinalIgnoreCase))
+    {
+        var connection = db.Database.GetDbConnection();
+        var connectionString = connection?.ConnectionString;
+        var dataSource = connection?.DataSource;
+
+        if (!string.IsNullOrWhiteSpace(connectionString) &&
+            (connectionString.Contains(":memory:", StringComparison.OrdinalIgnoreCase) ||
+             connectionString.Contains("Mode=Memory", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(dataSource) &&
+            dataSource.Contains(":memory:", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 app.MapPost("/auth/logout", async (HttpContext context, AuthService auth, CancellationToken ct) =>
 {
@@ -1258,7 +1304,20 @@ static CookieOptions BuildSessionCookieOptions(HttpContext context)
     }
 
     var secure = configuration.Secure ?? isHttps;
+    var secureForced = false;
+
+    if (!secure && !configuration.Secure.HasValue)
+    {
+        secure = true;
+        secureForced = true;
+    }
+
     var sameSite = configuration.SameSite ?? (secure ? SameSiteMode.None : SameSiteMode.Lax);
+
+    if (secureForced && sameSite != SameSiteMode.None)
+    {
+        sameSite = SameSiteMode.None;
+    }
     var path = string.IsNullOrWhiteSpace(configuration.Path) ? "/" : configuration.Path;
 
     var options = new CookieOptions

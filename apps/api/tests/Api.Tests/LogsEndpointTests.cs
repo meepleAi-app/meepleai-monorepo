@@ -61,8 +61,8 @@ public class LogsEndpointTests : IClassFixture<WebApplicationFactoryFixture>
             await db.SaveChangesAsync();
         }
 
-        using var client = _factory.CreateClient();
-        var cookies = await RegisterAndAuthenticateAsync(client, $"admin-logs-{Guid.NewGuid():N}@example.com", "Admin");
+        using var client = _factory.CreateHttpsClient();
+        var cookies = await RegisterAndAuthenticateAsync(client, $"admin-logs-{Guid.NewGuid():N}@example.com", UserRole.Admin);
 
         var request = new HttpRequestMessage(HttpMethod.Get, "/logs");
         AddCookies(request, cookies);
@@ -91,7 +91,7 @@ public class LogsEndpointTests : IClassFixture<WebApplicationFactoryFixture>
     [Fact]
     public async Task GetLogs_ReturnsUnauthorizedWhenSessionMissing()
     {
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
         var response = await client.GetAsync("/logs");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -99,16 +99,17 @@ public class LogsEndpointTests : IClassFixture<WebApplicationFactoryFixture>
 
     public static IEnumerable<object[]> NonAdminRoles => new[]
     {
-        new object[] { "Editor" },
-        new object[] { "User" }
+        new object[] { UserRole.Editor },
+        new object[] { UserRole.User }
     };
 
     [Theory]
     [MemberData(nameof(NonAdminRoles))]
-    public async Task GetLogs_ReturnsForbiddenForNonAdminRoles(string role)
+    public async Task GetLogs_ReturnsForbiddenForNonAdminRoles(UserRole role)
     {
-        using var client = _factory.CreateClient();
-        var cookies = await RegisterAndAuthenticateAsync(client, $"{role.ToLowerInvariant()}-logs-{Guid.NewGuid():N}@example.com", role);
+        using var client = _factory.CreateHttpsClient();
+        var email = $"{role.ToString().ToLowerInvariant()}-logs-{Guid.NewGuid():N}@example.com";
+        var cookies = await RegisterAndAuthenticateAsync(client, email, role);
 
         var request = new HttpRequestMessage(HttpMethod.Get, "/logs");
         AddCookies(request, cookies);
@@ -139,12 +140,21 @@ public class LogsEndpointTests : IClassFixture<WebApplicationFactoryFixture>
             .ToList();
     }
 
-    private async Task<List<string>> RegisterAndAuthenticateAsync(HttpClient client, string email, string role)
+    private async Task<List<string>> RegisterAndAuthenticateAsync(HttpClient client, string email, UserRole? role = null)
     {
         var payload = new RegisterPayload(email, "Password123!", "Logs Tester", null);
         var response = await client.PostAsJsonAsync("/auth/register", payload);
         response.EnsureSuccessStatusCode();
-        await PromoteUserAsync(email, role);
+
+        if (role.HasValue && role.Value != UserRole.User)
+        {
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var user = await db.Users.SingleAsync(u => u.Email == email);
+            user.Role = role.Value;
+            await db.SaveChangesAsync();
+        }
+
         return ExtractCookies(response);
     }
 

@@ -10,6 +10,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -33,25 +34,26 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
     [Fact]
     public async Task GetAdminRequests_AdminReceivesFilteredLogsWithMetadata()
     {
-        using var client = _factory.CreateClient();
+        using var adminClient = _factory.CreateHttpsClient();
         var adminEmail = $"admin-requests-{Guid.NewGuid():N}@example.com";
-        var adminCookies = await RegisterAndAuthenticateAsync(client, adminEmail, "Admin");
+        var adminCookies = await RegisterAndAuthenticateAsync(adminClient, adminEmail, "Admin");
         var adminUserId = await GetUserIdByEmailAsync(adminEmail);
 
         var editorEmail = $"editor-requests-{Guid.NewGuid():N}@example.com";
-        await RegisterAndAuthenticateAsync(client, editorEmail, "Editor");
+        using var editorClient = CreateClientWithoutCookies();
+        await RegisterAndAuthenticateAsync(editorClient, editorEmail, "Editor");
         var editorUserId = await GetUserIdByEmailAsync(editorEmail);
 
         var seedContext = await SeedDashboardDataAsync(adminUserId, editorUserId);
 
-        var requestUri = $"/admin/requests?limit=10&offset=0&endpoint=qa&userId={adminUserId}&gameId=game-1" +
+        var requestUri = $"/admin/requests?limit=10&offset=0&userId={adminUserId}&gameId=game-1" +
                          $"&startDate={Uri.EscapeDataString(seedContext.StartDate.ToString("O"))}" +
                          $"&endDate={Uri.EscapeDataString(seedContext.EndDate.ToString("O"))}";
 
         var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
         AddCookies(request, adminCookies);
 
-        var response = await client.SendAsync(request);
+        var response = await adminClient.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -92,13 +94,14 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
     [Fact]
     public async Task GetAdminStats_AdminReceivesAggregatedValues()
     {
-        using var client = _factory.CreateClient();
+        using var adminClient = _factory.CreateHttpsClient();
         var adminEmail = $"admin-stats-{Guid.NewGuid():N}@example.com";
-        var adminCookies = await RegisterAndAuthenticateAsync(client, adminEmail, "Admin");
+        var adminCookies = await RegisterAndAuthenticateAsync(adminClient, adminEmail, "Admin");
         var adminUserId = await GetUserIdByEmailAsync(adminEmail);
 
         var userEmail = $"user-stats-{Guid.NewGuid():N}@example.com";
-        await RegisterAndAuthenticateAsync(client, userEmail, "User");
+        using var userClient = CreateClientWithoutCookies();
+        await RegisterAndAuthenticateAsync(userClient, userEmail, "User");
         var userId = await GetUserIdByEmailAsync(userEmail);
 
         var seedContext = await SeedDashboardDataAsync(adminUserId, userId);
@@ -110,7 +113,7 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
         var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
         AddCookies(request, adminCookies);
 
-        var response = await client.SendAsync(request);
+        var response = await adminClient.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -146,14 +149,14 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
     [MemberData(nameof(NonAdminRoles))]
     public async Task GetAdminRequests_ReturnsForbiddenForNonAdminRoles(string role)
     {
-        using var client = _factory.CreateClient();
+        using var nonAdminClient = _factory.CreateHttpsClient();
         var email = $"{role.ToLowerInvariant()}-requests-{Guid.NewGuid():N}@example.com";
-        var cookies = await RegisterAndAuthenticateAsync(client, email, role);
+        var cookies = await RegisterAndAuthenticateAsync(nonAdminClient, email, role);
 
         var request = new HttpRequestMessage(HttpMethod.Get, "/admin/requests");
         AddCookies(request, cookies);
 
-        var response = await client.SendAsync(request);
+        var response = await nonAdminClient.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -161,7 +164,7 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
     [Fact]
     public async Task GetAdminRequests_ReturnsUnauthorizedForAnonymousUser()
     {
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
         var response = await client.GetAsync("/admin/requests");
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -170,14 +173,14 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
     [MemberData(nameof(NonAdminRoles))]
     public async Task GetAdminStats_ReturnsForbiddenForNonAdminRoles(string role)
     {
-        using var client = _factory.CreateClient();
+        using var nonAdminClient = _factory.CreateHttpsClient();
         var email = $"{role.ToLowerInvariant()}-stats-{Guid.NewGuid():N}@example.com";
-        var cookies = await RegisterAndAuthenticateAsync(client, email, role);
+        var cookies = await RegisterAndAuthenticateAsync(nonAdminClient, email, role);
 
         var request = new HttpRequestMessage(HttpMethod.Get, "/admin/stats");
         AddCookies(request, cookies);
 
-        var response = await client.SendAsync(request);
+        var response = await nonAdminClient.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -185,7 +188,7 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
     [Fact]
     public async Task GetAdminStats_ReturnsUnauthorizedForAnonymousUser()
     {
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
         var response = await client.GetAsync("/admin/stats");
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -194,9 +197,9 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
     [MemberData(nameof(NonAdminRoles))]
     public async Task PostAdminN8n_ReturnsForbiddenForNonAdminRoles(string role)
     {
-        using var client = _factory.CreateClient();
+        using var nonAdminClient = _factory.CreateHttpsClient();
         var email = $"{role.ToLowerInvariant()}-n8n-{Guid.NewGuid():N}@example.com";
-        var cookies = await RegisterAndAuthenticateAsync(client, email, role);
+        var cookies = await RegisterAndAuthenticateAsync(nonAdminClient, email, role);
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/admin/n8n")
         {
@@ -204,7 +207,7 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
         };
         AddCookies(request, cookies);
 
-        var response = await client.SendAsync(request);
+        var response = await nonAdminClient.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -214,9 +217,9 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
     {
         await ClearN8nConfigsAsync();
 
-        using var client = _factory.CreateClient();
+        using var adminClient = _factory.CreateHttpsClient();
         var adminEmail = $"admin-n8n-create-{Guid.NewGuid():N}@example.com";
-        var cookies = await RegisterAndAuthenticateAsync(client, adminEmail, "Admin");
+        var cookies = await RegisterAndAuthenticateAsync(adminClient, adminEmail, "Admin");
         var adminUserId = await GetUserIdByEmailAsync(adminEmail);
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/admin/n8n")
@@ -229,7 +232,7 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
         };
         AddCookies(request, cookies);
 
-        var response = await client.SendAsync(request);
+        var response = await adminClient.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -249,7 +252,7 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
 
         var listRequest = new HttpRequestMessage(HttpMethod.Get, "/admin/n8n");
         AddCookies(listRequest, cookies);
-        var listResponse = await client.SendAsync(listRequest);
+        var listResponse = await adminClient.SendAsync(listRequest);
 
         Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
         using var listDocument = JsonDocument.Parse(await listResponse.Content.ReadAsStringAsync());
@@ -262,9 +265,9 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
     {
         await ClearN8nConfigsAsync();
 
-        using var client = _factory.CreateClient();
+        using var adminClient = _factory.CreateHttpsClient();
         var adminEmail = $"admin-n8n-get-{Guid.NewGuid():N}@example.com";
-        var cookies = await RegisterAndAuthenticateAsync(client, adminEmail, "Admin");
+        var cookies = await RegisterAndAuthenticateAsync(adminClient, adminEmail, "Admin");
         var adminUserId = await GetUserIdByEmailAsync(adminEmail);
 
         var config = await CreateN8nConfigAsync(adminUserId, "Existing Workflow");
@@ -272,7 +275,7 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
         var request = new HttpRequestMessage(HttpMethod.Get, $"/admin/n8n/{config.Id}");
         AddCookies(request, cookies);
 
-        var response = await client.SendAsync(request);
+        var response = await adminClient.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -287,9 +290,9 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
     {
         await ClearN8nConfigsAsync();
 
-        using var client = _factory.CreateClient();
+        using var adminClient = _factory.CreateHttpsClient();
         var adminEmail = $"admin-n8n-update-{Guid.NewGuid():N}@example.com";
-        var cookies = await RegisterAndAuthenticateAsync(client, adminEmail, "Admin");
+        var cookies = await RegisterAndAuthenticateAsync(adminClient, adminEmail, "Admin");
         var adminUserId = await GetUserIdByEmailAsync(adminEmail);
 
         var existing = await CreateN8nConfigAsync(adminUserId, "Workflow To Update");
@@ -312,7 +315,7 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
         };
         AddCookies(updateRequest, cookies);
 
-        var response = await client.SendAsync(updateRequest);
+        var response = await adminClient.SendAsync(updateRequest);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -339,14 +342,14 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
     [Fact]
     public async Task DeleteAdminN8n_ReturnsNotFoundForMissingConfig()
     {
-        using var client = _factory.CreateClient();
+        using var adminClient = _factory.CreateHttpsClient();
         var adminEmail = $"admin-n8n-delete-{Guid.NewGuid():N}@example.com";
-        var cookies = await RegisterAndAuthenticateAsync(client, adminEmail, "Admin");
+        var cookies = await RegisterAndAuthenticateAsync(adminClient, adminEmail, "Admin");
 
         var request = new HttpRequestMessage(HttpMethod.Delete, "/admin/n8n/non-existent-config");
         AddCookies(request, cookies);
 
-        var response = await client.SendAsync(request);
+        var response = await adminClient.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
@@ -358,9 +361,9 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
     {
         await ClearN8nConfigsAsync();
 
-        using var client = _factory.CreateClient();
+        using var adminClient = _factory.CreateHttpsClient();
         var adminEmail = $"admin-n8n-test-{Guid.NewGuid():N}@example.com";
-        var cookies = await RegisterAndAuthenticateAsync(client, adminEmail, "Admin");
+        var cookies = await RegisterAndAuthenticateAsync(adminClient, adminEmail, "Admin");
         var adminUserId = await GetUserIdByEmailAsync(adminEmail);
 
         var config = await CreateN8nConfigAsync(adminUserId, "Workflow To Test");
@@ -368,7 +371,7 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
         var request = new HttpRequestMessage(HttpMethod.Post, $"/admin/n8n/{config.Id}/test");
         AddCookies(request, cookies);
 
-        var response = await client.SendAsync(request);
+        var response = await adminClient.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -388,12 +391,27 @@ public class AdminEndpointsIntegrationTests : IClassFixture<WebApplicationFactor
         }
     }
 
+    private HttpClient CreateClientWithoutCookies()
+    {
+        return _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            HandleCookies = false
+        });
+    }
+
     private static void AddCookies(HttpRequestMessage request, IEnumerable<string> cookies)
     {
-        foreach (var cookie in cookies)
+        var cookieList = cookies
+            .Where(cookie => !string.IsNullOrWhiteSpace(cookie))
+            .ToList();
+
+        if (cookieList.Count == 0)
         {
-            request.Headers.TryAddWithoutValidation("Cookie", cookie);
+            return;
         }
+
+        request.Headers.Remove("Cookie");
+        request.Headers.TryAddWithoutValidation("Cookie", string.Join("; ", cookieList));
     }
 
     private static List<string> ExtractCookies(HttpResponseMessage response)

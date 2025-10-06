@@ -5,8 +5,12 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities;
+using Api.Models;
 using Api.Services;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -27,7 +31,7 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
     [Fact]
     public async Task RequestsBeyondLimit_Return429WithHeadersAndBody()
     {
-        using var context = CreateClientContext();
+        await using var context = await CreateClientContextAsync();
 
         context.RateLimitService.EnqueueResponse(allowed: true, tokensRemaining: 59, retryAfterSeconds: 0);
         var okResponse = await context.Client.GetAsync("/logs");
@@ -52,7 +56,7 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
     [Fact]
     public async Task RateLimiter_FailsOpen_WhenServiceThrows()
     {
-        using var context = CreateClientContext();
+        await using var context = await CreateClientContextAsync();
 
         context.RateLimitService.FailWith(new RedisConnectionException(ConnectionFailureType.SocketFailure, "redis down"));
 
@@ -64,7 +68,7 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
         Assert.False(response.Headers.Contains("Retry-After"));
     }
 
-    private TestClientContext CreateClientContext()
+    private async Task<TestClientContext> CreateClientContextAsync()
     {
         var rateLimitService = new TestRateLimitService();
 
@@ -84,7 +88,52 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
         });
 
         var client = factory.CreateClient();
+
+        var email = $"rate-limit-admin-{Guid.NewGuid():N}@example.com";
+        var registerPayload = new RegisterPayload(email, "Password123!", "Rate Limit Admin", null);
+        var registerResponse = await client.PostAsJsonAsync("/auth/register", registerPayload);
+        registerResponse.EnsureSuccessStatusCode();
+
+        await PromoteUserAsync(factory.Services, email, UserRole.Admin);
+
+        var cookies = ExtractCookies(registerResponse);
+        AttachCookies(client, cookies);
+
         return new TestClientContext(factory, client, rateLimitService);
+    }
+
+    private static IReadOnlyList<string> ExtractCookies(HttpResponseMessage response)
+    {
+        if (!response.Headers.TryGetValues("Set-Cookie", out var values))
+        {
+            return Array.Empty<string>();
+        }
+
+        return values
+            .Select(value => value.Split(';')[0])
+            .ToList();
+    }
+
+    private static void AttachCookies(HttpClient client, IReadOnlyList<string> cookies)
+    {
+        client.DefaultRequestHeaders.Remove("Cookie");
+
+        if (cookies.Count > 0)
+        {
+            var headerValue = string.Join("; ", cookies);
+            client.DefaultRequestHeaders.Add("Cookie", headerValue);
+        }
+    }
+
+    private static async Task PromoteUserAsync(IServiceProvider services, string email, UserRole role)
+    {
+        await using var scope = services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var user = await db.Users.SingleAsync(u => u.Email == email);
+        user.Role = role;
+
+        await db.SaveChangesAsync();
     }
 
     private static string GetSingleHeaderValue(HttpResponseMessage response, string headerName)
@@ -96,7 +145,7 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
 
     private sealed record RateLimitErrorResponse(string error, int retryAfter, string message);
 
-    private sealed class TestClientContext : IDisposable
+    private sealed class TestClientContext : IDisposable, IAsyncDisposable
     {
         public TestClientContext(WebApplicationFactory<Program> factory, HttpClient client, TestRateLimitService rateLimitService)
         {
@@ -113,6 +162,12 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
         {
             Client.Dispose();
             Factory.Dispose();
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            Dispose();
+            return ValueTask.CompletedTask;
         }
     }
 

@@ -32,7 +32,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
     [Fact]
     public async Task Register_ReturnsAuthResponseWithoutTenantInformation()
     {
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
 
         var payload = new RegisterPayload(
             "register-user@example.com",
@@ -66,7 +66,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var email = "login-user@example.com";
         await RegisterUserAsync(email);
 
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
         var payload = new LoginPayload
         {
             email = email,
@@ -94,7 +94,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
     [Fact]
     public async Task SeedEndpoint_AllowsAdminWithoutTenantPayload()
     {
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
         var cookies = await RegisterAndAuthenticateAsync(client, "seed-admin@example.com", role: "Admin");
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/admin/seed")
@@ -122,7 +122,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
     [Fact]
     public async Task GenerateRuleSpecFromPdf_ReturnsStructuredSpec()
     {
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
         var email = "pdf-parser@example.com";
         var cookies = await RegisterAndAuthenticateAsync(client, email, role: "Admin");
 
@@ -186,7 +186,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
     private async Task RegisterUserAsync(string email, string role = "Admin")
     {
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
         await RegisterAndAuthenticateAsync(client, email, role);
     }
 
@@ -223,7 +223,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
     [InlineData("Editor")]
     public async Task Register_ReturnsConflictWhenNonBootstrapRequestsElevatedRole(string requestedRole)
     {
-        using var client = _factory.CreateClient();
+        using var client = _factory.CreateHttpsClient();
 
         var initialPayload = new RegisterPayload(
             $"initial-{Guid.NewGuid():N}@example.com",

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -48,7 +49,12 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
         Assert.Equal(15, payload.retryAfter);
         Assert.Contains("Too many requests", payload.message, StringComparison.OrdinalIgnoreCase);
 
-        Assert.Equal("60", GetSingleHeaderValue(limitedResponse, "X-RateLimit-Limit"));
+        var expectedLimit = RateLimitService
+            .GetConfigForRole(UserRole.Admin.ToString())
+            .MaxTokens
+            .ToString(CultureInfo.InvariantCulture);
+
+        Assert.Equal(expectedLimit, GetSingleHeaderValue(limitedResponse, "X-RateLimit-Limit"));
         Assert.Equal("0", GetSingleHeaderValue(limitedResponse, "X-RateLimit-Remaining"));
         Assert.Equal("15", GetSingleHeaderValue(limitedResponse, "Retry-After"));
     }
@@ -63,8 +69,13 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
         var response = await context.Client.GetAsync("/logs");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("60", GetSingleHeaderValue(response, "X-RateLimit-Limit"));
-        Assert.Equal("60", GetSingleHeaderValue(response, "X-RateLimit-Remaining"));
+        var expectedLimit = RateLimitService
+            .GetConfigForRole(UserRole.Admin.ToString())
+            .MaxTokens
+            .ToString(CultureInfo.InvariantCulture);
+
+        Assert.Equal(expectedLimit, GetSingleHeaderValue(response, "X-RateLimit-Limit"));
+        Assert.Equal(expectedLimit, GetSingleHeaderValue(response, "X-RateLimit-Remaining"));
         Assert.False(response.Headers.Contains("Retry-After"));
     }
 

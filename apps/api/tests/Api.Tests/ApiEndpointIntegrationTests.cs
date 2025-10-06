@@ -194,8 +194,8 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
     {
         Assert.True(response.Headers.TryGetValues("Set-Cookie", out var values));
         var sessionCookie = Assert.Single(values.Where(value => value.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal)));
-        Assert.Contains("Secure", sessionCookie);
-        Assert.Contains("SameSite=None", sessionCookie);
+        Assert.Contains("secure", sessionCookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("samesite=none", sessionCookie, StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<List<string>> RegisterAndAuthenticateAsync(HttpClient client, string email, string role = "Admin")

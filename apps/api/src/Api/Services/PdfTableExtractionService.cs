@@ -133,10 +133,22 @@ public class PdfTableExtractionService
             {
                 var previewSplit = SplitIntoColumns(line, null);
                 var previewColumnCount = Math.Max(previewSplit.Columns.Count, previewSplit.Boundaries.Count);
+                var hasBlankRowSentinel = currentRows.Count > 0 && currentRows[^1].All(string.IsNullOrWhiteSpace);
+                var previewNonEmptyColumns = previewSplit.Columns.Count(value => !string.IsNullOrWhiteSpace(value));
+                var requiredPreviewColumns = currentBoundaries.Count > 0
+                    ? Math.Max(2, (currentBoundaries.Count + 1) / 2)
+                    : 0;
 
                 if (previewColumnCount > 0 && previewColumnCount < currentBoundaries.Count)
                 {
-                    TrimTrailingEmptyRows();
+                    FinalizeCurrentTable();
+                    i--;
+                    lastLineWasBlank = false;
+                    continue;
+                }
+
+                if (hasBlankRowSentinel && currentRows.Count > 1 && previewNonEmptyColumns >= requiredPreviewColumns)
+                {
                     FinalizeCurrentTable();
                     i--;
                     lastLineWasBlank = false;

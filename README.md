@@ -21,6 +21,12 @@ Questo repository ospita gli stack principali di MeepleAI:
 
 Ogni servizio espone un healthcheck nel `docker-compose.yml`, per cui `docker compose ps` mostra lo stato "healthy" quando l'avvio è completo.
 
+### Configurazione CORS per ambienti non locali
+
+- Le API leggono l'elenco di origini consentite dalla chiave di configurazione `AllowedOrigins` (array di stringhe). In `appsettings.json` locale è già presente un esempio con `http://localhost:3000`.
+- In produzione/staging imposta il valore tramite variabili d'ambiente (`AllowedOrigins__0=https://app.example.com`, `AllowedOrigins__1=https://app-alt.example.com`, ...). È supportata anche la chiave legacy `Cors:AllowedOrigins` per retrocompatibilità.
+- Se non viene definita alcuna origine, l'API ricade sul valore di default `http://localhost:3000`, quindi assicurati di popolare la configurazione nei deploy non locali per evitare errori CORS.
+
 ## Database
 
 ### Avvio di Postgres via Docker Compose

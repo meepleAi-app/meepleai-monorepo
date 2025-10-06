@@ -1,3 +1,4 @@
+using System.Globalization;
 using StackExchange.Redis;
 
 namespace Api.Services;
@@ -98,11 +99,12 @@ public class RateLimitService
         try
         {
             var result = await db.ScriptEvaluateAsync(script, keys, values);
-            var resultArray = (RedisValue[])result!;
+            var resultArray = (RedisResult[])result!;
+            var numericResults = Array.ConvertAll(resultArray, ConvertRedisResultToInt);
 
-            var allowed = (int)resultArray[0] == 1;
-            var tokensRemaining = (int)resultArray[1];
-            var retryAfter = (int)resultArray[2];
+            var allowed = numericResults[0] == 1;
+            var tokensRemaining = numericResults[1];
+            var retryAfter = numericResults[2];
 
             if (!allowed)
             {
@@ -132,6 +134,23 @@ public class RateLimitService
             "user" => new RateLimitConfig(100, 1.0),     // 100 burst, 1/sec
             _ => new RateLimitConfig(60, 1.0)            // Default: 60 burst, 1/sec (anonymous)
         };
+    }
+
+    private static int ConvertRedisResultToInt(RedisResult result)
+    {
+        if (result.TryParse(out long longValue))
+        {
+            return (int)longValue;
+        }
+
+        var stringValue = result.ToString();
+
+        if (stringValue is not null && int.TryParse(stringValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed))
+        {
+            return parsed;
+        }
+
+        throw new InvalidOperationException($"Unexpected Redis script result type: {result.Type}");
     }
 }
 

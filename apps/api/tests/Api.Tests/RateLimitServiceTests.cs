@@ -86,7 +86,12 @@ public class RateLimitServiceTests
 
     private static Mock<IConnectionMultiplexer> CreateMockRedis(bool allowRequest, int tokensRemaining, int retryAfter)
     {
-        var resultArray = new RedisValue[] { allowRequest ? 1 : 0, tokensRemaining, retryAfter };
+        var resultArray = new RedisResult[]
+        {
+            RedisResult.Create(allowRequest ? 1 : 0),
+            RedisResult.Create(tokensRemaining),
+            RedisResult.Create(retryAfter)
+        };
 
         var mockDatabase = new Mock<IDatabase>();
         mockDatabase

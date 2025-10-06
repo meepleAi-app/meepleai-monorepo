@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { API_BASE } from "../lib/api";
 
+import { getApiBase } from "../lib/api";
+
 type AiRequest = {
   id: string;
   userId: string | null;
@@ -46,8 +48,9 @@ export default function AdminDashboard() {
       setLoading(true);
 
       // Fetch requests
+      const apiBase = getApiBase();
       const endpoint = endpointFilter === "all" ? "" : `&endpoint=${endpointFilter}`;
-      const requestsRes = await fetch(`${API_BASE}/admin/requests?limit=100${endpoint}`, {
+      const requestsRes = await fetch(`${apiBase}/admin/requests?limit=100${endpoint}`, {
         credentials: "include"
       });
 
@@ -59,7 +62,7 @@ export default function AdminDashboard() {
       setRequests(requestsData.requests);
 
       // Fetch stats
-      const statsRes = await fetch(`${API_BASE}/admin/stats`, {
+      const statsRes = await fetch(`${apiBase}/admin/stats`, {
         credentials: "include"
       });
 
@@ -132,10 +135,10 @@ export default function AdminDashboard() {
 
   const filteredRequests = requests.filter(
     (req) =>
-      req.query?.toLowerCase().includes(filter.toLowerCase()) ||
+      req.query?.toLowerCase()?.includes(filter.toLowerCase()) ||
       req.endpoint.toLowerCase().includes(filter.toLowerCase()) ||
-      req.userId?.toLowerCase().includes(filter.toLowerCase()) ||
-      req.gameId?.toLowerCase().includes(filter.toLowerCase())
+      req.userId?.toLowerCase()?.includes(filter.toLowerCase()) ||
+      req.gameId?.toLowerCase()?.includes(filter.toLowerCase())
   );
 
   const helpfulCount = stats?.feedbackCounts?.["helpful"] ?? 0;

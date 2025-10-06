@@ -58,7 +58,7 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
     {
         if (_skipReason is not null)
         {
-            Skip.If(true, _skipReason!);
+            throw new Xunit.Sdk.SkipException(_skipReason!);
         }
 
         if (_qdrantContainer != null)
@@ -74,7 +74,7 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
             {
                 _skipReason =
                     $"Qdrant integration tests skipped: failed to start local Testcontainers instance and no QDRANT_URL was provided. {ex.Message}";
-                Skip.If(true, _skipReason);
+                throw new Xunit.Sdk.SkipException(_skipReason);
             }
         }
 
@@ -82,7 +82,7 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
         {
             _skipReason =
                 "Qdrant integration tests skipped: no QDRANT_URL configured and Docker/Testcontainers is unavailable.";
-            Skip.If(true, _skipReason);
+            throw new Xunit.Sdk.SkipException(_skipReason);
         }
 
         // Create QdrantService with Qdrant connection (works for both CI and local)

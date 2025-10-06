@@ -185,6 +185,7 @@ describe('AdminDashboard', () => {
       .mockResolvedValueOnce(createJsonResponse(qaOnlyPayload))
       .mockResolvedValueOnce(createJsonResponse(statsPayload));
 
+    process.env.NEXT_PUBLIC_API_BASE = apiBase;
     const AdminDashboard = loadAdminDashboard();
 
     render(<AdminDashboard />);
@@ -306,6 +307,8 @@ describe('AdminDashboard', () => {
       .mockResolvedValueOnce(createJsonResponse(requestsPayload))
       .mockResolvedValueOnce(createJsonResponse(statsPayload));
 
+    process.env.NEXT_PUBLIC_API_BASE = apiBase;
+    const AdminDashboard = loadAdminDashboard();
     const user = userEvent.setup();
 
     render(<AdminDashboard />);
@@ -323,6 +326,7 @@ describe('AdminDashboard', () => {
   it('renders error state when the API responds with an error', async () => {
     fetchMock.mockResolvedValueOnce(createJsonResponse({}, false));
 
+    process.env.NEXT_PUBLIC_API_BASE = apiBase;
     const AdminDashboard = loadAdminDashboard();
 
     render(<AdminDashboard />);

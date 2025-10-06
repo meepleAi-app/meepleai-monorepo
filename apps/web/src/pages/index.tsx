@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { api } from "../lib/api";
 
 type AuthUser = {
@@ -15,6 +16,7 @@ type AuthResponse = {
 };
 
 export default function Home() {
+  const router = useRouter();
   const [answer, setAnswer] = useState<string>("");
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>("");
@@ -79,6 +81,7 @@ export default function Home() {
   const handleRegister = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage("");
+    setStatusMessage("");
     try {
       const payload = {
         email: registerForm.email,
@@ -88,13 +91,15 @@ export default function Home() {
       };
       const res = await api.post<AuthResponse>("/auth/register", payload);
       setAuthUser(res.user);
-      setStatusMessage("Registrazione completata. Sei connesso!");
       setRegisterForm({
         email: "",
         password: "",
         displayName: "",
         role: "User"
       });
+      if (router.pathname !== "/upload") {
+        void router.push("/upload");
+      }
     } catch (err: any) {
       console.error(err);
       setErrorMessage(err?.message || "Registrazione non riuscita.");
@@ -104,14 +109,17 @@ export default function Home() {
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setErrorMessage("");
+    setStatusMessage("");
     try {
       const res = await api.post<AuthResponse>("/auth/login", {
         email: loginForm.email,
         password: loginForm.password
       });
       setAuthUser(res.user);
-      setStatusMessage("Accesso eseguito.");
       setLoginForm({ email: "", password: "" });
+      if (router.pathname !== "/upload") {
+        void router.push("/upload");
+      }
     } catch (err: any) {
       console.error(err);
       setErrorMessage(err?.message || "Accesso non riuscito.");

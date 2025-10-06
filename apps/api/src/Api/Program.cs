@@ -6,6 +6,7 @@ using System.Security.Claims;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.HttpOverrides;

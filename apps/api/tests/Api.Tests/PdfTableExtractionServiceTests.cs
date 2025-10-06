@@ -11,8 +11,11 @@ using Moq;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
-using System.Linq;
 using Xunit;
+
+using QuestPdfDocument = QuestPDF.Fluent.Document;
+using ITextDocument = iText.Layout.Document;
+using ITextImage = iText.Layout.Element.Image;
 
 namespace Api.Tests;
 
@@ -56,7 +59,7 @@ public class PdfTableExtractionServiceTests : IDisposable
 
     private void CreateStructuredPdf(string filePath)
     {
-        Document.Create(container =>
+        QuestPdfDocument.Create(container =>
         {
             container.Page(page =>
             {
@@ -114,7 +117,7 @@ public class PdfTableExtractionServiceTests : IDisposable
         {
             using (var writer = new PdfWriter(tempFilePath))
             using (var pdfDocument = new PdfDocument(writer))
-            using (var document = new Document(pdfDocument))
+            using (var document = new ITextDocument(pdfDocument))
             {
                 var table = new Table(2);
                 table.AddHeaderCell("Header 1");
@@ -128,7 +131,7 @@ public class PdfTableExtractionServiceTests : IDisposable
                 var imageBytes = Convert.FromBase64String(
                     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=");
                 var imageData = ImageDataFactory.Create(imageBytes);
-                var image = new Image(imageData).ScaleToFit(50, 50);
+                var image = new ITextImage(imageData).ScaleToFit(50, 50);
                 document.Add(image);
             }
 

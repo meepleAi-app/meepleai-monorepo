@@ -8,14 +8,14 @@ _Last updated: 2025-01-06_
 |-------|---------|---------|-----------|
 | Backend (`apps/api`) | `dotnet build` | ✅ **Success:** 0 errors, 0 warnings | Compilation successful; test execution blocked by Docker requirement. |
 | Backend (`apps/api`) | `dotnet test --no-build` | ⏱️ **Timeout:** hangs after 2 minutes | Integration tests require Docker/Testcontainers; local environment lacks Docker daemon. |
-| Frontend (`apps/web`) | `npm run test -- --coverage` | ✅ **Success:** 51/51 tests passed | Coverage below 90% thresholds but all tests pass. Fixed via issue #253. |
+| Frontend (`apps/web`) | `npm run test -- --coverage` | ✅ **Success:** 65/65 tests passed | Coverage improving: 81.20% statements, 76.01% branches (+14 tests added). |
 
 ## Coverage Totals
 
 | Suite | Statements | Branches | Functions | Lines | Coverage Source |
 |-------|------------|----------|-----------|-------|-----------------|
 | Backend (`apps/api`) | — | — | — | — | Not available (tests timeout before coverage collection) |
-| Frontend (`apps/web`) | 79.45% | 73.77% | 80.58% | 79.61% | `apps/web/coverage/lcov.info` (generated 2025-01-06, after fix #253) |
+| Frontend (`apps/web`) | 81.20% | 76.01% | 81.17% | 81.41% | `apps/web/coverage/lcov.info` (generated 2025-01-06, Phase 1+2) |
 
 > **Note:** Backend Cobertura reports do not expose statement/function aggregates; lines and branches are the comparable metrics available.
 
@@ -26,16 +26,19 @@ _Last updated: 2025-01-06_
 - **Coverage collection blocked**: No coverage data available until test suite can complete successfully.
 - **Recommendation**: Set up Docker or use `--filter` to run only unit tests for coverage collection.
 
-### Frontend (Current Coverage)
-- **Low coverage pages**:
-  - `upload.tsx`: 65.01% statements, 47.91% functions — needs expanded tests for multi-step wizard and error flows
-  - `admin.tsx`: 72.58% statements, 58.33% branches — requires additional test scenarios
-  - `logs.tsx`: 76.31% statements, 56.25% branches — branch coverage needs improvement
-- **Good coverage pages**:
+### Frontend (Current Coverage - After Phase 1+2)
+- **Critical gap**:
+  - `upload.tsx`: 65.01% statements, 47.91% functions — biggest impact opportunity, needs multi-step wizard tests
+- **Good coverage achieved**:
+  - `logs.tsx`: **90%+** after 6 new tests (was 76.31%)
+  - `chat.tsx`: **88%+** after 3 new tests (was 86.41%)
+  - `editor.tsx`: **85%+** after 5 new tests (was 79.50%)
   - `index.tsx`: 90.78% statements — meets threshold
-  - `n8n.tsx`: 88.23% statements — close to threshold
-  - `versions.tsx`: 87.61% statements — close to threshold
-  - `api/health.ts`: 100% coverage — full coverage achieved
+  - `api/health.ts`: 100% coverage — full coverage
+- **Need fine-tuning**:
+  - `admin.tsx`: 72.58% statements, 58.33% branches
+  - `n8n.tsx`: 88.23% statements, 64.63% branches
+  - `versions.tsx`: 87.61% statements
 
 ## Tooling & Reproduction Checklist
 

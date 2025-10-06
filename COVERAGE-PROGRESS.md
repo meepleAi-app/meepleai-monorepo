@@ -1,9 +1,9 @@
 # Coverage Progress Report
 
-## 📊 Snapshot — 2025-01-06
+## 📊 Snapshot — 2025-01-06 (Updated after Phase 1+2)
 
 - **Backend (`apps/api`)**: `dotnet build` completes successfully with **0 errors, 0 warnings**. However, `dotnet test` hangs during integration test execution (likely Docker/Testcontainers-related), preventing coverage collection. Build is healthy; test suite requires Docker environment to complete.
-- **Frontend (`apps/web`)**: `npm run test -- --coverage` completed with coverage at **79.45% statements / 73.77% branches / 80.58% functions / 79.61% lines** (10 suites, 51 tests: **all passed**). Jest fails on 90% global thresholds but test suite is healthy.
+- **Frontend (`apps/web`)**: `npm run test -- --coverage` completed with coverage at **81.20% statements / 76.01% branches / 81.17% functions / 81.41% lines** (10 suites, 65 tests: **all passed**). Jest fails on 90% global thresholds but test suite is healthy and improving steadily.
 
 ## 🧪 Latest Commands Executed
 
@@ -21,9 +21,11 @@
 
 ### Frontend
 
-- ✅ **Fixed failing test**: AdminDashboard test now passes (issue #253 resolved - `NEXT_PUBLIC_API_BASE` was not set before loading component in tests).
-- **Raise coverage on `upload.tsx`**: Statements (65.01%) and functions (47.91%) are dragging global coverage under the threshold; expand tests around the multi-step upload flow and error branches.
-- **Target branch-heavy pages**: Continue improving `admin.tsx` and `n8n.tsx` branch coverage to reach the 90% bar.
+- ✅ **Fixed failing test**: AdminDashboard test now passes (issue #253 resolved).
+- ✅ **Phase 1 completed**: Added 9 tests total to logs.test.tsx and chat.test.tsx
+- ✅ **Phase 2 completed**: Added 5 tests to editor.test.tsx covering validation and error handling
+- **Next priority - upload.tsx**: Statements (65.01%) and functions (47.91%) remain the biggest gap; needs comprehensive test coverage for multi-step wizard flow
+- **Fine-tuning needed**: Target branch coverage in `admin.tsx`, `n8n.tsx`, and `index.tsx` to push from 81% to 90%
 
 ## 📂 Coverage Artifacts
 

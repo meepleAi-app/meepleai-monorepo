@@ -1,10 +1,22 @@
 import { test, expect } from '@playwright/test';
 
+type N8nConfig = {
+  id: string;
+  name: string;
+  baseUrl: string;
+  webhookUrl: string | null;
+  isActive: boolean;
+  lastTestedAt: string | null;
+  lastTestResult: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 const apiBase = 'http://localhost:8080';
 
 test.describe('n8n workflow management', () => {
   test('allows full lifecycle management of n8n configurations', async ({ page }) => {
-    const configs = [
+    const configs: N8nConfig[] = [
       {
         id: 'cfg-1',
         name: 'Production n8n',
@@ -49,7 +61,7 @@ test.describe('n8n workflow management', () => {
           webhookUrl: string | null;
         };
 
-        const newConfig = {
+        const newConfig: N8nConfig = {
           id: `cfg-${configs.length + 1}`,
           name: body.name,
           baseUrl: body.baseUrl,
@@ -85,18 +97,18 @@ test.describe('n8n workflow management', () => {
 
       const method = route.request().method();
       if (method === 'PUT') {
-        const body = route.request().postDataJSON() as Partial<typeof config> & { apiKey?: string };
+        const body = route.request().postDataJSON() as Partial<N8nConfig> & { apiKey?: string };
         if (body.name !== undefined) {
-          config.name = body.name as string;
+          config.name = body.name;
         }
         if (body.baseUrl !== undefined) {
-          config.baseUrl = body.baseUrl as string;
+          config.baseUrl = body.baseUrl;
         }
         if (body.webhookUrl !== undefined) {
-          config.webhookUrl = body.webhookUrl as string | null;
+          config.webhookUrl = body.webhookUrl;
         }
         if (body.isActive !== undefined) {
-          config.isActive = body.isActive as boolean;
+          config.isActive = body.isActive;
         }
         config.updatedAt = new Date().toISOString();
 

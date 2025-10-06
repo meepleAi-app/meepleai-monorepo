@@ -1,6 +1,12 @@
 export const API_BASE_FALLBACK = "http://localhost:8080";
 
-export const getApiBase = (): string => process.env.NEXT_PUBLIC_API_BASE || API_BASE_FALLBACK;
+export const getApiBase = (): string => {
+  const envBase = process.env.NEXT_PUBLIC_API_BASE?.trim();
+  if (envBase && envBase !== "undefined" && envBase !== "null") {
+    return envBase;
+  }
+  return API_BASE_FALLBACK;
+};
 
 export const api = {
   async get<T>(path: string): Promise<T | null> {

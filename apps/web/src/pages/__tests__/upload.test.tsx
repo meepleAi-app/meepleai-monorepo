@@ -779,4 +779,691 @@ describe('UploadPage', () => {
       jest.useRealTimers();
     }
   });
+
+  it('blocks access for users without admin or editor role', async () => {
+    const viewerResponse = {
+      user: {
+        id: 'viewer-1',
+        email: 'viewer@example.com',
+        role: 'Viewer',
+        displayName: 'Viewer User'
+      },
+      expiresAt: new Date().toISOString()
+    };
+
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+
+      if (url.endsWith('/auth/me')) {
+        return createJsonResponse(viewerResponse);
+      }
+
+      throw new Error(`Unexpected fetch call to ${url}`);
+    });
+
+    render(<UploadPage />);
+
+    await waitFor(() =>
+      expect(screen.getByText(/You need an Editor or Admin role to manage PDF ingestion/i)).toBeInTheDocument()
+    );
+    expect(screen.getByRole('link', { name: /Back to Home/i })).toBeInTheDocument();
+  });
+
+  it('publishes rulespec successfully and shows success message', async () => {
+    jest.useFakeTimers();
+
+    try {
+      const authResponse = {
+        user: {
+          id: 'user-10',
+          email: 'user10@example.com',
+          role: 'Editor',
+          displayName: 'User Ten'
+        },
+        expiresAt: new Date().toISOString()
+      };
+
+      const ruleSpecResponse = {
+        gameId: 'game-1',
+        version: 'v1',
+        createdAt: new Date().toISOString(),
+        rules: [{ id: 'r1', text: 'Rule to publish' }]
+      };
+
+      mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/auth/me')) {
+          return createJsonResponse(authResponse);
+        }
+
+        if (url.endsWith('/games') && method === 'GET') {
+          return createJsonResponse([
+            { id: 'game-1', name: 'Terraforming Mars', createdAt: new Date().toISOString() }
+          ]);
+        }
+
+        if (url.includes('/games/game-1/pdfs')) {
+          return createJsonResponse({ pdfs: [] });
+        }
+
+        if (url.endsWith('/ingest/pdf')) {
+          return createJsonResponse({ documentId: 'pdf-123' });
+        }
+
+        if (url.endsWith('/pdfs/pdf-123/text')) {
+          return createJsonResponse({
+            id: 'pdf-123',
+            fileName: 'rules.pdf',
+            processingStatus: 'completed',
+            processingError: null
+          });
+        }
+
+        if (url.endsWith('/games/game-1/rulespec') && method === 'GET') {
+          return createJsonResponse(ruleSpecResponse);
+        }
+
+        if (url.endsWith('/games/game-1/rulespec') && method === 'PUT') {
+          return createJsonResponse(ruleSpecResponse, 200);
+        }
+
+        throw new Error(`Unexpected fetch call to ${url}`);
+      });
+
+      render(<UploadPage />);
+
+      await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
+
+      const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
+      const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
+      fireEvent.change(fileInput, { target: { files: [file] } });
+
+      const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+      await waitFor(() => expect(uploadButton).not.toBeDisabled());
+      fireEvent.click(uploadButton);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2500);
+      });
+
+      await waitFor(() => expect(screen.getByText(/Rule to publish/i)).toBeInTheDocument());
+
+      const publishButton = screen.getByRole('button', { name: /Publish RuleSpec/i });
+      fireEvent.click(publishButton);
+
+      await waitFor(() =>
+        expect(screen.getByText(/✅ RuleSpec published successfully!/i)).toBeInTheDocument()
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('allows editing rule atom text in review phase', async () => {
+    jest.useFakeTimers();
+
+    try {
+      const authResponse = {
+        user: {
+          id: 'user-11',
+          email: 'user11@example.com',
+          role: 'Admin',
+          displayName: 'User Eleven'
+        },
+        expiresAt: new Date().toISOString()
+      };
+
+      const ruleSpecResponse = {
+        gameId: 'game-1',
+        version: 'v1',
+        createdAt: new Date().toISOString(),
+        rules: [{ id: 'r1', text: 'Original rule text', section: 'Setup', page: '1', line: '1' }]
+      };
+
+      mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/auth/me')) {
+          return createJsonResponse(authResponse);
+        }
+
+        if (url.endsWith('/games') && method === 'GET') {
+          return createJsonResponse([
+            { id: 'game-1', name: 'Terraforming Mars', createdAt: new Date().toISOString() }
+          ]);
+        }
+
+        if (url.includes('/games/game-1/pdfs')) {
+          return createJsonResponse({ pdfs: [] });
+        }
+
+        if (url.endsWith('/ingest/pdf')) {
+          return createJsonResponse({ documentId: 'pdf-123' });
+        }
+
+        if (url.endsWith('/pdfs/pdf-123/text')) {
+          return createJsonResponse({
+            id: 'pdf-123',
+            fileName: 'rules.pdf',
+            processingStatus: 'completed',
+            processingError: null
+          });
+        }
+
+        if (url.endsWith('/games/game-1/rulespec')) {
+          return createJsonResponse(ruleSpecResponse);
+        }
+
+        throw new Error(`Unexpected fetch call to ${url}`);
+      });
+
+      render(<UploadPage />);
+
+      await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
+
+      const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
+      const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
+      fireEvent.change(fileInput, { target: { files: [file] } });
+
+      const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+      await waitFor(() => expect(uploadButton).not.toBeDisabled());
+      fireEvent.click(uploadButton);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2500);
+      });
+
+      await waitFor(() => expect(screen.getByText(/Original rule text/i)).toBeInTheDocument());
+
+      const ruleTextInput = screen.getByDisplayValue('Original rule text');
+      fireEvent.change(ruleTextInput, { target: { value: 'Edited rule text' } });
+
+      expect(screen.getByDisplayValue('Edited rule text')).toBeInTheDocument();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('allows deleting a rule atom in review phase', async () => {
+    jest.useFakeTimers();
+
+    try {
+      const authResponse = {
+        user: {
+          id: 'user-12',
+          email: 'user12@example.com',
+          role: 'Admin',
+          displayName: 'User Twelve'
+        },
+        expiresAt: new Date().toISOString()
+      };
+
+      const ruleSpecResponse = {
+        gameId: 'game-1',
+        version: 'v1',
+        createdAt: new Date().toISOString(),
+        rules: [
+          { id: 'r1', text: 'Rule to keep', section: null, page: null, line: null },
+          { id: 'r2', text: 'Rule to delete', section: null, page: null, line: null }
+        ]
+      };
+
+      mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/auth/me')) {
+          return createJsonResponse(authResponse);
+        }
+
+        if (url.endsWith('/games') && method === 'GET') {
+          return createJsonResponse([
+            { id: 'game-1', name: 'Terraforming Mars', createdAt: new Date().toISOString() }
+          ]);
+        }
+
+        if (url.includes('/games/game-1/pdfs')) {
+          return createJsonResponse({ pdfs: [] });
+        }
+
+        if (url.endsWith('/ingest/pdf')) {
+          return createJsonResponse({ documentId: 'pdf-123' });
+        }
+
+        if (url.endsWith('/pdfs/pdf-123/text')) {
+          return createJsonResponse({
+            id: 'pdf-123',
+            fileName: 'rules.pdf',
+            processingStatus: 'completed',
+            processingError: null
+          });
+        }
+
+        if (url.endsWith('/games/game-1/rulespec')) {
+          return createJsonResponse(ruleSpecResponse);
+        }
+
+        throw new Error(`Unexpected fetch call to ${url}`);
+      });
+
+      render(<UploadPage />);
+
+      await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
+
+      const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
+      const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
+      fireEvent.change(fileInput, { target: { files: [file] } });
+
+      const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+      await waitFor(() => expect(uploadButton).not.toBeDisabled());
+      fireEvent.click(uploadButton);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2500);
+      });
+
+      await waitFor(() => expect(screen.getByText(/Rule to delete/i)).toBeInTheDocument());
+
+      const deleteButtons = screen.getAllByRole('button', { name: /Delete/i });
+      fireEvent.click(deleteButtons[1]); // Delete second rule
+
+      await waitFor(() => expect(screen.queryByText(/Rule to delete/i)).not.toBeInTheDocument());
+      expect(screen.getByText(/Rule to keep/i)).toBeInTheDocument();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('allows adding a new rule atom in review phase', async () => {
+    jest.useFakeTimers();
+
+    try {
+      const authResponse = {
+        user: {
+          id: 'user-13',
+          email: 'user13@example.com',
+          role: 'Admin',
+          displayName: 'User Thirteen'
+        },
+        expiresAt: new Date().toISOString()
+      };
+
+      const ruleSpecResponse = {
+        gameId: 'game-1',
+        version: 'v1',
+        createdAt: new Date().toISOString(),
+        rules: [{ id: 'r1', text: 'Existing rule' }]
+      };
+
+      mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/auth/me')) {
+          return createJsonResponse(authResponse);
+        }
+
+        if (url.endsWith('/games') && method === 'GET') {
+          return createJsonResponse([
+            { id: 'game-1', name: 'Terraforming Mars', createdAt: new Date().toISOString() }
+          ]);
+        }
+
+        if (url.includes('/games/game-1/pdfs')) {
+          return createJsonResponse({ pdfs: [] });
+        }
+
+        if (url.endsWith('/ingest/pdf')) {
+          return createJsonResponse({ documentId: 'pdf-123' });
+        }
+
+        if (url.endsWith('/pdfs/pdf-123/text')) {
+          return createJsonResponse({
+            id: 'pdf-123',
+            fileName: 'rules.pdf',
+            processingStatus: 'completed',
+            processingError: null
+          });
+        }
+
+        if (url.endsWith('/games/game-1/rulespec')) {
+          return createJsonResponse(ruleSpecResponse);
+        }
+
+        throw new Error(`Unexpected fetch call to ${url}`);
+      });
+
+      render(<UploadPage />);
+
+      await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
+
+      const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
+      const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
+      fireEvent.change(fileInput, { target: { files: [file] } });
+
+      const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+      await waitFor(() => expect(uploadButton).not.toBeDisabled());
+      fireEvent.click(uploadButton);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2500);
+      });
+
+      await waitFor(() => expect(screen.getByText(/Existing rule/i)).toBeInTheDocument());
+
+      const initialTextareas = screen.getAllByRole('textbox').filter((el) => el.tagName === 'TEXTAREA');
+      expect(initialTextareas).toHaveLength(1);
+
+      const addButton = screen.getByRole('button', { name: /Add Rule/i });
+      fireEvent.click(addButton);
+
+      await waitFor(() => {
+        const textareas = screen.getAllByRole('textbox').filter((el) => el.tagName === 'TEXTAREA');
+        expect(textareas).toHaveLength(2);
+      });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('auto-selects first game and enables confirm button', async () => {
+    const authResponse = {
+      user: {
+        id: 'user-14',
+        email: 'user14@example.com',
+        role: 'Admin',
+        displayName: 'User Fourteen'
+      },
+      expiresAt: new Date().toISOString()
+    };
+
+    mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      const method = init?.method ?? 'GET';
+
+      if (url.endsWith('/auth/me')) {
+        return createJsonResponse(authResponse);
+      }
+
+      if (url.endsWith('/games') && method === 'GET') {
+        return createJsonResponse([
+          { id: 'game-1', name: 'Terraforming Mars', createdAt: new Date().toISOString() }
+        ]);
+      }
+
+      if (url.includes('/games/game-1/pdfs')) {
+        return createJsonResponse({ pdfs: [] });
+      }
+
+      throw new Error(`Unexpected fetch call to ${url}`);
+    });
+
+    render(<UploadPage />);
+
+    await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+
+    // First game should be auto-selected
+    const gameSelect = screen.getByLabelText(/Existing games/i) as HTMLSelectElement;
+    expect(gameSelect.value).toBe('game-1');
+
+    // Confirm button should be enabled for the selected game
+    const confirmButton = screen.getByRole('button', { name: /Confirm selection/i });
+    expect(confirmButton).toBeEnabled();
+  });
+
+  it('shows error when trying to upload without confirming game', async () => {
+    const authResponse = {
+      user: {
+        id: 'user-15',
+        email: 'user15@example.com',
+        role: 'Admin',
+        displayName: 'User Fifteen'
+      },
+      expiresAt: new Date().toISOString()
+    };
+
+    mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      const method = init?.method ?? 'GET';
+
+      if (url.endsWith('/auth/me')) {
+        return createJsonResponse(authResponse);
+      }
+
+      if (url.endsWith('/games') && method === 'GET') {
+        return createJsonResponse([
+          { id: 'game-1', name: 'Terraforming Mars', createdAt: new Date().toISOString() }
+        ]);
+      }
+
+      if (url.includes('/games/game-1/pdfs')) {
+        return createJsonResponse({ pdfs: [] });
+      }
+
+      throw new Error(`Unexpected fetch call to ${url}`);
+    });
+
+    render(<UploadPage />);
+
+    await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+
+    // Don't confirm, just try to upload
+    const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
+    const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Upload button should be disabled
+    const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+    expect(uploadButton).toBeDisabled();
+  });
+
+  it('shows error when game creation fails', async () => {
+    const authResponse = {
+      user: {
+        id: 'user-16',
+        email: 'user16@example.com',
+        role: 'Admin',
+        displayName: 'User Sixteen'
+      },
+      expiresAt: new Date().toISOString()
+    };
+
+    mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      const method = init?.method ?? 'GET';
+
+      if (url.endsWith('/auth/me')) {
+        return createJsonResponse(authResponse);
+      }
+
+      if (url.endsWith('/games') && method === 'GET') {
+        return createJsonResponse([]);
+      }
+
+      if (url.endsWith('/games') && method === 'POST') {
+        return createErrorResponse(500, { error: 'Database error' });
+      }
+
+      throw new Error(`Unexpected fetch call to ${url}`);
+    });
+
+    render(<UploadPage />);
+
+    await waitFor(() => expect(screen.getByText(/Create one to get started/i)).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText(/New game name/i), { target: { value: 'New Game' } });
+    fireEvent.click(screen.getByRole('button', { name: /Create first game/i }));
+
+    await waitFor(() =>
+      expect(screen.getByText(/Failed to create game: API \/games 500/i)).toBeInTheDocument()
+    );
+  });
+
+  it('allows retry parsing of failed PDF', async () => {
+    jest.useFakeTimers();
+
+    try {
+      const authResponse = {
+        user: {
+          id: 'user-17',
+          email: 'user17@example.com',
+          role: 'Admin',
+          displayName: 'User Seventeen'
+        },
+        expiresAt: new Date().toISOString()
+      };
+
+      const failedPdf = {
+        id: 'pdf-failed',
+        fileName: 'failed.pdf',
+        fileSizeBytes: 1024,
+        uploadedAt: new Date().toISOString(),
+        uploadedByUserId: 'user-17',
+        status: 'failed',
+        logUrl: null
+      };
+
+      mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/auth/me')) {
+          return createJsonResponse(authResponse);
+        }
+
+        if (url.endsWith('/games') && method === 'GET') {
+          return createJsonResponse([
+            { id: 'game-1', name: 'Terraforming Mars', createdAt: new Date().toISOString() }
+          ]);
+        }
+
+        if (url.includes('/games/game-1/pdfs')) {
+          return createJsonResponse({ pdfs: [failedPdf] });
+        }
+
+        if (url.endsWith('/ingest/pdf/pdf-failed/retry') && method === 'POST') {
+          return createJsonResponse({ success: true }, 200);
+        }
+
+        throw new Error(`Unexpected fetch call to ${url}`);
+      });
+
+      render(<UploadPage />);
+
+      await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
+
+      await waitFor(() => expect(screen.getByText(/failed.pdf/i)).toBeInTheDocument());
+
+      const retryButton = screen.getByRole('button', { name: /Retry parsing/i });
+      fireEvent.click(retryButton);
+
+      await waitFor(() =>
+        expect(screen.getByText(/✅ Parse re-triggered for failed.pdf/i)).toBeInTheDocument()
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('resets wizard state when reset button is clicked', async () => {
+    jest.useFakeTimers();
+
+    try {
+      const authResponse = {
+        user: {
+          id: 'user-18',
+          email: 'user18@example.com',
+          role: 'Admin',
+          displayName: 'User Eighteen'
+        },
+        expiresAt: new Date().toISOString()
+      };
+
+      const ruleSpecResponse = {
+        gameId: 'game-1',
+        version: 'v1',
+        createdAt: new Date().toISOString(),
+        rules: [{ id: 'r1', text: 'Rule text' }]
+      };
+
+      mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        const method = init?.method ?? 'GET';
+
+        if (url.endsWith('/auth/me')) {
+          return createJsonResponse(authResponse);
+        }
+
+        if (url.endsWith('/games') && method === 'GET') {
+          return createJsonResponse([
+            { id: 'game-1', name: 'Terraforming Mars', createdAt: new Date().toISOString() }
+          ]);
+        }
+
+        if (url.includes('/games/game-1/pdfs')) {
+          return createJsonResponse({ pdfs: [] });
+        }
+
+        if (url.endsWith('/ingest/pdf')) {
+          return createJsonResponse({ documentId: 'pdf-123' });
+        }
+
+        if (url.endsWith('/pdfs/pdf-123/text')) {
+          return createJsonResponse({
+            id: 'pdf-123',
+            fileName: 'rules.pdf',
+            processingStatus: 'completed',
+            processingError: null
+          });
+        }
+
+        if (url.endsWith('/games/game-1/rulespec')) {
+          return createJsonResponse(ruleSpecResponse);
+        }
+
+        throw new Error(`Unexpected fetch call to ${url}`);
+      });
+
+      render(<UploadPage />);
+
+      await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
+
+      const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
+      const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
+      fireEvent.change(fileInput, { target: { files: [file] } });
+
+      const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+      await waitFor(() => expect(uploadButton).not.toBeDisabled());
+      fireEvent.click(uploadButton);
+
+      await act(async () => {
+        jest.advanceTimersByTime(2500);
+      });
+
+      await waitFor(() => expect(screen.getByText(/Rule text/i)).toBeInTheDocument());
+
+      const resetButton = screen.getByRole('button', { name: /Cancel/i });
+      fireEvent.click(resetButton);
+
+      await waitFor(() => expect(screen.getByLabelText(/PDF File/i)).toBeInTheDocument());
+      expect(screen.queryByText(/Rule text/i)).not.toBeInTheDocument();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });

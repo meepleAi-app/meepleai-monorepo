@@ -9,6 +9,7 @@ using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Events;
 using StackExchange.Redis;
@@ -28,6 +29,42 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 builder.Host.UseSerilog();
+
+var forwardedHeadersSection = builder.Configuration.GetSection("ForwardedHeaders");
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+    var knownProxies = forwardedHeadersSection.GetSection("KnownProxies").Get<string[]>() ?? Array.Empty<string>();
+    var knownNetworks = forwardedHeadersSection.GetSection("KnownNetworks").Get<string[]>() ?? Array.Empty<string>();
+
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+
+    foreach (var proxy in knownProxies)
+    {
+        if (IPAddress.TryParse(proxy, out var ipAddress))
+        {
+            options.KnownProxies.Add(ipAddress);
+        }
+    }
+
+    foreach (var network in knownNetworks)
+    {
+        if (IPNetwork.TryParse(network, out var ipNetwork))
+        {
+            options.KnownNetworks.Add(ipNetwork);
+        }
+    }
+
+    var forwardLimit = forwardedHeadersSection.GetValue<int?>("ForwardLimit");
+    if (forwardLimit.HasValue)
+    {
+        options.ForwardLimit = forwardLimit.Value;
+    }
+});
+
+builder.Services.Configure<SessionCookieConfiguration>(builder.Configuration.GetSection("Authentication:SessionCookie"));
 
 var connectionString = builder.Configuration.GetConnectionString("Postgres")
     ?? builder.Configuration["ConnectionStrings__Postgres"]

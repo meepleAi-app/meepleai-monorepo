@@ -1,3 +1,6 @@
+using System;
+using System.IO;
+using System.Linq;
 using Api.Services;
 using iText.IO.Image;
 using iText.Kernel.Pdf;
@@ -5,22 +8,101 @@ using iText.Layout;
 using iText.Layout.Element;
 using Microsoft.Extensions.Logging;
 using Moq;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 using System.Linq;
-using System.Reflection;
 using Xunit;
 
 namespace Api.Tests;
 
-public class PdfTableExtractionServiceTests
+public class PdfTableExtractionServiceTests : IDisposable
 {
     private readonly Mock<ILogger<PdfTableExtractionService>> _mockLogger;
     private readonly PdfTableExtractionService _service;
+    private readonly List<string> _tempFiles = new();
 
     public PdfTableExtractionServiceTests()
     {
+        QuestPDF.Settings.License = LicenseType.Community;
         _mockLogger = new Mock<ILogger<PdfTableExtractionService>>();
         _service = new PdfTableExtractionService(_mockLogger.Object);
     }
+
+    public void Dispose()
+    {
+        foreach (var file in _tempFiles)
+        {
+            try
+            {
+                if (File.Exists(file))
+                {
+                    File.Delete(file);
+                }
+            }
+            catch
+            {
+                // Ignore cleanup failures in tests
+            }
+        }
+    }
+
+    private string CreateTempPdfPath()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"structured_{Guid.NewGuid():N}.pdf");
+        _tempFiles.Add(path);
+        return path;
+    }
+
+    private void CreateStructuredPdf(string filePath)
+    {
+        Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(2, Unit.Centimetre);
+                page.Content().Column(column =>
+                {
+                    column.Spacing(10);
+                    column.Item().Text(text =>
+                    {
+                        text.Span("Structured Table Fixture").SemiBold().FontSize(18);
+                    });
+
+                    column.Item().Table(table =>
+                    {
+                        table.ColumnsDefinition(columns =>
+                        {
+                            columns.RelativeColumn();
+                            columns.RelativeColumn();
+                            columns.RelativeColumn();
+                        });
+
+                        table.Header(header =>
+                        {
+                            header.Cell().Element(CellStyle).Text("Phase");
+                            header.Cell().Element(CellStyle).Text("Task");
+                            header.Cell().Element(CellStyle).Text("Count");
+                        });
+
+                        table.Cell().Element(CellStyle).Text("Setup");
+                        table.Cell().Element(CellStyle).Text("Place tokens");
+                        table.Cell().Element(CellStyle).Text("16");
+
+                        table.Cell().Element(CellStyle).Text("Round Start");
+                        table.Cell().Element(CellStyle).Text(string.Empty); // intentionally empty cell
+                        table.Cell().Element(CellStyle).Text("8");
+                    });
+
+                    column.Item().PaddingTop(20).Image(Placeholders.Image(120, 80));
+                });
+            });
+        }).GeneratePdf(filePath);
+    }
+
+    private static IContainer CellStyle(IContainer container) =>
+        container.Border(0.5f).Padding(5).AlignMiddle();
 
     [Fact]
     public async Task ExtractStructuredContentAsync_WithPdfContainingTableAndImage_PopulatesStructuredCollections()
@@ -308,5 +390,56 @@ Row A1             Row A2
         Assert.Equal(0, diagram.Width);
         Assert.Equal(0, diagram.Height);
         Assert.Null(diagram.ImageData);
+    }
+
+    [Fact]
+    public async Task ExtractStructuredContentAsync_WithStructuredPdf_ReturnsTablesAndDiagrams()
+    {
+        // Arrange
+        var fixturePath = Path.Combine(AppContext.BaseDirectory, "Fixtures", "sample_table.pdf");
+
+        // Act
+        var result = await _service.ExtractStructuredContentAsync(fixturePath);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(1, result.TableCount);
+        Assert.Equal(result.TableCount, result.Tables.Count);
+        var table = Assert.Single(result.Tables);
+        Assert.Equal(new[] { "Name", "Value" }, table.Headers);
+        Assert.Equal(3, table.RowCount);
+        Assert.Equal(3, result.AtomicRuleCount);
+        Assert.Contains(result.AtomicRules, rule => rule.Contains("Name: Alpha", StringComparison.OrdinalIgnoreCase));
+        Assert.NotEmpty(result.Diagrams);
+        Assert.Equal(result.Diagrams.Count, result.DiagramCount);
+        Assert.All(result.Diagrams, diagram => Assert.Equal("Image", diagram.DiagramType));
+    public async Task ExtractStructuredContentAsync_WithStructuredPdfFixture_ParsesTablesDiagramsAndAtomicRules()
+    {
+        // Arrange
+        var pdfPath = CreateTempPdfPath();
+        CreateStructuredPdf(pdfPath);
+
+        // Act
+        var result = await _service.ExtractStructuredContentAsync(pdfPath);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.NotEmpty(result.Tables);
+
+        var table = result.Tables.First();
+        Assert.Equal(new[] { "Phase", "Task", "Count" }, table.Headers);
+        Assert.Equal(table.ColumnCount, table.Headers.Count);
+        Assert.True(table.RowCount >= 1);
+        Assert.All(table.Rows, row => Assert.Equal(table.ColumnCount, row.Length));
+        Assert.Contains(table.Rows, row =>
+            row.Length == table.ColumnCount &&
+            row.Any(value => string.IsNullOrWhiteSpace(value)) &&
+            row.Any(value => !string.IsNullOrWhiteSpace(value)));
+
+        Assert.NotEmpty(result.AtomicRules);
+        Assert.Contains(result.AtomicRules, rule => rule.Contains("Setup", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.AtomicRules, rule => rule.Contains("Round Start", StringComparison.OrdinalIgnoreCase));
+
+        Assert.NotEmpty(result.Diagrams);
     }
 }

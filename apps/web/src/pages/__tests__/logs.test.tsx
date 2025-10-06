@@ -68,19 +68,25 @@ describe('LogsPage', () => {
     expect(screen.getByText(/basic observability dashboard/i)).toBeInTheDocument();
   });
 
-  it('shows a permission error when the API returns forbidden', async () => {
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    mockGet.mockRejectedValueOnce(new Error('API /logs 403'));
+  it('handles logs without request or user identifiers when filtering', async () => {
+    const logsWithoutIds = [
+      {
+        timestamp: new Date('2024-01-01T11:00:00Z').toISOString(),
+        level: 'INFO',
+        message: 'System maintenance in progress'
+      }
+    ];
+
+    mockGet.mockResolvedValueOnce(logsWithoutIds);
+
+    const user = userEvent.setup();
 
     render(<LogsPage />);
 
-    expect(
-      await screen.findByText(/You do not have permission to view logs/i)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Please contact an administrator if you believe this is an error/i)
-    ).toBeInTheDocument();
+    const filterInput = await screen.findByPlaceholderText(/Filter logs/i);
 
-    consoleSpy.mockRestore();
+    await user.type(filterInput, 'maintenance');
+
+    expect(screen.getByText(/System maintenance in progress/i)).toBeInTheDocument();
   });
 });

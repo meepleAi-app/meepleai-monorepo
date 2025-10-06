@@ -22,10 +22,10 @@ public class GameEndpointsTests : IClassFixture<WebApplicationFactoryFixture>
     }
 
     [Fact]
-    public async Task PostGames_CreatesGame()
+    public async Task PostGames_CreatesGame_ForAdmin()
     {
         // Arrange
-        var cookies = await RegisterAndAuthenticateAsync("creator@example.com");
+        var cookies = await RegisterAndAuthenticateAsync("creator@example.com", "Admin");
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/games")
         {
@@ -55,13 +55,59 @@ public class GameEndpointsTests : IClassFixture<WebApplicationFactoryFixture>
         Assert.Equal("Terraforming Mars", entity.Name);
     }
 
-    private async Task<List<string>> RegisterAndAuthenticateAsync(string email)
+    [Fact]
+    public async Task PostGames_CreatesGame_ForEditor()
+    {
+        // Arrange
+        var cookies = await RegisterAndAuthenticateAsync("editor@example.com", "Editor");
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/games")
+        {
+            Content = JsonContent.Create(new CreateGameRequest("Brass Birmingham", "brass-birmingham"))
+        };
+
+        foreach (var cookie in cookies)
+        {
+            request.Headers.Add("Cookie", cookie);
+        }
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PostGames_ReturnsForbidden_ForUserRole()
+    {
+        // Arrange
+        var cookies = await RegisterAndAuthenticateAsync("player@example.com", "User");
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/games")
+        {
+            Content = JsonContent.Create(new CreateGameRequest("Catan", "catan"))
+        };
+
+        foreach (var cookie in cookies)
+        {
+            request.Headers.Add("Cookie", cookie);
+        }
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    private async Task<List<string>> RegisterAndAuthenticateAsync(string email, string role)
     {
         var registerRequest = new RegisterPayload(
             email,
             "Password123!",
             "Test User",
-            "Admin");
+            role);
 
         var response = await _client.PostAsJsonAsync("/auth/register", registerRequest);
         response.EnsureSuccessStatusCode();

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Linq;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -156,5 +156,25 @@ public class LogsEndpointTests : IClassFixture<WebApplicationFactoryFixture>
         }
 
         return ExtractCookies(response);
+    }
+
+    private async Task PromoteUserAsync(string email, string role)
+    {
+        if (string.IsNullOrWhiteSpace(role) ||
+            string.Equals(role, nameof(UserRole.User), StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!Enum.TryParse<UserRole>(role, true, out var parsedRole))
+        {
+            return;
+        }
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var user = await db.Users.SingleAsync(u => u.Email == email);
+        user.Role = parsedRole;
+        await db.SaveChangesAsync();
     }
 }

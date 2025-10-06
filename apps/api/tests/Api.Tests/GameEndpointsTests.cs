@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -126,12 +127,23 @@ public class GameEndpointsTests : IClassFixture<WebApplicationFactoryFixture>
         return setCookie.Select(cookie => cookie.Split(';')[0]).ToList();
     }
 
-    private async Task PromoteUserAsync(string email, UserRole role)
+    private async Task PromoteUserAsync(string email, string role)
     {
+        if (string.IsNullOrWhiteSpace(role) ||
+            string.Equals(role, nameof(UserRole.User), StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!Enum.TryParse<UserRole>(role, true, out var parsedRole))
+        {
+            return;
+        }
+
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var user = await db.Users.SingleAsync(u => u.Email == email);
-        user.Role = role;
+        user.Role = parsedRole;
         await db.SaveChangesAsync();
     }
 }

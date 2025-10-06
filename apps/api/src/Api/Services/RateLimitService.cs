@@ -138,8 +138,9 @@ public class RateLimitService
 
     private static int ConvertRedisResultToInt(RedisResult result)
     {
-        if (result.TryParse(out long longValue))
+        if (result.Resp3Type == ResultType.Integer || result.Resp2Type == ResultType.Integer)
         {
+            var longValue = (long)result;
             return (int)longValue;
         }
 
@@ -150,7 +151,7 @@ public class RateLimitService
             return parsed;
         }
 
-        throw new InvalidOperationException($"Unexpected Redis script result type: {result.Type}");
+        throw new InvalidOperationException($"Unexpected Redis script result type: Resp3Type={result.Resp3Type}, Resp2Type={result.Resp2Type}");
     }
 }
 

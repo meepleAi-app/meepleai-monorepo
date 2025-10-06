@@ -262,7 +262,9 @@ app.Use(async (context, next) =>
 // Authentication middleware
 app.Use(async (context, next) =>
 {
-    if (context.Request.Cookies.TryGetValue(AuthService.SessionCookieName, out var token) &&
+    var sessionCookieName = GetSessionCookieName(context);
+
+    if (context.Request.Cookies.TryGetValue(sessionCookieName, out var token) &&
         !string.IsNullOrWhiteSpace(token))
     {
         var auth = context.RequestServices.GetRequiredService<AuthService>();
@@ -450,7 +452,9 @@ app.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, Au
 
 app.MapPost("/auth/logout", async (HttpContext context, AuthService auth, CancellationToken ct) =>
 {
-    if (context.Request.Cookies.TryGetValue(AuthService.SessionCookieName, out var token) &&
+    var sessionCookieName = GetSessionCookieName(context);
+
+    if (context.Request.Cookies.TryGetValue(sessionCookieName, out var token) &&
         !string.IsNullOrWhiteSpace(token))
     {
         await auth.LogoutAsync(token, ct);
@@ -1266,7 +1270,8 @@ static CookieOptions CreateSessionCookieOptions(HttpContext context, DateTime ex
 static void WriteSessionCookie(HttpContext context, string token, DateTime expiresAt)
 {
     var options = CreateSessionCookieOptions(context, expiresAt);
-    context.Response.Cookies.Append(AuthService.SessionCookieName, token, options);
+    var sessionCookieName = GetSessionCookieName(context);
+    context.Response.Cookies.Append(sessionCookieName, token, options);
 }
 
 static void RemoveSessionCookie(HttpContext context)
@@ -1274,14 +1279,18 @@ static void RemoveSessionCookie(HttpContext context)
     var options = BuildSessionCookieOptions(context);
     options.Expires = DateTimeOffset.UnixEpoch;
 
-    context.Response.Cookies.Delete(AuthService.SessionCookieName, options);
+    var sessionCookieName = GetSessionCookieName(context);
+    context.Response.Cookies.Delete(sessionCookieName, options);
 }
 
 static CookieOptions BuildSessionCookieOptions(HttpContext context)
 {
+    var configuration = GetSessionCookieConfiguration(context);
+
     var isHttps = context.Request.IsHttps;
 
-    if (!isHttps && context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto))
+    if (!isHttps && configuration.UseForwardedProto &&
+        context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto))
     {
         foreach (var proto in forwardedProto)
         {
@@ -1293,12 +1302,38 @@ static CookieOptions BuildSessionCookieOptions(HttpContext context)
         }
     }
 
-    return new CookieOptions
+    var secure = configuration.Secure ?? isHttps;
+    var sameSite = configuration.SameSite ?? (secure ? SameSiteMode.None : SameSiteMode.Lax);
+    var path = string.IsNullOrWhiteSpace(configuration.Path) ? "/" : configuration.Path;
+
+    var options = new CookieOptions
     {
-        HttpOnly = true,
-        Secure = isHttps,
-        SameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax,
-        Path = "/"
+        HttpOnly = configuration.HttpOnly,
+        Secure = secure,
+        SameSite = sameSite,
+        Path = path
     };
+
+    if (!string.IsNullOrWhiteSpace(configuration.Domain))
+    {
+        options.Domain = configuration.Domain;
+    }
+
+    return options;
+}
+
+static string GetSessionCookieName(HttpContext context)
+{
+    var configuration = GetSessionCookieConfiguration(context);
+    return string.IsNullOrWhiteSpace(configuration.Name)
+        ? AuthService.SessionCookieName
+        : configuration.Name;
+}
+
+static SessionCookieConfiguration GetSessionCookieConfiguration(HttpContext context)
+{
+    return context.RequestServices
+        .GetRequiredService<IOptions<SessionCookieConfiguration>>()
+        .Value;
 }
 public partial class Program { }

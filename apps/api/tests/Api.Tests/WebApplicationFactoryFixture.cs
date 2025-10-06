@@ -1,3 +1,4 @@
+using System;
 using Api.Infrastructure;
 using Api.Services;
 using Microsoft.AspNetCore.Hosting;
@@ -89,5 +90,13 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
             _connection?.Dispose();
         }
         base.Dispose(disposing);
+    }
+
+    public WebApplicationFactory<Program> WithTestServices(Action<IServiceCollection> configureServices)
+    {
+        return WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(configureServices);
+        });
     }
 }

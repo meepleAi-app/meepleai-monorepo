@@ -17,9 +17,11 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
     private readonly QdrantContainer? _qdrantContainer;
     private readonly bool _isRunningInCi;
     private readonly string? _configuredQdrantUrl;
+    private readonly string? _configuredQdrantGrpcPort;
     private string? _skipReason;
     private string _qdrantUrl;
     private bool _containerStarted;
+    private int? _mappedGrpcPort;
 
     protected QdrantService QdrantService { get; private set; } = null!;
     protected string QdrantUrl => _qdrantUrl;
@@ -31,6 +33,7 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
                          !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GITHUB_ACTIONS"));
 
         _configuredQdrantUrl = Environment.GetEnvironmentVariable("QDRANT_URL");
+        _configuredQdrantGrpcPort = Environment.GetEnvironmentVariable("QDRANT_GRPC_PORT");
 
         if (!string.IsNullOrWhiteSpace(_configuredQdrantUrl))
         {
@@ -68,7 +71,9 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
                 // Start Qdrant container (local development only)
                 await _qdrantContainer.StartAsync();
                 _containerStarted = true;
-                _qdrantUrl = $"http://{_qdrantContainer.Hostname}:{_qdrantContainer.GetMappedPublicPort(6333)}";
+                var mappedRestPort = _qdrantContainer.GetMappedPublicPort(6333);
+                _mappedGrpcPort = _qdrantContainer.GetMappedPublicPort(6334);
+                _qdrantUrl = $"http://{_qdrantContainer.Hostname}:{mappedRestPort}";
             }
             catch (Exception ex) when (string.IsNullOrWhiteSpace(_configuredQdrantUrl))
             {
@@ -86,11 +91,22 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
         }
 
         // Create QdrantService with Qdrant connection (works for both CI and local)
+        var configurationValues = new Dictionary<string, string?>
+        {
+            ["QDRANT_URL"] = !string.IsNullOrWhiteSpace(_configuredQdrantUrl) ? _configuredQdrantUrl : _qdrantUrl
+        };
+
+        if (!string.IsNullOrWhiteSpace(_configuredQdrantGrpcPort))
+        {
+            configurationValues["QDRANT_GRPC_PORT"] = _configuredQdrantGrpcPort;
+        }
+        else if (_mappedGrpcPort.HasValue)
+        {
+            configurationValues["QDRANT_GRPC_PORT"] = _mappedGrpcPort.Value.ToString();
+        }
+
         var configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["QDRANT_URL"] = _qdrantUrl
-            })
+            .AddInMemoryCollection(configurationValues)
             .Build();
 
         var adapterLogger = new Mock<ILogger<QdrantClientAdapter>>();

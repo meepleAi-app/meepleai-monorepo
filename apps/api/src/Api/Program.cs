@@ -137,29 +137,39 @@ builder.Services.AddScoped<PdfTableExtractionService>();
 builder.Services.AddScoped<PdfStorageService>();
 builder.Services.AddScoped<N8nConfigService>();
 
-var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+builder.Services.AddCors();
 
-if (allowedOrigins.Length == 0)
-{
-    allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
-}
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("web", policy =>
+builder.Services.AddOptions<CorsOptions>()
+    .Configure<IConfiguration>((options, configuration) =>
     {
-        if (allowedOrigins.Length == 0)
+        options.AddPolicy("web", policy =>
         {
-            policy.WithOrigins("http://localhost:3000");
-        }
-        else
-        {
-            policy.WithOrigins(allowedOrigins);
-        }
+            var corsOrigins = configuration
+                .GetSection("Cors:AllowedOrigins")
+                .Get<string[]>() ?? Array.Empty<string>();
 
-        policy.AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+            var topLevelOrigins = configuration
+                .GetSection("AllowedOrigins")
+                .Get<string[]>() ?? Array.Empty<string>();
+
+            var configuredOrigins = corsOrigins
+                .Concat(topLevelOrigins)
+                .Where(origin => !string.IsNullOrWhiteSpace(origin))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            if (configuredOrigins.Length == 0)
+            {
+                policy.WithOrigins("http://localhost:3000");
+            }
+            else
+            {
+                policy.WithOrigins(configuredOrigins);
+            }
+
+            policy.AllowAnyHeader().AllowAnyMethod().AllowCredentials();
+        });
     });
-});
 
 var app = builder.Build();
 

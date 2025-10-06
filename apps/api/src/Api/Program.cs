@@ -115,6 +115,11 @@ builder.Services.AddScoped<N8nConfigService>();
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 
+if (allowedOrigins.Length == 0)
+{
+    allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+}
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("web", policy =>
@@ -131,6 +136,53 @@ builder.Services.AddCors(options =>
         policy.AllowAnyHeader().AllowAnyMethod().AllowCredentials();
     });
 });
+
+var forwardedHeadersSection = builder.Configuration.GetSection("ForwardedHeaders");
+var forwardedHeadersEnabled = forwardedHeadersSection.GetValue<bool?>("Enabled") ?? true;
+
+if (forwardedHeadersEnabled)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+        var forwardLimit = forwardedHeadersSection.GetValue<int?>("ForwardLimit");
+        if (forwardLimit.HasValue)
+        {
+            options.ForwardLimit = forwardLimit;
+        }
+
+        var requireHeaderSymmetry = forwardedHeadersSection.GetValue<bool?>("RequireHeaderSymmetry");
+        if (requireHeaderSymmetry.HasValue)
+        {
+            options.RequireHeaderSymmetry = requireHeaderSymmetry.Value;
+        }
+
+        var knownProxies = forwardedHeadersSection.GetSection("KnownProxies").Get<string[]>() ?? Array.Empty<string>();
+        foreach (var proxy in knownProxies)
+        {
+            if (!string.IsNullOrWhiteSpace(proxy) && IPAddress.TryParse(proxy, out var proxyAddress))
+            {
+                options.KnownProxies.Add(proxyAddress);
+            }
+        }
+
+        var knownNetworks = forwardedHeadersSection.GetSection("KnownNetworks").Get<string[]>() ?? Array.Empty<string>();
+        foreach (var network in knownNetworks)
+        {
+            if (string.IsNullOrWhiteSpace(network))
+            {
+                continue;
+            }
+
+            var parts = network.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var networkAddress) && int.TryParse(parts[1], out var prefixLength))
+            {
+                options.KnownNetworks.Add(new IPNetwork(networkAddress, prefixLength));
+            }
+        }
+    });
+}
 
 var app = builder.Build();
 
@@ -153,7 +205,10 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-app.UseForwardedHeaders();
+if (forwardedHeadersEnabled)
+{
+    app.UseForwardedHeaders();
+}
 
 app.UseCors("web");
 
@@ -265,8 +320,18 @@ app.Use(async (context, next) =>
 
 app.MapGet("/", () => Results.Json(new { ok = true, name = "MeepleAgentAI" }));
 
-app.MapGet("/logs", async (AiRequestLogService logService, CancellationToken ct) =>
+app.MapGet("/logs", async (HttpContext context, AiRequestLogService logService, CancellationToken ct) =>
 {
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
     var entries = await logService.GetRequestsAsync(limit: 100, ct: ct);
 
     var response = entries
@@ -704,9 +769,19 @@ app.MapGet("/games", async (HttpContext context, GameService gameService, Cancel
 
 app.MapPost("/games", async (CreateGameRequest? request, HttpContext context, GameService gameService, ILogger<Program> logger, CancellationToken ct) =>
 {
-    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
         return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        logger.LogWarning(
+            "User {UserId} with role {Role} attempted to create a game without permission",
+            session.User.id,
+            session.User.role);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
     if (request is null)
@@ -1160,91 +1235,47 @@ app.MapPost("/admin/n8n/{configId}/test", async (string configId, HttpContext co
 
 app.Run();
 
+static CookieOptions CreateSessionCookieOptions(DateTimeOffset expiresAt)
+{
+    var options = BuildSessionCookieOptions(context);
+    options.Expires = new DateTimeOffset(expiresAt);
+
 static void WriteSessionCookie(HttpContext context, string token, DateTime expiresAt)
 {
-    var options = new CookieOptions
-    {
-        HttpOnly = true,
-        Secure = true,
-        SameSite = SameSiteMode.None,
-        Path = "/",
-        Expires = new DateTimeOffset(expiresAt)
-    };
-
+    var options = CreateSessionCookieOptions(new DateTimeOffset(expiresAt));
     context.Response.Cookies.Append(AuthService.SessionCookieName, token, options);
 }
 
 static void RemoveSessionCookie(HttpContext context)
 {
-    var options = CreateSessionCookieOptions(context);
+    var options = BuildSessionCookieOptions(context);
     options.Expires = DateTimeOffset.UnixEpoch;
 
     context.Response.Cookies.Delete(AuthService.SessionCookieName, options);
 }
 
-static CookieOptions CreateSessionCookieOptions(HttpContext context)
+static CookieOptions BuildSessionCookieOptions(HttpContext context)
 {
-    var configuration = context.RequestServices.GetService<IOptions<SessionCookieConfiguration>>()?.Value
-                       ?? new SessionCookieConfiguration();
+    var isHttps = context.Request.IsHttps;
 
-    var options = new CookieOptions
+    if (!isHttps && context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto))
     {
-        HttpOnly = true,
-        Secure = true,
-        SameSite = SameSiteMode.None,
-        Path = "/",
-        Expires = DateTimeOffset.UnixEpoch
-    };
-
-    if (!string.IsNullOrWhiteSpace(configuration.Domain))
-    {
-        options.Domain = configuration.Domain;
-    }
-
-    return options;
-}
-
-static bool IsSecureRequest(HttpContext context)
-{
-    if (context.Request.IsHttps)
-    {
-        return true;
-    }
-
-    if (context.Request.Headers.TryGetValue("X-Forwarded-Proto", out var forwardedProto) &&
-        forwardedProto.Any(value => string.Equals(value, "https", StringComparison.OrdinalIgnoreCase)))
-    {
-        return true;
-    }
-
-    if (context.Request.Headers.TryGetValue("Forwarded", out var forwardedValues))
-    {
-        foreach (var value in forwardedValues)
+        foreach (var proto in forwardedProto)
         {
-            var segments = value.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries);
-            foreach (var segment in segments)
+            if (string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase))
             {
-                var trimmed = segment.Trim();
-                if (trimmed.StartsWith("proto=", StringComparison.OrdinalIgnoreCase))
-                {
-                    var proto = trimmed.Substring("proto=".Length);
-                    if (string.Equals(proto, "https", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return true;
-                    }
-                }
+                isHttps = true;
+                break;
             }
         }
     }
 
-    return false;
-}
-
-public sealed class SessionCookieConfiguration
-{
-    public CookieSecurePolicy SecurePolicy { get; set; } = CookieSecurePolicy.SameAsRequest;
-    public SameSiteMode SameSite { get; set; } = SameSiteMode.Strict;
-    public string Path { get; set; } = "/";
-    public string? Domain { get; set; }
+    return new CookieOptions
+    {
+        HttpOnly = true,
+        Secure = isHttps,
+        SameSite = isHttps ? SameSiteMode.None : SameSiteMode.Lax,
+        Path = "/"
+    };
 }
 public partial class Program { }

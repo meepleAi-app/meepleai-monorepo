@@ -71,6 +71,31 @@
               "description": "Minimum age recommendation"
             }
           }
+        },
+        "pieceValues": {
+          "type": "object",
+          "description": "Relative values of game pieces (for games with piece capture)",
+          "additionalProperties": {
+            "type": "number"
+          }
+        },
+        "notation": {
+          "type": "object",
+          "description": "Notation systems used for recording game moves and positions",
+          "properties": {
+            "standard": {
+              "type": "string",
+              "description": "Standard move notation system"
+            },
+            "positionFormat": {
+              "type": "string",
+              "description": "Format for describing positions"
+            },
+            "gameFormat": {
+              "type": "string",
+              "description": "Format for recording complete games"
+            }
+          }
         }
       }
     },
@@ -373,6 +398,100 @@
               "type": "string",
               "description": "Reference to phase ID"
             }
+          }
+        }
+      }
+    },
+    "positionExamples": {
+      "type": "array",
+      "description": "Example game positions or states with notation",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "description", "category"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for this position example"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of this position"
+          },
+          "fen": {
+            "type": "string",
+            "description": "Position in FEN notation (for chess-like games)"
+          },
+          "pgn": {
+            "type": "string",
+            "description": "Game moves leading to this position (for chess-like games)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Detailed description of the position and its significance"
+          },
+          "solution": {
+            "type": "string",
+            "description": "Optimal move or solution from this position"
+          },
+          "category": {
+            "type": "string",
+            "description": "Category of this position (e.g., 'setup', 'checkmate-pattern', 'draw', 'tactic', 'special-move')"
+          }
+        }
+      }
+    },
+    "variants": {
+      "type": "array",
+      "description": "Game variants with modified rules or time controls",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "description"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for this variant"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the variant"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the variant and what makes it unique"
+          },
+          "timeControl": {
+            "type": "object",
+            "description": "Time control settings for this variant",
+            "properties": {
+              "initial": {
+                "type": "integer",
+                "description": "Initial time in seconds"
+              },
+              "increment": {
+                "type": "integer",
+                "description": "Time increment per move in seconds"
+              },
+              "white": {
+                "type": "integer",
+                "description": "Initial time for white player (if asymmetric)"
+              },
+              "black": {
+                "type": "integer",
+                "description": "Initial time for black player (if asymmetric)"
+              },
+              "unit": {
+                "type": "string",
+                "description": "Time unit (e.g., 'seconds', 'minutes')"
+              },
+              "description": {
+                "type": "string",
+                "description": "Description of the time control"
+              }
+            }
+          },
+          "ruleModifications": {
+            "type": "string",
+            "description": "Description of how the rules differ from standard rules"
           }
         }
       }

@@ -34,6 +34,7 @@ const customJestConfig = {
     '/node_modules/',
     '/e2e/',
     '/.next/',
+    '/__tests__/fixtures/',
   ],
 }
 

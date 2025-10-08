@@ -1,290 +1,458 @@
-# CLAUDE.md - MeepleAI Monorepo Development Guide
+# CLAUDE.md
 
-This file provides essential information for Claude Code instances working on the MeepleAI monorepo. It covers the project architecture, development workflows, and key commands needed for effective development.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 🏗️ Project Architecture
+## Project Overview
 
-### Overview
-MeepleAI is a board game rules assistant platform built as a microservices architecture with:
-- **Frontend**: Next.js/TypeScript web application
-- **Backend**: .NET 8 Web API (C#)
-- **Infrastructure**: Docker Compose orchestration
-- **Data Storage**: PostgreSQL, Qdrant (vector DB), Redis (cache)
-- **Automation**: n8n workflows
+MeepleAI is a monorepo containing an AI-powered board game rules assistant. The system processes PDF rulebooks, performs semantic search using vector embeddings, and provides intelligent answers to gameplay questions.
 
-### Directory Structure
+**Tech Stack:**
+- **Backend API**: ASP.NET Core 8.0 (C#)
+- **Frontend**: Next.js 14 with React 18 (TypeScript)
+- **Databases**: PostgreSQL (relational), Qdrant (vector search), Redis (caching)
+- **AI/ML**: OpenRouter API for embeddings and LLM
+- **Workflow Automation**: n8n
+- **Infrastructure**: Docker Compose
+
+## Repository Structure
+
 ```
-meepleai-monorepo/
-├── apps/
-│   ├── web/                  # Next.js frontend application
-│   │   ├── src/              # UI source code
-│   │   ├── package.json      # Frontend dependencies
-│   │   └── Dockerfile        # Frontend container config
-│   └── api/                  # .NET 8 Web API backend
-│       ├── src/Api/          # Main API project
-│       │   ├── Models/       # Data contracts and DTOs
-│       │   ├── Services/     # Business logic services
-│       │   └── Program.cs    # API entry point
-│       ├── tests/            # Unit tests
-│       └── MeepleAI.Api.sln  # .NET solution file
-├── infra/
-│   ├── docker-compose.yml    # Main orchestration file
-│   ├── env/                  # Environment presets for compose
-│   └── init/                 # Database initialization scripts
-├── schemas/                  # JSON schemas for data validation
-├── scripts/                  # PowerShell development scripts
-├── tools/                    # Utility scripts and tools
-└── meepleai_backlog/        # Project backlog and planning
+apps/
+  api/                    # ASP.NET Core backend
+    src/Api/
+      Services/           # Core business logic services
+      Infrastructure/     # Database context and entities
+      Models/            # DTOs and domain models
+      Migrations/        # EF Core database migrations
+      Program.cs         # Application entry point and DI configuration
+    tests/Api.Tests/     # xUnit tests with Testcontainers
+  web/                   # Next.js frontend
+    src/
+      pages/            # Next.js pages (index, admin, chat, editor, upload, etc.)
+      lib/              # Shared utilities and API client
+infra/
+  docker-compose.yml    # Multi-service orchestration
+  env/                  # Environment file templates (.env.*.example)
+  init/                 # Database initialization scripts
+schemas/                # JSON schemas for data validation
+docs/                   # Technical documentation
+tools/                  # PowerShell automation scripts
 ```
 
-## 🛠️ Technology Stack
+## Development Commands
 
-### Frontend (`apps/web`)
-- **Framework**: Next.js 14.2.12
-- **Language**: TypeScript 5.5.4
-- **Runtime**: React 18.3.1
-- **Styling**: CSS-in-JS (inline styles currently)
-- **Build Tool**: Next.js built-in
+### Backend (API)
 
-### Backend (`apps/api`)
-- **Framework**: .NET 8 Web API
-- **Language**: C# with nullable reference types enabled
-- **Database**: PostgreSQL via Npgsql
-- **Cache**: Redis via StackExchange.Redis
-- **Vector DB**: Qdrant for RAG functionality
-- **Serialization**: System.Text.Json
+**Working Directory**: `apps/api`
 
-### Infrastructure
-- **Container Orchestration**: Docker Compose
-- **Database**: PostgreSQL 16 Alpine
-- **Vector Database**: Qdrant v1.12.4
-- **Cache**: Redis 7 Alpine
-- **Workflow Engine**: n8n 1.60.0
-
-## 🚀 Development Commands
-
-### Quick Start
 ```bash
-# Start all services (from root directory)
-./scripts/dev-up.ps1
-
-# Start with rebuild
-./scripts/dev-up.ps1 -Rebuild
-
-# View logs
-./scripts/dev-logs.ps1
-
-# Stop all services
-./scripts/dev-down.ps1
-
-# Seed demo data
-./scripts/seed-demo.ps1
-```
-
-### Frontend Development
-```bash
-cd apps/web
-
-# Install dependencies (if needed)
-npm install
-
-# Development server (port 3000)
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm run start
-
-# Run tests (smoke test currently)
-npm test
-```
-
-### Backend Development
-```bash
-cd apps/api
-
-# Restore packages
-dotnet restore
-
-# Build solution
+# Build the solution
 dotnet build
 
-# Run API (development)
-dotnet run --project src/Api
-
-# Run tests
+# Run tests (includes unit and integration tests)
 dotnet test
 
-# Build Docker image
-docker build -f src/Api/Dockerfile .
+# Run tests with coverage
+dotnet test /p:CollectCoverage=true /p:CoverageReportsDirectory=coverage
+
+# Apply database migrations
+dotnet ef database update --project src/Api
+
+# Create a new migration
+dotnet ef migrations add <MigrationName> --project src/Api
+
+# Run the API locally (not via Docker)
+cd src/Api
+dotnet run
 ```
 
-### Repository Safety Hooks & Security
+**Test Framework**: xUnit with Moq for mocking and Testcontainers for integration tests
+
+### Frontend (Web)
+
+**Working Directory**: `apps/web`
+
+**Package Manager**: pnpm (version 9)
+
 ```bash
-# Install Python tooling (requires Python 3.9+)
-python -m pip install --user -r requirements-dev.txt
+# Install dependencies
+pnpm install
 
-# Register git hooks (blocks commits with secrets)
-pre-commit install
+# Run development server (port 3000)
+pnpm dev
 
-# Run the full suite on demand
-pre-commit run --all-files
-```
-> Windows tip: if `python -m pre_commit` reports `No module named pre_commit`, rerun the installation command using `py -3 -m pip install --user -r requirements-dev.txt` to ensure the package is available on PATH.
+# Build for production
+pnpm build
 
-**Security Note**: Pre-commit hooks will automatically:
-- Detect and block API keys, tokens, and private keys
-- Prevent commits of `.env.dev` and `.env.local` files with secrets
-- Check for large files, merge conflicts, and code quality issues
+# Start production server
+pnpm start
 
-See [SECURITY.md](SECURITY.md) for complete security guidelines and secrets management.
+# Run linter
+pnpm lint
 
-## 🌐 Service Endpoints
+# Fix linting issues
+pnpm lint:fix
 
-### Development URLs
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8080
-- **n8n Workflows**: http://localhost:5678
-- **Qdrant**: http://localhost:6333
-- **PostgreSQL**: localhost:5432
-- **Redis**: localhost:6379
+# Type checking
+pnpm typecheck
 
-### API Endpoints
-- `GET /` - Health check
-- `POST /agents/qa` - Question answering endpoint
-- `POST /ingest/pdf` - PDF ingestion (placeholder)
-- `POST /admin/seed` - Seed demo data
+# Run unit tests (Jest)
+pnpm test
 
-## 🔧 Environment Configuration
+# Run tests in watch mode
+pnpm test:watch
 
-### Required Environment Variables
+# Run tests with coverage
+pnpm test:coverage
 
-**⚠️ Security**: Never commit real secrets to git. Use `.env.dev` files locally (ignored by git) and inject secrets via CI/CD for production.
+# Run E2E tests (Playwright)
+pnpm test:e2e
 
-#### Frontend (`apps/web`)
-```bash
-NEXT_PUBLIC_API_BASE=http://localhost:8080
-```
+# Run E2E tests with UI
+pnpm test:e2e:ui
 
-#### Backend (`apps/api`)
-```bash
-ASPNETCORE_URLS=http://+:8080
-ConnectionStrings__Postgres=Host=postgres;Database=meepleai;Username=meeple;Password=meeplepass
-QDRANT_URL=http://qdrant:6333
-REDIS_URL=redis:6379
-OPENROUTER_API_KEY=changeme  # ⚠️ Replace with your key in .env.dev
-JWT_ISSUER=http://localhost:8080
-ALLOW_ORIGIN=http://localhost:3000
+# Show E2E test report
+pnpm test:e2e:report
 ```
 
-#### Infrastructure
+**Test Frameworks**:
+- Jest with Testing Library for unit/integration tests
+- Playwright for E2E tests
+- Coverage threshold: 90% (branches, functions, lines, statements)
+
+### Docker Environment
+
+**Working Directory**: `infra`
+
 ```bash
-POSTGRES_USER=meeple
-POSTGRES_PASSWORD=meeplepass  # ⚠️ Use strong password in production
-POSTGRES_DB=meepleai
-```
+# Start all services
+docker compose up -d
 
-**Setup**: Run `.\scripts\dev-up.ps1` to auto-create `.env.dev` files from templates, then update secrets locally.
+# Start and rebuild all services
+docker compose up -d --build
 
-## 📋 Development Workflow
-
-### 1. Starting Development
-1. Clone the repository
-2. Copy environment templates: `cp infra/env/*.env.dev.example infra/env/*.env.dev`
-3. Start services: `cd infra && docker compose up -d --build`
-4. Verify services are running: `docker compose ps`
-
-### 2. Making Changes
-1. Create feature branch: `git checkout -b feature/your-feature`
-2. Make changes to frontend or backend
-3. Test locally using the running Docker services
-4. Commit changes with conventional commits format
-
-### 3. Testing
-- **Frontend**: Basic smoke test via `npm test`
-- **Backend**: xUnit tests via `dotnet test`
-- **Integration**: Test against running Docker services
-- **Manual**: Use the web interface at localhost:3000
-
-## 🏗️ Key Architectural Components
-
-### Frontend Components
-- **Main Page** (`src/pages/index.tsx`): Simple UI for testing QA functionality
-- **API Client** (`src/lib/api.ts`): HTTP client for backend communication
-- **Health Check** (`src/pages/api/health.ts`): Next.js API route for health monitoring
-
-### Backend Services
-- **RagService**: Handles question-answering using RAG (Retrieval-Augmented Generation)
-- **RuleSpecService**: Manages game rule specifications and demo data
-- **Program.cs**: Main API entry point with endpoint definitions
-
-### Data Flow
-1. User asks question via frontend (localhost:3000)
-2. Frontend calls backend API (localhost:8080)
-3. Backend processes query using RagService
-4. RagService queries Qdrant for relevant context
-5. Response returned through the chain back to user
-
-## 🔍 Common Development Patterns
-
-### Backend Patterns
-- **Dependency Injection**: Services registered in Program.cs
-- **Minimal APIs**: Direct endpoint mapping without controllers
-- **Async/Await**: All service methods are asynchronous
-- **Result Pattern**: JSON responses with consistent structure
-
-### Frontend Patterns
-- **React Hooks**: useState for local state management
-- **Async Functions**: API calls with async/await
-- **Environment Variables**: Next.js public env vars for configuration
-- **Component-based**: Functional React components
-
-## 🐛 Troubleshooting
-
-### Common Issues
-1. **Services not starting**: Check Docker Desktop is running
-2. **Database connection issues**: Verify PostgreSQL is healthy in `docker compose ps`
-3. **CORS errors**: Check ALLOW_ORIGIN environment variable
-4. **API not responding**: Verify backend is running on port 8080
-
-### Debugging Commands
-```bash
-# Check service status
-docker compose ps
+# View logs
+docker compose logs -f
 
 # View logs for specific service
-docker compose logs api
-docker compose logs web
+docker compose logs -f api
+docker compose logs -f web
 
-# Restart specific service
+# Stop all services
+docker compose down
+
+# Stop and remove volumes (CAUTION: deletes data)
+docker compose down -v
+
+# Restart a specific service
 docker compose restart api
+docker compose restart web
 
-# Rebuild and restart
-docker compose up --build -d
+# Check service health
+docker compose ps
 ```
 
-## 📚 Additional Resources
+**Services and Ports**:
+- `postgres`: 5432 (PostgreSQL 16.4)
+- `qdrant`: 6333 (HTTP REST), 6334 (gRPC) - Vector database
+- `redis`: 6379 - Caching layer
+- `n8n`: 5678 - Workflow automation
+- `api`: 8080 - ASP.NET Core backend
+- `web`: 3000 - Next.js frontend
 
-### Documentation Files
-- `agents.md`: Comprehensive agent development guidelines
-- `agents.monorepo.md`: Monorepo-specific development patterns
-- `infra/init/n8n/README.md`: n8n workflow setup instructions
+## Architecture
 
-### Key Scripts
-- `tools/create-issues.ps1`: GitHub issue creation automation
-- `scripts/seed-demo.ps1`: Demo data seeding
-- All scripts are PowerShell-based for Windows development
+### Backend Service Layer
 
-## 🎯 Development Focus Areas
+The API follows a service-oriented architecture with dependency injection configured in `Program.cs:100-139`:
 
-When working on this codebase, pay attention to:
+**AI/Vector Search Services** (AI-01):
+- `EmbeddingService`: Generates text embeddings via OpenRouter API
+- `QdrantService`: Manages Qdrant vector database collections
+- `TextChunkingService`: Splits documents into overlapping chunks (512 chars, 50 char overlap)
+- `RagService`: Semantic search and retrieval-augmented generation
+- `LlmService`: LLM interactions via OpenRouter
 
-1. **Microservices Communication**: Frontend ↔ Backend API communication
-2. **Data Persistence**: PostgreSQL for structured data, Qdrant for vectors
-3. **Containerization**: Docker-first development approach
-4. **Type Safety**: TypeScript frontend, C# backend with nullable reference types
-5. **RAG Implementation**: Question-answering system using vector search
+**PDF Processing Services** (PDF-02):
+- `PdfStorageService`: Manages PDF uploads and storage
+- `PdfTextExtractionService`: Extracts text from PDFs using Docnet.Core
+- `PdfTableExtractionService`: Extracts tables from PDFs using iText7
 
-This architecture supports a board game rules assistant where users can ask questions about game rules and receive AI-powered answers based on ingested rule documents.
+**Domain Services**:
+- `GameService`: Game metadata management
+- `RuleSpecService`: Rule specification CRUD and versioning
+- `RuleSpecDiffService`: Compares rule specification versions
+- `SetupGuideService`: Game setup instructions
+
+**Infrastructure Services**:
+- `AuthService`: Session-based authentication with cookie management
+- `AuditService`: Audit logging for user actions
+- `AiRequestLogService`: Tracks AI API requests
+- `AiResponseCacheService`: Redis-backed AI response caching (AI-05)
+- `RateLimitService`: Request rate limiting
+- `N8nConfigService`: n8n workflow configuration
+- `BackgroundTaskService`: Background task execution
+
+### Database Layer
+
+**ORM**: Entity Framework Core 8.0 with PostgreSQL provider
+
+**DbContext**: `MeepleAiDbContext` in `Infrastructure/MeepleAiDbContext.cs`
+
+**Key Entities** (in `Infrastructure/Entities/`):
+- `UserEntity`, `UserSessionEntity`, `UserRole` - Authentication
+- `GameEntity`, `RuleSpecEntity` - Game data
+- `PdfDocumentEntity`, `VectorDocumentEntity` - Document management
+- `ChatEntity`, `ChatLogEntity` - Conversation history
+- `AiRequestLogEntity`, `AuditLogEntity` - Logging
+- `AgentEntity`, `AgentFeedbackEntity` - Agent management
+- `N8nConfigEntity` - Workflow configuration
+
+**Migrations**: Auto-applied on startup via `Program.cs:184` unless in test mode
+
+### Frontend Architecture
+
+**Framework**: Next.js 14 with Pages Router
+
+**Key Pages**:
+- `index.tsx`: Landing/dashboard page (9.7KB)
+- `chat.tsx`: AI chat interface (14.3KB)
+- `upload.tsx`: PDF upload and processing (44KB - complex multi-step workflow)
+- `editor.tsx`: Rule specification editor (15.7KB)
+- `versions.tsx`: Rule version comparison (20.1KB)
+- `admin.tsx`: Admin dashboard (14.2KB)
+- `n8n.tsx`: Workflow management (16KB)
+- `logs.tsx`: Activity logs (6.9KB)
+
+**API Client**: `src/lib/api.ts` - Centralized API client with:
+- Automatic base URL configuration from `NEXT_PUBLIC_API_BASE`
+- Cookie-based authentication (`credentials: "include"`)
+- Methods: `get()`, `post()`, `put()`, `delete()`
+- 401 handling for auth failures
+
+**Testing**:
+- Unit tests in `__tests__/` directories alongside source
+- E2E tests separate from unit tests (excluded via `testPathIgnorePatterns`)
+- Coverage requirements enforced at 90% for all metrics
+
+### Authentication Flow
+
+Cookie-based session authentication implemented in `Program.cs:226-248`:
+
+1. Client sends session cookie (name configurable via `SessionCookieConfiguration`)
+2. Middleware validates session via `AuthService.ValidateSessionAsync()`
+3. Valid sessions populate `ClaimsPrincipal` with user claims
+4. Active session stored in `HttpContext.Items["ActiveSession"]`
+5. Claims include: UserId, Email, DisplayName, Role
+
+### Vector Search Pipeline (AI-01)
+
+Document indexing flow:
+
+```
+PDF Upload → PdfTextExtractionService
+           ↓
+      TextChunkingService (512 chars, 50 overlap)
+           ↓
+      EmbeddingService (OpenRouter API)
+           ↓
+      QdrantService (vector storage)
+           ↓
+      Searchable via RagService
+```
+
+**Qdrant Collection**: Initialized on startup via `Program.cs:186-188`
+
+### CORS Configuration
+
+Configured in `Program.cs:141-170`:
+- Policy name: "web"
+- Origins from: `Cors:AllowedOrigins` or `AllowedOrigins` config sections
+- Fallback: `http://localhost:3000`
+- Credentials enabled for cookie auth
+
+### Logging
+
+**Framework**: Serilog with structured logging (`Program.cs:23-32`)
+
+**Configuration**:
+- Console output with custom template
+- Enriched with: MachineName, EnvironmentName, CorrelationId
+- Request logging with user context (if authenticated)
+- Correlation ID in `X-Correlation-Id` response header
+
+**Log Levels**:
+- Default: Information
+- AspNetCore: Warning
+- EntityFrameworkCore: Warning
+
+## Testing
+
+### API Tests
+
+**Framework**: xUnit with Moq and Testcontainers
+
+**Infrastructure**:
+- `Testcontainers.PostgreSql`: Spin up real Postgres for integration tests
+- `Testcontainers.Qdrant`: Spin up real Qdrant for vector search tests
+- `Microsoft.AspNetCore.Mvc.Testing`: WebApplicationFactory for API testing
+- `coverlet`: Code coverage collection
+
+**Running Tests**:
+- Tests use SQLite in-memory for unit tests (configured via environment)
+- Integration tests use Testcontainers for real database
+- CI environment detected via `CI=true` env var
+- Docnet runtime set to Linux in CI (`DocnetRuntime=linux`)
+
+### Web Tests
+
+**Unit Tests (Jest)**:
+- Test files: `**/__tests__/**/*.[jt]s?(x)` or `**/*.(spec|test).[jt]s?(x)`
+- Environment: jsdom
+- Setup: `jest.setup.js`
+- Module alias: `@/*` → `<rootDir>/src/*`
+- Excluded: `_app.tsx`, `_document.tsx`, type definitions
+
+**E2E Tests (Playwright)**:
+- Configuration: `playwright.config.ts`
+- Excluded from Jest via `testPathIgnorePatterns: ['/e2e/']`
+
+## CI/CD
+
+**Workflow**: `.github/workflows/ci.yml`
+
+**Jobs**:
+
+1. **ci-web**: Lint → Typecheck → Test
+   - Node 20, pnpm 9
+   - Runs on: PRs and pushes to `main`
+
+2. **ci-api**: Build → Test
+   - .NET 8.0
+   - Services: postgres, qdrant
+   - Installs libgdiplus for PDF extraction
+   - Environment variables: `CI=true`, test API keys, connection strings
+
+## Environment Configuration
+
+**Templates**: `infra/env/*.env.*.example`
+
+**Key Variables**:
+
+API (`api.env.dev`):
+- `OPENROUTER_API_KEY`: OpenRouter API key for embeddings/LLM
+- `QDRANT_URL`: Qdrant endpoint (default: `http://qdrant:6333`)
+- `REDIS_URL`: Redis endpoint (default: `redis:6379`)
+- `ConnectionStrings__Postgres`: PostgreSQL connection string
+
+Web (`web.env.dev`):
+- `NEXT_PUBLIC_API_BASE`: API base URL (default: `http://localhost:8080`)
+
+n8n (`n8n.env.dev`):
+- n8n workflow engine configuration
+
+**Security**: Never commit `.env.dev`, `.env.local`, or `.env.prod` files (blocked in `.gitignore`)
+
+## Common Workflows
+
+### Adding a New API Endpoint
+
+1. Create service method in appropriate service (e.g., `Services/GameService.cs`)
+2. Add endpoint in `Program.cs` (endpoints defined after line 250+)
+3. Update models in `Models/` if needed
+4. Write tests in `tests/Api.Tests/`
+5. Ensure authentication/authorization logic if required
+
+### Adding a New Database Entity
+
+1. Create entity class in `Infrastructure/Entities/`
+2. Add `DbSet<T>` to `MeepleAiDbContext`
+3. Create migration: `dotnet ef migrations add <Name> --project src/Api`
+4. Review migration in `Migrations/` directory
+5. Apply: `dotnet ef database update --project src/Api`
+
+### Working with Vector Search
+
+The vector search system uses a shared data context (no tenant partitioning):
+
+1. Upload PDF via `PdfStorageService`
+2. Extract text via `PdfTextExtractionService`
+3. Chunk text via `TextChunkingService`
+4. Generate embeddings via `EmbeddingService`
+5. Store vectors via `QdrantService.IndexTextChunksAsync()`
+6. Query via `RagService.SearchAsync()`
+
+**Note**: Legacy tenant/partition fields should be removed before deployment.
+
+### Creating a New Frontend Page
+
+1. Create page file in `apps/web/src/pages/<name>.tsx`
+2. Use API client from `@/lib/api` for backend calls
+3. Add tests in `apps/web/src/pages/__tests__/<name>.test.tsx`
+4. Ensure coverage meets 90% threshold
+
+### Running Full Stack Locally
+
+```bash
+# Terminal 1: Start infrastructure
+cd infra
+docker compose up postgres qdrant redis n8n
+
+# Terminal 2: Run API
+cd apps/api/src/Api
+dotnet run
+
+# Terminal 3: Run web
+cd apps/web
+pnpm dev
+
+# Access:
+# - Web: http://localhost:3000
+# - API: http://localhost:8080
+# - n8n: http://localhost:5678
+```
+
+## Code Quality Standards
+
+### C# (.NET)
+
+- **Style**: Follow standard C# conventions
+- **Null Safety**: Nullable reference types enabled (`<Nullable>enable</Nullable>`)
+- **Async/Await**: Use async patterns for I/O operations
+- **DI**: Register all services in `Program.cs` builder configuration
+- **Logging**: Use `ILogger<T>` injection, Serilog for structured logging
+- **Error Handling**: Return appropriate HTTP status codes
+
+### TypeScript/React
+
+- **Strict Mode**: TypeScript strict mode enabled
+- **Formatting**: ESLint with Next.js config
+- **Typing**: Avoid `any`, use explicit types
+- **API Calls**: Use centralized API client (`@/lib/api`)
+- **Testing**: Arrange-Act-Assert pattern, descriptive test names
+
+## Troubleshooting
+
+### "Migration already applied" errors
+- Check `__EFMigrationsHistory` table in Postgres
+- Use `dotnet ef database update <PreviousMigration>` to rollback
+- Delete migration file and recreate if needed
+
+### Qdrant connection failures
+- Verify Qdrant is running: `curl http://localhost:6333/healthz`
+- Check collection initialization in API logs on startup
+
+### Frontend API calls fail with CORS
+- Verify `NEXT_PUBLIC_API_BASE` matches API URL
+- Check CORS origins in `Program.cs` CORS configuration
+- Ensure `credentials: "include"` in fetch calls
+
+### Tests failing in CI but passing locally
+- Check Docker/Linux-specific issues (e.g., Docnet runtime)
+- Verify environment variables set in CI workflow
+- Ensure test services (postgres, qdrant) are healthy before tests run
+
+### Session/Auth not working
+- Check cookie name configuration in `SessionCookieConfiguration`
+- Verify session exists in database (`user_sessions` table)
+- Check browser allows cookies from localhost

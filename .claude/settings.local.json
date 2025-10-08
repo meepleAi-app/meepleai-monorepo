@@ -28,9 +28,40 @@
       "Bash(docker ps:*)",
       "Bash(dotnet ef migrations:*)",
       "Bash(dotnet ef database update:*)",
-      "Bash(docker exec:*)"
+      "Bash(docker exec:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(gh repo view:*)",
+      "Bash(gh api:*)",
+      "Bash(gh issue create:*)",
+      "Bash(pwsh:*)",
+      "Bash(docker:*)",
+      "Bash(npm install)",
+      "Bash(for file in Dockerfile.{claude-context,knowledge-graph,magic,memory,sequential})",
+      "Bash(do sed -i 's/RUN addgroup -g 1000 mcp 2>\\/dev\\/null || true.*$/RUN GROUP_NAME=$(getent group 1000 | cut -d: -f1) \\&\\& \\\\/' \"$file\")",
+      "Bash(done)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)",
+      "Bash(timeout 600 docker compose build)",
+      "Bash(tee:*)",
+      "Bash(curl:*)",
+      "Bash(sort:*)",
+      "Bash(for:*)",
+      "Bash(do echo \"=== $container ===\")"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "github-project-manager",
+    "memory-bank",
+    "n8n",
+    "claude-context",
+    "knowledge-graph",
+    "magic",
+    "playwright",
+    "sequential",
+    "aakarsh-sasi-memory-bank-mcp"
+  ]
 }

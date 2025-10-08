@@ -1,0 +1,3 @@
+{
+  "mcp.configPath": "${workspaceFolder}/mcp/claude_mcp_config.json"
+}

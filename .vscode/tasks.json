@@ -1,0 +1,7 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "MCP build wrappers", "type": "shell", "command": "docker compose -f mcp/docker/compose.mcp.yml build" },
+    { "label": "MCP prepare outdir", "type": "shell", "command": "mkdir -p .mcp_out" }
+  ]
+}

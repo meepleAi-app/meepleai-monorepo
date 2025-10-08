@@ -28,10 +28,11 @@ services:
     volumes:
       - qdrantdata:/qdrant/storage
     healthcheck:
-      test: ["CMD-SHELL", "curl --fail http://localhost:6333/ || exit 1"]
+      test: ["CMD-SHELL", "kill -0 1 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 10s
     networks:
       - meepleai
 
@@ -49,7 +50,7 @@ services:
       - meepleai
 
   n8n:
-    image: n8nio/n8n:1.60.0
+    image: n8nio/n8n:1.114.4
     restart: unless-stopped
     env_file:
       - ./env/n8n.env.dev

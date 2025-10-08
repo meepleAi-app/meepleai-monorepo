@@ -47,7 +47,17 @@
       "Bash(curl:*)",
       "Bash(sort:*)",
       "Bash(for:*)",
-      "Bash(do echo \"=== $container ===\")"
+      "Bash(do echo \"=== $container ===\")",
+      "mcp__github-project-manager__github_list_issues",
+      "Bash(npx ajv-cli validate:*)",
+      "Bash(node:*)",
+      "mcp__aakarsh-sasi-memory-bank-mcp__track_progress",
+      "Bash(git checkout:*)",
+      "Bash(gh pr create:*)",
+      "Bash(git fetch:*)",
+      "Bash(git rebase:*)",
+      "Bash(git stash:*)",
+      "mcp__github-project-manager__github_review_pr"
     ],
     "deny": [],
     "ask": []

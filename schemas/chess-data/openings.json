@@ -1,0 +1,252 @@
+[
+  {
+    "id": "italian-game",
+    "name": "Italian Game (Giuoco Piano)",
+    "description": "One of the oldest chess openings, the Italian Game focuses on rapid development and central control. White develops the Bishop to c4, targeting the weak f7 square.",
+    "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bc4",
+    "fen": "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3",
+    "strategy": "Control the center with pawns, develop pieces quickly toward the kingside, prepare for castling. The Bishop on c4 puts pressure on f7, the weakest point in Black's position.",
+    "category": "e4",
+    "variations": ["Evans Gambit", "Giuoco Pianissimo", "Two Knights Defense"]
+  },
+  {
+    "id": "spanish-opening",
+    "name": "Spanish Opening (Ruy Lopez)",
+    "description": "Named after 16th-century Spanish priest Ruy López de Segura, this is one of the most popular and deeply analyzed openings. White's Bishop on b5 puts pressure on the knight defending e5.",
+    "pgn": "1. e4 e5 2. Nf3 Nc6 3. Bb5",
+    "fen": "r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3",
+    "strategy": "Apply subtle pressure on Black's center by attacking the knight that defends e5. White aims for long-term positional advantage rather than immediate tactics.",
+    "category": "e4",
+    "variations": ["Morphy Defense", "Berlin Defense", "Marshall Attack", "Closed Spanish"]
+  },
+  {
+    "id": "sicilian-defense",
+    "name": "Sicilian Defense",
+    "description": "The most popular defense against 1.e4 at all levels. Black immediately fights for the center with c5, creating an asymmetric pawn structure that leads to sharp, dynamic play.",
+    "pgn": "1. e4 c5",
+    "fen": "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2",
+    "strategy": "Black avoids symmetry and aims for counterplay on the queenside while White attacks on the kingside. Leads to rich tactical and strategic battles.",
+    "category": "e4",
+    "variations": ["Najdorf", "Dragon", "Sveshnikov", "Scheveningen", "Classical"]
+  },
+  {
+    "id": "french-defense",
+    "name": "French Defense",
+    "description": "A solid, strategic defense where Black builds a strong pawn chain and controls the center. Named after a Paris match in 1834.",
+    "pgn": "1. e4 e6",
+    "fen": "rnbqkbnr/pppp1ppp/4p3/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+    "strategy": "Black prepares d5 to challenge White's center. Often leads to closed positions with pawn chains. Black's light-squared bishop can become problematic.",
+    "category": "e4",
+    "variations": ["Winawer Variation", "Classical Variation", "Tarrasch Variation", "Advance Variation"]
+  },
+  {
+    "id": "caro-kann",
+    "name": "Caro-Kann Defense",
+    "description": "A solid defense similar to the French but avoiding the problem of the light-squared bishop. Black prepares d5 with c6.",
+    "pgn": "1. e4 c6",
+    "fen": "rnbqkbnr/pp1ppppp/2p5/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+    "strategy": "Prepare d5 to challenge the center while keeping the light-squared bishop free. Leads to solid, slightly passive positions for Black.",
+    "category": "e4",
+    "variations": ["Classical Variation", "Advance Variation", "Exchange Variation", "Panov Attack"]
+  },
+  {
+    "id": "queens-gambit",
+    "name": "Queen's Gambit",
+    "description": "Not a true gambit as the pawn is usually regained. White offers the c-pawn to gain central control and develop pieces actively.",
+    "pgn": "1. d4 d5 2. c4",
+    "fen": "rnbqkbnr/ppp1pppp/8/3p4/2PP4/8/PP2PPPP/RNBQKBNR b KQkq c3 0 2",
+    "strategy": "White challenges Black's central pawn on d5, aiming to control the center with pieces rather than pawns. The c-pawn can usually be regained.",
+    "category": "d4",
+    "variations": ["Queen's Gambit Declined", "Queen's Gambit Accepted", "Slav Defense", "Semi-Slav"]
+  },
+  {
+    "id": "queens-gambit-declined",
+    "name": "Queen's Gambit Declined",
+    "description": "Black declines the gambit pawn and maintains central presence. One of the most solid defenses to 1.d4.",
+    "pgn": "1. d4 d5 2. c4 e6",
+    "fen": "rnbqkbnr/ppp2ppp/4p3/3p4/2PP4/8/PP2PPPP/RNBQKBNR w KQkq - 0 3",
+    "strategy": "Black maintains d5 strongpoint and develops solidly. Often leads to a pawn chain with pawns on d5 and e6. Strategically rich positions.",
+    "category": "d4",
+    "variations": ["Orthodox Defense", "Tartakower Variation", "Cambridge Springs"]
+  },
+  {
+    "id": "kings-indian-defense",
+    "name": "King's Indian Defense",
+    "description": "A hypermodern defense where Black allows White to build a strong pawn center, planning to attack it later. Named after Indian chess players who popularized it.",
+    "pgn": "1. d4 Nf6 2. c4 g6 3. Nc3 Bg7",
+    "fen": "rnbqk2r/pppppb1p/5np1/8/2PP4/2N5/PP2PPPP/R1BQKBNR w KQkq - 2 4",
+    "strategy": "Black fianchettoes the kingside bishop and allows White's pawn center, then strikes back with f5 or c5. Dynamic and aggressive counterplay.",
+    "category": "d4",
+    "variations": ["Classical Variation", "Sämisch Variation", "Four Pawns Attack", "Averbakh System"]
+  },
+  {
+    "id": "nimzo-indian-defense",
+    "name": "Nimzo-Indian Defense",
+    "description": "Named after Aron Nimzowitsch, this hypermodern defense pins White's knight and controls the center with pieces. One of the most respected defenses to 1.d4.",
+    "pgn": "1. d4 Nf6 2. c4 e6 3. Nc3 Bb4",
+    "fen": "rnbqk2r/pppp1ppp/4pn2/8/1bPP4/2N5/PP2PPPP/R1BQKBNR w KQkq - 2 4",
+    "strategy": "Black pins the knight on c3 and is ready to double White's pawns if the knight is captured. Controls e4 and d5 squares with pieces.",
+    "category": "d4",
+    "variations": ["Classical Variation", "Rubinstein Variation", "Sämisch Variation", "Leningrad Variation"]
+  },
+  {
+    "id": "english-opening",
+    "name": "English Opening",
+    "description": "A flexible opening starting with c4, popular at all levels. Can transpose to many systems and allows White to avoid main-line theory.",
+    "pgn": "1. c4",
+    "fen": "rnbqkbnr/pppppppp/8/8/2P5/8/PP1PPPPP/RNBQKBNR b KQkq c3 0 1",
+    "strategy": "Control the center with pieces and queenside pawns. Very flexible and can lead to reversed Sicilian structures or closed positions.",
+    "category": "others",
+    "variations": ["Symmetrical Variation", "Reversed Sicilian", "Four Knights System"]
+  },
+  {
+    "id": "reti-opening",
+    "name": "Réti Opening",
+    "description": "A hypermodern opening named after Richard Réti. White develops the knight to f3 before committing pawns, controlling the center from a distance.",
+    "pgn": "1. Nf3",
+    "fen": "rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b KQkq - 1 1",
+    "strategy": "Flexible development allowing transposition to many systems. Controls e5 and d4 with pieces rather than pawns.",
+    "category": "others",
+    "variations": ["Réti Gambit", "King's Indian Attack setup"]
+  },
+  {
+    "id": "scotch-game",
+    "name": "Scotch Game",
+    "description": "An aggressive opening that immediately challenges Black's center. White opens the position early, leading to tactical play.",
+    "pgn": "1. e4 e5 2. Nf3 Nc6 3. d4",
+    "fen": "r1bqkbnr/pppp1ppp/2n5/4p3/3PP3/5N2/PPP2PPP/RNBQKB1R b KQkq d3 0 3",
+    "strategy": "Open the center quickly and create immediate tactical threats. Leads to sharp, tactical positions with chances for both sides.",
+    "category": "e4",
+    "variations": ["Scotch Gambit", "Classical Variation", "Mieses Variation"]
+  },
+  {
+    "id": "london-system",
+    "name": "London System",
+    "description": "A solid, system-based opening where White develops the bishop to f4 early. Popular at all levels for its simplicity and soundness.",
+    "pgn": "1. d4 d5 2. Bf4",
+    "fen": "rnbqkbnr/ppp1pppp/8/3p4/3P1B2/8/PPP1PPPP/RN1QKBNR b KQkq - 1 2",
+    "strategy": "Develop the bishop outside the pawn chain before playing e3. Solid and positional, avoiding heavy theory. Good for players who prefer systems.",
+    "category": "d4",
+    "variations": ["Jobava London System", "Accelerated London"]
+  },
+  {
+    "id": "slav-defense",
+    "name": "Slav Defense",
+    "description": "A solid defense to the Queen's Gambit. Black supports d5 with c6 while keeping the light-squared bishop free, unlike the Queen's Gambit Declined.",
+    "pgn": "1. d4 d5 2. c4 c6",
+    "fen": "rnbqkbnr/pp2pppp/2p5/3p4/2PP4/8/PP2PPPP/RNBQKBNR w KQkq - 0 3",
+    "strategy": "Maintain the d5 pawn while avoiding locking in the light-squared bishop. Solid and reliable, with good counterplay.",
+    "category": "d4",
+    "variations": ["Semi-Slav", "Chebanenko Variation", "Exchange Variation"]
+  },
+  {
+    "id": "pirc-defense",
+    "name": "Pirc Defense",
+    "description": "A hypermodern defense where Black fianchettoes the kingside bishop and allows White to build a strong center, planning counterplay later.",
+    "pgn": "1. e4 d6 2. d4 Nf6 3. Nc3 g6",
+    "fen": "rnbqkb1r/ppp1pp1p/3p1np1/8/3PP3/2N5/PPP2PPP/R1BQKBNR w KQkq - 0 4",
+    "strategy": "Allow White's pawn center and attack it later with pieces. Flexible pawn structure allows various plans.",
+    "category": "e4",
+    "variations": ["Austrian Attack", "Classical System", "150 Attack"]
+  },
+  {
+    "id": "alekhine-defense",
+    "name": "Alekhine's Defense",
+    "description": "Named after World Champion Alexander Alekhine, this provocative defense invites White to chase the knight and build a large pawn center, which Black aims to undermine.",
+    "pgn": "1. e4 Nf6",
+    "fen": "rnbqkb1r/pppppppp/5n2/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 1 2",
+    "strategy": "Provoke White's pawns forward, then attack the overextended pawn center. High-risk, high-reward strategy.",
+    "category": "e4",
+    "variations": ["Four Pawns Attack", "Modern Variation", "Exchange Variation"]
+  },
+  {
+    "id": "grunfeld-defense",
+    "name": "Grünfeld Defense",
+    "description": "A hypermodern defense developed by Ernst Grünfeld. Black allows White a strong pawn center and then attacks it with pieces.",
+    "pgn": "1. d4 Nf6 2. c4 g6 3. Nc3 d5",
+    "fen": "rnbqkb1r/ppp1pp1p/5np1/3p4/2PP4/2N5/PP2PPPP/R1BQKBNR w KQkq d6 0 4",
+    "strategy": "Strike at White's center immediately with d5. Complex and dynamic positions with chances for both sides.",
+    "category": "d4",
+    "variations": ["Exchange Variation", "Russian System", "Fianchetto Variation"]
+  },
+  {
+    "id": "benoni-defense",
+    "name": "Modern Benoni Defense",
+    "description": "An aggressive counterattacking defense creating an asymmetric pawn structure. Black sacrifices space for piece activity and counterplay.",
+    "pgn": "1. d4 Nf6 2. c4 c5 3. d5",
+    "fen": "rnbqkb1r/pp1ppppp/5n2/2pP4/2P5/8/PP2PPPP/RNBQKBNR b KQkq - 0 3",
+    "strategy": "Create imbalanced positions with sharp tactical play. Black gets queenside pawn majority and piece activity in exchange for White's space advantage.",
+    "category": "d4",
+    "variations": ["Taimanov Variation", "Four Pawns Attack", "Classical Variation"]
+  },
+  {
+    "id": "dutch-defense",
+    "name": "Dutch Defense",
+    "description": "An aggressive defense where Black immediately stakes a claim on the kingside and e4 square. Leads to unbalanced positions.",
+    "pgn": "1. d4 f5",
+    "fen": "rnbqkbnr/ppppp1pp/8/5p2/3P4/8/PPP1PPPP/RNBQKBNR w KQkq f6 0 2",
+    "strategy": "Control e4 and prepare kingside expansion. Black accepts weakened king safety for active piece play.",
+    "category": "d4",
+    "variations": ["Leningrad Dutch", "Stonewall Dutch", "Classical Dutch"]
+  },
+  {
+    "id": "catalan-opening",
+    "name": "Catalan Opening",
+    "description": "A sophisticated opening combining d4 with a kingside fianchetto. Popular at the highest levels for its strategic richness.",
+    "pgn": "1. d4 Nf6 2. c4 e6 3. g3",
+    "fen": "rnbqkb1r/pppp1ppp/4pn2/8/2PP4/6P1/PP2PP1P/RNBQKBNR b KQkq - 0 3",
+    "strategy": "Combine pressure on the center with the fianchettoed bishop's diagonal control. Subtle positional play.",
+    "category": "d4",
+    "variations": ["Open Catalan", "Closed Catalan"]
+  },
+  {
+    "id": "scandinavian-defense",
+    "name": "Scandinavian Defense (Center Counter)",
+    "description": "Black immediately challenges White's e4 pawn with d5. One of the oldest recorded openings, dating back to the 15th century.",
+    "pgn": "1. e4 d5",
+    "fen": "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2",
+    "strategy": "Immediately challenge White's center, though the queen will need to move multiple times early. Solid but slightly passive for Black.",
+    "category": "e4",
+    "variations": ["Modern Variation with Qd6", "Mieses Variation", "Portuguese Variation"]
+  },
+  {
+    "id": "budapest-gambit",
+    "name": "Budapest Gambit",
+    "description": "An aggressive gambit where Black sacrifices a pawn for rapid development and attacking chances. Relatively rare but tricky.",
+    "pgn": "1. d4 Nf6 2. c4 e5",
+    "fen": "rnbqkb1r/pppp1ppp/5n2/4p3/2PP4/8/PP2PPPP/RNBQKBNR w KQkq e6 0 3",
+    "strategy": "Sacrifice the e5 pawn to gain time and piece activity. Black aims for tactical complications and quick development.",
+    "category": "d4",
+    "variations": ["Fajarowicz Variation", "Adler Variation"]
+  },
+  {
+    "id": "kings-gambit",
+    "name": "King's Gambit",
+    "description": "One of the oldest openings, favored by Romantic-era players. White sacrifices the f-pawn for rapid development and attacking chances.",
+    "pgn": "1. e4 e5 2. f4",
+    "fen": "rnbqkbnr/pppp1ppp/8/4p3/4PP2/8/PPPP2PP/RNBQKBNR b KQkq f3 0 2",
+    "strategy": "Sacrifice a pawn to open lines and attack Black's king. Leads to sharp tactical battles. Less common at the highest levels today.",
+    "category": "e4",
+    "variations": ["King's Gambit Accepted", "King's Gambit Declined", "Falkbeer Countergambit"]
+  },
+  {
+    "id": "vienna-game",
+    "name": "Vienna Game",
+    "description": "White develops the knight to c3 early, preparing f4 or supporting central play. Flexible and solid.",
+    "pgn": "1. e4 e5 2. Nc3",
+    "fen": "rnbqkbnr/pppp1ppp/8/4p3/4P3/2N5/PPPP1PPP/R1BQKBNR b KQkq - 1 2",
+    "strategy": "Support the center and prepare f4 thrust. More positional than the King's Gambit but with similar ideas.",
+    "category": "e4",
+    "variations": ["Vienna Gambit", "Falkbeer Variation", "Max Lange Defense"]
+  },
+  {
+    "id": "four-knights",
+    "name": "Four Knights Game",
+    "description": "A classical opening where both sides develop their knights symmetrically. Solid and straightforward.",
+    "pgn": "1. e4 e5 2. Nf3 Nc6 3. Nc3 Nf6",
+    "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/4P3/2N2N2/PPPP1PPP/R1BQKB1R w KQkq - 4 4",
+    "strategy": "Develop all pieces before committing to a plan. Symmetrical but White retains a slight initiative.",
+    "category": "e4",
+    "variations": ["Spanish Variation", "Italian Variation", "Scotch Variation"]
+  }
+]

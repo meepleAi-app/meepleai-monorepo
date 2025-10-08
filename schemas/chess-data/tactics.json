@@ -1,0 +1,291 @@
+[
+  {
+    "id": "fork",
+    "name": "Fork (Forchetta)",
+    "description": "A tactic where one piece attacks two or more opponent pieces simultaneously. Knights are particularly effective at forking because of their unique movement pattern.",
+    "category": "double-attack",
+    "examples": [
+      {
+        "id": "fork-knight-1",
+        "fen": "r1bqkb1r/pppp1ppp/8/4p3/3nP3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 4",
+        "description": "The Black Knight on d4 is forking (attacking) both the White Queen on d1 and the White Pawn on e2. White must move the Queen and will lose the e2 Pawn.",
+        "solution": "Black's Nd4 forks queen and pawn",
+        "explanation": "The knight's L-shaped movement allows it to attack two pieces that cannot defend each other. This is one of the most common tactical patterns in chess."
+      },
+      {
+        "id": "fork-knight-2",
+        "fen": "r1bqk2r/pppp1ppp/2n5/2b1p3/2B1P1n1/5N2/PPPP1PPP/RNBQ1RK1 w kq - 0 7",
+        "description": "Black's knight on g4 can move to e3, forking the White Queen on d1 and the Rook on f1. This is called a 'royal fork' when it involves the king and another piece.",
+        "solution": "Ne3 forking queen and rook",
+        "explanation": "Forking the queen and rook forces White to move the queen, allowing Black to capture the rook with check, winning significant material."
+      },
+      {
+        "id": "fork-pawn",
+        "fen": "rnbqkb1r/ppp2ppp/4pn2/3p4/3PP3/2N5/PPP2PPP/R1BQKBNR w KQkq - 0 5",
+        "description": "White can play d5, forking the knight on f6 and the pawn on e6. Even pawns can fork pieces effectively.",
+        "solution": "d5 forks knight and pawn",
+        "explanation": "Pawn forks are common and effective because pawns can attack two diagonally adjacent pieces simultaneously."
+      }
+    ]
+  },
+  {
+    "id": "pin",
+    "name": "Pin (Inchiodatura)",
+    "description": "A tactic where a piece cannot move without exposing a more valuable piece behind it. An 'absolute pin' is against the king (illegal to move), while a 'relative pin' is against another valuable piece.",
+    "category": "immobilization",
+    "examples": [
+      {
+        "id": "pin-absolute",
+        "fen": "r1bqkb1r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 0 4",
+        "description": "The Black Knight on f6 is pinned to the King on e8 by the White Bishop on c4. The knight cannot legally move because it would expose the king to check (absolute pin).",
+        "solution": "Bishop on c4 absolutely pins knight to king",
+        "explanation": "An absolute pin renders the pinned piece immobile, effectively removing it from play. The pinned piece cannot be used for defense or attack."
+      },
+      {
+        "id": "pin-relative",
+        "fen": "r1bqkb1r/pppp1ppp/2n2n2/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 4",
+        "description": "The White Bishop on b5 pins the Black Knight on c6 to the Black Rook on a8 (relative pin). The knight can legally move but would lose the rook.",
+        "solution": "Bb5 pins knight to rook",
+        "explanation": "A relative pin creates a tactical dilemma: moving the pinned piece is legal but would lose material. Often more subtle than absolute pins."
+      },
+      {
+        "id": "pin-breaking",
+        "fen": "r1bqk2r/ppppbppp/2n2n2/4p3/1bB1P3/2N2N2/PPPP1PPP/R1BQK2R w KQkq - 5 6",
+        "description": "Black's bishop on b4 pins White's knight on c3 to the king. White can break the pin with Be2 or develop queenside to castle out of the pin.",
+        "solution": "Be2 breaks the pin or castle kingside",
+        "explanation": "Pins can often be broken by moving the piece behind, blocking with another piece, or attacking the pinning piece."
+      }
+    ]
+  },
+  {
+    "id": "skewer",
+    "name": "Skewer (Infilzata)",
+    "description": "The reverse of a pin: a valuable piece is attacked and must move, exposing a less valuable piece behind it. Sometimes called an 'x-ray attack'.",
+    "category": "double-attack",
+    "examples": [
+      {
+        "id": "skewer-rook",
+        "fen": "4r3/5pk1/6p1/8/8/6P1/5PK1/4R3 w - - 0 1",
+        "description": "White plays Re8+, checking the Black King on f7. The king must move, and White captures the rook on e8 next move.",
+        "solution": "Re8+ skewers king and rook",
+        "explanation": "Skewers are devastating because the more valuable piece must move, allowing capture of the piece behind it. Most effective with long-range pieces."
+      },
+      {
+        "id": "skewer-bishop",
+        "fen": "6k1/5ppp/8/8/8/2B5/5PPP/6K1 b - - 0 1",
+        "description": "If White's bishop moves to c7, it would skewer the Black King on g8 and the pawns on the h-file along the diagonal.",
+        "solution": "Bc7 attacks king, forcing it to move",
+        "explanation": "Bishops and queens excel at skewers along diagonals, while rooks use files and ranks. The key is forcing the valuable piece to move."
+      }
+    ]
+  },
+  {
+    "id": "discovered-attack",
+    "name": "Discovered Attack (Attacco di Scoperta)",
+    "description": "Moving a piece reveals an attack from another piece behind it. Extremely powerful because two pieces attack simultaneously.",
+    "category": "double-attack",
+    "examples": [
+      {
+        "id": "discovered-check",
+        "fen": "r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4",
+        "description": "White plays Nxe5, capturing the pawn and revealing a discovered check from the Bishop on c4 to the Black King on e8. Black must respond to the check.",
+        "solution": "Nxe5+ discovered check",
+        "explanation": "Discovered checks are especially powerful because the opponent must respond to the check, often allowing the moving piece to capture material freely."
+      },
+      {
+        "id": "discovered-attack-queen",
+        "fen": "r1bq1rk1/pppp1ppp/2n2n2/2b1p3/2B1P3/2N2N2/PPPP1PPP/R1BQK2R w KQ - 0 7",
+        "description": "If White's knight on c3 moves (e.g., Nd5), it reveals an attack from the queen on d1 to the bishop on c5.",
+        "solution": "Nd5 discovers attack on bishop",
+        "explanation": "The moving piece can make its own threat while simultaneously unveiling another attack. The opponent faces two threats at once."
+      }
+    ]
+  },
+  {
+    "id": "double-check",
+    "name": "Double Check (Scacco Doppio)",
+    "description": "Two pieces give check simultaneously, usually through a discovered check. The only legal response is to move the king; blocking or capturing doesn't work.",
+    "category": "check",
+    "examples": [
+      {
+        "id": "double-check-mate",
+        "fen": "6rk/5Npp/8/8/8/8/5PPP/5RK1 b - - 0 1",
+        "description": "The White Knight on f7 gives check, and if there were a rook on f1, moving the knight would create a double check from both knight and rook.",
+        "solution": "Double check forces king move only",
+        "explanation": "Double checks are devastating because blocking one piece doesn't help - the king must move. Often leads to checkmate."
+      }
+    ]
+  },
+  {
+    "id": "removal-of-defender",
+    "name": "Removal of the Defender (Rimozione del Difensore)",
+    "description": "Capturing or deflecting a piece that defends another piece or square, allowing a subsequent capture or attack.",
+    "category": "preparatory",
+    "examples": [
+      {
+        "id": "defender-removal",
+        "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4",
+        "description": "If White plays Bxf7+, removing the defender of the e5 pawn (the f7 pawn defends e6 which supports e5 indirectly), it wins material.",
+        "solution": "Bxf7+ removes key defender",
+        "explanation": "Identifying overworked defenders and removing them is a fundamental tactical skill. Look for pieces defending multiple pieces or squares."
+      }
+    ]
+  },
+  {
+    "id": "deflection",
+    "name": "Deflection (Deviazione)",
+    "description": "Forcing an opponent's piece away from defending a key piece, square, or tactical theme by giving it something more important to do.",
+    "category": "preparatory",
+    "examples": [
+      {
+        "id": "deflection-queen",
+        "fen": "6k1/5ppp/8/8/8/8/1Q3PPP/5RK1 b - - 0 1",
+        "description": "If Black plays Rb1, it deflects the White queen from defending the back rank, allowing a back-rank mate with Ra1.",
+        "solution": "Deflect defender from critical square",
+        "explanation": "Deflection creates forcing moves that pull defenders away from their posts. Often involves checks, captures, or threats."
+      }
+    ]
+  },
+  {
+    "id": "decoy",
+    "name": "Decoy (Esca)",
+    "description": "Forcing an opponent's piece to a square where it can be trapped, captured, or where it becomes vulnerable to another tactic.",
+    "category": "preparatory",
+    "examples": [
+      {
+        "id": "decoy-king",
+        "fen": "6k1/5ppp/8/8/8/8/1Q3PPP/6K1 b - - 0 1",
+        "description": "Sacrificing a piece on h6 to decoy the king forward, where it becomes vulnerable to checkmate patterns.",
+        "solution": "Sacrifice decoys king into danger",
+        "explanation": "Decoys often involve sacrifices to lure key pieces to fatal squares. Common in mating attacks and endgames."
+      }
+    ]
+  },
+  {
+    "id": "zugzwang",
+    "name": "Zugzwang",
+    "description": "A position where any move worsens the position. Having to move is a disadvantage. Most common in endgames.",
+    "category": "positional",
+    "examples": [
+      {
+        "id": "zugzwang-endgame",
+        "fen": "8/8/8/4k3/8/2K5/2P5/8 b - - 0 1",
+        "description": "Black to move is in zugzwang. Any king move allows White to advance the pawn with support. White to move cannot make progress.",
+        "solution": "Any Black king move worsens position",
+        "explanation": "In zugzwang, passing (not moving) would be preferable. Common in king and pawn endgames where opposition matters."
+      }
+    ]
+  },
+  {
+    "id": "intermediate-move",
+    "name": "Intermediate Move (Zwischenzug)",
+    "description": "Instead of making the expected recapture or response, inserting a forcing move (check, threat) that improves the position before completing the sequence.",
+    "category": "tactical-finesse",
+    "examples": [
+      {
+        "id": "zwischenzug",
+        "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 4",
+        "description": "If White plays Bxf7+, instead of immediately recapturing, Black can insert Kf8 (moving the king), and then after White takes on e5, Black recaptures with better piece placement.",
+        "solution": "Insert forcing move before expected recapture",
+        "explanation": "Zwischenzug disrupts the opponent's calculation. Look for checks, captures, and threats before making the 'obvious' move."
+      }
+    ]
+  },
+  {
+    "id": "undermining",
+    "name": "Undermining (Minamento)",
+    "description": "Attacking the base of a pawn chain or the support of a piece structure to make it collapse.",
+    "category": "strategic",
+    "examples": [
+      {
+        "id": "pawn-chain-break",
+        "fen": "rnbqkb1r/ppp2ppp/4pn2/3p4/2PP4/2N2N2/PP2PPPP/R1BQKB1R b KQkq - 0 5",
+        "description": "Black plays c5, undermining White's d4 pawn, which is the base of the pawn chain. If White takes cxd4, the chain collapses.",
+        "solution": "c5 undermines pawn chain base",
+        "explanation": "Attacking the base of pawn chains is more effective than attacking the head. Common in closed positions and the French Defense."
+      }
+    ]
+  },
+  {
+    "id": "overloading",
+    "name": "Overloading (Sovraccarico)",
+    "description": "A piece is given too many defensive tasks and cannot fulfill them all. Exploiting an overworked piece.",
+    "category": "preparatory",
+    "examples": [
+      {
+        "id": "overloaded-piece",
+        "fen": "6k1/5ppp/8/8/8/8/1r3PPP/R4RK1 w - - 0 1",
+        "description": "The Black rook on b2 is overloaded, defending both b8 and the second rank. White plays Rb1, exploiting this.",
+        "solution": "Attack overloaded defender twice",
+        "explanation": "Look for pieces defending multiple pieces or squares. Attack all the defended points to overwhelm the defender."
+      }
+    ]
+  },
+  {
+    "id": "trapped-piece",
+    "name": "Trapped Piece (Pezzo Intrappolato)",
+    "description": "A piece has no safe squares to move to and will be captured. Often happens when pieces venture too far into enemy territory.",
+    "category": "tactical-win",
+    "examples": [
+      {
+        "id": "trapped-queen",
+        "fen": "rnbqkb1r/pppp1ppp/5n2/4p3/4P3/3P1Q2/PPP2PPP/RNB1KBNR b KQkq - 0 4",
+        "description": "The White Queen on f3 can be trapped with Nc6 followed by d5, blocking all escape squares. The queen will be lost.",
+        "solution": "Trap queen with Nc6 and d5",
+        "explanation": "Pieces can become trapped when they lack escape squares. Be especially careful with queens and bishops in enemy territory."
+      },
+      {
+        "id": "trapped-bishop",
+        "fen": "rnbqk2r/pppp1ppp/5n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4",
+        "description": "If White plays a3, the Black bishop on c5 has no good squares and can be trapped with b4.",
+        "solution": "a3 and b4 traps bishop",
+        "explanation": "Bishops on the rim are often vulnerable to pawn attacks. Always ensure your pieces have retreat squares."
+      }
+    ]
+  },
+  {
+    "id": "clearance",
+    "name": "Clearance (Sgombero)",
+    "description": "Sacrificing material to clear a square, file, rank, or diagonal for another piece to deliver a decisive blow.",
+    "category": "preparatory",
+    "examples": [
+      {
+        "id": "clearance-sacrifice",
+        "fen": "r3k2r/ppp2ppp/2n5/8/8/8/PPP2PPP/R3K2R w KQkq - 0 1",
+        "description": "White plays Rxc6, sacrificing the rook to clear the sixth rank for the other rook to invade with devastating effect.",
+        "solution": "Sacrifice to clear critical square/line",
+        "explanation": "Clearance sacrifices remove obstacles (even your own pieces) to open lines for more powerful attacks."
+      }
+    ]
+  },
+  {
+    "id": "x-ray-attack",
+    "name": "X-Ray Attack (Attacco a Raggi X)",
+    "description": "Attacking through one piece to the piece behind it. Similar to skewer but doesn't require the first piece to move.",
+    "category": "double-attack",
+    "examples": [
+      {
+        "id": "xray-rook",
+        "fen": "4r3/5pk1/6p1/8/8/6P1/5PKR/8 w - - 0 1",
+        "description": "White's rook on h2 x-rays through the Black king to the rook on e8. If the king moves, the rook is attacked.",
+        "solution": "Rook attacks through king to rook",
+        "explanation": "X-ray attacks create indirect pressure. The attacked piece is only 'seen' through another piece, creating tactical opportunities."
+      }
+    ]
+  },
+  {
+    "id": "windmill",
+    "name": "Windmill (Mulino)",
+    "description": "A series of discovered checks that force the king to move back and forth while the discovering piece captures material each time.",
+    "category": "combination",
+    "examples": [
+      {
+        "id": "windmill-combination",
+        "fen": "6k1/5ppp/8/8/8/6P1/r4PBP/5RK1 w - - 0 1",
+        "description": "White plays Rf8+ (discovered check from bishop). After Kg7, Rxf7+ Kh8 (or Kg8), and White can repeat, capturing pawns each cycle.",
+        "solution": "Series of discovered checks winning material",
+        "explanation": "The windmill is a beautiful tactical pattern where discovered checks allow systematic demolition of the opponent's position."
+      }
+    ]
+  }
+]

@@ -57,7 +57,13 @@
       "Bash(git fetch:*)",
       "Bash(git rebase:*)",
       "Bash(git stash:*)",
-      "mcp__github-project-manager__github_review_pr"
+      "mcp__github-project-manager__github_review_pr",
+      "Bash(pnpm typecheck:*)",
+      "Bash(npx tsc:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(timeout 120 dotnet test --filter \"FullyQualifiedName~AdminStatsEndpointsTests.GetAdminStats_WhenAdminAuthenticated_ReturnsAggregatedStatistics\" --verbosity normal)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,0 +1,1146 @@
+{
+  "gameId": "chess",
+  "version": "v0.1",
+  "metadata": {
+    "name": "Chess",
+    "description": "A strategic two-player board game where each player commands an army of 16 pieces, aiming to checkmate the opponent's king. Chess is played on an 8x8 checkered board following FIDE (International Chess Federation) official rules.",
+    "createdAt": "2025-10-08T00:00:00Z",
+    "playerCount": {
+      "min": 2,
+      "max": 2
+    },
+    "playTime": {
+      "min": 10,
+      "max": 180
+    },
+    "ageRange": {
+      "min": 6
+    },
+    "pieceValues": {
+      "pawn": 1,
+      "knight": 3,
+      "bishop": 3,
+      "rook": 5,
+      "queen": 9,
+      "king": 0
+    },
+    "notation": {
+      "standard": "Algebraic Notation",
+      "positionFormat": "FEN (Forsyth-Edwards Notation)",
+      "gameFormat": "PGN (Portable Game Notation)"
+    }
+  },
+  "setup": {
+    "description": "Place the chessboard between the two players with a white square on the bottom-right corner. Each player's pieces are arranged on the two ranks closest to them: back rank has Rooks on corners, Knights next to them, Bishops next to Knights, Queen on her own color (white Queen on light square, black Queen on dark square), and King on the remaining center square. The second rank is filled with eight Pawns. White always moves first.",
+    "steps": [
+      {
+        "id": "setup-1",
+        "text": "Place the chessboard with a light square in the bottom-right corner from each player's perspective",
+        "order": 1,
+        "components": ["board"]
+      },
+      {
+        "id": "setup-2",
+        "text": "Place White's pieces on ranks 1 and 2: Rooks on a1 and h1, Knights on b1 and g1, Bishops on c1 and f1, Queen on d1, King on e1",
+        "order": 2,
+        "components": ["white-pieces"]
+      },
+      {
+        "id": "setup-3",
+        "text": "Place White's eight Pawns on the entire second rank (a2 through h2)",
+        "order": 3,
+        "components": ["white-pawns"]
+      },
+      {
+        "id": "setup-4",
+        "text": "Place Black's pieces on ranks 7 and 8: Rooks on a8 and h8, Knights on b8 and g8, Bishops on c8 and f8, Queen on d8, King on e8",
+        "order": 4,
+        "components": ["black-pieces"]
+      },
+      {
+        "id": "setup-5",
+        "text": "Place Black's eight Pawns on the entire seventh rank (a7 through h7)",
+        "order": 5,
+        "components": ["black-pawns"]
+      },
+      {
+        "id": "setup-6",
+        "text": "Verify Queen placement: White Queen on light square (d1), Black Queen on dark square (d8)",
+        "order": 6
+      },
+      {
+        "id": "setup-7",
+        "text": "White player moves first",
+        "order": 7
+      }
+    ],
+    "components": [
+      {
+        "id": "board",
+        "name": "Chessboard",
+        "quantity": 1,
+        "description": "8x8 checkered board with alternating light and dark squares (64 squares total)"
+      },
+      {
+        "id": "white-king",
+        "name": "White King",
+        "quantity": 1,
+        "description": "White's most important piece"
+      },
+      {
+        "id": "white-queen",
+        "name": "White Queen",
+        "quantity": 1,
+        "description": "White's most powerful piece"
+      },
+      {
+        "id": "white-rooks",
+        "name": "White Rooks",
+        "quantity": 2,
+        "description": "White's Rooks (corner pieces)"
+      },
+      {
+        "id": "white-bishops",
+        "name": "White Bishops",
+        "quantity": 2,
+        "description": "White's Bishops (one light-squared, one dark-squared)"
+      },
+      {
+        "id": "white-knights",
+        "name": "White Knights",
+        "quantity": 2,
+        "description": "White's Knights"
+      },
+      {
+        "id": "white-pawns",
+        "name": "White Pawns",
+        "quantity": 8,
+        "description": "White's eight Pawns"
+      },
+      {
+        "id": "black-king",
+        "name": "Black King",
+        "quantity": 1,
+        "description": "Black's most important piece"
+      },
+      {
+        "id": "black-queen",
+        "name": "Black Queen",
+        "quantity": 1,
+        "description": "Black's most powerful piece"
+      },
+      {
+        "id": "black-rooks",
+        "name": "Black Rooks",
+        "quantity": 2,
+        "description": "Black's Rooks (corner pieces)"
+      },
+      {
+        "id": "black-bishops",
+        "name": "Black Bishops",
+        "quantity": 2,
+        "description": "Black's Bishops (one light-squared, one dark-squared)"
+      },
+      {
+        "id": "black-knights",
+        "name": "Black Knights",
+        "quantity": 2,
+        "description": "Black's Knights"
+      },
+      {
+        "id": "black-pawns",
+        "name": "Black Pawns",
+        "quantity": 8,
+        "description": "Black's eight Pawns"
+      }
+    ]
+  },
+  "phases": [
+    {
+      "id": "opening",
+      "name": "Opening Phase",
+      "description": "The initial moves of the game where players develop their pieces from starting positions, control the center, and prepare for the middlegame.",
+      "order": 1,
+      "steps": [
+        {
+          "id": "opening-1",
+          "text": "White makes the first move",
+          "order": 1,
+          "optional": false
+        },
+        {
+          "id": "opening-2",
+          "text": "Black responds with their move",
+          "order": 2,
+          "optional": false
+        },
+        {
+          "id": "opening-3",
+          "text": "Players continue alternating moves, typically developing pieces and controlling center",
+          "order": 3,
+          "optional": false
+        }
+      ],
+      "allowedActions": ["move-king", "move-queen", "move-rook", "move-bishop", "move-knight", "move-pawn", "capture-piece"]
+    },
+    {
+      "id": "middlegame",
+      "name": "Middlegame Phase",
+      "description": "The phase after initial development where players execute tactical and strategic plans, including attacks, piece exchanges, and positional maneuvering.",
+      "order": 2,
+      "steps": [
+        {
+          "id": "middlegame-1",
+          "text": "Current player selects a piece to move",
+          "order": 1,
+          "optional": false
+        },
+        {
+          "id": "middlegame-2",
+          "text": "Move the piece according to its movement rules",
+          "order": 2,
+          "optional": false
+        },
+        {
+          "id": "middlegame-3",
+          "text": "If the move captures an opponent's piece, remove it from the board",
+          "order": 3,
+          "optional": true
+        },
+        {
+          "id": "middlegame-4",
+          "text": "Check if the opponent's King is in check",
+          "order": 4,
+          "optional": false
+        },
+        {
+          "id": "middlegame-5",
+          "text": "Check for checkmate or stalemate",
+          "order": 5,
+          "optional": false
+        },
+        {
+          "id": "middlegame-6",
+          "text": "Switch to the opponent's turn",
+          "order": 6,
+          "optional": false
+        }
+      ],
+      "allowedActions": ["move-king", "move-queen", "move-rook", "move-bishop", "move-knight", "move-pawn", "capture-piece", "castle-kingside", "castle-queenside", "en-passant", "promote-pawn"]
+    },
+    {
+      "id": "endgame",
+      "name": "Endgame Phase",
+      "description": "The final phase with fewer pieces on the board where players attempt to checkmate or force a draw. Kings become active pieces.",
+      "order": 3,
+      "steps": [
+        {
+          "id": "endgame-1",
+          "text": "Current player makes their move with remaining pieces",
+          "order": 1,
+          "optional": false
+        },
+        {
+          "id": "endgame-2",
+          "text": "Activate the King as an attacking piece if safe",
+          "order": 2,
+          "optional": true
+        },
+        {
+          "id": "endgame-3",
+          "text": "Check for checkmate, stalemate, or draw conditions",
+          "order": 3,
+          "optional": false
+        },
+        {
+          "id": "endgame-4",
+          "text": "Switch to opponent's turn or end game",
+          "order": 4,
+          "optional": false
+        }
+      ],
+      "allowedActions": ["move-king", "move-queen", "move-rook", "move-bishop", "move-knight", "move-pawn", "capture-piece", "promote-pawn"]
+    }
+  ],
+  "actions": [
+    {
+      "id": "move-king",
+      "name": "Move King",
+      "type": "mandatory",
+      "description": "The King moves exactly one square in any direction: horizontally, vertically, or diagonally. The King cannot move to a square that is under attack by an opponent's piece.",
+      "prerequisites": [
+        "It is your turn",
+        "The King is not moving into check",
+        "The target square is not occupied by your own piece",
+        "The target square is exactly one square away from the King's current position"
+      ],
+      "effects": [
+        "The King moves to the target square",
+        "If castling rights existed, they are permanently lost for this King",
+        "Any piece on the target square is captured (if opponent's piece)"
+      ]
+    },
+    {
+      "id": "move-queen",
+      "name": "Move Queen",
+      "type": "mandatory",
+      "description": "The Queen moves any number of squares horizontally, vertically, or diagonally in a straight line. The Queen cannot jump over other pieces.",
+      "prerequisites": [
+        "It is your turn",
+        "The path between current position and target square is clear (no pieces blocking)",
+        "The target square is not occupied by your own piece",
+        "The move does not leave your King in check"
+      ],
+      "effects": [
+        "The Queen moves to the target square",
+        "Any piece on the target square is captured (if opponent's piece)"
+      ]
+    },
+    {
+      "id": "move-rook",
+      "name": "Move Rook",
+      "type": "mandatory",
+      "description": "The Rook moves any number of squares horizontally or vertically in a straight line. The Rook cannot jump over other pieces.",
+      "prerequisites": [
+        "It is your turn",
+        "The path between current position and target square is clear (no pieces blocking)",
+        "The target square is not occupied by your own piece",
+        "The move does not leave your King in check"
+      ],
+      "effects": [
+        "The Rook moves to the target square",
+        "If this Rook has not moved before, castling rights with this Rook are permanently lost",
+        "Any piece on the target square is captured (if opponent's piece)"
+      ]
+    },
+    {
+      "id": "move-bishop",
+      "name": "Move Bishop",
+      "type": "mandatory",
+      "description": "The Bishop moves any number of squares diagonally in a straight line. The Bishop cannot jump over other pieces. Each Bishop remains on its original square color throughout the game.",
+      "prerequisites": [
+        "It is your turn",
+        "The path between current position and target square is clear (no pieces blocking)",
+        "The target square is not occupied by your own piece",
+        "The move does not leave your King in check",
+        "The target square is on a diagonal from the Bishop's current position"
+      ],
+      "effects": [
+        "The Bishop moves to the target square",
+        "Any piece on the target square is captured (if opponent's piece)"
+      ]
+    },
+    {
+      "id": "move-knight",
+      "name": "Move Knight",
+      "type": "mandatory",
+      "description": "The Knight moves in an 'L' shape: two squares in one direction (horizontal or vertical) and then one square perpendicular to that direction, or vice versa. The Knight is the only piece that can jump over other pieces.",
+      "prerequisites": [
+        "It is your turn",
+        "The target square is not occupied by your own piece",
+        "The target square is exactly an L-shape move away (2+1 or 1+2 squares)",
+        "The move does not leave your King in check"
+      ],
+      "effects": [
+        "The Knight moves to the target square",
+        "Any piece on the target square is captured (if opponent's piece)"
+      ]
+    },
+    {
+      "id": "move-pawn",
+      "name": "Move Pawn",
+      "type": "mandatory",
+      "description": "Pawns move forward one square (or two squares from their starting position). Pawns capture diagonally forward one square. Pawns cannot move backward.",
+      "prerequisites": [
+        "It is your turn",
+        "For forward moves: the target square directly ahead is empty",
+        "For two-square initial move: the Pawn is on its starting rank and both squares ahead are empty",
+        "For diagonal captures: an opponent's piece occupies the diagonal square",
+        "The move does not leave your King in check"
+      ],
+      "effects": [
+        "The Pawn moves to the target square",
+        "If capturing, the opponent's piece is removed",
+        "If moving two squares, the Pawn can be captured by en passant on the next turn only",
+        "If reaching the opposite end of the board (8th rank), the Pawn must be promoted"
+      ]
+    },
+    {
+      "id": "capture-piece",
+      "name": "Capture Piece",
+      "type": "optional",
+      "description": "Capture an opponent's piece by moving your piece to the square occupied by the opponent's piece, following that piece's normal movement rules.",
+      "prerequisites": [
+        "It is your turn",
+        "Your piece can legally move to the square occupied by the opponent's piece",
+        "The move does not leave your King in check"
+      ],
+      "effects": [
+        "The opponent's piece is removed from the board",
+        "Your piece occupies the captured piece's square"
+      ]
+    },
+    {
+      "id": "castle-kingside",
+      "name": "Castle Kingside (Short Castle)",
+      "type": "optional",
+      "description": "A special move involving the King and the Kingside Rook (on the h-file). The King moves two squares toward the Rook, and the Rook moves to the square the King crossed over. Notation: O-O",
+      "prerequisites": [
+        "It is your turn",
+        "Neither the King nor the Kingside Rook has moved before",
+        "All squares between the King and Rook are empty (f and g files)",
+        "The King is not in check",
+        "The King does not pass through a square that is under attack",
+        "The King does not end up in check"
+      ],
+      "effects": [
+        "The King moves from e-file to g-file",
+        "The Rook moves from h-file to f-file",
+        "Both pieces' castling rights are permanently lost"
+      ]
+    },
+    {
+      "id": "castle-queenside",
+      "name": "Castle Queenside (Long Castle)",
+      "type": "optional",
+      "description": "A special move involving the King and the Queenside Rook (on the a-file). The King moves two squares toward the Rook, and the Rook moves to the square the King crossed over. Notation: O-O-O",
+      "prerequisites": [
+        "It is your turn",
+        "Neither the King nor the Queenside Rook has moved before",
+        "All squares between the King and Rook are empty (b, c, and d files)",
+        "The King is not in check",
+        "The King does not pass through a square that is under attack (c and d files)",
+        "The King does not end up in check"
+      ],
+      "effects": [
+        "The King moves from e-file to c-file",
+        "The Rook moves from a-file to d-file",
+        "Both pieces' castling rights are permanently lost"
+      ]
+    },
+    {
+      "id": "en-passant",
+      "name": "En Passant Capture",
+      "type": "optional",
+      "description": "A special Pawn capture that can occur when an opponent's Pawn moves two squares forward from its starting position and lands beside your Pawn. You can capture it as if it had only moved one square.",
+      "prerequisites": [
+        "It is your turn",
+        "Your Pawn is on the 5th rank (for White) or 4th rank (for Black)",
+        "An opponent's Pawn just moved two squares forward on the previous turn",
+        "The opponent's Pawn is now directly beside your Pawn on an adjacent file",
+        "You must execute en passant on your immediate next turn or the right is lost"
+      ],
+      "effects": [
+        "Your Pawn moves diagonally forward one square to the square the opponent's Pawn passed over",
+        "The opponent's Pawn (on the adjacent square) is captured and removed from the board"
+      ]
+    },
+    {
+      "id": "promote-pawn",
+      "name": "Promote Pawn",
+      "type": "triggered",
+      "description": "When a Pawn reaches the opposite end of the board (8th rank for White, 1st rank for Black), it must immediately be promoted to a Queen, Rook, Bishop, or Knight of the same color. The player chooses which piece.",
+      "prerequisites": [
+        "Your Pawn has just moved to the opponent's back rank (8th rank for White, 1st rank for Black)"
+      ],
+      "effects": [
+        "The Pawn is removed from the board",
+        "A piece of the player's choice (Queen, Rook, Bishop, or Knight) is placed on the promotion square",
+        "The promoted piece can be used immediately on subsequent turns",
+        "Promotion to Queen is most common but other pieces may be chosen (underpromotion)"
+      ]
+    },
+    {
+      "id": "offer-draw",
+      "name": "Offer Draw",
+      "type": "optional",
+      "description": "A player may offer a draw at any time during their turn. The opponent may accept or decline.",
+      "prerequisites": [
+        "It is your turn"
+      ],
+      "effects": [
+        "The opponent may accept (game ends in draw) or decline (game continues)"
+      ]
+    },
+    {
+      "id": "resign",
+      "name": "Resign",
+      "type": "optional",
+      "description": "A player may resign at any time, conceding defeat to their opponent.",
+      "prerequisites": [
+        "It is your turn"
+      ],
+      "effects": [
+        "The game ends immediately",
+        "The resigning player loses",
+        "The opponent wins"
+      ]
+    }
+  ],
+  "scoring": {
+    "method": "elimination",
+    "description": "Chess is won by checkmating the opponent's King or by resignation. A draw can occur through stalemate, insufficient material, fifty-move rule, threefold repetition, or mutual agreement.",
+    "sources": [
+      {
+        "id": "checkmate",
+        "name": "Checkmate",
+        "value": -1,
+        "description": "The opponent's King is in check and has no legal move to escape check",
+        "when": "Immediately upon making the checkmating move"
+      },
+      {
+        "id": "resignation",
+        "name": "Resignation",
+        "value": -1,
+        "description": "The opponent voluntarily resigns the game",
+        "when": "When the opponent declares resignation"
+      },
+      {
+        "id": "timeout",
+        "name": "Timeout",
+        "value": -1,
+        "description": "The opponent runs out of time (in timed games)",
+        "when": "When the opponent's clock reaches zero"
+      }
+    ],
+    "tiebreakers": [
+      {
+        "order": 1,
+        "rule": "Stalemate: If a player has no legal moves and their King is not in check, the game is a draw"
+      },
+      {
+        "order": 2,
+        "rule": "Insufficient Material: If neither player has enough pieces to force checkmate (e.g., King vs King, King+Bishop vs King, King+Knight vs King), the game is a draw"
+      },
+      {
+        "order": 3,
+        "rule": "Fifty-Move Rule: If 50 consecutive moves by both players occur without any Pawn move or capture, either player may claim a draw"
+      },
+      {
+        "order": 4,
+        "rule": "Threefold Repetition: If the same position occurs three times with the same player to move and the same possible moves (including castling and en passant rights), either player may claim a draw"
+      },
+      {
+        "order": 5,
+        "rule": "Mutual Agreement: Both players may agree to a draw at any time"
+      }
+    ]
+  },
+  "endConditions": [
+    {
+      "id": "checkmate",
+      "type": "elimination",
+      "description": "A player's King is in check and has no legal move to escape check. The player whose King is checkmated loses."
+    },
+    {
+      "id": "resignation",
+      "type": "elimination",
+      "description": "A player voluntarily resigns the game. The resigning player loses."
+    },
+    {
+      "id": "stalemate",
+      "type": "custom",
+      "description": "A player has no legal moves available but their King is not in check. The game ends in a draw."
+    },
+    {
+      "id": "insufficient-material",
+      "type": "custom",
+      "description": "Neither player has sufficient pieces to deliver checkmate (e.g., lone Kings, King+Bishop vs King, King+Knight vs King). The game ends in a draw."
+    },
+    {
+      "id": "fifty-move-rule",
+      "type": "custom",
+      "description": "Fifty consecutive moves by both players occur without any Pawn move or capture. Either player may claim a draw.",
+      "value": 50
+    },
+    {
+      "id": "threefold-repetition",
+      "type": "custom",
+      "description": "The same board position occurs three times with the same player to move and identical possible moves. Either player may claim a draw.",
+      "value": 3
+    },
+    {
+      "id": "mutual-agreement",
+      "type": "custom",
+      "description": "Both players agree to end the game in a draw."
+    },
+    {
+      "id": "timeout",
+      "type": "custom",
+      "description": "In timed games, if a player's clock reaches zero, they lose (unless the opponent has insufficient material to checkmate)."
+    }
+  ],
+  "edgeCases": [
+    {
+      "id": "edge-1",
+      "category": "clarification",
+      "text": "Check: When a King is under direct attack by an opponent's piece, it is in 'check'. The player must immediately move out of check, block the attack, or capture the attacking piece.",
+      "relatedActions": ["move-king"]
+    },
+    {
+      "id": "edge-2",
+      "category": "exception",
+      "text": "Illegal Moves in Check: A player cannot make any move that leaves or places their own King in check. Such moves are illegal.",
+      "relatedActions": ["move-king", "move-queen", "move-rook", "move-bishop", "move-knight", "move-pawn"]
+    },
+    {
+      "id": "edge-3",
+      "category": "exception",
+      "text": "Castling Restrictions: Castling is permanently prohibited if the King or the relevant Rook has moved, even if they return to their original squares.",
+      "relatedActions": ["castle-kingside", "castle-queenside", "move-king", "move-rook"]
+    },
+    {
+      "id": "edge-4",
+      "category": "clarification",
+      "text": "Castling Through Check: The King cannot castle if it must pass through a square that is under attack, even though the Rook may pass through an attacked square.",
+      "relatedActions": ["castle-kingside", "castle-queenside"]
+    },
+    {
+      "id": "edge-5",
+      "category": "clarification",
+      "text": "En Passant Window: En passant capture must be executed immediately on the next turn after the opponent's two-square Pawn advance. The right expires if not used.",
+      "relatedActions": ["en-passant", "move-pawn"]
+    },
+    {
+      "id": "edge-6",
+      "category": "clarification",
+      "text": "Pawn Promotion Choice: A Pawn reaching the back rank must be promoted immediately to Queen, Rook, Bishop, or Knight. It cannot remain a Pawn or be promoted to a King.",
+      "relatedActions": ["promote-pawn"]
+    },
+    {
+      "id": "edge-7",
+      "category": "clarification",
+      "text": "Multiple Queens: A player may have multiple Queens on the board through Pawn promotion, even if the original Queen is still active.",
+      "relatedActions": ["promote-pawn"]
+    },
+    {
+      "id": "edge-8",
+      "category": "exception",
+      "text": "Underpromotion: A player may choose to promote a Pawn to a piece other than a Queen (Rook, Bishop, or Knight). This is called underpromotion and is legal but rare.",
+      "relatedActions": ["promote-pawn"]
+    },
+    {
+      "id": "edge-9",
+      "category": "clarification",
+      "text": "Bishop Color Constraint: Each Bishop is confined to squares of one color (light or dark) for the entire game. A player starts with one light-squared and one dark-squared Bishop.",
+      "relatedActions": ["move-bishop"]
+    },
+    {
+      "id": "edge-10",
+      "category": "clarification",
+      "text": "Touch-Move Rule: In official play, if a player touches a piece, they must move it if legal. If they touch an opponent's piece, they must capture it if possible.",
+      "relatedActions": ["move-king", "move-queen", "move-rook", "move-bishop", "move-knight", "move-pawn", "capture-piece"]
+    },
+    {
+      "id": "edge-11",
+      "category": "faq",
+      "text": "Q: Can a King capture a piece? A: Yes, the King can capture an opponent's piece if that piece is not protected by another opponent's piece.",
+      "relatedActions": ["move-king", "capture-piece"]
+    },
+    {
+      "id": "edge-12",
+      "category": "faq",
+      "text": "Q: Can two Kings stand next to each other? A: No, because each King would put the other in check, which is illegal. Kings must always be at least one square apart.",
+      "relatedActions": ["move-king"]
+    },
+    {
+      "id": "edge-13",
+      "category": "faq",
+      "text": "Q: What is perpetual check? A: If a player can continuously check the opponent's King without delivering checkmate, and neither player can break the cycle, the game typically ends in a draw by threefold repetition.",
+      "relatedActions": ["move-queen", "move-rook", "move-bishop", "move-knight"]
+    },
+    {
+      "id": "edge-14",
+      "category": "variant",
+      "text": "Chess960 (Fischer Random): A variant where the starting position of pieces on the back rank is randomized, with certain constraints. Castling rules are modified to accommodate any starting position.",
+      "relatedActions": ["castle-kingside", "castle-queenside"]
+    },
+    {
+      "id": "edge-15",
+      "category": "clarification",
+      "text": "Dead Position: A position where neither player can checkmate the opponent by any legal sequence of moves. The game is automatically drawn. Examples: King vs King, King+Bishop vs King, King+Knight vs King.",
+      "relatedPhases": ["endgame"]
+    },
+    {
+      "id": "edge-16",
+      "category": "exception",
+      "text": "Timeout with Insufficient Material: If a player runs out of time but their opponent does not have sufficient material to deliver checkmate (e.g., lone King or King+Bishop), the game is drawn instead of lost.",
+      "relatedActions": ["move-king"]
+    },
+    {
+      "id": "edge-17",
+      "category": "clarification",
+      "text": "Discovered Check: Moving a piece can expose an opponent's King to check from another piece behind it. This is legal and can be very powerful.",
+      "relatedActions": ["move-queen", "move-rook", "move-bishop", "move-knight", "move-pawn"]
+    },
+    {
+      "id": "edge-18",
+      "category": "clarification",
+      "text": "Double Check: When two pieces simultaneously give check to the opponent's King. The only legal response is to move the King; blocking or capturing one checking piece is not sufficient.",
+      "relatedActions": ["move-king"]
+    },
+    {
+      "id": "edge-19",
+      "category": "clarification",
+      "text": "Pin: A piece that cannot move without exposing the King to check is 'pinned'. Pinned pieces can still give check but cannot move away from the pin line.",
+      "relatedActions": ["move-queen", "move-rook", "move-bishop", "move-knight", "move-pawn"]
+    },
+    {
+      "id": "edge-20",
+      "category": "clarification",
+      "text": "Absolute Pin vs Relative Pin: An absolute pin is against the King (the piece cannot legally move). A relative pin is against a valuable piece (the piece can move but it may be unwise).",
+      "relatedActions": ["move-queen", "move-rook", "move-bishop"]
+    },
+    {
+      "id": "edge-21",
+      "category": "faq",
+      "text": "Fool's Mate: The fastest possible checkmate in chess, occurring in just 2 moves. Example: 1.f3 e5 2.g4 Qh4# - White is checkmated. This demonstrates the danger of weakening the kingside early.",
+      "relatedActions": ["move-pawn", "move-queen"]
+    },
+    {
+      "id": "edge-22",
+      "category": "faq",
+      "text": "Scholar's Mate: A common checkmate trap for beginners, occurring in 4 moves. Example: 1.e4 e5 2.Bc4 Nc6 3.Qh5 Nf6? 4.Qxf7# - Black is checkmated. The Queen and Bishop coordinate to attack f7, the weakest point in Black's position.",
+      "relatedActions": ["move-queen", "move-bishop", "capture-piece"]
+    },
+    {
+      "id": "edge-23",
+      "category": "faq",
+      "text": "Back Rank Mate: A common checkmating pattern where a Rook or Queen delivers checkmate on the opponent's back rank, with the King trapped by its own Pawns. Example: White Rook on e8, Black King on g8, Black Pawns on f7, g7, h7.",
+      "relatedActions": ["move-rook", "move-queen"],
+      "relatedPhases": ["middlegame", "endgame"]
+    },
+    {
+      "id": "edge-24",
+      "category": "faq",
+      "text": "Smothered Mate: A checkmate delivered by a Knight where the King is surrounded by its own pieces and cannot move. Example: Black King on h8, Black Rook on g8, Black Pawns on g7 and h7, White Knight delivers mate on f7.",
+      "relatedActions": ["move-knight"],
+      "relatedPhases": ["middlegame", "endgame"]
+    }
+  ],
+  "positionExamples": [
+    {
+      "id": "starting-position",
+      "name": "Starting Position",
+      "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+      "description": "The standard starting position for a chess game. All pieces are on their starting squares, White to move.",
+      "category": "setup"
+    },
+    {
+      "id": "fools-mate",
+      "name": "Fool's Mate",
+      "fen": "rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 2",
+      "description": "Position after 1.f3 e5 2.g4 - Black can now deliver checkmate with Qh4#. This is the fastest possible checkmate in chess.",
+      "pgn": "1. f3 e5 2. g4 Qh4#",
+      "category": "checkmate-pattern"
+    },
+    {
+      "id": "scholars-mate-setup",
+      "name": "Scholar's Mate Setup",
+      "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4",
+      "description": "Position after 1.e4 e5 2.Bc4 Nc6 3.Qh5 Nf6 - White threatens Qxf7# (Scholar's Mate). Black has defended with Nf6.",
+      "pgn": "1. e4 e5 2. Bc4 Nc6 3. Qh5 Nf6",
+      "category": "checkmate-pattern"
+    },
+    {
+      "id": "back-rank-mate",
+      "name": "Back Rank Mate",
+      "fen": "6k1/5ppp/8/8/8/8/5PPP/4R1K1 b - - 0 1",
+      "description": "A classic back rank checkmate position. Black's King is trapped on the back rank by its own Pawns. White's Rook on e1 delivers checkmate by moving to e8.",
+      "solution": "Re8#",
+      "category": "checkmate-pattern"
+    },
+    {
+      "id": "smothered-mate",
+      "name": "Smothered Mate",
+      "fen": "6rk/5Npp/8/8/8/8/8/6K1 b - - 0 1",
+      "description": "A smothered mate pattern. Black's King on h8 is trapped by its own pieces (Rook on g8, Pawns on g7 and h7). White's Knight on f7 delivers checkmate.",
+      "solution": "Already checkmate",
+      "category": "checkmate-pattern"
+    },
+    {
+      "id": "stalemate-example",
+      "name": "Stalemate Example",
+      "fen": "7k/5Q2/6K1/8/8/8/8/8 b - - 0 1",
+      "description": "A stalemate position. Black to move has no legal moves (King cannot move anywhere without going into check), but is not in check. The game is drawn.",
+      "category": "draw"
+    },
+    {
+      "id": "insufficient-material-kb",
+      "name": "Insufficient Material: King+Bishop vs King",
+      "fen": "8/8/8/4k3/8/8/2B5/4K3 w - - 0 1",
+      "description": "Neither side can deliver checkmate. White has King and Bishop, which is insufficient to force mate against a lone King.",
+      "category": "draw"
+    },
+    {
+      "id": "en-passant-position",
+      "name": "En Passant Capture Available",
+      "fen": "rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3",
+      "description": "Position after 1.e4 d5 2.e5 f5 - White can now capture en passant with exf6, as Black's Pawn just moved two squares from f7 to f5.",
+      "pgn": "1. e4 d5 2. e5 f5",
+      "solution": "exf6 (en passant)",
+      "category": "special-move"
+    },
+    {
+      "id": "castling-kingside",
+      "name": "Kingside Castling Available",
+      "fen": "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4",
+      "description": "Both sides can castle kingside. White can play O-O (Kg1, Rf1). The King and Rook haven't moved, and the squares between them are clear.",
+      "solution": "O-O or O-O-O",
+      "category": "special-move"
+    },
+    {
+      "id": "promotion-position",
+      "name": "Pawn Promotion Imminent",
+      "fen": "8/4P3/8/8/8/8/4k3/4K3 w - - 0 1",
+      "description": "White's Pawn is one move away from promotion. After e8=Q, White will have a Queen and can force checkmate.",
+      "solution": "e8=Q or e8=R or e8=B or e8=N",
+      "category": "special-move"
+    },
+    {
+      "id": "discovered-check",
+      "name": "Discovered Check Pattern",
+      "fen": "r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4",
+      "description": "White can play Nxe5, moving the Knight and revealing a discovered check from the Bishop on c4 to the Black King on e8.",
+      "solution": "Nxe5+",
+      "category": "tactic"
+    },
+    {
+      "id": "pin-example",
+      "name": "Absolute Pin",
+      "fen": "r1bqkb1r/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 0 4",
+      "description": "The Black Knight on f6 is pinned to the King on e8 by the White Bishop on c4. The Knight cannot legally move because it would expose the King to check.",
+      "category": "tactic"
+    },
+    {
+      "id": "fork-example",
+      "name": "Knight Fork",
+      "fen": "r1bqkb1r/pppp1ppp/8/4p3/3nP3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 4",
+      "description": "The Black Knight on d4 is forking (attacking) both the White Queen on d1 and the White Pawn on e2. White must move the Queen and will lose the e2 Pawn.",
+      "category": "tactic"
+    }
+  ],
+  "variants": [
+    {
+      "id": "blitz",
+      "name": "Blitz Chess",
+      "description": "A fast time control where each player has 3-5 minutes for the entire game. Extremely popular online and in casual play.",
+      "timeControl": {
+        "initial": 180,
+        "increment": 2,
+        "unit": "seconds",
+        "description": "Typically 3 minutes with 2-second increment per move (3+2), or 5 minutes total (5+0)"
+      },
+      "ruleModifications": "Same rules as standard chess, but with emphasis on clock management. Illegal moves may result in immediate loss in some rulesets."
+    },
+    {
+      "id": "bullet",
+      "name": "Bullet Chess",
+      "description": "Ultra-fast chess where each player has less than 3 minutes. The fastest mainstream variant.",
+      "timeControl": {
+        "initial": 60,
+        "increment": 0,
+        "unit": "seconds",
+        "description": "Typically 1 minute total per player (1+0), or 2 minutes (2+1)"
+      },
+      "ruleModifications": "Same rules as standard chess. Pre-moves are common. Extremely fast-paced."
+    },
+    {
+      "id": "rapid",
+      "name": "Rapid Chess",
+      "description": "A moderate time control where each player has 10-30 minutes for the entire game.",
+      "timeControl": {
+        "initial": 900,
+        "increment": 10,
+        "unit": "seconds",
+        "description": "Typically 15 minutes with 10-second increment (15+10), or 10 minutes (10+0)"
+      },
+      "ruleModifications": "Same rules as standard chess. More time for calculation than blitz but faster than classical."
+    },
+    {
+      "id": "classical",
+      "name": "Classical Chess",
+      "description": "Traditional long time control used in serious tournaments and world championships.",
+      "timeControl": {
+        "initial": 5400,
+        "increment": 30,
+        "unit": "seconds",
+        "description": "Typically 90 minutes for 40 moves, then 30 minutes for rest of game with 30-second increment. Can last 4-7 hours."
+      },
+      "ruleModifications": "Standard FIDE rules with strict adherence to touch-move rule, notation requirements, and arbiter oversight."
+    },
+    {
+      "id": "chess960",
+      "name": "Chess960 (Fischer Random Chess)",
+      "description": "A variant invented by Bobby Fischer where the starting position of pieces on the back rank is randomized following certain constraints. 960 possible starting positions.",
+      "ruleModifications": "Pieces on the back rank (except Pawns) are placed randomly with constraints: King must be between Rooks, Bishops on opposite colors. Castling rules modified to work from any starting position. Otherwise identical to standard chess."
+    },
+    {
+      "id": "armageddon",
+      "name": "Armageddon",
+      "description": "A decisive tiebreak format where White has more time but must win; Black only needs a draw to win the match.",
+      "timeControl": {
+        "white": 300,
+        "black": 240,
+        "unit": "seconds",
+        "description": "Typically 5 minutes for White, 4 minutes for Black"
+      },
+      "ruleModifications": "If the game ends in a draw, Black wins the match. Used as a final tiebreaker in tournaments when a decisive result is required."
+    },
+    {
+      "id": "three-check",
+      "name": "Three-Check Chess",
+      "description": "A player wins by checking the opponent's King three times, in addition to standard checkmate.",
+      "ruleModifications": "Standard chess rules plus additional win condition: giving check three times wins the game. Checks are counted even if the King moves. Popular online variant."
+    },
+    {
+      "id": "king-of-the-hill",
+      "name": "King of the Hill",
+      "description": "A player wins by moving their King to one of the four central squares (d4, d5, e4, e5) or by checkmate.",
+      "ruleModifications": "Standard chess rules plus additional win condition: if your King reaches d4, d5, e4, or e5, you win immediately. Encourages aggressive King play."
+    },
+    {
+      "id": "crazyhouse",
+      "name": "Crazyhouse",
+      "description": "Captured pieces can be dropped back onto the board on your turn instead of making a regular move. Inspired by Japanese shogi.",
+      "ruleModifications": "Standard chess rules with major addition: captured pieces change color and can be placed on any empty square as a move. Pawns cannot be dropped on the first or eighth rank. Extremely tactical and complex."
+    },
+    {
+      "id": "antichess",
+      "name": "Antichess (Losing Chess)",
+      "description": "The goal is to lose all your pieces or be stalemated. If you can capture, you must capture.",
+      "ruleModifications": "Capturing is mandatory. No check/checkmate. King is a normal piece. You win by losing all pieces or having no legal moves. Very different strategy from standard chess."
+    }
+  ],
+  "glossary": [
+    {
+      "term": "Check",
+      "definition": "A position where the King is under direct attack by an opponent's piece. The player in check must immediately escape by moving the King, blocking the attack, or capturing the attacking piece.",
+      "examples": [
+        "The Queen on d5 puts the King on e8 in check",
+        "After moving my Rook to e1, I announced 'check' to my opponent"
+      ]
+    },
+    {
+      "term": "Checkmate",
+      "definition": "A position where the King is in check and has no legal move to escape check. This ends the game with a win for the player delivering checkmate.",
+      "examples": [
+        "The back-rank checkmate: Queen on e8 with the King trapped by its own Pawns on f7, g7, h7",
+        "Scholar's Mate: Checkmate in four moves using Queen and Bishop"
+      ]
+    },
+    {
+      "term": "Stalemate",
+      "definition": "A position where a player has no legal moves and their King is not in check. This results in a draw.",
+      "examples": [
+        "King on a8, opponent's King on c7, opponent's Queen on b6 - Black has no legal moves but is not in check"
+      ]
+    },
+    {
+      "term": "Castling",
+      "definition": "A special move involving the King and one Rook, where the King moves two squares toward the Rook and the Rook jumps to the square the King crossed. Kingside castling (O-O) uses the h-file Rook; Queenside castling (O-O-O) uses the a-file Rook.",
+      "examples": [
+        "White castles kingside: King moves from e1 to g1, Rook from h1 to f1",
+        "Black castles queenside: King moves from e8 to c8, Rook from a8 to d8"
+      ]
+    },
+    {
+      "term": "En Passant",
+      "definition": "A special Pawn capture that can occur when an opponent's Pawn advances two squares from its starting position and lands beside your Pawn. You may capture it as if it had only moved one square, but only on your immediate next move.",
+      "examples": [
+        "White Pawn on e5, Black Pawn moves from d7 to d5. White can capture en passant by moving the e5 Pawn to d6 and removing the Black Pawn on d5"
+      ]
+    },
+    {
+      "term": "Pawn Promotion",
+      "definition": "When a Pawn reaches the opposite end of the board (8th rank for White, 1st rank for Black), it must be immediately replaced with a Queen, Rook, Bishop, or Knight of the same color.",
+      "examples": [
+        "White Pawn on h7 advances to h8 and is promoted to a Queen",
+        "Black Pawn on b2 advances to b1 and is promoted to a Knight (underpromotion)"
+      ]
+    },
+    {
+      "term": "Rank",
+      "definition": "A horizontal row on the chessboard, numbered 1-8. White's pieces start on ranks 1 and 2; Black's pieces start on ranks 7 and 8.",
+      "examples": [
+        "The first rank contains White's major pieces",
+        "A Pawn promotes when it reaches the 8th rank (for White) or 1st rank (for Black)"
+      ]
+    },
+    {
+      "term": "File",
+      "definition": "A vertical column on the chessboard, labeled a-h from left to right (from White's perspective).",
+      "examples": [
+        "The e-file often becomes an important avenue for Rooks in the middlegame",
+        "Castling kingside moves the King to the g-file"
+      ]
+    },
+    {
+      "term": "Diagonal",
+      "definition": "A line of squares of the same color running at a 45-degree angle across the board. Bishops move along diagonals.",
+      "examples": [
+        "The long diagonal from a1 to h8",
+        "A Bishop on c1 controls the a3-f8 diagonal"
+      ]
+    },
+    {
+      "term": "Pin",
+      "definition": "A tactic where a piece cannot move without exposing a more valuable piece (or the King) behind it to attack. An absolute pin is against the King; a relative pin is against another piece.",
+      "examples": [
+        "A Rook on e1 pins a Knight on e5 to the King on e8",
+        "A Bishop on b5 pins a Knight on c6 to the Queen on d7 (relative pin)"
+      ]
+    },
+    {
+      "term": "Fork",
+      "definition": "A tactic where one piece attacks two or more opponent pieces simultaneously. Knights are particularly effective at forking.",
+      "examples": [
+        "A Knight on d5 attacks both the King on e7 and the Rook on c7",
+        "A Queen on d4 forks the Rook on a4 and the Bishop on h8"
+      ]
+    },
+    {
+      "term": "Skewer",
+      "definition": "A tactic where a valuable piece is attacked and must move, exposing a less valuable piece behind it to capture. The opposite of a pin.",
+      "examples": [
+        "A Rook attacks the King on e8, which must move, allowing the Rook to capture the Rook on e1 behind it"
+      ]
+    },
+    {
+      "term": "Discovered Check",
+      "definition": "A check delivered by moving one piece out of the way, revealing a check from another piece behind it.",
+      "examples": [
+        "A Knight on e4 moves, revealing a check from the Bishop on c2 to the King on g6"
+      ]
+    },
+    {
+      "term": "Double Check",
+      "definition": "A position where two pieces simultaneously give check to the opponent's King. The only legal response is to move the King.",
+      "examples": [
+        "A Knight on f6 moves from e4 (giving check), revealing a check from the Rook on e1 to the King on e8"
+      ]
+    },
+    {
+      "term": "Zugzwang",
+      "definition": "A position where any move a player makes worsens their position. Having to move is a disadvantage.",
+      "examples": [
+        "In King and Pawn endgames, forcing the opponent to move can lead to zugzwang"
+      ]
+    },
+    {
+      "term": "Tempo",
+      "definition": "A unit of time measured in moves. Gaining a tempo means achieving in one move what would normally take two; losing a tempo means wasting time.",
+      "examples": [
+        "Attacking a piece and forcing it to move while developing your own pieces gains tempo",
+        "Moving the same piece twice in the opening without necessity loses tempo"
+      ]
+    },
+    {
+      "term": "Fianchetto",
+      "definition": "Developing a Bishop to b2 or g2 (for White) or b7 or g7 (for Black) after moving the respective Knight's Pawn one square. Common in hypermodern openings.",
+      "examples": [
+        "In the King's Indian Defense, Black fianchettoes the kingside Bishop to g7"
+      ]
+    },
+    {
+      "term": "Open File",
+      "definition": "A file with no Pawns on it. Rooks are most powerful on open files.",
+      "examples": [
+        "After trading Pawns on the d-file, both players try to control the open d-file with their Rooks"
+      ]
+    },
+    {
+      "term": "Passed Pawn",
+      "definition": "A Pawn with no opponent Pawns blocking or capable of capturing it on its path to promotion.",
+      "examples": [
+        "A White Pawn on e5 with no Black Pawns on the d, e, or f files ahead of it"
+      ]
+    },
+    {
+      "term": "Isolated Pawn",
+      "definition": "A Pawn with no friendly Pawns on adjacent files. Isolated Pawns are often weak because they cannot be defended by other Pawns.",
+      "examples": [
+        "A White Pawn on d4 with no White Pawns on the c or e files"
+      ]
+    },
+    {
+      "term": "Doubled Pawns",
+      "definition": "Two Pawns of the same color on the same file. Usually a weakness because they cannot defend each other.",
+      "examples": [
+        "White has Pawns on f2 and f3 after a piece capture on f3"
+      ]
+    },
+    {
+      "term": "Backward Pawn",
+      "definition": "A Pawn that is behind its neighboring Pawns and cannot advance safely.",
+      "examples": [
+        "A White Pawn on d3 with White Pawns on c4 and e4, and a Black Pawn on d5 controlling d4"
+      ]
+    },
+    {
+      "term": "Opposition",
+      "definition": "In King and Pawn endgames, Kings are in opposition when they face each other on the same file, rank, or diagonal with one square between them. Having the opposition is usually advantageous.",
+      "examples": [
+        "White King on e4, Black King on e6 - Black has the opposition"
+      ]
+    },
+    {
+      "term": "Perpetual Check",
+      "definition": "A situation where one player can keep checking the opponent's King indefinitely without delivering checkmate. This typically leads to a draw by threefold repetition.",
+      "examples": [
+        "A Queen repeatedly checks the King between two squares, and the King cannot escape the checks"
+      ]
+    },
+    {
+      "term": "Algebraic Notation",
+      "definition": "The standard method for recording chess moves. Each square is identified by a letter (a-h for files) and a number (1-8 for ranks). Pieces are denoted by letters: K (King), Q (Queen), R (Rook), B (Bishop), N (Knight). Pawns have no letter.",
+      "examples": [
+        "e4 means Pawn moves to e4",
+        "Nf3 means Knight moves to f3",
+        "Qxd5 means Queen captures on d5",
+        "O-O means kingside castling",
+        "e8=Q means Pawn promotes to Queen on e8"
+      ]
+    },
+    {
+      "term": "FEN (Forsyth-Edwards Notation)",
+      "definition": "A standard notation for describing a particular board position. It includes piece placement, active color, castling rights, en passant target, halfmove clock, and fullmove number.",
+      "examples": [
+        "Starting position: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "After 1.e4: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+      ]
+    },
+    {
+      "term": "PGN (Portable Game Notation)",
+      "definition": "A standard format for recording chess games, including metadata (players, date, result) and the sequence of moves in algebraic notation.",
+      "examples": [
+        "[Event \"World Championship\"]\n[White \"Carlsen\"]\n[Black \"Nepomniachtchi\"]\n1. e4 e5 2. Nf3 Nc6"
+      ]
+    },
+    {
+      "term": "Check Symbol (+)",
+      "definition": "In algebraic notation, a plus sign indicates that the move gives check to the opponent's King.",
+      "examples": [
+        "Qh5+ means Queen moves to h5 and gives check",
+        "Bb5+ means Bishop moves to b5 and gives check"
+      ]
+    },
+    {
+      "term": "Checkmate Symbol (#)",
+      "definition": "In algebraic notation, a hash/pound sign indicates that the move delivers checkmate, ending the game.",
+      "examples": [
+        "Qf7# means Queen moves to f7 and delivers checkmate",
+        "The game annotation ends with 1-0 or 0-1 depending on who won"
+      ]
+    },
+    {
+      "term": "Capture Notation (x)",
+      "definition": "In algebraic notation, an 'x' indicates a capture. It appears between the piece symbol and the destination square.",
+      "examples": [
+        "Nxe5 means Knight captures on e5",
+        "exd5 means Pawn on e-file captures on d5",
+        "Qxf7# means Queen captures on f7 delivering checkmate"
+      ]
+    }
+  ]
+}

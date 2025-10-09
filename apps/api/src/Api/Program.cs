@@ -119,6 +119,7 @@ builder.Services.AddSingleton<IQdrantService, QdrantService>();
 builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
 builder.Services.AddScoped<ILlmService, LlmService>();
 builder.Services.AddScoped<ITextChunkingService, TextChunkingService>();
+builder.Services.AddScoped<PdfIndexingService>();
 
 // AI-05: AI response caching
 builder.Services.AddSingleton<IAiResponseCacheService, AiResponseCacheService>();
@@ -1068,6 +1069,48 @@ app.MapPost("/ingest/pdf/{pdfId}/rulespec", async (string pdfId, HttpContext con
         logger.LogWarning(ex, "Unable to generate RuleSpec for PDF {PdfId}", pdfId);
         return Results.BadRequest(new { error = ex.Message });
     }
+});
+
+// AI-01: Index PDF for semantic search
+app.MapPost("/ingest/pdf/{pdfId}/index", async (string pdfId, HttpContext context, PdfIndexingService indexingService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        logger.LogWarning("User {UserId} with role {Role} attempted to index PDF without permission", session.User.id, session.User.role);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    logger.LogInformation("User {UserId} indexing PDF {PdfId}", session.User.id, pdfId);
+
+    var result = await indexingService.IndexPdfAsync(pdfId, ct);
+
+    if (!result.Success)
+    {
+        logger.LogWarning("PDF indexing failed for {PdfId}: {Error}", pdfId, result.ErrorMessage);
+
+        return result.ErrorCode switch
+        {
+            PdfIndexingErrorCode.PdfNotFound => Results.NotFound(new { error = result.ErrorMessage }),
+            PdfIndexingErrorCode.TextExtractionRequired => Results.BadRequest(new { error = result.ErrorMessage }),
+            _ => Results.BadRequest(new { error = result.ErrorMessage })
+        };
+    }
+
+    logger.LogInformation("PDF {PdfId} indexed successfully: {ChunkCount} chunks", pdfId, result.ChunkCount);
+
+    return Results.Json(new
+    {
+        success = true,
+        vectorDocumentId = result.VectorDocumentId,
+        chunkCount = result.ChunkCount,
+        indexedAt = result.IndexedAt
+    });
 });
 
 app.MapGet("/games/{gameId}/rulespec", async (string gameId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>

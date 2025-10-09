@@ -3,7 +3,11 @@
  *
  * This module provides reusable mock factories to reduce duplication
  * across upload test files (game-selection, pdf-upload, review-edit, edge-cases)
+ *
+ * REFACTORED: Now uses MockApiRouter for cleaner, more maintainable mocks
  */
+
+import { MockApiRouter, createJsonResponse, createErrorResponse } from '../utils/mock-api-router';
 
 export interface AuthMockOptions {
   userId?: string;
@@ -43,6 +47,9 @@ export interface RuleSpecMockOptions {
     line?: string | null;
   }>;
 }
+
+// Re-export response helpers for backward compatibility
+export { createJsonResponse, createErrorResponse };
 
 export interface UploadMocksConfig {
   auth?: ReturnType<typeof createAuthMock> | null;
@@ -146,31 +153,9 @@ export function createRuleSpecMock(options: RuleSpecMockOptions = {}) {
 }
 
 /**
- * Helper to create JSON response
- */
-export const createJsonResponse = (data: unknown, status = 200) =>
-  Promise.resolve({
-    ok: status >= 200 && status < 300,
-    status,
-    statusText: status >= 200 && status < 300 ? 'OK' : 'Error',
-    json: () => Promise.resolve(data)
-  } as Response);
-
-/**
- * Helper to create error response
- */
-export const createErrorResponse = (status: number, body: unknown = { error: 'Error' }, statusText?: string) =>
-  Promise.resolve({
-    ok: false,
-    status,
-    statusText:
-      statusText ??
-      (status === 401 ? 'Unauthorized' : status === 500 ? 'Internal Server Error' : 'Error'),
-    json: () => Promise.resolve(body)
-  } as Response);
-
-/**
  * Sets up a comprehensive fetch mock router for upload workflow tests
+ *
+ * REFACTORED: Now uses MockApiRouter for cleaner route management
  *
  * @param config Configuration object with mocks for different endpoints
  * @returns Mock fetch implementation function
@@ -193,90 +178,90 @@ export function setupUploadMocks(config: UploadMocksConfig = {}) {
     retryParseError
   } = config;
 
+  const router = new MockApiRouter();
+
+  // Auth endpoint
+  router.get('/auth/me', () => createJsonResponse(auth));
+
+  // Games endpoints
+  router.get('/games', () => createJsonResponse(games));
+
+  if (createGameError) {
+    router.post('/games', () =>
+      createErrorResponse(createGameError.status, { error: createGameError.error })
+    );
+  } else {
+    router.post('/games', () =>
+      createJsonResponse(createGameResponse ?? createGameMock({ id: 'game-new', name: 'New Game' }), 201)
+    );
+  }
+
+  // PDFs list for a game (using route parameters)
+  router.get('/games/:gameId/pdfs', () => createJsonResponse(pdfs));
+
+  // Upload PDF
+  if (uploadError) {
+    router.post('/ingest/pdf', () =>
+      createErrorResponse(uploadError.status, { error: uploadError.error })
+    );
+  } else {
+    router.post('/ingest/pdf', () => createJsonResponse(uploadResponse, 201));
+  }
+
+  // PDF status polling (stateful with closure)
   let statusIndex = 0;
-
-  return jest.fn((input: RequestInfo | URL, init?: RequestInit) => {
-    const url = typeof input === 'string' ? input : input.toString();
-    const method = init?.method ?? 'GET';
-
-    // Auth endpoint
-    if (url.endsWith('/auth/me')) {
-      return createJsonResponse(auth);
-    }
-
-    // Games list
-    if (url.endsWith('/games') && method === 'GET') {
-      return createJsonResponse(games);
-    }
-
-    // Create game
-    if (url.endsWith('/games') && method === 'POST') {
-      if (createGameError) {
-        return createErrorResponse(createGameError.status, { error: createGameError.error });
+  router.get('/pdfs/:documentId/text', ({ params }) => {
+    if (pdfStatusSequence.length > 0) {
+      const nextStatus = pdfStatusSequence[statusIndex] ?? pdfStatusSequence[pdfStatusSequence.length - 1];
+      if (statusIndex < pdfStatusSequence.length - 1) {
+        statusIndex++;
       }
-      return createJsonResponse(createGameResponse ?? createGameMock({ id: 'game-new', name: 'New Game' }));
-    }
-
-    // PDFs list for a game
-    if (url.includes('/games/') && url.includes('/pdfs') && method === 'GET') {
-      return createJsonResponse(pdfs);
-    }
-
-    // Upload PDF
-    if (url.endsWith('/ingest/pdf') && method === 'POST') {
-      if (uploadError) {
-        return createErrorResponse(uploadError.status, { error: uploadError.error });
-      }
-      return createJsonResponse(uploadResponse);
-    }
-
-    // PDF status polling
-    if (url.includes('/pdfs/') && url.endsWith('/text') && method === 'GET') {
-      if (pdfStatusSequence.length > 0) {
-        const nextStatus = pdfStatusSequence[statusIndex] ?? pdfStatusSequence[pdfStatusSequence.length - 1];
-        if (statusIndex < pdfStatusSequence.length - 1) {
-          statusIndex++;
-        }
-        return createJsonResponse({
-          id: uploadResponse.documentId,
-          fileName: uploadResponse.fileName ?? 'test.pdf',
-          processingStatus: nextStatus.processingStatus,
-          processingError: nextStatus.processingError ?? null
-        });
-      }
-      // Default: return completed status
       return createJsonResponse({
-        id: uploadResponse.documentId,
+        id: params.documentId,
         fileName: uploadResponse.fileName ?? 'test.pdf',
-        processingStatus: 'completed',
-        processingError: null
+        processingStatus: nextStatus.processingStatus,
+        processingError: nextStatus.processingError ?? null
       });
     }
+    // Default: return completed status
+    return createJsonResponse({
+      id: params.documentId,
+      fileName: uploadResponse.fileName ?? 'test.pdf',
+      processingStatus: 'completed',
+      processingError: null
+    });
+  });
 
-    // Get RuleSpec
-    if (url.includes('/games/') && url.endsWith('/rulespec') && method === 'GET') {
-      if (ruleSpecError) {
-        return createErrorResponse(ruleSpecError.status, ruleSpecError.error);
-      }
-      return createJsonResponse(ruleSpec);
-    }
+  // Get RuleSpec
+  if (ruleSpecError) {
+    router.get('/games/:gameId/rulespec', () =>
+      createErrorResponse(ruleSpecError.status, ruleSpecError.error)
+    );
+  } else {
+    router.get('/games/:gameId/rulespec', () => createJsonResponse(ruleSpec));
+  }
 
-    // Publish RuleSpec
-    if (url.includes('/games/') && url.endsWith('/rulespec') && method === 'PUT') {
-      if (publishRuleSpecError) {
-        return createErrorResponse(publishRuleSpecError.status, { error: publishRuleSpecError.error });
-      }
-      return createJsonResponse(publishRuleSpecResponse ?? ruleSpec);
-    }
+  // Publish RuleSpec
+  if (publishRuleSpecError) {
+    router.put('/games/:gameId/rulespec', () =>
+      createErrorResponse(publishRuleSpecError.status, { error: publishRuleSpecError.error })
+    );
+  } else {
+    router.put('/games/:gameId/rulespec', () =>
+      createJsonResponse(publishRuleSpecResponse ?? ruleSpec)
+    );
+  }
 
-    // Retry parse
-    if (url.includes('/ingest/pdf/') && url.endsWith('/retry') && method === 'POST') {
-      if (retryParseError) {
-        return createErrorResponse(retryParseError.status, { error: retryParseError.error });
-      }
-      return createJsonResponse(retryParseResponse ?? { success: true });
-    }
+  // Retry parse
+  if (retryParseError) {
+    router.post('/ingest/pdf/:documentId/retry', () =>
+      createErrorResponse(retryParseError.status, { error: retryParseError.error })
+    );
+  } else {
+    router.post('/ingest/pdf/:documentId/retry', () =>
+      createJsonResponse(retryParseResponse ?? { success: true })
+    );
+  }
 
-    throw new Error(`Unexpected fetch call to ${url} with method ${method}`);
-  }) as jest.MockedFunction<typeof fetch>;
+  return jest.fn(router.toMockImplementation()) as jest.MockedFunction<typeof fetch>;
 }

@@ -108,56 +108,53 @@ public class ChessDatasetTests
         Assert.Contains(openingNames, name => name.Contains("sicilian"));
     }
 
-    [Fact]
-    public async Task Openings_EachOpeningShouldHaveCompleteMetadata()
+    /// <summary>
+    /// Data-driven test: Tests each opening individually for precise error reporting
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(GetAllOpenings))]
+    public void Opening_ShouldHaveCompleteMetadata(ChessOpening opening)
     {
-        // Given: The openings dataset is loaded
-        var openings = await LoadOpeningsDataset();
-
-        // Then: Each opening should have required fields
-        foreach (var opening in openings)
-        {
-            Assert.False(string.IsNullOrWhiteSpace(opening.id),
-                $"Opening '{opening.name}' missing id");
-            Assert.False(string.IsNullOrWhiteSpace(opening.name),
-                "Opening missing name");
-            Assert.False(string.IsNullOrWhiteSpace(opening.description),
-                $"Opening '{opening.name}' missing description");
-            Assert.False(string.IsNullOrWhiteSpace(opening.pgn),
-                $"Opening '{opening.name}' missing PGN moves");
-            Assert.False(string.IsNullOrWhiteSpace(opening.fen),
-                $"Opening '{opening.name}' missing FEN position");
-            Assert.False(string.IsNullOrWhiteSpace(opening.strategy),
-                $"Opening '{opening.name}' missing strategy description");
-        }
+        // Given: An individual opening from the dataset
+        // Then: It should have all required metadata fields populated
+        Assert.False(string.IsNullOrWhiteSpace(opening.id),
+            $"Opening '{opening.name}' (id: {opening.id}) missing id");
+        Assert.False(string.IsNullOrWhiteSpace(opening.name),
+            $"Opening (id: {opening.id}) missing name");
+        Assert.False(string.IsNullOrWhiteSpace(opening.description),
+            $"Opening '{opening.name}' (id: {opening.id}) missing description");
+        Assert.False(string.IsNullOrWhiteSpace(opening.pgn),
+            $"Opening '{opening.name}' (id: {opening.id}) missing PGN moves");
+        Assert.False(string.IsNullOrWhiteSpace(opening.fen),
+            $"Opening '{opening.name}' (id: {opening.id}) missing FEN position");
+        Assert.False(string.IsNullOrWhiteSpace(opening.strategy),
+            $"Opening '{opening.name}' (id: {opening.id}) missing strategy description");
     }
 
-    [Fact]
-    public async Task Openings_PgnShouldBeValid()
+    /// <summary>
+    /// Data-driven test: Validates PGN format for each opening
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(GetAllOpenings))]
+    public void Opening_PgnShouldBeValid(ChessOpening opening)
     {
-        // Given: The openings dataset is loaded
-        var openings = await LoadOpeningsDataset();
-
-        // Then: All PGN notation should be syntactically valid
-        foreach (var opening in openings)
-        {
-            Assert.Matches(@"^[1-9]\.", opening.pgn);
-        }
+        // Given: An individual opening from the dataset
+        // Then: Its PGN notation should be syntactically valid (start with move number)
+        Assert.Matches(@"^[1-9]\.", opening.pgn);
     }
 
-    [Fact]
-    public async Task Openings_FenShouldBeValid()
+    /// <summary>
+    /// Data-driven test: Validates FEN format for each opening
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(GetAllOpenings))]
+    public void Opening_FenShouldBeValid(ChessOpening opening)
     {
-        // Given: The openings dataset is loaded
-        var openings = await LoadOpeningsDataset();
-
-        // Then: All FEN strings should be syntactically valid (8 parts separated by spaces)
-        foreach (var opening in openings)
-        {
-            var fenParts = opening.fen.Split(' ');
-            Assert.True(fenParts.Length == 6,
-                $"Opening '{opening.name}' has invalid FEN format (expected 6 parts): {opening.fen}");
-        }
+        // Given: An individual opening from the dataset
+        // Then: Its FEN string should be syntactically valid (6 parts separated by spaces)
+        var fenParts = opening.fen.Split(' ');
+        Assert.True(fenParts.Length == 6,
+            $"Opening '{opening.name}' (id: {opening.id}) has invalid FEN format (expected 6 parts, found {fenParts.Length}): {opening.fen}");
     }
 
     [Fact]
@@ -234,64 +231,55 @@ public class ChessDatasetTests
         Assert.Contains(tacticNames, name => name.Contains("discovered") || name.Contains("scoperta"));
     }
 
-    [Fact]
-    public async Task Tactics_EachTacticShouldHavePositionExamples()
+    /// <summary>
+    /// Data-driven test: Tests each tactic individually for complete metadata
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(GetAllTactics))]
+    public void Tactic_ShouldHaveCompleteMetadata(ChessTactic tactic)
     {
-        // Given: The tactics dataset is loaded
-        var tactics = await LoadTacticsDataset();
-
-        // Then: Each tactic should have at least 1 position example
-        foreach (var tactic in tactics)
-        {
-            Assert.False(string.IsNullOrWhiteSpace(tactic.id),
-                $"Tactic '{tactic.name}' missing id");
-            Assert.False(string.IsNullOrWhiteSpace(tactic.name),
-                "Tactic missing name");
-            Assert.False(string.IsNullOrWhiteSpace(tactic.description),
-                $"Tactic '{tactic.name}' missing description");
-            Assert.NotNull(tactic.examples);
-            Assert.NotEmpty(tactic.examples);
-        }
+        // Given: An individual tactic from the dataset
+        // Then: It should have all required metadata fields and at least 1 example
+        Assert.False(string.IsNullOrWhiteSpace(tactic.id),
+            $"Tactic '{tactic.name}' (id: {tactic.id}) missing id");
+        Assert.False(string.IsNullOrWhiteSpace(tactic.name),
+            $"Tactic (id: {tactic.id}) missing name");
+        Assert.False(string.IsNullOrWhiteSpace(tactic.description),
+            $"Tactic '{tactic.name}' (id: {tactic.id}) missing description");
+        Assert.NotNull(tactic.examples);
+        Assert.NotEmpty(tactic.examples);
     }
 
-    [Fact]
-    public async Task Tactics_PositionExamplesShouldHaveValidFen()
+    /// <summary>
+    /// Data-driven test: Tests each tactical position example individually for valid FEN
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(GetAllTacticalPositions))]
+    public void TacticalPosition_FenShouldBeValid(string tacticName, string tacticId, TacticalPosition example)
     {
-        // Given: The tactics dataset is loaded
-        var tactics = await LoadTacticsDataset();
+        // Given: An individual tactical position example
+        // Then: It should have a valid FEN notation (6 parts separated by spaces)
+        Assert.False(string.IsNullOrWhiteSpace(example.fen),
+            $"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' missing FEN");
 
-        // Then: All position examples should have valid FEN notation
-        foreach (var tactic in tactics)
-        {
-            foreach (var example in tactic.examples)
-            {
-                Assert.False(string.IsNullOrWhiteSpace(example.fen),
-                    $"Tactic '{tactic.name}' example '{example.id}' missing FEN");
-
-                var fenParts = example.fen.Split(' ');
-                Assert.True(fenParts.Length == 6,
-                    $"Tactic '{tactic.name}' example '{example.id}' has invalid FEN: {example.fen}");
-            }
-        }
+        var fenParts = example.fen.Split(' ');
+        Assert.True(fenParts.Length == 6,
+            $"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' has invalid FEN (expected 6 parts, found {fenParts.Length}): {example.fen}");
     }
 
-    [Fact]
-    public async Task Tactics_ExamplesShouldHaveSolutions()
+    /// <summary>
+    /// Data-driven test: Tests each tactical position example for complete solution data
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(GetAllTacticalPositions))]
+    public void TacticalPosition_ShouldHaveCompleteSolution(string tacticName, string tacticId, TacticalPosition example)
     {
-        // Given: The tactics dataset is loaded
-        var tactics = await LoadTacticsDataset();
-
-        // Then: Each position example should have a solution move
-        foreach (var tactic in tactics)
-        {
-            foreach (var example in tactic.examples)
-            {
-                Assert.False(string.IsNullOrWhiteSpace(example.solution),
-                    $"Tactic '{tactic.name}' example '{example.id}' missing solution");
-                Assert.False(string.IsNullOrWhiteSpace(example.explanation),
-                    $"Tactic '{tactic.name}' example '{example.id}' missing explanation");
-            }
-        }
+        // Given: An individual tactical position example
+        // Then: It should have both solution move and explanation
+        Assert.False(string.IsNullOrWhiteSpace(example.solution),
+            $"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' missing solution");
+        Assert.False(string.IsNullOrWhiteSpace(example.explanation),
+            $"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' missing explanation");
     }
 
     [Fact]
@@ -315,7 +303,95 @@ public class ChessDatasetTests
 
     #region Helper Methods
 
+    /// <summary>
+    /// MemberData provider: Returns all openings for data-driven tests
+    /// </summary>
+    public static IEnumerable<object[]> GetAllOpenings()
+    {
+        var openings = LoadOpeningsDatasetSync();
+        return openings.Select(opening => new object[] { opening });
+    }
+
+    /// <summary>
+    /// MemberData provider: Returns all tactics for data-driven tests
+    /// </summary>
+    public static IEnumerable<object[]> GetAllTactics()
+    {
+        var tactics = LoadTacticsDatasetSync();
+        return tactics.Select(tactic => new object[] { tactic });
+    }
+
+    /// <summary>
+    /// MemberData provider: Returns all tactical position examples for data-driven tests
+    /// Each item includes: tactic name, tactic id, and the example position
+    /// </summary>
+    public static IEnumerable<object[]> GetAllTacticalPositions()
+    {
+        var tactics = LoadTacticsDatasetSync();
+        var positions = new List<object[]>();
+
+        foreach (var tactic in tactics)
+        {
+            foreach (var example in tactic.examples)
+            {
+                positions.Add(new object[] { tactic.name, tactic.id, example });
+            }
+        }
+
+        return positions;
+    }
+
     private string FindProjectRoot()
+    {
+        var directory = Directory.GetCurrentDirectory();
+        while (directory != null)
+        {
+            if (Directory.Exists(Path.Combine(directory, "schemas")))
+            {
+                return directory;
+            }
+            directory = Directory.GetParent(directory)?.FullName;
+        }
+        throw new DirectoryNotFoundException("Could not find project root (schemas directory)");
+    }
+
+    private static List<ChessOpening> LoadOpeningsDatasetSync()
+    {
+        var projectRoot = FindProjectRootSync();
+        var openingsPath = Path.Combine(projectRoot, "schemas", "chess-data", "openings.json");
+        if (!File.Exists(openingsPath))
+        {
+            throw new FileNotFoundException($"Openings dataset not found at {openingsPath}");
+        }
+
+        var json = File.ReadAllText(openingsPath);
+        var openings = JsonSerializer.Deserialize<List<ChessOpening>>(json, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        return openings ?? throw new InvalidOperationException("Failed to deserialize openings dataset");
+    }
+
+    private static List<ChessTactic> LoadTacticsDatasetSync()
+    {
+        var projectRoot = FindProjectRootSync();
+        var tacticsPath = Path.Combine(projectRoot, "schemas", "chess-data", "tactics.json");
+        if (!File.Exists(tacticsPath))
+        {
+            throw new FileNotFoundException($"Tactics dataset not found at {tacticsPath}");
+        }
+
+        var json = File.ReadAllText(tacticsPath);
+        var tactics = JsonSerializer.Deserialize<List<ChessTactic>>(json, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        });
+
+        return tactics ?? throw new InvalidOperationException("Failed to deserialize tactics dataset");
+    }
+
+    private static string FindProjectRootSync()
     {
         var directory = Directory.GetCurrentDirectory();
         while (directory != null)

@@ -35,6 +35,8 @@ const customJestConfig = {
     '/e2e/',
     '/.next/',
     '/__tests__/fixtures/',
+    '/__tests__/utils/mock-api-router\\.ts$',
+    '/__tests__/utils/mock-api-presets\\.ts$',
   ],
 }
 

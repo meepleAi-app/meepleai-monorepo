@@ -6,8 +6,31 @@ namespace Api.Tests;
 /// <summary>
 /// Integration tests for QdrantService using real Qdrant container
 /// </summary>
-public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
+public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase, IAsyncLifetime
 {
+    private readonly List<string> _createdPdfIds = new();
+
+    async Task IAsyncLifetime.InitializeAsync()
+    {
+        // Call base class initialization to set up QdrantService
+        await base.InitializeAsync();
+    }
+
+    async Task IAsyncLifetime.DisposeAsync()
+    {
+        // Cleanup all created documents
+        if (QdrantService != null)
+        {
+            foreach (var pdfId in _createdPdfIds)
+            {
+                await QdrantService.DeleteDocumentAsync(pdfId);
+            }
+        }
+
+        // Call base class cleanup
+        await base.DisposeAsync();
+    }
+
     [Fact]
     public async Task EnsureCollectionExistsAsync_WhenCollectionDoesNotExist_CreatesCollection()
     {
@@ -24,6 +47,9 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
     public async Task IndexDocumentChunksAsync_WithValidChunks_IndexesSuccessfully()
     {
         // Arrange
+        var pdfId = $"test-pdf-{Guid.NewGuid():N}";
+        _createdPdfIds.Add(pdfId);
+
         var embedding1 = CreateRandomEmbedding();
         var embedding2 = CreateRandomEmbedding();
 
@@ -50,7 +76,7 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
         // Act
         var result = await QdrantService.IndexDocumentChunksAsync(
             gameId: "test-game",
-            pdfId: "test-pdf-1",
+            pdfId: pdfId,
             chunks: chunks);
 
         // Assert
@@ -63,6 +89,9 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
     public async Task SearchAsync_AfterIndexing_ReturnsRelevantResults()
     {
         // Arrange - Index some chunks first
+        var pdfId = $"pdf-search-{Guid.NewGuid():N}";
+        _createdPdfIds.Add(pdfId);
+
         var embedding = CreateRandomEmbedding();
         var chunks = new List<DocumentChunk>
         {
@@ -78,7 +107,7 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
 
         await QdrantService.IndexDocumentChunksAsync(
             gameId: "game-search",
-            pdfId: "pdf-search-1",
+            pdfId: pdfId,
             chunks: chunks);
 
         // Act - Search with similar embedding
@@ -93,13 +122,16 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
         Assert.NotEmpty(searchResult.Results);
         Assert.Contains(searchResult.Results, r => r.Text.Contains("victory points"));
         Assert.Equal(5, searchResult.Results[0].Page);
-        Assert.Equal("pdf-search-1", searchResult.Results[0].PdfId);
+        Assert.Equal(pdfId, searchResult.Results[0].PdfId);
     }
 
     [Fact]
     public async Task SearchAsync_WithoutTenantFilter_ReturnsResults()
     {
         // Arrange - Index chunks for one game (tenancy is global)
+        var pdfId = $"pdf-shared-{Guid.NewGuid():N}";
+        _createdPdfIds.Add(pdfId);
+
         var embedding = CreateRandomEmbedding();
         var chunks = new List<DocumentChunk>
         {
@@ -115,7 +147,7 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
 
         await QdrantService.IndexDocumentChunksAsync(
             gameId: "game-1",
-            pdfId: "pdf-shared-test",
+            pdfId: pdfId,
             chunks: chunks);
 
         // Act - Search
@@ -133,6 +165,9 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
     public async Task SearchAsync_WithDifferentGame_ReturnsNoResults()
     {
         // Arrange - Index chunks for one game
+        var pdfId = $"pdf-game-{Guid.NewGuid():N}";
+        _createdPdfIds.Add(pdfId);
+
         var embedding = CreateRandomEmbedding();
         var chunks = new List<DocumentChunk>
         {
@@ -148,7 +183,7 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
 
         await QdrantService.IndexDocumentChunksAsync(
             gameId: "chess",
-            pdfId: "pdf-game-test",
+            pdfId: pdfId,
             chunks: chunks);
 
         // Act - Search with different game
@@ -166,6 +201,9 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
     public async Task DeleteDocumentAsync_AfterIndexing_RemovesDocument()
     {
         // Arrange - Index chunks
+        var pdfId = $"pdf-delete-{Guid.NewGuid():N}";
+        _createdPdfIds.Add(pdfId);
+
         var embedding = CreateRandomEmbedding();
         var chunks = new List<DocumentChunk>
         {
@@ -179,7 +217,6 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
             }
         };
 
-        const string pdfId = "pdf-to-delete";
         await QdrantService.IndexDocumentChunksAsync(
             gameId: "game-delete",
             pdfId: pdfId,
@@ -210,6 +247,9 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
     public async Task IndexDocumentChunksAsync_WithMultiplePages_IndexesCorrectly()
     {
         // Arrange
+        var pdfId = $"pdf-multipage-{Guid.NewGuid():N}";
+        _createdPdfIds.Add(pdfId);
+
         var chunks = new List<DocumentChunk>();
         for (int page = 1; page <= 3; page++)
         {
@@ -229,7 +269,7 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
         // Act
         var result = await QdrantService.IndexDocumentChunksAsync(
             gameId: "game-multipage",
-            pdfId: "pdf-multipage",
+            pdfId: pdfId,
             chunks: chunks);
 
         // Assert
@@ -250,6 +290,9 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
     public async Task SearchAsync_WithLimitParameter_RespectsLimit()
     {
         // Arrange - Index 10 chunks
+        var pdfId = $"pdf-limit-{Guid.NewGuid():N}";
+        _createdPdfIds.Add(pdfId);
+
         var chunks = new List<DocumentChunk>();
         var baseEmbedding = CreateRandomEmbedding();
 
@@ -267,7 +310,7 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase
 
         await QdrantService.IndexDocumentChunksAsync(
             gameId: "game-limit",
-            pdfId: "pdf-limit",
+            pdfId: pdfId,
             chunks: chunks);
 
         // Act - Search with limit of 3

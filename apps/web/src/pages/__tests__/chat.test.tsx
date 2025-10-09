@@ -84,6 +84,14 @@ const mockChatWithHistory = {
   ]
 };
 
+// Helper function to setup complete authenticated state with full data
+const setupAuthenticatedState = () => {
+  mockApi.get.mockResolvedValueOnce(mockAuthResponse);
+  mockApi.get.mockResolvedValueOnce(mockGames);
+  mockApi.get.mockResolvedValueOnce(mockAgents);
+  mockApi.get.mockResolvedValueOnce(mockChats);
+};
+
 describe('ChatPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -124,8 +132,7 @@ describe('ChatPage', () => {
     });
 
     it('shows authenticated interface when user is logged in', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
+      setupAuthenticatedState();
 
       render(<ChatPage />);
 
@@ -155,8 +162,7 @@ describe('ChatPage', () => {
 
   describe('Data Loading', () => {
     it('loads games after authentication', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
+      setupAuthenticatedState();
 
       render(<ChatPage />);
 
@@ -168,10 +174,7 @@ describe('ChatPage', () => {
     });
 
     it('auto-selects first game when games are loaded', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
 
       render(<ChatPage />);
 
@@ -182,10 +185,7 @@ describe('ChatPage', () => {
     });
 
     it('loads agents when game is selected', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
 
       render(<ChatPage />);
 
@@ -197,10 +197,7 @@ describe('ChatPage', () => {
     });
 
     it('auto-selects first agent when agents are loaded', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
 
       render(<ChatPage />);
 
@@ -211,17 +208,17 @@ describe('ChatPage', () => {
     });
 
     it('loads chats filtered by selected game', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
 
       render(<ChatPage />);
 
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
 
-      expect(screen.getByText('Chess Expert')).toBeInTheDocument();
-      expect(screen.getByText('Chess Helper')).toBeInTheDocument();
+      // Both chats should appear in the sidebar
+      const chessExpertChats = screen.getAllByText('Chess Expert');
+      const chessHelperChats = screen.getAllByText('Chess Helper');
+      expect(chessExpertChats.length).toBeGreaterThan(0);
+      expect(chessHelperChats.length).toBeGreaterThan(0);
     });
 
     it('shows loading indicator while loading games', async () => {
@@ -294,6 +291,7 @@ describe('ChatPage', () => {
       mockApi.get.mockResolvedValueOnce(mockAuthResponse);
       mockApi.get.mockResolvedValueOnce(mockGames);
       mockApi.get.mockRejectedValueOnce(new Error('Agents API failed'));
+      mockApi.get.mockResolvedValueOnce([]); // chats still loads after agents error
 
       render(<ChatPage />);
 
@@ -330,10 +328,7 @@ describe('ChatPage', () => {
 
   describe('Game and Agent Selection', () => {
     it('allows changing game selection', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
 
       render(<ChatPage />);
 
@@ -356,10 +351,7 @@ describe('ChatPage', () => {
     });
 
     it('reloads agents when game changes', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
 
       render(<ChatPage />);
 
@@ -382,10 +374,7 @@ describe('ChatPage', () => {
     });
 
     it('clears active chat when game changes', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
 
       render(<ChatPage />);
 
@@ -414,10 +403,7 @@ describe('ChatPage', () => {
     });
 
     it('allows changing agent selection', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
 
       render(<ChatPage />);
 
@@ -432,8 +418,7 @@ describe('ChatPage', () => {
     });
 
     it('disables agent selector when no game is selected', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
+      setupAuthenticatedState();
 
       render(<ChatPage />);
 
@@ -457,10 +442,7 @@ describe('ChatPage', () => {
   describe('Chat Management', () => {
     describe('Creating New Chat', () => {
       it('creates new chat when "Nuova Chat" button is clicked', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
 
         const newChat = {
           id: 'chat-3',
@@ -495,8 +477,7 @@ describe('ChatPage', () => {
       });
 
       it('disables "Nuova Chat" button when no game is selected', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
+        setupAuthenticatedState();
 
         render(<ChatPage />);
 
@@ -512,10 +493,7 @@ describe('ChatPage', () => {
       });
 
       it('disables "Nuova Chat" button when no agent is selected', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
 
         render(<ChatPage />);
 
@@ -531,10 +509,7 @@ describe('ChatPage', () => {
       });
 
       it('shows loading state while creating chat', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
         mockApi.post.mockImplementation(() => new Promise(() => {})); // Never resolves
 
         render(<ChatPage />);
@@ -553,10 +528,7 @@ describe('ChatPage', () => {
 
       it('handles chat creation error gracefully', async () => {
         const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
         mockApi.post.mockRejectedValueOnce(new Error('Chat creation failed'));
 
         render(<ChatPage />);
@@ -578,10 +550,7 @@ describe('ChatPage', () => {
 
     describe('Loading Existing Chat', () => {
       it('loads chat history when chat is clicked', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
 
         render(<ChatPage />);
 
@@ -602,10 +571,7 @@ describe('ChatPage', () => {
       });
 
       it('shows loading indicator while loading chat history', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
 
         render(<ChatPage />);
 
@@ -623,10 +589,7 @@ describe('ChatPage', () => {
       });
 
       it('converts backend messages to frontend format correctly', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
         mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
         render(<ChatPage />);
@@ -649,10 +612,7 @@ describe('ChatPage', () => {
 
       it('handles malformed metadata JSON gracefully', async () => {
         const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
 
         const chatWithBadMetadata = {
           ...mockChatWithHistory,
@@ -688,10 +648,7 @@ describe('ChatPage', () => {
       });
 
       it('synchronizes game and agent selection with loaded chat', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
 
         render(<ChatPage />);
 
@@ -722,10 +679,7 @@ describe('ChatPage', () => {
 
       it('handles chat history loading error gracefully', async () => {
         const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
         mockApi.get.mockRejectedValueOnce(new Error('Chat history failed'));
 
         render(<ChatPage />);
@@ -748,10 +702,7 @@ describe('ChatPage', () => {
       it('deletes chat when delete button is clicked and confirmed', async () => {
         window.confirm = jest.fn(() => true);
 
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
         mockApi.delete.mockResolvedValueOnce(undefined);
 
         render(<ChatPage />);
@@ -779,10 +730,7 @@ describe('ChatPage', () => {
       it('does not delete chat when user cancels confirmation', async () => {
         window.confirm = jest.fn(() => false);
 
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
 
         render(<ChatPage />);
 
@@ -800,10 +748,7 @@ describe('ChatPage', () => {
       it('clears active chat when deleting the currently active chat', async () => {
         window.confirm = jest.fn(() => true);
 
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
         mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
         mockApi.delete.mockResolvedValueOnce(undefined);
 
@@ -839,10 +784,7 @@ describe('ChatPage', () => {
         const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
         window.confirm = jest.fn(() => true);
 
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
         mockApi.delete.mockRejectedValueOnce(new Error('Delete failed'));
 
         render(<ChatPage />);
@@ -864,10 +806,7 @@ describe('ChatPage', () => {
       it('stops click propagation on delete button to prevent loading chat', async () => {
         window.confirm = jest.fn(() => true);
 
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
         mockApi.delete.mockResolvedValueOnce(undefined);
 
         render(<ChatPage />);
@@ -894,10 +833,7 @@ describe('ChatPage', () => {
   describe('Messaging', () => {
     describe('Sending Messages', () => {
       it('sends message with chatId when chat is active', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
         mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
         render(<ChatPage />);
@@ -988,10 +924,7 @@ describe('ChatPage', () => {
       });
 
       it('displays user message immediately and assistant response after API call', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
         mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
         render(<ChatPage />);
@@ -1030,10 +963,7 @@ describe('ChatPage', () => {
       });
 
       it('clears input after sending message', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
         mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
         render(<ChatPage />);
@@ -1069,10 +999,7 @@ describe('ChatPage', () => {
       });
 
       it('shows loading indicator while sending message', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
         mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
         render(<ChatPage />);
@@ -1105,8 +1032,7 @@ describe('ChatPage', () => {
       });
 
       it('disables send button when no game is selected', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
+        setupAuthenticatedState();
 
         render(<ChatPage />);
 
@@ -1122,10 +1048,7 @@ describe('ChatPage', () => {
       });
 
       it('disables send button when no agent is selected', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
 
         render(<ChatPage />);
 
@@ -1144,10 +1067,7 @@ describe('ChatPage', () => {
       });
 
       it('disables send button when input is empty', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
 
         render(<ChatPage />);
 
@@ -1158,10 +1078,7 @@ describe('ChatPage', () => {
       });
 
       it('disables send button when input contains only whitespace', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
 
         render(<ChatPage />);
 
@@ -1177,10 +1094,7 @@ describe('ChatPage', () => {
       });
 
       it('does not send message when input is whitespace only', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
 
         render(<ChatPage />);
 
@@ -1199,10 +1113,7 @@ describe('ChatPage', () => {
 
       it('removes user message when message sending fails', async () => {
         const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
         mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
         render(<ChatPage />);
@@ -1272,10 +1183,7 @@ describe('ChatPage', () => {
       });
 
       it('updates chat lastMessageAt timestamp after sending message', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
         mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
         render(<ChatPage />);
@@ -1315,10 +1223,7 @@ describe('ChatPage', () => {
 
     describe('Displaying Messages', () => {
       it('displays snippets with page numbers', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
         mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
         render(<ChatPage />);
@@ -1357,10 +1262,7 @@ describe('ChatPage', () => {
       });
 
       it('displays snippets without page numbers when page is null', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
         mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
         render(<ChatPage />);
@@ -1443,10 +1345,7 @@ describe('ChatPage', () => {
       });
 
       it('displays message timestamps', async () => {
-        mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-        mockApi.get.mockResolvedValueOnce(mockGames);
-        mockApi.get.mockResolvedValueOnce(mockAgents);
-        mockApi.get.mockResolvedValueOnce(mockChats);
+        setupAuthenticatedState();
         mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
         render(<ChatPage />);
@@ -1476,10 +1375,7 @@ describe('ChatPage', () => {
 
   describe('Feedback', () => {
     it('submits helpful feedback when thumbs up is clicked', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
       mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
       render(<ChatPage />);
@@ -1513,10 +1409,7 @@ describe('ChatPage', () => {
     });
 
     it('submits not-helpful feedback when thumbs down is clicked', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
       mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
       render(<ChatPage />);
@@ -1550,10 +1443,7 @@ describe('ChatPage', () => {
     });
 
     it('toggles feedback to null when clicking same button twice', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
       mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
       render(<ChatPage />);
@@ -1603,10 +1493,7 @@ describe('ChatPage', () => {
     });
 
     it('changes feedback when switching between helpful and not-helpful', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
       mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
       render(<ChatPage />);
@@ -1650,10 +1537,7 @@ describe('ChatPage', () => {
 
     it('reverts feedback state when API call fails', async () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
       mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
       render(<ChatPage />);
@@ -1686,10 +1570,7 @@ describe('ChatPage', () => {
     });
 
     it('uses backend message ID for feedback when available', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
       mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
       render(<ChatPage />);
@@ -1720,10 +1601,7 @@ describe('ChatPage', () => {
     });
 
     it('only shows feedback buttons for assistant messages', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
       mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
       render(<ChatPage />);
@@ -1756,10 +1634,7 @@ describe('ChatPage', () => {
 
   describe('UI Interactions', () => {
     it('toggles sidebar when collapse button is clicked', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
 
       render(<ChatPage />);
 
@@ -1775,10 +1650,7 @@ describe('ChatPage', () => {
     });
 
     it('shows game name in header when game is selected', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
 
       render(<ChatPage />);
 
@@ -1788,10 +1660,7 @@ describe('ChatPage', () => {
     });
 
     it('shows agent name in header when chat is active', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
       mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
       render(<ChatPage />);
@@ -1823,10 +1692,7 @@ describe('ChatPage', () => {
     });
 
     it('highlights active chat in sidebar', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
       mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
       render(<ChatPage />);
@@ -1850,10 +1716,7 @@ describe('ChatPage', () => {
     });
 
     it('formats chat preview with date and time', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
 
       render(<ChatPage />);
 
@@ -1957,10 +1820,7 @@ describe('ChatPage', () => {
     });
 
     it('handles QA response without messageId', async () => {
-      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
-      mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
-      mockApi.get.mockResolvedValueOnce(mockChats);
+      setupAuthenticatedState();
       mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
       render(<ChatPage />);

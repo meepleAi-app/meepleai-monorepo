@@ -1,0 +1,42 @@
+---
+name: Bug Report
+about: Segnala un problema o comportamento inatteso
+title: '[BUG] '
+labels: bug, needs-triage
+---
+
+## Descrizione
+Breve descrizione del bug
+
+## Steps to Reproduce
+1. Vai a '...'
+2. Clicca su '...'
+3. Vedi errore
+
+## Comportamento Atteso
+Cosa dovrebbe accadere
+
+## Comportamento Attuale
+Cosa accade invece
+
+## Scenario BDD
+Given [contesto]
+When [azione]
+Then [dovrebbe] ma [accade invece]
+
+## Ambiente
+- OS: [Windows/Mac/Linux]
+- Browser: [Chrome/Firefox/Safari]
+- Versione: [es. v1.2.3]
+
+## Screenshot/Logs
+Se applicabile
+
+## Possibile Soluzione
+Se hai idee
+
+## Priorità Suggerita
+- [ ] Critical - Blocca utenti
+- [ ] High - Impatta feature chiave
+- [ ] Medium - Bug minore
+- [ ] Low - Estetico/edge case

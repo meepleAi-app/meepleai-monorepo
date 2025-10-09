@@ -441,3 +441,9 @@ apps/web/.next/
 
 # TypeScript incremental build info
 *.tsbuildinfo
+
+# Test output files
+test-output.txt
+
+# Temporary web directory in wrong location
+apps/api/web/

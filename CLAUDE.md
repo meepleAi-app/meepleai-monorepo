@@ -213,6 +213,23 @@ The API follows a service-oriented architecture with dependency injection config
 
 **Migrations**: Auto-applied on startup via `Program.cs:184` unless in test mode
 
+**Demo Seed Data** (DB-02): The database includes demo seed data that is automatically populated on startup:
+- **Demo Users** (password: `Demo123!`):
+  - `admin@meepleai.dev` - Admin role
+  - `editor@meepleai.dev` - Editor role
+  - `user@meepleai.dev` - User role
+- **Demo Games**:
+  - Tic-Tac-Toe (ID: `tic-tac-toe`)
+  - Chess (ID: `chess`)
+- **Demo Rule Specs**: v1.0 for each game
+- **Demo Agents**: Explain and Q&A agents for each game
+
+The seed data migration is idempotent and uses `WHERE NOT EXISTS` clauses to prevent duplicate insertion. Seed data is applied through:
+- **Production/Docker**: EF Core migration `20251009140700_SeedDemoData`
+- **Test Environment**: Programmatic seeding in `WebApplicationFactoryFixture.SeedDemoData()`
+
+**Tests**: See `apps/api/tests/Api.Tests/SeedDataTests.cs` for comprehensive seed data validation tests.
+
 ### Frontend Architecture
 
 **Framework**: Next.js 14 with Pages Router

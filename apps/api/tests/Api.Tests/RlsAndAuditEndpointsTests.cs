@@ -64,7 +64,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<RuleSpec>();
         Assert.NotNull(result);
-        Assert.Equal(ruleSpec.version, result!.version);
+        Assert.Equal(ruleSpec.Version, result!.version);
     }
 
     /// <summary>

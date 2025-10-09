@@ -99,10 +99,13 @@ describe('ChatPage', () => {
   // =============================================================================
 
   describe('Authentication', () => {
-    it('shows loading state initially', () => {
+    it('shows loading state initially', async () => {
       mockApi.get.mockImplementation(() => new Promise(() => {})); // Never resolves
 
       render(<ChatPage />);
+
+      // Wait a bit to ensure the component has mounted
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       // Page should be rendered but not show unauthenticated state immediately
       expect(screen.queryByText(/Accesso richiesto/i)).not.toBeInTheDocument();

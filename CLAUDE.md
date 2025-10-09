@@ -55,6 +55,9 @@ dotnet test
 # Run tests with coverage
 dotnet test /p:CollectCoverage=true /p:CoverageReportsDirectory=coverage
 
+# Quick coverage measurement (see docs/code-coverage.md for details)
+pwsh tools/measure-coverage.ps1 -Project api
+
 # Apply database migrations
 dotnet ef database update --project src/Api
 
@@ -316,6 +319,31 @@ Configured in `Program.cs:141-170`:
 **E2E Tests (Playwright)**:
 - Configuration: `playwright.config.ts`
 - Excluded from Jest via `testPathIgnorePatterns: ['/e2e/']`
+
+### Code Coverage
+
+**Documentation**: See `docs/code-coverage.md` for detailed coverage measurement guide
+
+**Quick Start**:
+```bash
+# Measure coverage for all projects
+pwsh tools/measure-coverage.ps1
+
+# API only
+pwsh tools/measure-coverage.ps1 -Project api
+
+# Web only
+pwsh tools/measure-coverage.ps1 -Project web
+
+# Generate HTML reports
+pwsh tools/measure-coverage.ps1 -GenerateHtml
+```
+
+**Coverage Tools**:
+- **Backend**: Coverlet (cobertura/lcov/json formats)
+- **Frontend**: Jest built-in coverage (90% threshold enforced)
+
+**Note**: Full API coverage with Testcontainers can take 10+ minutes. Use test filters for faster feedback during development.
 
 ## CI/CD
 

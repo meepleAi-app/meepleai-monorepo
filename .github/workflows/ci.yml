@@ -31,8 +31,18 @@ jobs:
         run: pnpm lint
       - name: Typecheck
         run: pnpm typecheck
-      - name: Test
-        run: pnpm test -- --ci
+      - name: Test with Coverage
+        run: pnpm test:coverage -- --ci
+
+      - name: Upload Web Coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: apps/web/coverage/lcov.info
+          flags: web
+          name: web-coverage
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   ci-api:
     name: API - Build and Test
@@ -84,7 +94,7 @@ jobs:
             sleep 2
           done
           curl -v http://localhost:6333/healthz || echo "Qdrant health check failed"
-      - name: Test
+      - name: Test with Coverage
         env:
           CI: true
           OPENROUTER_API_KEY: test-key-for-ci
@@ -92,4 +102,19 @@ jobs:
           ConnectionStrings__Postgres: Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100
         run: |
           # Run only refactored tests with IAsyncLifetime cleanup (ISSUE-319)
-          dotnet test --filter "FullyQualifiedName~GameEndpointsTests|FullyQualifiedName~ApiEndpointIntegrationTests|FullyQualifiedName~LogsEndpointTests|FullyQualifiedName~PdfIngestEndpointsTests|FullyQualifiedName~RateLimitingIntegrationTests|FullyQualifiedName~RuleSpecHistoryIntegrationTests" --logger "console;verbosity=normal"
+          dotnet test \
+            --filter "FullyQualifiedName~GameEndpointsTests|FullyQualifiedName~ApiEndpointIntegrationTests|FullyQualifiedName~LogsEndpointTests|FullyQualifiedName~PdfIngestEndpointsTests|FullyQualifiedName~RateLimitingIntegrationTests|FullyQualifiedName~RuleSpecHistoryIntegrationTests" \
+            --logger "console;verbosity=normal" \
+            -p:CollectCoverage=true \
+            -p:CoverletOutputFormat=lcov \
+            -p:CoverletOutput=./tests/Api.Tests/coverage/
+
+      - name: Upload API Coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: apps/api/tests/Api.Tests/coverage/coverage.info
+          flags: api
+          name: api-coverage
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

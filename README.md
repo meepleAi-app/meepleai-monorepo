@@ -77,6 +77,7 @@ MeepleAI helps players quickly find answers to gameplay questions by processing 
 
 ## 📚 Documentation
 
+- **[AGENTS.md](./AGENTS.md)** - Guide for AI coding assistants (conventions, workflow, prompts)
 - **[CLAUDE.md](./CLAUDE.md)** - Comprehensive development guide
 - **[Testing Guidelines](./README.test.md)** - BDD-style test naming conventions
 - **[Code Coverage](./docs/code-coverage.md)** - Coverage measurement and tracking
@@ -281,7 +282,9 @@ meepleai-monorepo/
 
 ## 📝 License
 
-This project is private and proprietary.
+This project is private and proprietary. All rights reserved.
+
+See [LICENSE](./LICENSE) for full terms.
 
 ## 🔗 Resources
 

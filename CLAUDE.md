@@ -440,6 +440,40 @@ pnpm dev
 # - n8n: http://localhost:5678
 ```
 
+### Working with RuleSpec Schema
+
+The **RuleSpec v0** schema (`schemas/rulespec.v0.schema.json`) defines a formal specification for normalized board game rules. It enables machine-readable rule representation for AI/LLM processing.
+
+**Schema Structure**:
+- **Metadata**: Game info (name, players, time, age)
+- **Setup**: Initial game setup instructions and components
+- **Phases**: Game flow structure (turns, rounds, steps)
+- **Actions**: Player actions with prerequisites and effects
+- **Scoring**: Scoring methods, sources, and tiebreakers
+- **End Conditions**: Conditions that trigger game end
+- **Edge Cases**: Exceptions, clarifications, variants, FAQs
+- **Glossary**: Game-specific terminology
+
+**Examples**:
+- `schemas/examples/tic-tac-toe.rulespec.json` - Simple game example
+- `schemas/examples/chess.rulespec.json` - Complex game with 1146 lines
+
+**Validation**:
+```bash
+# Validate all RuleSpec examples (runs in CI)
+node schemas/validate-all-examples.js
+
+# Validate single example
+node schemas/validate-example.js
+```
+
+**C# Models**: `apps/api/src/Api/Models/RuleSpecV0.cs`
+**Backend Entity**: `apps/api/src/Api/Infrastructure/Entities/RuleSpecEntity.cs`
+**Services**: `RuleSpecService`, `RuleSpecDiffService`
+**Tests**: `apps/api/tests/Api.Tests/RuleSpecV0ModelTests.cs` (786 lines)
+
+**Documentation**: See `schemas/README.md` for complete reference.
+
 ## Code Quality Standards
 
 ### C# (.NET)

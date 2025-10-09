@@ -62,6 +62,23 @@ A complete RuleSpec example for Tic-Tac-Toe demonstrating all schema features:
 
 ## Validation
 
+### Automated Validation Script
+
+The repository includes a validation script that checks all RuleSpec examples:
+
+```bash
+# Validate all examples in schemas/examples/
+node schemas/validate-all-examples.js
+```
+
+This script:
+- ✅ Validates all `.rulespec.json` files in `examples/`
+- ✅ Checks required fields and structure
+- ✅ Verifies version format (`vX.Y`)
+- ✅ Validates scoring methods and other enums
+- ✅ Provides detailed summary for each example
+- ✅ Runs automatically in CI on every PR
+
 ### Online Validators
 
 Use these tools to validate RuleSpec JSON against the schema:
@@ -69,11 +86,14 @@ Use these tools to validate RuleSpec JSON against the schema:
 - [JSON Schema Validator](https://www.jsonschemavalidator.net/)
 - [JSON Editor Online](https://jsoneditoronline.org/)
 
-### Command Line
+### Command Line (Advanced)
 
 ```bash
 # Using ajv-cli (install with: npm install -g ajv-cli)
 ajv validate -s schemas/rulespec.v0.schema.json -d schemas/examples/tic-tac-toe.rulespec.json
+
+# Validate all examples with ajv-cli
+ajv validate -s schemas/rulespec.v0.schema.json -d "schemas/examples/*.rulespec.json"
 ```
 
 ### Programmatic Validation (C#)

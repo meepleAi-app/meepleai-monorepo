@@ -116,7 +116,7 @@ jobs:
         run: |
           # Run only refactored tests with IAsyncLifetime cleanup (ISSUE-319)
           dotnet test \
-            --filter "FullyQualifiedName~GameEndpointsTests|FullyQualifiedName~ApiEndpointIntegrationTests|FullyQualifiedName~LogsEndpointTests|FullyQualifiedName~PdfIngestEndpointsTests|FullyQualifiedName~RateLimitingIntegrationTests|FullyQualifiedName~RuleSpecHistoryIntegrationTests" \
+            --filter "FullyQualifiedName~GameEndpointsTests|FullyQualifiedName~ApiEndpointIntegrationTests|FullyQualifiedName~LogsEndpointTests|FullyQualifiedName~PdfIngestEndpointsTests|FullyQualifiedName~PdfUploadEndpointsTests|FullyQualifiedName~RateLimitingIntegrationTests|FullyQualifiedName~RuleSpecHistoryIntegrationTests" \
             --logger "console;verbosity=normal" \
             -p:CollectCoverage=true \
             -p:CoverletOutputFormat=lcov \

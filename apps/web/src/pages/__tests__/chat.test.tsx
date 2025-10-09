@@ -749,7 +749,7 @@ describe('ChatPage', () => {
         mockApi.get.mockResolvedValueOnce(mockGames);
         mockApi.get.mockResolvedValueOnce(mockAgents);
         mockApi.get.mockResolvedValueOnce(mockChats);
-        mockApi.delete.mockResolvedValueOnce({});
+        mockApi.delete.mockResolvedValueOnce(undefined);
 
         render(<ChatPage />);
 
@@ -802,7 +802,7 @@ describe('ChatPage', () => {
         mockApi.get.mockResolvedValueOnce(mockAgents);
         mockApi.get.mockResolvedValueOnce(mockChats);
         mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
-        mockApi.delete.mockResolvedValueOnce({});
+        mockApi.delete.mockResolvedValueOnce(undefined);
 
         render(<ChatPage />);
 
@@ -865,7 +865,7 @@ describe('ChatPage', () => {
         mockApi.get.mockResolvedValueOnce(mockGames);
         mockApi.get.mockResolvedValueOnce(mockAgents);
         mockApi.get.mockResolvedValueOnce(mockChats);
-        mockApi.delete.mockResolvedValueOnce({});
+        mockApi.delete.mockResolvedValueOnce(undefined);
 
         render(<ChatPage />);
 

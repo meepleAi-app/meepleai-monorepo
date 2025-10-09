@@ -51,5 +51,18 @@ export const api = {
       throw new Error(`API ${path} ${res.status}`);
     }
     return res.json();
+  },
+  async delete(path: string): Promise<void> {
+    const res = await fetch(`${getApiBase()}${path}`, {
+      method: "DELETE",
+      credentials: "include"
+    });
+    if (res.status === 401) {
+      throw new Error("Unauthorized");
+    }
+    if (!res.ok) {
+      throw new Error(`API ${path} ${res.status}`);
+    }
+    // DELETE returns 204 NoContent, no body to parse
   }
 };

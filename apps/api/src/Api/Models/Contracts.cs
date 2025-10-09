@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Api.Models;
 
-public record QaRequest(string gameId, string query);
+public record QaRequest(string gameId, string query, Guid? chatId = null);
 public record QaResponse(
     string answer,
     IReadOnlyList<Snippet> snippets,
@@ -19,7 +19,7 @@ public record SeedRequest(string gameId);
 public record AgentFeedbackRequest(string messageId, string endpoint, string? outcome, string userId, string? gameId);
 
 // AI-02: RAG Explain models
-public record ExplainRequest(string gameId, string topic);
+public record ExplainRequest(string gameId, string topic, Guid? chatId = null);
 public record ExplainResponse(
     ExplainOutline outline,
     string script,
@@ -35,7 +35,7 @@ public record ExplainOutline(
 );
 
 // AI-03: RAG Setup Guide models
-public record SetupGuideRequest(string gameId);
+public record SetupGuideRequest(string gameId, Guid? chatId = null);
 public record SetupGuideResponse(
     string gameTitle,
     IReadOnlyList<SetupGuideStep> steps,
@@ -84,4 +84,47 @@ public record N8nTestResult(
     bool Success,
     string Message,
     int? LatencyMs
+);
+
+// UI-01: Chat management models
+public record ChatDto(
+    Guid Id,
+    string GameId,
+    string GameName,
+    string AgentId,
+    string AgentName,
+    DateTime StartedAt,
+    DateTime? LastMessageAt
+);
+
+public record ChatWithHistoryDto(
+    Guid Id,
+    string GameId,
+    string GameName,
+    string AgentId,
+    string AgentName,
+    DateTime StartedAt,
+    DateTime? LastMessageAt,
+    IReadOnlyList<ChatMessageDto> Messages
+);
+
+public record ChatMessageDto(
+    Guid Id,
+    string Level,
+    string Message,
+    string? MetadataJson,
+    DateTime CreatedAt
+);
+
+public record CreateChatRequest(
+    string GameId,
+    string AgentId
+);
+
+public record AgentDto(
+    string Id,
+    string GameId,
+    string Name,
+    string Kind,
+    DateTime CreatedAt
 );

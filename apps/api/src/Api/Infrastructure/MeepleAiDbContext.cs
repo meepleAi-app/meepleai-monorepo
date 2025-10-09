@@ -133,9 +133,15 @@ public class MeepleAiDbContext : DbContext
             entity.ToTable("chats");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasMaxLength(64);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.GameId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.AgentId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.StartedAt).IsRequired();
+            entity.Property(e => e.LastMessageAt);
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(e => e.Game)
                 .WithMany(g => g.Chats)
                 .HasForeignKey(e => e.GameId)
@@ -144,6 +150,7 @@ public class MeepleAiDbContext : DbContext
                 .WithMany(a => a.Chats)
                 .HasForeignKey(e => e.AgentId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => new { e.UserId, e.LastMessageAt });
             entity.HasIndex(e => new { e.GameId, e.StartedAt });
         });
 

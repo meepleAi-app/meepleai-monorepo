@@ -137,6 +137,7 @@ builder.Services.AddScoped<PdfTextExtractionService>();
 builder.Services.AddScoped<PdfTableExtractionService>();
 builder.Services.AddScoped<PdfStorageService>();
 builder.Services.AddScoped<N8nConfigService>();
+builder.Services.AddScoped<ChatService>();
 
 // CHESS-03: Chess knowledge indexing service
 builder.Services.AddScoped<IChessKnowledgeService, ChessKnowledgeService>();
@@ -476,7 +477,7 @@ app.MapGet("/auth/me", (HttpContext context) =>
     return Results.Unauthorized();
 });
 
-app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService rag, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService rag, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -494,6 +495,18 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
 
     try
     {
+        // Persist user query to chat if chatId provided
+        if (req.chatId.HasValue)
+        {
+            await chatService.AddMessageAsync(
+                req.chatId.Value,
+                session.User.id,
+                "user",
+                req.query,
+                new { endpoint = "qa", gameId = req.gameId },
+                ct);
+        }
+
         var resp = await rag.AskAsync(req.gameId, req.query, ct);
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
@@ -512,6 +525,29 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
             {
                 finishReason = metadataFinish;
             }
+        }
+
+        // Persist agent response to chat if chatId provided
+        if (req.chatId.HasValue)
+        {
+            await chatService.AddMessageAsync(
+                req.chatId.Value,
+                session.User.id,
+                "assistant",
+                resp.answer,
+                new
+                {
+                    endpoint = "qa",
+                    gameId = req.gameId,
+                    promptTokens = resp.promptTokens,
+                    completionTokens = resp.completionTokens,
+                    totalTokens = resp.totalTokens,
+                    confidence = resp.confidence,
+                    model,
+                    finishReason,
+                    snippetCount = resp.snippets.Count
+                },
+                ct);
         }
 
         // ADM-01: Log AI request
@@ -540,6 +576,25 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
     {
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
+        // Persist error to chat if chatId provided
+        if (req.chatId.HasValue)
+        {
+            try
+            {
+                await chatService.AddMessageAsync(
+                    req.chatId.Value,
+                    session.User.id,
+                    "error",
+                    $"Failed to process QA request: {ex.Message}",
+                    new { endpoint = "qa", gameId = req.gameId, error = ex.GetType().Name },
+                    ct);
+            }
+            catch (Exception chatEx)
+            {
+                logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
+            }
+        }
+
         // ADM-01: Log failed AI request
         await aiLog.LogRequestAsync(
             session.User.id,
@@ -558,7 +613,7 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
     }
 });
 
-app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, RagService rag, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, RagService rag, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -576,11 +631,47 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
 
     try
     {
+        // Persist user query to chat if chatId provided
+        if (req.chatId.HasValue)
+        {
+            await chatService.AddMessageAsync(
+                req.chatId.Value,
+                session.User.id,
+                "user",
+                $"Explain: {req.topic}",
+                new { endpoint = "explain", gameId = req.gameId, topic = req.topic },
+                ct);
+        }
+
         var resp = await rag.ExplainAsync(req.gameId, req.topic, ct);
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
         logger.LogInformation("Explain response delivered for game {GameId}, estimated {Minutes} min read",
             req.gameId, resp.estimatedReadingTimeMinutes);
+
+        // Persist agent response to chat if chatId provided
+        if (req.chatId.HasValue)
+        {
+            await chatService.AddMessageAsync(
+                req.chatId.Value,
+                session.User.id,
+                "assistant",
+                resp.script,
+                new
+                {
+                    endpoint = "explain",
+                    gameId = req.gameId,
+                    topic = req.topic,
+                    promptTokens = resp.promptTokens,
+                    completionTokens = resp.completionTokens,
+                    totalTokens = resp.totalTokens,
+                    confidence = resp.confidence,
+                    estimatedReadingTimeMinutes = resp.estimatedReadingTimeMinutes,
+                    outline = resp.outline,
+                    citationCount = resp.citations.Count
+                },
+                ct);
+        }
 
         // ADM-01: Log AI request
         await aiLog.LogRequestAsync(
@@ -608,6 +699,25 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
     {
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
+        // Persist error to chat if chatId provided
+        if (req.chatId.HasValue)
+        {
+            try
+            {
+                await chatService.AddMessageAsync(
+                    req.chatId.Value,
+                    session.User.id,
+                    "error",
+                    $"Failed to process Explain request: {ex.Message}",
+                    new { endpoint = "explain", gameId = req.gameId, topic = req.topic, error = ex.GetType().Name },
+                    ct);
+            }
+            catch (Exception chatEx)
+            {
+                logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
+            }
+        }
+
         // ADM-01: Log failed AI request
         await aiLog.LogRequestAsync(
             session.User.id,
@@ -627,7 +737,7 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
 });
 
 // AI-03: RAG Setup Guide endpoint
-app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, SetupGuideService setupGuide, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, SetupGuideService setupGuide, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -645,11 +755,51 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
 
     try
     {
+        // Persist user query to chat if chatId provided
+        if (req.chatId.HasValue)
+        {
+            await chatService.AddMessageAsync(
+                req.chatId.Value,
+                session.User.id,
+                "user",
+                "Generate setup guide",
+                new { endpoint = "setup", gameId = req.gameId },
+                ct);
+        }
+
         var resp = await setupGuide.GenerateSetupGuideAsync(req.gameId, ct);
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
         logger.LogInformation("Setup guide delivered for game {GameId}, {StepCount} steps, estimated {Minutes} min",
             req.gameId, resp.steps.Count, resp.estimatedSetupTimeMinutes);
+
+        // Persist agent response to chat if chatId provided
+        if (req.chatId.HasValue)
+        {
+            var setupSummary = resp.steps.Count > 0
+                ? string.Join("; ", resp.steps.Take(3).Select(s => $"{s.stepNumber}. {s.title}")) + (resp.steps.Count > 3 ? "..." : "")
+                : "No steps generated";
+
+            await chatService.AddMessageAsync(
+                req.chatId.Value,
+                session.User.id,
+                "assistant",
+                $"Setup guide for {resp.gameTitle}: {setupSummary}",
+                new
+                {
+                    endpoint = "setup",
+                    gameId = req.gameId,
+                    gameTitle = resp.gameTitle,
+                    promptTokens = resp.promptTokens,
+                    completionTokens = resp.completionTokens,
+                    totalTokens = resp.totalTokens,
+                    confidence = resp.confidence,
+                    estimatedSetupTimeMinutes = resp.estimatedSetupTimeMinutes,
+                    stepCount = resp.steps.Count,
+                    steps = resp.steps
+                },
+                ct);
+        }
 
         // ADM-01: Log AI request
         var responseSnippet = resp.steps.Count > 0
@@ -684,6 +834,25 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
     catch (Exception ex)
     {
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+        // Persist error to chat if chatId provided
+        if (req.chatId.HasValue)
+        {
+            try
+            {
+                await chatService.AddMessageAsync(
+                    req.chatId.Value,
+                    session.User.id,
+                    "error",
+                    $"Failed to generate setup guide: {ex.Message}",
+                    new { endpoint = "setup", gameId = req.gameId, error = ex.GetType().Name },
+                    ct);
+            }
+            catch (Exception chatEx)
+            {
+                logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
+            }
+        }
 
         // ADM-01: Log failed AI request
         await aiLog.LogRequestAsync(
@@ -1360,6 +1529,158 @@ app.MapDelete("/chess/index", async (HttpContext context, IChessKnowledgeService
 
     logger.LogInformation("Chess knowledge deletion completed successfully");
     return Results.Json(new { success = true });
+});
+
+// UI-01: Chat management endpoints
+app.MapGet("/chats", async (HttpContext context, ChatService chatService, string? gameId, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    var chats = string.IsNullOrWhiteSpace(gameId)
+        ? await chatService.GetUserChatsAsync(session.User.id, 50, ct)
+        : await chatService.GetUserChatsByGameAsync(session.User.id, gameId, 50, ct);
+
+    var response = chats.Select(c => new ChatDto(
+        c.Id,
+        c.GameId,
+        c.Game.Name,
+        c.AgentId,
+        c.Agent.Name,
+        c.StartedAt,
+        c.LastMessageAt
+    )).ToList();
+
+    return Results.Json(response);
+});
+
+app.MapGet("/chats/{chatId:guid}", async (Guid chatId, HttpContext context, ChatService chatService, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    var chat = await chatService.GetChatByIdAsync(chatId, session.User.id, ct);
+    if (chat == null)
+    {
+        return Results.NotFound(new { error = "Chat not found" });
+    }
+
+    var messages = chat.Logs.Select(l => new ChatMessageDto(
+        l.Id,
+        l.Level,
+        l.Message,
+        l.MetadataJson,
+        l.CreatedAt
+    )).ToList();
+
+    var response = new ChatWithHistoryDto(
+        chat.Id,
+        chat.GameId,
+        chat.Game.Name,
+        chat.AgentId,
+        chat.Agent.Name,
+        chat.StartedAt,
+        chat.LastMessageAt,
+        messages
+    );
+
+    return Results.Json(response);
+});
+
+app.MapPost("/chats", async (CreateChatRequest? request, HttpContext context, ChatService chatService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (request == null)
+    {
+        return Results.BadRequest(new { error = "Request body is required" });
+    }
+
+    if (string.IsNullOrWhiteSpace(request.GameId) || string.IsNullOrWhiteSpace(request.AgentId))
+    {
+        return Results.BadRequest(new { error = "GameId and AgentId are required" });
+    }
+
+    try
+    {
+        var chat = await chatService.CreateChatAsync(session.User.id, request.GameId, request.AgentId, ct);
+
+        // Reload with navigations
+        var fullChat = await chatService.GetChatByIdAsync(chat.Id, session.User.id, ct);
+        if (fullChat == null)
+        {
+            return Results.StatusCode(StatusCodes.Status500InternalServerError);
+        }
+
+        var response = new ChatDto(
+            fullChat.Id,
+            fullChat.GameId,
+            fullChat.Game.Name,
+            fullChat.AgentId,
+            fullChat.Agent.Name,
+            fullChat.StartedAt,
+            fullChat.LastMessageAt
+        );
+
+        logger.LogInformation("User {UserId} created chat {ChatId} for game {GameId}", session.User.id, chat.Id, request.GameId);
+        return Results.Created($"/chats/{chat.Id}", response);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning(ex, "Invalid chat creation request");
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+app.MapDelete("/chats/{chatId:guid}", async (Guid chatId, HttpContext context, ChatService chatService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    try
+    {
+        var deleted = await chatService.DeleteChatAsync(chatId, session.User.id, ct);
+        if (!deleted)
+        {
+            return Results.NotFound(new { error = "Chat not found" });
+        }
+
+        logger.LogInformation("User {UserId} deleted chat {ChatId}", session.User.id, chatId);
+        return Results.NoContent();
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        logger.LogWarning(ex, "Unauthorized chat deletion attempt");
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+});
+
+app.MapGet("/games/{gameId}/agents", async (string gameId, HttpContext context, ChatService chatService, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
+    {
+        return Results.Unauthorized();
+    }
+
+    var agents = await chatService.GetAgentsForGameAsync(gameId, ct);
+    var response = agents.Select(a => new AgentDto(
+        a.Id,
+        a.GameId,
+        a.Name,
+        a.Kind,
+        a.CreatedAt
+    )).ToList();
+
+    return Results.Json(response);
 });
 
 app.Run();

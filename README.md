@@ -198,13 +198,21 @@ cp infra/env/n8n.env.dev.example infra/env/n8n.env.dev
 - `ConnectionStrings__Postgres` - PostgreSQL connection string
 - `NEXT_PUBLIC_API_BASE` - API base URL for frontend
 
+**Security**: See [docs/SECURITY.md](./docs/SECURITY.md) for secret management and key rotation procedures.
+
 ## 🤝 Contributing
 
-1. Follow [BDD-style test naming conventions](./README.test.md)
-2. Ensure tests pass: `dotnet test` (API) and `pnpm test` (Web)
-3. Maintain 90% coverage for frontend
-4. Run linting: `pnpm lint` (Web)
-5. Create meaningful commits following conventional commits
+1. **Install pre-commit hooks** (first time setup):
+   ```bash
+   pip install pre-commit
+   pre-commit install
+   ```
+2. Follow [BDD-style test naming conventions](./README.test.md)
+3. Ensure tests pass: `dotnet test` (API) and `pnpm test` (Web)
+4. Maintain 90% coverage for frontend
+5. Run linting: `pnpm lint` (Web)
+6. Create meaningful commits following conventional commits
+7. **Never commit secrets** - hooks will block commits with detected secrets
 
 ## 📊 CI/CD
 

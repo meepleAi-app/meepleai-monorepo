@@ -20,27 +20,47 @@ using Xunit;
 
 namespace Api.Tests;
 
-public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryFixture>
+/// <summary>
+/// BDD-style integration tests for rate limiting middleware.
+///
+/// Feature: Rate limiting for API endpoints
+/// As a system
+/// I want to enforce rate limits on API requests
+/// So that I can prevent abuse and ensure fair resource allocation
+/// </summary>
+public class RateLimitingIntegrationTests : IntegrationTestBase
 {
-    private readonly WebApplicationFactoryFixture _fixture;
-
-    public RateLimitingIntegrationTests(WebApplicationFactoryFixture fixture)
+    public RateLimitingIntegrationTests(WebApplicationFactoryFixture fixture) : base(fixture)
     {
-        _fixture = fixture;
     }
 
+    /// <summary>
+    /// Scenario: Requests beyond rate limit return 429 with proper headers
+    ///   Given admin user is authenticated with rate limit service
+    ///   When user makes request within limit
+    ///   Then request succeeds
+    ///   When user exceeds rate limit
+    ///   Then request returns 429 with retry-after headers
+    ///   And cleanup is automatic
+    /// </summary>
     [Fact]
     public async Task RequestsBeyondLimit_Return429WithHeadersAndBody()
     {
+        // Given: Admin user is authenticated with rate limit service
         await using var context = await CreateClientContextAsync();
 
+        // When: User makes request within limit
         context.RateLimitService.EnqueueResponse(allowed: true, tokensRemaining: 59, retryAfterSeconds: 0);
         var okResponse = await context.Client.GetAsync("/logs");
+
+        // Then: Request succeeds
         Assert.Equal(HttpStatusCode.OK, okResponse.StatusCode);
 
+        // When: User exceeds rate limit
         context.RateLimitService.EnqueueResponse(allowed: false, tokensRemaining: 0, retryAfterSeconds: 15);
         var limitedResponse = await context.Client.GetAsync("/logs");
 
+        // Then: Request returns 429 with retry-after headers
         Assert.Equal(HttpStatusCode.TooManyRequests, limitedResponse.StatusCode);
 
         var payload = await limitedResponse.Content.ReadFromJsonAsync<RateLimitErrorResponse>();
@@ -57,18 +77,34 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
         Assert.Equal(expectedLimit, GetSingleHeaderValue(limitedResponse, "X-RateLimit-Limit"));
         Assert.Equal("0", GetSingleHeaderValue(limitedResponse, "X-RateLimit-Remaining"));
         Assert.Equal("15", GetSingleHeaderValue(limitedResponse, "Retry-After"));
+        // Cleanup happens automatically via DisposeAsync
     }
 
+    /// <summary>
+    /// Scenario: Rate limiter fails open when Redis is unavailable
+    ///   Given admin user is authenticated
+    ///   And rate limit service throws exception (Redis down)
+    ///   When user makes request
+    ///   Then request succeeds (fail-open behavior)
+    ///   And headers show full limit available
+    ///   And cleanup is automatic
+    /// </summary>
     [Fact]
     public async Task RateLimiter_FailsOpen_WhenServiceThrows()
     {
+        // Given: Admin user is authenticated
         await using var context = await CreateClientContextAsync();
 
+        // And: Rate limit service throws exception (Redis down)
         context.RateLimitService.FailWith(new RedisConnectionException(ConnectionFailureType.SocketFailure, "redis down"));
 
+        // When: User makes request
         var response = await context.Client.GetAsync("/logs");
 
+        // Then: Request succeeds (fail-open behavior)
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        // And: Headers show full limit available
         var expectedLimit = RateLimitService
             .GetConfigForRole(UserRole.Admin.ToString())
             .MaxTokens
@@ -77,13 +113,14 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
         Assert.Equal(expectedLimit, GetSingleHeaderValue(response, "X-RateLimit-Limit"));
         Assert.Equal(expectedLimit, GetSingleHeaderValue(response, "X-RateLimit-Remaining"));
         Assert.False(response.Headers.Contains("Retry-After"));
+        // Cleanup happens automatically via DisposeAsync
     }
 
     private async Task<TestClientContext> CreateClientContextAsync()
     {
         var rateLimitService = new TestRateLimitService();
 
-        var factory = _fixture.WithTestServices(services =>
+        var factory = Factory.WithTestServices(services =>
         {
             var descriptors = services
                 .Where(descriptor => descriptor.ServiceType == typeof(RateLimitService))
@@ -100,10 +137,14 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
 
         var client = factory.CreateClient();
 
-        var email = $"rate-limit-admin-{Guid.NewGuid():N}@example.com";
+        var email = $"rate-limit-admin-{TestRunId}-{Guid.NewGuid():N}@example.com";
         var registerPayload = new RegisterPayload(email, "Password123!", "Rate Limit Admin", null);
         var registerResponse = await client.PostAsJsonAsync("/auth/register", registerPayload);
         registerResponse.EnsureSuccessStatusCode();
+
+        // Track user for cleanup
+        var userId = await GetUserIdByEmailAsync(factory.Services, email);
+        TrackUserId(userId);
 
         await PromoteUserAsync(factory.Services, email, UserRole.Admin);
 
@@ -111,6 +152,14 @@ public class RateLimitingIntegrationTests : IClassFixture<WebApplicationFactoryF
         AttachCookies(client, cookies);
 
         return new TestClientContext(factory, client, rateLimitService);
+    }
+
+    private static async Task<string> GetUserIdByEmailAsync(IServiceProvider services, string email)
+    {
+        await using var scope = services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var user = await db.Users.SingleAsync(u => u.Email == email);
+        return user.Id;
     }
 
     private static IReadOnlyList<string> ExtractCookies(HttpResponseMessage response)

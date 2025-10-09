@@ -13,61 +13,79 @@ using Xunit;
 
 namespace Api.Tests;
 
-public class LogsEndpointTests : IClassFixture<WebApplicationFactoryFixture>
+/// <summary>
+/// BDD-style integration tests for logs endpoint.
+///
+/// Feature: Admin logs viewing
+/// As an admin
+/// I want to view AI request logs via API
+/// So that I can monitor system usage and errors
+/// </summary>
+public class LogsEndpointTests : IntegrationTestBase
 {
-    private readonly WebApplicationFactoryFixture _factory;
-
-    public LogsEndpointTests(WebApplicationFactoryFixture factory)
+    public LogsEndpointTests(WebApplicationFactoryFixture factory) : base(factory)
     {
-        _factory = factory;
     }
 
+    /// <summary>
+    /// Scenario: Admin views AI request logs
+    ///   Given AI request logs exist in the database
+    ///   And admin user is authenticated
+    ///   When admin requests /logs
+    ///   Then logs are returned sorted by newest first
+    ///   And cleanup is automatic
+    /// </summary>
     [Fact]
     public async Task GetLogs_ReturnsLatestEntriesFromAiRequestLogService()
     {
+        // Given: AI request logs exist in the database
+        var user1 = await CreateTestUserAsync("log-user-1");
+        var user2 = await CreateTestUserAsync("log-user-2");
         var now = DateTime.UtcNow;
 
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-            db.AiRequestLogs.AddRange(
-                new AiRequestLogEntity
-                {
-                    Id = "req-001",
-                    UserId = "user-123",
-                    GameId = "demo-chess",
-                    Endpoint = "qa",
-                    Query = "How many players?",
-                    ResponseSnippet = "Two players.",
-                    LatencyMs = 120,
-                    Status = "Success",
-                    CreatedAt = now.AddMinutes(-5)
-                },
-                new AiRequestLogEntity
-                {
-                    Id = "req-002",
-                    UserId = "user-456",
-                    GameId = "demo-chess",
-                    Endpoint = "qa",
-                    Query = "Explain setup",
-                    LatencyMs = 240,
-                    Status = "Error",
-                    ErrorMessage = "LLM timeout",
-                    CreatedAt = now
-                }
-            );
+        db.AiRequestLogs.AddRange(
+            new AiRequestLogEntity
+            {
+                Id = $"req-001-{TestRunId}",
+                UserId = user1.Id,
+                GameId = "demo-chess",
+                Endpoint = "qa",
+                Query = "How many players?",
+                ResponseSnippet = "Two players.",
+                LatencyMs = 120,
+                Status = "Success",
+                CreatedAt = now.AddMinutes(-5)
+            },
+            new AiRequestLogEntity
+            {
+                Id = $"req-002-{TestRunId}",
+                UserId = user2.Id,
+                GameId = "demo-chess",
+                Endpoint = "qa",
+                Query = "Explain setup",
+                LatencyMs = 240,
+                Status = "Error",
+                ErrorMessage = "LLM timeout",
+                CreatedAt = now
+            }
+        );
 
-            await db.SaveChangesAsync();
-        }
+        await db.SaveChangesAsync();
 
-        using var client = _factory.CreateHttpsClient();
-        var cookies = await RegisterAndAuthenticateAsync(client, $"admin-logs-{Guid.NewGuid():N}@example.com", UserRole.Admin);
+        // And: Admin user is authenticated
+        var adminUser = await CreateTestUserAsync("admin-logs", UserRole.Admin);
+        var cookies = await AuthenticateUserAsync(adminUser.Email);
+        var client = CreateClientWithoutCookies();
 
+        // When: Admin requests /logs
         var request = new HttpRequestMessage(HttpMethod.Get, "/logs");
         AddCookies(request, cookies);
         var response = await client.SendAsync(request);
 
+        // Then: Logs are returned sorted by newest first
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var entries = await response.Content.ReadFromJsonAsync<List<LogEntryResponse>>();
@@ -76,24 +94,35 @@ public class LogsEndpointTests : IClassFixture<WebApplicationFactoryFixture>
         Assert.Equal(2, entries!.Count);
 
         var newest = entries[0];
-        Assert.Equal("req-002", newest.RequestId);
+        Assert.Equal($"req-002-{TestRunId}", newest.RequestId);
         Assert.Equal("ERROR", newest.Level);
         Assert.Equal("Explain setup", newest.Message);
-        Assert.Equal("user-456", newest.UserId);
+        Assert.Equal(user2.Id, newest.UserId);
         Assert.Equal("demo-chess", newest.GameId);
 
         var older = entries[1];
-        Assert.Equal("req-001", older.RequestId);
+        Assert.Equal($"req-001-{TestRunId}", older.RequestId);
         Assert.Equal("INFO", older.Level);
         Assert.Equal("Two players.", older.Message);
+        // Cleanup happens automatically via DisposeAsync
     }
 
+    /// <summary>
+    /// Scenario: Unauthenticated user tries to view logs
+    ///   Given user is not authenticated
+    ///   When user requests /logs
+    ///   Then request is unauthorized
+    /// </summary>
     [Fact]
     public async Task GetLogs_ReturnsUnauthorizedWhenSessionMissing()
     {
-        using var client = _factory.CreateHttpsClient();
+        // Given: User is not authenticated
+        using var client = Factory.CreateHttpsClient();
+
+        // When: User requests /logs
         var response = await client.GetAsync("/logs");
 
+        // Then: Request is unauthorized
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
@@ -103,78 +132,30 @@ public class LogsEndpointTests : IClassFixture<WebApplicationFactoryFixture>
         new object[] { UserRole.User }
     };
 
+    /// <summary>
+    /// Scenario: Non-admin user tries to view logs
+    ///   Given user with non-admin role is authenticated
+    ///   When user requests /logs
+    ///   Then request is forbidden
+    ///   And cleanup is automatic
+    /// </summary>
     [Theory]
     [MemberData(nameof(NonAdminRoles))]
     public async Task GetLogs_ReturnsForbiddenForNonAdminRoles(UserRole role)
     {
-        using var client = _factory.CreateHttpsClient();
-        var email = $"{role.ToString().ToLowerInvariant()}-logs-{Guid.NewGuid():N}@example.com";
-        var cookies = await RegisterAndAuthenticateAsync(client, email, role);
+        // Given: User with non-admin role is authenticated
+        var username = $"non-admin-{Guid.NewGuid():N}";
+        var user = await CreateTestUserAsync(username, role);
+        var cookies = await AuthenticateUserAsync(user.Email);
+        var client = CreateClientWithoutCookies();
 
+        // When: User requests /logs
         var request = new HttpRequestMessage(HttpMethod.Get, "/logs");
         AddCookies(request, cookies);
         var response = await client.SendAsync(request);
 
+        // Then: Request is forbidden
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    private static void AddCookies(HttpRequestMessage request, IReadOnlyCollection<string> cookies)
-    {
-        if (cookies.Count == 0)
-        {
-            return;
-        }
-
-        request.Headers.Add("Cookie", string.Join("; ", cookies));
-    }
-
-    private static List<string> ExtractCookies(HttpResponseMessage response)
-    {
-        if (!response.Headers.TryGetValues("Set-Cookie", out var values))
-        {
-            return new List<string>();
-        }
-
-        return values
-            .Select(value => value.Split(';')[0])
-            .ToList();
-    }
-
-    private async Task<List<string>> RegisterAndAuthenticateAsync(HttpClient client, string email, UserRole? role = null)
-    {
-        var payload = new RegisterPayload(email, "Password123!", "Logs Tester", null);
-        var response = await client.PostAsJsonAsync("/auth/register", payload);
-        response.EnsureSuccessStatusCode();
-
-        if (role.HasValue && role.Value != UserRole.User)
-        {
-            using var scope = _factory.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            var user = await db.Users.SingleAsync(u => u.Email == email);
-            user.Role = role.Value;
-            await db.SaveChangesAsync();
-        }
-
-        return ExtractCookies(response);
-    }
-
-    private async Task PromoteUserAsync(string email, string role)
-    {
-        if (string.IsNullOrWhiteSpace(role) ||
-            string.Equals(role, nameof(UserRole.User), StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        if (!Enum.TryParse<UserRole>(role, true, out var parsedRole))
-        {
-            return;
-        }
-
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var user = await db.Users.SingleAsync(u => u.Email == email);
-        user.Role = parsedRole;
-        await db.SaveChangesAsync();
+        // Cleanup happens automatically via DisposeAsync
     }
 }

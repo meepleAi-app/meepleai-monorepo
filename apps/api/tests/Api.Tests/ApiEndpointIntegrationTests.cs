@@ -15,33 +15,48 @@ using Xunit;
 
 namespace Api.Tests;
 
-public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFixture>
+/// <summary>
+/// BDD-style integration tests for API endpoints.
+///
+/// Feature: Global API endpoint functionality
+/// As an API consumer
+/// I want to interact with authentication, seeding, and ingestion endpoints
+/// So that I can manage game data and authenticate users
+/// </summary>
+public class ApiEndpointIntegrationTests : IntegrationTestBase
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    private readonly WebApplicationFactoryFixture _factory;
-
-    public ApiEndpointIntegrationTests(WebApplicationFactoryFixture factory)
+    public ApiEndpointIntegrationTests(WebApplicationFactoryFixture factory) : base(factory)
     {
-        _factory = factory;
     }
 
+    /// <summary>
+    /// Scenario: User registers via API
+    ///   Given a new user with valid credentials
+    ///   When user posts to /auth/register
+    ///   Then registration succeeds
+    ///   And user is tracked for automatic cleanup
+    /// </summary>
     [Fact]
     public async Task Register_ReturnsAuthResponseWithoutTenantInformation()
     {
-        using var client = _factory.CreateHttpsClient();
+        // Given: A new user with valid credentials
+        using var client = Factory.CreateHttpsClient();
 
         var payload = new RegisterPayload(
-            "register-user@example.com",
+            $"register-{TestRunId}@example.com",
             "Password123!",
             "Register User",
             null);
 
+        // When: User posts to /auth/register
         var response = await client.PostAsJsonAsync("/auth/register", payload);
 
+        // Then: Registration succeeds
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var json = await response.Content.ReadAsStringAsync();
@@ -52,6 +67,9 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         Assert.Equal(payload.displayName, authResponse.user.displayName);
         Assert.Equal(UserRole.User.ToString(), authResponse.user.role);
 
+        // And: User is tracked for automatic cleanup
+        TrackUserId(authResponse.user.id);
+
         var cookies = ExtractCookies(response);
         Assert.Contains(cookies, cookie => cookie.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal));
         AssertSessionCookieSecure(response);
@@ -60,13 +78,22 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         AssertAuthResponsePayload(document.RootElement);
     }
 
+    /// <summary>
+    /// Scenario: Registered user logs in via API
+    ///   Given user is already registered
+    ///   When user posts to /auth/login with valid credentials
+    ///   Then login succeeds
+    ///   And cleanup is automatic
+    /// </summary>
     [Fact]
     public async Task Login_ReturnsAuthResponseWithoutTenantInformation()
     {
-        var email = "login-user@example.com";
+        // Given: User is already registered
+        var email = $"login-{TestRunId}@example.com";
         await RegisterUserAsync(email);
 
-        using var client = _factory.CreateHttpsClient();
+        // When: User posts to /auth/login with valid credentials
+        using var client = Factory.CreateHttpsClient();
         var payload = new LoginPayload
         {
             email = email,
@@ -75,6 +102,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
         var response = await client.PostAsJsonAsync("/auth/login", payload);
 
+        // Then: Login succeeds
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var json = await response.Content.ReadAsStringAsync();
@@ -89,14 +117,24 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
         using var document = JsonDocument.Parse(json);
         AssertAuthResponsePayload(document.RootElement);
+        // Cleanup happens automatically via DisposeAsync
     }
 
+    /// <summary>
+    /// Scenario: Admin seeds game data via API
+    ///   Given admin user is authenticated
+    ///   When admin posts to /admin/seed with game ID
+    ///   Then seeding succeeds
+    ///   And cleanup is automatic
+    /// </summary>
     [Fact]
     public async Task SeedEndpoint_AllowsAdminWithoutTenantPayload()
     {
-        using var client = _factory.CreateHttpsClient();
-        var cookies = await RegisterAndAuthenticateAsync(client, "seed-admin@example.com", role: "Admin");
+        // Given: Admin user is authenticated
+        using var client = Factory.CreateHttpsClient();
+        var cookies = await RegisterAndAuthenticateAsync(client, $"seed-admin-{TestRunId}@example.com", role: "Admin");
 
+        // When: Admin posts to /admin/seed with game ID
         var request = new HttpRequestMessage(HttpMethod.Post, "/admin/seed")
         {
             Content = JsonContent.Create(new SeedRequest("terraforming-mars"))
@@ -109,6 +147,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
         var response = await client.SendAsync(request);
 
+        // Then: Seeding succeeds
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var json = await response.Content.ReadAsStringAsync();
@@ -117,76 +156,78 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         Assert.True(document.RootElement.TryGetProperty("ok", out var okElement) && okElement.GetBoolean());
         Assert.True(document.RootElement.TryGetProperty("spec", out var specElement));
         Assert.Equal("terraforming-mars", specElement.GetProperty("gameId").GetString());
+        // Cleanup happens automatically via DisposeAsync
     }
 
+    /// <summary>
+    /// Scenario: Admin generates RuleSpec from PDF with atomic rules
+    ///   Given admin user is authenticated
+    ///   And a game exists
+    ///   And a PDF with atomic rules exists
+    ///   When admin requests RuleSpec generation from PDF
+    ///   Then structured RuleSpec is returned
+    ///   And cleanup is automatic
+    /// </summary>
     [Fact]
     public async Task GenerateRuleSpecFromPdf_ReturnsStructuredSpec()
     {
-        using var client = _factory.CreateHttpsClient();
-        var email = "pdf-parser@example.com";
-        var cookies = await RegisterAndAuthenticateAsync(client, email, role: "Admin");
+        // Given: Admin user is authenticated
+        var user = await CreateTestUserAsync("pdf-parser", UserRole.Admin);
+        var cookies = await AuthenticateUserAsync(user.Email);
+        var client = CreateClientWithoutCookies();
 
-        var pdfId = "pdf-integration";
-        var gameId = "game-integration";
+        // And: A game exists
+        var game = await CreateTestGameAsync("Integration Game");
 
-        using (var scope = _factory.Services.CreateScope())
+        // And: A PDF with atomic rules exists
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var pdfId = $"pdf-{TestRunId}";
+        var pdfDoc = new PdfDocumentEntity
         {
-            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            var user = await db.Users.SingleAsync(u => u.Email == email);
-
-            if (!await db.Games.AnyAsync(g => g.Id == gameId))
+            Id = pdfId,
+            GameId = game.Id,
+            FileName = "rules.pdf",
+            FilePath = "/tmp/rules.pdf",
+            FileSizeBytes = 1024,
+            UploadedByUserId = user.Id,
+            UploadedAt = DateTime.UtcNow,
+            ProcessingStatus = "completed",
+            ProcessedAt = DateTime.UtcNow,
+            AtomicRules = JsonSerializer.Serialize(new[]
             {
-                db.Games.Add(new GameEntity
-                {
-                    Id = gameId,
-                    Name = "Integration Game",
-                    CreatedAt = DateTime.UtcNow
-                });
-            }
+                "[Table on page 2] Setup: Place pieces; Count: 16",
+                "Victory condition: Highest score wins"
+            })
+        };
 
-            db.PdfDocuments.Add(new PdfDocumentEntity
-            {
-                Id = pdfId,
-                GameId = gameId,
-                FileName = "rules.pdf",
-                FilePath = "/tmp/rules.pdf",
-                FileSizeBytes = 1024,
-                UploadedByUserId = user.Id,
-                UploadedAt = DateTime.UtcNow,
-                ProcessingStatus = "completed",
-                ProcessedAt = DateTime.UtcNow,
-                AtomicRules = JsonSerializer.Serialize(new[]
-                {
-                    "[Table on page 2] Setup: Place pieces; Count: 16",
-                    "Victory condition: Highest score wins"
-                })
-            });
+        db.PdfDocuments.Add(pdfDoc);
+        await db.SaveChangesAsync();
+        TrackPdfDocumentId(pdfId);
 
-            await db.SaveChangesAsync();
-        }
-
+        // When: Admin requests RuleSpec generation from PDF
         var request = new HttpRequestMessage(HttpMethod.Post, $"/ingest/pdf/{pdfId}/rulespec");
-        foreach (var cookie in cookies)
-        {
-            request.Headers.TryAddWithoutValidation("Cookie", cookie);
-        }
+        AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
 
+        // Then: Structured RuleSpec is returned
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var json = await response.Content.ReadAsStringAsync();
         var ruleSpec = JsonSerializer.Deserialize<RuleSpec>(json, JsonOptions);
 
         Assert.NotNull(ruleSpec);
-        Assert.Equal(gameId, ruleSpec!.gameId);
+        Assert.Equal(game.Id, ruleSpec!.gameId);
         Assert.True(ruleSpec.rules.Count >= 2);
         Assert.Contains(ruleSpec.rules, atom => atom.page == "2");
+        // Cleanup happens automatically via DisposeAsync
     }
 
     private async Task RegisterUserAsync(string email, string role = "Admin")
     {
-        using var client = _factory.CreateHttpsClient();
+        using var client = Factory.CreateHttpsClient();
         await RegisterAndAuthenticateAsync(client, email, role);
     }
 
@@ -209,6 +250,14 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var response = await client.PostAsJsonAsync("/auth/register", payload);
         response.EnsureSuccessStatusCode();
 
+        // Track user for cleanup
+        var json = await response.Content.ReadAsStringAsync();
+        var authResponse = JsonSerializer.Deserialize<AuthResponse>(json, JsonOptions);
+        if (authResponse?.user.id != null)
+        {
+            TrackUserId(authResponse.user.id);
+        }
+
         if (!string.Equals(role, UserRole.User.ToString(), StringComparison.OrdinalIgnoreCase))
         {
             var parsedRole = Enum.Parse<UserRole>(role, true);
@@ -218,15 +267,23 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         return ExtractCookies(response);
     }
 
+    /// <summary>
+    /// Scenario: Non-bootstrap user attempts to register with elevated role
+    ///   Given a regular user is already registered (not bootstrap)
+    ///   When another user tries to register with elevated role
+    ///   Then registration is rejected with Conflict
+    ///   And cleanup is automatic
+    /// </summary>
     [Theory]
     [InlineData("Admin")]
     [InlineData("Editor")]
     public async Task Register_ReturnsConflictWhenNonBootstrapRequestsElevatedRole(string requestedRole)
     {
-        using var client = _factory.CreateHttpsClient();
+        // Given: A regular user is already registered (not bootstrap)
+        using var client = Factory.CreateHttpsClient();
 
         var initialPayload = new RegisterPayload(
-            $"initial-{Guid.NewGuid():N}@example.com",
+            $"initial-{TestRunId}-{Guid.NewGuid():N}@example.com",
             "Password123!",
             "Initial User",
             null);
@@ -234,20 +291,31 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var initialResponse = await client.PostAsJsonAsync("/auth/register", initialPayload);
         initialResponse.EnsureSuccessStatusCode();
 
+        // Track initial user for cleanup
+        var initialJson = await initialResponse.Content.ReadAsStringAsync();
+        var initialAuth = JsonSerializer.Deserialize<AuthResponse>(initialJson, JsonOptions);
+        if (initialAuth?.user.id != null)
+        {
+            TrackUserId(initialAuth.user.id);
+        }
+
+        // When: Another user tries to register with elevated role
         var escalationPayload = new RegisterPayload(
-            $"escalate-{Guid.NewGuid():N}@example.com",
+            $"escalate-{TestRunId}-{Guid.NewGuid():N}@example.com",
             "Password123!",
             "Escalation User",
             requestedRole);
 
         var response = await client.PostAsJsonAsync("/auth/register", escalationPayload);
 
+        // Then: Registration is rejected with Conflict
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
 
         var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
         Assert.NotNull(body);
         Assert.True(body!.TryGetValue("error", out var message));
         Assert.Equal("Only administrators can assign elevated roles.", message);
+        // Cleanup happens automatically via DisposeAsync
     }
 
     private static List<string> ExtractCookies(HttpResponseMessage response)
@@ -264,7 +332,7 @@ public class ApiEndpointIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
     private async Task PromoteUserAsync(string email, UserRole role)
     {
-        using var scope = _factory.Services.CreateScope();
+        using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var user = await db.Users.SingleAsync(u => u.Email == email);
         user.Role = role;

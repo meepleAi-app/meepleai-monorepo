@@ -14,108 +14,85 @@ using Xunit;
 
 namespace Api.Tests;
 
-public class PdfIngestEndpointsTests : IClassFixture<WebApplicationFactoryFixture>
+/// <summary>
+/// BDD-style integration tests for PDF ingest endpoints.
+///
+/// Feature: PDF ingestion and RuleSpec generation
+/// As an admin user
+/// I want to generate RuleSpecs from uploaded PDFs
+/// So that I can create structured game rules from rulebook documents
+/// </summary>
+public class PdfIngestEndpointsTests : IntegrationTestBase
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    private readonly WebApplicationFactoryFixture _factory;
-
-    public PdfIngestEndpointsTests(WebApplicationFactoryFixture factory)
+    public PdfIngestEndpointsTests(WebApplicationFactoryFixture factory) : base(factory)
     {
-        _factory = factory;
     }
 
+    /// <summary>
+    /// Scenario: Admin generates RuleSpec from PDF with atomic rules
+    ///   Given admin user is authenticated
+    ///   And a game exists
+    ///   And a PDF with atomic rules exists
+    ///   When admin posts to /ingest/pdf/{pdfId}/rulespec
+    ///   Then RuleSpec is generated from atomic rules
+    ///   And cleanup is automatic
+    /// </summary>
     [Fact]
     public async Task PostRulespecIngest_ReturnsGeneratedRuleSpec()
     {
-        using var client = _factory.CreateHttpsClient();
-        var email = "pdf-ingest@example.com";
-        var cookies = await RegisterAndAuthenticateAsync(client, email);
+        // Given: Admin user is authenticated
+        var user = await CreateTestUserAsync("pdf-ingest", UserRole.Admin);
+        var cookies = await AuthenticateUserAsync(user.Email);
+        var client = CreateClientWithoutCookies();
 
-        const string gameId = "game-ingest";
-        const string pdfId = "pdf-ingest";
+        // And: A game exists
+        var game = await CreateTestGameAsync("Ingest Game");
 
-        using (var scope = _factory.Services.CreateScope())
+        // And: A PDF with atomic rules exists
+        var pdfId = $"pdf-ingest-{TestRunId}";
+
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var pdfDoc = new PdfDocumentEntity
         {
-            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            var user = await db.Users.SingleAsync(u => u.Email == email);
-
-            db.Games.Add(new GameEntity
+            Id = pdfId,
+            GameId = game.Id,
+            FileName = "rules.pdf",
+            FilePath = "/tmp/rules.pdf",
+            FileSizeBytes = 2048,
+            UploadedByUserId = user.Id,
+            UploadedAt = DateTime.UtcNow,
+            AtomicRules = JsonSerializer.Serialize(new[]
             {
-                Id = gameId,
-                Name = "Ingest Game",
-                CreatedAt = DateTime.UtcNow
-            });
+                "[Table on page 4] Setup: Distribute four cards to each player"
+            })
+        };
 
-            db.PdfDocuments.Add(new PdfDocumentEntity
-            {
-                Id = pdfId,
-                GameId = gameId,
-                FileName = "rules.pdf",
-                FilePath = "/tmp/rules.pdf",
-                FileSizeBytes = 2048,
-                UploadedByUserId = user.Id,
-                UploadedAt = DateTime.UtcNow,
-                AtomicRules = JsonSerializer.Serialize(new[]
-                {
-                    "[Table on page 4] Setup: Distribute four cards to each player"
-                })
-            });
+        db.PdfDocuments.Add(pdfDoc);
+        await db.SaveChangesAsync();
+        TrackPdfDocumentId(pdfId);
 
-            await db.SaveChangesAsync();
-        }
-
+        // When: Admin posts to /ingest/pdf/{pdfId}/rulespec
         var request = new HttpRequestMessage(HttpMethod.Post, $"/ingest/pdf/{pdfId}/rulespec");
-        foreach (var cookie in cookies)
-        {
-            request.Headers.TryAddWithoutValidation("Cookie", cookie);
-        }
+        AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
 
+        // Then: RuleSpec is generated from atomic rules
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
         var spec = await response.Content.ReadFromJsonAsync<RuleSpec>(JsonOptions);
         Assert.NotNull(spec);
-        Assert.Equal(gameId, spec!.gameId);
+        Assert.Equal(game.Id, spec!.gameId);
         Assert.Single(spec.rules);
         Assert.Equal("Setup: Distribute four cards to each player", spec.rules[0].text);
         Assert.Equal("4", spec.rules[0].page);
-    }
-
-    private async Task<List<string>> RegisterAndAuthenticateAsync(HttpClient client, string email, string role = "Admin")
-    {
-        var registerRequest = new RegisterPayload(
-            email,
-            "Password123!",
-            "Test User",
-            null);
-
-        var response = await client.PostAsJsonAsync("/auth/register", registerRequest);
-        response.EnsureSuccessStatusCode();
-
-        if (!string.Equals(role, UserRole.User.ToString(), StringComparison.OrdinalIgnoreCase))
-        {
-            var parsedRole = Enum.Parse<UserRole>(role, true);
-            await PromoteUserAsync(email, parsedRole);
-        }
-
-        if (!response.Headers.TryGetValues("Set-Cookie", out var setCookie))
-        {
-            return new List<string>();
-        }
-
-        return new List<string>(setCookie.Select(cookie => cookie.Split(';')[0]));
-    }
-
-    private async Task PromoteUserAsync(string email, UserRole role)
-    {
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var user = await db.Users.SingleAsync(u => u.Email == email);
-        user.Role = role;
-        await db.SaveChangesAsync();
+        // Cleanup happens automatically via DisposeAsync
     }
 }

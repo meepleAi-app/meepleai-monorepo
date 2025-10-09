@@ -15,18 +15,23 @@ using Xunit;
 
 namespace Api.Tests;
 
-public class RuleSpecHistoryIntegrationTests : IClassFixture<WebApplicationFactoryFixture>
+/// <summary>
+/// BDD-style integration tests for RuleSpec history and versioning endpoints.
+///
+/// Feature: RuleSpec version history and diff functionality
+/// As an editor or admin
+/// I want to view RuleSpec version history and compare versions
+/// So that I can track changes to game rules over time
+/// </summary>
+public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true
     };
 
-    private readonly WebApplicationFactoryFixture _factory;
-
-    public RuleSpecHistoryIntegrationTests(WebApplicationFactoryFixture factory)
+    public RuleSpecHistoryIntegrationTests(WebApplicationFactoryFixture factory) : base(factory)
     {
-        _factory = factory;
     }
 
     [Fact]
@@ -65,7 +70,7 @@ public class RuleSpecHistoryIntegrationTests : IClassFixture<WebApplicationFacto
         await CreateGameAsync(gameId, "History Unauthorized Game");
         await SeedRuleSpecVersionsAsync(gameId, adminUserId);
 
-        using var client = _factory.CreateHttpsClient();
+        using var client = Factory.CreateHttpsClient();
         var response = await client.GetAsync($"/games/{gameId}/rulespec/history");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -142,7 +147,7 @@ public class RuleSpecHistoryIntegrationTests : IClassFixture<WebApplicationFacto
         await CreateGameAsync(gameId, "Versions Unauthorized Game");
         await SeedRuleSpecVersionsAsync(gameId, adminUserId);
 
-        using var client = _factory.CreateHttpsClient();
+        using var client = Factory.CreateHttpsClient();
         var response = await client.GetAsync($"/games/{gameId}/rulespec/versions/v1");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -253,7 +258,7 @@ public class RuleSpecHistoryIntegrationTests : IClassFixture<WebApplicationFacto
         await CreateGameAsync(gameId, "Diff Unauthorized Game");
         await SeedRuleSpecVersionsAsync(gameId, adminUserId);
 
-        using var client = _factory.CreateHttpsClient();
+        using var client = Factory.CreateHttpsClient();
         var response = await client.GetAsync($"/games/{gameId}/rulespec/diff?from=v1&to=v2");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -280,7 +285,7 @@ public class RuleSpecHistoryIntegrationTests : IClassFixture<WebApplicationFacto
 
     private async Task CreateGameAsync(string gameId, string name)
     {
-        using var scope = _factory.Services.CreateScope();
+        using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         if (!await db.Games.AnyAsync(g => g.Id == gameId))
@@ -292,12 +297,13 @@ public class RuleSpecHistoryIntegrationTests : IClassFixture<WebApplicationFacto
                 CreatedAt = DateTime.UtcNow
             });
             await db.SaveChangesAsync();
+            TrackGameId(gameId);
         }
     }
 
     private async Task<IReadOnlyDictionary<string, RuleSpec>> SeedRuleSpecVersionsAsync(string gameId, string createdByUserId)
     {
-        using var scope = _factory.Services.CreateScope();
+        using var scope = Factory.Services.CreateScope();
         var ruleSpecService = scope.ServiceProvider.GetRequiredService<RuleSpecService>();
 
         var version1 = await ruleSpecService.UpdateRuleSpecAsync(
@@ -350,8 +356,8 @@ public class RuleSpecHistoryIntegrationTests : IClassFixture<WebApplicationFacto
 
     private async Task<string> RegisterUserAsync(string role)
     {
-        using var client = _factory.CreateHttpsClient();
-        var email = $"{role.ToLowerInvariant()}-{Guid.NewGuid():N}@example.com";
+        using var client = Factory.CreateHttpsClient();
+        var email = $"{role.ToLowerInvariant()}-{TestRunId}-{Guid.NewGuid():N}@example.com";
         var payload = new RegisterPayload(email, "Password123!", $"{role} User", null);
         var response = await client.PostAsJsonAsync("/auth/register", payload);
         response.EnsureSuccessStatusCode();
@@ -360,13 +366,15 @@ public class RuleSpecHistoryIntegrationTests : IClassFixture<WebApplicationFacto
             var parsedRole = Enum.Parse<UserRole>(role, true);
             await PromoteUserAsync(email, parsedRole);
         }
-        return await GetUserIdByEmailAsync(email);
+        var userId = await GetUserIdByEmailAsync(email);
+        TrackUserId(userId);
+        return userId;
     }
 
     private async Task<AuthenticatedClient> CreateAuthenticatedClientAsync(string role)
     {
-        var client = _factory.CreateHttpsClient();
-        var email = $"{role.ToLowerInvariant()}-{Guid.NewGuid():N}@example.com";
+        var client = Factory.CreateHttpsClient();
+        var email = $"{role.ToLowerInvariant()}-{TestRunId}-{Guid.NewGuid():N}@example.com";
         var payload = new RegisterPayload(email, "Password123!", $"{role} User", null);
         var response = await client.PostAsJsonAsync("/auth/register", payload);
         response.EnsureSuccessStatusCode();
@@ -377,12 +385,13 @@ public class RuleSpecHistoryIntegrationTests : IClassFixture<WebApplicationFacto
             await PromoteUserAsync(email, parsedRole);
         }
         var userId = await GetUserIdByEmailAsync(email);
+        TrackUserId(userId);
         return new AuthenticatedClient(client, cookies, userId);
     }
 
     private async Task<string> GetUserIdByEmailAsync(string email)
     {
-        using var scope = _factory.Services.CreateScope();
+        using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var user = await db.Users.SingleAsync(u => u.Email == email);
         return user.Id;
@@ -402,7 +411,7 @@ public class RuleSpecHistoryIntegrationTests : IClassFixture<WebApplicationFacto
 
     private async Task PromoteUserAsync(string email, UserRole role)
     {
-        using var scope = _factory.Services.CreateScope();
+        using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var user = await db.Users.SingleAsync(u => u.Email == email);
         user.Role = role;

@@ -1,0 +1,210 @@
+{
+  "rules": [
+    {
+      "category": "Basic Rules",
+      "title": "Piece Movement - Pawn",
+      "content": "Pawns move forward one square, or two squares on their first move. They capture diagonally one square forward. When a pawn reaches the opposite end of the board, it must be promoted to a queen, rook, bishop, or knight."
+    },
+    {
+      "category": "Basic Rules",
+      "title": "Piece Movement - Rook",
+      "content": "Rooks move any number of squares horizontally or vertically in a straight line. They cannot jump over other pieces. Rooks are particularly powerful in open positions and endgames."
+    },
+    {
+      "category": "Basic Rules",
+      "title": "Piece Movement - Knight",
+      "content": "Knights move in an L-shape: two squares in one direction and one square perpendicular, or vice versa. Knights are the only pieces that can jump over other pieces. Each move alternates the color of the square the knight stands on."
+    },
+    {
+      "category": "Basic Rules",
+      "title": "Piece Movement - Bishop",
+      "content": "Bishops move any number of squares diagonally. Each bishop is confined to squares of one color throughout the game. A light-squared bishop always remains on light squares, and a dark-squared bishop on dark squares."
+    },
+    {
+      "category": "Basic Rules",
+      "title": "Piece Movement - Queen",
+      "content": "The queen is the most powerful piece, combining the movement of rook and bishop. It can move any number of squares horizontally, vertically, or diagonally. The queen cannot jump over other pieces."
+    },
+    {
+      "category": "Basic Rules",
+      "title": "Piece Movement - King",
+      "content": "The king moves one square in any direction: horizontally, vertically, or diagonally. The king is the most important piece but also the most limited in mobility. Protecting your king while attacking the opponent's king is the essence of chess."
+    },
+    {
+      "category": "Special Moves",
+      "title": "Castling",
+      "content": "Castling is a special move involving the king and either rook. The king moves two squares toward the rook, and the rook moves to the square the king crossed. Castling is only legal if: neither piece has moved before, there are no pieces between them, the king is not in check, and the king does not pass through or land on a square that is under attack. Kingside castling is written as O-O, queenside castling as O-O-O."
+    },
+    {
+      "category": "Special Moves",
+      "title": "En Passant",
+      "content": "En passant is a special pawn capture. If a pawn moves two squares forward from its starting position and lands beside an opponent's pawn, that opponent's pawn can capture it as if it had only moved one square. This capture must be made immediately on the next move or the right is lost. The capturing pawn moves diagonally to the square the captured pawn passed over."
+    },
+    {
+      "category": "Game Endings",
+      "title": "Checkmate",
+      "content": "Checkmate occurs when a king is in check and has no legal move to escape. The attacking player wins the game immediately. Checkmate is the ultimate goal in chess. Common checkmate patterns include back rank mate, smothered mate, and the two-rook mate."
+    },
+    {
+      "category": "Game Endings",
+      "title": "Stalemate",
+      "content": "Stalemate occurs when a player has no legal moves but is not in check. The game immediately ends in a draw. Stalemate is an important defensive resource and must be avoided when winning. Common stalemate patterns occur in king and pawn endgames."
+    },
+    {
+      "category": "Game Endings",
+      "title": "Draw Conditions",
+      "content": "A game can end in a draw through several ways: stalemate, threefold repetition of position, the fifty-move rule (50 moves without pawn move or capture), insufficient material to checkmate, or mutual agreement between players. Understanding draw conditions is crucial for both saving lost positions and converting winning positions."
+    }
+  ],
+  "openings": [
+    {
+      "category": "King Pawn Openings",
+      "title": "Italian Game",
+      "content": "The Italian Game begins with 1.e4 e5 2.Nf3 Nc6 3.Bc4, developing the bishop to an aggressive square attacking f7. This is one of the oldest openings in chess. White aims for quick development and central control. Black typically responds with Bc5 or Nf6. The Giuoco Piano (3...Bc5) and Two Knights Defense (3...Nf6) are the main variations."
+    },
+    {
+      "category": "King Pawn Openings",
+      "title": "Ruy Lopez",
+      "content": "The Ruy Lopez, also known as the Spanish Opening, starts with 1.e4 e5 2.Nf3 Nc6 3.Bb5. Named after a 16th-century Spanish priest, it puts pressure on the knight that defends the e5 pawn. This opening emphasizes control of the center and long-term positional pressure. Main variations include the Closed Ruy Lopez (3...a6 4.Ba4 Nf6 5.O-O Be7), the Open Ruy Lopez, and the Marshall Attack."
+    },
+    {
+      "category": "King Pawn Openings",
+      "title": "Sicilian Defense",
+      "content": "The Sicilian Defense (1.e4 c5) is Black's most popular and combative response to 1.e4. By attacking the d4 square, Black creates an asymmetrical pawn structure that offers excellent winning chances. The opening leads to sharp, tactical play. Major variations include the Najdorf (5...a6), Dragon (5...g6), Sveshnikov (5...e5), and Classical (5...Nc6). The Sicilian requires concrete knowledge and careful preparation."
+    },
+    {
+      "category": "King Pawn Openings",
+      "title": "French Defense",
+      "content": "The French Defense (1.e4 e6) is a solid, strategic opening where Black prepares to challenge White's center with d5. It often leads to a closed pawn structure where Black accepts spatial disadvantage for long-term counterplay. The main lines are the Winawer (3.Nc3 Bb4), Tarrasch (3.Nd2), and Classical (3.Nc3 Nf6). Black's light-squared bishop is often problematic, leading to plans involving piece exchanges or pawn breaks."
+    },
+    {
+      "category": "Queen Pawn Openings",
+      "title": "Queen's Gambit",
+      "content": "The Queen's Gambit (1.d4 d5 2.c4) is not a true gambit as Black cannot safely hold the pawn after 2...dxc4. This opening aims for central control and piece development. The main responses are the Queen's Gambit Accepted (2...dxc4) and Queen's Gambit Declined (2...e6 or 2...c6). The opening leads to strategic middlegames with complex maneuvering and pawn structures."
+    },
+    {
+      "category": "Queen Pawn Openings",
+      "title": "King's Indian Defense",
+      "content": "The King's Indian Defense (1.d4 Nf6 2.c4 g6 3.Nc3 Bg7) is a hypermodern opening where Black allows White central control, planning counterplay with pawn breaks like e5 or c5. This defense leads to sharp, tactical positions with opposite-side castling common. The main systems include the Classical Variation, Sämisch Variation, and Fianchetto Variation. Black often plays for a kingside attack while White expands on the queenside."
+    },
+    {
+      "category": "Queen Pawn Openings",
+      "title": "Nimzo-Indian Defense",
+      "content": "The Nimzo-Indian Defense (1.d4 Nf6 2.c4 e6 3.Nc3 Bb4) is named after Aron Nimzowitsch and is one of the most respected defenses against 1.d4. By pinning the knight, Black fights for central control while maintaining flexibility. Key variations include the Rubinstein (4.e3), Classical (4.Qc2), and Sämisch (4.a3). The opening often leads to strategic battles over weak pawns and piece placement."
+    },
+    {
+      "category": "Flank Openings",
+      "title": "English Opening",
+      "content": "The English Opening (1.c4) is a flexible system that can transpose to many different pawn structures. Named after Howard Staunton who played it in an 1843 match in England, it avoids early central pawn confrontation. Black's main responses include 1...e5 (Reversed Sicilian), 1...c5 (Symmetrical English), 1...Nf6, and 1...e6. The opening emphasizes piece development and control from a distance, often leading to strategic middlegames."
+    }
+  ],
+  "tactics": [
+    {
+      "category": "Basic Tactics",
+      "title": "Fork",
+      "content": "A fork is a tactic where one piece attacks two or more enemy pieces simultaneously. Knights are especially effective at forking because of their unique movement pattern. The classic example is a knight fork attacking both the king and queen, winning material. Forks can be executed by any piece, but knight forks, pawn forks, and queen forks are most common. Recognizing fork opportunities is fundamental to tactical chess."
+    },
+    {
+      "category": "Basic Tactics",
+      "title": "Pin",
+      "content": "A pin occurs when a piece cannot move without exposing a more valuable piece behind it to capture. Pins along ranks, files, and diagonals are performed by queens, rooks, and bishops. An absolute pin occurs when the king is the piece behind, making the pinned piece legally immobile. A relative pin involves a less valuable piece protecting a more valuable one. Breaking pins or exploiting them is a key tactical skill."
+    },
+    {
+      "category": "Basic Tactics",
+      "title": "Skewer",
+      "content": "A skewer is the reverse of a pin: a more valuable piece is attacked and must move, exposing a less valuable piece behind it. Queens, rooks, and bishops deliver skewers along ranks, files, and diagonals. The classic skewer involves checking the king and then capturing a piece behind it. Skewers are powerful forcing moves that win material or improve position."
+    },
+    {
+      "category": "Basic Tactics",
+      "title": "Discovered Attack",
+      "content": "A discovered attack occurs when moving one piece reveals an attack from another piece behind it. Discovered checks are especially powerful as they force the opponent to address the check while the moved piece can capture material freely. The most devastating is the double check, where both the moved piece and the piece behind give check simultaneously. The king must move as it's impossible to block or capture both checking pieces."
+    },
+    {
+      "category": "Basic Tactics",
+      "title": "Remove the Defender",
+      "content": "This tactic involves capturing, deflecting, or otherwise removing a piece that defends an important square or piece. Once the defender is gone, you can capture the undefended target or occupy the critical square. Common methods include: capturing the defender with check, offering a favorable trade, or forcing the defender away with threats. This is a fundamental principle in combination play."
+    },
+    {
+      "category": "Advanced Tactics",
+      "title": "Decoy and Deflection",
+      "content": "Decoy involves luring an enemy piece to an unfavorable square, often through sacrifice. Deflection forces a defending piece away from its defensive duties. These tactics often work together to create winning combinations. A classic example is sacrificing the queen to force the king to a square where it can be checkmated. Recognizing when to sacrifice material for positional gain or tactical blow requires calculation and pattern recognition."
+    },
+    {
+      "category": "Advanced Tactics",
+      "title": "Interference and Blocking",
+      "content": "Interference occurs when a piece is placed between two enemy pieces, disrupting their coordination. Blocking involves placing a piece on a critical square to obstruct enemy plans. These subtle tactics can win material or create decisive threats. A common example is blocking a defensive file to win material or deliver checkmate. Understanding piece coordination and harmony helps identify interference opportunities."
+    },
+    {
+      "category": "Advanced Tactics",
+      "title": "Zwischenzug (In-Between Move)",
+      "content": "A zwischenzug is an unexpected intermediate move inserted into an apparently forced sequence. Instead of making the expected recapture or response, a player makes a forcing move that improves the outcome. Common zwischenzugs include checks, captures, and threats that must be answered. This tactic requires looking one move deeper than the obvious continuation. Zwischenzugs can turn disadvantageous trades into winning combinations."
+    },
+    {
+      "category": "Mating Patterns",
+      "title": "Back Rank Mate",
+      "content": "Back rank mate occurs when a king trapped on its back rank by its own pawns is checkmated by a rook or queen. This is one of the most common mating patterns in chess. Prevention involves creating luft (air) by moving a pawn in front of the king. Attacking players should watch for back rank weaknesses throughout the game, especially after castling. Even strong players fall victim to back rank tactics."
+    },
+    {
+      "category": "Mating Patterns",
+      "title": "Smothered Mate",
+      "content": "Smothered mate is a checkmate delivered by a knight in which the mated king is unable to move because it is surrounded by its own pieces. The classic pattern involves sacrificing the queen to force the king into a corner, followed by knight checkmate. Philidor's Legacy is the most famous smothered mate pattern. Recognizing the key elements (king position, knight proximity, blocked escape squares) allows you to execute this spectacular checkmate."
+    }
+  ],
+  "middlegame_strategies": [
+    {
+      "category": "Pawn Structure",
+      "title": "Isolated Queen Pawn (IQP)",
+      "content": "An isolated queen pawn (on the d-file without supporting pawns on adjacent files) is a double-edged structure. Advantages include space advantage, active piece play, and attacking chances against the enemy king. The d5 square can serve as an outpost. Disadvantages include the weakness of the pawn itself and the d5 square in front of it. The side with the IQP typically seeks attacking chances before the endgame, where the weakness becomes more pronounced."
+    },
+    {
+      "category": "Pawn Structure",
+      "title": "Hanging Pawns",
+      "content": "Hanging pawns are two adjacent pawns (usually on the c- and d-files) that lack pawn support. They control important central squares and provide space advantage but can become weak targets. The player with hanging pawns must remain active, as passive defense is difficult. The opponent aims to blockade and attack these pawns. Converting hanging pawns to an isolated pawn or advancing them decisively are key strategic decisions."
+    },
+    {
+      "category": "Pawn Structure",
+      "title": "Pawn Chains",
+      "content": "Pawn chains are diagonal formations of pawns where each pawn except the base is defended by another pawn. According to Nimzowitsch, the proper plan is to attack the base of the chain. In French Defense structures, White attacks with f4-f5 while Black counterattacks with c5. Understanding pawn chain dynamics determines piece placement and strategic plans. Breaking the chain or extending it are key strategic goals."
+    },
+    {
+      "category": "Piece Coordination",
+      "title": "Rook on the 7th Rank",
+      "content": "A rook on the opponent's 7th rank (2nd rank for Black) is extremely powerful. It attacks pawns on their original squares and restricts the enemy king. Two rooks on the 7th rank can be devastating, often called 'pigs on the seventh'. This strategic achievement often justifies significant material or positional concessions. Achieving and maintaining a rook on the 7th is a common strategic goal in the middlegame and endgame."
+    },
+    {
+      "category": "Piece Coordination",
+      "title": "Bishop Pair Advantage",
+      "content": "The bishop pair (having two bishops while the opponent has bishop and knight or two knights) provides several advantages: long-range control, ability to attack on both color complexes, and strong performance in open positions. The bishop pair becomes increasingly powerful in positions with pawns on both sides of the board. To fight against the bishop pair, create a closed position, exchange one bishop, or exploit weaknesses on the color complex of the missing bishop."
+    },
+    {
+      "category": "Piece Coordination",
+      "title": "Knight Outposts",
+      "content": "A knight outpost is a square deep in enemy territory that cannot be attacked by enemy pawns. The classic outpost is on the 5th or 6th rank (4th or 3rd for Black), supported by a friendly pawn. Knights are particularly effective on outposts because their short-range movement makes centralized squares valuable. Creating or preventing outposts is a fundamental strategic consideration, especially in closed positions where knights excel."
+    },
+    {
+      "category": "Strategic Plans",
+      "title": "Minority Attack",
+      "content": "The minority attack involves advancing a pawn minority on one side of the board to create weaknesses in the opponent's pawn majority. The classic example occurs in the Exchange Variation of the Queen's Gambit where White advances b4-b5 to create a backward c-pawn or isolated a-pawn for Black. This long-term strategic plan requires patience and careful preparation. The attack is most effective when the opponent cannot create sufficient counterplay elsewhere."
+    },
+    {
+      "category": "Strategic Plans",
+      "title": "Space Advantage",
+      "content": "A space advantage occurs when your pawns control more squares than your opponent's, giving your pieces more room to maneuver. Space advantage must be maintained and exploited through active piece play. The player with less space should seek exchanges to relieve the cramp and look for pawn breaks to free their position. Common strategies with space advantage include restricting enemy pieces, preparing breakthroughs, and launching attacks on either flank."
+    },
+    {
+      "category": "Strategic Plans",
+      "title": "Prophylaxis",
+      "content": "Prophylaxis, a concept developed by Nimzowitsch, means preventing your opponent's plans before executing your own. Instead of rushing your own ideas, you identify and stop the opponent's threats and improvements. This requires understanding what your opponent wants to achieve. Prophylactic moves might restrain pieces, control key squares, or prevent pawn breaks. Balancing prophylaxis with concrete threats is the hallmark of strong positional play."
+    },
+    {
+      "category": "King Safety",
+      "title": "Opposite-Side Castling",
+      "content": "When players castle on opposite sides, the game typically becomes very sharp with mutual attacks. Each player storms pawns forward toward the enemy king with less concern for their own king safety. Tempo becomes critical as races develop. Common plans include pawn storms (h4-h5 or a4-a5), opening lines toward the enemy king, and sacrificing material for attack. Calculation and concrete analysis outweigh general principles in these positions."
+    },
+    {
+      "category": "King Safety",
+      "title": "Weakening Pawn Moves Around the King",
+      "content": "Moving pawns in front of your castled king (f3, g3, h3 for White; f6, g6, h6 for Black) creates permanent weaknesses. While sometimes necessary to prevent back rank mates or provide escape squares, these moves must be carefully considered. Each pawn move creates 'hooks' for enemy attacks and weakens specific squares. Understanding when luft (breathing room) is necessary versus when it invites attack requires experience and calculation."
+    }
+  ]
+}

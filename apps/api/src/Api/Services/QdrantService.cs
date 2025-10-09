@@ -63,6 +63,13 @@ public class QdrantService : IQdrantService
                 cancellationToken: ct
             );
 
+            await _clientAdapter.CreatePayloadIndexAsync(
+                collectionName: CollectionName,
+                fieldName: "category",
+                schemaType: PayloadSchemaType.Keyword,
+                cancellationToken: ct
+            );
+
             _logger.LogInformation("Collection {CollectionName} created successfully with indexes", CollectionName);
         }
         catch (Exception ex)
@@ -226,6 +233,168 @@ public class QdrantService : IQdrantService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to delete vectors for PDF {PdfId}", pdfId);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Index document chunks with custom metadata
+    /// </summary>
+    public async Task<IndexResult> IndexChunksWithMetadataAsync(
+        Dictionary<string, string> metadata,
+        List<DocumentChunk> chunks,
+        CancellationToken ct = default)
+    {
+        if (chunks == null || chunks.Count == 0)
+        {
+            return IndexResult.CreateFailure("No chunks to index");
+        }
+
+        try
+        {
+            var category = metadata.GetValueOrDefault("category", "unknown");
+            _logger.LogInformation("Indexing {Count} chunks with category {Category}", chunks.Count, category);
+
+            var points = new List<PointStruct>();
+
+            for (int i = 0; i < chunks.Count; i++)
+            {
+                var chunk = chunks[i];
+                var pointId = Guid.NewGuid().ToString();
+
+                var payload = new Dictionary<string, Value>();
+
+                // Add all provided metadata
+                foreach (var kvp in metadata)
+                {
+                    payload[kvp.Key] = kvp.Value;
+                }
+
+                // Add chunk-specific data
+                payload["chunk_index"] = i;
+                payload["text"] = chunk.Text;
+                payload["page"] = chunk.Page;
+                payload["char_start"] = chunk.CharStart;
+                payload["char_end"] = chunk.CharEnd;
+                payload["indexed_at"] = DateTime.UtcNow.ToString("o");
+
+                var point = new PointStruct
+                {
+                    Id = new PointId { Uuid = pointId },
+                    Vectors = chunk.Embedding,
+                    Payload = { payload }
+                };
+
+                points.Add(point);
+            }
+
+            await _clientAdapter.UpsertAsync(
+                collectionName: CollectionName,
+                points: points.AsReadOnly(),
+                cancellationToken: ct
+            );
+
+            _logger.LogInformation("Successfully indexed {Count} chunks with metadata", chunks.Count);
+            return IndexResult.CreateSuccess(chunks.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to index chunks with metadata");
+            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Search for similar chunks filtered by category
+    /// </summary>
+    public virtual async Task<SearchResult> SearchByCategoryAsync(
+        string category,
+        float[] queryEmbedding,
+        int limit = 5,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            _logger.LogInformation("Searching in category {Category}, limit {Limit}", category, limit);
+
+            var filter = new Filter
+            {
+                Must =
+                {
+                    new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "category",
+                            Match = new Match { Keyword = category }
+                        }
+                    }
+                }
+            };
+
+            var searchResults = await _clientAdapter.SearchAsync(
+                collectionName: CollectionName,
+                vector: queryEmbedding,
+                filter: filter,
+                limit: (ulong)limit,
+                cancellationToken: ct
+            );
+
+            var results = searchResults.Select(r => new SearchResultItem
+            {
+                Score = r.Score,
+                Text = r.Payload["text"].StringValue,
+                PdfId = r.Payload.ContainsKey("pdf_id") ? r.Payload["pdf_id"].StringValue : "",
+                Page = (int)r.Payload["page"].IntegerValue,
+                ChunkIndex = (int)r.Payload["chunk_index"].IntegerValue
+            }).ToList();
+
+            _logger.LogInformation("Found {Count} results in category {Category}", results.Count, category);
+            return SearchResult.CreateSuccess(results);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Search failed for category {Category}", category);
+            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Delete all vectors for a specific category
+    /// </summary>
+    public async Task<bool> DeleteByCategoryAsync(string category, CancellationToken ct = default)
+    {
+        try
+        {
+            _logger.LogInformation("Deleting vectors for category {Category}", category);
+
+            var filter = new Filter
+            {
+                Must =
+                {
+                    new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "category",
+                            Match = new Match { Keyword = category }
+                        }
+                    }
+                }
+            };
+
+            await _clientAdapter.DeleteAsync(
+                collectionName: CollectionName,
+                filter: filter,
+                cancellationToken: ct
+            );
+
+            _logger.LogInformation("Successfully deleted vectors for category {Category}", category);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete vectors for category {Category}", category);
             return false;
         }
     }

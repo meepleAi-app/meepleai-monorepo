@@ -257,12 +257,27 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
             return Task.FromResult(IndexResult.CreateSuccess(chunks.Count));
         }
 
+        public Task<IndexResult> IndexChunksWithMetadataAsync(Dictionary<string, string> metadata, List<DocumentChunk> chunks, CancellationToken ct = default)
+        {
+            return Task.FromResult(IndexResult.CreateSuccess(chunks.Count));
+        }
+
         public Task<SearchResult> SearchAsync(string gameId, float[] queryEmbedding, int limit = 5, CancellationToken ct = default)
         {
             throw new NotSupportedException();
         }
 
+        public Task<SearchResult> SearchByCategoryAsync(string category, float[] queryEmbedding, int limit = 5, CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+
         public Task<bool> DeleteDocumentAsync(string pdfId, CancellationToken ct = default)
+        {
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> DeleteByCategoryAsync(string category, CancellationToken ct = default)
         {
             return Task.FromResult(true);
         }

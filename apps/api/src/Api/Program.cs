@@ -138,6 +138,9 @@ builder.Services.AddScoped<PdfTableExtractionService>();
 builder.Services.AddScoped<PdfStorageService>();
 builder.Services.AddScoped<N8nConfigService>();
 
+// CHESS-03: Chess knowledge indexing service
+builder.Services.AddScoped<IChessKnowledgeService, ChessKnowledgeService>();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("web", policy =>
@@ -1255,6 +1258,108 @@ app.MapPost("/admin/n8n/{configId}/test", async (string configId, HttpContext co
         logger.LogWarning("Failed to test n8n config: {Error}", ex.Message);
         return Results.BadRequest(new { error = ex.Message });
     }
+});
+
+// CHESS-03: Chess knowledge indexing endpoints
+app.MapPost("/chess/index", async (HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        logger.LogWarning("User {UserId} with role {Role} attempted to index chess knowledge without permission",
+            session.User.id, session.User.role);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session.User.id);
+
+    var result = await chessService.IndexChessKnowledgeAsync(ct);
+
+    if (!result.Success)
+    {
+        logger.LogError("Chess knowledge indexing failed: {Error}", result.ErrorMessage);
+        return Results.BadRequest(new { error = result.ErrorMessage });
+    }
+
+    logger.LogInformation("Chess knowledge indexing completed: {TotalItems} items, {TotalChunks} chunks",
+        result.TotalKnowledgeItems, result.TotalChunks);
+
+    return Results.Json(new
+    {
+        success = true,
+        totalItems = result.TotalKnowledgeItems,
+        totalChunks = result.TotalChunks,
+        categoryCounts = result.CategoryCounts
+    });
+});
+
+app.MapGet("/chess/search", async (string? q, int? limit, HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (string.IsNullOrWhiteSpace(q))
+    {
+        return Results.BadRequest(new { error = "Query parameter 'q' is required" });
+    }
+
+    logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session.User.id, q);
+
+    var searchResult = await chessService.SearchChessKnowledgeAsync(q, limit ?? 5, ct);
+
+    if (!searchResult.Success)
+    {
+        logger.LogError("Chess knowledge search failed: {Error}", searchResult.ErrorMessage);
+        return Results.BadRequest(new { error = searchResult.ErrorMessage });
+    }
+
+    logger.LogInformation("Chess knowledge search completed: {ResultCount} results", searchResult.Results.Count);
+
+    return Results.Json(new
+    {
+        success = true,
+        results = searchResult.Results.Select(r => new
+        {
+            score = r.Score,
+            text = r.Text,
+            page = r.Page,
+            chunkIndex = r.ChunkIndex
+        })
+    });
+});
+
+app.MapDelete("/chess/index", async (HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        logger.LogWarning("User {UserId} with role {Role} attempted to delete chess knowledge without permission",
+            session.User.id, session.User.role);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    logger.LogInformation("Admin {UserId} deleting all chess knowledge", session.User.id);
+
+    var success = await chessService.DeleteChessKnowledgeAsync(ct);
+
+    if (!success)
+    {
+        logger.LogError("Chess knowledge deletion failed");
+        return Results.StatusCode(StatusCodes.Status500InternalServerError);
+    }
+
+    logger.LogInformation("Chess knowledge deletion completed successfully");
+    return Results.Json(new { success = true });
 });
 
 app.Run();

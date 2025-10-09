@@ -32,7 +32,7 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
       - name: Test with Coverage
-        run: pnpm test:coverage -- --ci
+        run: CI=true pnpm test:coverage
 
       - name: Upload Web Coverage to Codecov
         uses: codecov/codecov-action@v4

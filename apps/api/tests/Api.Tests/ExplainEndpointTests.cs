@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -402,6 +403,10 @@ public class ExplainEndpointTests : IntegrationTestBase
         await db.SaveChangesAsync();
 
         TrackPdfDocumentId(pdf.Id);
+
+        // Actually index the PDF content in Qdrant (the database entities alone are not enough!)
+        var indexingService = scope.ServiceProvider.GetRequiredService<PdfIndexingService>();
+        await indexingService.IndexPdfAsync(pdf.Id, default);
     }
 
     /// <summary>

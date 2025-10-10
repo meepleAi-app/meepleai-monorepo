@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 MeepleAI is a monorepo containing an AI-powered board game rules assistant. The system processes PDF rulebooks, performs semantic search using vector embeddings, and provides intelligent answers to gameplay questions.
 
 **Tech Stack:**
-- **Backend API**: ASP.NET Core 8.0 (C#)
+- **Backend API**: ASP.NET Core 9.0 (C#)
 - **Frontend**: Next.js 14 with React 18 (TypeScript)
 - **Databases**: PostgreSQL (relational), Qdrant (vector search), Redis (caching)
 - **AI/ML**: OpenRouter API for embeddings and LLM
@@ -198,7 +198,7 @@ The API follows a service-oriented architecture with dependency injection config
 
 ### Database Layer
 
-**ORM**: Entity Framework Core 8.0 with PostgreSQL provider
+**ORM**: Entity Framework Core 9.0 with PostgreSQL provider
 
 **DbContext**: `MeepleAiDbContext` in `Infrastructure/MeepleAiDbContext.cs`
 
@@ -375,7 +375,7 @@ pwsh tools/measure-coverage.ps1 -GenerateHtml
    - Runs on: PRs and pushes to `main`
 
 2. **ci-api**: Build → Test
-   - .NET 8.0
+   - .NET 9.0
    - Services: postgres, qdrant
    - Installs libgdiplus for PDF extraction
    - Environment variables: `CI=true`, test API keys, connection strings
@@ -388,7 +388,7 @@ pwsh tools/measure-coverage.ps1 -GenerateHtml
 **Security Layers**:
 
 1. **CodeQL SAST** - Static application security testing
-   - Languages: C# (.NET 8), JavaScript/TypeScript
+   - Languages: C# (.NET 9), JavaScript/TypeScript
    - Queries: `security-extended`, `security-and-quality`
    - Results in GitHub Security tab
 

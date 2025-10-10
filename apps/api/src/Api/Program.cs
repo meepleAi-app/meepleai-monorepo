@@ -91,12 +91,16 @@ if (forwardedHeadersEnabled)
 
 builder.Services.Configure<SessionCookieConfiguration>(builder.Configuration.GetSection("Authentication:SessionCookie"));
 
-var connectionString = builder.Configuration.GetConnectionString("Postgres")
-    ?? builder.Configuration["ConnectionStrings__Postgres"]
-    ?? throw new InvalidOperationException("Missing Postgres connection string");
+// Only configure Postgres in non-test environments (tests will override with SQLite)
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    var connectionString = builder.Configuration.GetConnectionString("Postgres")
+        ?? builder.Configuration["ConnectionStrings__Postgres"]
+        ?? throw new InvalidOperationException("Missing Postgres connection string");
 
-builder.Services.AddDbContext<MeepleAiDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    builder.Services.AddDbContext<MeepleAiDbContext>(options =>
+        options.UseNpgsql(connectionString));
+}
 
 // Configure Redis
 var redisUrl = builder.Configuration["REDIS_URL"] ?? "localhost:6379";

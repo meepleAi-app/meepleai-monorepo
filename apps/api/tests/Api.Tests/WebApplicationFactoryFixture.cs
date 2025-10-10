@@ -11,6 +11,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -113,15 +114,32 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
                     It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
 
-            // Mock upsert operation - succeed silently
+            // Mock upsert operation - store points in memory
             mockQdrantAdapter
                 .Setup(x => x.UpsertAsync(
                     It.IsAny<string>(),
                     It.IsAny<IReadOnlyList<Qdrant.Client.Grpc.PointStruct>>(),
                     It.IsAny<CancellationToken>()))
+                .Callback((string collectionName, IReadOnlyList<Qdrant.Client.Grpc.PointStruct> points, CancellationToken ct) =>
+                {
+                    lock (_storageLock)
+                    {
+                        if (!_mockQdrantStorage.ContainsKey(collectionName))
+                        {
+                            _mockQdrantStorage[collectionName] = new List<Qdrant.Client.Grpc.PointStruct>();
+                        }
+
+                        // Remove existing points with same IDs (upsert behavior)
+                        var existingIds = new HashSet<string>(points.Select(p => p.Id.Uuid));
+                        _mockQdrantStorage[collectionName].RemoveAll(p => existingIds.Contains(p.Id.Uuid));
+
+                        // Add new points
+                        _mockQdrantStorage[collectionName].AddRange(points);
+                    }
+                })
                 .Returns(Task.CompletedTask);
 
-            // Mock search operation - return empty results
+            // Mock search operation - return filtered results from in-memory storage
             mockQdrantAdapter
                 .Setup(x => x.SearchAsync(
                     It.IsAny<string>(),
@@ -129,14 +147,90 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
                     It.IsAny<Qdrant.Client.Grpc.Filter>(),
                     It.IsAny<ulong?>(),
                     It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<Qdrant.Client.Grpc.ScoredPoint>().AsReadOnly());
+                .ReturnsAsync((string collectionName, float[] vector, Qdrant.Client.Grpc.Filter? filter, ulong? limit, CancellationToken ct) =>
+                {
+                    lock (_storageLock)
+                    {
+                        if (!_mockQdrantStorage.ContainsKey(collectionName))
+                        {
+                            return new List<Qdrant.Client.Grpc.ScoredPoint>().AsReadOnly();
+                        }
 
-            // Mock delete operation - succeed silently
+                        var points = _mockQdrantStorage[collectionName];
+
+                        // Apply filter if provided
+                        var filteredPoints = points.AsEnumerable();
+
+                        if (filter != null && filter.Must.Count > 0)
+                        {
+                            foreach (var condition in filter.Must)
+                            {
+                                if (condition.Field != null)
+                                {
+                                    var fieldKey = condition.Field.Key;
+                                    var matchValue = condition.Field.Match?.Keyword;
+
+                                    if (!string.IsNullOrEmpty(fieldKey) && !string.IsNullOrEmpty(matchValue))
+                                    {
+                                        filteredPoints = filteredPoints.Where(p =>
+                                            p.Payload.ContainsKey(fieldKey) &&
+                                            p.Payload[fieldKey].StringValue == matchValue);
+                                    }
+                                }
+                            }
+                        }
+
+                        // Convert to scored points (use high default score since we're not doing real similarity)
+                        var scoredPoints = filteredPoints
+                            .Select((p, index) => new Qdrant.Client.Grpc.ScoredPoint
+                            {
+                                Id = p.Id,
+                                Payload = { p.Payload },
+                                Score = 0.95f - (index * 0.01f) // Decreasing scores for ranking
+                            })
+                            .Take((int)(limit ?? 10))
+                            .ToList();
+
+                        return scoredPoints.AsReadOnly();
+                    }
+                });
+
+            // Mock delete operation - remove points from in-memory storage
             mockQdrantAdapter
                 .Setup(x => x.DeleteAsync(
                     It.IsAny<string>(),
                     It.IsAny<Qdrant.Client.Grpc.Filter>(),
                     It.IsAny<CancellationToken>()))
+                .Callback((string collectionName, Qdrant.Client.Grpc.Filter filter, CancellationToken ct) =>
+                {
+                    lock (_storageLock)
+                    {
+                        if (!_mockQdrantStorage.ContainsKey(collectionName))
+                        {
+                            return;
+                        }
+
+                        // Apply filter to find points to delete
+                        if (filter != null && filter.Must.Count > 0)
+                        {
+                            foreach (var condition in filter.Must)
+                            {
+                                if (condition.Field != null)
+                                {
+                                    var fieldKey = condition.Field.Key;
+                                    var matchValue = condition.Field.Match?.Keyword;
+
+                                    if (!string.IsNullOrEmpty(fieldKey) && !string.IsNullOrEmpty(matchValue))
+                                    {
+                                        _mockQdrantStorage[collectionName].RemoveAll(p =>
+                                            p.Payload.ContainsKey(fieldKey) &&
+                                            p.Payload[fieldKey].StringValue == matchValue);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                })
                 .Returns(Task.CompletedTask);
 
             services.AddSingleton(mockQdrantAdapter.Object);
@@ -174,20 +268,40 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
 
             services.AddSingleton(mockEmbeddingService.Object);
 
-            services.AddSingleton<IHttpClientFactory>(_ => new StubHttpClientFactory());
-
-            // Ensure database is created
-            var sp = services.BuildServiceProvider();
-            using var scope = sp.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            db.Database.EnsureCreated();
-
-            // Seed demo data (since EnsureCreated doesn't run migrations)
-            SeedDemoData(db);
+            services.AddSingleton<IHttpClientFactory>(_ => new SmartHttpClientFactory());
         });
 
         builder.UseEnvironment("Testing");
     }
+
+    protected override IHost CreateHost(IHostBuilder builder)
+    {
+        var host = base.CreateHost(builder);
+
+        // Ensure database is created and seeded after host is built
+        if (!_databaseInitialized)
+        {
+            lock (_databaseInitLock)
+            {
+                if (!_databaseInitialized)
+                {
+                    using var scope = host.Services.CreateScope();
+                    var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+                    db.Database.EnsureCreated();
+
+                    // Seed demo data (since EnsureCreated doesn't run migrations)
+                    SeedDemoData(db);
+
+                    _databaseInitialized = true;
+                }
+            }
+        }
+
+        return host;
+    }
+
+    private static bool _databaseInitialized = false;
+    private static readonly object _databaseInitLock = new object();
 
     private static void SeedDemoData(MeepleAiDbContext db)
     {
@@ -325,24 +439,220 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
         base.Dispose(disposing);
     }
 
-    private sealed class StubHttpClientFactory : IHttpClientFactory
+    /// <summary>
+    /// In-memory storage for mocked Qdrant points across all tests
+    /// Key: collection name, Value: list of points
+    /// </summary>
+    private static readonly Dictionary<string, List<Qdrant.Client.Grpc.PointStruct>> _mockQdrantStorage = new();
+    private static readonly object _storageLock = new object();
+
+    /// <summary>
+    /// Smart HTTP client factory that returns realistic LLM responses for testing
+    /// </summary>
+    private sealed class SmartHttpClientFactory : IHttpClientFactory
     {
         public HttpClient CreateClient(string name)
         {
-            return new HttpClient(new StubHandler())
+            return new HttpClient(new SmartLlmHandler())
             {
-                Timeout = TimeSpan.FromSeconds(2)
+                Timeout = TimeSpan.FromSeconds(30)
             };
         }
 
-        private sealed class StubHandler : HttpMessageHandler
+        /// <summary>
+        /// HTTP handler that simulates OpenRouter LLM API responses based on request content
+        /// </summary>
+        private sealed class SmartLlmHandler : HttpMessageHandler
         {
-            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             {
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                // Read request body to determine what kind of response to return
+                var requestBody = await request.Content!.ReadAsStringAsync(cancellationToken);
+
+                // Parse the request to extract the prompt/context
+                var requestJson = System.Text.Json.JsonDocument.Parse(requestBody);
+
+                // Check if this is a chat completion request
+                if (requestJson.RootElement.TryGetProperty("messages", out var messages))
+                {
+                    var messageArray = messages.EnumerateArray().ToList();
+
+                    // Get the user message (usually the last one)
+                    var userMessage = messageArray.LastOrDefault(m =>
+                        m.TryGetProperty("role", out var role) && role.GetString() == "user");
+
+                    string userContent = "";
+                    if (userMessage.ValueKind != System.Text.Json.JsonValueKind.Undefined &&
+                        userMessage.TryGetProperty("content", out var content))
+                    {
+                        userContent = content.GetString() ?? "";
+                    }
+
+                    // Check if this is an "explain" request (contains CONTEXT, no QUESTION)
+                    bool isExplain = userContent.Contains("CONTEXT FROM RULEBOOK") &&
+                                    !userContent.Contains("QUESTION:");
+
+                    // Check if this is a Q&A request (contains both CONTEXT and QUESTION)
+                    bool isQa = userContent.Contains("CONTEXT FROM RULEBOOK") &&
+                               userContent.Contains("QUESTION:");
+
+                    // Check if there's no context (empty search results)
+                    bool hasNoContext = userContent.Contains("CONTEXT FROM RULEBOOK") &&
+                                       userContent.Contains("[Page") == false;
+
+                    string responseText;
+
+                    if (hasNoContext)
+                    {
+                        // No indexed content found - return appropriate message
+                        if (isExplain)
+                        {
+                            responseText = "No relevant information found about this topic in the rulebook.";
+                        }
+                        else
+                        {
+                            responseText = "Not specified";
+                        }
+                    }
+                    else if (isExplain)
+                    {
+                        // Generate explain response with structured format
+                        // Extract topic from context if possible
+                        var topicMatch = System.Text.RegularExpressions.Regex.Match(userContent, @"Explanation:\s*(.+?)\n");
+                        var topic = topicMatch.Success ? topicMatch.Groups[1].Value.Trim() : "game rules";
+
+                        // Extract context snippets
+                        var contextSnippets = ExtractContextSnippets(userContent);
+
+                        responseText = $@"# Explanation: {topic}
+
+## Overview
+
+{(contextSnippets.Count > 0 ? contextSnippets[0] : "This section covers the key aspects of " + topic + ".")}
+
+## Details
+
+{string.Join("\n\n", contextSnippets.Skip(1))}
+
+Based on the rulebook, {topic} involves the mechanics and conditions described above. Players should refer to the specific page numbers cited for complete details.";
+                    }
+                    else if (isQa)
+                    {
+                        // Generate Q&A response based on context
+                        var contextSnippets = ExtractContextSnippets(userContent);
+
+                        if (contextSnippets.Count > 0)
+                        {
+                            // Use first snippet as basis for answer
+                            responseText = $"{contextSnippets[0]} (see page 1 for details)";
+                        }
+                        else
+                        {
+                            responseText = "Based on the provided rulebook, the information needed to answer this question is available on the referenced pages.";
+                        }
+                    }
+                    else
+                    {
+                        // Default response for other LLM requests
+                        responseText = "This is a test response from the mocked LLM service.";
+                    }
+
+                    // Build OpenRouter-compatible response with token usage
+                    var llmResponse = new
+                    {
+                        id = "chatcmpl-test-" + Guid.NewGuid().ToString("N")[..8],
+                        @object = "chat.completion",
+                        created = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                        model = "anthropic/claude-3.5-sonnet",
+                        choices = new[]
+                        {
+                            new
+                            {
+                                index = 0,
+                                message = new
+                                {
+                                    role = "assistant",
+                                    content = responseText
+                                },
+                                finish_reason = "stop"
+                            }
+                        },
+                        usage = new
+                        {
+                            prompt_tokens = EstimateTokens(userContent),
+                            completion_tokens = EstimateTokens(responseText),
+                            total_tokens = EstimateTokens(userContent) + EstimateTokens(responseText)
+                        }
+                    };
+
+                    var jsonResponse = System.Text.Json.JsonSerializer.Serialize(llmResponse);
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent(jsonResponse, Encoding.UTF8, "application/json")
+                    };
+                }
+
+                // Default empty response for unrecognized requests
+                return new HttpResponseMessage(HttpStatusCode.OK)
                 {
                     Content = new StringContent("{}", Encoding.UTF8, "application/json")
-                });
+                };
+            }
+
+            /// <summary>
+            /// Extract context snippets from the prompt (text between [Page N] markers)
+            /// </summary>
+            private static List<string> ExtractContextSnippets(string userContent)
+            {
+                var snippets = new List<string>();
+                var lines = userContent.Split('\n');
+                var currentSnippet = new StringBuilder();
+                bool inContext = false;
+
+                foreach (var line in lines)
+                {
+                    if (line.StartsWith("[Page "))
+                    {
+                        if (currentSnippet.Length > 0)
+                        {
+                            snippets.Add(currentSnippet.ToString().Trim());
+                            currentSnippet.Clear();
+                        }
+                        inContext = true;
+                        continue;
+                    }
+
+                    if (line.Contains("---") || line.StartsWith("QUESTION:") || line.StartsWith("ANSWER:"))
+                    {
+                        if (currentSnippet.Length > 0)
+                        {
+                            snippets.Add(currentSnippet.ToString().Trim());
+                            currentSnippet.Clear();
+                        }
+                        inContext = false;
+                        continue;
+                    }
+
+                    if (inContext && !string.IsNullOrWhiteSpace(line))
+                    {
+                        currentSnippet.AppendLine(line);
+                    }
+                }
+
+                if (currentSnippet.Length > 0)
+                {
+                    snippets.Add(currentSnippet.ToString().Trim());
+                }
+
+                return snippets;
+            }
+
+            /// <summary>
+            /// Rough token estimation (1 token ≈ 4 characters for English text)
+            /// </summary>
+            private static int EstimateTokens(string text)
+            {
+                return Math.Max(1, text.Length / 4);
             }
         }
     }

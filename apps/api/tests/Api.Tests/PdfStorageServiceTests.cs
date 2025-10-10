@@ -62,7 +62,10 @@ public class PdfStorageServiceTests
             scopeFactoryMock.Object,
             configurationMock.Object,
             loggerMock.Object,
-            textExtractionService ?? new PdfTextExtractionService(Mock.Of<ILogger<PdfTextExtractionService>>()),
+            textExtractionService ?? new PdfTextExtractionService(
+                Mock.Of<ILogger<PdfTextExtractionService>>(),
+                Mock.Of<IConfiguration>(),
+                ocrService: null),
             tableExtractionService ?? new PdfTableExtractionService(Mock.Of<ILogger<PdfTableExtractionService>>()),
             backgroundTaskMock.Object,
             cacheMock.Object,

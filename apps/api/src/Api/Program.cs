@@ -140,6 +140,9 @@ builder.Services.AddScoped<PdfStorageService>();
 builder.Services.AddScoped<N8nConfigService>();
 builder.Services.AddScoped<ChatService>();
 
+// PDF-02: OCR service for fallback text extraction
+builder.Services.AddSingleton<IOcrService, TesseractOcrService>();
+
 // CHESS-03: Chess knowledge indexing service
 builder.Services.AddScoped<IChessKnowledgeService, ChessKnowledgeService>();
 

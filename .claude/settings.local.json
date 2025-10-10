@@ -68,7 +68,12 @@
       "Bash(gh run watch:*)",
       "Bash(pnpm test:*)",
       "Bash(npm test:*)",
-      "Bash(Select-String -Pattern \"FAIL|PASS|Error|Unauthorized|OK\" -Context 1,2)"
+      "Bash(Select-String -Pattern \"FAIL|PASS|Error|Unauthorized|OK\" -Context 1,2)",
+      "Bash(dotnet run:*)",
+      "WebSearch",
+      "Bash(Select-String -Pattern \"error|warning|successo|riuscit|Compil\" -Context 0,1)",
+      "Read(//d//**)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,4 +1,5 @@
 using Api.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using QuestPDF.Fluent;
@@ -11,6 +12,7 @@ namespace Api.Tests;
 public class PdfTextExtractionServiceTests : IDisposable
 {
     private readonly Mock<ILogger<PdfTextExtractionService>> _loggerMock;
+    private readonly Mock<IConfiguration> _configurationMock;
     private readonly PdfTextExtractionService _service;
     private readonly List<string> _tempFiles = new();
 
@@ -20,7 +22,10 @@ public class PdfTextExtractionServiceTests : IDisposable
         QuestPDF.Settings.License = LicenseType.Community;
 
         _loggerMock = new Mock<ILogger<PdfTextExtractionService>>();
-        _service = new PdfTextExtractionService(_loggerMock.Object);
+        _configurationMock = new Mock<IConfiguration>();
+
+        // Default: no OCR service (testing standard extraction only)
+        _service = new PdfTextExtractionService(_loggerMock.Object, _configurationMock.Object, ocrService: null);
     }
 
     public void Dispose()

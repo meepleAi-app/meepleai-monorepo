@@ -149,7 +149,10 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
         private static readonly string Extracted = "chunk-one\nchunk-two";
 
         public TestPdfTextExtractionService()
-            : base(NullLogger<PdfTextExtractionService>.Instance)
+            : base(
+                NullLogger<PdfTextExtractionService>.Instance,
+                new ConfigurationBuilder().Build(),
+                ocrService: null)
         {
         }
 

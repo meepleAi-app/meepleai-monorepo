@@ -73,7 +73,10 @@
       "WebSearch",
       "Bash(Select-String -Pattern \"error|warning|successo|riuscit|Compil\" -Context 0,1)",
       "Read(//d//**)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(do)",
+      "Bash(echo:*)",
+      "Bash(gh pr close:*)"
     ],
     "deny": [],
     "ask": []

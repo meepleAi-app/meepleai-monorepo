@@ -241,10 +241,10 @@ app.Use(async (context, next) =>
         {
             var claims = new List<Claim>
             {
-                new(ClaimTypes.NameIdentifier, session.User.id),
-                new(ClaimTypes.Email, session.User.email),
-                new("displayName", session.User.displayName ?? string.Empty),
-                new(ClaimTypes.Role, session.User.role)
+                new(ClaimTypes.NameIdentifier, session.User.Id),
+                new(ClaimTypes.Email, session.User.Email),
+                new("displayName", session.User.DisplayName ?? string.Empty),
+                new(ClaimTypes.Role, session.User.Role)
             };
             var identity = new ClaimsIdentity(claims, "session");
             context.User = new ClaimsPrincipal(identity);
@@ -268,8 +268,8 @@ app.Use(async (context, next) =>
     if (context.Items.TryGetValue(nameof(ActiveSession), out var sessionObj) && sessionObj is ActiveSession session)
     {
         // Authenticated: rate limit per user + role
-        rateLimitKey = $"user:{session.User.id}";
-        config = RateLimitService.GetConfigForRole(session.User.role);
+        rateLimitKey = $"user:{session.User.Id}";
+        config = RateLimitService.GetConfigForRole(session.User.Role);
     }
     else
     {
@@ -318,7 +318,7 @@ app.MapGet("/logs", async (HttpContext context, AiRequestLogService logService, 
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
@@ -357,27 +357,27 @@ app.MapPost("/auth/register", async (RegisterPayload payload, HttpContext contex
     try
     {
         var command = new RegisterCommand(
-            payload.email,
-            payload.password,
-            payload.displayName,
-            payload.role,
+            payload.Email,
+            payload.Password,
+            payload.DisplayName,
+            payload.Role,
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString());
 
-        logger.LogInformation("User registration attempt for {Email}", payload.email);
+        logger.LogInformation("User registration attempt for {Email}", payload.Email);
         var result = await auth.RegisterAsync(command, ct);
         WriteSessionCookie(context, result.SessionToken, result.ExpiresAt);
-        logger.LogInformation("User {UserId} registered successfully with role {Role}", result.User.id, result.User.role);
+        logger.LogInformation("User {UserId} registered successfully with role {Role}", result.User.Id, result.User.Role);
         return Results.Json(new AuthResponse(result.User, result.ExpiresAt));
     }
     catch (ArgumentException ex)
     {
-        logger.LogWarning("Registration validation failed for {Email}: {Error}", payload.email, ex.Message);
+        logger.LogWarning("Registration validation failed for {Email}: {Error}", payload.Email, ex.Message);
         return Results.BadRequest(new { error = ex.Message });
     }
     catch (InvalidOperationException ex)
     {
-        logger.LogWarning("Registration conflict for {Email}: {Error}", payload.email, ex.Message);
+        logger.LogWarning("Registration conflict for {Email}: {Error}", payload.Email, ex.Message);
         return Results.Conflict(new { error = ex.Message });
     }
 });
@@ -393,22 +393,22 @@ app.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, Au
     try
     {
         var command = new LoginCommand(
-            payload.email,
-            payload.password,
+            payload.Email,
+            payload.Password,
             context.Connection.RemoteIpAddress?.ToString(),
             context.Request.Headers.UserAgent.ToString());
 
-        logger.LogInformation("Login attempt for {Email}", payload.email);
+        logger.LogInformation("Login attempt for {Email}", payload.Email);
         var result = await auth.LoginAsync(command, ct);
         if (result == null)
         {
-            logger.LogWarning("Login failed for {Email}", payload.email);
+            logger.LogWarning("Login failed for {Email}", payload.Email);
             RemoveSessionCookie(context);
             return Results.Unauthorized();
         }
 
         WriteSessionCookie(context, result.SessionToken, result.ExpiresAt);
-        logger.LogInformation("User {UserId} logged in successfully", result.User.id);
+        logger.LogInformation("User {UserId} logged in successfully", result.User.Id);
         return Results.Json(new AuthResponse(result.User, result.ExpiresAt));
     }
     catch (Exception ex)
@@ -492,7 +492,7 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
 
     var startTime = DateTime.UtcNow;
     logger.LogInformation("QA request from user {UserId} for game {GameId}: {Query}",
-        session.User.id, req.gameId, req.query);
+        session.User.Id, req.gameId, req.query);
 
     try
     {
@@ -501,7 +501,7 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
         {
             await chatService.AddMessageAsync(
                 req.chatId.Value,
-                session.User.id,
+                session.User.Id,
                 "user",
                 req.query,
                 new { endpoint = "qa", gameId = req.gameId },
@@ -533,7 +533,7 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
         {
             await chatService.AddMessageAsync(
                 req.chatId.Value,
-                session.User.id,
+                session.User.Id,
                 "assistant",
                 resp.answer,
                 new
@@ -553,7 +553,7 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
 
         // ADM-01: Log AI request
         await aiLog.LogRequestAsync(
-            session.User.id,
+            session.User.Id,
             req.gameId,
             "qa",
             req.query,
@@ -584,7 +584,7 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
             {
                 await chatService.AddMessageAsync(
                     req.chatId.Value,
-                    session.User.id,
+                    session.User.Id,
                     "error",
                     $"Failed to process QA request: {ex.Message}",
                     new { endpoint = "qa", gameId = req.gameId, error = ex.GetType().Name },
@@ -598,7 +598,7 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
 
         // ADM-01: Log failed AI request
         await aiLog.LogRequestAsync(
-            session.User.id,
+            session.User.Id,
             req.gameId,
             "qa",
             req.query,
@@ -628,7 +628,7 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
 
     var startTime = DateTime.UtcNow;
     logger.LogInformation("Explain request from user {UserId} for game {GameId}: {Topic}",
-        session.User.id, req.gameId, req.topic);
+        session.User.Id, req.gameId, req.topic);
 
     try
     {
@@ -637,7 +637,7 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
         {
             await chatService.AddMessageAsync(
                 req.chatId.Value,
-                session.User.id,
+                session.User.Id,
                 "user",
                 $"Explain: {req.topic}",
                 new { endpoint = "explain", gameId = req.gameId, topic = req.topic },
@@ -655,7 +655,7 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
         {
             await chatService.AddMessageAsync(
                 req.chatId.Value,
-                session.User.id,
+                session.User.Id,
                 "assistant",
                 resp.script,
                 new
@@ -676,7 +676,7 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
 
         // ADM-01: Log AI request
         await aiLog.LogRequestAsync(
-            session.User.id,
+            session.User.Id,
             req.gameId,
             "explain",
             req.topic,
@@ -707,7 +707,7 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
             {
                 await chatService.AddMessageAsync(
                     req.chatId.Value,
-                    session.User.id,
+                    session.User.Id,
                     "error",
                     $"Failed to process Explain request: {ex.Message}",
                     new { endpoint = "explain", gameId = req.gameId, topic = req.topic, error = ex.GetType().Name },
@@ -721,7 +721,7 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
 
         // ADM-01: Log failed AI request
         await aiLog.LogRequestAsync(
-            session.User.id,
+            session.User.Id,
             req.gameId,
             "explain",
             req.topic,
@@ -752,7 +752,7 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
 
     var startTime = DateTime.UtcNow;
     logger.LogInformation("Setup guide request from user {UserId} for game {GameId}",
-        session.User.id, req.gameId);
+        session.User.Id, req.gameId);
 
     try
     {
@@ -761,7 +761,7 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
         {
             await chatService.AddMessageAsync(
                 req.chatId.Value,
-                session.User.id,
+                session.User.Id,
                 "user",
                 "Generate setup guide",
                 new { endpoint = "setup", gameId = req.gameId },
@@ -783,7 +783,7 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
 
             await chatService.AddMessageAsync(
                 req.chatId.Value,
-                session.User.id,
+                session.User.Id,
                 "assistant",
                 $"Setup guide for {resp.gameTitle}: {setupSummary}",
                 new
@@ -812,7 +812,7 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
         }
 
         await aiLog.LogRequestAsync(
-            session.User.id,
+            session.User.Id,
             req.gameId,
             "setup",
             "setup_guide",
@@ -843,7 +843,7 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
             {
                 await chatService.AddMessageAsync(
                     req.chatId.Value,
-                    session.User.id,
+                    session.User.Id,
                     "error",
                     $"Failed to generate setup guide: {ex.Message}",
                     new { endpoint = "setup", gameId = req.gameId, error = ex.GetType().Name },
@@ -857,7 +857,7 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
 
         // ADM-01: Log failed AI request
         await aiLog.LogRequestAsync(
-            session.User.id,
+            session.User.Id,
             req.gameId,
             "setup",
             "setup_guide",
@@ -880,7 +880,7 @@ app.MapPost("/agents/feedback", async (AgentFeedbackRequest req, HttpContext con
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(req.userId, session.User.id, StringComparison.Ordinal))
+    if (!string.Equals(req.userId, session.User.Id, StringComparison.Ordinal))
     {
         return Results.BadRequest(new { error = "Invalid user" });
     }
@@ -895,7 +895,7 @@ app.MapPost("/agents/feedback", async (AgentFeedbackRequest req, HttpContext con
         await feedbackService.RecordFeedbackAsync(
             req.messageId,
             req.endpoint,
-            session.User.id,
+            session.User.Id,
             string.IsNullOrWhiteSpace(req.outcome) ? null : req.outcome,
             req.gameId,
             ct);
@@ -905,7 +905,7 @@ app.MapPost("/agents/feedback", async (AgentFeedbackRequest req, HttpContext con
             req.outcome ?? "cleared",
             req.messageId,
             req.endpoint,
-            session.User.id);
+            session.User.Id);
 
         return Results.Json(new { ok = true });
     }
@@ -923,8 +923,8 @@ app.MapPost("/ingest/pdf", async (HttpContext context, PdfStorageService pdfStor
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-        !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
@@ -938,9 +938,9 @@ app.MapPost("/ingest/pdf", async (HttpContext context, PdfStorageService pdfStor
         return Results.BadRequest(new { error = "gameId is required" });
     }
 
-    logger.LogInformation("User {UserId} uploading PDF for game {GameId}", session.User.id, gameId);
+    logger.LogInformation("User {UserId} uploading PDF for game {GameId}", session.User.Id, gameId);
 
-    var result = await pdfStorage.UploadPdfAsync(gameId, session.User.id, file!, ct);
+    var result = await pdfStorage.UploadPdfAsync(gameId, session.User.Id, file!, ct);
 
     if (!result.Success)
     {
@@ -971,13 +971,13 @@ app.MapPost("/games", async (CreateGameRequest? request, HttpContext context, Ga
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-        !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         logger.LogWarning(
             "User {UserId} with role {Role} attempted to create a game without permission",
-            session.User.id,
-            session.User.role);
+            session.User.Id,
+            session.User.Role);
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
@@ -1052,15 +1052,15 @@ app.MapPost("/ingest/pdf/{pdfId}/rulespec", async (string pdfId, HttpContext con
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-        !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
     try
     {
-        logger.LogInformation("User {UserId} generating RuleSpec from PDF {PdfId}", session.User.id, pdfId);
+        logger.LogInformation("User {UserId} generating RuleSpec from PDF {PdfId}", session.User.Id, pdfId);
         var ruleSpec = await ruleSpecService.GenerateRuleSpecFromPdfAsync(pdfId, ct);
         return Results.Json(ruleSpec);
     }
@@ -1079,14 +1079,14 @@ app.MapPost("/ingest/pdf/{pdfId}/index", async (string pdfId, HttpContext contex
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-        !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
     {
-        logger.LogWarning("User {UserId} with role {Role} attempted to index PDF without permission", session.User.id, session.User.role);
+        logger.LogWarning("User {UserId} with role {Role} attempted to index PDF without permission", session.User.Id, session.User.Role);
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    logger.LogInformation("User {UserId} indexing PDF {PdfId}", session.User.id, pdfId);
+    logger.LogInformation("User {UserId} indexing PDF {PdfId}", session.User.Id, pdfId);
 
     var result = await indexingService.IndexPdfAsync(pdfId, ct);
 
@@ -1139,10 +1139,10 @@ app.MapPut("/games/{gameId}/rulespec", async (string gameId, RuleSpec ruleSpec, 
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-        !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
     {
-        logger.LogWarning("User {UserId} with role {Role} attempted to update RuleSpec without permission", session.User.id, session.User.role);
+        logger.LogWarning("User {UserId} with role {Role} attempted to update RuleSpec without permission", session.User.Id, session.User.Role);
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
@@ -1153,13 +1153,13 @@ app.MapPut("/games/{gameId}/rulespec", async (string gameId, RuleSpec ruleSpec, 
 
     try
     {
-        logger.LogInformation("User {UserId} updating RuleSpec for game {GameId}", session.User.id, gameId);
-        var updated = await ruleSpecService.UpdateRuleSpecAsync(gameId, ruleSpec, session.User.id, ct);
+        logger.LogInformation("User {UserId} updating RuleSpec for game {GameId}", session.User.Id, gameId);
+        var updated = await ruleSpecService.UpdateRuleSpecAsync(gameId, ruleSpec, session.User.Id, ct);
         logger.LogInformation("RuleSpec updated successfully for game {GameId}, version {Version}", gameId, updated.version);
 
         // Audit trail for RuleSpec changes
         await auditService.LogAsync(
-            session.User.id,
+            session.User.Id,
             "UPDATE_RULESPEC",
             "RuleSpec",
             gameId,
@@ -1186,8 +1186,8 @@ app.MapGet("/games/{gameId}/rulespec/history", async (string gameId, HttpContext
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-        !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
@@ -1205,8 +1205,8 @@ app.MapGet("/games/{gameId}/rulespec/versions/{version}", async (string gameId, 
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-        !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
@@ -1231,8 +1231,8 @@ app.MapGet("/games/{gameId}/rulespec/diff", async (string gameId, string? from, 
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-        !string.Equals(session.User.role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
@@ -1263,7 +1263,7 @@ app.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, Rule
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
@@ -1285,7 +1285,7 @@ app.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService lo
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
@@ -1310,7 +1310,7 @@ app.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logSe
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
@@ -1339,7 +1339,7 @@ app.MapGet("/admin/n8n", async (HttpContext context, N8nConfigService n8nService
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
@@ -1355,7 +1355,7 @@ app.MapGet("/admin/n8n/{configId}", async (string configId, HttpContext context,
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
@@ -1377,15 +1377,15 @@ app.MapPost("/admin/n8n", async (CreateN8nConfigRequest request, HttpContext con
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
     try
     {
-        logger.LogInformation("Admin {UserId} creating n8n config: {Name}", session.User.id, request.Name);
-        var config = await n8nService.CreateConfigAsync(session.User.id, request, ct);
+        logger.LogInformation("Admin {UserId} creating n8n config: {Name}", session.User.Id, request.Name);
+        var config = await n8nService.CreateConfigAsync(session.User.Id, request, ct);
         logger.LogInformation("n8n config {ConfigId} created successfully", config.Id);
         return Results.Json(config);
     }
@@ -1403,14 +1403,14 @@ app.MapPut("/admin/n8n/{configId}", async (string configId, UpdateN8nConfigReque
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
     try
     {
-        logger.LogInformation("Admin {UserId} updating n8n config {ConfigId}", session.User.id, configId);
+        logger.LogInformation("Admin {UserId} updating n8n config {ConfigId}", session.User.Id, configId);
         var config = await n8nService.UpdateConfigAsync(configId, request, ct);
         logger.LogInformation("n8n config {ConfigId} updated successfully", config.Id);
         return Results.Json(config);
@@ -1429,12 +1429,12 @@ app.MapDelete("/admin/n8n/{configId}", async (string configId, HttpContext conte
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    logger.LogInformation("Admin {UserId} deleting n8n config {ConfigId}", session.User.id, configId);
+    logger.LogInformation("Admin {UserId} deleting n8n config {ConfigId}", session.User.Id, configId);
     var deleted = await n8nService.DeleteConfigAsync(configId, ct);
 
     if (!deleted)
@@ -1453,14 +1453,14 @@ app.MapPost("/admin/n8n/{configId}/test", async (string configId, HttpContext co
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
     try
     {
-        logger.LogInformation("Admin {UserId} testing n8n config {ConfigId}", session.User.id, configId);
+        logger.LogInformation("Admin {UserId} testing n8n config {ConfigId}", session.User.Id, configId);
         var result = await n8nService.TestConnectionAsync(configId, ct);
         logger.LogInformation("n8n config {ConfigId} test result: {Success}", configId, result.Success);
         return Results.Json(result);
@@ -1480,14 +1480,14 @@ app.MapPost("/chess/index", async (HttpContext context, IChessKnowledgeService c
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         logger.LogWarning("User {UserId} with role {Role} attempted to index chess knowledge without permission",
-            session.User.id, session.User.role);
+            session.User.Id, session.User.Role);
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session.User.id);
+    logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session.User.Id);
 
     var result = await chessService.IndexChessKnowledgeAsync(ct);
 
@@ -1521,7 +1521,7 @@ app.MapGet("/chess/search", async (string? q, int? limit, HttpContext context, I
         return Results.BadRequest(new { error = "Query parameter 'q' is required" });
     }
 
-    logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session.User.id, q);
+    logger.LogInformation("User {UserId} searching chess knowledge: {Query}", session.User.Id, q);
 
     var searchResult = await chessService.SearchChessKnowledgeAsync(q, limit ?? 5, ct);
 
@@ -1553,14 +1553,14 @@ app.MapDelete("/chess/index", async (HttpContext context, IChessKnowledgeService
         return Results.Unauthorized();
     }
 
-    if (!string.Equals(session.User.role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         logger.LogWarning("User {UserId} with role {Role} attempted to delete chess knowledge without permission",
-            session.User.id, session.User.role);
+            session.User.Id, session.User.Role);
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    logger.LogInformation("Admin {UserId} deleting all chess knowledge", session.User.id);
+    logger.LogInformation("Admin {UserId} deleting all chess knowledge", session.User.Id);
 
     var success = await chessService.DeleteChessKnowledgeAsync(ct);
 
@@ -1583,8 +1583,8 @@ app.MapGet("/chats", async (HttpContext context, ChatService chatService, string
     }
 
     var chats = string.IsNullOrWhiteSpace(gameId)
-        ? await chatService.GetUserChatsAsync(session.User.id, 50, ct)
-        : await chatService.GetUserChatsByGameAsync(session.User.id, gameId, 50, ct);
+        ? await chatService.GetUserChatsAsync(session.User.Id, 50, ct)
+        : await chatService.GetUserChatsByGameAsync(session.User.Id, gameId, 50, ct);
 
     var response = chats.Select(c => new ChatDto(
         c.Id,
@@ -1606,7 +1606,7 @@ app.MapGet("/chats/{chatId:guid}", async (Guid chatId, HttpContext context, Chat
         return Results.Unauthorized();
     }
 
-    var chat = await chatService.GetChatByIdAsync(chatId, session.User.id, ct);
+    var chat = await chatService.GetChatByIdAsync(chatId, session.User.Id, ct);
     if (chat == null)
     {
         return Results.NotFound(new { error = "Chat not found" });
@@ -1653,10 +1653,10 @@ app.MapPost("/chats", async (CreateChatRequest? request, HttpContext context, Ch
 
     try
     {
-        var chat = await chatService.CreateChatAsync(session.User.id, request.GameId, request.AgentId, ct);
+        var chat = await chatService.CreateChatAsync(session.User.Id, request.GameId, request.AgentId, ct);
 
         // Reload with navigations
-        var fullChat = await chatService.GetChatByIdAsync(chat.Id, session.User.id, ct);
+        var fullChat = await chatService.GetChatByIdAsync(chat.Id, session.User.Id, ct);
         if (fullChat == null)
         {
             return Results.StatusCode(StatusCodes.Status500InternalServerError);
@@ -1672,7 +1672,7 @@ app.MapPost("/chats", async (CreateChatRequest? request, HttpContext context, Ch
             fullChat.LastMessageAt
         );
 
-        logger.LogInformation("User {UserId} created chat {ChatId} for game {GameId}", session.User.id, chat.Id, request.GameId);
+        logger.LogInformation("User {UserId} created chat {ChatId} for game {GameId}", session.User.Id, chat.Id, request.GameId);
         return Results.Created($"/chats/{chat.Id}", response);
     }
     catch (InvalidOperationException ex)
@@ -1691,13 +1691,13 @@ app.MapDelete("/chats/{chatId:guid}", async (Guid chatId, HttpContext context, C
 
     try
     {
-        var deleted = await chatService.DeleteChatAsync(chatId, session.User.id, ct);
+        var deleted = await chatService.DeleteChatAsync(chatId, session.User.Id, ct);
         if (!deleted)
         {
             return Results.NotFound(new { error = "Chat not found" });
         }
 
-        logger.LogInformation("User {UserId} deleted chat {ChatId}", session.User.id, chatId);
+        logger.LogInformation("User {UserId} deleted chat {ChatId}", session.User.Id, chatId);
         return Results.NoContent();
     }
     catch (UnauthorizedAccessException ex)

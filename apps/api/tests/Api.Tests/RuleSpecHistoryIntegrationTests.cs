@@ -358,7 +358,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
     {
         using var client = Factory.CreateHttpsClient();
         var email = $"{role.ToLowerInvariant()}-{TestRunId}-{Guid.NewGuid():N}@example.com";
-        var payload = new RegisterPayload(email, "Password123!", $"{role} User", null);
+        var payload = new RegisterPayload(Email: email, Password: "Password123!", DisplayName: $"{role} User", Role: null);
         var response = await client.PostAsJsonAsync("/auth/register", payload);
         response.EnsureSuccessStatusCode();
         if (!string.Equals(role, UserRole.User.ToString(), StringComparison.OrdinalIgnoreCase))
@@ -375,7 +375,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
     {
         var client = Factory.CreateHttpsClient();
         var email = $"{role.ToLowerInvariant()}-{TestRunId}-{Guid.NewGuid():N}@example.com";
-        var payload = new RegisterPayload(email, "Password123!", $"{role} User", null);
+        var payload = new RegisterPayload(Email: email, Password: "Password123!", DisplayName: $"{role} User", Role: null);
         var response = await client.PostAsJsonAsync("/auth/register", payload);
         response.EnsureSuccessStatusCode();
         var cookies = ExtractCookies(response);

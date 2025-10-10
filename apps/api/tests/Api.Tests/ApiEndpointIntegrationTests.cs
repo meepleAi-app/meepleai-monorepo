@@ -48,10 +48,10 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         using var client = Factory.CreateHttpsClient();
 
         var payload = new RegisterPayload(
-            $"register-{TestRunId}@example.com",
-            "Password123!",
-            "Register User",
-            null);
+            Email: $"register-{TestRunId}@example.com",
+            Password: "Password123!",
+            DisplayName: "Register User",
+            Role: null);
 
         // When: User posts to /auth/register
         var response = await client.PostAsJsonAsync("/auth/register", payload);
@@ -63,12 +63,12 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         var authResponse = JsonSerializer.Deserialize<AuthResponse>(json, JsonOptions);
 
         Assert.NotNull(authResponse);
-        Assert.Equal(payload.email, authResponse!.user.email);
-        Assert.Equal(payload.displayName, authResponse.user.displayName);
-        Assert.Equal(UserRole.User.ToString(), authResponse.user.role);
+        Assert.Equal(payload.Email, authResponse!.User.Email);
+        Assert.Equal(payload.DisplayName, authResponse.User.DisplayName);
+        Assert.Equal(UserRole.User.ToString(), authResponse.User.Role);
 
         // And: User is tracked for automatic cleanup
-        TrackUserId(authResponse.user.id);
+        TrackUserId(authResponse.User.Id);
 
         var cookies = ExtractCookies(response);
         Assert.Contains(cookies, cookie => cookie.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal));
@@ -96,8 +96,8 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         using var client = Factory.CreateHttpsClient();
         var payload = new LoginPayload
         {
-            email = email,
-            password = "Password123!"
+            Email = email,
+            Password = "Password123!"
         };
 
         var response = await client.PostAsJsonAsync("/auth/login", payload);
@@ -109,7 +109,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         var authResponse = JsonSerializer.Deserialize<AuthResponse>(json, JsonOptions);
 
         Assert.NotNull(authResponse);
-        Assert.Equal(email, authResponse!.user.email);
+        Assert.Equal(email, authResponse!.User.Email);
 
         var cookies = ExtractCookies(response);
         Assert.Contains(cookies, cookie => cookie.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal));
@@ -242,10 +242,10 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
     private async Task<List<string>> RegisterAndAuthenticateAsync(HttpClient client, string email, string role = "Admin")
     {
         var payload = new RegisterPayload(
-            email,
-            "Password123!",
-            "Test User",
-            null);
+            Email: email,
+            Password: "Password123!",
+            DisplayName: "Test User",
+            Role: null);
 
         var response = await client.PostAsJsonAsync("/auth/register", payload);
         response.EnsureSuccessStatusCode();
@@ -253,9 +253,9 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         // Track user for cleanup
         var json = await response.Content.ReadAsStringAsync();
         var authResponse = JsonSerializer.Deserialize<AuthResponse>(json, JsonOptions);
-        if (authResponse?.user.id != null)
+        if (authResponse?.User.Id != null)
         {
-            TrackUserId(authResponse.user.id);
+            TrackUserId(authResponse.User.Id);
         }
 
         if (!string.Equals(role, UserRole.User.ToString(), StringComparison.OrdinalIgnoreCase))
@@ -283,10 +283,10 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         using var client = Factory.CreateHttpsClient();
 
         var initialPayload = new RegisterPayload(
-            $"initial-{TestRunId}-{Guid.NewGuid():N}@example.com",
-            "Password123!",
-            "Initial User",
-            null);
+            Email: $"initial-{TestRunId}-{Guid.NewGuid():N}@example.com",
+            Password: "Password123!",
+            DisplayName: "Initial User",
+            Role: null);
 
         var initialResponse = await client.PostAsJsonAsync("/auth/register", initialPayload);
         initialResponse.EnsureSuccessStatusCode();
@@ -294,17 +294,17 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         // Track initial user for cleanup
         var initialJson = await initialResponse.Content.ReadAsStringAsync();
         var initialAuth = JsonSerializer.Deserialize<AuthResponse>(initialJson, JsonOptions);
-        if (initialAuth?.user.id != null)
+        if (initialAuth?.User.Id != null)
         {
-            TrackUserId(initialAuth.user.id);
+            TrackUserId(initialAuth.User.Id);
         }
 
         // When: Another user tries to register with elevated role
         var escalationPayload = new RegisterPayload(
-            $"escalate-{TestRunId}-{Guid.NewGuid():N}@example.com",
-            "Password123!",
-            "Escalation User",
-            requestedRole);
+            Email: $"escalate-{TestRunId}-{Guid.NewGuid():N}@example.com",
+            Password: "Password123!",
+            DisplayName: "Escalation User",
+            Role: requestedRole);
 
         var response = await client.PostAsJsonAsync("/auth/register", escalationPayload);
 

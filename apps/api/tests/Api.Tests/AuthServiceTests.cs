@@ -24,17 +24,17 @@ public class AuthServiceTests
         var authService = new AuthService(dbContext, timeProvider);
 
         var register = await authService.RegisterAsync(new RegisterCommand(
-            "user@example.com",
-            "Password!1",
-            "Test User",
-            "Admin",
-            "127.0.0.1",
-            "unit-tests"));
+            Email: "user@example.com",
+            Password: "Password!1",
+            DisplayName: "Test User",
+            Role: "Admin",
+            IpAddress: "127.0.0.1",
+            UserAgent: "unit-tests"));
 
-        Assert.False(string.IsNullOrWhiteSpace(register.User.id));
-        Assert.Equal("user@example.com", register.User.email);
-        Assert.Equal("Test User", register.User.displayName);
-        Assert.Equal("Admin", register.User.role);
+        Assert.False(string.IsNullOrWhiteSpace(register.User.Id));
+        Assert.Equal("user@example.com", register.User.Email);
+        Assert.Equal("Test User", register.User.DisplayName);
+        Assert.Equal("Admin", register.User.Role);
         Assert.False(string.IsNullOrWhiteSpace(register.SessionToken));
 
         var active = await authService.ValidateSessionAsync(register.SessionToken);
@@ -46,20 +46,20 @@ public class AuthServiceTests
         Assert.Null(afterLogout);
 
         var login = await authService.LoginAsync(new LoginCommand(
-            "user@example.com",
-            "Password!1",
-            null,
-            null));
+            Email: "user@example.com",
+            Password: "Password!1",
+            IpAddress: null,
+            UserAgent: null));
 
         Assert.NotNull(login);
         Assert.Equal(register.User, login!.User);
         Assert.NotEqual(register.SessionToken, login.SessionToken);
 
         var failedLogin = await authService.LoginAsync(new LoginCommand(
-            "user@example.com",
-            "wrong",
-            null,
-            null));
+            Email: "user@example.com",
+            Password: "wrong",
+            IpAddress: null,
+            UserAgent: null));
         Assert.Null(failedLogin);
     }
 
@@ -81,20 +81,20 @@ public class AuthServiceTests
         var authService = new AuthService(dbContext, timeProvider);
 
         await authService.RegisterAsync(new RegisterCommand(
-            "bootstrap@example.com",
-            "Password!1",
-            "Bootstrap Admin",
-            "Admin",
-            "127.0.0.1",
-            "unit-tests"));
+            Email: "bootstrap@example.com",
+            Password: "Password!1",
+            DisplayName: "Bootstrap Admin",
+            Role: "Admin",
+            IpAddress: "127.0.0.1",
+            UserAgent: "unit-tests"));
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => authService.RegisterAsync(new RegisterCommand(
-            $"{requestedRole.ToLowerInvariant()}@example.com",
-            "Password!1",
-            $"{requestedRole} User",
-            requestedRole,
-            "127.0.0.1",
-            "unit-tests")));
+            Email: $"{requestedRole.ToLowerInvariant()}@example.com",
+            Password: "Password!1",
+            DisplayName: $"{requestedRole} User",
+            Role: requestedRole,
+            IpAddress: "127.0.0.1",
+            UserAgent: "unit-tests")));
 
         Assert.Equal("Only administrators can assign elevated roles.", exception.Message);
     }

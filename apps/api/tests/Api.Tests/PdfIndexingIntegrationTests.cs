@@ -27,7 +27,10 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
     public PdfIndexingIntegrationTests(WebApplicationFactoryFixture factory)
     {
         _factory = factory;
-        _client = factory.CreateClient();
+        _client = factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+        {
+            HandleCookies = false
+        });
     }
 
     public async Task InitializeAsync()
@@ -67,7 +70,8 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
             "If all nine squares are filled and no player has three in a row, the game is a draw.");
 
         // WHEN: I trigger indexing for the PDF
-        _client.DefaultRequestHeaders.Add("Cookie", $"meepleai_session={_sessionToken}");
+        _client.DefaultRequestHeaders.Clear();
+        _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
         var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
 
         // THEN: The request should succeed
@@ -112,7 +116,8 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
             "The knight moves in an L-shape. Checkmate ends the game.");
 
         // WHEN: I search in the tic-tac-toe game
-        _client.DefaultRequestHeaders.Add("Cookie", $"meepleai_session={_sessionToken}");
+        _client.DefaultRequestHeaders.Clear();
+        _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
         var searchResponse = await _client.PostAsJsonAsync("/agents/qa", new
         {
             gameId = "tic-tac-toe",
@@ -148,7 +153,8 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var pdfId = await CreatePdfWithExtractedTextAsync(gameId, shortText);
 
         // WHEN: I trigger indexing
-        _client.DefaultRequestHeaders.Add("Cookie", $"meepleai_session={_sessionToken}");
+        _client.DefaultRequestHeaders.Clear();
+        _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
         var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should create exactly 1 chunk
@@ -175,7 +181,8 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var pdfId = await CreatePdfWithExtractedTextAsync(gameId, largeText);
 
         // WHEN: I trigger indexing
-        _client.DefaultRequestHeaders.Add("Cookie", $"meepleai_session={_sessionToken}");
+        _client.DefaultRequestHeaders.Clear();
+        _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
         var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should create many chunks (with 512 char chunks and 50 overlap, expect ~95-100 chunks)
@@ -206,7 +213,8 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var firstChunkCount = vectorDoc1.ChunkCount;
 
         // WHEN: I trigger indexing again
-        _client.DefaultRequestHeaders.Add("Cookie", $"meepleai_session={_sessionToken}");
+        _client.DefaultRequestHeaders.Clear();
+        _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
         var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should succeed and update the same VectorDocumentEntity
@@ -239,7 +247,8 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var pdfId = await CreatePdfWithoutExtractedTextAsync("tic-tac-toe");
 
         // WHEN: I trigger indexing
-        _client.DefaultRequestHeaders.Add("Cookie", $"meepleai_session={_sessionToken}");
+        _client.DefaultRequestHeaders.Clear();
+        _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
         var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should return 400 Bad Request
@@ -262,7 +271,8 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var fakePdfId = "non-existent-pdf-id";
 
         // WHEN: I trigger indexing
-        _client.DefaultRequestHeaders.Add("Cookie", $"meepleai_session={_sessionToken}");
+        _client.DefaultRequestHeaders.Clear();
+        _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
         var response = await _client.PostAsync($"/ingest/pdf/{fakePdfId}/index", null);
 
         // THEN: Should return 404 Not Found
@@ -287,7 +297,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
         // WHEN: Trigger indexing
         _client.DefaultRequestHeaders.Clear();
-        _client.DefaultRequestHeaders.Add("Cookie", $"meepleai_session={_sessionToken}");
+        _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
         var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should succeed
@@ -308,7 +318,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
         // WHEN: Trigger indexing
         _client.DefaultRequestHeaders.Clear();
-        _client.DefaultRequestHeaders.Add("Cookie", $"meepleai_session={_editorSessionToken}");
+        _client.DefaultRequestHeaders.Add("Cookie", _editorSessionToken);
         var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should succeed
@@ -329,7 +339,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
         // WHEN: Attempt to trigger indexing
         _client.DefaultRequestHeaders.Clear();
-        _client.DefaultRequestHeaders.Add("Cookie", $"meepleai_session={_userSessionToken}");
+        _client.DefaultRequestHeaders.Add("Cookie", _userSessionToken);
         var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should return 403 Forbidden
@@ -368,8 +378,9 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var setCookieHeader = loginResponse.Headers.GetValues("Set-Cookie").FirstOrDefault();
         Assert.NotNull(setCookieHeader);
 
-        var sessionToken = setCookieHeader.Split(';')[0].Split('=')[1];
-        return sessionToken;
+        // Return the full cookie string (name=value), not just the value
+        var sessionCookie = setCookieHeader.Split(';')[0];
+        return sessionCookie;
     }
 
     private async Task<string> CreatePdfWithExtractedTextAsync(string gameId, string extractedText)
@@ -429,7 +440,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var pdfId = await CreatePdfWithExtractedTextAsync(gameId, text);
 
         _client.DefaultRequestHeaders.Clear();
-        _client.DefaultRequestHeaders.Add("Cookie", $"meepleai_session={_sessionToken}");
+        _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
         var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
         response.EnsureSuccessStatusCode();
 

@@ -144,7 +144,7 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
 
     protected async Task<List<string>> RegisterAndAuthenticateAsync(HttpClient client, string email, string role)
     {
-        var payload = new RegisterPayload(email, "Password123!", "Integration Tester", null);
+        var payload = new RegisterPayload(Email: email, Password: "Password123!", DisplayName: "Integration Tester", Role: null);
         var response = await client.PostAsJsonAsync("/auth/register", payload);
         response.EnsureSuccessStatusCode();
 

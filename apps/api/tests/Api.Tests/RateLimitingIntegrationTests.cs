@@ -138,7 +138,7 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
         var client = factory.CreateClient();
 
         var email = $"rate-limit-admin-{TestRunId}-{Guid.NewGuid():N}@example.com";
-        var registerPayload = new RegisterPayload(email, "Password123!", "Rate Limit Admin", null);
+        var registerPayload = new RegisterPayload(Email: email, Password: "Password123!", DisplayName: "Rate Limit Admin", Role: null);
         var registerResponse = await client.PostAsJsonAsync("/auth/register", registerPayload);
         registerResponse.EnsureSuccessStatusCode();
 

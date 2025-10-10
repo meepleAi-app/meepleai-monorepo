@@ -23,12 +23,12 @@ public class AuthService
 
     public async Task<AuthResult> RegisterAsync(RegisterCommand command, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(command.email))
-            throw new ArgumentException("Email is required", nameof(command.email));
-        if (string.IsNullOrWhiteSpace(command.password) || command.password.Length < 8)
-            throw new ArgumentException("Password must be at least 8 characters", nameof(command.password));
+        if (string.IsNullOrWhiteSpace(command.Email))
+            throw new ArgumentException("Email is required", nameof(command.Email));
+        if (string.IsNullOrWhiteSpace(command.Password) || command.Password.Length < 8)
+            throw new ArgumentException("Password must be at least 8 characters", nameof(command.Password));
 
-        var email = command.email.Trim().ToLowerInvariant();
+        var email = command.Email.Trim().ToLowerInvariant();
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         var existingUser = await _db.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
@@ -38,7 +38,7 @@ public class AuthService
         }
 
         var hasAnyUsers = await _db.Users.AnyAsync(ct);
-        var requestedRole = ParseRole(command.role);
+        var requestedRole = ParseRole(command.Role);
 
         if (hasAnyUsers && requestedRole != UserRole.User)
         {
@@ -51,14 +51,14 @@ public class AuthService
         {
             Id = Guid.NewGuid().ToString("N"),
             Email = email,
-            DisplayName = command.displayName?.Trim(),
-            PasswordHash = HashPassword(command.password),
+            DisplayName = command.DisplayName?.Trim(),
+            PasswordHash = HashPassword(command.Password),
             Role = role,
             CreatedAt = now
         };
         _db.Users.Add(user);
 
-        var session = CreateSessionEntity(user, command.ipAddress, command.userAgent, now);
+        var session = CreateSessionEntity(user, command.IpAddress, command.UserAgent, now);
         _db.UserSessions.Add(session.Entity);
 
         await _db.SaveChangesAsync(ct);
@@ -68,12 +68,12 @@ public class AuthService
 
     public async Task<AuthResult?> LoginAsync(LoginCommand command, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(command.email) || string.IsNullOrWhiteSpace(command.password))
+        if (string.IsNullOrWhiteSpace(command.Email) || string.IsNullOrWhiteSpace(command.Password))
         {
             return null;
         }
 
-        var email = command.email.Trim().ToLowerInvariant();
+        var email = command.Email.Trim().ToLowerInvariant();
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
@@ -82,12 +82,12 @@ public class AuthService
             return null;
         }
 
-        if (!VerifyPassword(command.password, user.PasswordHash))
+        if (!VerifyPassword(command.Password, user.PasswordHash))
         {
             return null;
         }
 
-        var session = CreateSessionEntity(user, command.ipAddress, command.userAgent, now);
+        var session = CreateSessionEntity(user, command.IpAddress, command.UserAgent, now);
         _db.UserSessions.Add(session.Entity);
         await _db.SaveChangesAsync(ct);
 

@@ -43,7 +43,8 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
                 d.ServiceType == typeof(IConnectionMultiplexer) ||
                 d.ServiceType == typeof(QdrantService) ||
                 d.ServiceType == typeof(IQdrantService) ||
-                d.ServiceType == typeof(IQdrantClientAdapter)
+                d.ServiceType == typeof(IQdrantClientAdapter) ||
+                d.ServiceType == typeof(IEmbeddingService)
             ).ToList();
 
             foreach (var descriptor in descriptors)
@@ -61,27 +62,112 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
                 options.UseSqlite(_connection);
             });
 
-            // Mock Redis
+            // Mock Redis with proper script evaluation support
             var mockRedis = new Mock<IConnectionMultiplexer>();
             var mockDatabase = new Mock<IDatabase>();
+
+            // Mock ScriptEvaluateAsync to return valid rate limit results: [allowed=1, tokens_remaining=100, retry_after=0]
+            var rateLimitResult = RedisResult.Create(new[] {
+                RedisResult.Create((RedisValue)1),
+                RedisResult.Create((RedisValue)100),
+                RedisResult.Create((RedisValue)0)
+            });
+
+            mockDatabase.Setup(x => x.ScriptEvaluateAsync(
+                It.IsAny<string>(),
+                It.IsAny<RedisKey[]>(),
+                It.IsAny<RedisValue[]>(),
+                It.IsAny<CommandFlags>()))
+                .ReturnsAsync(rateLimitResult);
+
             mockRedis.Setup(x => x.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(mockDatabase.Object);
             services.AddSingleton(mockRedis.Object);
 
-            // Mock Qdrant configuration
-            var qdrantConfig = new ConfigurationBuilder()
-                .AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["QDRANT_URL"] = "http://test:6333"
-                })
-                .Build();
+            // Mock Qdrant client adapter to avoid network calls in tests
+            var mockQdrantAdapter = new Mock<IQdrantClientAdapter>();
 
-            services.AddSingleton<IQdrantClientAdapter>(_ => new QdrantClientAdapter(
-                qdrantConfig,
-                NullLogger<QdrantClientAdapter>.Instance));
+            // Mock collection listing - return empty list initially, collection will be "created"
+            mockQdrantAdapter
+                .Setup(x => x.ListCollectionsAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<string> { "meepleai_documents" }.AsReadOnly());
+
+            // Mock collection creation - succeed silently
+            mockQdrantAdapter
+                .Setup(x => x.CreateCollectionAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<Qdrant.Client.Grpc.VectorParams>(),
+                    It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            // Mock payload index creation - succeed silently
+            mockQdrantAdapter
+                .Setup(x => x.CreatePayloadIndexAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<Qdrant.Client.Grpc.PayloadSchemaType>(),
+                    It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            // Mock upsert operation - succeed silently
+            mockQdrantAdapter
+                .Setup(x => x.UpsertAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<IReadOnlyList<Qdrant.Client.Grpc.PointStruct>>(),
+                    It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            // Mock search operation - return empty results
+            mockQdrantAdapter
+                .Setup(x => x.SearchAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<float[]>(),
+                    It.IsAny<Qdrant.Client.Grpc.Filter>(),
+                    It.IsAny<ulong?>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<Qdrant.Client.Grpc.ScoredPoint>().AsReadOnly());
+
+            // Mock delete operation - succeed silently
+            mockQdrantAdapter
+                .Setup(x => x.DeleteAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<Qdrant.Client.Grpc.Filter>(),
+                    It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            services.AddSingleton(mockQdrantAdapter.Object);
             services.AddSingleton<IQdrantService>(sp => new QdrantService(
                 sp.GetRequiredService<IQdrantClientAdapter>(),
                 sp.GetRequiredService<ILogger<QdrantService>>()
             ));
+
+            // Mock embedding service to return dummy embeddings (1536 dimensions for text-embedding-3-small)
+            var mockEmbeddingService = new Mock<IEmbeddingService>();
+            mockEmbeddingService
+                .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((List<string> texts, CancellationToken ct) =>
+                {
+                    // Return dummy embeddings (1536 dimensions of zeros) for each text
+                    var embeddings = texts.Select(_ => new float[1536]).ToList();
+                    return new Api.Services.EmbeddingResult
+                    {
+                        Success = true,
+                        Embeddings = embeddings
+                    };
+                });
+
+            mockEmbeddingService
+                .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string text, CancellationToken ct) =>
+                {
+                    // Return dummy embedding (1536 dimensions of zeros)
+                    return new Api.Services.EmbeddingResult
+                    {
+                        Success = true,
+                        Embeddings = new List<float[]> { new float[1536] }
+                    };
+                });
+
+            services.AddSingleton(mockEmbeddingService.Object);
 
             services.AddSingleton<IHttpClientFactory>(_ => new StubHttpClientFactory());
 
@@ -100,8 +186,8 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
 
     private static void SeedDemoData(MeepleAiDbContext db)
     {
-        // Pre-computed password hash for "Demo123!" using PBKDF2
-        const string demoPasswordHash = "v1.210000.7wX9YqJ4hN5mK3pL6rT8vW=.eH3kM8nQ7tR5xZ2wB6cV9dF4gJ1lP0sY+";
+        // Pre-computed password hash for "Demo123!" using PBKDF2 (210k iterations, SHA256)
+        const string demoPasswordHash = "v1.210000.7wX9YqJ4hN5mK3pL6rT8vQ==.ug8xD+xho0bq+7hmTiefZgaOxYFu8rbdLjm7sDq6WGA=";
         var now = new DateTime(2025, 10, 9, 14, 0, 0, DateTimeKind.Utc);
 
         // Check if seed data already exists (idempotent)

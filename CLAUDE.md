@@ -364,6 +364,8 @@ pwsh tools/measure-coverage.ps1 -GenerateHtml
 
 ## CI/CD
 
+### Main CI Pipeline
+
 **Workflow**: `.github/workflows/ci.yml`
 
 **Jobs**:
@@ -377,6 +379,44 @@ pwsh tools/measure-coverage.ps1 -GenerateHtml
    - Services: postgres, qdrant
    - Installs libgdiplus for PDF extraction
    - Environment variables: `CI=true`, test API keys, connection strings
+
+### Security Scanning (SEC-03)
+
+**Workflow**: `.github/workflows/security-scan.yml`
+**Documentation**: See `docs/security-scanning.md` for complete details
+
+**Security Layers**:
+
+1. **CodeQL SAST** - Static application security testing
+   - Languages: C# (.NET 8), JavaScript/TypeScript
+   - Queries: `security-extended`, `security-and-quality`
+   - Results in GitHub Security tab
+
+2. **Dependency Scanning** - Vulnerability detection
+   - Backend: `dotnet list package --vulnerable`
+   - Frontend: `pnpm audit`
+   - **Fails pipeline on HIGH/CRITICAL severity**
+
+3. **Security Analyzers** - .NET-specific code analysis
+   - SecurityCodeScan.VS2019 v5.6.7
+   - Microsoft.CodeAnalysis.NetAnalyzers v9.0.0
+   - Detects: SQL injection, XSS, weak crypto, etc.
+
+4. **Dependabot** - Automated dependency updates
+   - Configuration: `.github/dependabot.yml`
+   - Weekly scans (Mondays)
+   - Ecosystems: NuGet, npm, GitHub Actions, Docker
+
+**Quick Security Scan**:
+```bash
+# Check .NET vulnerabilities
+cd apps/api && dotnet list package --vulnerable --include-transitive
+
+# Check frontend vulnerabilities
+cd apps/web && pnpm audit --audit-level=high
+```
+
+**Reports**: All security scan results are archived as CI artifacts (30-day retention)
 
 ## Environment Configuration
 

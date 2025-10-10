@@ -1,0 +1,229 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run weekly security scans on Mondays at 00:00 UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+# Cancel previous runs on same PR/branch
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # CodeQL SAST for both .NET and TypeScript
+  codeql-analysis:
+    name: CodeQL Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ['csharp', 'javascript']
+        include:
+          - language: csharp
+            build-mode: manual
+          - language: javascript
+            build-mode: none
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
+
+      # Build .NET projects for CodeQL analysis
+      - name: Setup .NET (C# only)
+        if: matrix.language == 'csharp'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install PDF dependencies (C# only)
+        if: matrix.language == 'csharp'
+        run: sudo apt-get update && sudo apt-get install -y libgdiplus
+
+      - name: Build .NET (C# only)
+        if: matrix.language == 'csharp'
+        run: |
+          cd apps/api
+          dotnet restore
+          dotnet build --no-restore --configuration Release
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+          upload: true
+
+  # Dependency vulnerability scanning
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # .NET dependency scanning
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Scan .NET Dependencies
+        id: dotnet-scan
+        working-directory: apps/api
+        run: |
+          echo "## .NET Dependency Vulnerabilities" >> $GITHUB_STEP_SUMMARY
+
+          # Check for vulnerable packages
+          dotnet list package --vulnerable --include-transitive > vulnerability-report.txt 2>&1 || true
+
+          # Display results
+          cat vulnerability-report.txt
+          cat vulnerability-report.txt >> $GITHUB_STEP_SUMMARY
+
+          # Check if there are HIGH or CRITICAL vulnerabilities
+          if grep -E "(High|Critical)" vulnerability-report.txt; then
+            echo "HIGH_SEVERITY_FOUND=true" >> $GITHUB_OUTPUT
+            echo "❌ **HIGH/CRITICAL vulnerabilities found in .NET dependencies!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "HIGH_SEVERITY_FOUND=false" >> $GITHUB_OUTPUT
+            echo "✅ No HIGH/CRITICAL vulnerabilities in .NET dependencies" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload .NET Vulnerability Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-vulnerability-report
+          path: apps/api/vulnerability-report.txt
+          retention-days: 30
+
+      # Frontend dependency scanning
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Scan Frontend Dependencies
+        id: pnpm-scan
+        working-directory: apps/web
+        run: |
+          echo "## Frontend Dependency Vulnerabilities" >> $GITHUB_STEP_SUMMARY
+
+          # Run pnpm audit and capture output
+          pnpm audit --audit-level=moderate --json > audit-report.json 2>&1 || true
+
+          # Generate human-readable report
+          pnpm audit --audit-level=moderate > audit-report.txt 2>&1 || true
+          cat audit-report.txt
+          cat audit-report.txt >> $GITHUB_STEP_SUMMARY
+
+          # Check for HIGH or CRITICAL vulnerabilities
+          if pnpm audit --audit-level=high --json > high-severity.json 2>&1; then
+            echo "HIGH_SEVERITY_FOUND=false" >> $GITHUB_OUTPUT
+            echo "✅ No HIGH/CRITICAL vulnerabilities in frontend dependencies" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "HIGH_SEVERITY_FOUND=true" >> $GITHUB_OUTPUT
+            echo "❌ **HIGH/CRITICAL vulnerabilities found in frontend dependencies!**" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload Frontend Vulnerability Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-vulnerability-report
+          path: |
+            apps/web/audit-report.txt
+            apps/web/audit-report.json
+          retention-days: 30
+
+      # Fail the pipeline if HIGH severity vulnerabilities found
+      - name: Check Severity Threshold
+        if: steps.dotnet-scan.outputs.HIGH_SEVERITY_FOUND == 'true' || steps.pnpm-scan.outputs.HIGH_SEVERITY_FOUND == 'true'
+        run: |
+          echo "::error::Pipeline failed due to HIGH or CRITICAL severity vulnerabilities"
+          echo "Please review the vulnerability reports and fix the issues before merging"
+          exit 1
+
+  # .NET Security Code Scan
+  dotnet-security-scan:
+    name: .NET Security Code Scan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install Security Code Scan Analyzer
+        run: |
+          # Add SecurityCodeScan.VS2019 analyzer to the project
+          dotnet add src/Api package SecurityCodeScan.VS2019 --version 5.6.7
+
+      - name: Build with Security Analysis
+        run: |
+          dotnet build --configuration Release /p:TreatWarningsAsErrors=false > security-scan.log 2>&1 || true
+
+          # Check for security warnings
+          if grep -i "warning.*security" security-scan.log; then
+            echo "## .NET Security Warnings Found" >> $GITHUB_STEP_SUMMARY
+            grep -i "warning.*security" security-scan.log >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No security warnings found in .NET code" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          cat security-scan.log
+
+      - name: Upload Security Scan Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dotnet-security-scan-report
+          path: apps/api/security-scan.log
+          retention-days: 30
+
+  # Security scan summary
+  security-summary:
+    name: Security Scan Summary
+    runs-on: ubuntu-latest
+    needs: [codeql-analysis, dependency-scan, dotnet-security-scan]
+    if: always()
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "# 🔒 Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All security scans completed. Check individual job results for details." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "- CodeQL Analysis: ${{ needs.codeql-analysis.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Dependency Scan: ${{ needs.dependency-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- .NET Security Scan: ${{ needs.dotnet-security-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📊 Security reports are available as workflow artifacts (retained for 30 days)" >> $GITHUB_STEP_SUMMARY

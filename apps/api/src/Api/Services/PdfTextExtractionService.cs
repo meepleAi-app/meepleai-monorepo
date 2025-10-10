@@ -18,6 +18,9 @@ public class PdfTextExtractionService
     // Quality threshold: if chars/page < this value, trigger OCR
     private const int DefaultOcrThresholdCharsPerPage = 100;
 
+    // Semaphore to prevent concurrent access to Docnet.Core (not thread-safe)
+    private static readonly SemaphoreSlim DocnetSemaphore = new(1, 1);
+
     public PdfTextExtractionService(
         ILogger<PdfTextExtractionService> logger,
         IConfiguration configuration,
@@ -49,69 +52,77 @@ public class PdfTextExtractionService
 
         try
         {
-            // Step 1: Try standard text extraction
-            var (rawText, pageCount) = await Task.Run(() => ExtractRawText(filePath), ct);
-
-            var normalizedText = NormalizeText(rawText);
-            var charCount = normalizedText.Length;
-            var charsPerPage = pageCount > 0 ? charCount / pageCount : 0;
-
-            // Step 2: Check if OCR fallback is needed
-            var ocrThreshold = _configuration.GetValue<int>(
-                "PdfExtraction:Ocr:ThresholdCharsPerPage",
-                DefaultOcrThresholdCharsPerPage);
-
-            var needsOcr = charsPerPage < ocrThreshold && _ocrService != null;
-
-            if (needsOcr)
+            // Step 1: Try standard text extraction (with thread safety for Docnet.Core)
+            await DocnetSemaphore.WaitAsync(ct);
+            try
             {
-                _logger.LogInformation(
-                    "Standard extraction quality too low ({CharsPerPage} chars/page < {Threshold}). Falling back to OCR for {FilePath}",
-                    charsPerPage, ocrThreshold, filePath);
+                var (rawText, pageCount) = await Task.Run(() => ExtractRawText(filePath), ct);
 
-                // Fallback to OCR
-                var ocrResult = await _ocrService!.ExtractTextFromPdfAsync(filePath, ct);
+                var normalizedText = NormalizeText(rawText);
+                var charCount = normalizedText.Length;
+                var charsPerPage = pageCount > 0 ? charCount / pageCount : 0;
 
-                if (!ocrResult.Success)
+                // Step 2: Check if OCR fallback is needed
+                var ocrThreshold = _configuration.GetValue<int>(
+                    "PdfExtraction:Ocr:ThresholdCharsPerPage",
+                    DefaultOcrThresholdCharsPerPage);
+
+                var needsOcr = charsPerPage < ocrThreshold && _ocrService != null;
+
+                if (needsOcr)
                 {
-                    _logger.LogWarning(
-                        "OCR fallback failed for {FilePath}: {Error}. Using standard extraction.",
-                        filePath, ocrResult.ErrorMessage);
+                    _logger.LogInformation(
+                        "Standard extraction quality too low ({CharsPerPage} chars/page < {Threshold}). Falling back to OCR for {FilePath}",
+                        charsPerPage, ocrThreshold, filePath);
 
-                    // Use standard extraction despite poor quality
+                    // Fallback to OCR
+                    var ocrResult = await _ocrService!.ExtractTextFromPdfAsync(filePath, ct);
+
+                    if (!ocrResult.Success)
+                    {
+                        _logger.LogWarning(
+                            "OCR fallback failed for {FilePath}: {Error}. Using standard extraction.",
+                            filePath, ocrResult.ErrorMessage);
+
+                        // Use standard extraction despite poor quality
+                        return PdfTextExtractionResult.CreateSuccess(
+                            normalizedText,
+                            pageCount,
+                            charCount,
+                            usedOcr: false,
+                            ocrConfidence: null);
+                    }
+
+                    var normalizedOcrText = NormalizeText(ocrResult.ExtractedText);
+
+                    _logger.LogInformation(
+                        "OCR extraction completed for {FilePath}. Pages: {PageCount}, Characters: {CharCount}, Confidence: {Confidence:F2}",
+                        filePath, ocrResult.PageCount, normalizedOcrText.Length, ocrResult.MeanConfidence);
+
                     return PdfTextExtractionResult.CreateSuccess(
-                        normalizedText,
-                        pageCount,
-                        charCount,
-                        usedOcr: false,
-                        ocrConfidence: null);
+                        normalizedOcrText,
+                        ocrResult.PageCount,
+                        normalizedOcrText.Length,
+                        usedOcr: true,
+                        ocrConfidence: ocrResult.MeanConfidence);
                 }
 
-                var normalizedOcrText = NormalizeText(ocrResult.ExtractedText);
-
+                // Standard extraction was good enough
                 _logger.LogInformation(
-                    "OCR extraction completed for {FilePath}. Pages: {PageCount}, Characters: {CharCount}, Confidence: {Confidence:F2}",
-                    filePath, ocrResult.PageCount, normalizedOcrText.Length, ocrResult.MeanConfidence);
+                    "Extracted text from PDF: {FilePath}, Pages: {PageCount}, Characters: {CharCount}, Chars/Page: {CharsPerPage}",
+                    filePath, pageCount, charCount, charsPerPage);
 
                 return PdfTextExtractionResult.CreateSuccess(
-                    normalizedOcrText,
-                    ocrResult.PageCount,
-                    normalizedOcrText.Length,
-                    usedOcr: true,
-                    ocrConfidence: ocrResult.MeanConfidence);
+                    normalizedText,
+                    pageCount,
+                    charCount,
+                    usedOcr: false,
+                    ocrConfidence: null);
             }
-
-            // Standard extraction was good enough
-            _logger.LogInformation(
-                "Extracted text from PDF: {FilePath}, Pages: {PageCount}, Characters: {CharCount}, Chars/Page: {CharsPerPage}",
-                filePath, pageCount, charCount, charsPerPage);
-
-            return PdfTextExtractionResult.CreateSuccess(
-                normalizedText,
-                pageCount,
-                charCount,
-                usedOcr: false,
-                ocrConfidence: null);
+            finally
+            {
+                DocnetSemaphore.Release();
+            }
         }
         catch (Exception ex)
         {

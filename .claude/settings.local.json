@@ -63,7 +63,12 @@
       "Bash(gh run list:*)",
       "Bash(gh pr merge:*)",
       "Bash(timeout 120 dotnet test --filter \"FullyQualifiedName~AdminStatsEndpointsTests.GetAdminStats_WhenAdminAuthenticated_ReturnsAggregatedStatistics\" --verbosity normal)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(git branch:*)",
+      "Bash(gh run watch:*)",
+      "Bash(pnpm test:*)",
+      "Bash(npm test:*)",
+      "Bash(Select-String -Pattern \"FAIL|PASS|Error|Unauthorized|OK\" -Context 1,2)"
     ],
     "deny": [],
     "ask": []

@@ -2,13 +2,55 @@ name: ci
 
 on:
   pull_request:
+    paths:
+      - 'apps/web/**'
+      - 'apps/api/**'
+      - 'schemas/**'
+      - '.github/workflows/**'
   push:
     branches: [main]
+    paths:
+      - 'apps/web/**'
+      - 'apps/api/**'
+      - 'schemas/**'
+      - '.github/workflows/**'
+
+# Cancel previous runs on same PR/branch to avoid piling up
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  # Determine which parts changed to run only necessary jobs
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      api: ${{ steps.filter.outputs.api }}
+      schemas: ${{ steps.filter.outputs.schemas }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Paths Filter
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            web:
+              - 'apps/web/**'
+            api:
+              - 'apps/api/**'
+            schemas:
+              - 'schemas/**'
   validate-schemas:
+    needs: changes
     name: Schemas - Validate RuleSpec Examples
     runs-on: ubuntu-latest
+    if: needs.changes.outputs.schemas == 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,8 +62,10 @@ jobs:
         run: node schemas/validate-all-examples.js
 
   ci-web:
+    needs: changes
     name: Web - Lint, Typecheck, Test
     runs-on: ubuntu-latest
+    if: needs.changes.outputs.web == 'true'
     defaults:
       run:
         working-directory: apps/web
@@ -58,8 +102,10 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   ci-api:
+    needs: changes
     name: API - Build and Test
     runs-on: ubuntu-latest
+    if: needs.changes.outputs.api == 'true'
     services:
       postgres:
         image: postgres:16-alpine

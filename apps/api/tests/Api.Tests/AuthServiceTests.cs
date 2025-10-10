@@ -21,7 +21,7 @@ public class AuthServiceTests
 
         await using var dbContext = CreateContext(connection);
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new AuthService(dbContext, timeProvider);
+        var authService = new AuthService(dbContext, sessionCache: null, timeProvider: timeProvider);
 
         var register = await authService.RegisterAsync(new RegisterCommand(
             Email: "user@example.com",
@@ -78,7 +78,7 @@ public class AuthServiceTests
 
         await using var dbContext = CreateContext(connection);
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new AuthService(dbContext, timeProvider);
+        var authService = new AuthService(dbContext, sessionCache: null, timeProvider: timeProvider);
 
         await authService.RegisterAsync(new RegisterCommand(
             Email: "bootstrap@example.com",

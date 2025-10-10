@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Api.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20251010153000_InitialGlobalSchema")]
+    [Migration("20251001000000_InitialGlobalSchema")]
     partial class InitialGlobalSchema
     {
         /// <inheritdoc />

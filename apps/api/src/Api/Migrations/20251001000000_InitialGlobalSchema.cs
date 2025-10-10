@@ -51,12 +51,16 @@ namespace Api.Migrations
                     Query = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true),
                     ResponseSnippet = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
                     LatencyMs = table.Column<int>(type: "integer", nullable: false),
-                    TokenCount = table.Column<int>(type: "integer", nullable: true),
+                    TokenCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    PromptTokens = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    CompletionTokens = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     Confidence = table.Column<double>(type: "double precision", nullable: true),
                     Status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
                     ErrorMessage = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
                     IpAddress = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
                     UserAgent = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    Model = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
+                    FinishReason = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -212,7 +216,9 @@ namespace Api.Migrations
                     UserAgent = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     IpAddress = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    LastSeenAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    RevokedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -230,9 +236,11 @@ namespace Api.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     GameId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     AgentId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
-                    StartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    StartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    LastMessageAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -247,6 +255,12 @@ namespace Api.Migrations
                         name: "FK_chats_games_GameId",
                         column: x => x.GameId,
                         principalTable: "games",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_chats_users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -393,6 +407,16 @@ namespace Api.Migrations
                 name: "IX_chats_GameId_StartedAt",
                 table: "chats",
                 columns: new[] { "GameId", "StartedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_chats_UserId",
+                table: "chats",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_chats_UserId_LastMessageAt",
+                table: "chats",
+                columns: new[] { "UserId", "LastMessageAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_games_Name",

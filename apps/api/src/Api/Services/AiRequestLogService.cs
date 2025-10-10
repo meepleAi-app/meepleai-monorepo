@@ -139,22 +139,42 @@ public class AiRequestLogService
             query = query.Where(log => log.GameId == gameId);
         }
 
-        var totalRequests = await query.CountAsync(ct);
-        var avgLatency = await query.AverageAsync(log => (double?)log.LatencyMs, ct) ?? 0;
-        var totalTokens = await query.SumAsync(log => log.TokenCount, ct);
-        var successCount = await query.CountAsync(log => log.Status == "Success", ct);
+        // PERF-03: Single aggregate query instead of 4 separate queries
+        var stats = await query
+            .GroupBy(_ => 1) // Group all into single aggregate
+            .Select(g => new
+            {
+                TotalRequests = g.Count(),
+                AvgLatencyMs = g.Average(log => (double?)log.LatencyMs) ?? 0,
+                TotalTokens = g.Sum(log => log.TokenCount),
+                SuccessCount = g.Count(log => log.Status == "Success")
+            })
+            .FirstOrDefaultAsync(ct);
 
         var endpointCounts = await query
             .GroupBy(log => log.Endpoint)
             .Select(g => new { Endpoint = g.Key, Count = g.Count() })
             .ToListAsync(ct);
 
+        if (stats == null)
+        {
+            // No data found - return empty stats
+            return new AiRequestStats
+            {
+                TotalRequests = 0,
+                AvgLatencyMs = 0,
+                TotalTokens = 0,
+                SuccessRate = 0,
+                EndpointCounts = new Dictionary<string, int>()
+            };
+        }
+
         return new AiRequestStats
         {
-            TotalRequests = totalRequests,
-            AvgLatencyMs = avgLatency,
-            TotalTokens = totalTokens,
-            SuccessRate = totalRequests > 0 ? (double)successCount / totalRequests : 0,
+            TotalRequests = stats.TotalRequests,
+            AvgLatencyMs = stats.AvgLatencyMs,
+            TotalTokens = stats.TotalTokens,
+            SuccessRate = stats.TotalRequests > 0 ? (double)stats.SuccessCount / stats.TotalRequests : 0,
             EndpointCounts = endpointCounts.ToDictionary(x => x.Endpoint, x => x.Count)
         };
     }

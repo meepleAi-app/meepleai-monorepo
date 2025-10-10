@@ -15,9 +15,15 @@ public class AuthService
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromDays(7);
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
-    public AuthService(MeepleAiDbContext db, TimeProvider? timeProvider = null)
+    private readonly ISessionCacheService? _sessionCache;
+
+    public AuthService(
+        MeepleAiDbContext db,
+        ISessionCacheService? sessionCache = null,
+        TimeProvider? timeProvider = null)
     {
         _db = db;
+        _sessionCache = sessionCache;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -104,19 +110,64 @@ public class AuthService
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var hash = HashToken(token);
 
-        var session = await _db.UserSessions
+        // Try cache first (Phase 2 optimization)
+        if (_sessionCache != null)
+        {
+            var cached = await _sessionCache.GetAsync(hash, ct);
+            if (cached != null)
+            {
+                // Verify not expired (belt-and-suspenders check)
+                if (cached.ExpiresAt > now)
+                {
+                    // Update last seen in background (fire-and-forget)
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var session = await _db.UserSessions
+                                .FirstOrDefaultAsync(s => s.TokenHash == hash, CancellationToken.None);
+                            if (session != null)
+                            {
+                                session.LastSeenAt = now;
+                                await _db.SaveChangesAsync(CancellationToken.None);
+                            }
+                        }
+                        catch
+                        {
+                            // Ignore errors in background task
+                        }
+                    }, CancellationToken.None);
+
+                    return cached;
+                }
+
+                // Expired in cache - invalidate
+                await _sessionCache.InvalidateAsync(hash, ct);
+            }
+        }
+
+        // Cache miss or no cache - query database
+        var dbSession = await _db.UserSessions
             .Include(s => s.User)
             .FirstOrDefaultAsync(s => s.TokenHash == hash, ct);
 
-        if (session == null || session.RevokedAt != null || session.ExpiresAt <= now)
+        if (dbSession == null || dbSession.RevokedAt != null || dbSession.ExpiresAt <= now)
         {
             return null;
         }
 
-        session.LastSeenAt = now;
+        dbSession.LastSeenAt = now;
         await _db.SaveChangesAsync(ct);
 
-        return new ActiveSession(ToDto(session.User), session.ExpiresAt);
+        var activeSession = new ActiveSession(ToDto(dbSession.User), dbSession.ExpiresAt);
+
+        // Cache for next time
+        if (_sessionCache != null)
+        {
+            await _sessionCache.SetAsync(hash, activeSession, dbSession.ExpiresAt, ct);
+        }
+
+        return activeSession;
     }
 
     public async Task LogoutAsync(string token, CancellationToken ct = default)
@@ -135,6 +186,12 @@ public class AuthService
 
         session.RevokedAt = _timeProvider.GetUtcNow().UtcDateTime;
         await _db.SaveChangesAsync(ct);
+
+        // Invalidate cache
+        if (_sessionCache != null)
+        {
+            await _sessionCache.InvalidateAsync(hash, ct);
+        }
     }
 
     private static (UserSessionEntity Entity, string Token) CreateSessionEntity(UserEntity user, string? ipAddress, string? userAgent, DateTime now)

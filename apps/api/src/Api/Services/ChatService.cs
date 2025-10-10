@@ -18,18 +18,35 @@ public class ChatService
 
     public async Task<ChatEntity?> GetChatByIdAsync(Guid chatId, string userId, CancellationToken ct = default)
     {
-        return await _db.Chats
+        // PERF-03: Split query to avoid Include with OrderBy (causes client evaluation)
+        var chat = await _db.Chats
             .Include(c => c.Game)
             .Include(c => c.Agent)
-            .Include(c => c.Logs.OrderBy(l => l.CreatedAt))
+            .AsSplitQuery() // Optimize for multiple includes
             .FirstOrDefaultAsync(c => c.Id == chatId && c.UserId == userId, ct);
+
+        if (chat == null)
+        {
+            return null;
+        }
+
+        // Load logs separately with proper ordering (executed server-side)
+        await _db.Entry(chat)
+            .Collection(c => c.Logs)
+            .Query()
+            .OrderBy(l => l.CreatedAt)
+            .LoadAsync(ct);
+
+        return chat;
     }
 
     public async Task<List<ChatEntity>> GetUserChatsAsync(string userId, int limit = 50, CancellationToken ct = default)
     {
+        // PERF-03: Use AsSplitQuery to avoid cartesian explosion with multiple includes
         return await _db.Chats
             .Include(c => c.Game)
             .Include(c => c.Agent)
+            .AsSplitQuery()
             .Where(c => c.UserId == userId)
             .OrderByDescending(c => c.LastMessageAt ?? c.StartedAt)
             .Take(limit)
@@ -38,9 +55,11 @@ public class ChatService
 
     public async Task<List<ChatEntity>> GetUserChatsByGameAsync(string userId, string gameId, int limit = 50, CancellationToken ct = default)
     {
+        // PERF-03: Use AsSplitQuery to avoid cartesian explosion with multiple includes
         return await _db.Chats
             .Include(c => c.Game)
             .Include(c => c.Agent)
+            .AsSplitQuery()
             .Where(c => c.UserId == userId && c.GameId == gameId)
             .OrderByDescending(c => c.LastMessageAt ?? c.StartedAt)
             .Take(limit)

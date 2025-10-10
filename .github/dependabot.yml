@@ -26,6 +26,12 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # Ignore EF Core 9.x until .NET 9 migration is planned
+      - dependency-name: "Microsoft.EntityFrameworkCore*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "Npgsql.EntityFrameworkCore.PostgreSQL"
+        update-types: ["version-update:semver-major"]
 
   # Frontend dependencies (npm)
   - package-ecosystem: "npm"

@@ -134,7 +134,7 @@ jobs:
       - name: Install PDF extraction dependencies
         run: sudo apt-get update && sudo apt-get install -y libgdiplus
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
       - name: Restore

@@ -84,6 +84,13 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Install PDF dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgdiplus
+
+      - name: Restore .NET dependencies
+        working-directory: apps/api
+        run: dotnet restore
+
       - name: Scan .NET Dependencies
         id: dotnet-scan
         working-directory: apps/api
@@ -125,6 +132,10 @@ jobs:
           node-version: 20
           cache: pnpm
           cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile
 
       - name: Scan Frontend Dependencies
         id: pnpm-scan
@@ -208,11 +219,74 @@ jobs:
           path: apps/api/security-scan.log
           retention-days: 30
 
+  # Semgrep SAST & Secrets Scanning
+  semgrep-scan:
+    name: Semgrep SAST & Secrets Detection
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    container:
+      image: semgrep/semgrep
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep Security Analysis
+        run: |
+          semgrep scan \
+            --config=p/security-audit \
+            --config=p/secrets \
+            --config=p/owasp-top-10 \
+            --config=p/csharp \
+            --config=p/typescript \
+            --sarif \
+            --output=semgrep-results.sarif \
+            --verbose || true
+
+      - name: Generate Human-Readable Report
+        run: |
+          echo "## Semgrep Security Findings" >> $GITHUB_STEP_SUMMARY
+
+          # Run Semgrep again for human-readable output
+          semgrep scan \
+            --config=p/security-audit \
+            --config=p/secrets \
+            --config=p/owasp-top-10 \
+            --config=p/csharp \
+            --config=p/typescript \
+            --quiet > semgrep-report.txt 2>&1 || true
+
+          if [ -s semgrep-report.txt ]; then
+            cat semgrep-report.txt >> $GITHUB_STEP_SUMMARY
+            cat semgrep-report.txt
+          else
+            echo "✅ No security issues found by Semgrep" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload SARIF to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep-results.sarif
+          category: semgrep
+        if: always()
+
+      - name: Upload Semgrep Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-security-reports
+          path: |
+            semgrep-results.sarif
+            semgrep-report.txt
+          retention-days: 30
+        if: always()
+
   # Security scan summary
   security-summary:
     name: Security Scan Summary
     runs-on: ubuntu-latest
-    needs: [codeql-analysis, dependency-scan, dotnet-security-scan]
+    needs: [codeql-analysis, dependency-scan, dotnet-security-scan, semgrep-scan]
     if: always()
     steps:
       - name: Generate Summary
@@ -225,5 +299,12 @@ jobs:
           echo "- CodeQL Analysis: ${{ needs.codeql-analysis.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Dependency Scan: ${{ needs.dependency-scan.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- .NET Security Scan: ${{ needs.dotnet-security-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Semgrep SAST & Secrets: ${{ needs.semgrep-scan.result }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "📊 Security reports are available as workflow artifacts (retained for 30 days)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Security Coverage (SEC-04)" >> $GITHUB_STEP_SUMMARY
+          echo "✅ SAST: CodeQL + Semgrep" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Secrets Detection: Semgrep" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Dependency Scanning: .NET + npm" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Code Analysis: SecurityCodeScan + NetAnalyzers" >> $GITHUB_STEP_SUMMARY

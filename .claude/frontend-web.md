@@ -51,7 +51,7 @@ pnpm test:e2e:report            # E2E report
 - Setup: `jest.setup.js`
 - Alias: `@/*` → `<rootDir>/src/*`
 - Excluded: `_app.tsx`, `_document.tsx`, type defs
-- Coverage: 90% threshold (branches, functions, lines, statements)
+- Coverage: 80% threshold (branches, functions, lines, statements)
 
 **Playwright** (E2E):
 - Config: `playwright.config.ts`

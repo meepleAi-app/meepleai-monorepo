@@ -76,7 +76,22 @@
       "Bash(git log:*)",
       "Bash(do)",
       "Bash(echo:*)",
-      "Bash(gh pr close:*)"
+      "Bash(gh pr close:*)",
+      "Bash(dotnet list package:*)",
+      "Bash(Select-String -Pattern \"Docnet|iText|Qdrant|StackExchange|Tesseract|QuestPDF|Microsoft.EntityFrameworkCore|Npgsql\" -Context 0,1)",
+      "Bash(Select-String -Pattern \"FAIL|PASS|Error|Total tests\" -Context 1,2)",
+      "Bash(dotnet clean:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(Select-Object -First 100)",
+      "Bash(cmd /c:*)",
+      "Bash(Select-String -Pattern \"FAIL|PASS|Error|Superato|Non superato\" -Context 0,1)",
+      "Bash(mv:*)",
+      "Bash(git reset:*)",
+      "Bash(Select-String -Pattern \"FAIL|PASS|Tests:|Test Suites:|Ran all test|error|warning\" -Context 0,1)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm test:coverage:*)",
+      "Bash(gh issue comment:*)"
     ],
     "deny": [],
     "ask": []

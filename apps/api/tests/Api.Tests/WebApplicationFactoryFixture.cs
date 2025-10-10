@@ -38,8 +38,13 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
         builder.ConfigureTestServices(services =>
         {
             // Remove real services
+            // IMPORTANT: Remove ALL DbContext-related services to prevent dual database provider registration
+            // EF Core registers multiple services when AddDbContext is called, and we need to remove all of them
+            // to avoid the "multiple database providers registered" error
             var descriptors = services.Where(d =>
                 d.ServiceType == typeof(DbContextOptions<MeepleAiDbContext>) ||
+                d.ServiceType == typeof(DbContextOptions) ||
+                d.ServiceType == typeof(MeepleAiDbContext) ||
                 d.ServiceType == typeof(IConnectionMultiplexer) ||
                 d.ServiceType == typeof(QdrantService) ||
                 d.ServiceType == typeof(IQdrantService) ||

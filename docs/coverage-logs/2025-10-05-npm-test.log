@@ -1,4 +1,0 @@
-
-> test
-> jest --passWithNoTests --runTestsByPath src/pages/api/__tests__/health.test.ts
-

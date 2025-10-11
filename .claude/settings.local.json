@@ -91,7 +91,19 @@
       "Bash(pnpm install:*)",
       "Bash(pnpm lint:*)",
       "Bash(pnpm test:coverage:*)",
-      "Bash(gh issue comment:*)"
+      "Bash(gh issue comment:*)",
+      "Bash(git pull:*)",
+      "Bash(gh issue close:*)",
+      "mcp__github-project-manager__github_create_issue",
+      "Bash(gh issue edit:*)",
+      "Bash(Select-String -Pattern \"n8n|N8N|webhook\")",
+      "Bash(gh label:*)",
+      "Bash(gh pr edit:*)",
+      "Bash(find . -maxdepth 2 -name \"README.md\" -exec sh -c 'echo \"\"\"\"$(wc -l < \"\"\"\"$1\"\"\"\") $1\"\"\"\"' _ {})",
+      "Bash(awk:*)",
+      "Bash(ConvertFrom-Json)",
+      "Bash(Where-Object { $_itle -match \"CHESS-03|PDF-02|AI-01\" })",
+      "Bash(Format-Table -AutoSize)"
     ],
     "deny": [],
     "ask": []

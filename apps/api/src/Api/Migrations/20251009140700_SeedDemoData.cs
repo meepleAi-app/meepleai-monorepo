@@ -10,7 +10,8 @@ namespace Api.Migrations
     {
         // Pre-computed password hash for "Demo123!" using PBKDF2 (210,000 iterations)
         // This allows users to test the system with known credentials
-        private const string DemoPasswordHash = "v1.210000.7wX9YqJ4hN5mK3pL6rT8vW=.eH3kM8nQ7tR5xZ2wB6cV9dF4gJ1lP0sY+";
+        // Hash generated and verified by VerifyPasswordHashTest.cs
+        private const string DemoPasswordHash = "v1.210000.8dE/5q2EBcd0MSLdKi8x6g==.zx114sOsC0WtjeEBN0aYdaqQxbcxWcJfwEbNQ5id1fM=";
 
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

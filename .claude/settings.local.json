@@ -103,7 +103,9 @@
       "Bash(awk:*)",
       "Bash(ConvertFrom-Json)",
       "Bash(Where-Object { $_itle -match \"CHESS-03|PDF-02|AI-01\" })",
-      "Bash(Format-Table -AutoSize)"
+      "Bash(Format-Table -AutoSize)",
+      "Bash(Select-String -Pattern \"error|warning|successo|Build succeeded\" -Context 0,1)",
+      "Bash(Select-String -Pattern \"FAIL|PASS|Error|Total tests|Test Run\" -Context 0,1)"
     ],
     "deny": [],
     "ask": []

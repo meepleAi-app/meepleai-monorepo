@@ -59,13 +59,19 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
             }
 
             // Create and open connection (keep it open for the lifetime of the factory)
-            _connection = new SqliteConnection("DataSource=:memory:");
-            _connection.Open();
+            // Only create a new connection if we don't already have one
+            if (_connection == null)
+            {
+                _connection = new SqliteConnection("DataSource=:memory:");
+                _connection.Open();
+            }
 
             // Add test database with the persistent connection
             services.AddDbContext<MeepleAiDbContext>(options =>
             {
                 options.UseSqlite(_connection);
+                // Important: Don't enable sensitive data logging in tests to avoid log spam
+                options.EnableServiceProviderCaching(false);
             });
 
             // Mock Redis with proper script evaluation support
@@ -274,11 +280,15 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
         builder.UseEnvironment("Testing");
     }
 
+    private bool _databaseInitialized = false;
+    private readonly object _databaseInitLock = new object();
+
     protected override IHost CreateHost(IHostBuilder builder)
     {
         var host = base.CreateHost(builder);
 
-        // Ensure database is created and seeded after host is built
+        // Initialize database on first host creation for this instance
+        // This handles both normal creation and WithTestServices scenarios
         if (!_databaseInitialized)
         {
             lock (_databaseInitLock)
@@ -287,21 +297,36 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
                 {
                     using var scope = host.Services.CreateScope();
                     var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-                    db.Database.EnsureCreated();
 
-                    // Seed demo data (since EnsureCreated doesn't run migrations)
-                    SeedDemoData(db);
+                    try
+                    {
+                        // Ensure the database schema is created
+                        db.Database.EnsureCreated();
 
-                    _databaseInitialized = true;
+                        // Verify critical tables exist
+                        var canConnect = db.Database.CanConnect();
+                        if (!canConnect)
+                        {
+                            throw new InvalidOperationException("Cannot connect to SQLite database after EnsureCreated()");
+                        }
+
+                        // Seed demo data (since EnsureCreated doesn't run migrations)
+                        SeedDemoData(db);
+
+                        _databaseInitialized = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new InvalidOperationException(
+                            "Failed to initialize SQLite test database for fixture instance. " +
+                            "Connection state: " + (_connection?.State.ToString() ?? "null"), ex);
+                    }
                 }
             }
         }
 
         return host;
     }
-
-    private static bool _databaseInitialized = false;
-    private static readonly object _databaseInitLock = new object();
 
     private static void SeedDemoData(MeepleAiDbContext db)
     {

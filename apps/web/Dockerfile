@@ -4,17 +4,23 @@
 FROM node:20.11.1-alpine3.19 AS deps
 WORKDIR /app
 
+# Install pnpm globally
+RUN npm install -g pnpm@9
+
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY package.json pnpm-lock.yaml ./
 
 # Install dependencies (including devDependencies for build stage)
-RUN npm ci
+RUN pnpm install --frozen-lockfile
 
 # ==============================================================================
 # Stage 2: Builder - Build the Next.js application
 # ==============================================================================
 FROM node:20.11.1-alpine3.19 AS builder
 WORKDIR /app
+
+# Install pnpm globally
+RUN npm install -g pnpm@9
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
@@ -29,7 +35,7 @@ ENV NODE_ENV=production
 RUN mkdir -p public
 
 # Build Next.js application (generates .next/standalone)
-RUN npm run build
+RUN pnpm run build
 
 # ==============================================================================
 # Stage 3: Runner - Production runtime environment

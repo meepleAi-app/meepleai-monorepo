@@ -109,7 +109,15 @@
       "Bash(Select-String -Pattern \"HTTP|Set-Cookie|userId\")",
       "Bash(find:*)",
       "Bash(Select-String -Pattern \"error|warning|successo|OK|FAIL|Total|chunks\" -Context 0,1)",
-      "Bash(/dev/null)"
+      "Bash(/dev/null)",
+      "Bash(tasklist)",
+      "Bash(do netstat:*)",
+      "Bash(break)",
+      "Bash(do curl -s http://localhost:8080/health/ready)",
+      "Bash(Select-String -Pattern \"FAIL|PASS|Error|Total tests|Test Run|Question|Answer|SUCCESS|Token\" -Context 0,1)",
+      "Bash(Select-String -Pattern \"Testing:|PASS|FAIL|Summary|Total|Success\")",
+      "Bash(curl.exe -s -X POST -H \"Cookie: meeple_session=q0NLHKVkqdqUbO2fQuY9wIzAZlmxR+6z50+bpq3Awls=\" -H \"Content-Type: application/json\" -d \"{\"\"question\"\":\"\"What is en passant?\"\"}\" http://localhost:8080/agents/chess)",
+      "Bash(bash:*)"
     ],
     "deny": [],
     "ask": []

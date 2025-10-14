@@ -21,7 +21,7 @@
   ],
   "item": [
     {
-      "name": "1. Login (User)",
+      "name": "0. Login (Admin)",
       "event": [
         {
           "listen": "test",
@@ -38,11 +38,99 @@
               "    if (sessionCookie) {",
               "        const cookieValue = sessionCookie.split(';')[0];",
               "        pm.collectionVariables.set('sessionCookie', cookieValue);",
-              "        console.log('Session cookie saved:', cookieValue);",
+              "        console.log('Admin session cookie saved:', cookieValue);",
               "    }",
               "}",
               "",
-              "pm.test('Login successful', function() {",
+              "pm.test('Admin login successful', function() {",
+              "    pm.response.to.have.status(200);",
+              "    pm.response.to.have.jsonBody('user.role', 'Admin');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@meepleai.dev\",\n  \"password\": \"Demo123!\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "login"]
+        },
+        "description": "Login with admin account for indexing chess knowledge"
+      },
+      "response": []
+    },
+    {
+      "name": "1. Index Chess Knowledge",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Index chess knowledge successful', function() {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(pm.response.json()).to.have.property('success', true);",
+              "    pm.expect(pm.response.json()).to.have.property('totalItems');",
+              "    pm.expect(pm.response.json().totalItems).to.be.above(0);",
+              "    console.log('Indexed', pm.response.json().totalItems, 'chess knowledge items');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "{{sessionCookie}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/chess/index",
+          "host": ["{{baseUrl}}"],
+          "path": ["chess", "index"]
+        },
+        "description": "Index all chess knowledge into Qdrant (requires Admin role)"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Login (User) - Optional",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Extract session cookie from response",
+              "const cookies = pm.response.headers.all()",
+              "  .filter(h => h.key.toLowerCase() === 'set-cookie')",
+              "  .map(h => h.value);",
+              "",
+              "if (cookies.length > 0) {",
+              "    // Extract .AspNetCore.Session cookie",
+              "    const sessionCookie = cookies.find(c => c.includes('.AspNetCore.Session'));",
+              "    if (sessionCookie) {",
+              "        const cookieValue = sessionCookie.split(';')[0];",
+              "        pm.collectionVariables.set('sessionCookie', cookieValue);",
+              "        console.log('User session cookie saved:', cookieValue);",
+              "    }",
+              "}",
+              "",
+              "pm.test('User login successful', function() {",
               "    pm.response.to.have.status(200);",
               "});"
             ],
@@ -67,12 +155,12 @@
           "host": ["{{baseUrl}}"],
           "path": ["auth", "login"]
         },
-        "description": "Login with demo user account"
+        "description": "Optional: Login as regular user for testing agent (admin can also ask questions)"
       },
       "response": []
     },
     {
-      "name": "2. Simple Chess Question",
+      "name": "3. Simple Chess Question",
       "request": {
         "method": "POST",
         "header": [
@@ -99,7 +187,7 @@
       "response": []
     },
     {
-      "name": "3. Opening Question",
+      "name": "4. Opening Question",
       "request": {
         "method": "POST",
         "header": [
@@ -126,7 +214,7 @@
       "response": []
     },
     {
-      "name": "4. Position Analysis (Starting Position)",
+      "name": "5. Position Analysis (Starting Position)",
       "request": {
         "method": "POST",
         "header": [
@@ -153,7 +241,7 @@
       "response": []
     },
     {
-      "name": "5. Position Analysis (After e4)",
+      "name": "6. Position Analysis (After e4)",
       "request": {
         "method": "POST",
         "header": [
@@ -180,7 +268,7 @@
       "response": []
     },
     {
-      "name": "6. Tactical Question",
+      "name": "7. Tactical Question",
       "request": {
         "method": "POST",
         "header": [
@@ -207,7 +295,7 @@
       "response": []
     },
     {
-      "name": "7. Invalid FEN Test",
+      "name": "8. Invalid FEN Test",
       "request": {
         "method": "POST",
         "header": [
@@ -234,7 +322,277 @@
       "response": []
     },
     {
-      "name": "8. Check Health",
+      "name": "9. Castling Rules",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"What are the conditions for castling? When can't I castle?\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/agents/chess",
+          "host": ["{{baseUrl}}"],
+          "path": ["agents", "chess"]
+        },
+        "description": "Ask about castling rules and restrictions"
+      },
+      "response": []
+    },
+    {
+      "name": "10. Pawn Promotion",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"Explain pawn promotion. Can I promote to any piece?\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/agents/chess",
+          "host": ["{{baseUrl}}"],
+          "path": ["agents", "chess"]
+        },
+        "description": "Ask about pawn promotion rules"
+      },
+      "response": []
+    },
+    {
+      "name": "11. Stalemate vs Checkmate",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"What's the difference between stalemate and checkmate?\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/agents/chess",
+          "host": ["{{baseUrl}}"],
+          "path": ["agents", "chess"]
+        },
+        "description": "Ask about endgame rules"
+      },
+      "response": []
+    },
+    {
+      "name": "12. Sicilian Defense",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"How should I play the Sicilian Defense as Black? What are the main variations?\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/agents/chess",
+          "host": ["{{baseUrl}}"],
+          "path": ["agents", "chess"]
+        },
+        "description": "Ask about the Sicilian Defense opening"
+      },
+      "response": []
+    },
+    {
+      "name": "13. Ruy Lopez Opening",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"What is the Ruy Lopez opening and what are its key ideas?\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/agents/chess",
+          "host": ["{{baseUrl}}"],
+          "path": ["agents", "chess"]
+        },
+        "description": "Ask about the Ruy Lopez (Spanish Opening)"
+      },
+      "response": []
+    },
+    {
+      "name": "14. Pin vs Skewer Tactics",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"Explain the difference between a pin and a skewer. Give examples of each.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/agents/chess",
+          "host": ["{{baseUrl}}"],
+          "path": ["agents", "chess"]
+        },
+        "description": "Ask about tactical patterns (pin vs skewer)"
+      },
+      "response": []
+    },
+    {
+      "name": "15. Discovered Attack",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"What is a discovered attack? How can I use it effectively?\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/agents/chess",
+          "host": ["{{baseUrl}}"],
+          "path": ["agents", "chess"]
+        },
+        "description": "Ask about discovered attack tactics"
+      },
+      "response": []
+    },
+    {
+      "name": "16. Bishop Pair Advantage",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"What is the bishop pair? When is having two bishops better than bishop and knight?\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/agents/chess",
+          "host": ["{{baseUrl}}"],
+          "path": ["agents", "chess"]
+        },
+        "description": "Ask about strategic concepts (bishop pair)"
+      },
+      "response": []
+    },
+    {
+      "name": "17. Isolated Queen Pawn",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"What is an isolated queen pawn? Is it a weakness or strength?\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/agents/chess",
+          "host": ["{{baseUrl}}"],
+          "path": ["agents", "chess"]
+        },
+        "description": "Ask about pawn structure concepts"
+      },
+      "response": []
+    },
+    {
+      "name": "18. Middlegame Position Analysis",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"Analyze this middlegame position. What should White do?\",\n  \"fenPosition\": \"r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 0 6\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/agents/chess",
+          "host": ["{{baseUrl}}"],
+          "path": ["agents", "chess"]
+        },
+        "description": "Analyze Italian Game middlegame position"
+      },
+      "response": []
+    },
+    {
+      "name": "19. Check Health",
       "request": {
         "method": "GET",
         "header": [],

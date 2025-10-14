@@ -150,7 +150,7 @@ builder.Services.AddSingleton<IBackgroundTaskService, BackgroundTaskService>();
 builder.Services.AddSingleton<IQdrantClientAdapter, QdrantClientAdapter>();
 builder.Services.AddSingleton<IQdrantService, QdrantService>();
 builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
-builder.Services.AddScoped<ILlmService, LlmService>();
+builder.Services.AddScoped<ILlmService, OllamaLlmService>();
 builder.Services.AddScoped<ITextChunkingService, TextChunkingService>();
 builder.Services.AddScoped<PdfIndexingService>();
 

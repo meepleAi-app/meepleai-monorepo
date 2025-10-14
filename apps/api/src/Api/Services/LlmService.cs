@@ -13,7 +13,7 @@ public class LlmService : ILlmService
     private readonly HttpClient _httpClient;
     private readonly ILogger<LlmService> _logger;
     private readonly string _apiKey;
-    private const string ChatModel = "anthropic/claude-3.5-sonnet";
+    private const string ChatModel = "deepseek/deepseek-chat-v3.1";
 
     public LlmService(IHttpClientFactory httpClientFactory, IConfiguration config, ILogger<LlmService> logger)
     {

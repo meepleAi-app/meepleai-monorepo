@@ -113,7 +113,7 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
         var clientAdapter = new QdrantClientAdapter(configuration, adapterLogger.Object);
 
         var loggerMock = new Mock<ILogger<QdrantService>>();
-        QdrantService = new QdrantService(clientAdapter, loggerMock.Object);
+        QdrantService = new QdrantService(clientAdapter, configuration, loggerMock.Object);
 
         // Ensure collection exists for tests
         await QdrantService.EnsureCollectionExistsAsync();

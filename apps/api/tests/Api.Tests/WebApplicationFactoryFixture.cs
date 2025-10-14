@@ -242,6 +242,7 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
             services.AddSingleton(mockQdrantAdapter.Object);
             services.AddSingleton<IQdrantService>(sp => new QdrantService(
                 sp.GetRequiredService<IQdrantClientAdapter>(),
+                sp.GetRequiredService<IConfiguration>(),
                 sp.GetRequiredService<ILogger<QdrantService>>()
             ));
 

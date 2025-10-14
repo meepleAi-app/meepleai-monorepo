@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Api.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Qdrant.Client.Grpc;
@@ -16,12 +17,13 @@ public class QdrantServiceTests
     private const string CollectionName = "meepleai_documents";
 
     private readonly Mock<IQdrantClientAdapter> _clientAdapterMock = new();
+    private readonly Mock<IConfiguration> _configurationMock = new();
     private readonly Mock<ILogger<QdrantService>> _loggerMock = new();
     private readonly QdrantService _sut;
 
     public QdrantServiceTests()
     {
-        _sut = new QdrantService(_clientAdapterMock.Object, _loggerMock.Object);
+        _sut = new QdrantService(_clientAdapterMock.Object, _configurationMock.Object, _loggerMock.Object);
     }
 
     [Fact]

@@ -48,7 +48,7 @@ tools/             - PowerShell scripts
 - `docker compose up -d [--build]` - Start [rebuild]
 - `docker compose logs -f [service]` - View logs
 - `docker compose down [-v]` - Stop [delete volumes]
-- **Ports**: postgres:5432, qdrant:6333, redis:6379, n8n:5678, api:8080, web:3000
+- **Ports**: postgres:5432, qdrant:6333, redis:6379, n8n:5678, seq:8081, api:8080, web:3000
 
 ## Architecture
 
@@ -75,7 +75,13 @@ tools/             - PowerShell scripts
 
 **CORS** (`Program.cs:141-170`): Policy "web", origins from config, fallback `http://localhost:3000`, credentials enabled
 
-**Logging** (Serilog, `Program.cs:23-32`): Console, enriched (MachineName, EnvironmentName, CorrelationId), X-Correlation-Id header. Levels: Info (default), Warning (AspNetCore, EF)
+**Logging** (Serilog, `Program.cs:22-45`): Console + Seq, enriched (MachineName, EnvironmentName, CorrelationId), X-Correlation-Id header. Levels: Info (default), Warning (AspNetCore, EF)
+
+**Observability** (OPS-01):
+- **Health Checks** (`Program.cs:162-177`): `/health` (detailed), `/health/ready` (K8s readiness), `/health/live` (K8s liveness). Monitors Postgres, Redis, Qdrant (HTTP + collection)
+- **Seq Dashboard**: `http://localhost:8081` - Centralized log aggregation, search by correlation ID, user ID, endpoint. Configured via `SEQ_URL` env var
+- **Correlation IDs**: Every request gets `X-Correlation-Id` response header (= `TraceIdentifier`). All logs enriched with `RequestId`, `RequestPath`, `RequestMethod`, `UserAgent`, `RemoteIp`, `UserId`, `UserEmail`
+- **Docs**: `docs/observability.md` - Complete observability guide
 
 ## Testing
 
@@ -103,7 +109,7 @@ tools/             - PowerShell scripts
 
 Templates: `infra/env/*.env.*.example`. Never commit `.env.dev/local/prod`
 
-**API**: `OPENROUTER_API_KEY`, `QDRANT_URL` (default: `http://qdrant:6333`), `REDIS_URL` (default: `redis:6379`), `ConnectionStrings__Postgres`
+**API**: `OPENROUTER_API_KEY`, `QDRANT_URL` (default: `http://qdrant:6333`), `REDIS_URL` (default: `redis:6379`), `SEQ_URL` (default: `http://seq:5341`), `ConnectionStrings__Postgres`
 **Web**: `NEXT_PUBLIC_API_BASE` (default: `http://localhost:8080`)
 **n8n**: Workflow config
 
@@ -119,9 +125,10 @@ Templates: `infra/env/*.env.*.example`. Never commit `.env.dev/local/prod`
 
 **Local Full Stack**:
 ```bash
-cd infra && docker compose up postgres qdrant redis n8n  # Terminal 1
-cd apps/api/src/Api && dotnet run                        # Terminal 2 (port 8080)
-cd apps/web && pnpm dev                                  # Terminal 3 (port 3000)
+cd infra && docker compose up postgres qdrant redis n8n seq  # Terminal 1 (add seq for logs)
+cd apps/api/src/Api && dotnet run                            # Terminal 2 (port 8080)
+cd apps/web && pnpm dev                                      # Terminal 3 (port 3000)
+# Seq Dashboard: http://localhost:8081
 ```
 
 **RuleSpec v0** (`schemas/rulespec.v0.schema.json`): Machine-readable board game rules for AI/LLM
@@ -141,6 +148,7 @@ cd apps/web && pnpm dev                                  # Terminal 3 (port 3000
 
 - **Security**: `docs/SECURITY.md` - Security policies, secret management, key rotation procedures
 - **Database**: `docs/database-schema.md` - Complete DB schema reference
+- **Observability**: `docs/observability.md` - Health checks, logging, Seq dashboard, correlation IDs (OPS-01)
 - **Workflows**: `docs/N8N-01-README.md` - n8n workflow automation guide
 - **Coverage**: `docs/code-coverage.md` - Coverage measurement & tracking
 - **Security Scanning**: `docs/security-scanning.md` - CI security scanning guide
@@ -153,3 +161,5 @@ cd apps/web && pnpm dev                                  # Terminal 3 (port 3000
 - **CORS errors**: Verify `NEXT_PUBLIC_API_BASE`, check `Program.cs` CORS config, ensure `credentials: "include"`
 - **CI test failures**: Check Docker/Linux issues (Docnet runtime), verify env vars, ensure services healthy
 - **Auth issues**: Check `SessionCookieConfiguration`, verify `user_sessions` table, check browser cookie settings
+- **Health check failures**: `curl http://localhost:8080/health` - Check Postgres/Redis/Qdrant status. See `docs/observability.md`
+- **Seq not receiving logs**: Verify `SEQ_URL` in env, check `docker compose logs seq`, test `curl http://localhost:5341/api`

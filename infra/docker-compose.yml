@@ -49,6 +49,19 @@ services:
     networks:
       - meepleai
 
+  seq:
+    image: datalust/seq:2025.1
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+    ports:
+      - "5341:5341"  # Ingestion port
+      - "8081:80"    # Web UI port
+    volumes:
+      - seqdata:/data
+    networks:
+      - meepleai
+
   n8n:
     image: n8nio/n8n:1.114.4
     restart: unless-stopped
@@ -116,6 +129,7 @@ services:
 volumes:
   pgdata:
   qdrantdata:
+  seqdata:
 
 networks:
   meepleai:

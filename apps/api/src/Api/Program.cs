@@ -20,7 +20,10 @@ using AspNetIpNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure Serilog
-Log.Logger = new LoggerConfiguration()
+var seqUrl = builder.Configuration["SEQ_URL"] ?? "http://seq:5341";
+var seqApiKey = builder.Configuration["SEQ_API_KEY"];
+
+var loggerConfig = new LoggerConfiguration()
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
     .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
@@ -28,8 +31,18 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.WithMachineName()
     .Enrich.WithEnvironmentName()
     .WriteTo.Console(
-        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
-    .CreateLogger();
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}");
+
+// OPS-01: Add Seq sink if URL is configured
+if (!string.IsNullOrWhiteSpace(seqUrl))
+{
+    loggerConfig = loggerConfig.WriteTo.Seq(
+        serverUrl: seqUrl,
+        apiKey: seqApiKey,
+        restrictedToMinimumLevel: LogEventLevel.Information);
+}
+
+Log.Logger = loggerConfig.CreateLogger();
 
 builder.Host.UseSerilog();
 
@@ -152,6 +165,29 @@ builder.Services.AddSingleton<IOcrService, TesseractOcrService>();
 
 // CHESS-03: Chess knowledge indexing service
 builder.Services.AddScoped<IChessKnowledgeService, ChessKnowledgeService>();
+
+// OPS-01: Health checks for observability
+var healthCheckConnectionString = builder.Configuration.GetConnectionString("Postgres")
+    ?? builder.Configuration["ConnectionStrings__Postgres"];
+var healthCheckRedisConnectionString = builder.Configuration["REDIS_URL"] ?? "localhost:6379";
+var healthCheckQdrantUrl = builder.Configuration["QDRANT_URL"] ?? "http://localhost:6333";
+
+builder.Services.AddHealthChecks()
+    .AddNpgSql(
+        healthCheckConnectionString ?? "Host=localhost;Database=meepleai;Username=postgres;Password=postgres",
+        name: "postgres",
+        tags: new[] { "db", "sql" })
+    .AddRedis(
+        healthCheckRedisConnectionString,
+        name: "redis",
+        tags: new[] { "cache", "redis" })
+    .AddUrlGroup(
+        new Uri($"{healthCheckQdrantUrl}/healthz"),
+        name: "qdrant",
+        tags: new[] { "vector", "qdrant" })
+    .AddCheck<QdrantHealthCheck>(
+        "qdrant-collection",
+        tags: new[] { "vector", "qdrant", "collection" });
 
 builder.Services.AddCors(options =>
 {
@@ -320,6 +356,39 @@ app.Use(async (context, next) =>
 });
 
 app.MapGet("/", () => Results.Json(new { ok = true, name = "MeepleAgentAI" }));
+
+// OPS-01: Health check endpoints
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description,
+                duration = e.Value.Duration.TotalMilliseconds,
+                tags = e.Value.Tags
+            }),
+            totalDuration = report.TotalDuration.TotalMilliseconds
+        });
+        await context.Response.WriteAsync(result);
+    }
+});
+
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("db") || check.Tags.Contains("cache") || check.Tags.Contains("vector")
+});
+
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false // Just check if the app is running
+});
 
 app.MapGet("/logs", async (HttpContext context, AiRequestLogService logService, CancellationToken ct) =>
 {

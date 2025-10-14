@@ -3,6 +3,7 @@ namespace Api.Services;
 public interface IQdrantService
 {
     Task EnsureCollectionExistsAsync(CancellationToken ct = default);
+    Task<bool> CollectionExistsAsync(CancellationToken ct = default);
     Task<IndexResult> IndexDocumentChunksAsync(
         string gameId,
         string pdfId,

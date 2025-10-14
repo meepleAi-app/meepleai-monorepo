@@ -243,6 +243,11 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
             return Task.CompletedTask;
         }
 
+        public Task<bool> CollectionExistsAsync(CancellationToken ct = default)
+        {
+            return Task.FromResult(true);
+        }
+
         public Task<IndexResult> IndexDocumentChunksAsync(string gameId, string pdfId, List<DocumentChunk> chunks, CancellationToken ct = default)
         {
             IndexCallCount++;

@@ -21,14 +21,30 @@ public class QdrantService : IQdrantService
     }
 
     /// <summary>
+    /// Check if collection exists
+    /// </summary>
+    public async Task<bool> CollectionExistsAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var collectionsResponse = await _clientAdapter.ListCollectionsAsync(ct);
+            return collectionsResponse.Any(c => c == CollectionName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to check if collection exists");
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Initialize Qdrant collection if it doesn't exist
     /// </summary>
     public async Task EnsureCollectionExistsAsync(CancellationToken ct = default)
     {
         try
         {
-            var collectionsResponse = await _clientAdapter.ListCollectionsAsync(ct);
-            var exists = collectionsResponse.Any(c => c == CollectionName);
+            var exists = await CollectionExistsAsync(ct);
 
             if (exists)
             {

@@ -12,6 +12,9 @@
     <InternalsVisibleTo Include="Api.Tests" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
+    <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
+    <PackageReference Include="AspNetCore.HealthChecks.Uris" Version="9.0.0" />
     <PackageReference Include="Docnet.Core" Version="2.6.0" />
     <PackageReference Include="itext7" Version="9.3.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.9" />
@@ -26,6 +29,7 @@
     <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
     <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0" />
     <PackageReference Include="StackExchange.Redis" Version="2.9.25" />
     <PackageReference Include="System.Drawing.Common" Version="9.0.9" />
     <PackageReference Include="System.Text.Json" Version="9.0.9" />

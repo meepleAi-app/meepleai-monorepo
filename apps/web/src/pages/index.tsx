@@ -154,7 +154,7 @@ export default function Home() {
               <span className="gradient-text">Board Game Rules Assistant</span>
             </h1>
             <p className="text-xl text-slate-400 leading-relaxed">
-              Never argue about rules again. Get instant, accurate answers from any game's rulebook with AI-powered semantic search.
+              Never argue about rules again. Get instant, accurate answers from any game&apos;s rulebook with AI-powered semantic search.
             </p>
             <div className="flex flex-wrap gap-4">
               <motion.button
@@ -208,7 +208,7 @@ export default function Home() {
                 >
                   <div className="card p-4">
                     <p className="text-sm">
-                      <strong>🤖 MeepleAI:</strong> En passant is a special pawn capture that can only occur immediately after a pawn moves two squares forward from its starting position and lands beside an opponent's pawn...
+                      <strong>🤖 MeepleAI:</strong> En passant is a special pawn capture that can only occur immediately after a pawn moves two squares forward from its starting position and lands beside an opponent&apos;s pawn...
                     </p>
                     <p className="text-xs text-slate-500 mt-2 italic">
                       📖 Sources: Chess Rules (FIDE) - Page 12

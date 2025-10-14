@@ -135,7 +135,7 @@ export default function ChatPage() {
     if (authUser) {
       void loadGames();
     }
-  }, [authUser]);
+  }, [authUser, loadGames]);
 
   // Load agents and chats when game is selected
   useEffect(() => {

@@ -1,0 +1,251 @@
+{
+  "info": {
+    "name": "MeepleAI - Chess Agent",
+    "description": "Collection for testing CHESS-04 Chess Conversational Agent",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "sessionCookie",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Login (User)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Extract session cookie from response",
+              "const cookies = pm.response.headers.all()",
+              "  .filter(h => h.key.toLowerCase() === 'set-cookie')",
+              "  .map(h => h.value);",
+              "",
+              "if (cookies.length > 0) {",
+              "    // Extract .AspNetCore.Session cookie",
+              "    const sessionCookie = cookies.find(c => c.includes('.AspNetCore.Session'));",
+              "    if (sessionCookie) {",
+              "        const cookieValue = sessionCookie.split(';')[0];",
+              "        pm.collectionVariables.set('sessionCookie', cookieValue);",
+              "        console.log('Session cookie saved:', cookieValue);",
+              "    }",
+              "}",
+              "",
+              "pm.test('Login successful', function() {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"user@meepleai.dev\",\n  \"password\": \"Demo123!\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "login"]
+        },
+        "description": "Login with demo user account"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Simple Chess Question",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"What is en passant?\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/agents/chess",
+          "host": ["{{baseUrl}}"],
+          "path": ["agents", "chess"]
+        },
+        "description": "Ask a simple chess rules question"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Opening Question",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"Explain the Italian Game opening\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/agents/chess",
+          "host": ["{{baseUrl}}"],
+          "path": ["agents", "chess"]
+        },
+        "description": "Ask about a chess opening"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Position Analysis (Starting Position)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"Analyze this opening position. What are the best first moves?\",\n  \"fenPosition\": \"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/agents/chess",
+          "host": ["{{baseUrl}}"],
+          "path": ["agents", "chess"]
+        },
+        "description": "Analyze the starting chess position"
+      },
+      "response": []
+    },
+    {
+      "name": "5. Position Analysis (After e4)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"What should Black play now?\",\n  \"fenPosition\": \"rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/agents/chess",
+          "host": ["{{baseUrl}}"],
+          "path": ["agents", "chess"]
+        },
+        "description": "Position after 1. e4"
+      },
+      "response": []
+    },
+    {
+      "name": "6. Tactical Question",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"What is a fork in chess? Give examples.\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/agents/chess",
+          "host": ["{{baseUrl}}"],
+          "path": ["agents", "chess"]
+        },
+        "description": "Ask about chess tactics"
+      },
+      "response": []
+    },
+    {
+      "name": "7. Invalid FEN Test",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{sessionCookie}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"Analyze this position\",\n  \"fenPosition\": \"invalid-fen-string\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/agents/chess",
+          "host": ["{{baseUrl}}"],
+          "path": ["agents", "chess"]
+        },
+        "description": "Test FEN validation with invalid input"
+      },
+      "response": []
+    },
+    {
+      "name": "8. Check Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        },
+        "description": "Check API health status"
+      },
+      "response": []
+    }
+  ]
+}

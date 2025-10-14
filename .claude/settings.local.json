@@ -105,7 +105,11 @@
       "Bash(Where-Object { $_itle -match \"CHESS-03|PDF-02|AI-01\" })",
       "Bash(Format-Table -AutoSize)",
       "Bash(Select-String -Pattern \"error|warning|successo|Build succeeded\" -Context 0,1)",
-      "Bash(Select-String -Pattern \"FAIL|PASS|Error|Total tests|Test Run\" -Context 0,1)"
+      "Bash(Select-String -Pattern \"FAIL|PASS|Error|Total tests|Test Run\" -Context 0,1)",
+      "Bash(Select-String -Pattern \"HTTP|Set-Cookie|userId\")",
+      "Bash(find:*)",
+      "Bash(Select-String -Pattern \"error|warning|successo|OK|FAIL|Total|chunks\" -Context 0,1)",
+      "Bash(/dev/null)"
     ],
     "deny": [],
     "ask": []

@@ -159,6 +159,19 @@ export default function Home() {
             Chat
           </Link>
           <Link
+            href="/chess"
+            style={{
+              padding: "8px 16px",
+              background: "#f9ab00",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: 4,
+              fontSize: 14
+            }}
+          >
+            Chess AI
+          </Link>
+          <Link
             href="/upload"
             style={{
               padding: "8px 16px",

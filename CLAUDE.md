@@ -56,7 +56,7 @@ tools/             - PowerShell scripts
 - **AI/RAG**: EmbeddingService, QdrantService, TextChunkingService (512 chars, 50 overlap), RagService, LlmService (OpenRouter)
 - **PDF**: PdfStorageService, PdfTextExtractionService (Docnet.Core), PdfTableExtractionService (iText7)
 - **Domain**: GameService, RuleSpecService, RuleSpecDiffService, SetupGuideService
-- **Infra**: AuthService (session cookies), AuditService, AiRequestLogService, AiResponseCacheService (Redis), RateLimitService, N8nConfigService, BackgroundTaskService
+- **Infra**: AuthService (session cookies), SessionManagementService, SessionAutoRevocationService, AuditService, AiRequestLogService, AiResponseCacheService (Redis), RateLimitService, N8nConfigService, BackgroundTaskService
 
 **Database** (EF Core 9.0 + PostgreSQL):
 - **Context**: `MeepleAiDbContext` (`Infrastructure/MeepleAiDbContext.cs`)
@@ -70,6 +70,31 @@ tools/             - PowerShell scripts
 - **Tests**: Jest (90% coverage) + Playwright E2E
 
 **Auth** (`Program.cs:226-248`): Cookie-based sessions → `AuthService.ValidateSessionAsync()` → ClaimsPrincipal (UserId, Email, DisplayName, Role)
+
+**Session Management** (AUTH-03):
+- **SessionManagementService** (`Services/SessionManagementService.cs`): Core session management
+  - `GetUserSessionsAsync()` - List user's active sessions
+  - `GetAllSessionsAsync()` - Admin: list all sessions (with filters, pagination)
+  - `RevokeSessionAsync()` - Revoke specific session by ID
+  - `RevokeAllUserSessionsAsync()` - Revoke all sessions for user (e.g., password change)
+  - `RevokeInactiveSessionsAsync()` - Auto-revoke sessions exceeding inactivity threshold
+- **SessionAutoRevocationService** (`Services/SessionAutoRevocationService.cs`): Background service
+  - Runs periodically (configurable interval, default: 1 hour)
+  - Auto-revokes sessions inactive > N days (configurable, default: 30 days)
+  - Waits 1 minute after startup before first run
+  - Graceful shutdown on cancellation
+- **Configuration** (`appsettings.json`): `Authentication:SessionManagement`
+  - `InactivityTimeoutDays`: Days before inactive session is revoked (default: 30)
+  - `AutoRevocationIntervalHours`: Hours between auto-revocation runs (default: 1)
+- **Endpoints** (Admin only, `Program.cs:1724-1793`):
+  - `GET /admin/sessions` - List sessions (optional filters: userId, limit)
+  - `DELETE /admin/sessions/{id}` - Revoke specific session
+  - `DELETE /admin/users/{userId}/sessions` - Revoke all sessions for user
+  - `GET /users/me/sessions` - User views own sessions
+- **Tests**: 39 tests (25 unit + 13 integration + 13 background service)
+  - `SessionManagementServiceTests.cs` - Unit tests with SQLite in-memory
+  - `SessionManagementEndpointsTests.cs` - Integration tests with auth
+  - `SessionAutoRevocationServiceTests.cs` - Background service tests
 
 **Vector Pipeline**: PDF → PdfTextExtractionService → TextChunkingService → EmbeddingService (OpenRouter) → QdrantService → RagService (search)
 

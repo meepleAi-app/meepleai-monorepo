@@ -103,6 +103,7 @@ if (forwardedHeadersEnabled)
 }
 
 builder.Services.Configure<SessionCookieConfiguration>(builder.Configuration.GetSection("Authentication:SessionCookie"));
+builder.Services.Configure<SessionManagementConfiguration>(builder.Configuration.GetSection("Authentication:SessionManagement"));
 
 // Only configure Postgres in non-test environments (tests will override with SQLite)
 if (!builder.Environment.IsEnvironment("Testing"))
@@ -175,6 +176,10 @@ builder.Services.AddScoped<PdfTableExtractionService>();
 builder.Services.AddScoped<PdfStorageService>();
 builder.Services.AddScoped<N8nConfigService>();
 builder.Services.AddScoped<ChatService>();
+
+// AUTH-03: Session management service
+builder.Services.AddScoped<ISessionManagementService, SessionManagementService>();
+builder.Services.AddHostedService<SessionAutoRevocationService>();
 
 // PDF-02: OCR service for fallback text extraction
 builder.Services.AddSingleton<IOcrService, TesseractOcrService>();
@@ -1713,6 +1718,78 @@ app.MapPost("/admin/n8n/{configId}/test", async (string configId, HttpContext co
         logger.LogWarning("Failed to test n8n config: {Error}", ex.Message);
         return Results.BadRequest(new { error = ex.Message });
     }
+});
+
+// AUTH-03: Session management endpoints
+app.MapGet("/admin/sessions", async (HttpContext context, ISessionManagementService sessionManagement, int limit = 100, string? userId = null, CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var sessions = await sessionManagement.GetAllSessionsAsync(userId, limit, ct);
+    return Results.Json(sessions);
+});
+
+app.MapDelete("/admin/sessions/{sessionId}", async (string sessionId, HttpContext context, ISessionManagementService sessionManagement, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    logger.LogInformation("Admin {AdminId} revoking session {SessionId}", session.User.Id, sessionId);
+
+    var revoked = await sessionManagement.RevokeSessionAsync(sessionId, ct);
+    if (!revoked)
+    {
+        return Results.NotFound(new { error = "Session not found or already revoked" });
+    }
+
+    logger.LogInformation("Session {SessionId} revoked successfully", sessionId);
+    return Results.Json(new { ok = true });
+});
+
+app.MapDelete("/admin/users/{userId}/sessions", async (string userId, HttpContext context, ISessionManagementService sessionManagement, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    logger.LogInformation("Admin {AdminId} revoking all sessions for user {UserId}", session.User.Id, userId);
+
+    var count = await sessionManagement.RevokeAllUserSessionsAsync(userId, ct);
+
+    logger.LogInformation("Revoked {Count} sessions for user {UserId}", count, userId);
+    return Results.Json(new { ok = true, revokedCount = count });
+});
+
+app.MapGet("/users/me/sessions", async (HttpContext context, ISessionManagementService sessionManagement, CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    var sessions = await sessionManagement.GetUserSessionsAsync(session.User.Id, ct);
+    return Results.Json(sessions);
 });
 
 // CHESS-03: Chess knowledge indexing endpoints

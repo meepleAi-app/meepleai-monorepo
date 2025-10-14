@@ -37,3 +37,29 @@ public record AuthResult(AuthUser User, string SessionToken, DateTime ExpiresAt)
 public record ActiveSession(AuthUser User, DateTime ExpiresAt);
 
 public record AuthResponse(AuthUser User, DateTime ExpiresAt);
+
+public record SessionInfo(
+    string Id,
+    string UserId,
+    string UserEmail,
+    DateTime CreatedAt,
+    DateTime ExpiresAt,
+    DateTime? LastSeenAt,
+    DateTime? RevokedAt,
+    string? IpAddress,
+    string? UserAgent);
+
+public class SessionManagementConfiguration
+{
+    /// <summary>
+    /// Number of days of inactivity before a session is auto-revoked.
+    /// Default: 30 days.
+    /// </summary>
+    public int InactivityTimeoutDays { get; set; } = 30;
+
+    /// <summary>
+    /// Interval in hours between auto-revocation checks.
+    /// Default: 1 hour.
+    /// </summary>
+    public int AutoRevocationIntervalHours { get; set; } = 1;
+}

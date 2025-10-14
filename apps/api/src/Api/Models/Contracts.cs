@@ -128,3 +128,28 @@ public record AgentDto(
     string Kind,
     DateTime CreatedAt
 );
+
+// CHESS-04: Chess Agent models
+public record ChessAgentRequest(
+    string question,
+    string? fenPosition = null,
+    Guid? chatId = null
+);
+
+public record ChessAgentResponse(
+    string answer,
+    ChessAnalysis? analysis,
+    IReadOnlyList<string> suggestedMoves,
+    IReadOnlyList<Snippet> sources,
+    int promptTokens = 0,
+    int completionTokens = 0,
+    int totalTokens = 0,
+    double? confidence = null,
+    IReadOnlyDictionary<string, string>? metadata = null
+);
+
+public record ChessAnalysis(
+    string? fenPosition,
+    string? evaluationSummary,
+    IReadOnlyList<string> keyConsiderations
+);

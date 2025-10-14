@@ -124,8 +124,24 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
     return ConnectionMultiplexer.Connect(configuration);
 });
 
-// Configure HttpClient for EmbeddingService
+// Configure HttpClient for EmbeddingService and LlmService
 builder.Services.AddHttpClient();
+builder.Services.AddHttpClient("Ollama", client =>
+{
+    var ollamaUrl = builder.Configuration["OLLAMA_URL"] ?? "http://localhost:11434";
+    client.BaseAddress = new Uri(ollamaUrl);
+    client.Timeout = TimeSpan.FromSeconds(60);
+});
+builder.Services.AddHttpClient("OpenAI", client =>
+{
+    client.BaseAddress = new Uri("https://api.openai.com/v1/");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+builder.Services.AddHttpClient("OpenRouter", client =>
+{
+    client.BaseAddress = new Uri("https://openrouter.ai/api/v1/");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 
 // Background task execution
 builder.Services.AddSingleton<IBackgroundTaskService, BackgroundTaskService>();
@@ -165,6 +181,9 @@ builder.Services.AddSingleton<IOcrService, TesseractOcrService>();
 
 // CHESS-03: Chess knowledge indexing service
 builder.Services.AddScoped<IChessKnowledgeService, ChessKnowledgeService>();
+
+// CHESS-04: Chess conversational agent service
+builder.Services.AddScoped<IChessAgentService, ChessAgentService>();
 
 // OPS-01: Health checks for observability
 var healthCheckConnectionString = builder.Configuration.GetConnectionString("Postgres")
@@ -992,6 +1011,151 @@ app.MapPost("/agents/feedback", async (AgentFeedbackRequest req, HttpContext con
     {
         logger.LogError(ex, "Failed to record feedback for message {MessageId}", req.messageId);
         return Results.Problem(detail: "Unable to record feedback", statusCode: 500);
+    }
+});
+
+// CHESS-04: Chess conversational agent endpoint
+app.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context, IChessAgentService chessAgent, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (string.IsNullOrWhiteSpace(req.question))
+    {
+        return Results.BadRequest(new { error = "question is required" });
+    }
+
+    var startTime = DateTime.UtcNow;
+    logger.LogInformation("Chess agent request from user {UserId}: {Question}, FEN: {FEN}",
+        session.User.Id, req.question, req.fenPosition ?? "none");
+
+    try
+    {
+        // Persist user query to chat if chatId provided
+        if (req.chatId.HasValue)
+        {
+            var queryText = !string.IsNullOrWhiteSpace(req.fenPosition)
+                ? $"{req.question} [Position: {req.fenPosition}]"
+                : req.question;
+
+            await chatService.AddMessageAsync(
+                req.chatId.Value,
+                session.User.Id,
+                "user",
+                queryText,
+                new { endpoint = "chess", question = req.question, fenPosition = req.fenPosition },
+                ct);
+        }
+
+        var resp = await chessAgent.AskAsync(req, ct);
+        var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+        logger.LogInformation("Chess agent response delivered: {MoveCount} moves suggested",
+            resp.suggestedMoves.Count);
+
+        string? model = null;
+        string? finishReason = null;
+        if (resp.metadata != null)
+        {
+            if (resp.metadata.TryGetValue("model", out var metadataModel))
+            {
+                model = metadataModel;
+            }
+
+            if (resp.metadata.TryGetValue("finish_reason", out var metadataFinish))
+            {
+                finishReason = metadataFinish;
+            }
+        }
+
+        // Persist agent response to chat if chatId provided
+        if (req.chatId.HasValue)
+        {
+            await chatService.AddMessageAsync(
+                req.chatId.Value,
+                session.User.Id,
+                "assistant",
+                resp.answer,
+                new
+                {
+                    endpoint = "chess",
+                    question = req.question,
+                    fenPosition = req.fenPosition,
+                    promptTokens = resp.promptTokens,
+                    completionTokens = resp.completionTokens,
+                    totalTokens = resp.totalTokens,
+                    confidence = resp.confidence,
+                    model,
+                    finishReason,
+                    sourceCount = resp.sources.Count,
+                    suggestedMoves = resp.suggestedMoves,
+                    analysis = resp.analysis
+                },
+                ct);
+        }
+
+        // ADM-01: Log AI request
+        await aiLog.LogRequestAsync(
+            session.User.Id,
+            "chess",
+            "chess",
+            req.question,
+            resp.answer?.Length > 500 ? resp.answer.Substring(0, 500) : resp.answer,
+            latencyMs,
+            resp.totalTokens,
+            resp.confidence,
+            "Success",
+            null,
+            context.Connection.RemoteIpAddress?.ToString(),
+            context.Request.Headers.UserAgent.ToString(),
+            promptTokens: resp.promptTokens,
+            completionTokens: resp.completionTokens,
+            model: model,
+            finishReason: finishReason,
+            ct: ct);
+
+        return Results.Json(resp);
+    }
+    catch (Exception ex)
+    {
+        var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+        // Persist error to chat if chatId provided
+        if (req.chatId.HasValue)
+        {
+            try
+            {
+                await chatService.AddMessageAsync(
+                    req.chatId.Value,
+                    session.User.Id,
+                    "error",
+                    $"Failed to process chess question: {ex.Message}",
+                    new { endpoint = "chess", question = req.question, fenPosition = req.fenPosition, error = ex.GetType().Name },
+                    ct);
+            }
+            catch (Exception chatEx)
+            {
+                logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
+            }
+        }
+
+        // ADM-01: Log failed AI request
+        await aiLog.LogRequestAsync(
+            session.User.Id,
+            "chess",
+            "chess",
+            req.question,
+            null,
+            latencyMs,
+            status: "Error",
+            errorMessage: ex.Message,
+            ipAddress: context.Connection.RemoteIpAddress?.ToString(),
+            userAgent: context.Request.Headers.UserAgent.ToString(),
+            ct: ct);
+
+        throw;
     }
 });
 

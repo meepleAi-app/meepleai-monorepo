@@ -1,0 +1,17 @@
+{
+  "profiles": {
+    "Api": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:8080",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "EMBEDDING_PROVIDER": "ollama",
+        "OLLAMA_URL": "http://localhost:11434",
+        "EMBEDDING_MODEL": "nomic-embed-text",
+        "OPENROUTER_API_KEY": "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"
+      }
+    }
+  }
+}

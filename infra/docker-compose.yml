@@ -49,6 +49,46 @@ services:
     networks:
       - meepleai
 
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollamadata:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - meepleai
+    # Uncomment if you have NVIDIA GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  ollama-pull:
+    image: curlimages/curl:latest
+    container_name: ollama-pull
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: "no"
+    command: >
+      sh -c '
+        echo "Pulling nomic-embed-text model..." &&
+        curl -X POST http://ollama:11434/api/pull -d "{\"name\":\"nomic-embed-text\"}" &&
+        echo "Model pull initiated!"
+      '
+    networks:
+      - meepleai
+
   seq:
     image: datalust/seq:2025.1
     restart: unless-stopped
@@ -83,10 +123,14 @@ services:
     env_file:
       - ./env/api.env.dev
     environment:
+      ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: Host=postgres;Database=${POSTGRES_DB:-meepleai};Username=${POSTGRES_USER:-meeple};Password=${POSTGRES_PASSWORD:-meeplepass}
       QDRANT_URL: http://qdrant:6333
       REDIS_URL: redis:6379
+      OLLAMA_URL: http://ollama:11434
+      EMBEDDING_PROVIDER: ollama
+      EMBEDDING_MODEL: nomic-embed-text
     ports:
       - "8080:8080"
     depends_on:
@@ -95,6 +139,8 @@ services:
       qdrant:
         condition: service_started
       redis:
+        condition: service_healthy
+      ollama:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl --fail http://localhost:8080/ || exit 1"]
@@ -130,6 +176,7 @@ volumes:
   pgdata:
   qdrantdata:
   seqdata:
+  ollamadata:
 
 networks:
   meepleai:

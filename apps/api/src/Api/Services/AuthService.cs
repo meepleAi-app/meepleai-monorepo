@@ -119,24 +119,14 @@ public class AuthService
                 // Verify not expired (belt-and-suspenders check)
                 if (cached.ExpiresAt > now)
                 {
-                    // Update last seen in background (fire-and-forget)
-                    _ = Task.Run(async () =>
+                    // Update last seen synchronously to avoid disposed context issues
+                    var session = await _db.UserSessions
+                        .FirstOrDefaultAsync(s => s.TokenHash == hash, ct);
+                    if (session != null)
                     {
-                        try
-                        {
-                            var session = await _db.UserSessions
-                                .FirstOrDefaultAsync(s => s.TokenHash == hash, CancellationToken.None);
-                            if (session != null)
-                            {
-                                session.LastSeenAt = now;
-                                await _db.SaveChangesAsync(CancellationToken.None);
-                            }
-                        }
-                        catch
-                        {
-                            // Ignore errors in background task
-                        }
-                    }, CancellationToken.None);
+                        session.LastSeenAt = now;
+                        await _db.SaveChangesAsync(ct);
+                    }
 
                     return cached;
                 }

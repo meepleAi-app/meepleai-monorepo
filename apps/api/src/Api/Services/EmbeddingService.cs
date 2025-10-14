@@ -5,27 +5,49 @@ using System.Text.Json.Serialization;
 namespace Api.Services;
 
 /// <summary>
-/// Service for generating text embeddings via OpenRouter API
+/// Service for generating text embeddings via Ollama (local) or OpenAI API
 /// </summary>
 public class EmbeddingService : IEmbeddingService
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<EmbeddingService> _logger;
-    private readonly string _apiKey;
-    private const string EmbeddingModel = "openai/text-embedding-3-small";
-    private const int EmbeddingDimensions = 1536; // text-embedding-3-small default
+    private readonly string? _apiKey;
+    private readonly string _embeddingModel;
+    private readonly string _provider;
+    private const int EmbeddingDimensions = 768; // nomic-embed-text default
 
     public EmbeddingService(IHttpClientFactory httpClientFactory, IConfiguration config, ILogger<EmbeddingService> logger)
     {
-        _httpClient = httpClientFactory.CreateClient("OpenRouter");
         _logger = logger;
-        _apiKey = config["OPENROUTER_API_KEY"] ?? throw new InvalidOperationException("OPENROUTER_API_KEY not configured");
 
-        // Configure HttpClient
-        _httpClient.BaseAddress = new Uri("https://openrouter.ai/api/v1/");
-        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
-        _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://meepleai.app");
-        _httpClient.Timeout = TimeSpan.FromSeconds(30);
+        // Check for embedding provider configuration (default: ollama)
+        _provider = config["EMBEDDING_PROVIDER"]?.ToLowerInvariant() ?? "ollama";
+
+        if (_provider == "ollama")
+        {
+            // Use Ollama for local embeddings (no API key needed)
+            _httpClient = httpClientFactory.CreateClient("Ollama");
+            var ollamaUrl = config["OLLAMA_URL"] ?? "http://localhost:11434";
+            _httpClient.BaseAddress = new Uri(ollamaUrl);
+            _embeddingModel = config["EMBEDDING_MODEL"] ?? "nomic-embed-text";
+            _httpClient.Timeout = TimeSpan.FromSeconds(60);
+            _logger.LogInformation("Using Ollama for embeddings at {Url} with model {Model}", ollamaUrl, _embeddingModel);
+        }
+        else if (_provider == "openai")
+        {
+            // Use OpenAI API
+            _httpClient = httpClientFactory.CreateClient("OpenAI");
+            _httpClient.BaseAddress = new Uri("https://api.openai.com/v1/");
+            _apiKey = config["OPENAI_API_KEY"] ?? throw new InvalidOperationException("OPENAI_API_KEY not configured for OpenAI provider");
+            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
+            _embeddingModel = config["EMBEDDING_MODEL"] ?? "text-embedding-3-small";
+            _httpClient.Timeout = TimeSpan.FromSeconds(30);
+            _logger.LogInformation("Using OpenAI for embeddings with model {Model}", _embeddingModel);
+        }
+        else
+        {
+            throw new InvalidOperationException($"Unsupported embedding provider: {_provider}. Use 'ollama' or 'openai'");
+        }
     }
 
     /// <summary>
@@ -42,42 +64,14 @@ public class EmbeddingService : IEmbeddingService
 
         try
         {
-            var request = new
+            if (_provider == "ollama")
             {
-                model = EmbeddingModel,
-                input = texts,
-                encoding_format = "float"
-            };
-
-            var json = JsonSerializer.Serialize(request);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            _logger.LogInformation("Generating embeddings for {Count} texts using {Model}", texts.Count, EmbeddingModel);
-
-            var response = await _httpClient.PostAsync("embeddings", content, ct);
-            var responseBody = await response.Content.ReadAsStringAsync(ct);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogError("OpenRouter embeddings API error: {Status} - {Body}", response.StatusCode, responseBody);
-                return EmbeddingResult.CreateFailure($"API error: {response.StatusCode}");
+                return await GenerateOllamaEmbeddingsAsync(texts, ct);
             }
-
-            var embeddingResponse = JsonSerializer.Deserialize<OpenRouterEmbeddingResponse>(responseBody);
-
-            if (embeddingResponse?.Data == null || embeddingResponse.Data.Count == 0)
+            else // openai
             {
-                return EmbeddingResult.CreateFailure("No embeddings returned from API");
+                return await GenerateOpenAIEmbeddingsAsync(texts, ct);
             }
-
-            var embeddings = embeddingResponse.Data
-                .OrderBy(d => d.Index)
-                .Select(d => d.Embedding)
-                .ToList();
-
-            _logger.LogInformation("Successfully generated {Count} embeddings", embeddings.Count);
-
-            return EmbeddingResult.CreateSuccess(embeddings);
         }
         catch (TaskCanceledException ex)
         {
@@ -89,6 +83,86 @@ public class EmbeddingService : IEmbeddingService
             _logger.LogError(ex, "Failed to generate embeddings");
             return EmbeddingResult.CreateFailure($"Error: {ex.Message}");
         }
+    }
+
+    private async Task<EmbeddingResult> GenerateOllamaEmbeddingsAsync(List<string> texts, CancellationToken ct)
+    {
+        _logger.LogInformation("Generating embeddings for {Count} texts using Ollama model {Model}", texts.Count, _embeddingModel);
+
+        var embeddings = new List<float[]>();
+
+        // Ollama /api/embeddings endpoint processes one text at a time
+        foreach (var text in texts)
+        {
+            var request = new
+            {
+                model = _embeddingModel,
+                prompt = text
+            };
+
+            var json = JsonSerializer.Serialize(request);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync("/api/embeddings", content, ct);
+            var responseBody = await response.Content.ReadAsStringAsync(ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Ollama embeddings API error: {Status} - {Body}", response.StatusCode, responseBody);
+                return EmbeddingResult.CreateFailure($"API error: {response.StatusCode}");
+            }
+
+            var ollamaResponse = JsonSerializer.Deserialize<OllamaEmbeddingResponse>(responseBody);
+
+            if (ollamaResponse?.Embedding == null || ollamaResponse.Embedding.Length == 0)
+            {
+                return EmbeddingResult.CreateFailure("No embedding returned from Ollama");
+            }
+
+            embeddings.Add(ollamaResponse.Embedding);
+        }
+
+        _logger.LogInformation("Successfully generated {Count} embeddings via Ollama", embeddings.Count);
+        return EmbeddingResult.CreateSuccess(embeddings);
+    }
+
+    private async Task<EmbeddingResult> GenerateOpenAIEmbeddingsAsync(List<string> texts, CancellationToken ct)
+    {
+        _logger.LogInformation("Generating embeddings for {Count} texts using OpenAI model {Model}", texts.Count, _embeddingModel);
+
+        var request = new
+        {
+            model = _embeddingModel,
+            input = texts,
+            encoding_format = "float"
+        };
+
+        var json = JsonSerializer.Serialize(request);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var response = await _httpClient.PostAsync("embeddings", content, ct);
+        var responseBody = await response.Content.ReadAsStringAsync(ct);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError("OpenAI embeddings API error: {Status} - {Body}", response.StatusCode, responseBody);
+            return EmbeddingResult.CreateFailure($"API error: {response.StatusCode}");
+        }
+
+        var embeddingResponse = JsonSerializer.Deserialize<OpenAIEmbeddingResponse>(responseBody);
+
+        if (embeddingResponse?.Data == null || embeddingResponse.Data.Count == 0)
+        {
+            return EmbeddingResult.CreateFailure("No embeddings returned from OpenAI");
+        }
+
+        var embeddings = embeddingResponse.Data
+            .OrderBy(d => d.Index)
+            .Select(d => d.Embedding)
+            .ToList();
+
+        _logger.LogInformation("Successfully generated {Count} embeddings via OpenAI", embeddings.Count);
+        return EmbeddingResult.CreateSuccess(embeddings);
     }
 
     /// <summary>
@@ -117,8 +191,15 @@ public record EmbeddingResult
         new() { Success = false, ErrorMessage = error };
 }
 
-// OpenRouter API response models
-internal record OpenRouterEmbeddingResponse
+// Ollama API response model
+internal record OllamaEmbeddingResponse
+{
+    [JsonPropertyName("embedding")]
+    public float[] Embedding { get; init; } = Array.Empty<float>();
+}
+
+// OpenAI API response models
+internal record OpenAIEmbeddingResponse
 {
     [JsonPropertyName("data")]
     public List<EmbeddingData> Data { get; init; } = new();

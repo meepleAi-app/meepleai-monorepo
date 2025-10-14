@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
@@ -11,13 +12,29 @@ public class QdrantService : IQdrantService
 {
     private readonly IQdrantClientAdapter _clientAdapter;
     private readonly ILogger<QdrantService> _logger;
+    private readonly IConfiguration _configuration;
     private const string CollectionName = "meepleai_documents";
-    private const uint VectorSize = 1536; // text-embedding-3-small dimensions
 
-    public QdrantService(IQdrantClientAdapter clientAdapter, ILogger<QdrantService> logger)
+    // Vector size depends on embedding provider:
+    // - OpenAI text-embedding-3-small: 1536
+    // - Ollama nomic-embed-text: 768
+    private readonly uint _vectorSize;
+
+    public QdrantService(
+        IQdrantClientAdapter clientAdapter,
+        IConfiguration configuration,
+        ILogger<QdrantService> logger)
     {
         _clientAdapter = clientAdapter;
+        _configuration = configuration;
         _logger = logger;
+
+        // Determine vector size based on embedding provider
+        var provider = _configuration["EMBEDDING_PROVIDER"]?.ToLowerInvariant() ?? "ollama";
+        _vectorSize = provider == "ollama" ? 768u : 1536u;
+
+        _logger.LogInformation("QdrantService initialized with vector size {VectorSize} for provider {Provider}",
+            _vectorSize, provider);
     }
 
     /// <summary>
@@ -52,13 +69,14 @@ public class QdrantService : IQdrantService
                 return;
             }
 
-            _logger.LogInformation("Creating collection {CollectionName}", CollectionName);
+            _logger.LogInformation("Creating collection {CollectionName} with vector size {VectorSize}",
+                CollectionName, _vectorSize);
 
             await _clientAdapter.CreateCollectionAsync(
                 collectionName: CollectionName,
                 vectorsConfig: new VectorParams
                 {
-                    Size = VectorSize,
+                    Size = _vectorSize,
                     Distance = Distance.Cosine
                 },
                 cancellationToken: ct

@@ -757,4 +757,389 @@ public class RagServiceTests
         Assert.Equal("An error occurred while generating the explanation.", result.script);
         Assert.Empty(result.citations);
     }
+
+    #region Phase 3: Additional Coverage Tests
+
+    [Fact]
+    public async Task AskAsync_WithLlmFailure_ReturnsErrorWithSnippets()
+    {
+        // Arrange - Tests graceful handling of LLM service failure
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
+
+        var searchResults = new List<SearchResultItem>
+        {
+            new() { Text = "Sample rule text.", PdfId = "pdf-1", Page = 1, Score = 0.95f }
+        };
+
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
+
+        var mockLlm = new Mock<ILlmService>();
+        mockLlm
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateFailure("LLM service unavailable"));
+
+        var mockCache = CreateCacheMock();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+
+        // Act
+        var result = await ragService.AskAsync("game1", "test query", CancellationToken.None);
+
+        // Assert
+        Assert.Equal("Unable to generate answer.", result.answer);
+        Assert.Single(result.snippets); // Snippets are still returned even when LLM fails
+        Assert.Equal("Sample rule text.", result.snippets[0].text);
+    }
+
+    [Fact]
+    public async Task AskAsync_WithEmptyLlmResponse_ReturnsError()
+    {
+        // Arrange - Tests handling of empty/whitespace LLM responses
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
+
+        var searchResults = new List<SearchResultItem>
+        {
+            new() { Text = "Rule text.", PdfId = "pdf-1", Page = 1, Score = 0.95f }
+        };
+
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
+
+        var mockLlm = new Mock<ILlmService>();
+        mockLlm
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("   ")); // Empty response
+
+        var mockCache = CreateCacheMock();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+
+        // Act
+        var result = await ragService.AskAsync("game1", "test query", CancellationToken.None);
+
+        // Assert
+        Assert.Equal("Unable to generate answer.", result.answer);
+        Assert.Single(result.snippets);
+    }
+
+    [Fact]
+    public async Task AskAsync_WithMetadata_ReturnsMetadataInResponse()
+    {
+        // Arrange - Tests metadata propagation from LLM to response
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
+
+        var searchResults = new List<SearchResultItem>
+        {
+            new() { Text = "Players take turns.", PdfId = "pdf-1", Page = 1, Score = 0.95f }
+        };
+
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
+
+        var expectedMetadata = new Dictionary<string, string>
+        {
+            { "model", "anthropic/claude-3.5-sonnet" },
+            { "finish_reason", "stop" },
+            { "system_fingerprint", "fp_abc123" }
+        };
+
+        var mockLlm = new Mock<ILlmService>();
+        mockLlm
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(
+                "Players alternate turns.",
+                new LlmUsage(10, 5, 15),
+                expectedMetadata));
+
+        var mockCache = CreateCacheMock();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+
+        // Act
+        var result = await ragService.AskAsync("game1", "Who goes first?", CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(result.metadata);
+        Assert.Equal(3, result.metadata.Count);
+        Assert.Equal("anthropic/claude-3.5-sonnet", result.metadata["model"]);
+        Assert.Equal("stop", result.metadata["finish_reason"]);
+        Assert.Equal("fp_abc123", result.metadata["system_fingerprint"]);
+    }
+
+    [Fact]
+    public async Task AskAsync_WithNoMetadata_ReturnsNullMetadata()
+    {
+        // Arrange - Tests handling of missing metadata
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
+
+        var searchResults = new List<SearchResultItem>
+        {
+            new() { Text = "Rule text.", PdfId = "pdf-1", Page = 1, Score = 0.95f }
+        };
+
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
+
+        var mockLlm = new Mock<ILlmService>();
+        mockLlm
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(
+                "Answer text.",
+                new LlmUsage(10, 5, 15),
+                new Dictionary<string, string>())); // Empty metadata
+
+        var mockCache = CreateCacheMock();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+
+        // Act
+        var result = await ragService.AskAsync("game1", "test query", CancellationToken.None);
+
+        // Assert
+        Assert.Null(result.metadata); // Should be null when metadata dict is empty
+    }
+
+    [Fact]
+    public async Task AskAsync_WithCacheMiss_StoresResponseInCache()
+    {
+        // Arrange - Tests cache write operation
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
+
+        var searchResults = new List<SearchResultItem>
+        {
+            new() { Text = "Test rule.", PdfId = "pdf-1", Page = 1, Score = 0.95f }
+        };
+
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
+
+        var mockLlm = new Mock<ILlmService>();
+        mockLlm
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("Answer.", new LlmUsage(10, 5, 15)));
+
+        var mockCache = CreateCacheMock();
+        const string gameId = "game1";
+        const string query = "test query";
+        const string cacheKey = "qa::game1::test";
+
+        mockCache
+            .Setup(x => x.GenerateQaCacheKey(gameId, query))
+            .Returns(cacheKey);
+        mockCache
+            .Setup(x => x.GetAsync<QaResponse>(cacheKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QaResponse?)null); // Cache miss
+
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+
+        // Act
+        var result = await ragService.AskAsync(gameId, query, CancellationToken.None);
+
+        // Assert
+        Assert.Equal("Answer.", result.answer);
+
+        // Verify cache write was called with 24-hour TTL
+        mockCache.Verify(
+            x => x.SetAsync(
+                cacheKey,
+                It.Is<QaResponse>(r => r.answer == "Answer." && r.snippets.Count == 1),
+                86400, // 24 hours in seconds
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ExplainAsync_ReturnsCachedResponse()
+    {
+        // Arrange - Tests cache hit for Explain endpoint
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>(MockBehavior.Strict);
+        var mockQdrant = new Mock<IQdrantService>(MockBehavior.Strict);
+        var mockLlm = new Mock<ILlmService>(MockBehavior.Strict);
+        var mockCache = CreateCacheMock();
+
+        const string gameId = "game1";
+        const string topic = "scoring";
+        const string cacheKey = "explain::game1::scoring";
+
+        var cachedResponse = new ExplainResponse(
+            new ExplainOutline("scoring", new List<string> { "Points", "Victory" }),
+            "Cached script content",
+            new List<Snippet> { new("Cached citation", "PDF:cached", 5, 0) },
+            3); // 3 minutes reading time
+
+        mockCache
+            .Setup(x => x.GenerateExplainCacheKey(gameId, topic))
+            .Returns(cacheKey);
+        mockCache
+            .Setup(x => x.GetAsync<ExplainResponse>(cacheKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cachedResponse);
+
+        _mockLogger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+
+        // Act
+        var result = await ragService.ExplainAsync(gameId, topic, CancellationToken.None);
+
+        // Assert
+        Assert.Same(cachedResponse, result);
+        Assert.Equal("Cached script content", result.script);
+        Assert.Equal("scoring", result.outline.mainTopic);
+        Assert.Single(result.citations);
+
+        // Verify no embedding/search/LLM calls were made
+        mockEmbedding.VerifyNoOtherCalls();
+        mockQdrant.VerifyNoOtherCalls();
+        mockLlm.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task AskAsync_CalculatesConfidenceFromMaxScore()
+    {
+        // Arrange - Tests confidence calculation from search result scores
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
+
+        var searchResults = new List<SearchResultItem>
+        {
+            new() { Text = "Low relevance.", PdfId = "pdf-1", Page = 1, Score = 0.65f },
+            new() { Text = "High relevance.", PdfId = "pdf-1", Page = 2, Score = 0.98f }, // Max score
+            new() { Text = "Medium relevance.", PdfId = "pdf-1", Page = 3, Score = 0.75f }
+        };
+
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
+
+        var mockLlm = new Mock<ILlmService>();
+        mockLlm
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("Answer", new LlmUsage(10, 5, 15)));
+
+        var mockCache = CreateCacheMock();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+
+        // Act
+        var result = await ragService.AskAsync("game1", "test query", CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(result.confidence);
+        Assert.Equal(0.98, result.confidence.Value, precision: 2); // Should be max score
+    }
+
+    [Fact]
+    public async Task ExplainAsync_CalculatesReadingTimeFromWordCount()
+    {
+        // Arrange - Tests reading time estimation (200 words/minute)
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
+
+        // Create text with approximately 400 words (should be 2 minutes)
+        var longText = string.Join(" ", Enumerable.Repeat("word", 200));
+        var searchResults = new List<SearchResultItem>
+        {
+            new() { Text = longText, PdfId = "pdf-1", Page = 1, Score = 0.95f },
+            new() { Text = longText, PdfId = "pdf-1", Page = 2, Score = 0.90f }
+        };
+
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
+
+        var mockLlm = new Mock<ILlmService>();
+        var mockCache = CreateCacheMock();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+
+        // Act
+        var result = await ragService.ExplainAsync("game1", "test topic", CancellationToken.None);
+
+        // Assert
+        // Script contains 2 chunks with ~200 words each = ~400 words total
+        // At 200 words/minute, should be ~2 minutes
+        Assert.True(result.estimatedReadingTimeMinutes >= 1);
+        Assert.True(result.estimatedReadingTimeMinutes <= 3); // Allow some variance for header text
+    }
+
+    [Fact]
+    public async Task AskAsync_TrimsLlmResponseWhitespace()
+    {
+        // Arrange - Tests whitespace trimming from LLM response
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
+
+        var searchResults = new List<SearchResultItem>
+        {
+            new() { Text = "Rule text.", PdfId = "pdf-1", Page = 1, Score = 0.95f }
+        };
+
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
+
+        var mockLlm = new Mock<ILlmService>();
+        mockLlm
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(
+                "\n\n  This is the answer.  \n\n", // Leading/trailing whitespace
+                new LlmUsage(10, 5, 15)));
+
+        var mockCache = CreateCacheMock();
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+
+        // Act
+        var result = await ragService.AskAsync("game1", "test query", CancellationToken.None);
+
+        // Assert
+        Assert.Equal("This is the answer.", result.answer); // Whitespace trimmed
+    }
+
+    #endregion
 }

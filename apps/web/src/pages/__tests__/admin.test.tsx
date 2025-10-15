@@ -156,7 +156,8 @@ describe('AdminDashboard', () => {
           model: 'anthropic/claude-3-haiku',
           finishReason: 'length'
         }
-      ]
+      ],
+      totalCount: 2
     };
 
     const statsPayload = {
@@ -176,7 +177,8 @@ describe('AdminDashboard', () => {
     };
 
     const qaOnlyPayload = {
-      requests: [requestsPayload.requests[0]]
+      requests: [requestsPayload.requests[0]],
+      totalCount: 1
     };
 
     fetchMock
@@ -192,14 +194,14 @@ describe('AdminDashboard', () => {
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
-        `${apiBase}/admin/requests?limit=100`,
+        `${apiBase}/api/v1/admin/requests?limit=50&offset=0`,
         expect.objectContaining({ credentials: 'include' })
       )
     );
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
-        `${apiBase}/admin/stats`,
+        `${apiBase}/api/v1/admin/stats`,
         expect.objectContaining({ credentials: 'include' })
       )
     );
@@ -211,8 +213,8 @@ describe('AdminDashboard', () => {
     expect(screen.getByText('60')).toBeInTheDocument();
     expect(screen.getByText('95.0%')).toBeInTheDocument();
     expect(screen.getByText('Feedback Totali')).toBeInTheDocument();
-    expect(screen.getByText('👍 Utile: 1')).toBeInTheDocument();
-    expect(screen.getByText('👎 Non utile: 1')).toBeInTheDocument();
+    expect(screen.getByText('Utile: 1')).toBeInTheDocument();
+    expect(screen.getByText('Non utile: 1')).toBeInTheDocument();
 
     expect(screen.getByText('How do I win?')).toBeInTheDocument();
     expect(screen.getByText('Setup instructions')).toBeInTheDocument();
@@ -241,7 +243,7 @@ describe('AdminDashboard', () => {
 
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
-        `${apiBase}/admin/requests?limit=100&endpoint=qa`,
+        `${apiBase}/api/v1/admin/requests?limit=50&offset=0&endpoint=qa`,
         expect.objectContaining({ credentials: 'include' })
       )
     );
@@ -290,7 +292,8 @@ describe('AdminDashboard', () => {
           model: null,
           finishReason: null
         }
-      ]
+      ],
+      totalCount: 1
     };
 
     const statsPayload = {
@@ -332,14 +335,14 @@ describe('AdminDashboard', () => {
     render(<AdminDashboard />);
 
     expect(await screen.findByText('Error')).toBeInTheDocument();
-    expect(screen.getByText('Failed to fetch requests')).toBeInTheDocument();
+    expect(screen.getByText(/API \/api\/v1\/admin\/requests/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to Home' })).toBeInTheDocument();
   });
 
   it('falls back to the localhost API base when NEXT_PUBLIC_API_BASE is unset', async () => {
     delete process.env.NEXT_PUBLIC_API_BASE;
 
-    const emptyRequests = { requests: [] };
+    const emptyRequests = { requests: [], totalCount: 0 };
     const emptyStats = {
       totalRequests: 0,
       avgLatencyMs: 0,
@@ -359,14 +362,14 @@ describe('AdminDashboard', () => {
     await waitFor(() =>
       expect(fetchMock).toHaveBeenNthCalledWith(
         1,
-        `${API_BASE_FALLBACK}/admin/requests?limit=100`,
+        `${API_BASE_FALLBACK}/api/v1/admin/requests?limit=50&offset=0`,
         expect.objectContaining({ credentials: 'include' })
       )
     );
     await waitFor(() =>
       expect(fetchMock).toHaveBeenNthCalledWith(
         2,
-        `${API_BASE_FALLBACK}/admin/stats`,
+        `${API_BASE_FALLBACK}/api/v1/admin/stats`,
         expect.objectContaining({ credentials: 'include' })
       )
     );
@@ -378,7 +381,7 @@ describe('AdminDashboard', () => {
     process.env.NEXT_PUBLIC_API_BASE = apiBase;
     const AdminDashboard = loadAdminDashboard();
 
-    const requestsPayload = { requests: [] };
+    const requestsPayload = { requests: [], totalCount: 0 };
 
     fetchMock
       .mockResolvedValueOnce(createJsonResponse(requestsPayload))
@@ -387,7 +390,7 @@ describe('AdminDashboard', () => {
     render(<AdminDashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Failed to fetch stats/i)).toBeInTheDocument();
+      expect(screen.getByText(/API \/api\/v1\/admin\/stats/)).toBeInTheDocument();
     });
   });
 
@@ -477,7 +480,8 @@ describe('AdminDashboard', () => {
           model: 'test-model',
           finishReason: 'stop'
         }
-      ]
+      ],
+      totalCount: 4
     };
 
     const statsPayload = {

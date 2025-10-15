@@ -68,6 +68,10 @@ public class AdminRequestsEndpointsTests : AdminTestFixture
         Assert.True(document.RootElement.TryGetProperty("requests", out var requestsElement));
         Assert.Equal(JsonValueKind.Array, requestsElement.ValueKind);
 
+        // And: Response includes totalCount
+        Assert.True(document.RootElement.TryGetProperty("totalCount", out var totalCountElement));
+        Assert.Equal(2, totalCountElement.GetInt32());
+
         // And: Response includes exactly 2 filtered logs (admin's logs for game-1)
         Assert.Equal(2, requestsElement.GetArrayLength());
 

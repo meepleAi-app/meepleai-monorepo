@@ -518,9 +518,9 @@ v1Api.MapGet("/logs", async (HttpContext context, AiRequestLogService logService
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    var entries = await logService.GetRequestsAsync(limit: 100, ct: ct);
+    var result = await logService.GetRequestsAsync(limit: 100, ct: ct);
 
-    var response = entries
+    var response = result.Requests
         .Select(log =>
         {
             var level = string.Equals(log.Status, "Error", StringComparison.OrdinalIgnoreCase)
@@ -1806,7 +1806,7 @@ v1Api.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService 
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    var requests = await logService.GetRequestsAsync(
+    var result = await logService.GetRequestsAsync(
         limit,
         offset,
         endpoint,
@@ -1816,7 +1816,7 @@ v1Api.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService 
         endDate,
         ct);
 
-    return Results.Json(new { requests });
+    return Results.Json(new { requests = result.Requests, totalCount = result.TotalCount });
 });
 
 v1Api.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logService, AgentFeedbackService feedbackService, DateTime? startDate = null, DateTime? endDate = null, string? userId = null, string? gameId = null, CancellationToken ct = default) =>

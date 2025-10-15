@@ -128,7 +128,7 @@ public class AiRequestLogServiceTests
         var loggerMock = new Mock<ILogger<AiRequestLogService>>();
         var service = new AiRequestLogService(dbContext, loggerMock.Object);
 
-        var results = await service.GetRequestsAsync(
+        var result = await service.GetRequestsAsync(
             limit: 1,
             offset: 0,
             endpoint: "qa",
@@ -136,9 +136,10 @@ public class AiRequestLogServiceTests
             gameId: "game-2",
             ct: CancellationToken.None);
 
-        Assert.Single(results);
-        Assert.Equal("game-2", results[0].GameId);
-        Assert.Equal("qa", results[0].Endpoint);
+        Assert.Single(result.Requests);
+        Assert.Equal(1, result.TotalCount);
+        Assert.Equal("game-2", result.Requests[0].GameId);
+        Assert.Equal("qa", result.Requests[0].Endpoint);
     }
 
     [Fact]

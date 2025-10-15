@@ -66,7 +66,7 @@ public class AiRequestLogService
         }
     }
 
-    public async Task<List<AiRequestLogEntity>> GetRequestsAsync(
+    public async Task<AiRequestListResult> GetRequestsAsync(
         int limit = 100,
         int offset = 0,
         string? endpoint = null,
@@ -103,11 +103,21 @@ public class AiRequestLogService
             query = query.Where(log => log.CreatedAt <= endDate.Value);
         }
 
-        return await query
+        // Get total count before pagination
+        var totalCount = await query.CountAsync(ct);
+
+        // Get paginated results
+        var requests = await query
             .OrderByDescending(log => log.CreatedAt)
             .Skip(offset)
             .Take(limit)
             .ToListAsync(ct);
+
+        return new AiRequestListResult
+        {
+            Requests = requests,
+            TotalCount = totalCount
+        };
     }
 
     public async Task<AiRequestStats> GetStatsAsync(
@@ -187,4 +197,10 @@ public record AiRequestStats
     public int TotalTokens { get; init; }
     public double SuccessRate { get; init; }
     public Dictionary<string, int> EndpointCounts { get; init; } = new();
+}
+
+public record AiRequestListResult
+{
+    public List<AiRequestLogEntity> Requests { get; init; } = new();
+    public int TotalCount { get; init; }
 }

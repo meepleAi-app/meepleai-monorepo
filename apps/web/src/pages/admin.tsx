@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { getApiBase } from "../lib/api";
+import { api } from "../lib/api";
 
 type AiRequest = {
   id: string;
@@ -38,37 +38,54 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [filter, setFilter] = useState<string>("");
   const [endpointFilter, setEndpointFilter] = useState<string>("all");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(50);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
+
+      // Build query params
+      const offset = (page - 1) * pageSize;
+      const queryParams = new URLSearchParams({
+        limit: pageSize.toString(),
+        offset: offset.toString()
+      });
+      if (endpointFilter !== "all") {
+        queryParams.append("endpoint", endpointFilter);
+      }
+      if (startDate) {
+        queryParams.append("startDate", new Date(startDate).toISOString());
+      }
+      if (endDate) {
+        queryParams.append("endDate", new Date(endDate).toISOString());
+      }
 
       // Fetch requests
-      const apiBase = getApiBase();
-      const endpoint = endpointFilter === "all" ? "" : `&endpoint=${endpointFilter}`;
-      const requestsRes = await fetch(`${apiBase}/admin/requests?limit=100${endpoint}`, {
-        credentials: "include"
-      });
+      const requestsData = await api.get<{ requests: AiRequest[]; totalCount: number }>(
+        `/api/v1/admin/requests?${queryParams.toString()}`
+      );
 
-      if (!requestsRes.ok) {
-        throw new Error("Failed to fetch requests");
+      if (!requestsData) {
+        throw new Error("Unauthorized - Admin access required");
       }
 
-      const requestsData = await requestsRes.json();
       setRequests(requestsData.requests);
+      setTotalCount(requestsData.totalCount);
 
       // Fetch stats
-      const statsRes = await fetch(`${apiBase}/admin/stats`, {
-        credentials: "include"
-      });
+      const statsData = await api.get<Stats>(`/api/v1/admin/stats`);
 
-      if (!statsRes.ok) {
-        throw new Error("Failed to fetch stats");
+      if (!statsData) {
+        throw new Error("Unauthorized - Admin access required");
       }
 
-      const statsData = await statsRes.json();
       setStats({
         ...statsData,
         feedbackCounts: statsData.feedbackCounts ?? {},
@@ -80,11 +97,16 @@ export default function AdminDashboard() {
       setError(err instanceof Error ? err.message : "An error occurred");
       setLoading(false);
     }
-  }, [endpointFilter]);
+  }, [endpointFilter, startDate, endDate, page, pageSize]);
 
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [endpointFilter, startDate, endDate]);
 
   const exportToCSV = () => {
     const headers = [
@@ -239,8 +261,8 @@ export default function AdminDashboard() {
             <div style={{ fontSize: 12, color: "#5f6368", marginBottom: 8 }}>Feedback Totali</div>
             <div style={{ fontSize: 32, fontWeight: 600 }}>{stats.totalFeedback}</div>
             <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
-              <span style={{ color: "#34a853", fontWeight: 600 }}>👍 Utile: {helpfulCount}</span>
-              <span style={{ color: "#ea4335", fontWeight: 600 }}>👎 Non utile: {notHelpfulCount}</span>
+              <span style={{ color: "#34a853", fontWeight: 600 }}>Utile: {helpfulCount}</span>
+              <span style={{ color: "#ea4335", fontWeight: 600 }}>Non utile: {notHelpfulCount}</span>
             </div>
           </div>
         </div>
@@ -272,7 +294,7 @@ export default function AdminDashboard() {
       )}
 
       {/* Filters */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+      <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
         <input
           type="text"
           placeholder="Filter by query, endpoint, user ID, or game ID..."
@@ -302,6 +324,60 @@ export default function AdminDashboard() {
           <option value="explain">Explain</option>
           <option value="setup">Setup</option>
         </select>
+      </div>
+
+      {/* Date Range Filters */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+        <div style={{ flex: 1 }}>
+          <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#5f6368", fontWeight: 600 }}>
+            Start Date
+          </label>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            style={{
+              width: "100%",
+              padding: 12,
+              fontSize: 14,
+              border: "1px solid #dadce0",
+              borderRadius: 4
+            }}
+          />
+        </div>
+        <div style={{ flex: 1 }}>
+          <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#5f6368", fontWeight: 600 }}>
+            End Date
+          </label>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            style={{
+              width: "100%",
+              padding: 12,
+              fontSize: 14,
+              border: "1px solid #dadce0",
+              borderRadius: 4
+            }}
+          />
+        </div>
+        <button
+          onClick={() => { setStartDate(""); setEndDate(""); }}
+          disabled={!startDate && !endDate}
+          style={{
+            padding: "28px 16px 12px 16px",
+            background: !startDate && !endDate ? "#f8f9fa" : "#f8f9fa",
+            color: "#5f6368",
+            border: "1px solid #dadce0",
+            borderRadius: 4,
+            cursor: !startDate && !endDate ? "not-allowed" : "pointer",
+            alignSelf: "flex-start",
+            fontSize: 14
+          }}
+        >
+          Clear Dates
+        </button>
       </div>
 
       {/* Requests Table */}
@@ -390,6 +466,52 @@ export default function AdminDashboard() {
               </div>
             </div>
           ))
+        )}
+
+        {/* Pagination Controls */}
+        {totalCount > 0 && (
+          <div style={{ padding: 16, borderTop: "1px solid #dadce0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8f9fa" }}>
+            <div style={{ fontSize: 13, color: "#5f6368" }}>
+              Showing {Math.min((page - 1) * pageSize + 1, totalCount)}-{Math.min(page * pageSize, totalCount)} of {totalCount} requests
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                style={{
+                  padding: "8px 16px",
+                  background: page === 1 ? "#f8f9fa" : "#1a73e8",
+                  color: page === 1 ? "#5f6368" : "white",
+                  border: page === 1 ? "1px solid #dadce0" : "none",
+                  borderRadius: 4,
+                  cursor: page === 1 ? "not-allowed" : "pointer",
+                  fontSize: 14,
+                  fontWeight: 600
+                }}
+              >
+                Previous
+              </button>
+              <span style={{ fontSize: 13, color: "#5f6368", padding: "0 8px" }}>
+                Page {page} of {Math.ceil(totalCount / pageSize)}
+              </span>
+              <button
+                onClick={() => setPage(p => p + 1)}
+                disabled={page * pageSize >= totalCount}
+                style={{
+                  padding: "8px 16px",
+                  background: page * pageSize >= totalCount ? "#f8f9fa" : "#1a73e8",
+                  color: page * pageSize >= totalCount ? "#5f6368" : "white",
+                  border: page * pageSize >= totalCount ? "1px solid #dadce0" : "none",
+                  borderRadius: 4,
+                  cursor: page * pageSize >= totalCount ? "not-allowed" : "pointer",
+                  fontSize: 14,
+                  fontWeight: 600
+                }}
+              >
+                Next
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </main>

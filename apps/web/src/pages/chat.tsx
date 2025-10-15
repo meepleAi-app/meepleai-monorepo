@@ -135,7 +135,8 @@ export default function ChatPage() {
     if (authUser) {
       void loadGames();
     }
-  }, [authUser, loadGames]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser]);
 
   // Load agents and chats when game is selected
   useEffect(() => {

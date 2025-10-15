@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { api } from "../lib/api";
+import { CommentThread } from "../components/CommentThread";
 
 type AuthUser = {
   id: string;
@@ -400,7 +401,21 @@ export default function VersionHistory() {
             {isLoadingDiff ? (
               <p>Caricamento diff...</p>
             ) : diff ? (
-              <DiffViewer diff={diff} showOnlyChanges={showOnlyChanges} />
+              <>
+                <DiffViewer diff={diff} showOnlyChanges={showOnlyChanges} />
+
+                {/* Comments section for the selected "to" version */}
+                {selectedToVersion && authUser && (
+                  <div style={{ marginTop: 32, borderTop: "2px solid #ddd", paddingTop: 24 }}>
+                    <CommentThread
+                      gameId={gameId as string}
+                      version={selectedToVersion}
+                      currentUserId={authUser.id}
+                      currentUserRole={authUser.role}
+                    />
+                  </div>
+                )}
+              </>
             ) : (
               <p style={{ color: "#999" }}>Seleziona due versioni per visualizzare le differenze</p>
             )}

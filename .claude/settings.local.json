@@ -135,7 +135,12 @@
       "Bash(Select-String -Pattern \"passed|failed|running\" -Context 0,1)",
       "Bash(Select-String -Pattern \"BCrypt|Identity\")",
       "Bash(dotnet add package:*)",
-      "Bash(Select-String -Pattern \"FAIL|Error|Exception|Assert\" -Context 2,3)"
+      "Bash(Select-String -Pattern \"FAIL|Error|Exception|Assert\" -Context 2,3)",
+      "mcp__github-project-manager__github_create_pr",
+      "Bash(while read file)",
+      "Bash(do if grep -q -E '(PostAsJsonAsync|GetAsync|PutAsJsonAsync|DeleteAsync|HttpRequestMessage).*(HttpMethod|\"\"\"\"/)(auth|admin|games|chat|agents|n8n|logs|ingest|rules|pdf)' \"$file\")",
+      "Bash(then if ! grep -q \"/api/v1/\" \"$file\")",
+      "Bash(then echo \"$file\" fi fi done)"
     ],
     "deny": [],
     "ask": []

@@ -166,6 +166,7 @@ builder.Services.AddSingleton<ISessionCacheService, SessionCacheService>();
 builder.Services.AddScoped<GameService>();
 builder.Services.AddScoped<RuleSpecService>();
 builder.Services.AddScoped<RuleSpecDiffService>();
+builder.Services.AddScoped<RuleSpecCommentService>();
 builder.Services.AddScoped<RagService>();
 builder.Services.AddScoped<SetupGuideService>();
 builder.Services.AddScoped<AuthService>();
@@ -1594,6 +1595,117 @@ v1Api.MapGet("/games/{gameId}/rulespec/diff", async (string gameId, string? from
 
     var diff = diffService.ComputeDiff(fromSpec, toSpec);
     return Results.Json(diff);
+});
+
+// EDIT-02: RuleSpec comment endpoints
+v1Api.MapPost("/games/{gameId}/rulespec/versions/{version}/comments", async (string gameId, string version, CreateRuleSpecCommentRequest request, HttpContext context, RuleSpecCommentService commentService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    if (string.IsNullOrWhiteSpace(request.CommentText))
+    {
+        return Results.BadRequest(new { error = "CommentText is required" });
+    }
+
+    try
+    {
+        logger.LogInformation("User {UserId} adding comment to RuleSpec {GameId} version {Version}", session.User.Id, gameId, version);
+        var comment = await commentService.AddCommentAsync(gameId, version, request.AtomId, session.User.Id, request.CommentText, ct);
+        logger.LogInformation("Comment {CommentId} created successfully", comment.Id);
+        return Results.Created($"/api/v1/games/{gameId}/rulespec/comments/{comment.Id}", comment);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Failed to add comment: {Error}", ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+v1Api.MapGet("/games/{gameId}/rulespec/versions/{version}/comments", async (string gameId, string version, HttpContext context, RuleSpecCommentService commentService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    logger.LogInformation("User {UserId} fetching comments for RuleSpec {GameId} version {Version}", session.User.Id, gameId, version);
+    var response = await commentService.GetCommentsForVersionAsync(gameId, version, ct);
+    return Results.Json(response);
+});
+
+v1Api.MapPut("/games/{gameId}/rulespec/comments/{commentId:guid}", async (string gameId, Guid commentId, UpdateRuleSpecCommentRequest request, HttpContext context, RuleSpecCommentService commentService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (string.IsNullOrWhiteSpace(request.CommentText))
+    {
+        return Results.BadRequest(new { error = "CommentText is required" });
+    }
+
+    try
+    {
+        logger.LogInformation("User {UserId} updating comment {CommentId}", session.User.Id, commentId);
+        var comment = await commentService.UpdateCommentAsync(commentId, session.User.Id, request.CommentText, ct);
+        logger.LogInformation("Comment {CommentId} updated successfully", commentId);
+        return Results.Json(comment);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Failed to update comment {CommentId}: {Error}", commentId, ex.Message);
+        return Results.NotFound(new { error = ex.Message });
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        logger.LogWarning("User {UserId} not authorized to update comment {CommentId}: {Error}", session.User.Id, commentId, ex.Message);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+});
+
+v1Api.MapDelete("/games/{gameId}/rulespec/comments/{commentId:guid}", async (string gameId, Guid commentId, HttpContext context, RuleSpecCommentService commentService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    var isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+
+    try
+    {
+        logger.LogInformation("User {UserId} deleting comment {CommentId}", session.User.Id, commentId);
+        var deleted = await commentService.DeleteCommentAsync(commentId, session.User.Id, isAdmin, ct);
+
+        if (!deleted)
+        {
+            return Results.NotFound(new { error = "Comment not found" });
+        }
+
+        logger.LogInformation("Comment {CommentId} deleted successfully", commentId);
+        return Results.NoContent();
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        logger.LogWarning("User {UserId} not authorized to delete comment {CommentId}: {Error}", session.User.Id, commentId, ex.Message);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
 });
 
 v1Api.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, RuleSpecService rules, CancellationToken ct) =>

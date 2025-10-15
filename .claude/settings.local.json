@@ -125,7 +125,14 @@
       "Bash(pnpm add:*)",
       "Bash(pnpm dev)",
       "Bash(pnpm dev:*)",
-      "Bash(Select-String -Pattern \"FAIL|PASS|Error|Total tests|Succeeded|Failed\" -Context 0,1)"
+      "Bash(Select-String -Pattern \"FAIL|PASS|Error|Total tests|Succeeded|Failed\" -Context 0,1)",
+      "Bash(Select-String -Pattern \"FAIL|PASS|Error|Build|Compil\" -Context 0,1)",
+      "Bash(curl.exe:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(gh search issues:*)",
+      "Bash(pnpm test:e2e:*)",
+      "Bash(pnpm exec playwright:*)",
+      "Bash(Select-String -Pattern \"passed|failed|running\" -Context 0,1)"
     ],
     "deny": [],
     "ask": []

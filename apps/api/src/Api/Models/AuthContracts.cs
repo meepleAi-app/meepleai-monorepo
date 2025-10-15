@@ -36,7 +36,7 @@ public record AuthResult(AuthUser User, string SessionToken, DateTime ExpiresAt)
 
 public record ActiveSession(AuthUser User, DateTime ExpiresAt);
 
-public record AuthResponse(AuthUser User, DateTime ExpiresAt);
+public record AuthResponse(AuthUser User, DateTime? ExpiresAt);
 
 public record SessionInfo(
     string Id,

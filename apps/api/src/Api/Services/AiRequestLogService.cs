@@ -31,6 +31,7 @@ public class AiRequestLogService
         int? completionTokens = null,
         string? model = null,
         string? finishReason = null,
+        string? apiKeyId = null,
         CancellationToken ct = default)
     {
         try
@@ -38,6 +39,7 @@ public class AiRequestLogService
             var log = new AiRequestLogEntity
             {
                 UserId = userId,
+                ApiKeyId = apiKeyId,
                 GameId = gameId,
                 Endpoint = endpoint,
                 Query = query,

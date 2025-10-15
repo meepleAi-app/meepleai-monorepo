@@ -146,6 +146,9 @@ builder.Services.AddHttpClient("OpenRouter", client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
+// Time provider for testability
+builder.Services.AddSingleton(TimeProvider.System);
+
 // Background task execution
 builder.Services.AddSingleton<IBackgroundTaskService, BackgroundTaskService>();
 
@@ -187,6 +190,9 @@ builder.Services.AddHostedService<SessionAutoRevocationService>();
 
 // API-01: API key authentication service
 builder.Services.AddScoped<ApiKeyAuthenticationService>();
+
+// API-04: API key management service
+builder.Services.AddScoped<ApiKeyManagementService>();
 
 // PDF-02: OCR service for fallback text extraction
 builder.Services.AddSingleton<IOcrService, TesseractOcrService>();
@@ -466,6 +472,9 @@ app.Use(async (context, next) =>
     await next();
 });
 
+// API-04: API key quota enforcement middleware (must be after API key authentication)
+app.UseMiddleware<ApiKeyQuotaEnforcementMiddleware>();
+
 // API-01: Create v1 API route group
 var v1Api = app.MapGroup("/api/v1");
 
@@ -666,9 +675,25 @@ v1Api.MapPost("/auth/logout", async (HttpContext context, AuthService auth, Canc
 
 v1Api.MapGet("/auth/me", (HttpContext context) =>
 {
+    // Support both cookie-based session auth and API key auth
     if (context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession session)
     {
         return Results.Json(new AuthResponse(session.User, session.ExpiresAt));
+    }
+
+    // Check for API key authentication
+    if (context.User.Identity?.IsAuthenticated == true)
+    {
+        var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var email = context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+        var displayName = context.User.FindFirst("displayName")?.Value;
+        var role = context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+
+        if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(email))
+        {
+            var user = new AuthUser(userId, email, displayName ?? email, role ?? UserRole.User.ToString());
+            return Results.Json(new AuthResponse(user, null)); // API keys don't have session expiration
+        }
     }
 
     return Results.Unauthorized();
@@ -2049,6 +2074,35 @@ v1Api.MapDelete("/admin/users/{userId}/sessions", async (string userId, HttpCont
     return Results.Json(new { ok = true, revokedCount = count });
 });
 
+// API-04: Admin API Key Management endpoint
+v1Api.MapDelete("/admin/api-keys/{keyId}", async (string keyId, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        logger.LogWarning("User {UserId} with role {Role} attempted to delete API key without admin permission",
+            session.User.Id, session.User.Role);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    logger.LogInformation("Admin {AdminId} permanently deleting API key {KeyId}", session.User.Id, keyId);
+
+    var success = await apiKeyManagement.DeleteApiKeyAsync(keyId, session.User.Id, ct);
+
+    if (!success)
+    {
+        logger.LogWarning("API key {KeyId} not found for admin deletion", keyId);
+        return Results.NotFound(new { error = "API key not found" });
+    }
+
+    logger.LogInformation("API key {KeyId} permanently deleted by admin {AdminId}", keyId, session.User.Id);
+    return Results.NoContent();
+});
+
 v1Api.MapGet("/users/me/sessions", async (HttpContext context, ISessionManagementService sessionManagement, CancellationToken ct = default) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
@@ -2058,6 +2112,157 @@ v1Api.MapGet("/users/me/sessions", async (HttpContext context, ISessionManagemen
 
     var sessions = await sessionManagement.GetUserSessionsAsync(session.User.Id, ct);
     return Results.Json(sessions);
+});
+
+// API-04: API Key Management endpoints
+v1Api.MapPost("/api-keys", async (CreateApiKeyRequest request, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (string.IsNullOrWhiteSpace(request.KeyName))
+    {
+        return Results.BadRequest(new { error = "Key name is required" });
+    }
+
+    logger.LogInformation("User {UserId} creating API key '{KeyName}'", session.User.Id, request.KeyName);
+
+    try
+    {
+        var result = await apiKeyManagement.CreateApiKeyAsync(
+            session.User.Id,
+            request,
+            ct);
+
+        logger.LogInformation("API key '{KeyId}' created for user {UserId}", result.ApiKey.Id, session.User.Id);
+
+        return Results.Created($"/api/v1/api-keys/{result.ApiKey.Id}", result);
+    }
+    catch (ArgumentException ex)
+    {
+        logger.LogWarning("Invalid API key creation request from user {UserId}: {Error}", session.User.Id, ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+v1Api.MapGet("/api-keys", async (HttpContext context, ApiKeyManagementService apiKeyManagement, bool includeRevoked = false, int page = 1, int pageSize = 20, CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    var result = await apiKeyManagement.ListApiKeysAsync(session.User.Id, includeRevoked, page, pageSize, ct);
+    return Results.Json(result);
+});
+
+v1Api.MapGet("/api-keys/{keyId}", async (string keyId, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    var apiKey = await apiKeyManagement.GetApiKeyAsync(keyId, session.User.Id, ct);
+
+    if (apiKey == null)
+    {
+        logger.LogWarning("API key {KeyId} not found for user {UserId}", keyId, session.User.Id);
+        return Results.NotFound(new { error = "API key not found" });
+    }
+
+    return Results.Json(apiKey);
+});
+
+v1Api.MapPut("/api-keys/{keyId}", async (string keyId, UpdateApiKeyRequest request, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    logger.LogInformation("User {UserId} updating API key {KeyId}", session.User.Id, keyId);
+
+    var updated = await apiKeyManagement.UpdateApiKeyAsync(
+        keyId,
+        session.User.Id,
+        request,
+        ct);
+
+    if (updated == null)
+    {
+        logger.LogWarning("API key {KeyId} not found for user {UserId}", keyId, session.User.Id);
+        return Results.NotFound(new { error = "API key not found" });
+    }
+
+    logger.LogInformation("API key {KeyId} updated by user {UserId}", keyId, session.User.Id);
+    return Results.Json(updated);
+});
+
+v1Api.MapDelete("/api-keys/{keyId}", async (string keyId, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    logger.LogInformation("User {UserId} revoking API key {KeyId}", session.User.Id, keyId);
+
+    var success = await apiKeyManagement.RevokeApiKeyAsync(keyId, session.User.Id, ct);
+
+    if (!success)
+    {
+        logger.LogWarning("API key {KeyId} not found for user {UserId}", keyId, session.User.Id);
+        return Results.NotFound(new { error = "API key not found" });
+    }
+
+    logger.LogInformation("API key {KeyId} revoked by user {UserId}", keyId, session.User.Id);
+    return Results.NoContent();
+});
+
+v1Api.MapPost("/api-keys/{keyId}/rotate", async (string keyId, RotateApiKeyRequest? request, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    logger.LogInformation("User {UserId} rotating API key {KeyId}", session.User.Id, keyId);
+
+    var result = await apiKeyManagement.RotateApiKeyAsync(
+        keyId,
+        session.User.Id,
+        request ?? new RotateApiKeyRequest(),
+        ct);
+
+    if (result == null)
+    {
+        logger.LogWarning("API key {KeyId} not found for user {UserId}", keyId, session.User.Id);
+        return Results.NotFound(new { error = "API key not found" });
+    }
+
+    logger.LogInformation("API key {OldKeyId} rotated to {NewKeyId} by user {UserId}", keyId, result.NewApiKey.Id, session.User.Id);
+    return Results.Json(result);
+});
+
+v1Api.MapGet("/api-keys/{keyId}/usage", async (string keyId, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    var usage = await apiKeyManagement.GetApiKeyUsageAsync(keyId, session.User.Id, ct);
+
+    if (usage == null)
+    {
+        logger.LogWarning("API key {KeyId} not found for user {UserId}", keyId, session.User.Id);
+        return Results.NotFound(new { error = "API key not found" });
+    }
+
+    return Results.Json(usage);
 });
 
 // CHESS-03: Chess knowledge indexing endpoints

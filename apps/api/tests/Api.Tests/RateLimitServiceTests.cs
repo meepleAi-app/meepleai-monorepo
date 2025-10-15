@@ -1,5 +1,7 @@
+using Api.Models;
 using Api.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
@@ -14,7 +16,8 @@ public class RateLimitServiceTests
         // Arrange
         var mockRedis = CreateMockRedis(allowRequest: true, tokensRemaining: 99, retryAfter: 0);
         var logger = Mock.Of<ILogger<RateLimitService>>();
-        var service = new RateLimitService(mockRedis.Object, logger);
+        var config = CreateDefaultRateLimitConfig();
+        var service = new RateLimitService(mockRedis.Object, logger, config);
 
         // Act
         var result = await service.CheckRateLimitAsync("test-key", 100, 1.0);
@@ -31,7 +34,8 @@ public class RateLimitServiceTests
         // Arrange
         var mockRedis = CreateMockRedis(allowRequest: false, tokensRemaining: 0, retryAfter: 5);
         var logger = Mock.Of<ILogger<RateLimitService>>();
-        var service = new RateLimitService(mockRedis.Object, logger);
+        var config = CreateDefaultRateLimitConfig();
+        var service = new RateLimitService(mockRedis.Object, logger, config);
 
         // Act
         var result = await service.CheckRateLimitAsync("test-key", 100, 1.0);
@@ -59,7 +63,8 @@ public class RateLimitServiceTests
         mockRedis.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(mockDatabase.Object);
 
         var logger = Mock.Of<ILogger<RateLimitService>>();
-        var service = new RateLimitService(mockRedis.Object, logger);
+        var config = CreateDefaultRateLimitConfig();
+        var service = new RateLimitService(mockRedis.Object, logger, config);
 
         // Act
         var result = await service.CheckRateLimitAsync("test-key", 100, 1.0);
@@ -76,12 +81,18 @@ public class RateLimitServiceTests
     [InlineData("Unknown", 60, 1.0)]
     public void GetConfigForRole_ReturnsCorrectLimits(string? role, int expectedTokens, double expectedRate)
     {
+        // Arrange
+        var mockRedis = Mock.Of<IConnectionMultiplexer>();
+        var logger = Mock.Of<ILogger<RateLimitService>>();
+        var config = CreateDefaultRateLimitConfig();
+        var service = new RateLimitService(mockRedis, logger, config);
+
         // Act
-        var config = RateLimitService.GetConfigForRole(role);
+        var result = service.GetConfigForRole(role);
 
         // Assert
-        Assert.Equal(expectedTokens, config.MaxTokens);
-        Assert.Equal(expectedRate, config.RefillRate);
+        Assert.Equal(expectedTokens, result.MaxTokens);
+        Assert.Equal(expectedRate, result.RefillRate);
     }
 
     private static Mock<IConnectionMultiplexer> CreateMockRedis(bool allowRequest, int tokensRemaining, int retryAfter)
@@ -106,5 +117,18 @@ public class RateLimitServiceTests
         mockRedis.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(mockDatabase.Object);
 
         return mockRedis;
+    }
+
+    private static IOptions<RateLimitConfiguration> CreateDefaultRateLimitConfig()
+    {
+        var config = new RateLimitConfiguration
+        {
+            Admin = new RoleLimitConfiguration { MaxTokens = 1000, RefillRate = 10.0 },
+            Editor = new RoleLimitConfiguration { MaxTokens = 500, RefillRate = 5.0 },
+            User = new RoleLimitConfiguration { MaxTokens = 100, RefillRate = 1.0 },
+            Anonymous = new RoleLimitConfiguration { MaxTokens = 60, RefillRate = 1.0 }
+        };
+
+        return Options.Create(config);
     }
 }

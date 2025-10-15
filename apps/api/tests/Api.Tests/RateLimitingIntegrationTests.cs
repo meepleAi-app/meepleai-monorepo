@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
@@ -69,10 +70,8 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
         Assert.Equal(15, payload.retryAfter);
         Assert.Contains("Too many requests", payload.message, StringComparison.OrdinalIgnoreCase);
 
-        var expectedLimit = RateLimitService
-            .GetConfigForRole(UserRole.Admin.ToString())
-            .MaxTokens
-            .ToString(CultureInfo.InvariantCulture);
+        // Admin role has 1000 tokens by default configuration
+        var expectedLimit = "1000";
 
         Assert.Equal(expectedLimit, GetSingleHeaderValue(limitedResponse, "X-RateLimit-Limit"));
         Assert.Equal("0", GetSingleHeaderValue(limitedResponse, "X-RateLimit-Remaining"));
@@ -105,10 +104,8 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         // And: Headers show full limit available
-        var expectedLimit = RateLimitService
-            .GetConfigForRole(UserRole.Admin.ToString())
-            .MaxTokens
-            .ToString(CultureInfo.InvariantCulture);
+        // Admin role has 1000 tokens by default configuration
+        var expectedLimit = "1000";
 
         Assert.Equal(expectedLimit, GetSingleHeaderValue(response, "X-RateLimit-Limit"));
         Assert.Equal(expectedLimit, GetSingleHeaderValue(response, "X-RateLimit-Remaining"));
@@ -238,7 +235,7 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
         private Exception? _nextException;
 
         public TestRateLimitService()
-            : base(CreateMultiplexer(out var databaseMock), NullLogger<RateLimitService>.Instance)
+            : base(CreateMultiplexer(out var databaseMock), NullLogger<RateLimitService>.Instance, CreateDefaultConfig())
         {
             _mockDatabase = databaseMock;
             _mockDatabase
@@ -296,6 +293,19 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
                 .Returns(() => localDatabaseMock.Object);
 
             return multiplexerMock.Object;
+        }
+
+        private static IOptions<RateLimitConfiguration> CreateDefaultConfig()
+        {
+            var config = new RateLimitConfiguration
+            {
+                Admin = new RoleLimitConfiguration { MaxTokens = 1000, RefillRate = 10.0 },
+                Editor = new RoleLimitConfiguration { MaxTokens = 500, RefillRate = 5.0 },
+                User = new RoleLimitConfiguration { MaxTokens = 100, RefillRate = 1.0 },
+                Anonymous = new RoleLimitConfiguration { MaxTokens = 60, RefillRate = 1.0 }
+            };
+
+            return Options.Create(config);
         }
     }
 }

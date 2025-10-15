@@ -104,6 +104,7 @@ if (forwardedHeadersEnabled)
 
 builder.Services.Configure<SessionCookieConfiguration>(builder.Configuration.GetSection("Authentication:SessionCookie"));
 builder.Services.Configure<SessionManagementConfiguration>(builder.Configuration.GetSection("Authentication:SessionManagement"));
+builder.Services.Configure<RateLimitConfiguration>(builder.Configuration.GetSection("RateLimit"));
 
 // Only configure Postgres in non-test environments (tests will override with SQLite)
 if (!builder.Environment.IsEnvironment("Testing"))
@@ -339,14 +340,14 @@ app.Use(async (context, next) =>
     {
         // Authenticated: rate limit per user + role
         rateLimitKey = $"user:{session.User.Id}";
-        config = RateLimitService.GetConfigForRole(session.User.Role);
+        config = rateLimiter.GetConfigForRole(session.User.Role);
     }
     else
     {
         // Anonymous: rate limit per IP
         var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         rateLimitKey = $"ip:{ip}";
-        config = RateLimitService.GetConfigForRole(null); // Default anonymous limits
+        config = rateLimiter.GetConfigForRole(null); // Default anonymous limits
     }
 
     var result = await rateLimiter.CheckRateLimitAsync(

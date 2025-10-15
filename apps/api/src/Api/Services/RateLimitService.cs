@@ -1,4 +1,6 @@
 using System.Globalization;
+using Api.Models;
+using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
 namespace Api.Services;
@@ -12,14 +14,17 @@ public class RateLimitService
     private readonly IConnectionMultiplexer _redis;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<RateLimitService> _logger;
+    private readonly RateLimitConfiguration _config;
 
     public RateLimitService(
         IConnectionMultiplexer redis,
         ILogger<RateLimitService> logger,
+        IOptions<RateLimitConfiguration> config,
         TimeProvider? timeProvider = null)
     {
         _redis = redis;
         _logger = logger;
+        _config = config.Value;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -125,15 +130,17 @@ public class RateLimitService
     /// <summary>
     /// Get rate limit configuration based on role or defaults.
     /// </summary>
-    public static RateLimitConfig GetConfigForRole(string? role)
+    public RateLimitConfig GetConfigForRole(string? role)
     {
-        return role?.ToLowerInvariant() switch
+        var roleConfig = role?.ToLowerInvariant() switch
         {
-            "admin" => new RateLimitConfig(1000, 10.0), // 1000 burst, 10/sec
-            "editor" => new RateLimitConfig(500, 5.0),   // 500 burst, 5/sec
-            "user" => new RateLimitConfig(100, 1.0),     // 100 burst, 1/sec
-            _ => new RateLimitConfig(60, 1.0)            // Default: 60 burst, 1/sec (anonymous)
+            "admin" => _config.Admin,
+            "editor" => _config.Editor,
+            "user" => _config.User,
+            _ => _config.Anonymous
         };
+
+        return new RateLimitConfig(roleConfig.MaxTokens, roleConfig.RefillRate);
     }
 
     private static int ConvertRedisResultToInt(RedisResult result)

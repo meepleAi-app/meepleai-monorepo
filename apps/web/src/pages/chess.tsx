@@ -57,7 +57,7 @@ export default function ChessPage() {
 
   const loadCurrentUser = async () => {
     try {
-      const res = await api.get<AuthResponse>("/auth/me");
+      const res = await api.get<AuthResponse>("/api/v1/auth/me");
       if (res) {
         setAuthUser(res.user);
       } else {
@@ -148,7 +148,7 @@ export default function ChessPage() {
 
     try {
       // Send question with current FEN position
-      const res = await api.post<ChessResponse>("/agents/chess", {
+      const res = await api.post<ChessResponse>("/api/v1/agents/chess", {
         question: userMessageContent,
         fenPosition: currentPosition
       });

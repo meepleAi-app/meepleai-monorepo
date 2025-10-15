@@ -100,7 +100,7 @@ describe('VersionHistory page', () => {
 
     render(<VersionHistory />);
 
-    await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/auth/me'));
+    await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
     expect(
       await screen.findByText(/Devi effettuare l'accesso per visualizzare lo storico/i)
     ).toBeInTheDocument();
@@ -111,7 +111,7 @@ describe('VersionHistory page', () => {
 
     render(<VersionHistory />);
 
-    await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/auth/me'));
+    await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
     expect(
       await screen.findByText(/Specifica un gameId nella query string/i)
     ).toBeInTheDocument();
@@ -171,13 +171,13 @@ describe('VersionHistory page', () => {
     };
 
     mockApi.get.mockImplementation(async (path: string) => {
-      if (path === '/auth/me') {
+      if (path === '/api/v1/auth/me') {
         return authResponse;
       }
-      if (path === '/games/demo-chess/rulespec/history') {
+      if (path === '/api/v1/games/demo-chess/rulespec/history') {
         return historyResponse;
       }
-      if (path.startsWith('/games/demo-chess/rulespec/diff')) {
+      if (path.startsWith('/api/v1/games/demo-chess/rulespec/diff')) {
         return diffResponse;
       }
       return null;
@@ -189,7 +189,7 @@ describe('VersionHistory page', () => {
 
     await waitFor(() =>
       expect(mockApi.get).toHaveBeenCalledWith(
-        '/games/demo-chess/rulespec/diff?from=1.5.0&to=2.0.0'
+        '/api/v1/games/demo-chess/rulespec/diff?from=1.5.0&to=2.0.0'
       )
     );
 
@@ -255,13 +255,13 @@ describe('VersionHistory page', () => {
     };
 
     mockApi.get.mockImplementation(async (path: string) => {
-      if (path === '/auth/me') {
+      if (path === '/api/v1/auth/me') {
         return authResponse;
       }
-      if (path === '/games/demo-chess/rulespec/history') {
+      if (path === '/api/v1/games/demo-chess/rulespec/history') {
         return historyResponse;
       }
-      if (path.startsWith('/games/demo-chess/rulespec/diff')) {
+      if (path.startsWith('/api/v1/games/demo-chess/rulespec/diff')) {
         return diffResponse;
       }
       return null;
@@ -275,7 +275,7 @@ describe('VersionHistory page', () => {
     expect(confirmSpy).toHaveBeenCalledWith(
       'Sei sicuro di voler ripristinare la versione 1.5.0? Questo creerà una nuova versione.'
     );
-    expect(mockApi.get).not.toHaveBeenCalledWith('/games/demo-chess/rulespec/versions/1.5.0');
+    expect(mockApi.get).not.toHaveBeenCalledWith('/api/v1/games/demo-chess/rulespec/versions/1.5.0');
     expect(mockApi.put).not.toHaveBeenCalled();
   });
 
@@ -323,17 +323,17 @@ describe('VersionHistory page', () => {
 
     let historyCallCount = 0;
     mockApi.get.mockImplementation(async (path: string) => {
-      if (path === '/auth/me') {
+      if (path === '/api/v1/auth/me') {
         return authResponse;
       }
-      if (path === '/games/demo-chess/rulespec/history') {
+      if (path === '/api/v1/games/demo-chess/rulespec/history') {
         historyCallCount += 1;
         return historyResponse;
       }
-      if (path.startsWith('/games/demo-chess/rulespec/diff')) {
+      if (path.startsWith('/api/v1/games/demo-chess/rulespec/diff')) {
         return diffResponse;
       }
-      if (path === '/games/demo-chess/rulespec/versions/1.5.0') {
+      if (path === '/api/v1/games/demo-chess/rulespec/versions/1.5.0') {
         return versionToRestore;
       }
       return null;
@@ -351,9 +351,9 @@ describe('VersionHistory page', () => {
     );
 
     await waitFor(() =>
-      expect(mockApi.get).toHaveBeenCalledWith('/games/demo-chess/rulespec/versions/1.5.0')
+      expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games/demo-chess/rulespec/versions/1.5.0')
     );
-    expect(mockApi.put).toHaveBeenCalledWith('/games/demo-chess/rulespec', versionToRestore);
+    expect(mockApi.put).toHaveBeenCalledWith('/api/v1/games/demo-chess/rulespec', versionToRestore);
     await screen.findByText(/Versione 1\.5\.0 ripristinata con successo come versione 3\.0\.0/i);
     expect(historyCallCount).toBeGreaterThanOrEqual(2);
   });
@@ -396,16 +396,16 @@ describe('VersionHistory page', () => {
     };
 
     mockApi.get.mockImplementation(async (path: string) => {
-      if (path === '/auth/me') {
+      if (path === '/api/v1/auth/me') {
         return authResponse;
       }
-      if (path === '/games/demo-chess/rulespec/history') {
+      if (path === '/api/v1/games/demo-chess/rulespec/history') {
         return historyResponse;
       }
-      if (path.startsWith('/games/demo-chess/rulespec/diff')) {
+      if (path.startsWith('/api/v1/games/demo-chess/rulespec/diff')) {
         return diffResponse;
       }
-      if (path === '/games/demo-chess/rulespec/versions/1.5.0') {
+      if (path === '/api/v1/games/demo-chess/rulespec/versions/1.5.0') {
         return versionToRestore;
       }
       return null;

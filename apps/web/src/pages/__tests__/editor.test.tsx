@@ -90,7 +90,7 @@ describe('RuleSpecEditor', () => {
 
     render(<RuleSpecEditor />);
 
-    await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/auth/me'));
+    await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
     expect(screen.getByText(/Devi effettuare l'accesso per utilizzare l'editor/i)).toBeInTheDocument();
   });
 
@@ -125,10 +125,10 @@ describe('RuleSpecEditor', () => {
 
     mockUseRouter.mockReturnValue(createRouter({ query: { gameId: 'demo-chess' } }));
     mockApi.get.mockImplementation(async (path: string) => {
-      if (path === '/auth/me') {
+      if (path === '/api/v1/auth/me') {
         return authResponse;
       }
-      if (path === '/games/demo-chess/rulespec') {
+      if (path === '/api/v1/games/demo-chess/rulespec') {
         return initialSpec;
       }
       return null;
@@ -155,7 +155,7 @@ describe('RuleSpecEditor', () => {
     await user.click(saveButton);
 
     await waitFor(() =>
-      expect(mockApi.put).toHaveBeenCalledWith('/games/demo-chess/rulespec', updatedSpec)
+      expect(mockApi.put).toHaveBeenCalledWith('/api/v1/games/demo-chess/rulespec', updatedSpec)
     );
     await screen.findByText(/RuleSpec salvato con successo/i);
   });
@@ -175,10 +175,10 @@ describe('RuleSpecEditor', () => {
 
     mockUseRouter.mockReturnValue(createRouter({ query: { gameId: 'demo-risk' } }));
     mockApi.get.mockImplementation(async (path: string) => {
-      if (path === '/auth/me') {
+      if (path === '/api/v1/auth/me') {
         return authResponse;
       }
-      if (path === '/games/demo-risk/rulespec') {
+      if (path === '/api/v1/games/demo-risk/rulespec') {
         return initialSpec;
       }
       return null;
@@ -224,10 +224,10 @@ describe('RuleSpecEditor', () => {
 
     mockUseRouter.mockReturnValue(createRouter({ query: { gameId: 'demo-catan' } }));
     mockApi.get.mockImplementation(async (path: string) => {
-      if (path === '/auth/me') {
+      if (path === '/api/v1/auth/me') {
         return authResponse;
       }
-      if (path === '/games/demo-catan/rulespec') {
+      if (path === '/api/v1/games/demo-catan/rulespec') {
         return initialSpec;
       }
       return null;
@@ -252,7 +252,7 @@ describe('RuleSpecEditor', () => {
   it('shows loading state while fetching rulespec', () => {
     mockUseRouter.mockReturnValue(createRouter({ query: { gameId: 'demo-game' } }));
     mockApi.get.mockImplementation((path: string) => {
-      if (path === '/auth/me') {
+      if (path === '/api/v1/auth/me') {
         return Promise.resolve(authResponse);
       }
       // Never resolve rulespec
@@ -277,10 +277,10 @@ describe('RuleSpecEditor', () => {
 
     mockUseRouter.mockReturnValue(createRouter({ query: { gameId: 'demo-game' } }));
     mockApi.get.mockImplementation(async (path: string) => {
-      if (path === '/auth/me') {
+      if (path === '/api/v1/auth/me') {
         return authResponse;
       }
-      if (path === '/games/demo-game/rulespec') {
+      if (path === '/api/v1/games/demo-game/rulespec') {
         return initialSpec;
       }
       return null;
@@ -316,10 +316,10 @@ describe('RuleSpecEditor', () => {
 
     mockUseRouter.mockReturnValue(createRouter({ query: { gameId: 'demo-game' } }));
     mockApi.get.mockImplementation(async (path: string) => {
-      if (path === '/auth/me') {
+      if (path === '/api/v1/auth/me') {
         return authResponse;
       }
-      if (path === '/games/demo-game/rulespec') {
+      if (path === '/api/v1/games/demo-game/rulespec') {
         return initialSpec;
       }
       return null;
@@ -354,10 +354,10 @@ describe('RuleSpecEditor', () => {
 
     mockUseRouter.mockReturnValue(createRouter({ query: { gameId: 'demo-game' } }));
     mockApi.get.mockImplementation(async (path: string) => {
-      if (path === '/auth/me') {
+      if (path === '/api/v1/auth/me') {
         return authResponse;
       }
-      if (path === '/games/demo-game/rulespec') {
+      if (path === '/api/v1/games/demo-game/rulespec') {
         return initialSpec;
       }
       return null;
@@ -416,10 +416,10 @@ describe('RuleSpecEditor', () => {
 
     mockUseRouter.mockReturnValue(createRouter({ query: { gameId: 'demo-game' } }));
     mockApi.get.mockImplementation(async (path: string) => {
-      if (path === '/auth/me') {
+      if (path === '/api/v1/auth/me') {
         return authResponse;
       }
-      if (path === '/games/demo-game/rulespec') {
+      if (path === '/api/v1/games/demo-game/rulespec') {
         throw new Error('Network error');
       }
       return null;

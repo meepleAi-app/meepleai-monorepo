@@ -158,7 +158,7 @@ export default function ChatPage() {
 
   const loadCurrentUser = async () => {
     try {
-      const res = await api.get<AuthResponse>("/auth/me");
+      const res = await api.get<AuthResponse>("/api/v1/auth/me");
       if (res) {
         setAuthUser(res.user);
       } else {
@@ -173,7 +173,7 @@ export default function ChatPage() {
     setIsLoadingGames(true);
     setErrorMessage("");
     try {
-      const gamesList = await api.get<Game[]>("/games");
+      const gamesList = await api.get<Game[]>("/api/v1/games");
       setGames(gamesList ?? []);
 
       // Auto-select first game if available
@@ -193,7 +193,7 @@ export default function ChatPage() {
     setIsLoadingAgents(true);
     setErrorMessage("");
     try {
-      const agentsList = await api.get<Agent[]>(`/games/${gameId}/agents`);
+      const agentsList = await api.get<Agent[]>(`/api/v1/games/${gameId}/agents`);
       setAgents(agentsList ?? []);
 
       // Auto-select first agent if available
@@ -212,7 +212,7 @@ export default function ChatPage() {
   const loadChats = async (gameId: string) => {
     setIsLoadingChats(true);
     try {
-      const chatsList = await api.get<Chat[]>(`/chats?gameId=${gameId}`);
+      const chatsList = await api.get<Chat[]>(`/api/v1/chats?gameId=${gameId}`);
       setChats(chatsList ?? []);
     } catch (err) {
       console.error("Error loading chats:", err);
@@ -227,7 +227,7 @@ export default function ChatPage() {
     setIsLoadingMessages(true);
     setErrorMessage("");
     try {
-      const chatWithHistory = await api.get<ChatWithHistory>(`/chats/${chatId}`);
+      const chatWithHistory = await api.get<ChatWithHistory>(`/api/v1/chats/${chatId}`);
 
       if (chatWithHistory) {
         // Convert backend messages to frontend Message format
@@ -287,7 +287,7 @@ export default function ChatPage() {
     setIsCreatingChat(true);
     setErrorMessage("");
     try {
-      const newChat = await api.post<Chat>("/chats", {
+      const newChat = await api.post<Chat>("/api/v1/chats", {
         gameId: selectedGameId,
         agentId: selectedAgentId
       });
@@ -314,7 +314,7 @@ export default function ChatPage() {
     }
 
     try {
-      await api.delete(`/chats/${chatId}`);
+      await api.delete(`/api/v1/chats/${chatId}`);
 
       // Remove from list
       setChats((prev) => prev.filter((c) => c.id !== chatId));
@@ -366,7 +366,7 @@ export default function ChatPage() {
       // Create chat if none exists
       let chatId = activeChatId;
       if (!chatId) {
-        const newChat = await api.post<Chat>("/chats", {
+        const newChat = await api.post<Chat>("/api/v1/chats", {
           gameId: selectedGameId,
           agentId: selectedAgentId
         });
@@ -381,7 +381,7 @@ export default function ChatPage() {
       }
 
       // Send message with chatId
-      const res = await api.post<QaResponse>("/agents/qa", {
+      const res = await api.post<QaResponse>("/api/v1/agents/qa", {
         gameId: selectedGameId,
         query: userMessageContent,
         chatId: chatId
@@ -446,7 +446,7 @@ export default function ChatPage() {
     );
 
     try {
-      await api.post("/agents/feedback", {
+      await api.post("/api/v1/agents/feedback", {
         messageId: feedbackMessageId,
         endpoint,
         outcome: nextFeedback,

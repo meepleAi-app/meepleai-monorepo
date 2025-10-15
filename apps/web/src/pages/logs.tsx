@@ -22,7 +22,7 @@ export default function LogsPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await api.get<LogEntry[]>("/logs");
+        const response = await api.get<LogEntry[]>("/api/v1/logs");
         if (isMounted) {
           setLogs(response ?? []);
         }

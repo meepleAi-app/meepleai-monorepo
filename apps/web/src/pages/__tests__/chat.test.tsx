@@ -132,7 +132,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/auth/me'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
 
       expect(screen.getByRole('heading', { name: /Accesso richiesto/i })).toBeInTheDocument();
       expect(screen.getByText(/Devi effettuare l'accesso per utilizzare la chat/i)).toBeInTheDocument();
@@ -144,7 +144,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/auth/me'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
 
       expect(screen.getByRole('heading', { name: /MeepleAI Chat/i })).toBeInTheDocument();
       expect(screen.queryByText(/Accesso richiesto/i)).not.toBeInTheDocument();
@@ -156,7 +156,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/auth/me'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
 
       expect(screen.getByRole('heading', { name: /Accesso richiesto/i })).toBeInTheDocument();
 
@@ -174,7 +174,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/games'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
       const gameSelect = screen.getByLabelText(/Gioco:/i);
       expect(within(gameSelect).getByText('Chess')).toBeInTheDocument();
@@ -186,7 +186,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/games'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
       const gameSelect = screen.getByLabelText(/Gioco:/i) as HTMLSelectElement;
       expect(gameSelect.value).toBe('game-1');
@@ -197,7 +197,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/games/game-1/agents'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games/game-1/agents'));
 
       const agentSelect = screen.getByLabelText(/Agente:/i);
       expect(within(agentSelect).getByText('Chess Expert')).toBeInTheDocument();
@@ -209,7 +209,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/games/game-1/agents'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games/game-1/agents'));
 
       const agentSelect = screen.getByLabelText(/Agente:/i) as HTMLSelectElement;
       expect(agentSelect.value).toBe('agent-1');
@@ -220,7 +220,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       // Both chats should appear in the sidebar
       const chessExpertChats = screen.getAllByText('Chess Expert');
@@ -235,7 +235,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/games'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
       const gameSelect = screen.getByLabelText(/Gioco:/i) as HTMLSelectElement;
       expect(gameSelect.disabled).toBe(true);
@@ -260,7 +260,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/games'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
       const gameSelect = screen.getByLabelText(/Gioco:/i);
       expect(within(gameSelect).getByText(/Seleziona un gioco.../i)).toBeInTheDocument();
@@ -287,7 +287,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/games'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
       expect(screen.getByText(/Errore nel caricamento dei giochi/i)).toBeInTheDocument();
 
@@ -340,7 +340,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/games'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
       const user = userEvent.setup();
       const gameSelect = screen.getByLabelText(/Gioco:/i);
@@ -353,8 +353,8 @@ describe('ChatPage', () => {
       await user.selectOptions(gameSelect, 'game-2');
 
       await waitFor(() => {
-        expect(mockApi.get).toHaveBeenCalledWith('/games/game-2/agents');
-        expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-2');
+        expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games/game-2/agents');
+        expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-2');
       });
     });
 
@@ -363,7 +363,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/games/game-1/agents'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games/game-1/agents'));
 
       const user = userEvent.setup();
       const gameSelect = screen.getByLabelText(/Gioco:/i);
@@ -375,7 +375,7 @@ describe('ChatPage', () => {
 
       await user.selectOptions(gameSelect, 'game-2');
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/games/game-2/agents'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games/game-2/agents'));
 
       const agentSelect = screen.getByLabelText(/Agente:/i);
       expect(within(agentSelect).getByText('Catan Expert')).toBeInTheDocument();
@@ -386,7 +386,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       const user = userEvent.setup();
 
@@ -416,7 +416,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/games/game-1/agents'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games/game-1/agents'));
 
       const user = userEvent.setup();
       const agentSelect = screen.getByLabelText(/Agente:/i) as HTMLSelectElement;
@@ -431,7 +431,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/games'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
       const user = userEvent.setup();
       const gameSelect = screen.getByLabelText(/Gioco:/i);
@@ -466,7 +466,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
         const newChatButton = screen.getByRole('button', { name: /\+ Nuova Chat/i });
@@ -474,7 +474,7 @@ describe('ChatPage', () => {
         await user.click(newChatButton);
 
         await waitFor(() => {
-          expect(mockApi.post).toHaveBeenCalledWith('/chats', {
+          expect(mockApi.post).toHaveBeenCalledWith('/api/v1/chats', {
             gameId: 'game-1',
             agentId: 'agent-1'
           });
@@ -490,7 +490,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/games'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
         const user = userEvent.setup();
         const gameSelect = screen.getByLabelText(/Gioco:/i);
@@ -506,7 +506,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/games/game-1/agents'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games/game-1/agents'));
 
         const user = userEvent.setup();
         const agentSelect = screen.getByLabelText(/Agente:/i);
@@ -523,7 +523,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
         const newChatButton = screen.getByRole('button', { name: /\+ Nuova Chat/i });
@@ -542,7 +542,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
         const newChatButton = screen.getByRole('button', { name: /\+ Nuova Chat/i });
@@ -563,7 +563,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
 
@@ -582,7 +582,7 @@ describe('ChatPage', () => {
         await user.click(chatItem);
 
         await waitFor(() => {
-          expect(mockApi.get).toHaveBeenCalledWith('/chats/chat-1');
+          expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats/chat-1');
         });
 
         expect(screen.getByText('How do I castle?')).toBeInTheDocument();
@@ -594,7 +594,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         mockApi.get.mockImplementation(() => new Promise(() => {})); // Never resolves
 
@@ -613,7 +613,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
         const chatItems = screen.getAllByText('Chess Expert');
@@ -650,7 +650,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
         const chatItems = screen.getAllByText('Chess Expert');
@@ -671,7 +671,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
 
@@ -726,7 +726,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
         const chatItems = screen.getAllByText('Chess Expert');
@@ -749,7 +749,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
         const deleteButtons = screen.getAllByTitle('Elimina chat');
@@ -759,7 +759,7 @@ describe('ChatPage', () => {
         expect(window.confirm).toHaveBeenCalledWith('Sei sicuro di voler eliminare questa chat?');
 
         await waitFor(() => {
-          expect(mockApi.delete).toHaveBeenCalledWith('/chats/chat-1');
+          expect(mockApi.delete).toHaveBeenCalledWith('/api/v1/chats/chat-1');
         });
 
         // Chat should be removed from list
@@ -776,7 +776,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
         const deleteButtons = screen.getAllByTitle('Elimina chat');
@@ -796,7 +796,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
 
@@ -813,7 +813,7 @@ describe('ChatPage', () => {
         await user.click(deleteButtons[0]);
 
         await waitFor(() => {
-          expect(mockApi.delete).toHaveBeenCalledWith('/chats/chat-1');
+          expect(mockApi.delete).toHaveBeenCalledWith('/api/v1/chats/chat-1');
         });
 
         // Messages should be cleared
@@ -831,7 +831,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
         const deleteButtons = screen.getAllByTitle('Elimina chat');
@@ -853,7 +853,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
         const deleteButtons = screen.getAllByTitle('Elimina chat');
@@ -863,7 +863,7 @@ describe('ChatPage', () => {
         await user.click(deleteButtons[0]);
 
         // Should not call /chats/{chatId} to load history
-        expect(mockApi.get).not.toHaveBeenCalledWith('/chats/chat-1');
+        expect(mockApi.get).not.toHaveBeenCalledWith('/api/v1/chats/chat-1');
       });
     });
   });
@@ -880,7 +880,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
 
@@ -906,7 +906,7 @@ describe('ChatPage', () => {
         await user.click(sendButton);
 
         await waitFor(() => {
-          expect(mockApi.post).toHaveBeenCalledWith('/agents/qa', {
+          expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/qa', {
             gameId: 'game-1',
             query: 'Can I castle now?',
             chatId: 'chat-1'
@@ -922,7 +922,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
 
@@ -950,14 +950,14 @@ describe('ChatPage', () => {
         await user.click(sendButton);
 
         await waitFor(() => {
-          expect(mockApi.post).toHaveBeenNthCalledWith(1, '/chats', {
+          expect(mockApi.post).toHaveBeenNthCalledWith(1, '/api/v1/chats', {
             gameId: 'game-1',
             agentId: 'agent-1'
           });
         });
 
         await waitFor(() => {
-          expect(mockApi.post).toHaveBeenNthCalledWith(2, '/agents/qa', {
+          expect(mockApi.post).toHaveBeenNthCalledWith(2, '/api/v1/agents/qa', {
             gameId: 'game-1',
             query: 'First message',
             chatId: 'chat-new'
@@ -971,7 +971,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
 
@@ -1010,7 +1010,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
 
@@ -1046,7 +1046,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
 
@@ -1078,7 +1078,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/games'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
         const user = userEvent.setup();
         const gameSelect = screen.getByLabelText(/Gioco:/i);
@@ -1094,7 +1094,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/games/game-1/agents'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games/game-1/agents'));
 
         const user = userEvent.setup();
         const agentSelect = screen.getByLabelText(/Agente:/i);
@@ -1113,7 +1113,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const sendButton = screen.getByRole('button', { name: /Invia/i }) as HTMLButtonElement;
         expect(sendButton.disabled).toBe(true);
@@ -1124,7 +1124,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
@@ -1140,7 +1140,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
@@ -1160,7 +1160,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
 
@@ -1201,7 +1201,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
 
@@ -1229,7 +1229,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
 
@@ -1269,7 +1269,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
 
@@ -1308,7 +1308,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
 
@@ -1354,7 +1354,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
 
@@ -1391,7 +1391,7 @@ describe('ChatPage', () => {
 
         render(<ChatPage />);
 
-        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
 
@@ -1421,7 +1421,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       const user = userEvent.setup();
 
@@ -1439,7 +1439,7 @@ describe('ChatPage', () => {
       await user.click(helpfulButtons[0]);
 
       await waitFor(() => {
-        expect(mockApi.post).toHaveBeenCalledWith('/agents/feedback', {
+        expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
           messageId: 'msg-2',
           endpoint: 'qa',
           outcome: 'helpful',
@@ -1455,7 +1455,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       const user = userEvent.setup();
 
@@ -1473,7 +1473,7 @@ describe('ChatPage', () => {
       await user.click(notHelpfulButtons[0]);
 
       await waitFor(() => {
-        expect(mockApi.post).toHaveBeenCalledWith('/agents/feedback', {
+        expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', {
           messageId: 'msg-2',
           endpoint: 'qa',
           outcome: 'not-helpful',
@@ -1489,7 +1489,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       const user = userEvent.setup();
 
@@ -1510,7 +1510,7 @@ describe('ChatPage', () => {
       await user.click(helpfulButtons[0]);
 
       await waitFor(() => {
-        expect(mockApi.post).toHaveBeenNthCalledWith(1, '/agents/feedback', {
+        expect(mockApi.post).toHaveBeenNthCalledWith(1, '/api/v1/agents/feedback', {
           messageId: 'msg-2',
           endpoint: 'qa',
           outcome: 'helpful',
@@ -1523,7 +1523,7 @@ describe('ChatPage', () => {
       await user.click(helpfulButtons[0]);
 
       await waitFor(() => {
-        expect(mockApi.post).toHaveBeenNthCalledWith(2, '/agents/feedback', {
+        expect(mockApi.post).toHaveBeenNthCalledWith(2, '/api/v1/agents/feedback', {
           messageId: 'msg-2',
           endpoint: 'qa',
           outcome: null,
@@ -1539,7 +1539,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       const user = userEvent.setup();
 
@@ -1561,7 +1561,7 @@ describe('ChatPage', () => {
       await user.click(helpfulButtons[0]);
 
       await waitFor(() => {
-        expect(mockApi.post).toHaveBeenNthCalledWith(1, '/agents/feedback', expect.objectContaining({
+        expect(mockApi.post).toHaveBeenNthCalledWith(1, '/api/v1/agents/feedback', expect.objectContaining({
           outcome: 'helpful'
         }));
       });
@@ -1570,7 +1570,7 @@ describe('ChatPage', () => {
       await user.click(notHelpfulButtons[0]);
 
       await waitFor(() => {
-        expect(mockApi.post).toHaveBeenNthCalledWith(2, '/agents/feedback', expect.objectContaining({
+        expect(mockApi.post).toHaveBeenNthCalledWith(2, '/api/v1/agents/feedback', expect.objectContaining({
           outcome: 'not-helpful'
         }));
       });
@@ -1583,7 +1583,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       const user = userEvent.setup();
 
@@ -1616,7 +1616,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       const user = userEvent.setup();
 
@@ -1635,7 +1635,7 @@ describe('ChatPage', () => {
 
       // Should use backend message ID 'msg-2' from mockChatWithHistory
       await waitFor(() => {
-        expect(mockApi.post).toHaveBeenCalledWith('/agents/feedback', expect.objectContaining({
+        expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', expect.objectContaining({
           messageId: 'msg-2'
         }));
       });
@@ -1647,7 +1647,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       const user = userEvent.setup();
 
@@ -1679,7 +1679,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       const user = userEvent.setup();
       const collapseButton = screen.getByTitle(/Nascondi sidebar/i);
@@ -1695,7 +1695,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       // Use getAllByText since "Chess" appears in multiple places (header, select, chat items)
       const chessElements = screen.getAllByText('Chess');
@@ -1708,7 +1708,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       const user = userEvent.setup();
 
@@ -1729,7 +1729,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       expect(screen.getByRole('heading', { name: /Seleziona o crea una chat/i })).toBeInTheDocument();
     });
@@ -1740,7 +1740,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       const user = userEvent.setup();
 
@@ -1763,7 +1763,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       // Check chat preview includes date/time (format is locale-dependent)
       const chatPreview = screen.getAllByText(/\d{1,2}\/\d{1,2}\/\d{4}/);
@@ -1781,7 +1781,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/auth/me'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
 
       expect(screen.getByRole('heading', { name: /Accesso richiesto/i })).toBeInTheDocument();
     });
@@ -1792,7 +1792,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/games'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
 
       const gameSelect = screen.getByLabelText(/Gioco:/i);
       expect(within(gameSelect).queryByText('Chess')).not.toBeInTheDocument();
@@ -1806,7 +1806,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/games/game-1/agents'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games/game-1/agents'));
 
       const agentSelect = screen.getByLabelText(/Agente:/i);
       expect(within(agentSelect).queryByText('Chess Expert')).not.toBeInTheDocument();
@@ -1820,7 +1820,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       // Should use startedAt for preview
       // Use getAllByText since "Chess Helper" appears in multiple places (sidebar, select options)
@@ -1851,7 +1851,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       const user = userEvent.setup();
       const chatItems = screen.getAllByText('Chess Expert');
@@ -1870,7 +1870,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       const user = userEvent.setup();
 
@@ -1905,7 +1905,7 @@ describe('ChatPage', () => {
       await user.click(helpfulButtons[helpfulButtons.length - 1]); // Last one (new message)
 
       await waitFor(() => {
-        expect(mockApi.post).toHaveBeenCalledWith('/agents/feedback', expect.objectContaining({
+        expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/feedback', expect.objectContaining({
           outcome: 'helpful'
         }));
       });
@@ -1920,7 +1920,7 @@ describe('ChatPage', () => {
 
       render(<ChatPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/chats?gameId=game-1'));
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       const user = userEvent.setup();
 

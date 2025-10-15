@@ -97,7 +97,7 @@ export default function VersionHistory() {
 
   const loadCurrentUser = useCallback(async () => {
     try {
-      const res = await api.get<AuthResponse>("/auth/me");
+      const res = await api.get<AuthResponse>("/api/v1/auth/me");
       if (res) {
         setAuthUser(res.user);
       } else {
@@ -112,7 +112,7 @@ export default function VersionHistory() {
     setIsLoadingHistory(true);
     setErrorMessage("");
     try {
-      const historyData = await api.get<RuleSpecHistory>(`/games/${gId}/rulespec/history`);
+      const historyData = await api.get<RuleSpecHistory>(`/api/v1/games/${gId}/rulespec/history`);
       if (historyData) {
         setHistory(historyData);
         // Auto-select the two most recent versions for diff
@@ -139,7 +139,7 @@ export default function VersionHistory() {
     setDiff(null);
     try {
       const diffData = await api.get<RuleSpecDiff>(
-        `/games/${gameId}/rulespec/diff?from=${encodeURIComponent(selectedFromVersion)}&to=${encodeURIComponent(selectedToVersion)}`
+        `/api/v1/games/${gameId}/rulespec/diff?from=${encodeURIComponent(selectedFromVersion)}&to=${encodeURIComponent(selectedToVersion)}`
       );
       if (diffData) {
         setDiff(diffData);
@@ -178,13 +178,13 @@ export default function VersionHistory() {
     setStatusMessage("");
     try {
       // Get the version to restore
-      const versionData = await api.get<RuleSpec>(`/games/${gameId}/rulespec/versions/${version}`);
+      const versionData = await api.get<RuleSpec>(`/api/v1/games/${gameId}/rulespec/versions/${version}`);
       if (!versionData) {
         throw new Error("Versione non trovata");
       }
 
       // Save it as a new version
-      const updated = await api.put<RuleSpec>(`/games/${gameId}/rulespec`, versionData);
+      const updated = await api.put<RuleSpec>(`/api/v1/games/${gameId}/rulespec`, versionData);
       setStatusMessage(`Versione ${version} ripristinata con successo come versione ${updated.version}`);
 
       // Reload history

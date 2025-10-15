@@ -98,7 +98,7 @@ export default function RuleSpecEditor() {
 
   const loadCurrentUser = useCallback(async () => {
     try {
-      const res = await api.get<AuthResponse>("/auth/me");
+      const res = await api.get<AuthResponse>("/api/v1/auth/me");
       if (res) {
         setAuthUser(res.user);
       } else {
@@ -114,7 +114,7 @@ export default function RuleSpecEditor() {
       setIsLoading(true);
       setErrorMessage("");
       try {
-        const spec = await api.get<RuleSpec>(`/games/${gId}/rulespec`);
+        const spec = await api.get<RuleSpec>(`/api/v1/games/${gId}/rulespec`);
         if (spec) {
           setRuleSpec(spec);
           const formatted = JSON.stringify(spec, null, 2);
@@ -202,7 +202,7 @@ export default function RuleSpecEditor() {
       setErrorMessage("");
       setStatusMessage("");
 
-      const updated = await api.put<RuleSpec>(`/games/${gameId}/rulespec`, parsed);
+      const updated = await api.put<RuleSpec>(`/api/v1/games/${gameId}/rulespec`, parsed);
       setRuleSpec(updated);
       setStatusMessage(`RuleSpec salvato con successo (versione ${updated.version})`);
     } catch (err: any) {

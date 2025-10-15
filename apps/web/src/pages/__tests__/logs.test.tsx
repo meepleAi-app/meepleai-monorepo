@@ -42,7 +42,7 @@ describe('LogsPage', () => {
     render(<LogsPage />);
 
     await screen.findByText(/Application started/i);
-    expect(mockGet).toHaveBeenCalledWith('/logs');
+    expect(mockGet).toHaveBeenCalledWith('/api/v1/logs');
     expect(screen.getByText(/User logged in successfully/i)).toBeInTheDocument();
 
     const filterInput = screen.getByPlaceholderText(/Filter logs/i);

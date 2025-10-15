@@ -107,7 +107,7 @@ export default function UploadPage() {
       setPdfsError(null);
 
       try {
-        const response = await fetch(`${API_BASE}/games/${gameId}/pdfs`, {
+        const response = await fetch(`${API_BASE}/api/v1/games/${gameId}/pdfs`, {
           credentials: 'include'
         });
 
@@ -132,7 +132,7 @@ export default function UploadPage() {
   const initialize = useCallback(async () => {
     setLoadingGames(true);
     try {
-      const me = await api.get<AuthResponse>('/auth/me');
+      const me = await api.get<AuthResponse>('/api/v1/auth/me');
       if (!me) {
         setAuthUser(null);
         setGames([]);
@@ -142,7 +142,7 @@ export default function UploadPage() {
       }
 
       setAuthUser(me.user);
-      const fetchedGames = (await api.get<GameSummary[]>('/games')) ?? [];
+      const fetchedGames = (await api.get<GameSummary[]>('/api/v1/games')) ?? [];
       setGames(fetchedGames);
       if (fetchedGames.length > 0) {
         setSelectedGameId(fetchedGames[0].id);
@@ -178,7 +178,7 @@ export default function UploadPage() {
 
     const pollStatus = async () => {
       try {
-        const response = await fetch(`${API_BASE}/pdfs/${documentId}/text`, {
+        const response = await fetch(`${API_BASE}/api/v1/pdfs/${documentId}/text`, {
           credentials: 'include'
         });
 
@@ -244,7 +244,7 @@ export default function UploadPage() {
     setRuleSpec(null);
 
     try {
-      const fetchedRuleSpec = await api.get<RuleSpec>(`/games/${confirmedGameId}/rulespec`);
+      const fetchedRuleSpec = await api.get<RuleSpec>(`/api/v1/games/${confirmedGameId}/rulespec`);
 
       if (!fetchedRuleSpec) {
         setMessage('❌ Parse failed: Unable to load RuleSpec.');
@@ -302,7 +302,7 @@ export default function UploadPage() {
       formData.append('file', file);
       formData.append('gameId', confirmedGameId);
 
-      const response = await fetch(`${API_BASE}/ingest/pdf`, {
+      const response = await fetch(`${API_BASE}/api/v1/ingest/pdf`, {
         method: 'POST',
         body: formData,
         credentials: 'include'
@@ -340,7 +340,7 @@ export default function UploadPage() {
     setMessage('');
 
     try {
-      const response = await fetch(`${API_BASE}/games/${confirmedGameId}/rulespec`, {
+      const response = await fetch(`${API_BASE}/api/v1/games/${confirmedGameId}/rulespec`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -436,7 +436,7 @@ export default function UploadPage() {
     setRetryingPdfId(pdf.id);
     setMessage('');
     try {
-      const response = await fetch(`${API_BASE}/ingest/pdf/${pdf.id}/retry`, {
+      const response = await fetch(`${API_BASE}/api/v1/ingest/pdf/${pdf.id}/retry`, {
         method: 'POST',
         credentials: 'include'
       });
@@ -474,7 +474,7 @@ export default function UploadPage() {
     setMessage('');
 
     try {
-      const created = await api.post<GameSummary>('/games', {
+      const created = await api.post<GameSummary>('/api/v1/games', {
         name: trimmedName
       });
 

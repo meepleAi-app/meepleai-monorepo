@@ -92,7 +92,7 @@ describe('Home page', () => {
     render(<Home />);
 
     await waitFor(() => {
-      expect(mockedApi.get).toHaveBeenCalledWith('/auth/me');
+      expect(mockedApi.get).toHaveBeenCalledWith('/api/v1/auth/me');
     });
 
     const askButton = await screen.findByRole('button', { name: 'Chiedi' });
@@ -114,7 +114,7 @@ describe('Home page', () => {
       ).toBeInTheDocument();
     });
 
-    expect(mockedApi.post).not.toHaveBeenCalledWith('/agents/qa', expect.anything());
+    expect(mockedApi.post).not.toHaveBeenCalledWith('/api/v1/agents/qa', expect.anything());
   });
 
   it('resets the registration form and redirects to the upload page after successful registration', async () => {
@@ -147,7 +147,7 @@ describe('Home page', () => {
     await user.click(registerScope.getByRole('button', { name: 'Crea account' }));
 
     await waitFor(() => {
-      expect(mockedApi.post).toHaveBeenCalledWith('/auth/register', {
+      expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/register', {
         email: 'new@example.com',
         password: 'password123',
         displayName: 'New User',
@@ -194,7 +194,7 @@ describe('Home page', () => {
     await user.click(loginScope.getByRole('button', { name: 'Entra' }));
 
     await waitFor(() => {
-      expect(mockedApi.post).toHaveBeenCalledWith('/auth/login', {
+      expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/login', {
         email: 'user@example.com',
         password: 'super-secret'
       });
@@ -309,7 +309,7 @@ describe('Home page', () => {
     await user.click(logoutButton);
 
     await waitFor(() => {
-      expect(mockedApi.post).toHaveBeenCalledWith('/auth/logout');
+      expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/logout');
     });
 
     await waitFor(() => {
@@ -362,7 +362,7 @@ describe('Home page', () => {
     await user.click(askButton);
 
     await waitFor(() => {
-      expect(mockedApi.post).toHaveBeenCalledWith('/agents/qa', {
+      expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/agents/qa', {
         gameId: 'demo-chess',
         query: 'How many players?'
       });
@@ -398,7 +398,7 @@ describe('Home page', () => {
     await user.click(logoutButton);
 
     await waitFor(() => {
-      expect(mockedApi.post).toHaveBeenCalledWith('/auth/logout');
+      expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/logout');
     });
 
     // User should still be logged out even if API call fails
@@ -437,7 +437,7 @@ describe('Home page', () => {
     await user.click(registerScope.getByRole('button', { name: 'Crea account' }));
 
     await waitFor(() => {
-      expect(mockedApi.post).toHaveBeenCalledWith('/auth/register', {
+      expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/register', {
         email: 'new@example.com',
         password: 'password123',
         displayName: undefined,
@@ -472,7 +472,7 @@ describe('Home page', () => {
     await user.click(registerScope.getByRole('button', { name: 'Crea account' }));
 
     await waitFor(() => {
-      expect(mockedApi.post).toHaveBeenCalledWith('/auth/register', expect.any(Object));
+      expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/register', expect.any(Object));
     });
 
     expect(routerMock.push).not.toHaveBeenCalled();
@@ -504,7 +504,7 @@ describe('Home page', () => {
     await user.click(loginScope.getByRole('button', { name: 'Entra' }));
 
     await waitFor(() => {
-      expect(mockedApi.post).toHaveBeenCalledWith('/auth/login', expect.any(Object));
+      expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/login', expect.any(Object));
     });
 
     expect(routerMock.push).not.toHaveBeenCalled();
@@ -559,7 +559,7 @@ describe('Home page', () => {
     render(<Home />);
 
     await waitFor(() => {
-      expect(mockedApi.get).toHaveBeenCalledWith('/auth/me');
+      expect(mockedApi.get).toHaveBeenCalledWith('/api/v1/auth/me');
     });
 
     await waitFor(() => {

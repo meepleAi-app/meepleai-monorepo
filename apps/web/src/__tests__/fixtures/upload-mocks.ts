@@ -181,36 +181,40 @@ export function setupUploadMocks(config: UploadMocksConfig = {}) {
   const router = new MockApiRouter();
 
   // Auth endpoint
-  router.get('/auth/me', () => createJsonResponse(auth));
+  if (auth === null) {
+    router.get('/api/v1/auth/me', () => createErrorResponse(401, { error: 'Unauthorized' }));
+  } else {
+    router.get('/api/v1/auth/me', () => createJsonResponse(auth));
+  }
 
   // Games endpoints
-  router.get('/games', () => createJsonResponse(games));
+  router.get('/api/v1/games', () => createJsonResponse(games));
 
   if (createGameError) {
-    router.post('/games', () =>
+    router.post('/api/v1/games', () =>
       createErrorResponse(createGameError.status, { error: createGameError.error })
     );
   } else {
-    router.post('/games', () =>
+    router.post('/api/v1/games', () =>
       createJsonResponse(createGameResponse ?? createGameMock({ id: 'game-new', name: 'New Game' }), 201)
     );
   }
 
   // PDFs list for a game (using route parameters)
-  router.get('/games/:gameId/pdfs', () => createJsonResponse(pdfs));
+  router.get('/api/v1/games/:gameId/pdfs', () => createJsonResponse(pdfs));
 
   // Upload PDF
   if (uploadError) {
-    router.post('/ingest/pdf', () =>
+    router.post('/api/v1/ingest/pdf', () =>
       createErrorResponse(uploadError.status, { error: uploadError.error })
     );
   } else {
-    router.post('/ingest/pdf', () => createJsonResponse(uploadResponse, 201));
+    router.post('/api/v1/ingest/pdf', () => createJsonResponse(uploadResponse, 201));
   }
 
   // PDF status polling (stateful with closure)
   let statusIndex = 0;
-  router.get('/pdfs/:documentId/text', ({ params }) => {
+  router.get('/api/v1/pdfs/:documentId/text', ({ params }) => {
     if (pdfStatusSequence.length > 0) {
       const nextStatus = pdfStatusSequence[statusIndex] ?? pdfStatusSequence[pdfStatusSequence.length - 1];
       if (statusIndex < pdfStatusSequence.length - 1) {
@@ -234,31 +238,31 @@ export function setupUploadMocks(config: UploadMocksConfig = {}) {
 
   // Get RuleSpec
   if (ruleSpecError) {
-    router.get('/games/:gameId/rulespec', () =>
+    router.get('/api/v1/games/:gameId/rulespec', () =>
       createErrorResponse(ruleSpecError.status, ruleSpecError.error)
     );
   } else {
-    router.get('/games/:gameId/rulespec', () => createJsonResponse(ruleSpec));
+    router.get('/api/v1/games/:gameId/rulespec', () => createJsonResponse(ruleSpec));
   }
 
   // Publish RuleSpec
   if (publishRuleSpecError) {
-    router.put('/games/:gameId/rulespec', () =>
+    router.put('/api/v1/games/:gameId/rulespec', () =>
       createErrorResponse(publishRuleSpecError.status, { error: publishRuleSpecError.error })
     );
   } else {
-    router.put('/games/:gameId/rulespec', () =>
+    router.put('/api/v1/games/:gameId/rulespec', () =>
       createJsonResponse(publishRuleSpecResponse ?? ruleSpec)
     );
   }
 
   // Retry parse
   if (retryParseError) {
-    router.post('/ingest/pdf/:documentId/retry', () =>
+    router.post('/api/v1/ingest/pdf/:documentId/retry', () =>
       createErrorResponse(retryParseError.status, { error: retryParseError.error })
     );
   } else {
-    router.post('/ingest/pdf/:documentId/retry', () =>
+    router.post('/api/v1/ingest/pdf/:documentId/retry', () =>
       createJsonResponse(retryParseResponse ?? { success: true })
     );
   }

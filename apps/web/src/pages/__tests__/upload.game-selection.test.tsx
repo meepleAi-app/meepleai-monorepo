@@ -154,7 +154,7 @@ describe('UploadPage - Game Selection', () => {
         fireEvent.click(screen.getByRole('button', { name: /Create first game/i }));
 
         await waitFor(() =>
-          expect(screen.getByText(/Failed to create game: API \/games 500/i)).toBeInTheDocument()
+          expect(screen.getByText(/Failed to create game: API \/api\/v1\/games 500/i)).toBeInTheDocument()
         );
       });
     });

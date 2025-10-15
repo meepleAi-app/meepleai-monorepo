@@ -373,7 +373,7 @@ describe('UploadPage - Review & Edit', () => {
 
           await waitFor(() =>
             expect(
-              screen.getByText(/❌ Parse failed: API \/games\/game-1\/rulespec 500/i)
+              screen.getByText(/❌ Parse failed: API \/api\/v1\/games\/game-1\/rulespec 500/i)
             ).toBeInTheDocument()
           );
           expect(screen.getByRole('heading', { name: /Step 2: Parse PDF/i })).toBeInTheDocument();

@@ -45,7 +45,7 @@ export default function Home() {
 
   const loadCurrentUser = async () => {
     try {
-      const res = await api.get<AuthResponse>("/auth/me");
+      const res = await api.get<AuthResponse>("/api/v1/auth/me");
       if (res) {
         setAuthUser(res.user);
       }
@@ -64,7 +64,7 @@ export default function Home() {
         displayName: registerForm.displayName || undefined,
         role: registerForm.role
       };
-      const res = await api.post<AuthResponse>("/auth/register", payload);
+      const res = await api.post<AuthResponse>("/api/v1/auth/register", payload);
       setAuthUser(res.user);
       setShowAuthModal(false);
       void router.push("/chat");
@@ -77,7 +77,7 @@ export default function Home() {
     e.preventDefault();
     setErrorMessage("");
     try {
-      const res = await api.post<AuthResponse>("/auth/login", {
+      const res = await api.post<AuthResponse>("/api/v1/auth/login", {
         email: loginForm.email,
         password: loginForm.password
       });
@@ -91,7 +91,7 @@ export default function Home() {
 
   const logout = async () => {
     try {
-      await api.post("/auth/logout");
+      await api.post("/api/v1/auth/logout");
     } catch (err) {
       console.error(err);
     } finally {

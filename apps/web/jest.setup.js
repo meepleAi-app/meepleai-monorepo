@@ -16,6 +16,25 @@ global.ResizeObserver = class ResizeObserver {
   }
 };
 
+// Mock IntersectionObserver for framer-motion InView (used in index.tsx)
+global.IntersectionObserver = class IntersectionObserver {
+  constructor(callback) {
+    this.callback = callback;
+  }
+  observe() {
+    // Mock observe method
+  }
+  unobserve() {
+    // Mock unobserve method
+  }
+  disconnect() {
+    // Mock disconnect method
+  }
+  takeRecords() {
+    return [];
+  }
+};
+
 beforeEach(() => {
   const state = typeof expect !== 'undefined' ? expect.getState?.() : undefined;
   if (state?.testPath?.includes('src/pages/__tests__/admin.test.tsx')) {

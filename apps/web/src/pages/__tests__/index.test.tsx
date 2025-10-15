@@ -399,8 +399,9 @@ describe('Home page (Landing Page)', () => {
       // Fill and submit
       await user.type(screen.getByLabelText('Email'), 'user@example.com');
       await user.type(screen.getByLabelText('Password'), 'wrong-password');
-      const loginButton = screen.getByRole('button', { name: 'Login' });
-      await user.click(loginButton);
+      // Get all Login buttons (tab + submit) and click the submit button (index 1)
+      const loginButtons = screen.getAllByRole('button', { name: 'Login' });
+      await user.click(loginButtons[1]);
 
       await waitFor(() => {
         expect(screen.getByText('Accesso non riuscito.')).toBeInTheDocument();

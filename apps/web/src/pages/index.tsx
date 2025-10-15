@@ -419,8 +419,9 @@ export default function Home() {
                 {authMode === "login" ? (
                   <form onSubmit={handleLogin} className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-300">Email</label>
+                      <label htmlFor="login-email" className="text-sm font-medium text-slate-300">Email</label>
                       <input
+                        id="login-email"
                         type="email"
                         value={loginForm.email}
                         onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
@@ -429,8 +430,9 @@ export default function Home() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-300">Password</label>
+                      <label htmlFor="login-password" className="text-sm font-medium text-slate-300">Password</label>
                       <input
+                        id="login-password"
                         type="password"
                         value={loginForm.password}
                         onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
@@ -445,8 +447,9 @@ export default function Home() {
                 ) : (
                   <form onSubmit={handleRegister} className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-300">Email</label>
+                      <label htmlFor="register-email" className="text-sm font-medium text-slate-300">Email</label>
                       <input
+                        id="register-email"
                         type="email"
                         value={registerForm.email}
                         onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
@@ -455,8 +458,9 @@ export default function Home() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-300">Password (min 8 characters)</label>
+                      <label htmlFor="register-password" className="text-sm font-medium text-slate-300">Password (min 8 characters)</label>
                       <input
+                        id="register-password"
                         type="password"
                         value={registerForm.password}
                         onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
@@ -466,16 +470,18 @@ export default function Home() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-300">Display Name (optional)</label>
+                      <label htmlFor="register-displayName" className="text-sm font-medium text-slate-300">Display Name (optional)</label>
                       <input
+                        id="register-displayName"
                         value={registerForm.displayName}
                         onChange={(e) => setRegisterForm({ ...registerForm, displayName: e.target.value })}
                         className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white outline-none focus:border-primary-500 transition-colors"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-300">Role</label>
+                      <label htmlFor="register-role" className="text-sm font-medium text-slate-300">Role</label>
                       <select
+                        id="register-role"
                         value={registerForm.role}
                         onChange={(e) => setRegisterForm({ ...registerForm, role: e.target.value })}
                         className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white outline-none focus:border-primary-500 transition-colors"

@@ -4,6 +4,7 @@ import '@testing-library/jest-dom'
 jest.mock('framer-motion', () => {
   const React = require('react');
 
+  // Factory function to create mock motion components with proper ref forwarding
   const makeMockComponent = (type) => {
     return React.forwardRef((props, ref) => {
       // Remove all framer-motion specific props and keep only standard HTML props
@@ -41,8 +42,18 @@ jest.mock('framer-motion', () => {
       section: makeMockComponent('section'),
       article: makeMockComponent('article'),
     },
-    AnimatePresence: ({ children }) => <>{children}</>,
-    useInView: () => [React.useRef(null), true], // Always return true for inView
+    // AnimatePresence mock that renders all children immediately
+    // This is necessary because jsdom doesn't support requestAnimationFrame
+    // and AnimatePresence uses lazy rendering that doesn't work in test environment
+    AnimatePresence: ({ children, mode }) => {
+      // In test environment, render all children immediately without animation delays
+      // This ensures form elements are accessible to tests via getByLabelText/getByRole
+      return <>{React.Children.map(children, child => child)}</>;
+    },
+    // Always return true for inView to trigger animations immediately in tests
+    useInView: () => [React.useRef(null), true],
+    // Disable motion by returning true for reduced motion preference
+    useReducedMotion: () => true,
   };
 });
 

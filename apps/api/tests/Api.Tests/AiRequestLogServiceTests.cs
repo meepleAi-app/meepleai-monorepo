@@ -194,4 +194,295 @@ public class AiRequestLogServiceTests
         Assert.Equal(2, stats.EndpointCounts["qa"]);
         Assert.Equal(1, stats.EndpointCounts["setup"]);
     }
+
+    [Fact]
+    public async Task GetStatsAsync_WhenNoData_ReturnsEmptyStats()
+    {
+        await using var dbContext = CreateInMemoryContext();
+        var loggerMock = new Mock<ILogger<AiRequestLogService>>();
+        var service = new AiRequestLogService(dbContext, loggerMock.Object);
+
+        var stats = await service.GetStatsAsync(ct: CancellationToken.None);
+
+        Assert.Equal(0, stats.TotalRequests);
+        Assert.Equal(0, stats.AvgLatencyMs);
+        Assert.Equal(0, stats.TotalTokens);
+        Assert.Equal(0, stats.SuccessRate);
+        Assert.Empty(stats.EndpointCounts);
+    }
+
+    [Fact]
+    public async Task GetStatsAsync_FiltersBy_UserId()
+    {
+        await using var dbContext = CreateInMemoryContext();
+        dbContext.AiRequestLogs.AddRange(
+            new AiRequestLogEntity
+            {
+                Endpoint = "qa",
+                UserId = "user-1",
+                GameId = "game-1",
+                CreatedAt = DateTime.UtcNow,
+                LatencyMs = 100,
+                TokenCount = 50,
+                Status = "Success"
+            },
+            new AiRequestLogEntity
+            {
+                Endpoint = "setup",
+                UserId = "user-2",
+                GameId = "game-1",
+                CreatedAt = DateTime.UtcNow,
+                LatencyMs = 200,
+                TokenCount = 100,
+                Status = "Success"
+            });
+        await dbContext.SaveChangesAsync();
+
+        var loggerMock = new Mock<ILogger<AiRequestLogService>>();
+        var service = new AiRequestLogService(dbContext, loggerMock.Object);
+
+        var stats = await service.GetStatsAsync(userId: "user-1", ct: CancellationToken.None);
+
+        Assert.Equal(1, stats.TotalRequests);
+        Assert.Equal(100, stats.AvgLatencyMs);
+        Assert.Equal(50, stats.TotalTokens);
+        Assert.Equal(1.0, stats.SuccessRate);
+        Assert.Single(stats.EndpointCounts);
+        Assert.Equal(1, stats.EndpointCounts["qa"]);
+    }
+
+    [Fact]
+    public async Task GetStatsAsync_FiltersBy_GameId()
+    {
+        await using var dbContext = CreateInMemoryContext();
+        dbContext.AiRequestLogs.AddRange(
+            new AiRequestLogEntity
+            {
+                Endpoint = "qa",
+                UserId = "user-1",
+                GameId = "game-1",
+                CreatedAt = DateTime.UtcNow,
+                LatencyMs = 150,
+                TokenCount = 75,
+                Status = "Success"
+            },
+            new AiRequestLogEntity
+            {
+                Endpoint = "explain",
+                UserId = "user-1",
+                GameId = "game-2",
+                CreatedAt = DateTime.UtcNow,
+                LatencyMs = 250,
+                TokenCount = 125,
+                Status = "Error"
+            });
+        await dbContext.SaveChangesAsync();
+
+        var loggerMock = new Mock<ILogger<AiRequestLogService>>();
+        var service = new AiRequestLogService(dbContext, loggerMock.Object);
+
+        var stats = await service.GetStatsAsync(gameId: "game-1", ct: CancellationToken.None);
+
+        Assert.Equal(1, stats.TotalRequests);
+        Assert.Equal(150, stats.AvgLatencyMs);
+        Assert.Equal(75, stats.TotalTokens);
+        Assert.Equal(1.0, stats.SuccessRate);
+        Assert.Single(stats.EndpointCounts);
+        Assert.Equal(1, stats.EndpointCounts["qa"]);
+    }
+
+    [Fact]
+    public async Task GetStatsAsync_ComputesSuccessRate_WhenAllErrors()
+    {
+        await using var dbContext = CreateInMemoryContext();
+        dbContext.AiRequestLogs.AddRange(
+            new AiRequestLogEntity
+            {
+                Endpoint = "qa",
+                UserId = "user-1",
+                GameId = "game-1",
+                CreatedAt = DateTime.UtcNow,
+                LatencyMs = 100,
+                TokenCount = 0,
+                Status = "Error"
+            },
+            new AiRequestLogEntity
+            {
+                Endpoint = "setup",
+                UserId = "user-1",
+                GameId = "game-1",
+                CreatedAt = DateTime.UtcNow,
+                LatencyMs = 150,
+                TokenCount = 0,
+                Status = "Error"
+            });
+        await dbContext.SaveChangesAsync();
+
+        var loggerMock = new Mock<ILogger<AiRequestLogService>>();
+        var service = new AiRequestLogService(dbContext, loggerMock.Object);
+
+        var stats = await service.GetStatsAsync(ct: CancellationToken.None);
+
+        Assert.Equal(2, stats.TotalRequests);
+        Assert.Equal(0.0, stats.SuccessRate);
+    }
+
+    [Fact]
+    public async Task GetRequestsAsync_FiltersBy_DateRange()
+    {
+        await using var dbContext = CreateInMemoryContext();
+        var now = DateTime.UtcNow;
+        dbContext.AiRequestLogs.AddRange(
+            new AiRequestLogEntity
+            {
+                Endpoint = "qa",
+                UserId = "user-1",
+                GameId = "game-1",
+                CreatedAt = now.AddHours(-10),
+                LatencyMs = 100,
+                Status = "Success"
+            },
+            new AiRequestLogEntity
+            {
+                Endpoint = "setup",
+                UserId = "user-1",
+                GameId = "game-1",
+                CreatedAt = now.AddHours(-5),
+                LatencyMs = 200,
+                Status = "Success"
+            },
+            new AiRequestLogEntity
+            {
+                Endpoint = "explain",
+                UserId = "user-1",
+                GameId = "game-1",
+                CreatedAt = now.AddHours(-1),
+                LatencyMs = 150,
+                Status = "Success"
+            });
+        await dbContext.SaveChangesAsync();
+
+        var loggerMock = new Mock<ILogger<AiRequestLogService>>();
+        var service = new AiRequestLogService(dbContext, loggerMock.Object);
+
+        var result = await service.GetRequestsAsync(
+            startDate: now.AddHours(-6),
+            endDate: now,
+            ct: CancellationToken.None);
+
+        Assert.Equal(2, result.Requests.Count);
+        Assert.Equal(2, result.TotalCount);
+        Assert.DoesNotContain(result.Requests, r => r.CreatedAt < now.AddHours(-6));
+    }
+
+    [Fact]
+    public async Task GetRequestsAsync_OrdersByCreatedAtDescending()
+    {
+        await using var dbContext = CreateInMemoryContext();
+        var now = DateTime.UtcNow;
+        dbContext.AiRequestLogs.AddRange(
+            new AiRequestLogEntity
+            {
+                Endpoint = "qa",
+                UserId = "user-1",
+                GameId = "game-1",
+                CreatedAt = now.AddHours(-3),
+                LatencyMs = 100,
+                Status = "Success"
+            },
+            new AiRequestLogEntity
+            {
+                Endpoint = "setup",
+                UserId = "user-1",
+                GameId = "game-1",
+                CreatedAt = now.AddHours(-1),
+                LatencyMs = 200,
+                Status = "Success"
+            },
+            new AiRequestLogEntity
+            {
+                Endpoint = "explain",
+                UserId = "user-1",
+                GameId = "game-1",
+                CreatedAt = now.AddHours(-2),
+                LatencyMs = 150,
+                Status = "Success"
+            });
+        await dbContext.SaveChangesAsync();
+
+        var loggerMock = new Mock<ILogger<AiRequestLogService>>();
+        var service = new AiRequestLogService(dbContext, loggerMock.Object);
+
+        var result = await service.GetRequestsAsync(ct: CancellationToken.None);
+
+        Assert.Equal(3, result.Requests.Count);
+        Assert.Equal("setup", result.Requests[0].Endpoint); // Most recent
+        Assert.Equal("explain", result.Requests[1].Endpoint);
+        Assert.Equal("qa", result.Requests[2].Endpoint); // Oldest
+    }
+
+    [Fact]
+    public async Task GetRequestsAsync_WhenOffsetBeyondTotal_ReturnsEmpty()
+    {
+        await using var dbContext = CreateInMemoryContext();
+        dbContext.AiRequestLogs.Add(
+            new AiRequestLogEntity
+            {
+                Endpoint = "qa",
+                UserId = "user-1",
+                GameId = "game-1",
+                CreatedAt = DateTime.UtcNow,
+                LatencyMs = 100,
+                Status = "Success"
+            });
+        await dbContext.SaveChangesAsync();
+
+        var loggerMock = new Mock<ILogger<AiRequestLogService>>();
+        var service = new AiRequestLogService(dbContext, loggerMock.Object);
+
+        var result = await service.GetRequestsAsync(offset: 10, ct: CancellationToken.None);
+
+        Assert.Empty(result.Requests);
+        Assert.Equal(1, result.TotalCount); // Total count still correct
+    }
+
+    [Fact]
+    public async Task LogRequestAsync_WithNullOptionalValues_PersistsSuccessfully()
+    {
+        await using var dbContext = CreateInMemoryContext();
+        var loggerMock = new Mock<ILogger<AiRequestLogService>>();
+        var service = new AiRequestLogService(dbContext, loggerMock.Object);
+
+        await service.LogRequestAsync(
+            userId: null,
+            gameId: null,
+            endpoint: "qa",
+            query: null,
+            responseSnippet: null,
+            latencyMs: 100,
+            tokenCount: null,
+            confidence: null,
+            status: "Success",
+            errorMessage: null,
+            ipAddress: null,
+            userAgent: null,
+            promptTokens: null,
+            completionTokens: null,
+            model: null,
+            finishReason: null,
+            apiKeyId: null,
+            ct: CancellationToken.None);
+
+        var logs = await dbContext.AiRequestLogs.ToListAsync();
+        Assert.Single(logs);
+
+        var log = logs[0];
+        Assert.Null(log.UserId);
+        Assert.Null(log.GameId);
+        Assert.Null(log.Query);
+        Assert.Null(log.Confidence);
+        Assert.Equal(0, log.TokenCount); // Default value
+        Assert.Equal(0, log.PromptTokens);
+        Assert.Equal(0, log.CompletionTokens);
+    }
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "../lib/api";
+import { EndpointDistributionChart, LatencyDistributionChart, RequestsTimeSeriesChart, FeedbackChart } from "../components/AdminCharts";
 
 type AiRequest = {
   id: string;
@@ -264,6 +265,31 @@ export default function AdminDashboard() {
               <span style={{ color: "#34a853", fontWeight: 600 }}>Utile: {helpfulCount}</span>
               <span style={{ color: "#ea4335", fontWeight: 600 }}>Non utile: {notHelpfulCount}</span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Charts Section */}
+      {stats && requests.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(500px, 1fr))", gap: 16, marginBottom: 24 }}>
+          <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
+            <h3 style={{ marginTop: 0, marginBottom: 16 }}>Endpoint Distribution</h3>
+            <EndpointDistributionChart endpointCounts={stats.endpointCounts} />
+          </div>
+
+          <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
+            <h3 style={{ marginTop: 0, marginBottom: 16 }}>Latency Distribution</h3>
+            <LatencyDistributionChart requests={filteredRequests.map(r => ({ latencyMs: r.latencyMs, endpoint: r.endpoint, createdAt: r.createdAt }))} />
+          </div>
+
+          <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
+            <h3 style={{ marginTop: 0, marginBottom: 16 }}>Requests Over Time</h3>
+            <RequestsTimeSeriesChart requests={filteredRequests.map(r => ({ createdAt: r.createdAt, status: r.status }))} />
+          </div>
+
+          <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
+            <h3 style={{ marginTop: 0, marginBottom: 16 }}>User Feedback</h3>
+            <FeedbackChart feedbackCounts={stats.feedbackCounts} />
           </div>
         </div>
       )}

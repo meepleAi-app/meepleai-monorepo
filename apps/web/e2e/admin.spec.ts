@@ -182,4 +182,163 @@ test.describe('Admin dashboard', () => {
     await expect(page.getByText('Failed to fetch requests')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Back to Home' })).toBeVisible();
   });
+
+  test('displays visual charts with data', async ({ page }) => {
+    await mockAuthenticatedUser(page);
+
+    const requests = [
+      {
+        id: 'req-1',
+        userId: 'user-1',
+        gameId: 'chess',
+        endpoint: 'qa',
+        query: 'How do I castle?',
+        responseSnippet: 'Castling moves...',
+        latencyMs: 120,
+        tokenCount: 100,
+        promptTokens: 50,
+        completionTokens: 50,
+        confidence: 0.95,
+        status: 'Success',
+        errorMessage: null,
+        ipAddress: '127.0.0.1',
+        userAgent: 'Playwright',
+        createdAt: new Date('2025-01-06T10:00:00Z').toISOString(),
+        model: 'gpt-4',
+        finishReason: 'stop'
+      },
+      {
+        id: 'req-2',
+        userId: 'user-1',
+        gameId: 'chess',
+        endpoint: 'explain',
+        query: 'Explain en passant',
+        responseSnippet: 'En passant is...',
+        latencyMs: 250,
+        tokenCount: 150,
+        promptTokens: 60,
+        completionTokens: 90,
+        confidence: 0.88,
+        status: 'Success',
+        errorMessage: null,
+        ipAddress: '127.0.0.1',
+        userAgent: 'Playwright',
+        createdAt: new Date('2025-01-06T10:15:00Z').toISOString(),
+        model: 'gpt-4',
+        finishReason: 'stop'
+      },
+      {
+        id: 'req-3',
+        userId: 'user-2',
+        gameId: 'chess',
+        endpoint: 'setup',
+        query: 'How to setup chess board?',
+        responseSnippet: 'Place pieces...',
+        latencyMs: 350,
+        tokenCount: 200,
+        promptTokens: 80,
+        completionTokens: 120,
+        confidence: 0.92,
+        status: 'Error',
+        errorMessage: 'Timeout',
+        ipAddress: '127.0.0.1',
+        userAgent: 'Playwright',
+        createdAt: new Date('2025-01-06T10:30:00Z').toISOString(),
+        model: 'gpt-4',
+        finishReason: 'length'
+      }
+    ];
+
+    await page.route(new RegExp(`${apiBase}/admin/requests.*`), async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ requests, totalCount: 3 })
+      });
+    });
+
+    await page.route(`${apiBase}/admin/stats`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          totalRequests: 3,
+          avgLatencyMs: 240,
+          totalTokens: 450,
+          successRate: 0.67,
+          endpointCounts: {
+            qa: 1,
+            explain: 1,
+            setup: 1
+          },
+          feedbackCounts: {
+            helpful: 5,
+            'not-helpful': 2
+          },
+          totalFeedback: 7
+        })
+      });
+    });
+
+    await page.goto('/admin');
+
+    // Wait for charts to render
+    await page.waitForTimeout(500);
+
+    // Check Endpoint Distribution Chart
+    await expect(page.getByRole('heading', { name: 'Endpoint Distribution' })).toBeVisible();
+
+    // Check Latency Distribution Chart
+    await expect(page.getByRole('heading', { name: 'Latency Distribution' })).toBeVisible();
+
+    // Check Requests Over Time Chart
+    await expect(page.getByRole('heading', { name: 'Requests Over Time' })).toBeVisible();
+
+    // Check User Feedback Chart
+    await expect(page.getByRole('heading', { name: 'User Feedback' })).toBeVisible();
+
+    // Verify charts are rendered (check for SVG elements from recharts)
+    const svgElements = page.locator('svg.recharts-surface');
+    await expect(svgElements).toHaveCount(4); // 4 charts
+  });
+
+  test('hides charts when no data available', async ({ page }) => {
+    await mockAuthenticatedUser(page);
+
+    await page.route(new RegExp(`${apiBase}/admin/requests.*`), async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ requests: [], totalCount: 0 })
+      });
+    });
+
+    await page.route(`${apiBase}/admin/stats`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          totalRequests: 0,
+          avgLatencyMs: 0,
+          totalTokens: 0,
+          successRate: 0,
+          endpointCounts: {},
+          feedbackCounts: {},
+          totalFeedback: 0
+        })
+      });
+    });
+
+    await page.goto('/admin');
+
+    // Charts section should not be visible when there's no data
+    await expect(page.getByRole('heading', { name: 'Endpoint Distribution' })).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Latency Distribution' })).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Requests Over Time' })).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: 'User Feedback' })).not.toBeVisible();
+
+    // But statistics cards should still be visible
+    await expect(page.getByText('Total Requests')).toBeVisible();
+    await expect(page.getByText('0', { exact: true })).toBeVisible();
+  });
 });

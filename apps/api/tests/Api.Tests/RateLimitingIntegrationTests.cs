@@ -52,14 +52,14 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
 
         // When: User makes request within limit
         context.RateLimitService.EnqueueResponse(allowed: true, tokensRemaining: 59, retryAfterSeconds: 0);
-        var okResponse = await context.Client.GetAsync("/logs");
+        var okResponse = await context.Client.GetAsync("/api/v1/logs");
 
         // Then: Request succeeds
         Assert.Equal(HttpStatusCode.OK, okResponse.StatusCode);
 
         // When: User exceeds rate limit
         context.RateLimitService.EnqueueResponse(allowed: false, tokensRemaining: 0, retryAfterSeconds: 15);
-        var limitedResponse = await context.Client.GetAsync("/logs");
+        var limitedResponse = await context.Client.GetAsync("/api/v1/logs");
 
         // Then: Request returns 429 with retry-after headers
         Assert.Equal(HttpStatusCode.TooManyRequests, limitedResponse.StatusCode);
@@ -98,7 +98,7 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
         context.RateLimitService.FailWith(new RedisConnectionException(ConnectionFailureType.SocketFailure, "redis down"));
 
         // When: User makes request
-        var response = await context.Client.GetAsync("/logs");
+        var response = await context.Client.GetAsync("/api/v1/logs");
 
         // Then: Request succeeds (fail-open behavior)
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -136,7 +136,7 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
 
         var email = $"rate-limit-admin-{TestRunId}-{Guid.NewGuid():N}@example.com";
         var registerPayload = new RegisterPayload(Email: email, Password: "Password123!", DisplayName: "Rate Limit Admin", Role: null);
-        var registerResponse = await client.PostAsJsonAsync("/auth/register", registerPayload);
+        var registerResponse = await client.PostAsJsonAsync("/api/v1/auth/register", registerPayload);
         registerResponse.EnsureSuccessStatusCode();
 
         // Track user for cleanup

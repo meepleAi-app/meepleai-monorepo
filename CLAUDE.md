@@ -69,7 +69,37 @@ tools/             - PowerShell scripts
 - **API Client**: `lib/api.ts` - `get/post/put/delete`, cookie auth (`credentials: "include"`), 401 handling, base URL from `NEXT_PUBLIC_API_BASE`
 - **Tests**: Jest (90% coverage) + Playwright E2E
 
-**Auth** (`Program.cs:226-248`): Cookie-based sessions → `AuthService.ValidateSessionAsync()` → ClaimsPrincipal (UserId, Email, DisplayName, Role)
+**Auth** (`Program.cs:226-248`): Dual authentication system supports both cookie-based sessions and API keys
+- **Cookie Auth**: Session cookies → `AuthService.ValidateSessionAsync()` → ClaimsPrincipal (UserId, Email, DisplayName, Role)
+- **API Key Auth**: X-API-Key header → `ApiKeyAuthenticationService.ValidateApiKeyAsync()` → ClaimsPrincipal with scopes
+- API key takes precedence if both are provided
+
+**API Key Authentication** (API-01):
+- **ApiKeyAuthenticationService** (`Services/ApiKeyAuthenticationService.cs`): Core API key operations
+  - `ValidateApiKeyAsync(apiKey)` - Validates API key via PBKDF2 hash verification
+  - `GenerateApiKeyAsync(userId, keyName, scopes, expiresAt, environment)` - Generates new API key
+  - `RevokeApiKeyAsync(keyId, revokedByUserId)` - Revokes API key
+  - Uses PBKDF2 with 210,000 iterations (SHA256) for key hashing, consistent with password hashing
+- **ApiKeyAuthenticationMiddleware** (`Middleware/ApiKeyAuthenticationMiddleware.cs`): HTTP middleware
+  - Processes `/api/*` paths only (skips health checks, swagger, root)
+  - Validates `X-API-Key` header
+  - Sets ClaimsPrincipal with user info and scopes on successful validation
+  - Returns 401 Unauthorized with JSON error response on failure
+  - Falls through to cookie auth if no API key provided
+- **API Key Format**: `mpl_{environment}_{random_base64}` (e.g., `mpl_live_abc123...`, `mpl_test_xyz789...`)
+- **Database**: `api_keys` table with indexes on `key_hash` (unique), `user_id`, `is_active+expires_at`
+- **Migration**: `20251015084754_AddApiKeysTable` - Creates api_keys table and relationships
+- **Security Features**:
+  - Secure hash storage (never stores plaintext keys)
+  - Constant-time hash comparison (prevents timing attacks)
+  - Key expiration support (optional)
+  - Key revocation support
+  - Scoped permissions per key
+  - Last used timestamp tracking
+  - Environment tagging (live/test)
+- **Tests**: 21 unit tests (all passing) + 17 integration tests
+  - `ApiKeyAuthenticationServiceTests.cs` - Unit tests with SQLite in-memory
+  - `ApiKeyAuthenticationIntegrationTests.cs` - Integration tests with Testcontainers
 
 **Session Management** (AUTH-03):
 - **SessionManagementService** (`Services/SessionManagementService.cs`): Core session management
@@ -97,6 +127,19 @@ tools/             - PowerShell scripts
   - `SessionAutoRevocationServiceTests.cs` - Background service tests
 
 **Vector Pipeline**: PDF → PdfTextExtractionService → TextChunkingService → EmbeddingService (OpenRouter) → QdrantService → RagService (search)
+
+**API Versioning** (API-01):
+- **URL Path Strategy**: All API endpoints under `/api/v1/*`
+- **Infrastructure Endpoints**: Unversioned (`/`, `/health`, `/health/ready`, `/health/live`)
+- **Swagger/OpenAPI**: Available at `/api/docs` in development mode
+  - Supports both ApiKey (`X-API-Key` header) and Cookie authentication
+  - Security definitions for both auth methods
+  - Bearer token style for API keys
+- **Example URLs**:
+  - `/api/v1/auth/login` - Authentication
+  - `/api/v1/games` - Games list
+  - `/api/v1/agents/qa` - Q&A agent
+  - `/health/ready` - Health check (unversioned)
 
 **CORS** (`Program.cs:141-170`): Policy "web", origins from config, fallback `http://localhost:3000`, credentials enabled
 
@@ -140,7 +183,9 @@ Templates: `infra/env/*.env.*.example`. Never commit `.env.dev/local/prod`
 
 ## Workflows
 
-**New API Endpoint**: Service method → `Program.cs` endpoint (line 250+) → models in `Models/` → tests → auth/authz
+**New API Endpoint**: Service method → `Program.cs` v1 route group endpoint (line 468+) → models in `Models/` → tests → auth/authz
+- All new endpoints must use versioned path: `v1Api.MapGet("/resource", ...)` not `app.MapGet("/api/v1/resource", ...)`
+- Infrastructure endpoints (health checks, root) remain unversioned
 
 **New DB Entity**: `Infrastructure/Entities/` → `DbSet<T>` in `MeepleAiDbContext` → `dotnet ef migrations add <Name> --project src/Api` → review → `dotnet ef database update --project src/Api`
 

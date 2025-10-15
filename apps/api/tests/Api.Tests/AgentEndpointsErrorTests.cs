@@ -26,7 +26,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var payload = new { gameId = "test-game", query = "What are the rules?" };
 
         // When: User tries to ask question without authentication
-        var response = await client.PostAsJsonAsync("/agents/qa", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/agents/qa", payload);
 
         // Then: System returns unauthorized
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -39,7 +39,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/qa");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = JsonContent.Create(new { gameId = "", query = "What are the rules?" });
         AddCookies(request, cookies);
 
@@ -57,7 +57,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/qa");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = JsonContent.Create(new { gameId = (string?)null, query = "What are the rules?" });
         AddCookies(request, cookies);
 
@@ -76,7 +76,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/qa");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = JsonContent.Create(new { gameId = game.Id, query = "" });
         AddCookies(request, cookies);
 
@@ -104,7 +104,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var payload = new { gameId = "test-game", topic = "Setup phase" };
 
         // When: User tries to get explanation without authentication
-        var response = await client.PostAsJsonAsync("/agents/explain", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/agents/explain", payload);
 
         // Then: System returns unauthorized
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -117,7 +117,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/explain");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
         request.Content = JsonContent.Create(new { gameId = "", topic = "Setup phase" });
         AddCookies(request, cookies);
 
@@ -135,7 +135,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/explain");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
         request.Content = JsonContent.Create(new { gameId = (string?)null, topic = "Setup phase" });
         AddCookies(request, cookies);
 
@@ -154,7 +154,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/explain");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
         request.Content = JsonContent.Create(new { gameId = game.Id, topic = "" });
         AddCookies(request, cookies);
 
@@ -181,7 +181,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var payload = new { gameId = "test-game" };
 
         // When: User tries to get setup guide without authentication
-        var response = await client.PostAsJsonAsync("/agents/setup", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/agents/setup", payload);
 
         // Then: System returns unauthorized
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -194,7 +194,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/setup");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup");
         request.Content = JsonContent.Create(new { gameId = "" });
         AddCookies(request, cookies);
 
@@ -212,7 +212,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/setup");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup");
         request.Content = JsonContent.Create(new { gameId = (string?)null });
         AddCookies(request, cookies);
 
@@ -235,7 +235,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var payload = new { userId = "user-id", messageId = "msg-123", endpoint = "qa", outcome = "helpful" };
 
         // When: User tries to submit feedback without authentication
-        var response = await client.PostAsJsonAsync("/agents/feedback", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/agents/feedback", payload);
 
         // Then: System returns unauthorized
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -248,7 +248,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/feedback");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback");
         request.Content = JsonContent.Create(new
         {
             userId = "different-user-id",
@@ -272,7 +272,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/feedback");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback");
         request.Content = JsonContent.Create(new
         {
             userId = user.Id,
@@ -296,7 +296,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/feedback");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback");
         request.Content = JsonContent.Create(new
         {
             userId = user.Id,

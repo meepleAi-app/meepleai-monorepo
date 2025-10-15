@@ -52,7 +52,7 @@ public class AdminRequestsEndpointsTests : AdminTestFixture
         var seedContext = await SeedDashboardDataAsync(adminUserId, editorUserId);
 
         // When: Admin requests logs with filters
-        var requestUri = $"/admin/requests?limit=10&offset=0&userId={adminUserId}&gameId=game-1" +
+        var requestUri = $"/api/v1/admin/requests?limit=10&offset=0&userId={adminUserId}&gameId=game-1" +
                          $"&startDate={Uri.EscapeDataString(seedContext.StartDate.ToString("O"))}" +
                          $"&endDate={Uri.EscapeDataString(seedContext.EndDate.ToString("O"))}";
 
@@ -119,7 +119,7 @@ public class AdminRequestsEndpointsTests : AdminTestFixture
         var cookies = await RegisterAndAuthenticateAsync(nonAdminClient, email, role);
 
         // When: User requests admin request logs
-        var request = new HttpRequestMessage(HttpMethod.Get, "/admin/requests");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/requests");
         AddCookies(request, cookies);
 
         var response = await nonAdminClient.SendAsync(request);
@@ -141,7 +141,7 @@ public class AdminRequestsEndpointsTests : AdminTestFixture
         using var client = Factory.CreateHttpsClient();
 
         // When: Anonymous user requests admin logs
-        var response = await client.GetAsync("/admin/requests");
+        var response = await client.GetAsync("/api/v1/admin/requests");
 
         // Then: System requires authentication
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);

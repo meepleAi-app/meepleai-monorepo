@@ -54,7 +54,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
             Role: null);
 
         // When: User posts to /auth/register
-        var response = await client.PostAsJsonAsync("/auth/register", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Then: Registration succeeds
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -100,7 +100,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
             Password = "Password123!"
         };
 
-        var response = await client.PostAsJsonAsync("/auth/login", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
 
         // Then: Login succeeds
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -135,7 +135,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         var cookies = await RegisterAndAuthenticateAsync(client, $"seed-admin-{TestRunId}@example.com", role: "Admin");
 
         // When: Admin posts to /admin/seed with game ID
-        var request = new HttpRequestMessage(HttpMethod.Post, "/admin/seed")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/seed")
         {
             Content = JsonContent.Create(new SeedRequest("terraforming-mars"))
         };
@@ -207,7 +207,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         TrackPdfDocumentId(pdfId);
 
         // When: Admin requests RuleSpec generation from PDF
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/ingest/pdf/{pdfId}/rulespec");
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/ingest/pdf/{pdfId}/rulespec");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -247,7 +247,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
             DisplayName: "Test User",
             Role: null);
 
-        var response = await client.PostAsJsonAsync("/auth/register", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
         response.EnsureSuccessStatusCode();
 
         // Track user for cleanup
@@ -288,7 +288,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
             DisplayName: "Initial User",
             Role: null);
 
-        var initialResponse = await client.PostAsJsonAsync("/auth/register", initialPayload);
+        var initialResponse = await client.PostAsJsonAsync("/api/v1/auth/register", initialPayload);
         initialResponse.EnsureSuccessStatusCode();
 
         // Track initial user for cleanup
@@ -306,7 +306,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
             DisplayName: "Escalation User",
             Role: requestedRole);
 
-        var response = await client.PostAsJsonAsync("/auth/register", escalationPayload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/register", escalationPayload);
 
         // Then: Registration is rejected with Conflict
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);

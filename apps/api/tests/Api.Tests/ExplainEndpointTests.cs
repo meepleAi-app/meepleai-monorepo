@@ -62,7 +62,7 @@ public class ExplainEndpointTests : IntegrationTestBase
             topic = "winning conditions"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/agents/explain")
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };
@@ -125,7 +125,7 @@ public class ExplainEndpointTests : IntegrationTestBase
             topic = "winning conditions"
         };
 
-        var response = await client.PostAsJsonAsync("/agents/explain", request);
+        var response = await client.PostAsJsonAsync("/api/v1/agents/explain", request);
 
         // Then: HTTP 401
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -153,7 +153,7 @@ public class ExplainEndpointTests : IntegrationTestBase
             topic = ""
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/agents/explain")
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };
@@ -195,7 +195,7 @@ public class ExplainEndpointTests : IntegrationTestBase
             topic = "rules"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/agents/explain")
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };
@@ -231,7 +231,7 @@ public class ExplainEndpointTests : IntegrationTestBase
             topic = "winning conditions"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/agents/explain")
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };
@@ -275,7 +275,7 @@ public class ExplainEndpointTests : IntegrationTestBase
             chatId = chat.Id
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/agents/explain")
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };
@@ -329,7 +329,7 @@ public class ExplainEndpointTests : IntegrationTestBase
             topic = "scoring"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/agents/explain")
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };

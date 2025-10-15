@@ -72,7 +72,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // WHEN: I trigger indexing for the PDF
         _client.DefaultRequestHeaders.Clear();
         _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
-        var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
+        var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
 
         // THEN: The request should succeed
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -118,7 +118,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // WHEN: I search in the tic-tac-toe game
         _client.DefaultRequestHeaders.Clear();
         _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
-        var searchResponse = await _client.PostAsJsonAsync("/agents/qa", new
+        var searchResponse = await _client.PostAsJsonAsync("/api/v1/agents/qa", new
         {
             gameId = "tic-tac-toe",
             query = "how do players win the game?"
@@ -155,7 +155,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // WHEN: I trigger indexing
         _client.DefaultRequestHeaders.Clear();
         _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
-        var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
+        var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should create exactly 1 chunk
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -183,7 +183,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // WHEN: I trigger indexing
         _client.DefaultRequestHeaders.Clear();
         _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
-        var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
+        var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should create many chunks (with 512 char chunks and 50 overlap, expect ~95-120 chunks)
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -215,7 +215,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // WHEN: I trigger indexing again
         _client.DefaultRequestHeaders.Clear();
         _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
-        var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
+        var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should succeed and update the same VectorDocumentEntity
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -249,7 +249,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // WHEN: I trigger indexing
         _client.DefaultRequestHeaders.Clear();
         _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
-        var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
+        var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should return 400 Bad Request
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -273,7 +273,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // WHEN: I trigger indexing
         _client.DefaultRequestHeaders.Clear();
         _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
-        var response = await _client.PostAsync($"/ingest/pdf/{fakePdfId}/index", null);
+        var response = await _client.PostAsync($"/api/v1/ingest/pdf/{fakePdfId}/index", null);
 
         // THEN: Should return 404 Not Found
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -298,7 +298,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // WHEN: Trigger indexing
         _client.DefaultRequestHeaders.Clear();
         _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
-        var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
+        var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should succeed
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -319,7 +319,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // WHEN: Trigger indexing
         _client.DefaultRequestHeaders.Clear();
         _client.DefaultRequestHeaders.Add("Cookie", _editorSessionToken);
-        var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
+        var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should succeed
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -340,7 +340,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         // WHEN: Attempt to trigger indexing
         _client.DefaultRequestHeaders.Clear();
         _client.DefaultRequestHeaders.Add("Cookie", _userSessionToken);
-        var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
+        var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should return 403 Forbidden
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -360,7 +360,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
         // WHEN: Attempt to trigger indexing
         _client.DefaultRequestHeaders.Clear();
-        var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
+        var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should return 401 Unauthorized
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -372,7 +372,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
     private async Task<string> LoginAsync(string email, string password)
     {
-        var loginResponse = await _client.PostAsJsonAsync("/auth/login", new { email, password });
+        var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
         loginResponse.EnsureSuccessStatusCode();
 
         var setCookieHeader = loginResponse.Headers.GetValues("Set-Cookie").FirstOrDefault();
@@ -441,7 +441,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
         _client.DefaultRequestHeaders.Clear();
         _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
-        var response = await _client.PostAsync($"/ingest/pdf/{pdfId}/index", null);
+        var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
         response.EnsureSuccessStatusCode();
 
         return pdfId;

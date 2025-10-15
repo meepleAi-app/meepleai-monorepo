@@ -44,7 +44,7 @@ public class GameEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Admin posts to /games with valid game data
-        var request = new HttpRequestMessage(HttpMethod.Post, "/games")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
         {
             Content = JsonContent.Create(new CreateGameRequest("Terraforming Mars", "terraforming-mars"))
         };
@@ -89,7 +89,7 @@ public class GameEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Editor posts to /games
-        var request = new HttpRequestMessage(HttpMethod.Post, "/games")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
         {
             Content = JsonContent.Create(new CreateGameRequest("Brass Birmingham", "brass-birmingham"))
         };
@@ -123,7 +123,7 @@ public class GameEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User posts to /games
-        var request = new HttpRequestMessage(HttpMethod.Post, "/games")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
         {
             Content = JsonContent.Create(new CreateGameRequest("Catan", "catan"))
         };

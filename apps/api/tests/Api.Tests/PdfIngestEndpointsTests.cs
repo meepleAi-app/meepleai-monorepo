@@ -79,7 +79,7 @@ public class PdfIngestEndpointsTests : IntegrationTestBase
         TrackPdfDocumentId(pdfId);
 
         // When: Admin posts to /ingest/pdf/{pdfId}/rulespec
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/ingest/pdf/{pdfId}/rulespec");
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/ingest/pdf/{pdfId}/rulespec");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);

@@ -23,7 +23,7 @@ public class CorsValidationTests : IntegrationTestBase
     {
         // Given: Valid Origin (localhost:3000 - default fallback)
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Options, "/games");
+        var request = new HttpRequestMessage(HttpMethod.Options, "/api/v1/games");
         request.Headers.Add("Origin", "http://localhost:3000");
         request.Headers.Add("Access-Control-Request-Method", "GET");
 
@@ -44,7 +44,7 @@ public class CorsValidationTests : IntegrationTestBase
     {
         // Given: Invalid Origin (not in allowed list)
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Options, "/games");
+        var request = new HttpRequestMessage(HttpMethod.Options, "/api/v1/games");
         request.Headers.Add("Origin", "http://evil.com");
         request.Headers.Add("Access-Control-Request-Method", "GET");
 
@@ -62,7 +62,7 @@ public class CorsValidationTests : IntegrationTestBase
     {
         // Given: No Origin header (not a CORS request)
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Options, "/games");
+        var request = new HttpRequestMessage(HttpMethod.Options, "/api/v1/games");
         request.Headers.Add("Access-Control-Request-Method", "GET");
 
         // When: Preflight request is sent
@@ -81,7 +81,7 @@ public class CorsValidationTests : IntegrationTestBase
     {
         // Given: Preflight for auth endpoint
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Options, "/auth/login");
+        var request = new HttpRequestMessage(HttpMethod.Options, "/api/v1/auth/login");
         request.Headers.Add("Origin", "http://localhost:3000");
         request.Headers.Add("Access-Control-Request-Method", "POST");
         request.Headers.Add("Access-Control-Request-Headers", "content-type");
@@ -106,7 +106,7 @@ public class CorsValidationTests : IntegrationTestBase
         var user = await CreateTestUserAsync("cors-user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/games");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
         request.Headers.Add("Origin", "http://localhost:3000");
         AddCookies(request, cookies);
 
@@ -131,7 +131,7 @@ public class CorsValidationTests : IntegrationTestBase
         var game = await CreateTestGameAsync("CORS Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/qa");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Headers.Add("Origin", "http://localhost:3000");
         request.Content = JsonContent.Create(new { gameId = game.Id, query = "test query" });
         AddCookies(request, cookies);
@@ -157,7 +157,7 @@ public class CorsValidationTests : IntegrationTestBase
         var user = await CreateTestUserAsync("localhost-user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/games");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
         request.Headers.Add("Origin", "http://localhost:3000");
         AddCookies(request, cookies);
 
@@ -177,7 +177,7 @@ public class CorsValidationTests : IntegrationTestBase
         var user = await CreateTestUserAsync("invalid-origin-user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/games");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
         request.Headers.Add("Origin", "http://attacker.com");
         AddCookies(request, cookies);
 
@@ -197,7 +197,7 @@ public class CorsValidationTests : IntegrationTestBase
         var user = await CreateTestUserAsync("https-localhost-user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/games");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
         request.Headers.Add("Origin", "https://localhost:3000");
         AddCookies(request, cookies);
 
@@ -218,7 +218,7 @@ public class CorsValidationTests : IntegrationTestBase
     {
         // Given: Preflight with custom headers
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Options, "/games");
+        var request = new HttpRequestMessage(HttpMethod.Options, "/api/v1/games");
         request.Headers.Add("Origin", "http://localhost:3000");
         request.Headers.Add("Access-Control-Request-Method", "GET");
         request.Headers.Add("Access-Control-Request-Headers", "content-type,x-custom-header,authorization");
@@ -239,7 +239,7 @@ public class CorsValidationTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Content-Type Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/qa");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Headers.Add("Origin", "http://localhost:3000");
         request.Content = JsonContent.Create(new { gameId = game.Id, query = "test" });
         AddCookies(request, cookies);
@@ -261,7 +261,7 @@ public class CorsValidationTests : IntegrationTestBase
     {
         // Given: Preflight for POST endpoint
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Options, "/games");
+        var request = new HttpRequestMessage(HttpMethod.Options, "/api/v1/games");
         request.Headers.Add("Origin", "http://localhost:3000");
         request.Headers.Add("Access-Control-Request-Method", "POST");
 
@@ -278,7 +278,7 @@ public class CorsValidationTests : IntegrationTestBase
     {
         // Given: Preflight for GET endpoint
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Options, "/games");
+        var request = new HttpRequestMessage(HttpMethod.Options, "/api/v1/games");
         request.Headers.Add("Origin", "http://localhost:3000");
         request.Headers.Add("Access-Control-Request-Method", "GET");
 
@@ -300,7 +300,7 @@ public class CorsValidationTests : IntegrationTestBase
         // Given: Login request with valid origin
         var user = await CreateTestUserAsync("login-cors-user", UserRole.User, "Password123!");
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/auth/login");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login");
         request.Headers.Add("Origin", "http://localhost:3000");
         request.Content = JsonContent.Create(new { email = user.Email, password = "Password123!" });
 
@@ -323,7 +323,7 @@ public class CorsValidationTests : IntegrationTestBase
         var user = await CreateTestUserAsync("me-cors-user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/auth/me");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         request.Headers.Add("Origin", "http://localhost:3000");
         AddCookies(request, cookies);
 

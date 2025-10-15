@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using Api.Infrastructure.Entities;
+using Api.Middleware;
 using Api.Models;
 using Api.Services;
 using Microsoft.AspNetCore.Cors.Infrastructure;
@@ -182,6 +183,9 @@ builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<ISessionManagementService, SessionManagementService>();
 builder.Services.AddHostedService<SessionAutoRevocationService>();
 
+// API-01: API key authentication service
+builder.Services.AddScoped<ApiKeyAuthenticationService>();
+
 // PDF-02: OCR service for fallback text extraction
 builder.Services.AddSingleton<IOcrService, TesseractOcrService>();
 
@@ -190,6 +194,68 @@ builder.Services.AddScoped<IChessKnowledgeService, ChessKnowledgeService>();
 
 // CHESS-04: Chess conversational agent service
 builder.Services.AddScoped<IChessAgentService, ChessAgentService>();
+
+// API-01: OpenAPI/Swagger configuration
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Version = "v1",
+        Title = "MeepleAI API",
+        Description = "AI-powered board game rules assistant API with RAG-based question answering, rule explanations, and chess analysis",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        {
+            Name = "MeepleAI Support",
+            Email = "support@meepleai.dev"
+        }
+    });
+
+    // API Key Security Scheme
+    options.AddSecurityDefinition("ApiKey", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Name = "X-API-Key",
+        Description = "API key authentication. Format: mpl_live_{40_random_chars} or mpl_test_{40_random_chars}"
+    });
+
+    // Cookie Security Scheme (existing session-based auth)
+    options.AddSecurityDefinition("Cookie", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        In = Microsoft.OpenApi.Models.ParameterLocation.Cookie,
+        Name = "meeple_session",
+        Description = "Cookie-based session authentication for web clients"
+    });
+
+    // Apply security requirements globally
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "ApiKey"
+                }
+            },
+            Array.Empty<string>()
+        },
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Cookie"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 // OPS-01: Health checks for observability
 var healthCheckConnectionString = builder.Configuration.GetConnectionString("Postgres")
@@ -272,6 +338,21 @@ if (forwardedHeadersEnabled)
 
 app.UseCors("web");
 
+// API-01: Swagger UI (development only)
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "MeepleAI API v1");
+        options.RoutePrefix = "api/docs"; // Swagger UI at /api/docs
+        options.DocumentTitle = "MeepleAI API Documentation";
+    });
+}
+
+// API-01: API exception handler middleware (must be early in pipeline)
+app.UseApiExceptionHandler();
+
 // Request logging with correlation ID
 app.UseSerilogRequestLogging(options =>
 {
@@ -297,6 +378,9 @@ app.Use(async (context, next) =>
     context.Response.Headers["X-Correlation-Id"] = context.TraceIdentifier;
     await next();
 });
+
+// API-01: API key authentication middleware (must be before cookie auth)
+app.UseApiKeyAuthentication();
 
 // Authentication middleware
 app.Use(async (context, next) =>
@@ -380,6 +464,10 @@ app.Use(async (context, next) =>
     await next();
 });
 
+// API-01: Create v1 API route group
+var v1Api = app.MapGroup("/api/v1");
+
+// Unversioned endpoints (keep for backwards compatibility and infrastructure)
 app.MapGet("/", () => Results.Json(new { ok = true, name = "MeepleAgentAI" }));
 
 // OPS-01: Health check endpoints
@@ -415,7 +503,8 @@ app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthC
     Predicate = _ => false // Just check if the app is running
 });
 
-app.MapGet("/logs", async (HttpContext context, AiRequestLogService logService, CancellationToken ct) =>
+// API-01: Admin logs endpoint (versioned)
+v1Api.MapGet("/logs", async (HttpContext context, AiRequestLogService logService, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -456,7 +545,8 @@ app.MapGet("/logs", async (HttpContext context, AiRequestLogService logService, 
     return Results.Json(response);
 });
 
-app.MapPost("/auth/register", async (RegisterPayload payload, HttpContext context, AuthService auth, ILogger<Program> logger, CancellationToken ct) =>
+// API-01: Authentication endpoints (versioned)
+v1Api.MapPost("/auth/register", async (RegisterPayload payload, HttpContext context, AuthService auth, ILogger<Program> logger, CancellationToken ct) =>
 {
     try
     {
@@ -486,7 +576,7 @@ app.MapPost("/auth/register", async (RegisterPayload payload, HttpContext contex
     }
 });
 
-app.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, AuthService auth, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, AuthService auth, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (payload == null)
     {
@@ -558,7 +648,7 @@ static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)
     return false;
 }
 
-app.MapPost("/auth/logout", async (HttpContext context, AuthService auth, CancellationToken ct) =>
+v1Api.MapPost("/auth/logout", async (HttpContext context, AuthService auth, CancellationToken ct) =>
 {
     var sessionCookieName = GetSessionCookieName(context);
 
@@ -572,7 +662,7 @@ app.MapPost("/auth/logout", async (HttpContext context, AuthService auth, Cancel
     return Results.Json(new { ok = true });
 });
 
-app.MapGet("/auth/me", (HttpContext context) =>
+v1Api.MapGet("/auth/me", (HttpContext context) =>
 {
     if (context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession session)
     {
@@ -582,7 +672,8 @@ app.MapGet("/auth/me", (HttpContext context) =>
     return Results.Unauthorized();
 });
 
-app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService rag, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+// API-01: AI agent endpoints (versioned)
+v1Api.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService rag, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -718,7 +809,7 @@ app.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService 
     }
 });
 
-app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, RagService rag, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, RagService rag, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -842,7 +933,7 @@ app.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, R
 });
 
 // AI-03: RAG Setup Guide endpoint
-app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, SetupGuideService setupGuide, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, SetupGuideService setupGuide, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -977,7 +1068,7 @@ app.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, 
     }
 });
 
-app.MapPost("/agents/feedback", async (AgentFeedbackRequest req, HttpContext context, AgentFeedbackService feedbackService, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/agents/feedback", async (AgentFeedbackRequest req, HttpContext context, AgentFeedbackService feedbackService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1021,7 +1112,7 @@ app.MapPost("/agents/feedback", async (AgentFeedbackRequest req, HttpContext con
 });
 
 // CHESS-04: Chess conversational agent endpoint
-app.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context, IChessAgentService chessAgent, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context, IChessAgentService chessAgent, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1165,7 +1256,7 @@ app.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context, 
     }
 });
 
-app.MapPost("/ingest/pdf", async (HttpContext context, PdfStorageService pdfStorage, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/ingest/pdf", async (HttpContext context, PdfStorageService pdfStorage, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1201,7 +1292,7 @@ app.MapPost("/ingest/pdf", async (HttpContext context, PdfStorageService pdfStor
     return Results.Json(new { documentId = result.Document.Id, fileName = result.Document.FileName });
 });
 
-app.MapGet("/games", async (HttpContext context, GameService gameService, CancellationToken ct) =>
+v1Api.MapGet("/games", async (HttpContext context, GameService gameService, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
     {
@@ -1213,7 +1304,7 @@ app.MapGet("/games", async (HttpContext context, GameService gameService, Cancel
     return Results.Json(response);
 });
 
-app.MapPost("/games", async (CreateGameRequest? request, HttpContext context, GameService gameService, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/games", async (CreateGameRequest? request, HttpContext context, GameService gameService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1253,7 +1344,7 @@ app.MapPost("/games", async (CreateGameRequest? request, HttpContext context, Ga
     }
 });
 
-app.MapGet("/games/{gameId}/pdfs", async (string gameId, HttpContext context, PdfStorageService pdfStorage, CancellationToken ct) =>
+v1Api.MapGet("/games/{gameId}/pdfs", async (string gameId, HttpContext context, PdfStorageService pdfStorage, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1264,7 +1355,7 @@ app.MapGet("/games/{gameId}/pdfs", async (string gameId, HttpContext context, Pd
     return Results.Json(new { pdfs });
 });
 
-app.MapGet("/pdfs/{pdfId}/text", async (string pdfId, HttpContext context, MeepleAiDbContext db, CancellationToken ct) =>
+v1Api.MapGet("/pdfs/{pdfId}/text", async (string pdfId, HttpContext context, MeepleAiDbContext db, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1294,7 +1385,7 @@ app.MapGet("/pdfs/{pdfId}/text", async (string pdfId, HttpContext context, Meepl
     return Results.Json(pdf);
 });
 
-app.MapPost("/ingest/pdf/{pdfId}/rulespec", async (string pdfId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/ingest/pdf/{pdfId}/rulespec", async (string pdfId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1321,7 +1412,7 @@ app.MapPost("/ingest/pdf/{pdfId}/rulespec", async (string pdfId, HttpContext con
 });
 
 // AI-01: Index PDF for semantic search
-app.MapPost("/ingest/pdf/{pdfId}/index", async (string pdfId, HttpContext context, PdfIndexingService indexingService, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/ingest/pdf/{pdfId}/index", async (string pdfId, HttpContext context, PdfIndexingService indexingService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1362,7 +1453,7 @@ app.MapPost("/ingest/pdf/{pdfId}/index", async (string pdfId, HttpContext contex
     });
 });
 
-app.MapGet("/games/{gameId}/rulespec", async (string gameId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapGet("/games/{gameId}/rulespec", async (string gameId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1381,7 +1472,7 @@ app.MapGet("/games/{gameId}/rulespec", async (string gameId, HttpContext context
     return Results.Json(ruleSpec);
 });
 
-app.MapPut("/games/{gameId}/rulespec", async (string gameId, RuleSpec ruleSpec, HttpContext context, RuleSpecService ruleSpecService, AuditService auditService, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPut("/games/{gameId}/rulespec", async (string gameId, RuleSpec ruleSpec, HttpContext context, RuleSpecService ruleSpecService, AuditService auditService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1428,7 +1519,7 @@ app.MapPut("/games/{gameId}/rulespec", async (string gameId, RuleSpec ruleSpec, 
 });
 
 // RULE-02: Get version history
-app.MapGet("/games/{gameId}/rulespec/history", async (string gameId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapGet("/games/{gameId}/rulespec/history", async (string gameId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1447,7 +1538,7 @@ app.MapGet("/games/{gameId}/rulespec/history", async (string gameId, HttpContext
 });
 
 // RULE-02: Get specific version
-app.MapGet("/games/{gameId}/rulespec/versions/{version}", async (string gameId, string version, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapGet("/games/{gameId}/rulespec/versions/{version}", async (string gameId, string version, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1473,7 +1564,7 @@ app.MapGet("/games/{gameId}/rulespec/versions/{version}", async (string gameId, 
 });
 
 // RULE-02: Compare two versions (diff)
-app.MapGet("/games/{gameId}/rulespec/diff", async (string gameId, string? from, string? to, HttpContext context, RuleSpecService ruleSpecService, RuleSpecDiffService diffService, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapGet("/games/{gameId}/rulespec/diff", async (string gameId, string? from, string? to, HttpContext context, RuleSpecService ruleSpecService, RuleSpecDiffService diffService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1505,7 +1596,7 @@ app.MapGet("/games/{gameId}/rulespec/diff", async (string gameId, string? from, 
     return Results.Json(diff);
 });
 
-app.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, RuleSpecService rules, CancellationToken ct) =>
+v1Api.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, RuleSpecService rules, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1527,7 +1618,7 @@ app.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, Rule
 });
 
 // ADM-01: Admin dashboard endpoints
-app.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService logService, int limit = 100, int offset = 0, string? endpoint = null, string? userId = null, string? gameId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default) =>
+v1Api.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService logService, int limit = 100, int offset = 0, string? endpoint = null, string? userId = null, string? gameId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1552,7 +1643,7 @@ app.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService lo
     return Results.Json(new { requests });
 });
 
-app.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logService, AgentFeedbackService feedbackService, DateTime? startDate = null, DateTime? endDate = null, string? userId = null, string? gameId = null, CancellationToken ct = default) =>
+v1Api.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logService, AgentFeedbackService feedbackService, DateTime? startDate = null, DateTime? endDate = null, string? userId = null, string? gameId = null, CancellationToken ct = default) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1581,7 +1672,7 @@ app.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logSe
 });
 
 // ADM-02: n8n workflow configuration endpoints
-app.MapGet("/admin/n8n", async (HttpContext context, N8nConfigService n8nService, CancellationToken ct) =>
+v1Api.MapGet("/admin/n8n", async (HttpContext context, N8nConfigService n8nService, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1597,7 +1688,7 @@ app.MapGet("/admin/n8n", async (HttpContext context, N8nConfigService n8nService
     return Results.Json(new { configs });
 });
 
-app.MapGet("/admin/n8n/{configId}", async (string configId, HttpContext context, N8nConfigService n8nService, CancellationToken ct) =>
+v1Api.MapGet("/admin/n8n/{configId}", async (string configId, HttpContext context, N8nConfigService n8nService, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1619,7 +1710,7 @@ app.MapGet("/admin/n8n/{configId}", async (string configId, HttpContext context,
     return Results.Json(config);
 });
 
-app.MapPost("/admin/n8n", async (CreateN8nConfigRequest request, HttpContext context, N8nConfigService n8nService, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/admin/n8n", async (CreateN8nConfigRequest request, HttpContext context, N8nConfigService n8nService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1645,7 +1736,7 @@ app.MapPost("/admin/n8n", async (CreateN8nConfigRequest request, HttpContext con
     }
 });
 
-app.MapPut("/admin/n8n/{configId}", async (string configId, UpdateN8nConfigRequest request, HttpContext context, N8nConfigService n8nService, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPut("/admin/n8n/{configId}", async (string configId, UpdateN8nConfigRequest request, HttpContext context, N8nConfigService n8nService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1671,7 +1762,7 @@ app.MapPut("/admin/n8n/{configId}", async (string configId, UpdateN8nConfigReque
     }
 });
 
-app.MapDelete("/admin/n8n/{configId}", async (string configId, HttpContext context, N8nConfigService n8nService, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapDelete("/admin/n8n/{configId}", async (string configId, HttpContext context, N8nConfigService n8nService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1695,7 +1786,7 @@ app.MapDelete("/admin/n8n/{configId}", async (string configId, HttpContext conte
     return Results.Json(new { ok = true });
 });
 
-app.MapPost("/admin/n8n/{configId}/test", async (string configId, HttpContext context, N8nConfigService n8nService, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/admin/n8n/{configId}/test", async (string configId, HttpContext context, N8nConfigService n8nService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1722,7 +1813,7 @@ app.MapPost("/admin/n8n/{configId}/test", async (string configId, HttpContext co
 });
 
 // AUTH-03: Session management endpoints
-app.MapGet("/admin/sessions", async (HttpContext context, ISessionManagementService sessionManagement, int limit = 100, string? userId = null, CancellationToken ct = default) =>
+v1Api.MapGet("/admin/sessions", async (HttpContext context, ISessionManagementService sessionManagement, int limit = 100, string? userId = null, CancellationToken ct = default) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1738,7 +1829,7 @@ app.MapGet("/admin/sessions", async (HttpContext context, ISessionManagementServ
     return Results.Json(sessions);
 });
 
-app.MapDelete("/admin/sessions/{sessionId}", async (string sessionId, HttpContext context, ISessionManagementService sessionManagement, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapDelete("/admin/sessions/{sessionId}", async (string sessionId, HttpContext context, ISessionManagementService sessionManagement, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1762,7 +1853,7 @@ app.MapDelete("/admin/sessions/{sessionId}", async (string sessionId, HttpContex
     return Results.Json(new { ok = true });
 });
 
-app.MapDelete("/admin/users/{userId}/sessions", async (string userId, HttpContext context, ISessionManagementService sessionManagement, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapDelete("/admin/users/{userId}/sessions", async (string userId, HttpContext context, ISessionManagementService sessionManagement, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1782,7 +1873,7 @@ app.MapDelete("/admin/users/{userId}/sessions", async (string userId, HttpContex
     return Results.Json(new { ok = true, revokedCount = count });
 });
 
-app.MapGet("/users/me/sessions", async (HttpContext context, ISessionManagementService sessionManagement, CancellationToken ct = default) =>
+v1Api.MapGet("/users/me/sessions", async (HttpContext context, ISessionManagementService sessionManagement, CancellationToken ct = default) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1794,7 +1885,7 @@ app.MapGet("/users/me/sessions", async (HttpContext context, ISessionManagementS
 });
 
 // CHESS-03: Chess knowledge indexing endpoints
-app.MapPost("/chess/index", async (HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/chess/index", async (HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1830,7 +1921,7 @@ app.MapPost("/chess/index", async (HttpContext context, IChessKnowledgeService c
     });
 });
 
-app.MapGet("/chess/search", async (string? q, int? limit, HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapGet("/chess/search", async (string? q, int? limit, HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1867,7 +1958,7 @@ app.MapGet("/chess/search", async (string? q, int? limit, HttpContext context, I
     });
 });
 
-app.MapDelete("/chess/index", async (HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapDelete("/chess/index", async (HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1896,7 +1987,7 @@ app.MapDelete("/chess/index", async (HttpContext context, IChessKnowledgeService
 });
 
 // UI-01: Chat management endpoints
-app.MapGet("/chats", async (HttpContext context, ChatService chatService, string? gameId, CancellationToken ct) =>
+v1Api.MapGet("/chats", async (HttpContext context, ChatService chatService, string? gameId, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1920,7 +2011,7 @@ app.MapGet("/chats", async (HttpContext context, ChatService chatService, string
     return Results.Json(response);
 });
 
-app.MapGet("/chats/{chatId:guid}", async (Guid chatId, HttpContext context, ChatService chatService, CancellationToken ct) =>
+v1Api.MapGet("/chats/{chatId:guid}", async (Guid chatId, HttpContext context, ChatService chatService, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1955,7 +2046,7 @@ app.MapGet("/chats/{chatId:guid}", async (Guid chatId, HttpContext context, Chat
     return Results.Json(response);
 });
 
-app.MapPost("/chats", async (CreateChatRequest? request, HttpContext context, ChatService chatService, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/chats", async (CreateChatRequest? request, HttpContext context, ChatService chatService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -2003,7 +2094,7 @@ app.MapPost("/chats", async (CreateChatRequest? request, HttpContext context, Ch
     }
 });
 
-app.MapDelete("/chats/{chatId:guid}", async (Guid chatId, HttpContext context, ChatService chatService, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapDelete("/chats/{chatId:guid}", async (Guid chatId, HttpContext context, ChatService chatService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -2028,7 +2119,7 @@ app.MapDelete("/chats/{chatId:guid}", async (Guid chatId, HttpContext context, C
     }
 });
 
-app.MapGet("/games/{gameId}/agents", async (string gameId, HttpContext context, ChatService chatService, CancellationToken ct) =>
+v1Api.MapGet("/games/{gameId}/agents", async (string gameId, HttpContext context, ChatService chatService, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
     {

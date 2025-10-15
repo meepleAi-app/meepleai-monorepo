@@ -26,7 +26,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         var user = await CreateTestUserAsync("no-content-type-user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/qa");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = new StringContent("{\"gameId\":\"test\",\"query\":\"test\"}", Encoding.UTF8);
         request.Content.Headers.ContentType = null; // Remove Content-Type
         AddCookies(request, cookies);
@@ -47,7 +47,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         var user = await CreateTestUserAsync("wrong-content-type-user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/qa");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = new StringContent("{\"gameId\":\"test\",\"query\":\"test\"}", Encoding.UTF8, "text/plain");
         AddCookies(request, cookies);
 
@@ -68,7 +68,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Content Type Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/qa");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = JsonContent.Create(new { gameId = game.Id, query = "test" });
         AddCookies(request, cookies);
 
@@ -94,7 +94,7 @@ public class EdgeScenarioTests : IntegrationTestBase
 
         // Create a very large query (10MB of text)
         var largeQuery = new string('A', 10 * 1024 * 1024);
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/qa");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = JsonContent.Create(new { gameId = game.Id, query = largeQuery });
         AddCookies(request, cookies);
 
@@ -116,7 +116,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         var user = await CreateTestUserAsync("empty-body-user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/qa");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = new StringContent("", Encoding.UTF8, "application/json");
         AddCookies(request, cookies);
 
@@ -141,7 +141,7 @@ public class EdgeScenarioTests : IntegrationTestBase
 
         // GameId with special characters: spaces, unicode, symbols
         var specialGameId = "Test Game 123 !@#$%^&*() 中文 émojis🎮";
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/qa");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = JsonContent.Create(new { gameId = specialGameId, query = "test" });
         AddCookies(request, cookies);
 
@@ -164,7 +164,7 @@ public class EdgeScenarioTests : IntegrationTestBase
 
         // Query with various Unicode characters
         var unicodeQuery = "Comment jouer? 如何玩? Как играть? 🎲🃏";
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/qa");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = JsonContent.Create(new { gameId = game.Id, query = unicodeQuery });
         AddCookies(request, cookies);
 
@@ -186,7 +186,7 @@ public class EdgeScenarioTests : IntegrationTestBase
 
         // Common SQL injection patterns
         var maliciousQuery = "'; DROP TABLE games; --";
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/qa");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = JsonContent.Create(new { gameId = game.Id, query = maliciousQuery });
         AddCookies(request, cookies);
 
@@ -198,7 +198,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
 
         // And: Can still query games (proves table wasn't dropped)
-        var gamesRequest = new HttpRequestMessage(HttpMethod.Get, "/games");
+        var gamesRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
         AddCookies(gamesRequest, cookies);
         var gamesResponse = await client.SendAsync(gamesRequest);
         Assert.Equal(HttpStatusCode.OK, gamesResponse.StatusCode);
@@ -215,7 +215,7 @@ public class EdgeScenarioTests : IntegrationTestBase
 
         // XSS payload
         var xssQuery = "<script>alert('XSS')</script>";
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/qa");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = JsonContent.Create(new { gameId = game.Id, query = xssQuery });
         AddCookies(request, cookies);
 
@@ -240,7 +240,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         var user = await CreateTestUserAsync("malformed-json-user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/qa");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = new StringContent("{\"gameId\":\"test\",\"query\":", Encoding.UTF8, "application/json");
         AddCookies(request, cookies);
 
@@ -258,7 +258,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         var user = await CreateTestUserAsync("missing-fields-user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/qa");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = JsonContent.Create(new { query = "test" }); // Missing gameId
         AddCookies(request, cookies);
 
@@ -277,7 +277,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Extra Fields Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/agents/qa");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = JsonContent.Create(new
         {
             gameId = game.Id,
@@ -312,7 +312,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         var tasks = new List<Task<HttpResponseMessage>>();
         for (int i = 0; i < 5; i++)
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, "/agents/qa");
+            var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
             request.Content = JsonContent.Create(new { gameId = game.Id, query = $"test query {i}" });
             AddCookies(request, cookies);
             tasks.Add(client.SendAsync(request));
@@ -343,7 +343,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         for (int i = 0; i < 3; i++)
         {
             var loginPayload = new { email = user.Email, password = "Password123!" };
-            tasks.Add(client.PostAsJsonAsync("/auth/login", loginPayload));
+            tasks.Add(client.PostAsJsonAsync("/api/v1/auth/login", loginPayload));
         }
 
         var responses = await Task.WhenAll(tasks);
@@ -376,7 +376,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         var tasks = new List<Task<HttpResponseMessage>>();
         for (int i = 0; i < 3; i++)
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, "/games");
+            var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games");
             request.Content = JsonContent.Create(new { name = $"Concurrent Test Game {Guid.NewGuid()}", gameId = $"concurrent-game-{i}" });
             AddCookies(request, cookies);
             tasks.Add(client.SendAsync(request));

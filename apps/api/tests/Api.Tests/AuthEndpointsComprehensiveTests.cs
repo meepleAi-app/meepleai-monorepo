@@ -30,7 +30,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var payload = new { email = user.Email, password = "SessionUser123!" };
 
         // When: User logs in
-        var response = await client.PostAsJsonAsync("/auth/login", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
 
         // Then: Session is created successfully
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -71,7 +71,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         await db.SaveChangesAsync();
 
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/auth/me");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         request.Headers.Add("Cookie", $"session_token=expired-token");
 
         // When: User tries to access protected endpoint with expired session
@@ -90,7 +90,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var client = Factory.CreateHttpsClient();
 
         // When: User logs out
-        var logoutRequest = new HttpRequestMessage(HttpMethod.Post, "/auth/logout");
+        var logoutRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
         AddCookies(logoutRequest, cookies);
         var logoutResponse = await client.SendAsync(logoutRequest);
 
@@ -98,7 +98,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, logoutResponse.StatusCode);
 
         // And: Session is invalidated
-        var meRequest = new HttpRequestMessage(HttpMethod.Get, "/auth/me");
+        var meRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         AddCookies(meRequest, cookies);
         var meResponse = await client.SendAsync(meRequest);
         Assert.Equal(HttpStatusCode.Unauthorized, meResponse.StatusCode);
@@ -111,7 +111,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var client = Factory.CreateHttpsClient();
 
         // When: User tries to logout without session
-        var response = await client.PostAsync("/auth/logout", null);
+        var response = await client.PostAsync("/api/v1/auth/logout", null);
 
         // Then: Logout succeeds (idempotent operation)
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -126,11 +126,11 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var client = Factory.CreateHttpsClient();
 
         // When: User logs out twice
-        var firstLogout = new HttpRequestMessage(HttpMethod.Post, "/auth/logout");
+        var firstLogout = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
         AddCookies(firstLogout, cookies);
         var firstResponse = await client.SendAsync(firstLogout);
 
-        var secondLogout = new HttpRequestMessage(HttpMethod.Post, "/auth/logout");
+        var secondLogout = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
         AddCookies(secondLogout, cookies);
         var secondResponse = await client.SendAsync(secondLogout);
 
@@ -151,7 +151,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var payload = new { email = "nonexistent@example.com", password = "SomePassword123!" };
 
         // When: User attempts to login
-        var response = await client.PostAsJsonAsync("/auth/login", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
 
         // Then: System returns unauthorized
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -166,7 +166,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var payload = new { email = user.Email, password = "WrongPassword123!" };
 
         // When: User attempts to login with wrong password
-        var response = await client.PostAsJsonAsync("/auth/login", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
 
         // Then: System returns unauthorized
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -179,7 +179,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var client = Factory.CreateHttpsClient();
 
         // When: Request is sent with null body
-        var response = await client.PostAsync("/auth/login", null);
+        var response = await client.PostAsync("/api/v1/auth/login", null);
 
         // Then: System returns bad request
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -193,7 +193,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var payload = new { email = "", password = "SomePassword123!" };
 
         // When: User attempts to login
-        var response = await client.PostAsJsonAsync("/auth/login", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
 
         // Then: System returns bad request
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -207,7 +207,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var payload = new { email = "user@example.com", password = "" };
 
         // When: User attempts to login
-        var response = await client.PostAsJsonAsync("/auth/login", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
 
         // Then: System returns bad request
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -221,7 +221,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var payload = new { email = "not-an-email", password = "SomePassword123!" };
 
         // When: User attempts to login
-        var response = await client.PostAsJsonAsync("/auth/login", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
 
         // Then: System returns bad request or unauthorized
         Assert.True(
@@ -249,7 +249,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         };
 
         // When: Another user tries to register with same email
-        var response = await client.PostAsJsonAsync("/auth/register", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Then: System returns conflict
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
@@ -268,7 +268,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         };
 
         // When: User attempts to register
-        var response = await client.PostAsJsonAsync("/auth/register", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Then: System returns bad request
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -287,7 +287,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         };
 
         // When: User attempts to register
-        var response = await client.PostAsJsonAsync("/auth/register", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Then: System returns bad request
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -305,7 +305,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         };
 
         // When: User attempts to register
-        var response = await client.PostAsJsonAsync("/auth/register", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Then: System returns bad request
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -324,7 +324,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         };
 
         // When: User attempts to register
-        var response = await client.PostAsJsonAsync("/auth/register", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Then: System returns bad request
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -343,7 +343,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         };
 
         // When: User attempts to register
-        var response = await client.PostAsJsonAsync("/auth/register", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Then: System returns bad request
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -362,7 +362,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         };
 
         // When: User attempts to register
-        var response = await client.PostAsJsonAsync("/auth/register", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Then: System returns bad request
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -379,7 +379,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var user = await CreateTestUserAsync("me-user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/auth/me");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         AddCookies(request, cookies);
 
         // When: User requests their info
@@ -402,7 +402,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var client = Factory.CreateHttpsClient();
 
         // When: User requests their info without authentication
-        var response = await client.GetAsync("/auth/me");
+        var response = await client.GetAsync("/api/v1/auth/me");
 
         // Then: System returns unauthorized
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -421,10 +421,10 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var payload = new { email = user.Email, password = "MultiSession123!" };
 
         // When: User logs in multiple times
-        var firstLogin = await client.PostAsJsonAsync("/auth/login", payload);
+        var firstLogin = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
         var firstCookies = GetCookiesFromResponse(firstLogin);
 
-        var secondLogin = await client.PostAsJsonAsync("/auth/login", payload);
+        var secondLogin = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
         var secondCookies = GetCookiesFromResponse(secondLogin);
 
         // Then: Each login creates a different session token
@@ -442,18 +442,18 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var payload = new { email = user.Email, password = "Concurrent123!" };
 
         // When: User logs in twice (simulating two devices)
-        var firstLogin = await client.PostAsJsonAsync("/auth/login", payload);
+        var firstLogin = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
         var firstCookies = GetCookiesFromResponse(firstLogin);
 
-        var secondLogin = await client.PostAsJsonAsync("/auth/login", payload);
+        var secondLogin = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
         var secondCookies = GetCookiesFromResponse(secondLogin);
 
         // Then: Both sessions are valid simultaneously
-        var firstMeRequest = new HttpRequestMessage(HttpMethod.Get, "/auth/me");
+        var firstMeRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         AddCookies(firstMeRequest, new List<string>(firstCookies.Select(kv => $"{kv.Key}={kv.Value}")));
         var firstMeResponse = await client.SendAsync(firstMeRequest);
 
-        var secondMeRequest = new HttpRequestMessage(HttpMethod.Get, "/auth/me");
+        var secondMeRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         AddCookies(secondMeRequest, new List<string>(secondCookies.Select(kv => $"{kv.Key}={kv.Value}")));
         var secondMeResponse = await client.SendAsync(secondMeRequest);
 

@@ -47,7 +47,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         var response = await SendWithCookiesAsync(
             editor.Client,
             HttpMethod.Get,
-            $"/games/{gameId}/rulespec/history",
+            $"/api/v1/games/{gameId}/rulespec/history",
             editor.Cookies);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -71,7 +71,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         await SeedRuleSpecVersionsAsync(gameId, adminUserId);
 
         using var client = Factory.CreateHttpsClient();
-        var response = await client.GetAsync($"/games/{gameId}/rulespec/history");
+        var response = await client.GetAsync($"/api/v1/games/{gameId}/rulespec/history");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -89,7 +89,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         var response = await SendWithCookiesAsync(
             viewer.Client,
             HttpMethod.Get,
-            $"/games/{gameId}/rulespec/history",
+            $"/api/v1/games/{gameId}/rulespec/history",
             viewer.Cookies);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -108,7 +108,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         var response = await SendWithCookiesAsync(
             editor.Client,
             HttpMethod.Get,
-            $"/games/{gameId}/rulespec/versions/v2",
+            $"/api/v1/games/{gameId}/rulespec/versions/v2",
             editor.Cookies);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -133,7 +133,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         var response = await SendWithCookiesAsync(
             editor.Client,
             HttpMethod.Get,
-            $"/games/{gameId}/rulespec/versions/v99",
+            $"/api/v1/games/{gameId}/rulespec/versions/v99",
             editor.Cookies);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -148,7 +148,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         await SeedRuleSpecVersionsAsync(gameId, adminUserId);
 
         using var client = Factory.CreateHttpsClient();
-        var response = await client.GetAsync($"/games/{gameId}/rulespec/versions/v1");
+        var response = await client.GetAsync($"/api/v1/games/{gameId}/rulespec/versions/v1");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -166,7 +166,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         var response = await SendWithCookiesAsync(
             viewer.Client,
             HttpMethod.Get,
-            $"/games/{gameId}/rulespec/versions/v1",
+            $"/api/v1/games/{gameId}/rulespec/versions/v1",
             viewer.Cookies);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -185,7 +185,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         var response = await SendWithCookiesAsync(
             editor.Client,
             HttpMethod.Get,
-            $"/games/{gameId}/rulespec/diff",
+            $"/api/v1/games/{gameId}/rulespec/diff",
             editor.Cookies);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -204,7 +204,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         var response = await SendWithCookiesAsync(
             editor.Client,
             HttpMethod.Get,
-            $"/games/{gameId}/rulespec/diff?from=v1&to=v42",
+            $"/api/v1/games/{gameId}/rulespec/diff?from=v1&to=v42",
             editor.Cookies);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -223,7 +223,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         var response = await SendWithCookiesAsync(
             editor.Client,
             HttpMethod.Get,
-            $"/games/{gameId}/rulespec/diff?from=v1&to=v2",
+            $"/api/v1/games/{gameId}/rulespec/diff?from=v1&to=v2",
             editor.Cookies);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -259,7 +259,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         await SeedRuleSpecVersionsAsync(gameId, adminUserId);
 
         using var client = Factory.CreateHttpsClient();
-        var response = await client.GetAsync($"/games/{gameId}/rulespec/diff?from=v1&to=v2");
+        var response = await client.GetAsync($"/api/v1/games/{gameId}/rulespec/diff?from=v1&to=v2");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -277,7 +277,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         var response = await SendWithCookiesAsync(
             viewer.Client,
             HttpMethod.Get,
-            $"/games/{gameId}/rulespec/diff?from=v1&to=v2",
+            $"/api/v1/games/{gameId}/rulespec/diff?from=v1&to=v2",
             viewer.Cookies);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -359,7 +359,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         using var client = Factory.CreateHttpsClient();
         var email = $"{role.ToLowerInvariant()}-{TestRunId}-{Guid.NewGuid():N}@example.com";
         var payload = new RegisterPayload(Email: email, Password: "Password123!", DisplayName: $"{role} User", Role: null);
-        var response = await client.PostAsJsonAsync("/auth/register", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
         response.EnsureSuccessStatusCode();
         if (!string.Equals(role, UserRole.User.ToString(), StringComparison.OrdinalIgnoreCase))
         {
@@ -376,7 +376,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         var client = Factory.CreateHttpsClient();
         var email = $"{role.ToLowerInvariant()}-{TestRunId}-{Guid.NewGuid():N}@example.com";
         var payload = new RegisterPayload(Email: email, Password: "Password123!", DisplayName: $"{role} User", Role: null);
-        var response = await client.PostAsJsonAsync("/auth/register", payload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
         response.EnsureSuccessStatusCode();
         var cookies = ExtractCookies(response);
         if (!string.Equals(role, UserRole.User.ToString(), StringComparison.OrdinalIgnoreCase))

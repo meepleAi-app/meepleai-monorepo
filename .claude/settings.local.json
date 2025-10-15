@@ -132,7 +132,10 @@
       "Bash(gh search issues:*)",
       "Bash(pnpm test:e2e:*)",
       "Bash(pnpm exec playwright:*)",
-      "Bash(Select-String -Pattern \"passed|failed|running\" -Context 0,1)"
+      "Bash(Select-String -Pattern \"passed|failed|running\" -Context 0,1)",
+      "Bash(Select-String -Pattern \"BCrypt|Identity\")",
+      "Bash(dotnet add package:*)",
+      "Bash(Select-String -Pattern \"FAIL|Error|Exception|Assert\" -Context 2,3)"
     ],
     "deny": [],
     "ask": []

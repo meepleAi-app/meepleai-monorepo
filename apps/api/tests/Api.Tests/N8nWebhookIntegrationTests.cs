@@ -58,7 +58,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
             topic = "winning conditions"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/agents/explain")
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };
@@ -104,7 +104,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
             topic = "rules"
         };
 
-        var response = await client.PostAsJsonAsync("/agents/explain", request);
+        var response = await client.PostAsJsonAsync("/api/v1/agents/explain", request);
 
         // Then: HTTP 401
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -130,7 +130,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
             topic = "rules"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/agents/explain")
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };
@@ -172,7 +172,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
             topic = "rules"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/agents/explain")
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };
@@ -212,7 +212,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
             topic = "setup"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/agents/explain")
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };
@@ -265,7 +265,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
             webhookUrl = "http://n8n:5678/webhook/explain"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/admin/n8n")
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/n8n")
         {
             Content = JsonContent.Create(createRequest)
         };
@@ -282,7 +282,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         Assert.Equal(createRequest.name, name.GetString());
 
         // And: Configuration is retrievable
-        var getRequest = new HttpRequestMessage(HttpMethod.Get, $"/admin/n8n/{configId.GetString()}");
+        var getRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/admin/n8n/{configId.GetString()}");
         AddCookies(getRequest, cookies);
 
         var getResponse = await client.SendAsync(getRequest);

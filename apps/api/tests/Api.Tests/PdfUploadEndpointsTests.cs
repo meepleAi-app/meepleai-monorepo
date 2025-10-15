@@ -64,7 +64,7 @@ public class PdfUploadEndpointsTests : IntegrationTestBase
         content.Add(fileContent, "file", "chess-rules.pdf");
         content.Add(new StringContent(game.Id), "gameId");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/ingest/pdf")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
         {
             Content = content
         };
@@ -117,7 +117,7 @@ public class PdfUploadEndpointsTests : IntegrationTestBase
         content.Add(fileContent, "file", "rules.pdf");
         content.Add(new StringContent(game.Id), "gameId");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/ingest/pdf")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
         {
             Content = content
         };
@@ -153,7 +153,7 @@ public class PdfUploadEndpointsTests : IntegrationTestBase
         content.Add(fileContent, "file", "rules.pdf");
         content.Add(new StringContent(game.Id), "gameId");
 
-        var response = await client.PostAsync("/ingest/pdf", content);
+        var response = await client.PostAsync("/api/v1/ingest/pdf", content);
 
         // Then: HTTP 401
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -181,7 +181,7 @@ public class PdfUploadEndpointsTests : IntegrationTestBase
         content.Add(fileContent, "file", "rules.pdf");
         content.Add(new StringContent(game.Id), "gameId");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/ingest/pdf")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
         {
             Content = content
         };
@@ -215,7 +215,7 @@ public class PdfUploadEndpointsTests : IntegrationTestBase
         content.Add(fileContent, "file", "rules.pdf");
         // gameId intentionally omitted
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/ingest/pdf")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
         {
             Content = content
         };
@@ -295,7 +295,7 @@ public class PdfUploadEndpointsTests : IntegrationTestBase
         }
 
         // When: User requests PDF list for game
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/games/{game.Id}/pdfs");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/pdfs");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -340,7 +340,7 @@ public class PdfUploadEndpointsTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Empty Game");
 
         // When: User requests PDF list
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/games/{game.Id}/pdfs");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/pdfs");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -369,7 +369,7 @@ public class PdfUploadEndpointsTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Test Game");
 
         // When: User requests PDF list
-        var response = await client.GetAsync($"/games/{game.Id}/pdfs");
+        var response = await client.GetAsync($"/api/v1/games/{game.Id}/pdfs");
 
         // Then: HTTP 401
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -419,7 +419,7 @@ public class PdfUploadEndpointsTests : IntegrationTestBase
         }
 
         // When: User requests PDF details
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/pdfs/{pdfId}/text");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/pdfs/{pdfId}/text");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -478,7 +478,7 @@ public class PdfUploadEndpointsTests : IntegrationTestBase
         }
 
         // When: User requests PDF details
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/pdfs/{pdfId}/text");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/pdfs/{pdfId}/text");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -539,7 +539,7 @@ public class PdfUploadEndpointsTests : IntegrationTestBase
         }
 
         // When: User requests PDF details
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/pdfs/{pdfId}/text");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/pdfs/{pdfId}/text");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -569,7 +569,7 @@ public class PdfUploadEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User requests details for non-existent PDF
-        var request = new HttpRequestMessage(HttpMethod.Get, "/pdfs/nonexistent-pdf-id/text");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/pdfs/nonexistent-pdf-id/text");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -595,7 +595,7 @@ public class PdfUploadEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User requests PDF details
-        var response = await client.GetAsync("/pdfs/some-pdf-id/text");
+        var response = await client.GetAsync("/api/v1/pdfs/some-pdf-id/text");
 
         // Then: HTTP 401
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);

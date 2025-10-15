@@ -50,7 +50,7 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         var seedContext = await SeedDashboardDataAsync(adminUserId, userId);
 
         // When: Admin requests stats with filters
-        var requestUri = $"/admin/stats?userId={adminUserId}&gameId=game-1" +
+        var requestUri = $"/api/v1/admin/stats?userId={adminUserId}&gameId=game-1" +
                          $"&startDate={Uri.EscapeDataString(seedContext.StartDate.ToString("O"))}" +
                          $"&endDate={Uri.EscapeDataString(seedContext.EndDate.ToString("O"))}";
 
@@ -105,7 +105,7 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         var cookies = await RegisterAndAuthenticateAsync(nonAdminClient, email, role);
 
         // When: User requests admin stats
-        var request = new HttpRequestMessage(HttpMethod.Get, "/admin/stats");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/stats");
         AddCookies(request, cookies);
 
         var response = await nonAdminClient.SendAsync(request);
@@ -127,7 +127,7 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         using var client = Factory.CreateHttpsClient();
 
         // When: Anonymous user requests admin stats
-        var response = await client.GetAsync("/admin/stats");
+        var response = await client.GetAsync("/api/v1/admin/stats");
 
         // Then: System requires authentication
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);

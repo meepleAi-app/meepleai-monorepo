@@ -57,7 +57,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var cookies2 = await AuthenticateUserAsync(user2.Email);
 
         // When: Admin requests all sessions
-        var request = new HttpRequestMessage(HttpMethod.Get, "/admin/sessions");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/sessions");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -101,7 +101,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var cookies2 = await AuthenticateUserAsync(user.Email); // Create another session
 
         // When: Admin requests sessions filtered by userId
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/admin/sessions?userId={user.Id}");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/admin/sessions?userId={user.Id}");
         AddCookies(request, adminCookies);
 
         var response = await client.SendAsync(request);
@@ -137,7 +137,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Admin requests sessions with limit
-        var request = new HttpRequestMessage(HttpMethod.Get, "/admin/sessions?limit=5");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/sessions?limit=5");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -166,7 +166,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User tries to access admin endpoint
-        var request = new HttpRequestMessage(HttpMethod.Get, "/admin/sessions");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/sessions");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -188,7 +188,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Unauthenticated request
-        var response = await client.GetAsync("/admin/sessions");
+        var response = await client.GetAsync("/api/v1/admin/sessions");
 
         // Then: HTTP 401 Unauthorized
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -229,7 +229,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         Assert.NotNull(sessionId);
 
         // When: Admin revokes the session
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/admin/sessions/{sessionId}");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/sessions/{sessionId}");
         AddCookies(request, adminCookies);
 
         var response = await client.SendAsync(request);
@@ -268,7 +268,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
 
         // When: Admin tries to revoke non-existent session
         var nonExistentId = "non-existent-session-id";
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/admin/sessions/{nonExistentId}");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/sessions/{nonExistentId}");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -292,7 +292,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User tries to revoke a session
-        var request = new HttpRequestMessage(HttpMethod.Delete, "/admin/sessions/some-session-id");
+        var request = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/admin/sessions/some-session-id");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -336,7 +336,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         Assert.True(sessionCountBefore >= 2);
 
         // When: Admin revokes all user sessions
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/admin/users/{user.Id}/sessions");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/users/{user.Id}/sessions");
         AddCookies(request, adminCookies);
 
         var response = await client.SendAsync(request);
@@ -385,7 +385,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user-no-sessions", UserRole.User);
 
         // When: Admin tries to revoke all sessions
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/admin/users/{user.Id}/sessions");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/users/{user.Id}/sessions");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -414,7 +414,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
 
         // When: User tries to revoke all sessions for another user
         var anotherUser = await CreateTestUserAsync("another-user", UserRole.User);
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/admin/users/{anotherUser.Id}/sessions");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/users/{anotherUser.Id}/sessions");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);

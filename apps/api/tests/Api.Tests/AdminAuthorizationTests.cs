@@ -48,7 +48,7 @@ public class AdminAuthorizationTests : AdminTestFixture
             new AdminEndpointTestCase(
                 "GET /admin/stats",
                 HttpMethod.Get,
-                "/admin/stats")
+                "/api/v1/admin/stats")
         },
 
         // Request logs endpoints
@@ -57,7 +57,7 @@ public class AdminAuthorizationTests : AdminTestFixture
             new AdminEndpointTestCase(
                 "GET /admin/requests",
                 HttpMethod.Get,
-                "/admin/requests")
+                "/api/v1/admin/requests")
         },
 
         // N8n configuration endpoints
@@ -66,7 +66,7 @@ public class AdminAuthorizationTests : AdminTestFixture
             new AdminEndpointTestCase(
                 "POST /admin/n8n",
                 HttpMethod.Post,
-                "/admin/n8n",
+                "/api/v1/admin/n8n",
                 () => JsonContent.Create(new CreateN8nConfigRequest("Test", "https://n8n.test", "key", null)))
         },
         new object[]
@@ -74,21 +74,21 @@ public class AdminAuthorizationTests : AdminTestFixture
             new AdminEndpointTestCase(
                 "GET /admin/n8n",
                 HttpMethod.Get,
-                "/admin/n8n")
+                "/api/v1/admin/n8n")
         },
         new object[]
         {
             new AdminEndpointTestCase(
                 "GET /admin/n8n/{id}",
                 HttpMethod.Get,
-                "/admin/n8n/test-id")
+                "/api/v1/admin/n8n/test-id")
         },
         new object[]
         {
             new AdminEndpointTestCase(
                 "PUT /admin/n8n/{id}",
                 HttpMethod.Put,
-                "/admin/n8n/test-id",
+                "/api/v1/admin/n8n/test-id",
                 () => JsonContent.Create(new UpdateN8nConfigRequest("Updated", "https://n8n.test", "key", null, true)))
         },
         new object[]
@@ -96,14 +96,14 @@ public class AdminAuthorizationTests : AdminTestFixture
             new AdminEndpointTestCase(
                 "DELETE /admin/n8n/{id}",
                 HttpMethod.Delete,
-                "/admin/n8n/test-id")
+                "/api/v1/admin/n8n/test-id")
         },
         new object[]
         {
             new AdminEndpointTestCase(
                 "POST /admin/n8n/{id}/test",
                 HttpMethod.Post,
-                "/admin/n8n/test-id/test")
+                "/api/v1/admin/n8n/test-id/test")
         }
     };
 

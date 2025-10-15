@@ -12,6 +12,7 @@ public class MeepleAiDbContext : DbContext
 
     public DbSet<UserEntity> Users => Set<UserEntity>();
     public DbSet<UserSessionEntity> UserSessions => Set<UserSessionEntity>();
+    public DbSet<ApiKeyEntity> ApiKeys => Set<ApiKeyEntity>();
     public DbSet<GameEntity> Games => Set<GameEntity>();
     public DbSet<RuleSpecEntity> RuleSpecs => Set<RuleSpecEntity>();
     public DbSet<RuleAtomEntity> RuleAtoms => Set<RuleAtomEntity>();
@@ -64,6 +65,36 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.RevokedAt);
             entity.HasIndex(e => e.TokenHash).IsUnique();
             entity.HasIndex(e => e.UserId);
+        });
+
+        modelBuilder.Entity<ApiKeyEntity>(entity =>
+        {
+            entity.ToTable("api_keys");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.KeyName).IsRequired().HasMaxLength(128);
+            entity.Property(e => e.KeyHash).IsRequired().HasMaxLength(256);
+            entity.Property(e => e.KeyPrefix).IsRequired().HasMaxLength(16);
+            entity.Property(e => e.Scopes).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired();
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.LastUsedAt);
+            entity.Property(e => e.ExpiresAt);
+            entity.Property(e => e.RevokedAt);
+            entity.Property(e => e.RevokedBy).HasMaxLength(64);
+            entity.Property(e => e.Metadata).HasMaxLength(4096);
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.RevokedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.RevokedBy)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasIndex(e => e.KeyHash).IsUnique();
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => new { e.IsActive, e.ExpiresAt });
         });
 
         modelBuilder.Entity<GameEntity>(entity =>

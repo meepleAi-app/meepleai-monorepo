@@ -55,7 +55,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Admin requests the RuleSpec
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/games/{game.Id}/rulespec");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/rulespec");
         AddCookies(request, adminCookies);
 
         var response = await client.SendAsync(request);
@@ -88,7 +88,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Admin deletes the PDF
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/pdf/{pdf.Id}");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/pdf/{pdf.Id}");
         AddCookies(request, adminCookies);
 
         var response = await client.SendAsync(request);
@@ -118,7 +118,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Admin creates a game
-        var request = new HttpRequestMessage(HttpMethod.Post, "/games")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
         {
             Content = JsonContent.Create(new CreateGameRequest("Azul", "azul"))
         };
@@ -152,7 +152,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Admin requests RuleSpec history
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/games/{game.Id}/rulespec/history");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/rulespec/history");
         AddCookies(request, adminCookies);
 
         var response = await client.SendAsync(request);
@@ -180,7 +180,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Editor creates a game
-        var request = new HttpRequestMessage(HttpMethod.Post, "/games")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
         {
             Content = JsonContent.Create(new CreateGameRequest("Root", "root"))
         };
@@ -221,7 +221,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
             new List<RuleAtom> { new RuleAtom("atom-1", "New rule text") }
         );
 
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/games/{game.Id}/rulespec")
+        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/games/{game.Id}/rulespec")
         {
             Content = JsonContent.Create(updatedRuleSpec)
         };
@@ -253,7 +253,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Editor attempts to delete owner's PDF
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/pdf/{pdf.Id}");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/pdf/{pdf.Id}");
         AddCookies(request, editorCookies);
 
         var response = await client.SendAsync(request);
@@ -286,7 +286,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Editor deletes own PDF
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/pdf/{pdf.Id}");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/pdf/{pdf.Id}");
         AddCookies(request, editorCookies);
 
         var response = await client.SendAsync(request);
@@ -314,7 +314,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Editor requests RuleSpec history
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/games/{game.Id}/rulespec/history");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/rulespec/history");
         AddCookies(request, editorCookies);
 
         var response = await client.SendAsync(request);
@@ -347,7 +347,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User2 attempts to delete user1's PDF
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/pdf/{pdf.Id}");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/pdf/{pdf.Id}");
         AddCookies(request, user2Cookies);
 
         var response = await client.SendAsync(request);
@@ -380,7 +380,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User deletes own PDF
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/pdf/{pdf.Id}");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/pdf/{pdf.Id}");
         AddCookies(request, userCookies);
 
         var response = await client.SendAsync(request);
@@ -404,7 +404,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User attempts to create a game
-        var request = new HttpRequestMessage(HttpMethod.Post, "/games")
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
         {
             Content = JsonContent.Create(new CreateGameRequest("Forbidden Game", "forbidden-game"))
         };
@@ -431,7 +431,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User attempts to access admin stats
-        var request = new HttpRequestMessage(HttpMethod.Get, "/admin/stats");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/stats");
         AddCookies(request, userCookies);
 
         var response = await client.SendAsync(request);
@@ -460,7 +460,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User requests RuleSpec history
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/games/{game.Id}/rulespec/history");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/rulespec/history");
         AddCookies(request, userCookies);
 
         var response = await client.SendAsync(request);
@@ -494,7 +494,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Attacker attempts to delete owner's PDF
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/pdf/{pdf.Id}");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/pdf/{pdf.Id}");
         AddCookies(request, attackerCookies);
 
         var response = await client.SendAsync(request);
@@ -556,7 +556,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
 
         foreach (var (cookies, role) in requests)
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, "/games");
+            var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
             AddCookies(request, cookies);
 
             var response = await client.SendAsync(request);
@@ -587,7 +587,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Request to protected endpoint
-        var response = await client.GetAsync("/games");
+        var response = await client.GetAsync("/api/v1/games");
 
         // Then: Access is denied
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);

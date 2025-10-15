@@ -61,6 +61,7 @@ public abstract class IntegrationTestBase : IClassFixture<WebApplicationFactoryF
     private readonly List<string> _testChatIds = new();
     private readonly List<string> _testAgentIds = new();
     private readonly List<string> _testN8nConfigIds = new();
+    private readonly List<string> _testApiKeyIds = new();
 
     protected IntegrationTestBase(WebApplicationFactoryFixture factory)
     {
@@ -178,7 +179,16 @@ public abstract class IntegrationTestBase : IClassFixture<WebApplicationFactoryF
                 db.N8nConfigs.RemoveRange(configs);
             }
 
-            // 7. Remove users and sessions (at the end)
+            // 7. Remove API keys (depends on users)
+            if (_testApiKeyIds.Count > 0)
+            {
+                var apiKeys = await db.ApiKeys
+                    .Where(k => _testApiKeyIds.Contains(k.Id))
+                    .ToListAsync();
+                db.ApiKeys.RemoveRange(apiKeys);
+            }
+
+            // 8. Remove users and sessions (at the end)
             if (_testUserIds.Count > 0)
             {
                 var sessions = await db.UserSessions
@@ -256,6 +266,17 @@ public abstract class IntegrationTestBase : IClassFixture<WebApplicationFactoryF
         if (!_testPdfDocumentIds.Contains(pdfDocumentId))
         {
             _testPdfDocumentIds.Add(pdfDocumentId);
+        }
+    }
+
+    /// <summary>
+    /// Manually tracks an API key ID for cleanup.
+    /// </summary>
+    protected void TrackApiKeyId(string apiKeyId)
+    {
+        if (!_testApiKeyIds.Contains(apiKeyId))
+        {
+            _testApiKeyIds.Add(apiKeyId);
         }
     }
 
@@ -412,6 +433,40 @@ public abstract class IntegrationTestBase : IClassFixture<WebApplicationFactoryF
     }
 
     /// <summary>
+    /// Creates a test API key for a user using the ApiKeyAuthenticationService.
+    /// Returns the plaintext key and entity. Automatically tracks for cleanup.
+    ///
+    /// BDD: Given a test API key with unique identifier
+    /// </summary>
+    protected async Task<(string PlaintextKey, ApiKeyEntity Entity)> CreateTestApiKeyAsync(
+        string userId,
+        string keyName,
+        string[] scopes,
+        DateTime? expiresAt = null,
+        string environment = "test")
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var apiKeyService = scope.ServiceProvider.GetRequiredService<Services.ApiKeyAuthenticationService>();
+
+        var (plaintextKey, entity) = await apiKeyService.GenerateApiKeyAsync(
+            userId,
+            keyName,
+            scopes,
+            expiresAt,
+            environment);
+
+        // Clear User navigation property to avoid EF tracking conflicts
+        entity.User = null!;
+
+        db.ApiKeys.Add(entity);
+        await db.SaveChangesAsync();
+
+        _testApiKeyIds.Add(entity.Id);
+        return (plaintextKey, entity);
+    }
+
+    /// <summary>
     /// Authenticates a user via the API and returns cookies.
     ///
     /// BDD: When user authenticates with valid credentials
@@ -424,7 +479,7 @@ public abstract class IntegrationTestBase : IClassFixture<WebApplicationFactoryF
         });
 
         var loginPayload = new { email, password };
-        var response = await client.PostAsJsonAsync("/auth/login", loginPayload);
+        var response = await client.PostAsJsonAsync("/api/v1/auth/login", loginPayload);
         response.EnsureSuccessStatusCode();
 
         if (!response.Headers.TryGetValues("Set-Cookie", out var values))

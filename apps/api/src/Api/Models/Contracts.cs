@@ -34,6 +34,39 @@ public record ExplainOutline(
     IReadOnlyList<string> sections
 );
 
+// API-02: RAG Explain Streaming models (SSE)
+public enum StreamingEventType
+{
+    StateUpdate,    // Progress updates (e.g., "Generating embeddings")
+    Citations,      // Retrieved citations from vector search
+    Outline,        // Generated outline structure
+    ScriptChunk,    // Incremental script content chunks
+    Complete,       // Final event with metadata (tokens, confidence)
+    Error,          // Error event
+    Heartbeat       // Keep-alive signal
+}
+
+public record RagStreamingEvent(
+    StreamingEventType Type,
+    object? Data,
+    DateTime Timestamp
+);
+
+// Specific data models for streaming events
+public record StreamingStateUpdate(string message);
+public record StreamingCitations(IReadOnlyList<Snippet> citations);
+public record StreamingOutline(ExplainOutline outline);
+public record StreamingScriptChunk(string chunk, int chunkIndex, int totalChunks);
+public record StreamingComplete(
+    int estimatedReadingTimeMinutes,
+    int promptTokens,
+    int completionTokens,
+    int totalTokens,
+    double? confidence
+);
+public record StreamingError(string errorMessage, string? errorCode = null);
+public record StreamingHeartbeat(string message = "keep-alive");
+
 // AI-03: RAG Setup Guide models
 public record SetupGuideRequest(string gameId, Guid? chatId = null);
 public record SetupGuideResponse(

@@ -168,6 +168,7 @@ builder.Services.AddScoped<RuleSpecService>();
 builder.Services.AddScoped<RuleSpecDiffService>();
 builder.Services.AddScoped<RuleSpecCommentService>();
 builder.Services.AddScoped<RagService>();
+builder.Services.AddScoped<IStreamingRagService, StreamingRagService>(); // API-02: Streaming RAG service
 builder.Services.AddScoped<SetupGuideService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AuditService>();
@@ -931,6 +932,69 @@ v1Api.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context,
 
         throw;
     }
+});
+
+// API-02: Streaming RAG Explain endpoint (SSE)
+v1Api.MapPost("/agents/explain/stream", async (ExplainRequest req, HttpContext context, IStreamingRagService streamingRag, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (string.IsNullOrWhiteSpace(req.gameId))
+    {
+        return Results.BadRequest(new { error = "gameId is required" });
+    }
+
+    logger.LogInformation("Streaming explain request from user {UserId} for game {GameId}: {Topic}",
+        session.User.Id, req.gameId, req.topic);
+
+    // Set SSE headers
+    context.Response.Headers["Content-Type"] = "text/event-stream";
+    context.Response.Headers["Cache-Control"] = "no-cache";
+    context.Response.Headers["Connection"] = "keep-alive";
+
+    try
+    {
+        await foreach (var evt in streamingRag.ExplainStreamAsync(req.gameId, req.topic, ct))
+        {
+            // Serialize event as JSON
+            var json = System.Text.Json.JsonSerializer.Serialize(evt);
+
+            // Write SSE format: "data: {json}\n\n"
+            await context.Response.WriteAsync($"data: {json}\n\n", ct);
+            await context.Response.Body.FlushAsync(ct);
+        }
+
+        logger.LogInformation("Streaming explain completed for game {GameId}, topic: {Topic}", req.gameId, req.topic);
+    }
+    catch (OperationCanceledException)
+    {
+        logger.LogInformation("Streaming explain cancelled by client for game {GameId}, topic: {Topic}", req.gameId, req.topic);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error during streaming explain for game {GameId}, topic: {Topic}", req.gameId, req.topic);
+
+        // Send error event if possible
+        try
+        {
+            var errorEvent = new RagStreamingEvent(
+                StreamingEventType.Error,
+                new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
+                DateTime.UtcNow);
+            var json = System.Text.Json.JsonSerializer.Serialize(errorEvent);
+            await context.Response.WriteAsync($"data: {json}\n\n", ct);
+            await context.Response.Body.FlushAsync(ct);
+        }
+        catch
+        {
+            // If we can't send error event, client connection is likely broken
+        }
+    }
+
+    return Results.Empty;
 });
 
 // AI-03: RAG Setup Guide endpoint

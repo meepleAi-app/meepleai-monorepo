@@ -203,11 +203,11 @@ public class N8nConfigService
 
         try
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, $"{config.BaseUrl}/api/v1/workflows");
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"{config.BaseUrl}/api/v1/workflows");
             request.Headers.Add("X-N8N-API-KEY", apiKey);
 
             var startTime = DateTime.UtcNow;
-            var response = await httpClient.SendAsync(request, ct);
+            using var response = await httpClient.SendAsync(request, ct);
             var latency = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
             var success = response.IsSuccessStatusCode;

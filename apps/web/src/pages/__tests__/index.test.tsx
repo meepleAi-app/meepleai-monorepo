@@ -45,35 +45,10 @@ const createMockRouter = (): jest.Mocked<NextRouter> => ({
 
 let routerMock = createMockRouter();
 
-describe('Home page', () => {
-  const originalFetch = global.fetch;
-  const originalAlert = window.alert;
-  let fetchMock: jest.Mock;
-  let alertMock: jest.Mock;
-
+describe('Home page (Landing Page)', () => {
   beforeEach(() => {
     routerMock = createMockRouter();
     useRouterMock.mockReturnValue(routerMock);
-
-    fetchMock = jest.fn().mockImplementation(async (input: RequestInfo | URL) => {
-      if (typeof input === 'string' && input.includes('/api/health')) {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ ok: true })
-        } as unknown as Response;
-      }
-
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({})
-      } as unknown as Response;
-    });
-    alertMock = jest.fn();
-
-    global.fetch = fetchMock as unknown as typeof fetch;
-    window.alert = alertMock as typeof window.alert;
 
     mockedApi.get.mockReset();
     mockedApi.post.mockReset();
@@ -82,490 +57,753 @@ describe('Home page', () => {
   });
 
   afterEach(() => {
-    global.fetch = originalFetch;
-    window.alert = originalAlert;
     jest.clearAllMocks();
     useRouterMock.mockReset();
   });
 
-  it("shows an error message when an unauthenticated user tries to ask a question", async () => {
-    render(<Home />);
+  describe('Hero Section', () => {
+    it('renders hero section with title and description', async () => {
+      render(<Home />);
 
-    await waitFor(() => {
-      expect(mockedApi.get).toHaveBeenCalledWith('/api/v1/auth/me');
-    });
+      await waitFor(() => {
+        expect(screen.getByText('Your AI-Powered', { exact: false })).toBeInTheDocument();
+      });
 
-    const askButton = await screen.findByRole('button', { name: 'Chiedi' });
-    expect(askButton).toBeDisabled();
-
-    const reactPropsKey = Object.keys(askButton).find((key) => key.startsWith('__reactProps$'));
-    expect(reactPropsKey).toBeDefined();
-
-    act(() => {
-      const props = (askButton as unknown as Record<string, { onClick?: (event: unknown) => void }>)[
-        reactPropsKey as string
-      ];
-      props.onClick?.({ preventDefault: () => undefined });
-    });
-
-    await waitFor(() => {
+      expect(screen.getByText('Board Game Rules Assistant', { exact: false })).toBeInTheDocument();
       expect(
-        screen.getByText("Devi effettuare l'accesso per porre domande.")
+        screen.getByText('Never argue about rules again.', { exact: false })
       ).toBeInTheDocument();
     });
 
-    expect(mockedApi.post).not.toHaveBeenCalledWith('/api/v1/agents/qa', expect.anything());
-  });
+    it('shows "Get Started Free" button when user is not authenticated', async () => {
+      render(<Home />);
 
-  it('resets the registration form and redirects to the upload page after successful registration', async () => {
-    const user = userEvent.setup();
+      await waitFor(() => {
+        expect(mockedApi.get).toHaveBeenCalledWith('/api/v1/auth/me');
+      });
 
-    const authResponse = {
-      user: {
-        id: 'user-1',
-        email: 'new@example.com',
-        displayName: 'New User',
-        role: 'Editor'
-      },
-      expiresAt: '2024-12-31T00:00:00.000Z'
-    };
+      const getStartedButtons = screen.getAllByText('Get Started Free');
+      expect(getStartedButtons.length).toBeGreaterThan(0);
+    });
 
-    mockedApi.post.mockResolvedValueOnce(authResponse);
+    it('shows "Go to Chat" button when user is authenticated', async () => {
+      mockedApi.get.mockResolvedValueOnce({
+        user: {
+          id: 'user-1',
+          email: 'user@example.com',
+          displayName: 'Test User',
+          role: 'User'
+        },
+        expiresAt: '2024-12-31T00:00:00.000Z'
+      });
 
-    render(<Home />);
+      render(<Home />);
 
-    const registerFormHeading = await screen.findByRole('heading', { name: 'Registrazione' });
-    const registerForm = registerFormHeading.closest('form');
-    expect(registerForm).not.toBeNull();
-    const registerScope = within(registerForm as HTMLFormElement);
-
-    await user.type(registerScope.getByLabelText('Email'), 'new@example.com');
-    await user.type(registerScope.getByLabelText('Password (min 8 caratteri)'), 'password123');
-    await user.type(registerScope.getByLabelText('Nome visualizzato'), 'New User');
-    await user.selectOptions(registerScope.getByLabelText('Ruolo'), 'Editor');
-
-    await user.click(registerScope.getByRole('button', { name: 'Crea account' }));
-
-    await waitFor(() => {
-      expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/register', {
-        email: 'new@example.com',
-        password: 'password123',
-        displayName: 'New User',
-        role: 'Editor'
+      await waitFor(() => {
+        expect(screen.getByText('Go to Chat')).toBeInTheDocument();
       });
     });
 
-    expect(registerScope.getByLabelText('Email')).toHaveValue('');
-    expect(registerScope.getByLabelText('Password (min 8 caratteri)')).toHaveValue('');
-    expect(registerScope.getByLabelText('Nome visualizzato')).toHaveValue('');
-    expect(registerScope.getByLabelText('Ruolo')).toHaveValue('User');
+    it('shows demo credentials hint when not authenticated', async () => {
+      render(<Home />);
 
-    await waitFor(() => {
-      expect(routerMock.push).toHaveBeenCalledWith('/upload');
+      await waitFor(() => {
+        expect(screen.getByText(/Try with demo account/i)).toBeInTheDocument();
+      });
+
+      // user@meepleai.dev appears multiple times (hero + footer)
+      const emailElements = screen.getAllByText('user@meepleai.dev');
+      expect(emailElements.length).toBeGreaterThan(0);
+      expect(screen.getByText('Demo123!')).toBeInTheDocument();
     });
-    expect(routerMock.push).toHaveBeenCalledTimes(1);
-    expect(screen.getByText('new@example.com')).toBeInTheDocument();
   });
 
-  it('logs in the user, updates the session state, and redirects to the upload page', async () => {
-    const user = userEvent.setup();
+  describe('Header Navigation', () => {
+    it('shows MeepleAI logo and Get Started button when not authenticated', async () => {
+      render(<Home />);
 
-    const loginResponse = {
-      user: {
-        id: 'user-1',
-        email: 'user@example.com',
-        role: 'User'
-      },
-      expiresAt: '2024-12-31T00:00:00.000Z'
-    };
+      await waitFor(() => {
+        const logoElements = screen.getAllByText('MeepleAI');
+        expect(logoElements.length).toBeGreaterThan(0);
+      });
 
-    mockedApi.post.mockResolvedValueOnce(loginResponse);
+      const header = screen.getByRole('banner');
+      const getStartedButton = within(header).getByText('Get Started');
+      expect(getStartedButton).toBeInTheDocument();
+    });
 
-    render(<Home />);
+    it('shows navigation links when authenticated', async () => {
+      mockedApi.get.mockResolvedValueOnce({
+        user: {
+          id: 'user-1',
+          email: 'user@example.com',
+          displayName: 'Test User',
+          role: 'User'
+        },
+        expiresAt: '2024-12-31T00:00:00.000Z'
+      });
 
-    const loginFormHeading = await screen.findByRole('heading', { name: 'Accesso' });
-    const loginForm = loginFormHeading.closest('form');
-    expect(loginForm).not.toBeNull();
-    const loginScope = within(loginForm as HTMLFormElement);
+      render(<Home />);
 
-    await user.type(loginScope.getByLabelText('Email'), 'user@example.com');
-    await user.type(loginScope.getByLabelText('Password'), 'super-secret');
+      await waitFor(() => {
+        expect(screen.getByRole('link', { name: 'Chat' })).toBeInTheDocument();
+      });
 
-    await user.click(loginScope.getByRole('button', { name: 'Entra' }));
+      expect(screen.getByRole('link', { name: 'Chess' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Upload' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Logout' })).toBeInTheDocument();
+    });
 
-    await waitFor(() => {
-      expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/login', {
-        email: 'user@example.com',
-        password: 'super-secret'
+    it('shows Admin link for admin users', async () => {
+      mockedApi.get.mockResolvedValueOnce({
+        user: {
+          id: 'admin-1',
+          email: 'admin@example.com',
+          displayName: 'Admin User',
+          role: 'Admin'
+        },
+        expiresAt: '2024-12-31T00:00:00.000Z'
+      });
+
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('link', { name: 'Admin' })).toBeInTheDocument();
       });
     });
 
-    await waitFor(() => {
-      expect(routerMock.push).toHaveBeenCalledWith('/upload');
-    });
-    expect(routerMock.push).toHaveBeenCalledTimes(1);
+    it('does not show Admin link for non-admin users', async () => {
+      mockedApi.get.mockResolvedValueOnce({
+        user: {
+          id: 'user-1',
+          email: 'user@example.com',
+          role: 'User'
+        },
+        expiresAt: '2024-12-31T00:00:00.000Z'
+      });
 
-    const askButton = await screen.findByRole('button', { name: 'Chiedi' });
-    await waitFor(() => {
-      expect(askButton).toBeEnabled();
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('link', { name: 'Chat' })).toBeInTheDocument();
+      });
+
+      expect(screen.queryByRole('link', { name: 'Admin' })).not.toBeInTheDocument();
     });
-    expect(screen.getByText('user@example.com')).toBeInTheDocument();
   });
 
-  it('displays error messages when register, login, or ask operations fail', async () => {
-    const user = userEvent.setup();
+  describe('Auth Modal', () => {
+    it('opens auth modal when clicking Get Started button', async () => {
+      const user = userEvent.setup();
+      render(<Home />);
 
-    render(<Home />);
+      await waitFor(() => {
+        expect(mockedApi.get).toHaveBeenCalled();
+      });
 
-    const registerFormHeading = await screen.findByRole('heading', { name: 'Registrazione' });
-    const registerForm = registerFormHeading.closest('form');
-    expect(registerForm).not.toBeNull();
-    const registerScope = within(registerForm as HTMLFormElement);
+      const getStartedButtons = screen.getAllByText('Get Started Free');
+      await user.click(getStartedButtons[0]);
 
-    await user.type(registerScope.getByLabelText('Email'), 'new@example.com');
-    await user.type(registerScope.getByLabelText('Password (min 8 caratteri)'), 'password123');
-    await user.type(registerScope.getByLabelText('Nome visualizzato'), 'New User');
-
-    mockedApi.post.mockRejectedValueOnce(new Error('Registrazione fallita'));
-
-    await user.click(registerScope.getByRole('button', { name: 'Crea account' }));
-
-    await waitFor(() => {
-      expect(screen.getByText('Registrazione fallita')).toBeInTheDocument();
+      await waitFor(
+        () => {
+          const loginButtons = screen.getAllByRole('button', { name: 'Login' });
+          expect(loginButtons.length).toBeGreaterThan(0);
+          const registerButtons = screen.getAllByRole('button', { name: 'Register' });
+          expect(registerButtons.length).toBeGreaterThan(0);
+        },
+        { timeout: 3000 }
+      );
     });
 
-    const loginFormHeading = await screen.findByRole('heading', { name: 'Accesso' });
-    const loginForm = loginFormHeading.closest('form');
-    expect(loginForm).not.toBeNull();
-    const loginScope = within(loginForm as HTMLFormElement);
+    it('closes auth modal when clicking X button', async () => {
+      const user = userEvent.setup();
+      render(<Home />);
 
-    await user.type(loginScope.getByLabelText('Email'), 'user@example.com');
-    await user.type(loginScope.getByLabelText('Password'), 'wrong-password');
+      await waitFor(() => {
+        expect(mockedApi.get).toHaveBeenCalled();
+      });
 
-    mockedApi.post.mockRejectedValueOnce(new Error('Credenziali errate'));
+      const getStartedButtons = screen.getAllByText('Get Started Free');
+      await user.click(getStartedButtons[0]);
 
-    await user.click(loginScope.getByRole('button', { name: 'Entra' }));
+      await waitFor(
+        () => {
+          const loginButtons = screen.getAllByRole('button', { name: 'Login' });
+          expect(loginButtons.length).toBeGreaterThan(0);
+        },
+        { timeout: 3000 }
+      );
 
-    await waitFor(() => {
-      expect(screen.getByText('Credenziali errate')).toBeInTheDocument();
+      const closeButton = screen.getByText('✕');
+      await user.click(closeButton);
+
+      await waitFor(
+        () => {
+          const loginButtons = screen.queryAllByRole('button', { name: 'Login' });
+          expect(loginButtons.length).toBe(0);
+        },
+        { timeout: 3000 }
+      );
     });
 
-    mockedApi.post.mockResolvedValueOnce({
-      user: {
-        id: 'user-1',
-        email: 'user@example.com',
-        role: 'User'
-      },
-      expiresAt: '2024-12-31T00:00:00.000Z'
+    it('switches between Login and Register tabs', async () => {
+      const user = userEvent.setup();
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(mockedApi.get).toHaveBeenCalled();
+      });
+
+      const getStartedButtons = screen.getAllByText('Get Started Free');
+      await user.click(getStartedButtons[0]);
+
+      await waitFor(
+        () => {
+          const loginButtons = screen.getAllByRole('button', { name: 'Login' });
+          expect(loginButtons.length).toBeGreaterThan(0);
+        },
+        { timeout: 3000 }
+      );
+
+      // Should show login form by default
+      await waitFor(() => {
+        expect(screen.getByLabelText('Email')).toBeInTheDocument();
+        expect(screen.getByLabelText('Password')).toBeInTheDocument();
+      });
+
+      // Switch to Register tab (first one is the tab)
+      const registerButtons = screen.getAllByRole('button', { name: 'Register' });
+      await user.click(registerButtons[0]);
+
+      // Wait for register form to appear (has unique fields)
+      await waitFor(
+        () => {
+          expect(screen.getByLabelText('Password (min 8 characters)')).toBeInTheDocument();
+          expect(screen.getByLabelText('Display Name (optional)')).toBeInTheDocument();
+          expect(screen.getByLabelText('Role')).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+    });
+  });
+
+  describe('Authentication - Login', () => {
+    it('logs in the user and redirects to /chat', async () => {
+      const user = userEvent.setup();
+
+      const loginResponse = {
+        user: {
+          id: 'user-1',
+          email: 'user@example.com',
+          role: 'User'
+        },
+        expiresAt: '2024-12-31T00:00:00.000Z'
+      };
+
+      mockedApi.post.mockResolvedValueOnce(loginResponse);
+
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(mockedApi.get).toHaveBeenCalled();
+      });
+
+      // Open modal
+      const getStartedButtons = screen.getAllByText('Get Started Free');
+      await user.click(getStartedButtons[0]);
+
+      await waitFor(
+        () => {
+          expect(screen.getByLabelText('Email')).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+
+      // Fill login form
+      await user.type(screen.getByLabelText('Email'), 'user@example.com');
+      await user.type(screen.getByLabelText('Password'), 'super-secret');
+
+      // Submit (second button is the submit button)
+      const loginButtons = screen.getAllByRole('button', { name: 'Login' });
+      await user.click(loginButtons[1]);
+
+      await waitFor(() => {
+        expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/login', {
+          email: 'user@example.com',
+          password: 'super-secret'
+        });
+      });
+
+      await waitFor(() => {
+        expect(routerMock.push).toHaveBeenCalledWith('/chat');
+      });
     });
 
-    await user.clear(loginScope.getByLabelText('Password'));
-    await user.type(loginScope.getByLabelText('Password'), 'super-secret');
+    it('displays error message when login fails', async () => {
+      const user = userEvent.setup();
 
-    await user.click(loginScope.getByRole('button', { name: 'Entra' }));
+      mockedApi.post.mockRejectedValueOnce(new Error('Credenziali errate'));
 
-    await waitFor(() => {
-      expect(routerMock.push).toHaveBeenCalledWith('/upload');
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(mockedApi.get).toHaveBeenCalled();
+      });
+
+      // Open modal
+      const getStartedButtons = screen.getAllByText('Get Started Free');
+      await user.click(getStartedButtons[0]);
+
+      await waitFor(
+        () => {
+          expect(screen.getByLabelText('Email')).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+
+      // Fill login form
+      await user.type(screen.getByLabelText('Email'), 'user@example.com');
+      await user.type(screen.getByLabelText('Password'), 'wrong-password');
+
+      // Submit (second button is the submit button)
+      const loginButtons = screen.getAllByRole('button', { name: 'Login' });
+      await user.click(loginButtons[1]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Credenziali errate')).toBeInTheDocument();
+      });
     });
-    expect(routerMock.push).toHaveBeenCalledTimes(1);
 
-    mockedApi.post.mockRejectedValueOnce(new Error('Agente non raggiungibile'));
+    it('displays fallback error message when login fails without error message', async () => {
+      const user = userEvent.setup();
 
-    const askButton = await screen.findByRole('button', { name: 'Chiedi' });
-    await waitFor(() => {
-      expect(askButton).toBeEnabled();
+      mockedApi.post.mockRejectedValueOnce({});
+
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(mockedApi.get).toHaveBeenCalled();
+      });
+
+      // Open modal
+      const getStartedButtons = screen.getAllByText('Get Started Free');
+      await user.click(getStartedButtons[0]);
+
+      await waitFor(
+        () => {
+          expect(screen.getByLabelText('Email')).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+
+      // Fill and submit
+      await user.type(screen.getByLabelText('Email'), 'user@example.com');
+      await user.type(screen.getByLabelText('Password'), 'wrong-password');
+      const loginButton = screen.getByRole('button', { name: 'Login' });
+      await user.click(loginButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Accesso non riuscito.')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Authentication - Register', () => {
+    it('registers the user and redirects to /chat', async () => {
+      const user = userEvent.setup();
+
+      const authResponse = {
+        user: {
+          id: 'user-1',
+          email: 'new@example.com',
+          displayName: 'New User',
+          role: 'Editor'
+        },
+        expiresAt: '2024-12-31T00:00:00.000Z'
+      };
+
+      mockedApi.post.mockResolvedValueOnce(authResponse);
+
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(mockedApi.get).toHaveBeenCalled();
+      });
+
+      // Open modal
+      const getStartedButtons = screen.getAllByText('Get Started Free');
+      await user.click(getStartedButtons[0]);
+
+      await waitFor(
+        () => {
+          expect(screen.getByRole('button', { name: 'Register' })).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+
+      // Switch to Register tab (first button is the tab)
+      const registerButtons = screen.getAllByRole('button', { name: 'Register' });
+      await user.click(registerButtons[0]);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Password (min 8 characters)')).toBeInTheDocument();
+      });
+
+      // Fill register form
+      await user.type(screen.getByLabelText('Email'), 'new@example.com');
+      await user.type(screen.getByLabelText('Password (min 8 characters)'), 'password123');
+      await user.type(screen.getByLabelText('Display Name (optional)'), 'New User');
+      await user.selectOptions(screen.getByLabelText('Role'), 'Editor');
+
+      // Submit
+      const createAccountButton = screen.getByRole('button', { name: 'Create Account' });
+      await user.click(createAccountButton);
+
+      await waitFor(() => {
+        expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/register', {
+          email: 'new@example.com',
+          password: 'password123',
+          displayName: 'New User',
+          role: 'Editor'
+        });
+      });
+
+      await waitFor(() => {
+        expect(routerMock.push).toHaveBeenCalledWith('/chat');
+      });
     });
 
-    await user.click(askButton);
+    it('handles registration with empty displayName using undefined fallback', async () => {
+      const user = userEvent.setup();
 
-    await waitFor(() => {
+      const authResponse = {
+        user: {
+          id: 'user-1',
+          email: 'new@example.com',
+          displayName: null,
+          role: 'User'
+        },
+        expiresAt: '2024-12-31T00:00:00.000Z'
+      };
+
+      mockedApi.post.mockResolvedValueOnce(authResponse);
+
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(mockedApi.get).toHaveBeenCalled();
+      });
+
+      // Open modal and switch to Register
+      const getStartedButtons = screen.getAllByText('Get Started Free');
+      await user.click(getStartedButtons[0]);
+
+      await waitFor(
+        () => {
+          expect(screen.getByRole('button', { name: 'Register' })).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+
+      const registerTab = screen.getByRole('button', { name: 'Register' });
+      await user.click(registerTab);
+
+      await waitFor(
+        () => {
+          expect(screen.getByLabelText('Email')).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+
+      // Fill form without displayName
+      await user.type(screen.getByLabelText('Email'), 'new@example.com');
+      await user.type(screen.getByLabelText('Password (min 8 characters)'), 'password123');
+
+      const createAccountButton = screen.getByRole('button', { name: 'Create Account' });
+      await user.click(createAccountButton);
+
+      await waitFor(() => {
+        expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/register', {
+          email: 'new@example.com',
+          password: 'password123',
+          displayName: undefined,
+          role: 'User'
+        });
+      });
+    });
+
+    it('displays error message when registration fails', async () => {
+      const user = userEvent.setup();
+
+      mockedApi.post.mockRejectedValueOnce(new Error('Registrazione fallita'));
+
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(mockedApi.get).toHaveBeenCalled();
+      });
+
+      // Open modal and switch to Register
+      const getStartedButtons = screen.getAllByText('Get Started Free');
+      await user.click(getStartedButtons[0]);
+
+      await waitFor(
+        () => {
+          expect(screen.getByRole('button', { name: 'Register' })).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+
+      const registerTab = screen.getByRole('button', { name: 'Register' });
+      await user.click(registerTab);
+
+      await waitFor(
+        () => {
+          expect(screen.getByLabelText('Email')).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+
+      // Fill and submit
+      await user.type(screen.getByLabelText('Email'), 'new@example.com');
+      await user.type(screen.getByLabelText('Password (min 8 characters)'), 'password123');
+
+      const createAccountButton = screen.getByRole('button', { name: 'Create Account' });
+      await user.click(createAccountButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Registrazione fallita')).toBeInTheDocument();
+      });
+    });
+
+    it('displays fallback error message when registration fails without error message', async () => {
+      const user = userEvent.setup();
+
+      mockedApi.post.mockRejectedValueOnce({});
+
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(mockedApi.get).toHaveBeenCalled();
+      });
+
+      // Open modal and switch to Register
+      const getStartedButtons = screen.getAllByText('Get Started Free');
+      await user.click(getStartedButtons[0]);
+
+      await waitFor(
+        () => {
+          expect(screen.getByRole('button', { name: 'Register' })).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+
+      const registerTab = screen.getByRole('button', { name: 'Register' });
+      await user.click(registerTab);
+
+      await waitFor(
+        () => {
+          expect(screen.getByLabelText('Email')).toBeInTheDocument();
+        },
+        { timeout: 3000 }
+      );
+
+      // Fill and submit
+      await user.type(screen.getByLabelText('Email'), 'new@example.com');
+      await user.type(screen.getByLabelText('Password (min 8 characters)'), 'password123');
+
+      const createAccountButton = screen.getByRole('button', { name: 'Create Account' });
+      await user.click(createAccountButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Registrazione non riuscita.')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Logout', () => {
+    it('logs out the user and clears the session state', async () => {
+      const user = userEvent.setup();
+
+      mockedApi.get.mockResolvedValueOnce({
+        user: {
+          id: 'user-1',
+          email: 'user@example.com',
+          role: 'Admin'
+        },
+        expiresAt: '2024-12-31T00:00:00.000Z'
+      });
+
+      mockedApi.post.mockResolvedValueOnce({});
+
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Logout' })).toBeInTheDocument();
+      });
+
+      const logoutButton = screen.getByRole('button', { name: 'Logout' });
+      await user.click(logoutButton);
+
+      await waitFor(() => {
+        expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/logout');
+      });
+
+      // After logout, should show Get Started button again
+      await waitFor(() => {
+        expect(screen.getAllByText('Get Started Free').length).toBeGreaterThan(0);
+      });
+    });
+
+    it('handles logout error gracefully', async () => {
+      const user = userEvent.setup();
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+      mockedApi.get.mockResolvedValueOnce({
+        user: {
+          id: 'user-1',
+          email: 'user@example.com',
+          role: 'Admin'
+        },
+        expiresAt: '2024-12-31T00:00:00.000Z'
+      });
+
+      mockedApi.post.mockRejectedValueOnce(new Error('Logout failed'));
+
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Logout' })).toBeInTheDocument();
+      });
+
+      const logoutButton = screen.getByRole('button', { name: 'Logout' });
+      await user.click(logoutButton);
+
+      await waitFor(() => {
+        expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/logout');
+      });
+
+      // User should still be logged out even if API call fails
+      await waitFor(() => {
+        expect(screen.getAllByText('Get Started Free').length).toBeGreaterThan(0);
+      });
+
+      consoleErrorSpy.mockRestore();
+    });
+  });
+
+  describe('Features Section', () => {
+    it('renders How It Works section with three steps', async () => {
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(screen.getByText('How It Works')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText('1. Upload')).toBeInTheDocument();
+      expect(screen.getByText('2. Ask')).toBeInTheDocument();
+      expect(screen.getByText('3. Play')).toBeInTheDocument();
+    });
+
+    it('renders Key Features section', async () => {
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Semantic Search')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText('Multi-Game Support')).toBeInTheDocument();
+      expect(screen.getByText('Source Citations')).toBeInTheDocument();
+      // RuleSpec Editor appears in both Key Features and Footer
+      const ruleSpecElements = screen.getAllByText('RuleSpec Editor');
+      expect(ruleSpecElements.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('CTA Section', () => {
+    it('renders CTA section with call to action', async () => {
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Ready to Stop Arguing About Rules?')).toBeInTheDocument();
+      });
+
       expect(
-        screen.getByText("Impossibile interrogare l'agente. Controlla le credenziali.")
+        screen.getByText('Join board game enthusiasts using AI to understand rules better')
       ).toBeInTheDocument();
     });
-  });
 
-  it('logs out the user and clears the session state', async () => {
-    const user = userEvent.setup();
+    it('CTA button redirects to chat when authenticated', async () => {
+      const user = userEvent.setup();
 
-    mockedApi.get.mockResolvedValueOnce({
-      user: {
-        id: 'user-1',
-        email: 'user@example.com',
-        role: 'Admin'
-      },
-      expiresAt: '2024-12-31T00:00:00.000Z'
-    });
-
-    mockedApi.post.mockResolvedValueOnce({});
-
-    render(<Home />);
-
-    await waitFor(() => {
-      expect(screen.getByText('user@example.com')).toBeInTheDocument();
-    });
-
-    const logoutButton = screen.getByRole('button', { name: 'Esci' });
-    await user.click(logoutButton);
-
-    await waitFor(() => {
-      expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/logout');
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText('Sessione terminata.')).toBeInTheDocument();
-      expect(screen.getByText('Nessun utente connesso.')).toBeInTheDocument();
-    });
-
-    const askButton = await screen.findByRole('button', { name: 'Chiedi' });
-    expect(askButton).toBeDisabled();
-  });
-
-  it('calls ping function and shows alert with health status', async () => {
-    const user = userEvent.setup();
-
-    render(<Home />);
-
-    await waitFor(() => expect(mockedApi.get).toHaveBeenCalled());
-
-    const pingButton = screen.getByRole('button', { name: 'Ping Web' });
-    await user.click(pingButton);
-
-    await waitFor(() => {
-      expect(alertMock).toHaveBeenCalledWith('Web OK: true');
-    });
-  });
-
-  it('successfully asks question when authenticated', async () => {
-    const user = userEvent.setup();
-
-    mockedApi.get.mockResolvedValueOnce({
-      user: {
-        id: 'user-1',
-        email: 'user@example.com',
-        role: 'Admin'
-      },
-      expiresAt: '2024-12-31T00:00:00.000Z'
-    });
-
-    mockedApi.post.mockResolvedValueOnce({ answer: 'There are 2-4 players' });
-
-    render(<Home />);
-
-    await waitFor(() => {
-      expect(screen.getByText('user@example.com')).toBeInTheDocument();
-    });
-
-    const askButton = screen.getByRole('button', { name: 'Chiedi' });
-    await waitFor(() => expect(askButton).toBeEnabled());
-
-    await user.click(askButton);
-
-    await waitFor(() => {
-      expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/agents/qa', {
-        gameId: 'demo-chess',
-        query: 'How many players?'
+      mockedApi.get.mockResolvedValueOnce({
+        user: {
+          id: 'user-1',
+          email: 'user@example.com',
+          role: 'User'
+        },
+        expiresAt: '2024-12-31T00:00:00.000Z'
       });
-    });
 
-    await waitFor(() => {
-      expect(screen.getByText('Risposta aggiornata.')).toBeInTheDocument();
-    });
-  });
+      render(<Home />);
 
-  it('handles logout error gracefully', async () => {
-    const user = userEvent.setup();
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-
-    mockedApi.get.mockResolvedValueOnce({
-      user: {
-        id: 'user-1',
-        email: 'user@example.com',
-        role: 'Admin'
-      },
-      expiresAt: '2024-12-31T00:00:00.000Z'
-    });
-
-    mockedApi.post.mockRejectedValueOnce(new Error('Logout failed'));
-
-    render(<Home />);
-
-    await waitFor(() => {
-      expect(screen.getByText('user@example.com')).toBeInTheDocument();
-    });
-
-    const logoutButton = screen.getByRole('button', { name: 'Esci' });
-    await user.click(logoutButton);
-
-    await waitFor(() => {
-      expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/logout');
-    });
-
-    // User should still be logged out even if API call fails
-    await waitFor(() => {
-      expect(screen.getByText('Sessione terminata.')).toBeInTheDocument();
-      expect(screen.getByText('Nessun utente connesso.')).toBeInTheDocument();
-    });
-
-    consoleErrorSpy.mockRestore();
-  });
-
-  it('handles registration with empty displayName using undefined fallback', async () => {
-    const user = userEvent.setup();
-
-    const authResponse = {
-      user: {
-        id: 'user-1',
-        email: 'new@example.com',
-        displayName: null,
-        role: 'User'
-      },
-      expiresAt: '2024-12-31T00:00:00.000Z'
-    };
-
-    mockedApi.post.mockResolvedValueOnce(authResponse);
-
-    render(<Home />);
-
-    const registerFormHeading = await screen.findByRole('heading', { name: 'Registrazione' });
-    const registerForm = registerFormHeading.closest('form');
-    const registerScope = within(registerForm as HTMLFormElement);
-
-    await user.type(registerScope.getByLabelText('Email'), 'new@example.com');
-    await user.type(registerScope.getByLabelText('Password (min 8 caratteri)'), 'password123');
-
-    await user.click(registerScope.getByRole('button', { name: 'Crea account' }));
-
-    await waitFor(() => {
-      expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/register', {
-        email: 'new@example.com',
-        password: 'password123',
-        displayName: undefined,
-        role: 'User'
+      await waitFor(() => {
+        expect(screen.getByText('Start Chatting')).toBeInTheDocument();
       });
+
+      const ctaButton = screen.getByText('Start Chatting');
+      await user.click(ctaButton);
+
+      expect(routerMock.push).toHaveBeenCalledWith('/chat');
     });
   });
 
-  it('does not redirect when registering on /upload page', async () => {
-    routerMock.pathname = '/upload';
-    const user = userEvent.setup();
+  describe('Footer', () => {
+    it('renders footer with links', async () => {
+      render(<Home />);
 
-    const authResponse = {
-      user: {
-        id: 'user-1',
-        email: 'new@example.com',
-        role: 'Editor'
-      },
-      expiresAt: '2024-12-31T00:00:00.000Z'
-    };
+      await waitFor(() => {
+        expect(screen.getByText('© 2025 MeepleAI. Open source project.')).toBeInTheDocument();
+      });
 
-    mockedApi.post.mockResolvedValueOnce(authResponse);
-
-    render(<Home />);
-
-    const registerFormHeading = await screen.findByRole('heading', { name: 'Registrazione' });
-    const registerForm = registerFormHeading.closest('form');
-    const registerScope = within(registerForm as HTMLFormElement);
-
-    await user.type(registerScope.getByLabelText('Email'), 'new@example.com');
-    await user.type(registerScope.getByLabelText('Password (min 8 caratteri)'), 'password123');
-    await user.click(registerScope.getByRole('button', { name: 'Crea account' }));
-
-    await waitFor(() => {
-      expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/register', expect.any(Object));
+      // Check Product links
+      expect(screen.getByRole('link', { name: 'Chat' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Upload PDF' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'RuleSpec Editor' })).toBeInTheDocument();
     });
 
-    expect(routerMock.push).not.toHaveBeenCalled();
-  });
+    it('renders demo accounts in footer', async () => {
+      render(<Home />);
 
-  it('does not redirect when logging in on /upload page', async () => {
-    routerMock.pathname = '/upload';
-    const user = userEvent.setup();
+      await waitFor(() => {
+        expect(screen.getByText('Demo Accounts')).toBeInTheDocument();
+      });
 
-    const loginResponse = {
-      user: {
-        id: 'user-1',
-        email: 'user@example.com',
-        role: 'User'
-      },
-      expiresAt: '2024-12-31T00:00:00.000Z'
-    };
-
-    mockedApi.post.mockResolvedValueOnce(loginResponse);
-
-    render(<Home />);
-
-    const loginFormHeading = await screen.findByRole('heading', { name: 'Accesso' });
-    const loginForm = loginFormHeading.closest('form');
-    const loginScope = within(loginForm as HTMLFormElement);
-
-    await user.type(loginScope.getByLabelText('Email'), 'user@example.com');
-    await user.type(loginScope.getByLabelText('Password'), 'super-secret');
-    await user.click(loginScope.getByRole('button', { name: 'Entra' }));
-
-    await waitFor(() => {
-      expect(mockedApi.post).toHaveBeenCalledWith('/api/v1/auth/login', expect.any(Object));
-    });
-
-    expect(routerMock.push).not.toHaveBeenCalled();
-  });
-
-  it('displays fallback error message when register fails without error message', async () => {
-    const user = userEvent.setup();
-
-    render(<Home />);
-
-    const registerFormHeading = await screen.findByRole('heading', { name: 'Registrazione' });
-    const registerForm = registerFormHeading.closest('form');
-    const registerScope = within(registerForm as HTMLFormElement);
-
-    await user.type(registerScope.getByLabelText('Email'), 'new@example.com');
-    await user.type(registerScope.getByLabelText('Password (min 8 caratteri)'), 'password123');
-
-    mockedApi.post.mockRejectedValueOnce({});
-
-    await user.click(registerScope.getByRole('button', { name: 'Crea account' }));
-
-    await waitFor(() => {
-      expect(screen.getByText('Registrazione non riuscita.')).toBeInTheDocument();
+      expect(screen.getByText('admin@meepleai.dev')).toBeInTheDocument();
+      expect(screen.getByText('editor@meepleai.dev')).toBeInTheDocument();
+      // user@meepleai.dev appears in hero section too
+      const userEmails = screen.getAllByText('user@meepleai.dev');
+      expect(userEmails.length).toBeGreaterThan(0);
     });
   });
 
-  it('displays fallback error message when login fails without error message', async () => {
-    const user = userEvent.setup();
+  describe('Error Handling', () => {
+    it('sets authUser to null when loadCurrentUser catches an error', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockedApi.get.mockRejectedValueOnce(new Error('Network failure'));
 
-    render(<Home />);
+      render(<Home />);
 
-    const loginFormHeading = await screen.findByRole('heading', { name: 'Accesso' });
-    const loginForm = loginFormHeading.closest('form');
-    const loginScope = within(loginForm as HTMLFormElement);
+      await waitFor(() => {
+        expect(mockedApi.get).toHaveBeenCalledWith('/api/v1/auth/me');
+      });
 
-    await user.type(loginScope.getByLabelText('Email'), 'user@example.com');
-    await user.type(loginScope.getByLabelText('Password'), 'wrong-password');
+      // Should show Get Started button (not authenticated)
+      await waitFor(() => {
+        expect(screen.getAllByText('Get Started Free').length).toBeGreaterThan(0);
+      });
 
-    mockedApi.post.mockRejectedValueOnce({});
-
-    await user.click(loginScope.getByRole('button', { name: 'Entra' }));
-
-    await waitFor(() => {
-      expect(screen.getByText('Accesso non riuscito.')).toBeInTheDocument();
+      consoleErrorSpy.mockRestore();
     });
-  });
-
-  it('sets authUser to null when loadCurrentUser catches an error', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    mockedApi.get.mockRejectedValueOnce(new Error('Network failure'));
-
-    render(<Home />);
-
-    await waitFor(() => {
-      expect(mockedApi.get).toHaveBeenCalledWith('/api/v1/auth/me');
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText('Nessun utente connesso.')).toBeInTheDocument();
-    });
-
-    consoleErrorSpy.mockRestore();
   });
 });

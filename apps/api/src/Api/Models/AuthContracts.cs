@@ -34,7 +34,7 @@ public record AuthUser(
 
 public record AuthResult(AuthUser User, string SessionToken, DateTime ExpiresAt);
 
-public record ActiveSession(AuthUser User, DateTime ExpiresAt);
+public record ActiveSession(AuthUser User, DateTime ExpiresAt, DateTime? LastSeenAt);
 
 public record AuthResponse(AuthUser User, DateTime? ExpiresAt);
 
@@ -48,6 +48,14 @@ public record SessionInfo(
     DateTime? RevokedAt,
     string? IpAddress,
     string? UserAgent);
+
+/// <summary>
+/// Response for session status check (AUTH-05)
+/// </summary>
+public record SessionStatusResponse(
+    DateTime ExpiresAt,
+    DateTime? LastSeenAt,
+    int RemainingMinutes);
 
 public class SessionManagementConfiguration
 {

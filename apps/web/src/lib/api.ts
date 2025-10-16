@@ -37,6 +37,13 @@ export interface UpdateRuleSpecCommentRequest {
   commentText: string;
 }
 
+// AUTH-05: Session status response
+export interface SessionStatusResponse {
+  expiresAt: string;
+  lastSeenAt: string | null;
+  remainingMinutes: number;
+}
+
 export const api = {
   async get<T>(path: string): Promise<T | null> {
     const res = await fetch(`${getApiBase()}${path}`, {
@@ -93,6 +100,17 @@ export const api = {
       throw new Error(`API ${path} ${res.status}`);
     }
     // DELETE returns 204 NoContent, no body to parse
+  },
+
+  // AUTH-05: Session management API
+  auth: {
+    async getSessionStatus(): Promise<SessionStatusResponse | null> {
+      return api.get<SessionStatusResponse>('/api/v1/auth/session/status');
+    },
+
+    async extendSession(): Promise<SessionStatusResponse> {
+      return api.post<SessionStatusResponse>('/api/v1/auth/session/extend');
+    }
   },
 
   // RuleSpec Comment API

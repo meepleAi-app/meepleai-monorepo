@@ -1,4 +1,8 @@
 import '@testing-library/jest-dom'
+import { toHaveNoViolations } from 'jest-axe'
+
+// Extend Jest matchers with jest-axe for accessibility testing
+expect.extend(toHaveNoViolations)
 
 // Mock framer-motion to avoid animation issues in tests
 jest.mock('framer-motion', () => {

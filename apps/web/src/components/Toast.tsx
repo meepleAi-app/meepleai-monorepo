@@ -169,6 +169,7 @@ export function ToastContainer({ toasts, onDismiss, position = 'top-right' }: To
 
   return (
     <div
+      role="region"
       aria-label="Notifications"
       className={`fixed ${getPositionClass()} z-50 pointer-events-none`}
     >

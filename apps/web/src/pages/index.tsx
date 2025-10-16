@@ -160,7 +160,7 @@ export default function Home() {
               <br />
               <span className="gradient-text">Board Game Rules Assistant</span>
             </h1>
-            <p className="text-xl text-slate-400 leading-relaxed">
+            <p className="text-xl text-slate-300 leading-relaxed">
               Never argue about rules again. Get instant, accurate answers from any game&apos;s rulebook with AI-powered semantic search.
             </p>
             <div className="flex flex-wrap gap-4">
@@ -182,7 +182,7 @@ export default function Home() {
               </motion.a>
             </div>
             {!authUser && (
-              <p className="text-sm text-slate-500 mt-4">
+              <p className="text-sm text-slate-400 mt-4">
                 💡 Try with demo account: <code className="bg-white/10 px-2 py-1 rounded text-slate-300 font-mono">user@meepleai.dev</code> / <code className="bg-white/10 px-2 py-1 rounded text-slate-300 font-mono">Demo123!</code>
               </p>
             )}
@@ -217,7 +217,7 @@ export default function Home() {
                     <p className="text-sm">
                       <strong>🤖 MeepleAI:</strong> En passant is a special pawn capture that can only occur immediately after a pawn moves two squares forward from its starting position and lands beside an opponent&apos;s pawn...
                     </p>
-                    <p className="text-xs text-slate-500 mt-2 italic">
+                    <p className="text-xs text-slate-400 mt-2 italic">
                       📖 Sources: Chess Rules (FIDE) - Page 12
                     </p>
                   </div>
@@ -249,7 +249,7 @@ export default function Home() {
             className="text-center mb-16"
           >
             <h2 className="text-5xl font-bold mb-4">How It Works</h2>
-            <p className="text-xl text-slate-400">Three simple steps to never misunderstand rules again</p>
+            <p className="text-xl text-slate-300">Three simple steps to never misunderstand rules again</p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -267,7 +267,7 @@ export default function Home() {
               >
                 <div className="text-6xl mb-4">{feature.icon}</div>
                 <h3 className="text-2xl font-semibold mb-3">{feature.title}</h3>
-                <p className="text-slate-400 leading-relaxed">{feature.description}</p>
+                <p className="text-slate-300 leading-relaxed">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -295,7 +295,7 @@ export default function Home() {
                   <span className="text-2xl">{feature.icon}</span>
                   {feature.title}
                 </h3>
-                <p className="text-slate-400">{feature.description}</p>
+                <p className="text-slate-300">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -333,30 +333,30 @@ export default function Home() {
               <span className="text-3xl">🎲</span>
               <span className="text-xl font-bold gradient-text">MeepleAI</span>
             </div>
-            <p className="text-slate-400 text-sm">AI-powered board game rules assistance</p>
+            <p className="text-slate-300 text-sm">AI-powered board game rules assistance</p>
           </div>
 
           <div className="space-y-3">
             <h4 className="font-semibold">Product</h4>
             <div className="flex flex-col gap-2 text-sm">
-              <Link href="/chat" className="text-slate-400 hover:text-white transition-colors">Chat</Link>
-              <Link href="/upload" className="text-slate-400 hover:text-white transition-colors">Upload PDF</Link>
-              <Link href="/editor" className="text-slate-400 hover:text-white transition-colors">RuleSpec Editor</Link>
+              <Link href="/chat" className="text-slate-300 hover:text-white transition-colors">Chat</Link>
+              <Link href="/upload" className="text-slate-300 hover:text-white transition-colors">Upload PDF</Link>
+              <Link href="/editor" className="text-slate-300 hover:text-white transition-colors">RuleSpec Editor</Link>
             </div>
           </div>
 
           <div className="space-y-3">
             <h4 className="font-semibold">Resources</h4>
             <div className="flex flex-col gap-2 text-sm">
-              <a href="https://github.com/yourusername/meepleai" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors">GitHub</a>
-              <Link href="/docs" className="text-slate-400 hover:text-white transition-colors">Documentation</Link>
-              <Link href="/logs" className="text-slate-400 hover:text-white transition-colors">API Logs</Link>
+              <a href="https://github.com/yourusername/meepleai" target="_blank" rel="noopener noreferrer" className="text-slate-300 hover:text-white transition-colors">GitHub</a>
+              <Link href="/docs" className="text-slate-300 hover:text-white transition-colors">Documentation</Link>
+              <Link href="/logs" className="text-slate-300 hover:text-white transition-colors">API Logs</Link>
             </div>
           </div>
 
           <div className="space-y-3">
             <h4 className="font-semibold">Demo Accounts</h4>
-            <div className="text-sm text-slate-400 space-y-1">
+            <div className="text-sm text-slate-300 space-y-1">
               <p>admin@meepleai.dev</p>
               <p>editor@meepleai.dev</p>
               <p>user@meepleai.dev</p>
@@ -365,7 +365,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="max-w-6xl mx-auto pt-8 border-t border-white/10 text-center text-sm text-slate-500">
+        <div className="max-w-6xl mx-auto pt-8 border-t border-white/10 text-center text-sm text-slate-400">
           <p>© 2025 MeepleAI. Open source project.</p>
         </div>
       </footer>
@@ -396,7 +396,7 @@ export default function Home() {
               className={`px-6 py-3 font-medium transition-all ${
                 authMode === "login"
                   ? "text-primary-500 border-b-2 border-primary-500"
-                  : "text-slate-400 hover:text-white"
+                  : "text-slate-300 hover:text-white"
               }`}
             >
               Login
@@ -413,7 +413,7 @@ export default function Home() {
               className={`px-6 py-3 font-medium transition-all ${
                 authMode === "register"
                   ? "text-primary-500 border-b-2 border-primary-500"
-                  : "text-slate-400 hover:text-white"
+                  : "text-slate-300 hover:text-white"
               }`}
             >
               Register

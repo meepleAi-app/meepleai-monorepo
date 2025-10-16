@@ -182,7 +182,7 @@ describe('LogsPage', () => {
     expect(warnLevel).toHaveStyle({ color: '#f9ab00' }); // Orange
     expect(warningLevel).toHaveStyle({ color: '#f9ab00' }); // Orange
     expect(infoLevel).toHaveStyle({ color: '#1a73e8' }); // Blue
-    expect(debugLevel).toHaveStyle({ color: '#5f6368' }); // Gray (default)
+    expect(debugLevel).toHaveStyle({ color: '#94a3b8' }); // Gray (default) - updated for WCAG AA compliance
   });
 
   it('cleans up on unmount to prevent memory leaks', async () => {

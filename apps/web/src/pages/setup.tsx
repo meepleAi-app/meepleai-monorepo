@@ -91,7 +91,7 @@ function CitationModal({
               border: "none",
               fontSize: 24,
               cursor: "pointer",
-              color: "#5f6368",
+              color: "#94a3b8",
               padding: 0,
               width: 32,
               height: 32,
@@ -120,11 +120,11 @@ function CitationModal({
                 <span style={{ fontWeight: 500, fontSize: 14, color: "#202124" }}>
                   {snippet.source}
                 </span>
-                <span style={{ fontSize: 12, color: "#5f6368" }}>
+                <span style={{ fontSize: 12, color: "#94a3b8" }}>
                   Page {snippet.page}
                 </span>
               </div>
-              <div style={{ fontSize: 13, color: "#5f6368", lineHeight: 1.5 }}>
+              <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>
                 {snippet.text}
               </div>
             </div>
@@ -188,7 +188,7 @@ function SetupStepCard({
                   fontWeight: 500,
                   padding: "2px 8px",
                   background: "#e8eaed",
-                  color: "#5f6368",
+                  color: "#94a3b8",
                   borderRadius: 12
                 }}
               >
@@ -201,7 +201,7 @@ function SetupStepCard({
           <div
             style={{
               fontSize: 14,
-              color: "#5f6368",
+              color: "#94a3b8",
               lineHeight: 1.6,
               marginBottom: 12,
               textDecoration: isCompleted ? "line-through" : "none",
@@ -452,7 +452,7 @@ export default function SetupPage() {
             <div style={{ flex: 1 }}>
               <label
                 htmlFor="gameSelect"
-                style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14, color: "#5f6368" }}
+                style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14, color: "#94a3b8" }}
               >
                 Game:
               </label>
@@ -526,7 +526,7 @@ export default function SetupPage() {
               textAlign: "center"
             }}
           >
-            <div style={{ fontSize: 16, color: "#5f6368", marginBottom: 16 }}>
+            <div style={{ fontSize: 16, color: "#94a3b8", marginBottom: 16 }}>
               Generating your setup guide...
             </div>
             <div style={{ fontSize: 14, color: "#9aa0a6" }}>
@@ -553,7 +553,7 @@ export default function SetupPage() {
                   <h2 style={{ margin: "0 0 8px 0", fontSize: 20, fontWeight: 600 }}>
                     {setupGuide.gameTitle}
                   </h2>
-                  <div style={{ fontSize: 14, color: "#5f6368" }}>
+                  <div style={{ fontSize: 14, color: "#94a3b8" }}>
                     Estimated setup time: {setupGuide.estimatedSetupTimeMinutes} minutes
                   </div>
                 </div>
@@ -630,7 +630,7 @@ export default function SetupPage() {
 
               {/* AI Confidence */}
               {setupGuide.confidence !== null && (
-                <div style={{ marginTop: 12, fontSize: 12, color: "#5f6368" }}>
+                <div style={{ marginTop: 12, fontSize: 12, color: "#94a3b8" }}>
                   AI Confidence: {Math.round(setupGuide.confidence * 100)}%
                 </div>
               )}
@@ -666,7 +666,7 @@ export default function SetupPage() {
             <h3 style={{ margin: "0 0 8px 0", fontSize: 18, color: "#202124" }}>
               No Setup Guide Yet
             </h3>
-            <p style={{ margin: 0, fontSize: 14, color: "#5f6368" }}>
+            <p style={{ margin: 0, fontSize: 14, color: "#94a3b8" }}>
               Select a game and click &quot;Generate Setup Guide&quot; to get started with step-by-step instructions.
             </p>
           </div>

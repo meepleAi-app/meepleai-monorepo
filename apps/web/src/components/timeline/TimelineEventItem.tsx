@@ -83,7 +83,7 @@ export function TimelineEventItem({
           >
             {event.data.message || getEventTypeLabel(event.type)}
           </div>
-          <div style={{ fontSize: 11, color: "#5f6368", marginTop: 2 }}>
+          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
             {event.timestamp.toLocaleTimeString()}
           </div>
         </div>
@@ -120,7 +120,7 @@ export function TimelineEventItem({
             border: "none",
             cursor: "pointer",
             fontSize: 16,
-            color: "#5f6368",
+            color: "#94a3b8",
             flexShrink: 0
           }}
           title={isExpanded ? "Comprimi" : "Espandi"}
@@ -142,7 +142,7 @@ export function TimelineEventItem({
           {/* Message Content */}
           {event.data.message && event.type === "message" && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontWeight: 600, marginBottom: 6, color: "#5f6368" }}>Messaggio:</div>
+              <div style={{ fontWeight: 600, marginBottom: 6, color: "#94a3b8" }}>Messaggio:</div>
               <div
                 style={{
                   padding: 10,
@@ -160,7 +160,7 @@ export function TimelineEventItem({
           {/* Citations */}
           {event.data.citations && event.data.citations.length > 0 && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontWeight: 600, marginBottom: 6, color: "#5f6368" }}>
+              <div style={{ fontWeight: 600, marginBottom: 6, color: "#94a3b8" }}>
                 Citazioni ({event.data.citations.length}):
               </div>
               {event.data.citations.map((citation: Snippet, idx: number) => (
@@ -178,7 +178,7 @@ export function TimelineEventItem({
                     {citation.source}
                     {citation.page !== null && citation.page !== undefined && ` (Pagina ${citation.page})`}
                   </div>
-                  <div style={{ color: "#5f6368", fontSize: 11 }}>{citation.text}</div>
+                  <div style={{ color: "#94a3b8", fontSize: 11 }}>{citation.text}</div>
                 </div>
               ))}
             </div>
@@ -187,7 +187,7 @@ export function TimelineEventItem({
           {/* Metrics */}
           {event.data.metrics && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontWeight: 600, marginBottom: 6, color: "#5f6368" }}>Metriche:</div>
+              <div style={{ fontWeight: 600, marginBottom: 6, color: "#94a3b8" }}>Metriche:</div>
               <div
                 style={{
                   display: "grid",
@@ -204,7 +204,7 @@ export function TimelineEventItem({
                       borderRadius: 4
                     }}
                   >
-                    <div style={{ fontSize: 10, color: "#5f6368", marginBottom: 2 }}>Latenza</div>
+                    <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 2 }}>Latenza</div>
                     <div style={{ fontWeight: 600, color: "#1a73e8" }}>
                       {formatDuration(event.data.metrics.latencyMs)}
                     </div>
@@ -219,7 +219,7 @@ export function TimelineEventItem({
                       borderRadius: 4
                     }}
                   >
-                    <div style={{ fontSize: 10, color: "#5f6368", marginBottom: 2 }}>
+                    <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 2 }}>
                       Token Prompt
                     </div>
                     <div style={{ fontWeight: 600, color: "#1a73e8" }}>
@@ -236,7 +236,7 @@ export function TimelineEventItem({
                       borderRadius: 4
                     }}
                   >
-                    <div style={{ fontSize: 10, color: "#5f6368", marginBottom: 2 }}>
+                    <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 2 }}>
                       Token Completamento
                     </div>
                     <div style={{ fontWeight: 600, color: "#1a73e8" }}>
@@ -253,7 +253,7 @@ export function TimelineEventItem({
                       borderRadius: 4
                     }}
                   >
-                    <div style={{ fontSize: 10, color: "#5f6368", marginBottom: 2 }}>
+                    <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 2 }}>
                       Totale Token
                     </div>
                     <div style={{ fontWeight: 600, color: "#1a73e8" }}>
@@ -270,7 +270,7 @@ export function TimelineEventItem({
                       borderRadius: 4
                     }}
                   >
-                    <div style={{ fontSize: 10, color: "#5f6368", marginBottom: 2 }}>Confidenza</div>
+                    <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 2 }}>Confidenza</div>
                     <div style={{ fontWeight: 600, color: "#188038" }}>
                       {(event.data.metrics.confidence * 100).toFixed(1)}%
                     </div>
@@ -303,7 +303,7 @@ export function TimelineEventItem({
             <summary
               style={{
                 cursor: "pointer",
-                color: "#5f6368",
+                color: "#94a3b8",
                 fontSize: 11,
                 fontWeight: 500,
                 padding: "4px 0"

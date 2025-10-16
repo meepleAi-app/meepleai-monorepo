@@ -170,7 +170,17 @@
       "Bash(git merge:*)",
       "Bash(Select-String -Pattern \"Passed|Failed|Total tests|Test Run|error|warning\" -Context 0,1)",
       "Bash(Select-String -Pattern \"(error|warning|Build succeeded|Build FAILED)\" -Context 0,2)",
-      "Bash(git cherry-pick:*)"
+      "Bash(git cherry-pick:*)",
+      "Bash(pnpm test:a11y:*)",
+      "Bash(CI=true pnpm test:a11y:*)",
+      "Bash(CI=true timeout 60 pnpm test:a11y:*)",
+      "Bash(set CI=true)",
+      "Bash(Select-String -Pattern \"PASS|FAIL|Test Suites\")",
+      "Bash(Select-Object -First 10)",
+      "Bash(pnpm audit:a11y:*)",
+      "Bash(Select-String -Pattern \"ready|started|compiled\" -Context 0,1)",
+      "WebFetch(domain:dequeuniversity.com)",
+      "Bash(npx tsx:*)"
     ],
     "deny": [],
     "ask": []

@@ -73,7 +73,8 @@ export function TimelineFilters({
 
   if (isCollapsed) {
     return (
-      <div
+      <aside
+        aria-label="Timeline filters (collapsed)"
         style={{
           width: 60,
           background: "#f8f9fa",
@@ -86,6 +87,7 @@ export function TimelineFilters({
       >
         <button
           onClick={onToggleCollapse}
+          aria-label="Show filters"
           style={{
             padding: 12,
             background: "#1a73e8",
@@ -101,10 +103,11 @@ export function TimelineFilters({
           ☰
         </button>
         <div
+          aria-hidden="true"
           style={{
             marginTop: 16,
             fontSize: 11,
-            color: "#5f6368",
+            color: "#94a3b8",
             textAlign: "center",
             writingMode: "vertical-rl",
             transform: "rotate(180deg)"
@@ -112,12 +115,13 @@ export function TimelineFilters({
         >
           Filtri
         </div>
-      </div>
+      </aside>
     );
   }
 
   return (
-    <div
+    <aside
+      aria-label="Timeline filters"
       style={{
         width: 280,
         background: "#f8f9fa",
@@ -140,6 +144,7 @@ export function TimelineFilters({
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Filtri Timeline</h3>
         <button
           onClick={onToggleCollapse}
+          aria-label="Hide filters"
           style={{
             padding: "6px 10px",
             background: "#f1f3f4",
@@ -191,9 +196,10 @@ export function TimelineFilters({
             }}
           >
             <label style={{ fontSize: 13, fontWeight: 600 }}>Tipo Evento</label>
-            <div style={{ display: "flex", gap: 4 }}>
+            <div role="group" aria-label="Event type filter controls" style={{ display: "flex", gap: 4 }}>
               <button
                 onClick={selectAllEventTypes}
+                aria-label="Select all event types"
                 style={{
                   padding: "2px 6px",
                   fontSize: 10,
@@ -208,11 +214,12 @@ export function TimelineFilters({
               </button>
               <button
                 onClick={deselectAllEventTypes}
+                aria-label="Deselect all event types"
                 style={{
                   padding: "2px 6px",
                   fontSize: 10,
                   background: "#f1f3f4",
-                  color: "#5f6368",
+                  color: "#94a3b8",
                   border: "none",
                   borderRadius: 3,
                   cursor: "pointer"
@@ -273,9 +280,10 @@ export function TimelineFilters({
             }}
           >
             <label style={{ fontSize: 13, fontWeight: 600 }}>Stato</label>
-            <div style={{ display: "flex", gap: 4 }}>
+            <div role="group" aria-label="Status filter controls" style={{ display: "flex", gap: 4 }}>
               <button
                 onClick={selectAllStatuses}
+                aria-label="Select all statuses"
                 style={{
                   padding: "2px 6px",
                   fontSize: 10,
@@ -290,11 +298,12 @@ export function TimelineFilters({
               </button>
               <button
                 onClick={deselectAllStatuses}
+                aria-label="Deselect all statuses"
                 style={{
                   padding: "2px 6px",
                   fontSize: 10,
                   background: "#f1f3f4",
-                  color: "#5f6368",
+                  color: "#94a3b8",
                   border: "none",
                   borderRadius: 3,
                   cursor: "pointer"
@@ -350,11 +359,12 @@ export function TimelineFilters({
               searchText: undefined
             })
           }
+          aria-label="Reset all filters"
           style={{
             width: "100%",
             padding: 10,
             background: "#f1f3f4",
-            color: "#5f6368",
+            color: "#94a3b8",
             border: "none",
             borderRadius: 4,
             fontSize: 13,
@@ -365,6 +375,6 @@ export function TimelineFilters({
           Ripristina Filtri
         </button>
       </div>
-    </div>
+    </aside>
   );
 }

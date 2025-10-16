@@ -759,7 +759,7 @@ export default function UploadPage() {
                       border: '1px solid #ddd',
                       borderRadius: '4px',
                       backgroundColor: confirmedGame ? '#fff' : '#f1f3f4',
-                      color: confirmedGame ? '#202124' : '#5f6368'
+                      color: confirmedGame ? '#202124' : '#94a3b8'
                     }}
                   >
                     {confirmedGame
@@ -826,7 +826,7 @@ export default function UploadPage() {
               >
                 <h3 style={{ marginTop: 0, marginBottom: '12px' }}>Uploaded PDFs</h3>
                 {!confirmedGameId ? (
-                  <p style={{ margin: 0, color: '#5f6368' }}>
+                  <p style={{ margin: 0, color: '#94a3b8' }}>
                     Confirm a game to review its uploaded PDFs.
                   </p>
                 ) : loadingPdfs ? (
@@ -846,7 +846,7 @@ export default function UploadPage() {
                 ) : pdfsError ? (
                   <p style={{ margin: 0, color: '#d93025' }}>{pdfsError}</p>
                 ) : pdfs.length === 0 ? (
-                  <p style={{ margin: 0, color: '#5f6368' }}>No PDFs uploaded yet for this game.</p>
+                  <p style={{ margin: 0, color: '#94a3b8' }}>No PDFs uploaded yet for this game.</p>
                 ) : (
                   <div style={{ overflowX: 'auto' }}>
                     <table aria-label="Uploaded PDFs" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>

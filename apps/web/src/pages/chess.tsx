@@ -221,8 +221,8 @@ export default function ChessPage() {
   // Render login required state
   if (!authUser) {
     return (
-      <main style={{ padding: 24, maxWidth: 900, margin: "0 auto", fontFamily: "sans-serif" }}>
-        <Link href="/" style={{ color: "#0070f3", textDecoration: "none" }}>
+      <main style={{ padding: 24, maxWidth: 900, margin: "0 auto", fontFamily: "sans-serif", background: "#ffffff", minHeight: "100vh" }}>
+        <Link href="/" style={{ color: "#1a73e8", textDecoration: "underline" }}>
           ← Torna alla Home
         </Link>
         <div
@@ -280,7 +280,7 @@ export default function ChessPage() {
         {/* Board Header */}
         <div style={{ marginBottom: 16 }}>
           <h1 style={{ margin: 0, fontSize: 24, marginBottom: 8 }}>Chess Assistant</h1>
-          <p style={{ margin: 0, color: "#5f6368", fontSize: 14 }}>
+          <p style={{ margin: 0, color: "#94a3b8", fontSize: 14 }}>
             Gioca o chiedi consigli sull&apos;agente scacchi AI
           </p>
         </div>
@@ -381,7 +381,7 @@ export default function ChessPage() {
                     ? "Stallo"
                     : "In corso"}
           </div>
-          <div style={{ fontSize: 11, color: "#5f6368", marginTop: 8 }}>
+          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 8 }}>
             <strong>FEN:</strong> {currentPosition}
           </div>
         </div>
@@ -398,7 +398,7 @@ export default function ChessPage() {
           }}
         >
           <h2 style={{ margin: 0, fontSize: 18 }}>Chat con l&apos;Agente</h2>
-          <p style={{ margin: "4px 0 0 0", color: "#5f6368", fontSize: 13 }}>
+          <p style={{ margin: "4px 0 0 0", color: "#94a3b8", fontSize: 13 }}>
             Chiedi consigli, analisi o spiegazioni sulle mosse
           </p>
         </div>
@@ -429,7 +429,7 @@ export default function ChessPage() {
           }}
         >
           {messages.length === 0 ? (
-            <div style={{ textAlign: "center", padding: 48, color: "#5f6368" }}>
+            <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
               <p style={{ fontSize: 16, marginBottom: 8 }}>Benvenuto nella Chess Chat!</p>
               <p style={{ fontSize: 14 }}>
                 Inizia facendo una domanda o muovi un pezzo sulla scacchiera.
@@ -464,7 +464,7 @@ export default function ChessPage() {
                     lineHeight: 1.5
                   }}
                 >
-                  <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 12, color: "#5f6368" }}>
+                  <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 12, color: "#94a3b8" }}>
                     {msg.role === "user" ? "Tu" : "Chess AI"}
                   </div>
                   <div style={{ whiteSpace: "pre-wrap" }}>{msg.content}</div>
@@ -472,7 +472,7 @@ export default function ChessPage() {
                   {/* Suggested Moves */}
                   {msg.suggestedMoves && msg.suggestedMoves.length > 0 && (
                     <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #dadce0" }}>
-                      <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8, color: "#5f6368" }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8, color: "#94a3b8" }}>
                         Mosse suggerite:
                       </div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -522,10 +522,10 @@ export default function ChessPage() {
                   fontSize: 14
                 }}
               >
-                <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 12, color: "#5f6368" }}>
+                <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 12, color: "#94a3b8" }}>
                   Chess AI
                 </div>
-                <div style={{ color: "#5f6368" }}>Sto analizzando...</div>
+                <div style={{ color: "#94a3b8" }}>Sto analizzando...</div>
               </div>
             </div>
           )}

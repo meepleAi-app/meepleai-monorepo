@@ -128,7 +128,8 @@ public class AuthService
                         await _db.SaveChangesAsync(ct);
                     }
 
-                    return cached;
+                    // Return session with current LastSeenAt (AUTH-05 fix)
+                    return new ActiveSession(cached.User, cached.ExpiresAt, now);
                 }
 
                 // Expired in cache - invalidate
@@ -149,7 +150,7 @@ public class AuthService
         dbSession.LastSeenAt = now;
         await _db.SaveChangesAsync(ct);
 
-        var activeSession = new ActiveSession(ToDto(dbSession.User), dbSession.ExpiresAt);
+        var activeSession = new ActiveSession(ToDto(dbSession.User), dbSession.ExpiresAt, now);
 
         // Cache for next time
         if (_sessionCache != null)

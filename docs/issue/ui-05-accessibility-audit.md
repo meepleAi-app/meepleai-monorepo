@@ -1,9 +1,9 @@
 # Accessibility Audit Report (UI-05)
 
-**Generated:** 16/10/2025, 20:46:42
+**Generated:** 16/10/2025, 21:20:54
 **Tool:** axe-core (via @axe-core/playwright)
 **Standard:** WCAG 2.1 AA
-**Pages Audited:** 10
+**Pages Audited:** 2
 
 ---
 
@@ -12,12 +12,12 @@
 | Severity | Count |
 |----------|-------|
 | 🔴 Critical | 0 |
-| 🟠 Serious | 29 |
+| 🟠 Serious | 0 |
 | 🟡 Moderate | 0 |
 | 🔵 Minor | 0 |
-| **Total** | **29** |
+| **Total** | **0** |
 
-❌ **Status:** FAIL - 29 blocking errors found
+✅ **Status:** PASS - No blocking accessibility errors
 
 ---
 
@@ -26,217 +26,20 @@
 ### Landing Page
 
 **URL:** `/`  
-**Violations:** 3 (Critical: 0, Serious: 3, Moderate: 0, Minor: 0)  
-**Passes:** 16  
-
-#### Violations
-
-##### 🟠 Serious
-
-- **color-contrast** (3 instances)
-  - Elements must meet minimum color contrast ratio thresholds
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=playwright)
-- **document-title** (1 instance)
-  - Documents must have <title> element to aid in navigation
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/document-title?application=playwright)
-- **html-has-lang** (1 instance)
-  - <html> element must have a lang attribute
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/html-has-lang?application=playwright)
-
----
-
-### Chat
-
-**URL:** `/chat`  
-**Violations:** 3 (Critical: 0, Serious: 3, Moderate: 0, Minor: 0)  
+**Violations:** 0 (Critical: 0, Serious: 0, Moderate: 0, Minor: 0)  
 **Passes:** 20  
 
-#### Violations
-
-##### 🟠 Serious
-
-- **color-contrast** (3 instances)
-  - Elements must meet minimum color contrast ratio thresholds
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=playwright)
-- **document-title** (1 instance)
-  - Documents must have <title> element to aid in navigation
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/document-title?application=playwright)
-- **html-has-lang** (1 instance)
-  - <html> element must have a lang attribute
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/html-has-lang?application=playwright)
-
----
-
-### Upload
-
-**URL:** `/upload`  
-**Violations:** 3 (Critical: 0, Serious: 3, Moderate: 0, Minor: 0)  
-**Passes:** 14  
-
-#### Violations
-
-##### 🟠 Serious
-
-- **color-contrast** (5 instances)
-  - Elements must meet minimum color contrast ratio thresholds
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=playwright)
-- **document-title** (1 instance)
-  - Documents must have <title> element to aid in navigation
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/document-title?application=playwright)
-- **html-has-lang** (1 instance)
-  - <html> element must have a lang attribute
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/html-has-lang?application=playwright)
-
----
-
-### Editor
-
-**URL:** `/editor`  
-**Violations:** 3 (Critical: 0, Serious: 3, Moderate: 0, Minor: 0)  
-**Passes:** 14  
-
-#### Violations
-
-##### 🟠 Serious
-
-- **color-contrast** (1 instance)
-  - Elements must meet minimum color contrast ratio thresholds
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=playwright)
-- **document-title** (1 instance)
-  - Documents must have <title> element to aid in navigation
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/document-title?application=playwright)
-- **html-has-lang** (1 instance)
-  - <html> element must have a lang attribute
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/html-has-lang?application=playwright)
-
----
-
-### Versions
-
-**URL:** `/versions`  
-**Violations:** 3 (Critical: 0, Serious: 3, Moderate: 0, Minor: 0)  
-**Passes:** 14  
-
-#### Violations
-
-##### 🟠 Serious
-
-- **color-contrast** (1 instance)
-  - Elements must meet minimum color contrast ratio thresholds
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=playwright)
-- **document-title** (1 instance)
-  - Documents must have <title> element to aid in navigation
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/document-title?application=playwright)
-- **html-has-lang** (1 instance)
-  - <html> element must have a lang attribute
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/html-has-lang?application=playwright)
-
----
-
-### Admin
-
-**URL:** `/admin`  
-**Violations:** 3 (Critical: 0, Serious: 3, Moderate: 0, Minor: 0)  
-**Passes:** 14  
-
-#### Violations
-
-##### 🟠 Serious
-
-- **color-contrast** (2 instances)
-  - Elements must meet minimum color contrast ratio thresholds
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=playwright)
-- **document-title** (1 instance)
-  - Documents must have <title> element to aid in navigation
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/document-title?application=playwright)
-- **html-has-lang** (1 instance)
-  - <html> element must have a lang attribute
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/html-has-lang?application=playwright)
-
----
-
-### N8N
-
-**URL:** `/n8n`  
-**Violations:** 3 (Critical: 0, Serious: 3, Moderate: 0, Minor: 0)  
-**Passes:** 14  
-
-#### Violations
-
-##### 🟠 Serious
-
-- **color-contrast** (2 instances)
-  - Elements must meet minimum color contrast ratio thresholds
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=playwright)
-- **document-title** (1 instance)
-  - Documents must have <title> element to aid in navigation
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/document-title?application=playwright)
-- **html-has-lang** (1 instance)
-  - <html> element must have a lang attribute
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/html-has-lang?application=playwright)
-
----
-
-### Logs
-
-**URL:** `/logs`  
-**Violations:** 3 (Critical: 0, Serious: 3, Moderate: 0, Minor: 0)  
-**Passes:** 18  
-
-#### Violations
-
-##### 🟠 Serious
-
-- **color-contrast** (9 instances)
-  - Elements must meet minimum color contrast ratio thresholds
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=playwright)
-- **document-title** (1 instance)
-  - Documents must have <title> element to aid in navigation
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/document-title?application=playwright)
-- **html-has-lang** (1 instance)
-  - <html> element must have a lang attribute
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/html-has-lang?application=playwright)
-
----
-
-### Setup
-
-**URL:** `/setup`  
-**Violations:** 3 (Critical: 0, Serious: 3, Moderate: 0, Minor: 0)  
-**Passes:** 19  
-
-#### Violations
-
-##### 🟠 Serious
-
-- **color-contrast** (1 instance)
-  - Elements must meet minimum color contrast ratio thresholds
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/color-contrast?application=playwright)
-- **document-title** (1 instance)
-  - Documents must have <title> element to aid in navigation
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/document-title?application=playwright)
-- **html-has-lang** (1 instance)
-  - <html> element must have a lang attribute
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/html-has-lang?application=playwright)
+✅ No accessibility violations found!
 
 ---
 
 ### Chess
 
 **URL:** `/chess`  
-**Violations:** 2 (Critical: 0, Serious: 2, Moderate: 0, Minor: 0)  
-**Passes:** 20  
+**Violations:** 0 (Critical: 0, Serious: 0, Moderate: 0, Minor: 0)  
+**Passes:** 21  
 
-#### Violations
-
-##### 🟠 Serious
-
-- **document-title** (1 instance)
-  - Documents must have <title> element to aid in navigation
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/document-title?application=playwright)
-- **html-has-lang** (1 instance)
-  - <html> element must have a lang attribute
-  - [Learn more](https://dequeuniversity.com/rules/axe/4.10/html-has-lang?application=playwright)
+✅ No accessibility violations found!
 
 ---
 
@@ -245,11 +48,7 @@
 Based on the audit findings, the following actions are recommended:
 
 ### Priority 1: Critical & Serious Issues
-These **MUST** be fixed before considering the application WCAG 2.1 AA compliant.
-
-- [ ] Fix `color-contrast` across all affected pages
-- [ ] Fix `document-title` across all affected pages
-- [ ] Fix `html-has-lang` across all affected pages
+✅ No critical or serious issues found!
 
 ### Priority 2: Moderate Issues
 

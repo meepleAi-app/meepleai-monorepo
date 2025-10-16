@@ -33,7 +33,7 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
           style={{
             padding: 12,
             background: event ? "#1a73e8" : "#f1f3f4",
-            color: event ? "white" : "#5f6368",
+            color: event ? "white" : "#94a3b8",
             border: "none",
             borderRadius: 4,
             cursor: "pointer",
@@ -50,7 +50,7 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
             style={{
               marginTop: 16,
               fontSize: 11,
-              color: "#5f6368",
+              color: "#94a3b8",
               textAlign: "center",
               writingMode: "vertical-rl",
               transform: "rotate(180deg)"
@@ -112,7 +112,7 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
             justifyContent: "center",
             padding: 32,
             textAlign: "center",
-            color: "#5f6368"
+            color: "#94a3b8"
           }}
         >
           <div style={{ fontSize: 48, marginBottom: 16 }}>👈</div>
@@ -148,7 +148,7 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
                 >
                   {getEventTypeLabel(event.type)}
                 </div>
-                <div style={{ fontSize: 11, color: "#5f6368", marginTop: 4 }}>
+                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>
                   {event.timestamp.toLocaleString()}
                 </div>
               </div>
@@ -168,7 +168,7 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
                 style={{
                   fontSize: 12,
                   fontWeight: 600,
-                  color: "#5f6368",
+                  color: "#94a3b8",
                   marginBottom: 8,
                   textTransform: "uppercase",
                   letterSpacing: "0.5px"
@@ -197,7 +197,7 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
                 style={{
                   fontSize: 12,
                   fontWeight: 600,
-                  color: "#5f6368",
+                  color: "#94a3b8",
                   marginBottom: 8,
                   textTransform: "uppercase",
                   letterSpacing: "0.5px"
@@ -218,7 +218,7 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
                       alignItems: "center"
                     }}
                   >
-                    <span style={{ fontSize: 13, color: "#5f6368" }}>Latenza</span>
+                    <span style={{ fontSize: 13, color: "#94a3b8" }}>Latenza</span>
                     <span style={{ fontSize: 15, fontWeight: 600, color: "#1a73e8" }}>
                       {formatDuration(event.data.metrics.latencyMs)}
                     </span>
@@ -236,7 +236,7 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
                       alignItems: "center"
                     }}
                   >
-                    <span style={{ fontSize: 13, color: "#5f6368" }}>Token Prompt</span>
+                    <span style={{ fontSize: 13, color: "#94a3b8" }}>Token Prompt</span>
                     <span style={{ fontSize: 15, fontWeight: 600, color: "#1a73e8" }}>
                       {event.data.metrics.promptTokens}
                     </span>
@@ -254,7 +254,7 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
                       alignItems: "center"
                     }}
                   >
-                    <span style={{ fontSize: 13, color: "#5f6368" }}>Token Completamento</span>
+                    <span style={{ fontSize: 13, color: "#94a3b8" }}>Token Completamento</span>
                     <span style={{ fontSize: 15, fontWeight: 600, color: "#1a73e8" }}>
                       {event.data.metrics.completionTokens}
                     </span>
@@ -272,7 +272,7 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
                       alignItems: "center"
                     }}
                   >
-                    <span style={{ fontSize: 13, color: "#5f6368" }}>Totale Token</span>
+                    <span style={{ fontSize: 13, color: "#94a3b8" }}>Totale Token</span>
                     <span style={{ fontSize: 15, fontWeight: 600, color: "#1a73e8" }}>
                       {event.data.metrics.totalTokens}
                     </span>
@@ -290,7 +290,7 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
                       alignItems: "center"
                     }}
                   >
-                    <span style={{ fontSize: 13, color: "#5f6368" }}>Confidenza</span>
+                    <span style={{ fontSize: 13, color: "#94a3b8" }}>Confidenza</span>
                     <span style={{ fontSize: 15, fontWeight: 600, color: "#188038" }}>
                       {(event.data.metrics.confidence * 100).toFixed(1)}%
                     </span>
@@ -307,7 +307,7 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
                 style={{
                   fontSize: 12,
                   fontWeight: 600,
-                  color: "#5f6368",
+                  color: "#94a3b8",
                   marginBottom: 8,
                   textTransform: "uppercase",
                   letterSpacing: "0.5px"
@@ -329,7 +329,7 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
                     <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6, color: "#202124" }}>
                       {citation.source}
                       {citation.page !== null && citation.page !== undefined && (
-                        <span style={{ color: "#5f6368", fontWeight: 400 }}>
+                        <span style={{ color: "#94a3b8", fontWeight: 400 }}>
                           {" "}
                           • Pagina {citation.page}
                         </span>
@@ -338,7 +338,7 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
                     <div
                       style={{
                         fontSize: 12,
-                        color: "#5f6368",
+                        color: "#94a3b8",
                         lineHeight: 1.5,
                         whiteSpace: "pre-wrap"
                       }}
@@ -388,7 +388,7 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
               style={{
                 fontSize: 12,
                 fontWeight: 600,
-                color: "#5f6368",
+                color: "#94a3b8",
                 marginBottom: 8,
                 textTransform: "uppercase",
                 letterSpacing: "0.5px",

@@ -3,7 +3,10 @@ import Head from 'next/head';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { ToastContainer } from '../components/Toast';
 import { useToast } from '../hooks/useToast';
+import { useSessionCheck } from '../hooks/useSessionCheck';
+import { SessionWarningModal } from '../components/SessionWarningModal';
 import { AccessibleSkipLink } from '@/components/accessible';
+import { api } from '@/lib/api';
 import '../styles/globals.css';
 
 // Enable axe-core accessibility checks in development (UI-05)
@@ -21,6 +24,24 @@ if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
 function AppContent({ Component, pageProps }: AppProps) {
   const { toasts, dismiss } = useToast();
 
+  // AUTH-05: Session timeout monitoring
+  const { remainingMinutes, isNearExpiry } = useSessionCheck();
+
+  const handleStayLoggedIn = async () => {
+    try {
+      await api.auth.extendSession();
+      // Session extended - modal will close automatically when isNearExpiry becomes false
+    } catch (error) {
+      console.error('Failed to extend session:', error);
+      // Redirect to login on error
+      window.location.href = '/login?reason=session_expired';
+    }
+  };
+
+  const handleLogOut = () => {
+    window.location.href = '/login?reason=session_expired';
+  };
+
   return (
     <>
       {/* Default document title (UI-05 WCAG 2.1 AA requirement) */}
@@ -31,6 +52,15 @@ function AppContent({ Component, pageProps }: AppProps) {
       <AccessibleSkipLink href="#main-content" />
       <Component {...pageProps} />
       <ToastContainer toasts={toasts} onDismiss={dismiss} position="top-right" />
+
+      {/* AUTH-05: Session expiry warning modal */}
+      {isNearExpiry && remainingMinutes !== null && (
+        <SessionWarningModal
+          remainingMinutes={remainingMinutes}
+          onStayLoggedIn={handleStayLoggedIn}
+          onLogOut={handleLogOut}
+        />
+      )}
     </>
   );
 }

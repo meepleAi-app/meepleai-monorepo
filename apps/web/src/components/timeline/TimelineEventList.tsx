@@ -76,7 +76,7 @@ export function TimelineEventList({
         style={{
           padding: 48,
           textAlign: "center",
-          color: "#5f6368"
+          color: "#94a3b8"
         }}
       >
         <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>

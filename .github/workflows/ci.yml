@@ -107,6 +107,47 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+      # UI-05: Accessibility Testing
+      - name: Run Accessibility Unit Tests (jest-axe)
+        run: CI=true pnpm test:a11y
+
+  ci-web-a11y:
+    needs: changes
+    name: Web - Accessibility Tests (E2E)
+    runs-on: ubuntu-latest
+    if: needs.changes.outputs.web == 'true'
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Build Next.js for E2E
+        run: pnpm build
+      - name: Run Playwright Accessibility Tests
+        run: pnpm test:e2e e2e/accessibility.spec.ts
+      - name: Upload Playwright Report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-a11y-report-${{ github.run_number }}
+          path: apps/web/playwright-report/
+          retention-days: 7
+
   ci-api:
     needs: changes
     name: API - Build and Test

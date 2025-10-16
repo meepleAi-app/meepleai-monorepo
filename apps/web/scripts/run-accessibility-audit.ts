@@ -414,8 +414,20 @@ async function main() {
     for (const config of PAGES_TO_AUDIT) {
       // Authenticate if needed and not yet authenticated
       if (config.requiresAuth && !isAuthenticated) {
-        await login(page);
-        isAuthenticated = true;
+        try {
+          await login(page);
+          isAuthenticated = true;
+        } catch (error) {
+          console.log(`  ⚠️  Login failed, skipping authenticated pages`);
+          console.log(`  Error: ${error.message}`);
+          // Skip this and all remaining auth-required pages
+          const publicPages = PAGES_TO_AUDIT.filter(p => !p.requiresAuth && !results.some(r => r.page === p.name));
+          for (const publicConfig of publicPages) {
+            const result = await auditPage(page, publicConfig, false);
+            results.push(result);
+          }
+          break;
+        }
       }
 
       // Audit the page

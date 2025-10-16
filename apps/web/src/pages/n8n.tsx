@@ -201,7 +201,7 @@ export default function N8nWorkflowManagement() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h1 style={{ margin: 0 }}>n8n Workflow Management</h1>
-          <p style={{ margin: "8px 0 0 0", color: "#5f6368" }}>
+          <p style={{ margin: "8px 0 0 0", color: "#94a3b8" }}>
             Configure n8n endpoints and credentials for workflow automation
           </p>
         </div>
@@ -214,7 +214,7 @@ export default function N8nWorkflowManagement() {
             }}
             style={{
               padding: "8px 16px",
-              background: showForm ? "#5f6368" : "#0f9d58",
+              background: showForm ? "#94a3b8" : "#0f9d58",
               color: "white",
               border: "none",
               borderRadius: 4,
@@ -342,7 +342,7 @@ export default function N8nWorkflowManagement() {
       )}
 
       {configs.length === 0 ? (
-        <div style={{ padding: 48, textAlign: "center", color: "#5f6368", border: "1px solid #dadce0", borderRadius: 8 }}>
+        <div style={{ padding: 48, textAlign: "center", color: "#94a3b8", border: "1px solid #dadce0", borderRadius: 8 }}>
           <p>No n8n configurations found. Click &quot;Add Configuration&quot; to create one.</p>
         </div>
       ) : (
@@ -365,7 +365,7 @@ export default function N8nWorkflowManagement() {
                       style={{
                         padding: "4px 8px",
                         background: config.isActive ? "#e8f5e9" : "#f5f5f5",
-                        color: config.isActive ? "#0f9d58" : "#5f6368",
+                        color: config.isActive ? "#0f9d58" : "#94a3b8",
                         fontSize: 12,
                         fontWeight: 600,
                         borderRadius: 4
@@ -374,11 +374,11 @@ export default function N8nWorkflowManagement() {
                       {config.isActive ? "Active" : "Inactive"}
                     </span>
                   </div>
-                  <p style={{ margin: "4px 0 0 0", color: "#5f6368", fontSize: 14 }}>
+                  <p style={{ margin: "4px 0 0 0", color: "#94a3b8", fontSize: 14 }}>
                     {config.baseUrl}
                   </p>
                   {config.webhookUrl && (
-                    <p style={{ margin: "4px 0 0 0", color: "#5f6368", fontSize: 14 }}>
+                    <p style={{ margin: "4px 0 0 0", color: "#94a3b8", fontSize: 14 }}>
                       Webhook: {config.webhookUrl}
                     </p>
                   )}
@@ -404,7 +404,7 @@ export default function N8nWorkflowManagement() {
                     onClick={() => handleToggleActive(config)}
                     style={{
                       padding: "6px 12px",
-                      background: config.isActive ? "#5f6368" : "#0f9d58",
+                      background: config.isActive ? "#94a3b8" : "#0f9d58",
                       color: "white",
                       border: "none",
                       borderRadius: 4,
@@ -447,7 +447,7 @@ export default function N8nWorkflowManagement() {
 
               {config.lastTestedAt && (
                 <div style={{ padding: 12, background: "#f8f9fa", borderRadius: 4 }}>
-                  <div style={{ fontSize: 12, color: "#5f6368", marginBottom: 4 }}>
+                  <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>
                     Last tested: {new Date(config.lastTestedAt).toLocaleString()}
                   </div>
                   <div

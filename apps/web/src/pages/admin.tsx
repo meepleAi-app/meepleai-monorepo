@@ -178,7 +178,7 @@ export default function AdminDashboard() {
       case "setup":
         return "#a142f4";
       default:
-        return "#5f6368";
+        return "#94a3b8";
     }
   };
 
@@ -205,7 +205,7 @@ export default function AdminDashboard() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h1 style={{ margin: 0 }}>Admin Dashboard</h1>
-          <p style={{ margin: "8px 0 0 0", color: "#5f6368" }}>
+          <p style={{ margin: "8px 0 0 0", color: "#94a3b8" }}>
             Monitor AI requests, latency, and token usage
           </p>
         </div>
@@ -243,23 +243,23 @@ export default function AdminDashboard() {
       {stats && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginBottom: 24 }}>
           <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-            <div style={{ fontSize: 12, color: "#5f6368", marginBottom: 8 }}>Total Requests</div>
+            <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 8 }}>Total Requests</div>
             <div style={{ fontSize: 32, fontWeight: 600 }}>{stats.totalRequests}</div>
           </div>
           <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-            <div style={{ fontSize: 12, color: "#5f6368", marginBottom: 8 }}>Avg Latency</div>
+            <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 8 }}>Avg Latency</div>
             <div style={{ fontSize: 32, fontWeight: 600 }}>{Math.round(stats.avgLatencyMs)}ms</div>
           </div>
           <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-            <div style={{ fontSize: 12, color: "#5f6368", marginBottom: 8 }}>Total Tokens</div>
+            <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 8 }}>Total Tokens</div>
             <div style={{ fontSize: 32, fontWeight: 600 }}>{stats.totalTokens}</div>
           </div>
           <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-            <div style={{ fontSize: 12, color: "#5f6368", marginBottom: 8 }}>Success Rate</div>
+            <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 8 }}>Success Rate</div>
             <div style={{ fontSize: 32, fontWeight: 600 }}>{(stats.successRate * 100).toFixed(1)}%</div>
           </div>
           <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
-            <div style={{ fontSize: 12, color: "#5f6368", marginBottom: 8 }}>Feedback Totali</div>
+            <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 8 }}>Feedback Totali</div>
             <div style={{ fontSize: 32, fontWeight: 600 }}>{stats.totalFeedback}</div>
             <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
               <span style={{ color: "#34a853", fontWeight: 600 }}>Utile: {helpfulCount}</span>
@@ -355,7 +355,7 @@ export default function AdminDashboard() {
       {/* Date Range Filters */}
       <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
         <div style={{ flex: 1 }}>
-          <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#5f6368", fontWeight: 600 }}>
+          <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#94a3b8", fontWeight: 600 }}>
             Start Date
           </label>
           <input
@@ -372,7 +372,7 @@ export default function AdminDashboard() {
           />
         </div>
         <div style={{ flex: 1 }}>
-          <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#5f6368", fontWeight: 600 }}>
+          <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#94a3b8", fontWeight: 600 }}>
             End Date
           </label>
           <input
@@ -394,7 +394,7 @@ export default function AdminDashboard() {
           style={{
             padding: "28px 16px 12px 16px",
             background: !startDate && !endDate ? "#f8f9fa" : "#f8f9fa",
-            color: "#5f6368",
+            color: "#94a3b8",
             border: "1px solid #dadce0",
             borderRadius: 4,
             cursor: !startDate && !endDate ? "not-allowed" : "pointer",
@@ -418,7 +418,7 @@ export default function AdminDashboard() {
             gap: 16,
             fontSize: 12,
             fontWeight: 600,
-            color: "#5f6368",
+            color: "#94a3b8",
             textTransform: "uppercase"
           }}
         >
@@ -436,7 +436,7 @@ export default function AdminDashboard() {
         </div>
 
         {filteredRequests.length === 0 ? (
-          <div style={{ padding: 48, textAlign: "center", color: "#5f6368" }}>
+          <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
             <p>No AI requests found.</p>
           </div>
         ) : (
@@ -453,7 +453,7 @@ export default function AdminDashboard() {
                 alignItems: "start"
               }}
             >
-              <div style={{ color: "#5f6368", fontSize: 11, fontFamily: "monospace" }}>
+              <div style={{ color: "#94a3b8", fontSize: 11, fontFamily: "monospace" }}>
                 {new Date(req.createdAt).toLocaleString()}
               </div>
               <div
@@ -465,23 +465,23 @@ export default function AdminDashboard() {
               >
                 {req.endpoint}
               </div>
-              <div style={{ fontSize: 11, fontFamily: "monospace", color: "#5f6368" }}>
+              <div style={{ fontSize: 11, fontFamily: "monospace", color: "#94a3b8" }}>
                 {req.gameId?.substring(0, 8) || "-"}
               </div>
               <div style={{ fontSize: 12, fontFamily: "monospace" }}>{req.latencyMs}ms</div>
-              <div style={{ fontSize: 12, fontFamily: "monospace", color: "#5f6368" }}>
+              <div style={{ fontSize: 12, fontFamily: "monospace", color: "#94a3b8" }}>
                 {req.promptTokens}
               </div>
-              <div style={{ fontSize: 12, fontFamily: "monospace", color: "#5f6368" }}>
+              <div style={{ fontSize: 12, fontFamily: "monospace", color: "#94a3b8" }}>
                 {req.completionTokens}
               </div>
-              <div style={{ fontSize: 12, fontFamily: "monospace", color: "#5f6368" }}>
+              <div style={{ fontSize: 12, fontFamily: "monospace", color: "#94a3b8" }}>
                 {req.tokenCount}
               </div>
-              <div style={{ fontSize: 12, fontFamily: "monospace", color: "#5f6368" }}>
+              <div style={{ fontSize: 12, fontFamily: "monospace", color: "#94a3b8" }}>
                 {req.confidence !== null && req.confidence !== undefined ? req.confidence.toFixed(2) : "-"}
               </div>
-              <div style={{ fontSize: 12, color: "#5f6368" }}>
+              <div style={{ fontSize: 12, color: "#94a3b8" }}>
                 {req.model ? `${req.model}${req.finishReason ? ` (${req.finishReason})` : ""}` : "-"}
               </div>
               <div style={{ fontSize: 12, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -497,7 +497,7 @@ export default function AdminDashboard() {
         {/* Pagination Controls */}
         {totalCount > 0 && (
           <div style={{ padding: 16, borderTop: "1px solid #dadce0", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8f9fa" }}>
-            <div style={{ fontSize: 13, color: "#5f6368" }}>
+            <div style={{ fontSize: 13, color: "#94a3b8" }}>
               Showing {Math.min((page - 1) * pageSize + 1, totalCount)}-{Math.min(page * pageSize, totalCount)} of {totalCount} requests
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -507,7 +507,7 @@ export default function AdminDashboard() {
                 style={{
                   padding: "8px 16px",
                   background: page === 1 ? "#f8f9fa" : "#1a73e8",
-                  color: page === 1 ? "#5f6368" : "white",
+                  color: page === 1 ? "#94a3b8" : "white",
                   border: page === 1 ? "1px solid #dadce0" : "none",
                   borderRadius: 4,
                   cursor: page === 1 ? "not-allowed" : "pointer",
@@ -517,7 +517,7 @@ export default function AdminDashboard() {
               >
                 Previous
               </button>
-              <span style={{ fontSize: 13, color: "#5f6368", padding: "0 8px" }}>
+              <span style={{ fontSize: 13, color: "#94a3b8", padding: "0 8px" }}>
                 Page {page} of {Math.ceil(totalCount / pageSize)}
               </span>
               <button
@@ -526,7 +526,7 @@ export default function AdminDashboard() {
                 style={{
                   padding: "8px 16px",
                   background: page * pageSize >= totalCount ? "#f8f9fa" : "#1a73e8",
-                  color: page * pageSize >= totalCount ? "#5f6368" : "white",
+                  color: page * pageSize >= totalCount ? "#94a3b8" : "white",
                   border: page * pageSize >= totalCount ? "1px solid #dadce0" : "none",
                   borderRadius: 4,
                   cursor: page * pageSize >= totalCount ? "not-allowed" : "pointer",

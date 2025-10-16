@@ -29,12 +29,12 @@ export function EndpointDistributionChart({ endpointCounts }: EndpointChartProps
   const data = Object.entries(endpointCounts).map(([name, value]) => ({
     name,
     value,
-    color: ENDPOINT_COLORS[name] || "#5f6368"
+    color: ENDPOINT_COLORS[name] || "#94a3b8"
   }));
 
   if (data.length === 0) {
     return (
-      <div style={{ padding: 48, textAlign: "center", color: "#5f6368" }}>
+      <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
         No endpoint data available
       </div>
     );
@@ -66,7 +66,7 @@ export function EndpointDistributionChart({ endpointCounts }: EndpointChartProps
 export function LatencyDistributionChart({ requests }: LatencyChartProps) {
   if (requests.length === 0) {
     return (
-      <div style={{ padding: 48, textAlign: "center", color: "#5f6368" }}>
+      <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
         No latency data available
       </div>
     );
@@ -100,7 +100,7 @@ export function LatencyDistributionChart({ requests }: LatencyChartProps) {
 export function RequestsTimeSeriesChart({ requests }: TimeSeriesChartProps) {
   if (requests.length === 0) {
     return (
-      <div style={{ padding: 48, textAlign: "center", color: "#5f6368" }}>
+      <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
         No time series data available
       </div>
     );
@@ -157,7 +157,7 @@ export function FeedbackChart({ feedbackCounts }: FeedbackChartProps) {
 
   if (data.length === 0 || data.every(d => d.value === 0)) {
     return (
-      <div style={{ padding: 48, textAlign: "center", color: "#5f6368" }}>
+      <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
         No feedback data available
       </div>
     );

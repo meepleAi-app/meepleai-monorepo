@@ -21,7 +21,8 @@ public class SessionCacheServiceTests
         var tokenHash = "test-hash";
         var user = new AuthUser("user-123", "test@example.com", "Test User", "User");
         var expiresAt = DateTime.UtcNow.AddDays(7);
-        var session = new ActiveSession(user, expiresAt);
+        var lastSeenAt = DateTime.UtcNow;
+        var session = new ActiveSession(user, expiresAt, lastSeenAt);
 
         var cachedJson = System.Text.Json.JsonSerializer.Serialize(session, new System.Text.Json.JsonSerializerOptions
         {
@@ -84,7 +85,8 @@ public class SessionCacheServiceTests
         var tokenHash = "test-hash";
         var user = new AuthUser("user-123", "test@example.com", "Test User", "User");
         var expiresAt = DateTime.UtcNow.AddDays(7);
-        var session = new ActiveSession(user, expiresAt);
+        var lastSeenAt = DateTime.UtcNow;
+        var session = new ActiveSession(user, expiresAt, lastSeenAt);
 
         TimeSpan? capturedTtl = null;
         mockDatabase

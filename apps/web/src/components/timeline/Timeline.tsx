@@ -23,6 +23,7 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
     return (
       <button
         onClick={onToggleVisibility}
+        aria-label="Show RAG Timeline"
         style={{
           position: "fixed",
           bottom: 24,
@@ -64,7 +65,9 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
   }
 
   return (
-    <div
+    <aside
+      role="region"
+      aria-label="RAG Timeline with conversation events and metrics"
       style={{
         position: "fixed",
         top: 0,
@@ -79,7 +82,7 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
       }}
     >
       {/* Timeline Header */}
-      <div
+      <header
         style={{
           padding: 16,
           borderBottom: "1px solid #dadce0",
@@ -91,20 +94,21 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 28 }}>📊</span>
+          <span aria-hidden="true" style={{ fontSize: 28 }}>📊</span>
           <div>
             <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Timeline RAG</h1>
-            <p style={{ margin: "4px 0 0 0", fontSize: 13, color: "#5f6368" }}>
+            <p style={{ margin: "4px 0 0 0", fontSize: 13, color: "#94a3b8" }}>
               Cronologia eventi e metriche conversazione
             </p>
           </div>
         </div>
         <button
           onClick={onToggleVisibility}
+          aria-label="Close RAG Timeline"
           style={{
             padding: "10px 18px",
             background: "#f1f3f4",
-            color: "#5f6368",
+            color: "#94a3b8",
             border: "none",
             borderRadius: 4,
             fontSize: 14,
@@ -116,9 +120,9 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
           }}
         >
           <span>Chiudi Timeline</span>
-          <span style={{ fontSize: 16 }}>✕</span>
+          <span aria-hidden="true" style={{ fontSize: 16 }}>✕</span>
         </button>
-      </div>
+      </header>
 
       {/* Multi-pane Layout */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
@@ -157,7 +161,9 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
 
       {/* Stats Bar (optional) */}
       {events.length > 0 && (
-        <div
+        <footer
+          role="status"
+          aria-label="Timeline statistics"
           style={{
             padding: "8px 16px",
             borderTop: "1px solid #dadce0",
@@ -165,7 +171,7 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
             display: "flex",
             gap: 24,
             fontSize: 12,
-            color: "#5f6368"
+            color: "#94a3b8"
           }}
         >
           <div>
@@ -193,8 +199,8 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
               token totali
             </div>
           )}
-        </div>
+        </footer>
       )}
-    </div>
+    </aside>
   );
 }

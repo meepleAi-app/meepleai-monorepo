@@ -1,5 +1,5 @@
 // UI-04: Timeline event list component
-import { TimelineEvent, TimelineFilters } from "@/lib/timeline-types";
+import { TimelineEvent, TimelineFilters, Snippet } from "@/lib/timeline-types";
 import { TimelineEventItem } from "./TimelineEventItem";
 import { useState } from "react";
 
@@ -55,7 +55,7 @@ export function TimelineEventList({
       const searchLower = filters.searchText.toLowerCase();
       const messageMatch = event.data.message?.toLowerCase().includes(searchLower);
       const errorMatch = event.data.error?.toLowerCase().includes(searchLower);
-      const citationMatch = event.data.citations?.some((c) =>
+      const citationMatch = event.data.citations?.some((c: Snippet) =>
         c.text.toLowerCase().includes(searchLower) || c.source.toLowerCase().includes(searchLower)
       );
 

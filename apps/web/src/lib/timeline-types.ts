@@ -54,7 +54,7 @@ export interface TimelineFilters {
 }
 
 export const DEFAULT_FILTERS: TimelineFilters = {
-  eventTypes: new Set([
+  eventTypes: new Set<TimelineEventType>([
     "message",
     "rag_search",
     "rag_retrieval",
@@ -62,7 +62,7 @@ export const DEFAULT_FILTERS: TimelineFilters = {
     "rag_complete",
     "error"
   ]),
-  statuses: new Set(["pending", "in_progress", "success", "error"])
+  statuses: new Set<TimelineEventStatus>(["pending", "in_progress", "success", "error"])
 };
 
 // Helper functions

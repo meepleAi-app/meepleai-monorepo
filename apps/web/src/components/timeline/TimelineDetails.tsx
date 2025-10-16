@@ -1,6 +1,7 @@
 // UI-04: Timeline event details panel
 import {
   TimelineEvent,
+  Snippet,
   getEventTypeLabel,
   getEventTypeColor,
   getStatusIcon,
@@ -315,7 +316,7 @@ export function TimelineDetails({ event, isCollapsed, onToggleCollapse }: Timeli
                 Citazioni ({event.data.citations.length})
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {event.data.citations.map((citation, idx) => (
+                {event.data.citations.map((citation: Snippet, idx: number) => (
                   <div
                     key={idx}
                     style={{

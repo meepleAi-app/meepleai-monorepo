@@ -1,6 +1,7 @@
 // UI-04: Timeline event item component
 import {
   TimelineEvent,
+  Snippet,
   getEventTypeLabel,
   getEventTypeColor,
   getStatusIcon,
@@ -162,7 +163,7 @@ export function TimelineEventItem({
               <div style={{ fontWeight: 600, marginBottom: 6, color: "#5f6368" }}>
                 Citazioni ({event.data.citations.length}):
               </div>
-              {event.data.citations.map((citation, idx) => (
+              {event.data.citations.map((citation: Snippet, idx: number) => (
                 <div
                   key={idx}
                   style={{

@@ -667,7 +667,7 @@ export default function SetupPage() {
               No Setup Guide Yet
             </h3>
             <p style={{ margin: 0, fontSize: 14, color: "#5f6368" }}>
-              Select a game and click "Generate Setup Guide" to get started with step-by-step instructions.
+              Select a game and click &quot;Generate Setup Guide&quot; to get started with step-by-step instructions.
             </p>
           </div>
         )}

@@ -137,6 +137,7 @@ services:
       - '--web.enable-lifecycle'
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
       - prometheusdata:/prometheus
     ports:
       - "9090:9090"
@@ -147,6 +148,51 @@ services:
       retries: 5
     networks:
       - meepleai
+
+  # OPS-05: Error Monitoring & Alerting
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    env_file:
+      - ./env/alertmanager.env
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanagerdata:/alertmanager
+    ports:
+      - "9093:9093"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9093/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - meepleai
+
+  # NOTE: Grafana OnCall is commented out for now as it requires manual setup
+  # To add on-call management, follow the setup guide at:
+  # https://grafana.com/docs/oncall/latest/set-up/open-source/
+  # You can use Alertmanager directly with Slack/Email notifications in the meantime
+  #
+  # grafana-oncall:
+  #   image: grafana/oncall:latest
+  #   restart: unless-stopped
+  #   environment:
+  #     BASE_URL: http://localhost:8082
+  #     SECRET_KEY: ${ONCALL_SECRET_KEY:-changeme-generate-secure-secret}
+  #     DATABASE_TYPE: sqlite3
+  #   volumes:
+  #     - oncalldata:/var/lib/oncall
+  #   ports:
+  #     - "8082:8080"
+  #   depends_on:
+  #     - redis
+  #     - alertmanager
+  #   networks:
+  #     - meepleai
 
   grafana:
     image: grafana/grafana:11.4.0
@@ -254,6 +300,8 @@ volumes:
   jaegerdata:
   prometheusdata:
   grafanadata:
+  # OPS-05: Error Monitoring & Alerting volumes
+  alertmanagerdata:
 
 networks:
   meepleai:

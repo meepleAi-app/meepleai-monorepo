@@ -10,11 +10,17 @@ global:
     cluster: 'meepleai-dev'
     environment: 'development'
 
-# Alertmanager configuration (optional - can be added later)
-# alerting:
-#   alertmanagers:
-#     - static_configs:
-#         - targets: ['alertmanager:9093']
+# OPS-05: Alertmanager configuration for error monitoring
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+      timeout: 10s
+      api_version: v2
+
+# OPS-05: Rule files for recording and alerting rules
+rule_files:
+  - '/etc/prometheus/prometheus-rules.yml'
 
 # Scrape configurations
 scrape_configs:
@@ -50,3 +56,11 @@ scrape_configs:
         labels:
           service: 'grafana'
           component: 'visualization'
+
+  # OPS-05: Scrape Alertmanager metrics
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
+        labels:
+          service: 'alertmanager'
+          component: 'alerting'

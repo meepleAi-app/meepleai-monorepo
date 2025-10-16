@@ -1,9 +1,12 @@
+using Api.Observability;
+
 namespace Api.Middleware;
 
 /// <summary>
 /// Middleware that catches unhandled exceptions in API endpoints and returns JSON error responses.
 /// Only processes /api/* paths - other paths fall through to default exception handling.
 /// Returns structured error responses with correlation IDs for debugging.
+/// OPS-05: Records error metrics for monitoring and alerting.
 /// </summary>
 public class ApiExceptionHandlerMiddleware
 {
@@ -51,6 +54,15 @@ public class ApiExceptionHandlerMiddleware
         // Determine status code and error type based on exception type
         var (statusCode, errorType, message) = MapExceptionToResponse(ex);
 
+        // OPS-05: Record error metrics for monitoring and alerting
+        // Use route pattern for endpoint to avoid high cardinality (e.g., /api/v1/games instead of /api/v1/games/{id})
+        var endpoint = GetRoutePattern(context) ?? context.Request.Path.ToString();
+        MeepleAiMetrics.RecordApiError(
+            exception: ex,
+            httpStatusCode: statusCode,
+            endpoint: endpoint,
+            isUnhandled: true); // This is unhandled since it reached middleware
+
         context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/json";
 
@@ -65,6 +77,23 @@ public class ApiExceptionHandlerMiddleware
         };
 
         await context.Response.WriteAsJsonAsync(errorResponse);
+    }
+
+    /// <summary>
+    /// Extracts the route pattern from the HttpContext to avoid high cardinality metrics.
+    /// Returns route template like "/api/v1/games/{id}" instead of "/api/v1/games/abc-123".
+    /// </summary>
+    private static string? GetRoutePattern(HttpContext context)
+    {
+        // Try to get the route pattern from endpoint metadata
+        var endpoint = context.GetEndpoint();
+        if (endpoint is RouteEndpoint routeEndpoint)
+        {
+            return routeEndpoint.RoutePattern.RawText;
+        }
+
+        // Fallback to request path if route pattern not available
+        return null;
     }
 
     private static (int StatusCode, string ErrorType, string Message) MapExceptionToResponse(Exception ex)

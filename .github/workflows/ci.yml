@@ -184,3 +184,40 @@ jobs:
           fail_ci_if_error: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  validate-observability-configs:
+    needs: changes
+    name: Validate Prometheus & Alertmanager Configs
+    runs-on: ubuntu-latest
+    if: needs.changes.outputs.infra == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Validate Prometheus Rules
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/infra:/etc/prometheus:ro \
+            prom/prometheus:v3.7.0 \
+            promtool check rules /etc/prometheus/prometheus-rules.yml
+
+      - name: Validate Prometheus Config
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/infra:/etc/prometheus:ro \
+            prom/prometheus:v3.7.0 \
+            promtool check config /etc/prometheus/prometheus.yml
+
+      - name: Validate Alertmanager Config
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/infra:/etc/alertmanager:ro \
+            prom/alertmanager:v0.27.0 \
+            amtool check-config /etc/alertmanager/alertmanager.yml
+
+      - name: Validate Grafana Dashboards
+        run: |
+          for dashboard in infra/dashboards/*.json; do
+            echo "Validating $dashboard..."
+            jq empty "$dashboard" || exit 1
+          done

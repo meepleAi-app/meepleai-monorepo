@@ -165,7 +165,8 @@
       "Bash(Select-String -Pattern \"Superato|Non superato|Ignorato|Totale\" -Context 0,1)",
       "Bash(dotnet format:*)",
       "Bash(Where-Object { $_ame -eq \"CodeQL Security Analysis (csharp)\" })",
-      "Bash(Format-Table name,state,conclusion)"
+      "Bash(Format-Table name,state,conclusion)",
+      "SlashCommand(/close-issue:*)"
     ],
     "deny": [],
     "ask": []

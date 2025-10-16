@@ -147,7 +147,26 @@ return total";
                 return;
             }
 
-            var removed = (long)result;
+            // Handle both direct integer results and array results from Redis
+            long removed = 0;
+            if (result.Type == ResultType.Integer)
+            {
+                removed = (long)result;
+            }
+            else if (!result.IsNull)
+            {
+                // Try to convert to integer for other result types
+                try
+                {
+                    removed = (long)result;
+                }
+                catch (InvalidCastException)
+                {
+                    _logger.LogDebug("Cache invalidation completed for pattern {Pattern}, but could not determine count", pattern);
+                    return;
+                }
+            }
+
             _logger.LogInformation("Invalidated {RemovedCount} cache entries matching {Pattern}", removed, pattern);
         }
         catch (OperationCanceledException)

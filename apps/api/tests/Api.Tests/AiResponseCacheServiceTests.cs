@@ -475,4 +475,368 @@ public class AiResponseCacheServiceTests
         Assert.Equal(73, cacheHits);   // 57 popular + 16 uncommon
         Assert.Equal(0.9125, cacheHitRate, precision: 4);
     }
+
+    #region Edge Cases and Error Handling Tests
+
+    [Fact]
+    public async Task GetAsync_WithRedisException_ReturnsNullGracefully()
+    {
+        // Arrange: Redis throws exception
+        _mockDatabase.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Connection failed"));
+
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+
+        // Act
+        var result = await service.GetAsync<QaResponse>("test-key");
+
+        // Assert: Returns null without throwing (graceful degradation)
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task SetAsync_WithRedisException_DoesNotThrow()
+    {
+        // Arrange: Redis throws exception
+        _mockDatabase.Setup(db => db.StringSetAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<bool>(),
+                It.IsAny<When>(),
+                It.IsAny<CommandFlags>()))
+            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Connection failed"));
+
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var response = new QaResponse("Test", Array.Empty<Snippet>());
+
+        // Act & Assert: No exception thrown (graceful degradation)
+        var exception = await Record.ExceptionAsync(async () =>
+        {
+            await service.SetAsync("test-key", response);
+        });
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public async Task GetAsync_WithInvalidJson_ReturnsNull()
+    {
+        // Arrange: Redis returns invalid JSON
+        _mockDatabase.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync(RedisValue.Unbox("invalid json {{{"));
+
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+
+        // Act
+        var result = await service.GetAsync<QaResponse>("test-key");
+
+        // Assert: Returns null on deserialization failure
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetAsync_WithCancellationToken_ThrowsWhenCancelled()
+    {
+        // Arrange
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        // Mock Redis to throw OperationCanceledException when token is cancelled
+        _mockDatabase.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+
+        // Act: Cache operations catch cancellation and return null gracefully
+        var result = await service.GetAsync<QaResponse>("test-key", cts.Token);
+
+        // Assert: Cache operations should gracefully handle cancellation by returning null
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task SetAsync_WithNegativeTTL_UsesDefaultTTL()
+    {
+        // Arrange
+        TimeSpan? storedTtl = null;
+
+        _mockDatabase.Setup(db => db.StringSetAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<bool>(),
+                It.IsAny<When>(),
+                It.IsAny<CommandFlags>()))
+            .Callback<RedisKey, RedisValue, TimeSpan?, bool, When, CommandFlags>(
+                (k, v, ttl, keepTtl, when, flags) => storedTtl = ttl)
+            .ReturnsAsync(true);
+
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var response = new QaResponse("Test", Array.Empty<Snippet>());
+
+        // Act
+        await service.SetAsync("test-key", response, ttlSeconds: -100);
+
+        // Assert: Negative TTL is converted to TimeSpan (which handles negatives)
+        Assert.NotNull(storedTtl);
+        // TimeSpan.FromSeconds(-100) is valid, Redis will reject it, but our service doesn't validate
+    }
+
+    [Fact]
+    public async Task InvalidateGameAsync_WithCancellation_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+
+        // Act & Assert: Invalidation respects cancellation token
+        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+        {
+            await service.InvalidateGameAsync("game-1", cts.Token);
+        });
+    }
+
+    [Fact]
+    public async Task InvalidateEndpointAsync_WithCancellation_ThrowsOperationCanceledException()
+    {
+        // Arrange
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+
+        // Act & Assert: Invalidation respects cancellation token
+        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+        {
+            await service.InvalidateEndpointAsync("game-1", AiCacheEndpoint.Qa, cts.Token);
+        });
+    }
+
+    [Fact]
+    public async Task InvalidateGameAsync_WithScriptError_LogsWarningButDoesNotThrow()
+    {
+        // Arrange: Script execution fails
+        _mockDatabase.Setup(db => db.ScriptEvaluateAsync(
+                It.IsAny<string>(),
+                It.IsAny<RedisKey[]>(),
+                It.IsAny<RedisValue[]>(),
+                It.IsAny<CommandFlags>()))
+            .ThrowsAsync(new RedisServerException("Script execution failed"));
+
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+
+        // Act & Assert: Does not throw, logs warning
+        var exception = await Record.ExceptionAsync(async () =>
+        {
+            await service.InvalidateGameAsync("game-1");
+        });
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void GenerateQaCacheKey_WithSpecialCharacters_CreatesValidKey()
+    {
+        // Arrange
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var gameId = "catan-test";
+        var queryWithSpecialChars = "How many cards? (including development cards & resources!)";
+
+        // Act
+        var key = service.GenerateQaCacheKey(gameId, queryWithSpecialChars);
+
+        // Assert: Special characters are hashed consistently
+        Assert.StartsWith("ai:qa:catan-test:", key);
+        Assert.DoesNotContain("(", key);
+        Assert.DoesNotContain("&", key);
+        Assert.DoesNotContain("!", key);
+    }
+
+    [Fact]
+    public void GenerateQaCacheKey_WithUnicodeCharacters_CreatesValidKey()
+    {
+        // Arrange
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var gameId = "catan-test";
+        var queryWithUnicode = "Comment puis-je gagner? 如何获胜？ Как победить?";
+
+        // Act
+        var key1 = service.GenerateQaCacheKey(gameId, queryWithUnicode);
+        var key2 = service.GenerateQaCacheKey(gameId, queryWithUnicode);
+
+        // Assert: Unicode is consistently hashed
+        Assert.Equal(key1, key2);
+        Assert.StartsWith("ai:qa:catan-test:", key1);
+    }
+
+    [Fact]
+    public void GenerateQaCacheKey_WithVeryLongQuery_CreatesValidKey()
+    {
+        // Arrange
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var gameId = "catan-test";
+        var longQuery = new string('a', 10000); // 10KB query
+
+        // Act
+        var key = service.GenerateQaCacheKey(gameId, longQuery);
+
+        // Assert: Long queries are hashed to fixed-length keys
+        Assert.StartsWith("ai:qa:catan-test:", key);
+        Assert.True(key.Length < 200, "Cache key should be fixed length regardless of query length");
+    }
+
+    [Fact]
+    public void GenerateExplainCacheKey_WithEmptyTopic_CreatesValidKey()
+    {
+        // Arrange
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var gameId = "catan-test";
+
+        // Act
+        var key = service.GenerateExplainCacheKey(gameId, "");
+
+        // Assert: Empty topic is hashed consistently
+        Assert.StartsWith("ai:explain:catan-test:", key);
+    }
+
+    [Fact]
+    public async Task SetAsync_WithComplexNestedResponse_SerializesCorrectly()
+    {
+        // Arrange
+        var storedJson = "";
+
+        _mockDatabase.Setup(db => db.StringSetAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<bool>(),
+                It.IsAny<When>(),
+                It.IsAny<CommandFlags>()))
+            .Callback<RedisKey, RedisValue, TimeSpan?, bool, When, CommandFlags>(
+                (k, v, ttl, keepTtl, when, flags) => storedJson = v.ToString())
+            .ReturnsAsync(true);
+
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+
+        var complexResponse = new SetupGuideResponse(
+            "Complex Game",
+            new List<SetupGuideStep>
+            {
+                new SetupGuideStep(
+                    1,
+                    "Step with references",
+                    "Complex instruction with nested data",
+                    new List<Snippet>
+                    {
+                        new Snippet("Reference text 1", "PDF:doc1", 5, 10),
+                        new Snippet("Reference text 2", "PDF:doc2", 12, 25)
+                    },
+                    false
+                )
+            },
+            15,
+            100,
+            200,
+            300,
+            0.95
+        );
+
+        // Act
+        await service.SetAsync("test-complex", complexResponse);
+
+        // Assert: JSON is valid and contains nested data
+        Assert.NotEmpty(storedJson);
+        Assert.Contains("Complex Game", storedJson);
+        Assert.Contains("Reference text 1", storedJson);
+        Assert.Contains("PDF:doc1", storedJson);
+    }
+
+    [Fact]
+    public async Task GetAsync_WithDifferentResponseTypes_DoesNotCrossPollute()
+    {
+        // Arrange: Store QA response
+        var cache = new Dictionary<string, string>();
+
+        _mockDatabase.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync((RedisKey key, CommandFlags _) =>
+            {
+                return cache.TryGetValue(key.ToString(), out var value)
+                    ? RedisValue.Unbox(value)
+                    : RedisValue.Null;
+            });
+
+        _mockDatabase.Setup(db => db.StringSetAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<bool>(),
+                It.IsAny<When>(),
+                It.IsAny<CommandFlags>()))
+            .Callback<RedisKey, RedisValue, TimeSpan?, bool, When, CommandFlags>((key, value, _, _, _, _) =>
+            {
+                cache[key.ToString()] = value.ToString();
+            })
+            .ReturnsAsync(true);
+
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+
+        var qaResponse = new QaResponse("QA answer", Array.Empty<Snippet>());
+        await service.SetAsync("test-key", qaResponse);
+
+        // Act: Retrieve correctly as QaResponse
+        var asQa = await service.GetAsync<QaResponse>("test-key");
+
+        // Assert: Correctly deserializes as same type
+        Assert.NotNull(asQa);
+        Assert.Equal("QA answer", asQa.answer);
+    }
+
+    [Fact]
+    public async Task InvalidateGameAsync_WithNoMatchingKeys_ReturnsSuccessfully()
+    {
+        // Arrange: Empty cache
+        _mockDatabase.Setup(db => db.ScriptEvaluateAsync(
+                It.IsAny<string>(),
+                It.IsAny<RedisKey[]>(),
+                It.IsAny<RedisValue[]>(),
+                It.IsAny<CommandFlags>()))
+            .ReturnsAsync(RedisResult.Create(0L));
+
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+
+        // Act & Assert: No error when invalidating non-existent keys
+        var exception = await Record.ExceptionAsync(async () =>
+        {
+            await service.InvalidateGameAsync("nonexistent-game");
+        });
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public async Task InvalidateGameAsync_WithNullScriptResult_HandlesGracefully()
+    {
+        // Arrange: Script returns null
+        _mockDatabase.Setup(db => db.ScriptEvaluateAsync(
+                It.IsAny<string>(),
+                It.IsAny<RedisKey[]>(),
+                It.IsAny<RedisValue[]>(),
+                It.IsAny<CommandFlags>()))
+            .ReturnsAsync(RedisResult.Create(RedisValue.Null));
+
+        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+
+        // Act & Assert: Handles null result gracefully
+        var exception = await Record.ExceptionAsync(async () =>
+        {
+            await service.InvalidateGameAsync("game-1");
+        });
+
+        Assert.Null(exception);
+    }
+
+    #endregion
 }

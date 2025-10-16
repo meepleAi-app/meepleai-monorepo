@@ -17,6 +17,11 @@ using Serilog;
 using Serilog.Events;
 using StackExchange.Redis;
 using AspNetIpNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
+// OPS-02: OpenTelemetry imports
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using Api.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -319,6 +324,45 @@ builder.Services.AddCors(options =>
     });
 });
 
+// OPS-02: OpenTelemetry configuration
+var otlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"] ?? "http://jaeger:4318";
+var serviceName = "MeepleAI.Api";
+var serviceVersion = "1.0.0";
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource
+        .AddService(
+            serviceName: serviceName,
+            serviceVersion: serviceVersion,
+            serviceInstanceId: Environment.MachineName))
+    .WithTracing(tracing => tracing
+        .AddAspNetCoreInstrumentation(options =>
+        {
+            options.RecordException = true;
+            options.Filter = httpContext =>
+            {
+                // Don't trace health checks or metrics endpoints
+                var path = httpContext.Request.Path.Value ?? string.Empty;
+                return !path.StartsWith("/health") && !path.Equals("/metrics");
+            };
+        })
+        .AddHttpClientInstrumentation(options =>
+        {
+            options.RecordException = true;
+        })
+        .AddSource(MeepleAiMetrics.MeterName)
+        .AddOtlpExporter(options =>
+        {
+            options.Endpoint = new Uri(otlpEndpoint);
+            options.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.HttpProtobuf;
+        }))
+    .WithMetrics(metrics => metrics
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddMeter(MeepleAiMetrics.MeterName)
+        .AddPrometheusExporter());
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -345,6 +389,9 @@ if (forwardedHeadersEnabled)
 }
 
 app.UseCors("web");
+
+// OPS-02: OpenTelemetry Prometheus metrics endpoint
+app.MapPrometheusScrapingEndpoint();
 
 // API-01: Swagger UI (development only)
 if (app.Environment.IsDevelopment())

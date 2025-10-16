@@ -1,6 +1,8 @@
 using Api.Infrastructure;
 using Api.Models;
+using Api.Observability;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -35,9 +37,14 @@ public class RagService
     /// <summary>
     /// AI-04: Answer question using RAG with LLM generation and anti-hallucination
     /// AI-05: Now with caching support for reduced latency
+    /// OPS-02: Now with OpenTelemetry metrics tracking
     /// </summary>
     public async Task<QaResponse> AskAsync(string gameId, string query, CancellationToken cancellationToken = default)
     {
+        // OPS-02: Start tracking duration
+        var stopwatch = Stopwatch.StartNew();
+        var success = false;
+
         if (string.IsNullOrWhiteSpace(query))
         {
             return new QaResponse("Please provide a question.", Array.Empty<Snippet>());
@@ -137,11 +144,27 @@ ANSWER:";
             // AI-05: Cache the response for future requests
             await _cache.SetAsync(cacheKey, response, 86400, cancellationToken);
 
+            // OPS-02: Record metrics
+            success = true;
+            stopwatch.Stop();
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success);
+            MeepleAiMetrics.TokensUsed.Record(llmResult.Usage.TotalTokens, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa" } });
+            if (confidence.HasValue)
+            {
+                MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa" } });
+            }
+
             return response;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during RAG query for game {GameId}", gameId);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
             return new QaResponse("An error occurred while processing your question.", Array.Empty<Snippet>());
         }
     }
@@ -149,9 +172,14 @@ ANSWER:";
     /// <summary>
     /// AI-02: Generate structured explanation with outline, script, and citations
     /// AI-05: Now with caching support for reduced latency
+    /// OPS-02: Now with OpenTelemetry metrics tracking
     /// </summary>
     public async Task<ExplainResponse> ExplainAsync(string gameId, string topic, CancellationToken cancellationToken = default)
     {
+        // OPS-02: Start tracking duration
+        var stopwatch = Stopwatch.StartNew();
+        var success = false;
+
         if (string.IsNullOrWhiteSpace(topic))
         {
             return CreateEmptyExplainResponse("Please provide a topic to explain.");
@@ -226,11 +254,26 @@ ANSWER:";
             // AI-05: Cache the response for future requests
             await _cache.SetAsync(cacheKey, response, 86400, cancellationToken);
 
+            // OPS-02: Record metrics
+            success = true;
+            stopwatch.Stop();
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success);
+            if (confidence.HasValue)
+            {
+                MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "explain" } });
+            }
+
             return response;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during RAG explain for topic {Topic} in game {GameId}", topic, gameId);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "explain" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
             return CreateEmptyExplainResponse("An error occurred while generating the explanation.");
         }
     }

@@ -48,7 +48,7 @@ tools/             - PowerShell scripts
 - `docker compose up -d [--build]` - Start [rebuild]
 - `docker compose logs -f [service]` - View logs
 - `docker compose down [-v]` - Stop [delete volumes]
-- **Ports**: postgres:5432, qdrant:6333, redis:6379, n8n:5678, seq:8081, api:8080, web:3000
+- **Ports**: postgres:5432, qdrant:6333/6334, redis:6379, ollama:11434, n8n:5678, seq:8081, jaeger:16686, prometheus:9090, grafana:3001, api:8080, web:3000
 
 ## Architecture
 
@@ -151,6 +151,21 @@ tools/             - PowerShell scripts
 - **Correlation IDs**: Every request gets `X-Correlation-Id` response header (= `TraceIdentifier`). All logs enriched with `RequestId`, `RequestPath`, `RequestMethod`, `UserAgent`, `RemoteIp`, `UserId`, `UserEmail`
 - **Docs**: `docs/observability.md` - Complete observability guide
 
+**OpenTelemetry** (OPS-02):
+- **Distributed Tracing**: OTLP export to Jaeger, W3C Trace Context propagation, filtered health checks/metrics from traces
+- **Metrics**: Prometheus exporter at `/metrics`, custom meters for RAG/AI, vector search, PDF processing, cache ops
+- **Infrastructure**: Jaeger UI (:16686), Prometheus (:9090), Grafana (:3001) with auto-provisioned dashboards
+- **Custom Metrics** (`Api/Observability/MeepleAiMetrics.cs`):
+  - RAG: `meepleai.rag.requests.total`, `meepleai.rag.request.duration`, `meepleai.ai.tokens.used`, `meepleai.rag.confidence.score`, `meepleai.rag.errors.total`
+  - Vector Search: `meepleai.vector.search.total`, `meepleai.vector.search.duration`, `meepleai.vector.results.count`, `meepleai.vector.indexing.duration`
+  - PDF: `meepleai.pdf.upload.total`, `meepleai.pdf.processing.duration`, `meepleai.pdf.pages.processed`, `meepleai.pdf.extraction.errors`
+  - Cache: `meepleai.cache.hits.total`, `meepleai.cache.misses.total`, `meepleai.cache.evictions.total`
+- **Dashboards**: `infra/dashboards/` - API Performance, AI/RAG Operations, Infrastructure (auto-provisioned)
+- **Configuration**: `OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318` in `infra/env/api.env.dev`
+- **Packages**: OpenTelemetry 1.13.1 (core), Instrumentation 1.12.0 (AspNetCore, Http, Runtime), Prometheus Exporter 1.13.1-beta.1
+- **Tests**: `OpenTelemetryIntegrationTests.cs` - Metrics endpoint, HTTP/runtime metrics, Prometheus format
+- **Docs**: `docs/ops-02-opentelemetry-design.md` - Architecture & implementation guide
+
 ## Testing
 
 **API**: xUnit + Moq + Testcontainers (Postgres, Qdrant), WebApplicationFactory, Coverlet. SQLite for unit tests, Testcontainers for integration. CI: `CI=true`, `DocnetRuntime=linux`
@@ -195,10 +210,15 @@ Templates: `infra/env/*.env.*.example`. Never commit `.env.dev/local/prod`
 
 **Local Full Stack**:
 ```bash
-cd infra && docker compose up postgres qdrant redis n8n seq  # Terminal 1 (add seq for logs)
-cd apps/api/src/Api && dotnet run                            # Terminal 2 (port 8080)
-cd apps/web && pnpm dev                                      # Terminal 3 (port 3000)
-# Seq Dashboard: http://localhost:8081
+cd infra && docker compose up postgres qdrant redis ollama n8n seq jaeger prometheus grafana  # Terminal 1
+cd apps/api/src/Api && dotnet run                                                              # Terminal 2 (port 8080)
+cd apps/web && pnpm dev                                                                        # Terminal 3 (port 3000)
+# Observability UIs:
+# - Seq (logs): http://localhost:8081
+# - Jaeger (traces): http://localhost:16686
+# - Prometheus (metrics): http://localhost:9090
+# - Grafana (dashboards): http://localhost:3001 (admin/admin)
+# - API metrics: http://localhost:8080/metrics
 ```
 
 **RuleSpec v0** (`schemas/rulespec.v0.schema.json`): Machine-readable board game rules for AI/LLM
@@ -219,6 +239,7 @@ cd apps/web && pnpm dev                                      # Terminal 3 (port 
 - **Security**: `docs/SECURITY.md` - Security policies, secret management, key rotation procedures
 - **Database**: `docs/database-schema.md` - Complete DB schema reference
 - **Observability**: `docs/observability.md` - Health checks, logging, Seq dashboard, correlation IDs (OPS-01)
+- **OpenTelemetry**: `docs/ops-02-opentelemetry-design.md` - Distributed tracing & metrics architecture (OPS-02)
 - **Workflows**: `docs/N8N-01-README.md` - n8n workflow automation guide
 - **Coverage**: `docs/code-coverage.md` - Coverage measurement & tracking
 - **Security Scanning**: `docs/security-scanning.md` - CI security scanning guide

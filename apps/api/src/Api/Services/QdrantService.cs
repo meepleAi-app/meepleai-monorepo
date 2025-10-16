@@ -1,7 +1,9 @@
+using Api.Observability;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Qdrant.Client;
 using Qdrant.Client.Grpc;
+using System.Diagnostics;
 
 namespace Api.Services;
 
@@ -115,6 +117,7 @@ public class QdrantService : IQdrantService
 
     /// <summary>
     /// Index document chunks with embeddings
+    /// OPS-02: Now with OpenTelemetry metrics tracking
     /// </summary>
     public async Task<IndexResult> IndexDocumentChunksAsync(
         string gameId,
@@ -126,6 +129,9 @@ public class QdrantService : IQdrantService
         {
             return IndexResult.CreateFailure("No chunks to index");
         }
+
+        // OPS-02: Start tracking duration
+        var stopwatch = Stopwatch.StartNew();
 
         try
         {
@@ -167,6 +173,11 @@ public class QdrantService : IQdrantService
             );
 
             _logger.LogInformation("Successfully indexed {Count} chunks for PDF {PdfId}", chunks.Count, pdfId);
+
+            // OPS-02: Record metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.VectorIndexingDuration.Record(stopwatch.Elapsed.TotalMilliseconds, new TagList { { "collection", CollectionName } });
+
             return IndexResult.CreateSuccess(chunks.Count);
         }
         catch (Exception ex)
@@ -178,6 +189,7 @@ public class QdrantService : IQdrantService
 
     /// <summary>
     /// Search for similar chunks filtered by game identifier
+    /// OPS-02: Now with OpenTelemetry metrics tracking
     /// </summary>
     public virtual async Task<SearchResult> SearchAsync(
         string gameId,
@@ -185,6 +197,9 @@ public class QdrantService : IQdrantService
         int limit = 5,
         CancellationToken ct = default)
     {
+        // OPS-02: Start tracking duration
+        var stopwatch = Stopwatch.StartNew();
+
         try
         {
             _logger.LogInformation("Searching in game {GameId}, limit {Limit}", gameId, limit);
@@ -222,6 +237,11 @@ public class QdrantService : IQdrantService
             }).ToList();
 
             _logger.LogInformation("Found {Count} results", results.Count);
+
+            // OPS-02: Record metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RecordVectorSearch(stopwatch.Elapsed.TotalMilliseconds, results.Count, CollectionName);
+
             return SearchResult.CreateSuccess(results);
         }
         catch (Exception ex)

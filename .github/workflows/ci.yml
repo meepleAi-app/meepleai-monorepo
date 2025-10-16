@@ -6,6 +6,7 @@ on:
       - 'apps/web/**'
       - 'apps/api/**'
       - 'schemas/**'
+      - 'infra/**'
       - '.github/workflows/**'
   push:
     branches: [main]
@@ -13,6 +14,7 @@ on:
       - 'apps/web/**'
       - 'apps/api/**'
       - 'schemas/**'
+      - 'infra/**'
       - '.github/workflows/**'
 
 # Cancel previous runs on same PR/branch to avoid piling up
@@ -29,6 +31,7 @@ jobs:
       web: ${{ steps.filter.outputs.web }}
       api: ${{ steps.filter.outputs.api }}
       schemas: ${{ steps.filter.outputs.schemas }}
+      infra: ${{ steps.filter.outputs.infra }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -44,8 +47,11 @@ jobs:
               - 'apps/web/**'
             api:
               - 'apps/api/**'
+              - 'infra/**'
             schemas:
               - 'schemas/**'
+            infra:
+              - 'infra/**'
   validate-schemas:
     needs: changes
     name: Schemas - Validate RuleSpec Examples
@@ -159,10 +165,11 @@ jobs:
           OPENROUTER_API_KEY: test-key-for-ci
           QDRANT_URL: http://127.0.0.1:6333
           ConnectionStrings__Postgres: Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100
+          OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
         run: |
-          # Run only refactored tests with IAsyncLifetime cleanup (ISSUE-319)
+          # Run only refactored tests with IAsyncLifetime cleanup (ISSUE-319) + OpenTelemetry tests (OPS-02)
           dotnet test \
-            --filter "FullyQualifiedName~GameEndpointsTests|FullyQualifiedName~ApiEndpointIntegrationTests|FullyQualifiedName~LogsEndpointTests|FullyQualifiedName~PdfIngestEndpointsTests|FullyQualifiedName~PdfUploadEndpointsTests|FullyQualifiedName~RateLimitingIntegrationTests|FullyQualifiedName~RuleSpecHistoryIntegrationTests" \
+            --filter "FullyQualifiedName~GameEndpointsTests|FullyQualifiedName~ApiEndpointIntegrationTests|FullyQualifiedName~LogsEndpointTests|FullyQualifiedName~PdfIngestEndpointsTests|FullyQualifiedName~PdfUploadEndpointsTests|FullyQualifiedName~RateLimitingIntegrationTests|FullyQualifiedName~RuleSpecHistoryIntegrationTests|FullyQualifiedName~OpenTelemetryIntegrationTests" \
             --logger "console;verbosity=normal" \
             -p:CollectCoverage=true \
             -p:CoverletOutputFormat=lcov \

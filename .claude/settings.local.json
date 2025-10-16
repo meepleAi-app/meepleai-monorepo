@@ -156,7 +156,10 @@
       "Bash(git -C \"D:\\Repositories\\meepleai-monorepo\" log --all --oneline --grep=\"#263\\|API-05\")",
       "Bash(gh:*)",
       "Bash(git -C \"D:\\Repositories\\meepleai-monorepo\" log --oneline --all --grep=\"299\")",
-      "mcp__github-project-manager__github_search_code"
+      "mcp__github-project-manager__github_search_code",
+      "mcp__magic__magic_generate",
+      "Bash(Select-String -Pattern \"FAIL|PASS|Error|Total tests|Test Run|Succeeded|Failed\" -Context 0,1)",
+      "Bash(Select-String -Pattern \"PASS|FAIL|Tests:|Test Suites:|Ran all test|error|warning\" -Context 0,1)"
     ],
     "deny": [],
     "ask": []

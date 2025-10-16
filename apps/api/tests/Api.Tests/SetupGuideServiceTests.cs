@@ -14,6 +14,7 @@ public class SetupGuideServiceTests : IDisposable
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<IEmbeddingService> _mockEmbeddingService;
     private readonly Mock<IQdrantService> _mockQdrantService;
+    private readonly Mock<ILlmService> _mockLlmService;
     private readonly Mock<IAiResponseCacheService> _mockCacheService;
     private readonly Mock<ILogger<SetupGuideService>> _mockLogger;
     private readonly SetupGuideService _service;
@@ -29,6 +30,7 @@ public class SetupGuideServiceTests : IDisposable
         _dbContext.Database.EnsureCreated();
         _mockEmbeddingService = new Mock<IEmbeddingService>();
         _mockQdrantService = new Mock<IQdrantService>();
+        _mockLlmService = new Mock<ILlmService>();
         _mockCacheService = new Mock<IAiResponseCacheService>();
         _mockLogger = new Mock<ILogger<SetupGuideService>>();
 
@@ -36,6 +38,7 @@ public class SetupGuideServiceTests : IDisposable
             _dbContext,
             _mockEmbeddingService.Object,
             _mockQdrantService.Object,
+            _mockLlmService.Object,
             _mockCacheService.Object,
             _mockLogger.Object
         );
@@ -146,6 +149,17 @@ public class SetupGuideServiceTests : IDisposable
                 }
             }));
 
+        // Mock LLM service to synthesize steps from RAG context
+        var llmResponse = @"STEP 1: Setup Game Board
+Place the game board in the center where all players can reach it.
+
+STEP 2: Distribute Player Materials
+Each player takes a player board and starting components.";
+
+        _mockLlmService
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(llmResponse, new LlmUsage(100, 80, 180)));
+
         // Act
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
@@ -154,7 +168,8 @@ public class SetupGuideServiceTests : IDisposable
         Assert.Equal("Advanced Strategy Game", result.gameTitle);
         Assert.NotEmpty(result.steps);
         Assert.NotNull(result.confidence);
-        Assert.Equal(0, result.totalTokens);
+        Assert.Equal(180, result.totalTokens); // LLM was used
+        Assert.Equal(2, result.steps.Count); // LLM generated 2 steps
 
         // Verify steps have references from RAG
         var stepsWithReferences = result.steps.Where(s => s.references.Count > 0).ToList();
@@ -162,9 +177,9 @@ public class SetupGuideServiceTests : IDisposable
 
         // Verify step structure
         var firstStep = result.steps.First();
-        Assert.True(firstStep.stepNumber > 0);
-        Assert.False(string.IsNullOrEmpty(firstStep.title));
-        Assert.False(string.IsNullOrEmpty(firstStep.instruction));
+        Assert.Equal(1, firstStep.stepNumber);
+        Assert.Equal("Setup Game Board", firstStep.title);
+        Assert.Contains("center", firstStep.instruction);
     }
 
     [Fact]

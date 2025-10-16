@@ -7,7 +7,7 @@ using System.Linq;
 namespace Api.Services;
 
 /// <summary>
-/// AI-03: Service for generating step-by-step setup guides using RAG
+/// AI-03: Service for generating step-by-step setup guides using RAG + LLM
 /// AI-05: Now with caching support for reduced latency
 /// </summary>
 public class SetupGuideService
@@ -15,6 +15,7 @@ public class SetupGuideService
     private readonly MeepleAiDbContext _dbContext;
     private readonly IEmbeddingService _embeddingService;
     private readonly IQdrantService _qdrantService;
+    private readonly ILlmService _llmService;
     private readonly IAiResponseCacheService _cache;
     private readonly ILogger<SetupGuideService> _logger;
 
@@ -22,18 +23,20 @@ public class SetupGuideService
         MeepleAiDbContext dbContext,
         IEmbeddingService embeddingService,
         IQdrantService qdrantService,
+        ILlmService llmService,
         IAiResponseCacheService cache,
         ILogger<SetupGuideService> logger)
     {
         _dbContext = dbContext;
         _embeddingService = embeddingService;
         _qdrantService = qdrantService;
+        _llmService = llmService;
         _cache = cache;
         _logger = logger;
     }
 
     /// <summary>
-    /// AI-03: Generate step-by-step setup guide with references
+    /// AI-03: Generate step-by-step setup guide with references using RAG + LLM
     /// AI-05: Now with caching support for reduced latency
     /// </summary>
     public async Task<SetupGuideResponse> GenerateSetupGuideAsync(
@@ -62,64 +65,112 @@ public class SetupGuideService
                 return CreateEmptySetupGuide("Unknown Game");
             }
 
-            // Query RAG for setup-related content
-            var setupQueries = new[]
+            // Query RAG for comprehensive setup-related content
+            var setupQuery = "game setup preparation initial components placement player starting conditions";
+            var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(setupQuery, cancellationToken);
+
+            if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
             {
-                "game setup",
-                "preparation",
-                "initial setup",
-                "components placement",
-                "player setup"
-            };
-
-            var allSteps = new List<SetupGuideStep>();
-            var confidences = new List<double>();
-            var stepNumber = 1;
-
-            foreach (var query in setupQueries)
-            {
-                var setupInfo = await QuerySetupInformationAsync(gameId, query, cancellationToken);
-
-                if (setupInfo.snippets.Count > 0)
-                {
-                    // Create step from retrieved information
-                    var step = CreateSetupStep(
-                        stepNumber++,
-                        FormatStepTitle(query),
-                        setupInfo.answer,
-                        setupInfo.snippets);
-
-                    allSteps.Add(step);
-                }
-
-                if (setupInfo.confidence.HasValue)
-                {
-                    confidences.Add(setupInfo.confidence.Value);
-                }
+                _logger.LogWarning("Failed to generate embedding for setup query: {GameId}", gameId);
+                return CreateEmptySetupGuide(game.Name);
             }
 
-            // If no steps found via RAG, create default steps
-            if (allSteps.Count == 0)
+            var queryEmbedding = embeddingResult.Embeddings[0];
+
+            // Search Qdrant for setup-related chunks (get more for comprehensive guide)
+            var searchResult = await _qdrantService.SearchAsync(
+                gameId,
+                queryEmbedding,
+                limit: 10, // Increased from 2 for better coverage
+                cancellationToken);
+
+            List<SetupGuideStep> allSteps;
+            int totalTokens = 0;
+            int promptTokens = 0;
+            int completionTokens = 0;
+            double? confidence = null;
+
+            if (searchResult.Success && searchResult.Results.Count > 0)
             {
+                // Build context from retrieved chunks
+                var context = string.Join("\n\n---\n\n", searchResult.Results.Select(r =>
+                    $"[Page {r.Page}]\n{r.Text}"));
+
+                // Build references for all steps
+                var allReferences = searchResult.Results.Select(r => new Snippet(
+                    r.Text,
+                    $"PDF:{r.PdfId}",
+                    r.Page,
+                    0 // line number not tracked in chunks
+                )).ToList();
+
+                // Use LLM to synthesize structured setup steps from the context
+                var systemPrompt = @"You are a board game setup assistant. Your job is to create clear, actionable setup instructions based ONLY on the provided rulebook context.
+
+CRITICAL INSTRUCTIONS:
+- Generate 3-7 numbered setup steps in a logical order
+- Each step should be concrete and actionable (e.g., 'Place the board in the center')
+- Keep each step instruction concise (1-2 sentences maximum)
+- Mark optional steps with '[OPTIONAL]' prefix in the title
+- Use information ONLY from the provided context
+- If the context is insufficient, generate generic but helpful setup steps
+- Return ONLY the steps in this exact format:
+
+STEP 1: <title>
+<instruction>
+
+STEP 2: <title>
+<instruction>
+
+etc.";
+
+                var userPrompt = $@"CONTEXT FROM RULEBOOK:
+{context}
+
+TASK: Generate a step-by-step setup guide for this board game. Focus on the initial setup before gameplay begins.";
+
+                var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken);
+
+                if (llmResult.Success && !string.IsNullOrWhiteSpace(llmResult.Response))
+                {
+                    // Parse LLM response into steps
+                    allSteps = ParseLlmStepsResponse(llmResult.Response, allReferences);
+                    totalTokens = llmResult.Usage.TotalTokens;
+                    promptTokens = llmResult.Usage.PromptTokens;
+                    completionTokens = llmResult.Usage.CompletionTokens;
+
+                    _logger.LogInformation(
+                        "LLM generated {StepCount} setup steps for game {GameId}, tokens: {TotalTokens}",
+                        allSteps.Count, gameId, totalTokens);
+                }
+                else
+                {
+                    _logger.LogWarning("LLM generation failed for game {GameId}, falling back to default", gameId);
+                    allSteps = CreateDefaultSetupSteps();
+                }
+
+                confidence = (double?)searchResult.Results.Max(r => r.Score);
+            }
+            else
+            {
+                _logger.LogInformation("No RAG results found for game {GameId}, using default steps", gameId);
                 allSteps = CreateDefaultSetupSteps();
             }
 
-            // Estimate setup time (1-2 minutes per step)
-            var estimatedTime = allSteps.Count * 2;
+            // Estimate setup time (2 minutes per step, minimum 5 minutes)
+            var estimatedTime = Math.Max(5, allSteps.Count * 2);
 
             _logger.LogInformation(
-                "Generated setup guide for game {GameId} with {StepCount} steps",
-                gameId, allSteps.Count);
-
-            var confidence = confidences.Count > 0 ? (double?)confidences.Max() : null;
+                "Generated setup guide for game {GameId} with {StepCount} steps, estimated {Minutes} min",
+                gameId, allSteps.Count, estimatedTime);
 
             var response = new SetupGuideResponse(
                 game.Name,
                 allSteps,
                 estimatedTime,
-                0,
-                0,
-                0,
+                promptTokens,
+                completionTokens,
+                totalTokens,
                 confidence
             );
 
@@ -136,76 +187,119 @@ public class SetupGuideService
     }
 
     /// <summary>
-    /// Query RAG system for setup-related information
+    /// Parse LLM-generated steps response into structured SetupGuideStep objects
     /// </summary>
-    private async Task<(string answer, List<Snippet> snippets, double? confidence)> QuerySetupInformationAsync(
-        string gameId,
-        string query,
-        CancellationToken cancellationToken)
+    private List<SetupGuideStep> ParseLlmStepsResponse(string llmResponse, List<Snippet> references)
     {
+        var steps = new List<SetupGuideStep>();
+
         try
         {
-            // Generate embedding for the query
-            var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
-            if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
+            // Split response by STEP markers
+            var lines = llmResponse.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            int currentStepNumber = 0;
+            string? currentTitle = null;
+            var currentInstructionLines = new List<string>();
+
+            foreach (var line in lines)
             {
-                return (string.Empty, new List<Snippet>(), null);
+                var trimmedLine = line.Trim();
+
+                // Check if this is a new step
+                if (trimmedLine.StartsWith("STEP ", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Save previous step if exists
+                    if (currentStepNumber > 0 && currentTitle != null)
+                    {
+                        var instruction = string.Join(" ", currentInstructionLines).Trim();
+                        if (!string.IsNullOrWhiteSpace(instruction))
+                        {
+                            steps.Add(CreateParsedStep(currentStepNumber, currentTitle, instruction, references));
+                        }
+                    }
+
+                    // Parse new step
+                    var colonIndex = trimmedLine.IndexOf(':');
+                    if (colonIndex > 0)
+                    {
+                        var stepPart = trimmedLine.Substring(0, colonIndex).Trim();
+                        var titlePart = trimmedLine.Substring(colonIndex + 1).Trim();
+
+                        // Extract step number
+                        var numberMatch = System.Text.RegularExpressions.Regex.Match(stepPart, @"\d+");
+                        if (numberMatch.Success && int.TryParse(numberMatch.Value, out int stepNum))
+                        {
+                            currentStepNumber = stepNum;
+                            currentTitle = titlePart;
+                            currentInstructionLines.Clear();
+                        }
+                    }
+                }
+                else if (currentStepNumber > 0)
+                {
+                    // This is part of the current step's instruction
+                    if (!string.IsNullOrWhiteSpace(trimmedLine))
+                    {
+                        currentInstructionLines.Add(trimmedLine);
+                    }
+                }
             }
 
-            var queryEmbedding = embeddingResult.Embeddings[0];
-
-            // Search Qdrant for similar chunks
-            var searchResult = await _qdrantService.SearchAsync(
-                gameId,
-                queryEmbedding,
-                limit: 2,
-                cancellationToken);
-
-            if (!searchResult.Success || searchResult.Results.Count == 0)
+            // Don't forget the last step
+            if (currentStepNumber > 0 && currentTitle != null)
             {
-                return (string.Empty, new List<Snippet>(), null);
+                var instruction = string.Join(" ", currentInstructionLines).Trim();
+                if (!string.IsNullOrWhiteSpace(instruction))
+                {
+                    steps.Add(CreateParsedStep(currentStepNumber, currentTitle, instruction, references));
+                }
             }
 
-            // Build snippets from results
-            var snippets = searchResult.Results.Select(r => new Snippet(
-                r.Text,
-                $"PDF:{r.PdfId}",
-                r.Page,
-                0 // line number not tracked in chunks
-            )).ToList();
-
-            // Use top result as the answer
-            var answer = searchResult.Results[0].Text;
-
-            var confidence = (double?)searchResult.Results.Max(r => r.Score);
-
-            return (answer, snippets, confidence);
+            // If parsing failed, return empty list (will trigger fallback to default steps)
+            if (steps.Count == 0)
+            {
+                _logger.LogWarning("Failed to parse any steps from LLM response");
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error querying setup information for: {Query}", query);
-            return (string.Empty, new List<Snippet>(), null);
+            _logger.LogError(ex, "Error parsing LLM steps response");
         }
+
+        return steps;
     }
 
     /// <summary>
-    /// Create a setup step from RAG results
+    /// Create a setup step from parsed LLM data
     /// </summary>
-    private SetupGuideStep CreateSetupStep(
+    private SetupGuideStep CreateParsedStep(
         int stepNumber,
         string title,
         string instruction,
         List<Snippet> references)
     {
+        // Check if step is optional
+        var isOptional = title.Contains("[OPTIONAL]", StringComparison.OrdinalIgnoreCase);
+        if (isOptional)
+        {
+            title = title.Replace("[OPTIONAL]", "", StringComparison.OrdinalIgnoreCase).Trim();
+        }
+
         // Clean up instruction text
         var cleanInstruction = CleanupInstruction(instruction);
+
+        // Distribute references across steps (give first 2-3 references to each step)
+        var stepReferences = references
+            .Skip((stepNumber - 1) * 2)
+            .Take(3)
+            .ToList();
 
         return new SetupGuideStep(
             stepNumber,
             title,
             cleanInstruction,
-            references,
-            isOptional: false
+            stepReferences,
+            isOptional
         );
     }
 
@@ -226,20 +320,6 @@ public class SetupGuideService
         }
 
         return text.Trim();
-    }
-
-    /// <summary>
-    /// Format query as step title
-    /// </summary>
-    private string FormatStepTitle(string query)
-    {
-        // Capitalize first letter
-        if (string.IsNullOrEmpty(query))
-        {
-            return "Setup Step";
-        }
-
-        return char.ToUpper(query[0]) + query.Substring(1);
     }
 
     /// <summary>

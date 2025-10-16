@@ -65,7 +65,7 @@ tools/             - PowerShell scripts
 - **Seed Data** (DB-02): Demo users (admin/editor/user@meepleai.dev, pwd: `Demo123!`), games (Tic-Tac-Toe, Chess), rule specs, agents. Migration: `20251009140700_SeedDemoData`. Tests: `SeedDataTests.cs`
 
 **Frontend** (Next.js 14):
-- **Pages**: index, chat, upload (complex), editor, versions, admin, n8n, logs
+- **Pages**: index, chat, upload (complex), editor, versions, admin, n8n, logs, setup (AI-03)
 - **API Client**: `lib/api.ts` - `get/post/put/delete`, cookie auth (`credentials: "include"`), 401 handling, base URL from `NEXT_PUBLIC_API_BASE`
 - **Tests**: Jest (90% coverage) + Playwright E2E
 
@@ -125,6 +125,36 @@ tools/             - PowerShell scripts
   - `SessionManagementServiceTests.cs` - Unit tests with SQLite in-memory
   - `SessionManagementEndpointsTests.cs` - Integration tests with auth
   - `SessionAutoRevocationServiceTests.cs` - Background service tests
+
+**Setup Guide Generation** (AI-03):
+- **SetupGuideService** (`Services/SetupGuideService.cs`): RAG-powered game setup wizard
+  - `GenerateSetupGuideAsync(gameId, chatId?)` - LLM synthesizes setup steps from RAG context
+  - Retrieves 10 most relevant chunks via RAG for comprehensive context
+  - Uses ILlmService to generate coherent, game-specific instructions
+  - Supports optional steps detection (setup variations)
+  - Distributes citation references across generated steps
+  - Falls back to default steps if LLM/RAG unavailable
+  - Integrates with AI-05 response caching for performance
+  - Returns structured response: steps with descriptions, citations, time estimates, confidence
+- **Frontend** (`pages/setup.tsx`, 735 lines): Interactive setup wizard
+  - Game selection with auto-load from /api/v1/games
+  - Generate button triggers RAG-powered step synthesis
+  - Real-time progress tracking with checkboxes
+  - Progress percentage calculation (completed/total)
+  - Citation modal for viewing rulebook references with page numbers
+  - Reset progress confirmation dialog
+  - Authentication gate (login required)
+  - Empty state before guide generation
+  - Loading indicators during API calls
+- **Endpoint** (`Program.cs`, v1Api group):
+  - `POST /api/v1/setup/generate` - Generate setup guide (requires authentication)
+  - Request: `{ "gameId": "uuid", "chatId": "uuid?" }`
+  - Response: `{ "steps": [...], "totalSteps": int, "estimatedTimeMinutes": int, "confidence": float? }`
+- **Tests**: Comprehensive coverage across all layers
+  - **Backend Unit**: `SetupGuideServiceComprehensiveTests.cs` (20+ tests) - RAG failures, LLM parsing, optional steps, cache scenarios, error handling
+  - **Backend Integration**: `SetupGuideEndpointIntegrationTests.cs` (11 tests) - BDD-style, auth, validation, token tracking, concurrent requests
+  - **Frontend Unit**: `pages/__tests__/setup.test.tsx` - Component behavior, authentication, data loading, step interactions, citations modal, edge cases
+  - **E2E**: `e2e/setup.spec.ts` - Full user flow, authentication gate, guide generation, step completion, progress tracking, citation modal interactions
 
 **Vector Pipeline**: PDF → PdfTextExtractionService → TextChunkingService → EmbeddingService (OpenRouter) → QdrantService → RagService (search)
 

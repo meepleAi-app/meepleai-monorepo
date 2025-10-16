@@ -322,6 +322,7 @@ builder.Services.AddOpenTelemetry()
             serviceVersion: serviceVersion,
             serviceInstanceId: Environment.MachineName))
     .WithTracing(tracing => tracing
+        .SetSampler(new OpenTelemetry.Trace.AlwaysOnSampler())
         .AddAspNetCoreInstrumentation(options =>
         {
             options.RecordException = true;
@@ -336,7 +337,15 @@ builder.Services.AddOpenTelemetry()
         {
             options.RecordException = true;
         })
-        .AddSource(MeepleAiMetrics.MeterName)
+        // Add explicit Activity Sources for tracing (not Meter sources)
+        .AddSource("Microsoft.AspNetCore")  // ASP.NET Core framework traces
+        .AddSource("System.Net.Http")       // HTTP client traces
+        // Add custom MeepleAI Activity Sources for domain-specific tracing
+        .AddSource(MeepleAiActivitySources.ApiSourceName)
+        .AddSource(MeepleAiActivitySources.RagSourceName)
+        .AddSource(MeepleAiActivitySources.VectorSearchSourceName)
+        .AddSource(MeepleAiActivitySources.PdfProcessingSourceName)
+        .AddSource(MeepleAiActivitySources.CacheSourceName)
         .AddOtlpExporter(options =>
         {
             options.Endpoint = new Uri(otlpEndpoint);

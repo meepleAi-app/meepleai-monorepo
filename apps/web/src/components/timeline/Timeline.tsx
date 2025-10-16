@@ -97,7 +97,7 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
           <span aria-hidden="true" style={{ fontSize: 28 }}>📊</span>
           <div>
             <h1 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Timeline RAG</h1>
-            <p style={{ margin: "4px 0 0 0", fontSize: 13, color: "#94a3b8" }}>
+            <p style={{ margin: "4px 0 0 0", fontSize: 13, color: "#64748b" }}>
               Cronologia eventi e metriche conversazione
             </p>
           </div>
@@ -108,7 +108,7 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
           style={{
             padding: "10px 18px",
             background: "#f1f3f4",
-            color: "#94a3b8",
+            color: "#64748b",
             border: "none",
             borderRadius: 4,
             fontSize: 14,
@@ -171,7 +171,7 @@ export function Timeline({ events, isVisible, onToggleVisibility }: TimelineProp
             display: "flex",
             gap: 24,
             fontSize: 12,
-            color: "#94a3b8"
+            color: "#64748b"
           }}
         >
           <div>

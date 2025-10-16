@@ -179,10 +179,10 @@ describe('LogsPage', () => {
     const debugLevel = screen.getByText('DEBUG');
 
     expect(errorLevel).toHaveStyle({ color: '#d93025' }); // Red
-    expect(warnLevel).toHaveStyle({ color: '#f9ab00' }); // Orange
-    expect(warningLevel).toHaveStyle({ color: '#f9ab00' }); // Orange
+    expect(warnLevel).toHaveStyle({ color: '#e37400' }); // Orange (WCAG AA compliant)
+    expect(warningLevel).toHaveStyle({ color: '#e37400' }); // Orange (WCAG AA compliant)
     expect(infoLevel).toHaveStyle({ color: '#1a73e8' }); // Blue
-    expect(debugLevel).toHaveStyle({ color: '#94a3b8' }); // Gray (default) - updated for WCAG AA compliance
+    expect(debugLevel).toHaveStyle({ color: '#64748b' }); // Gray (WCAG AA compliant 4.51:1)
   });
 
   it('cleans up on unmount to prevent memory leaks', async () => {

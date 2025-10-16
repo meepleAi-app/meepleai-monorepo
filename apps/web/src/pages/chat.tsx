@@ -614,11 +614,11 @@ export default function ChatPage() {
         {/* Chat List */}
         <nav aria-label="Chat history" style={{ flex: 1, overflowY: "auto", padding: 8 }}>
           {isLoadingChats ? (
-            <div role="status" aria-live="polite" style={{ padding: 16, textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+            <div role="status" aria-live="polite" style={{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 13 }}>
               Caricamento chat...
             </div>
           ) : chats.length === 0 ? (
-            <div style={{ padding: 16, textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+            <div style={{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 13 }}>
               Nessuna chat. Creane una nuova!
             </div>
           ) : (
@@ -648,7 +648,7 @@ export default function ChatPage() {
                   aria-current={activeChatId === chat.id ? "true" : undefined}
                 >
                   <div style={{ fontWeight: 500, marginBottom: 4 }}>{chat.agentName}</div>
-                  <div style={{ fontSize: 11, color: "#94a3b8" }}>{formatChatPreview(chat)}</div>
+                  <div style={{ fontSize: 11, color: "#64748b" }}>{formatChatPreview(chat)}</div>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -714,7 +714,7 @@ export default function ChatPage() {
                   ? chats.find((c) => c.id === activeChatId)?.agentName ?? "Chat"
                   : "Seleziona o crea una chat"}
               </h1>
-              <p style={{ margin: "4px 0 0 0", color: "#94a3b8", fontSize: 13 }}>
+              <p style={{ margin: "4px 0 0 0", color: "#64748b", fontSize: 13 }}>
                 {selectedGameId
                   ? games.find((g) => g.id === selectedGameId)?.name ?? ""
                   : "Nessun gioco selezionato"}
@@ -766,11 +766,11 @@ export default function ChatPage() {
           }}
         >
           {isLoadingMessages ? (
-            <div role="status" aria-live="polite" style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
+            <div role="status" aria-live="polite" style={{ textAlign: "center", padding: 48, color: "#64748b" }}>
               <p style={{ fontSize: 16 }}>Caricamento messaggi...</p>
             </div>
           ) : messages.length === 0 ? (
-            <div style={{ textAlign: "center", padding: 48, color: "#94a3b8" }}>
+            <div style={{ textAlign: "center", padding: 48, color: "#64748b" }}>
               <p style={{ fontSize: 16, marginBottom: 8 }}>Nessun messaggio ancora.</p>
               <p style={{ fontSize: 14 }}>
                 {activeChatId
@@ -802,7 +802,7 @@ export default function ChatPage() {
                     lineHeight: 1.5
                   }}
                 >
-                  <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 12, color: "#94a3b8" }}>
+                  <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 12, color: "#64748b" }}>
                     {msg.role === "user" ? "Tu" : "MeepleAI"}
                   </div>
                   <div style={{ whiteSpace: "pre-wrap" }}>{msg.content}</div>
@@ -810,7 +810,7 @@ export default function ChatPage() {
                   {/* Sources */}
                   {msg.snippets && msg.snippets.length > 0 && (
                     <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #dadce0" }}>
-                      <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8, color: "#94a3b8" }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8, color: "#64748b" }}>
                         Fonti:
                       </div>
                       {msg.snippets.map((snippet, idx) => (
@@ -828,7 +828,7 @@ export default function ChatPage() {
                           <div style={{ fontWeight: 500, marginBottom: 4 }}>
                             {getSnippetLabel(snippet)}
                           </div>
-                          <div style={{ color: "#94a3b8", fontSize: 11 }}>{snippet.text}</div>
+                          <div style={{ color: "#64748b", fontSize: 11 }}>{snippet.text}</div>
                         </div>
                       ))}
                     </div>
@@ -845,7 +845,7 @@ export default function ChatPage() {
                       style={{
                         padding: "4px 8px",
                         background: msg.feedback === "helpful" ? "#34a853" : "#f1f3f4",
-                        color: msg.feedback === "helpful" ? "white" : "#94a3b8",
+                        color: msg.feedback === "helpful" ? "white" : "#64748b",
                         border: "none",
                         borderRadius: 4,
                         fontSize: 12,
@@ -865,7 +865,7 @@ export default function ChatPage() {
                       style={{
                         padding: "4px 8px",
                         background: msg.feedback === "not-helpful" ? "#ea4335" : "#f1f3f4",
-                        color: msg.feedback === "not-helpful" ? "white" : "#94a3b8",
+                        color: msg.feedback === "not-helpful" ? "white" : "#64748b",
                         border: "none",
                         borderRadius: 4,
                         fontSize: 12,
@@ -882,7 +882,7 @@ export default function ChatPage() {
                 )}
 
                 {/* Timestamp */}
-                <div style={{ fontSize: 11, color: "#9aa0a6", marginTop: 4 }}>
+                <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
                   {msg.timestamp.toLocaleTimeString()}
                 </div>
               </li>
@@ -901,10 +901,10 @@ export default function ChatPage() {
                   fontSize: 14
                 }}
               >
-                <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 12, color: "#94a3b8" }}>
+                <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 12, color: "#64748b" }}>
                   MeepleAI
                 </div>
-                <div style={{ color: "#94a3b8" }}>Sto pensando...</div>
+                <div style={{ color: "#64748b" }}>Sto pensando...</div>
               </div>
             </div>
           )}

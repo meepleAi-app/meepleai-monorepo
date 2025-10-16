@@ -528,15 +528,73 @@ grafana:
 ## Success Criteria
 
 1. ✅ OpenTelemetry SDK integrated and verified
-2. ✅ Traces visible in Jaeger UI with correlation IDs
+2. ✅ Traces visible in Jaeger UI with correlation IDs (Issue #433 resolved)
 3. ✅ Metrics available at /metrics endpoint
 4. ✅ Prometheus scraping metrics successfully
 5. ✅ Grafana dashboards displaying real-time data
-6. ✅ Custom traces for RAG/AI operations
+6. ✅ Custom traces for RAG/AI operations (RagService, QdrantService)
 7. ✅ Custom metrics for domain-specific operations
-8. ✅ 90% test coverage for new code
+8. ✅ 90% test coverage for new code (20+ tracing tests)
 9. ✅ Documentation complete and reviewed
 10. ✅ CI/CD pipeline passing
+
+## Implementation Status (2025-10-16)
+
+### ✅ Completed (Issue #433 Resolution)
+
+1. **Activity Sources Created**: `MeepleAiActivitySources` class with 5 domain-specific sources
+   - `MeepleAI.Api` - Main application traces
+   - `MeepleAI.Rag` - RAG operation traces
+   - `MeepleAI.VectorSearch` - Qdrant vector search traces
+   - `MeepleAI.PdfProcessing` - PDF processing traces
+   - `MeepleAI.Cache` - Cache operation traces
+
+2. **Tracing Configuration Fixed** (`Program.cs:324-353`):
+   - Removed incorrect `MeepleAiMetrics.MeterName` from tracing config
+   - Added explicit `Microsoft.AspNetCore` and `System.Net.Http` sources
+   - Added all custom MeepleAI Activity Sources
+   - Set `AlwaysOnSampler` for development (100% sampling)
+
+3. **Services Instrumented**:
+   - `RagService.AskAsync()` - Tags: game.id, query.length, operation, response.tokens, confidence, snippets.count
+   - `RagService.ExplainAsync()` - Tags: game.id, topic.length, sections.count, citations.count, estimated.minutes
+   - `QdrantService.IndexDocumentChunksAsync()` - Tags: game.id, pdf.id, chunks.count, collection, indexed.count
+   - `QdrantService.SearchAsync()` - Tags: game.id, limit, collection, vector.dimension, results.count, top.score
+
+4. **Testing**:
+   - 15 unit tests in `OpenTelemetryTracingTests.cs`
+   - 5 integration tests in `OpenTelemetryIntegrationTests.cs`
+   - Total: 20+ tests covering Activity Sources, tag setting, exception handling, trace filtering
+
+5. **Documentation**:
+   - `docs/issue/ops-02-jaeger-tracing-fix.md` - Complete resolution documentation
+   - `docs/ops-02-opentelemetry-design.md` - Updated with implementation status
+
+### Key Lesson Learned (Issue #433)
+
+**Problem**: Traces not appearing in Jaeger despite correct infrastructure setup.
+
+**Root Cause**: Confusion between `Meter` (for metrics) and `ActivitySource` (for tracing).
+
+**Original Code** (incorrect):
+```csharp
+.WithTracing(tracing => tracing
+    .AddSource(MeepleAiMetrics.MeterName))  // ❌ Meter, not ActivitySource
+```
+
+**Fixed Code**:
+```csharp
+.WithTracing(tracing => tracing
+    .AddSource("Microsoft.AspNetCore")  // ✅ ActivitySource for framework traces
+    .AddSource(MeepleAiActivitySources.ApiSourceName)  // ✅ Custom ActivitySource
+    .AddSource(MeepleAiActivitySources.RagSourceName))
+```
+
+**Distinction**:
+- **Meter** = Record numeric measurements (counters, histograms) → Metrics
+- **ActivitySource** = Record operation spans → Distributed Traces
+
+See `docs/issue/ops-02-jaeger-tracing-fix.md` for complete resolution details.
 
 ## Risks & Mitigation
 

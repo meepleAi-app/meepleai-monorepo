@@ -37,10 +37,16 @@ public class RagService
     /// <summary>
     /// AI-04: Answer question using RAG with LLM generation and anti-hallucination
     /// AI-05: Now with caching support for reduced latency
-    /// OPS-02: Now with OpenTelemetry metrics tracking
+    /// OPS-02: Now with OpenTelemetry metrics tracking and distributed tracing
     /// </summary>
     public async Task<QaResponse> AskAsync(string gameId, string query, CancellationToken cancellationToken = default)
     {
+        // OPS-02: Create distributed trace span for RAG Q&A operation
+        using var activity = MeepleAiActivitySources.Rag.StartActivity("RagService.Ask");
+        activity?.SetTag("game.id", gameId);
+        activity?.SetTag("query.length", query?.Length ?? 0);
+        activity?.SetTag("operation", "qa");
+
         // OPS-02: Start tracking duration
         var stopwatch = Stopwatch.StartNew();
         var success = false;
@@ -124,6 +130,12 @@ ANSWER:";
                 ? (double?)searchResult.Results.Max(r => r.Score)
                 : null;
 
+            // OPS-02: Add trace attributes for successful operation
+            activity?.SetTag("response.tokens", llmResult.Usage.TotalTokens);
+            activity?.SetTag("response.confidence", confidence ?? 0.0);
+            activity?.SetTag("snippets.count", snippets.Count);
+            activity?.SetTag("success", true);
+
             LogInformation(
                 "RAG query answered with {SnippetCount} snippets, LLM generated answer: {AnswerPreview}",
                 snippets.Count, answer.Length > 50 ? answer.Substring(0, 50) + "..." : answer);
@@ -160,6 +172,12 @@ ANSWER:";
         {
             _logger.LogError(ex, "Error during RAG query for game {GameId}", gameId);
 
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
             // OPS-02: Record error metrics
             stopwatch.Stop();
             MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa" }, { "error.type", ex.GetType().Name } });
@@ -172,10 +190,16 @@ ANSWER:";
     /// <summary>
     /// AI-02: Generate structured explanation with outline, script, and citations
     /// AI-05: Now with caching support for reduced latency
-    /// OPS-02: Now with OpenTelemetry metrics tracking
+    /// OPS-02: Now with OpenTelemetry metrics tracking and distributed tracing
     /// </summary>
     public async Task<ExplainResponse> ExplainAsync(string gameId, string topic, CancellationToken cancellationToken = default)
     {
+        // OPS-02: Create distributed trace span for RAG Explain operation
+        using var activity = MeepleAiActivitySources.Rag.StartActivity("RagService.Explain");
+        activity?.SetTag("game.id", gameId);
+        activity?.SetTag("topic.length", topic?.Length ?? 0);
+        activity?.SetTag("operation", "explain");
+
         // OPS-02: Start tracking duration
         var stopwatch = Stopwatch.StartNew();
         var success = false;
@@ -241,6 +265,13 @@ ANSWER:";
                 ? (double?)searchResult.Results.Max(r => r.Score)
                 : null;
 
+            // OPS-02: Add trace attributes for successful operation
+            activity?.SetTag("sections.count", outline.sections.Count);
+            activity?.SetTag("citations.count", citations.Count);
+            activity?.SetTag("estimated.minutes", estimatedMinutes);
+            activity?.SetTag("response.confidence", confidence ?? 0.0);
+            activity?.SetTag("success", true);
+
             var response = new ExplainResponse(
                 outline,
                 script,
@@ -268,6 +299,12 @@ ANSWER:";
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during RAG explain for topic {Topic} in game {GameId}", topic, gameId);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
 
             // OPS-02: Record error metrics
             stopwatch.Stop();

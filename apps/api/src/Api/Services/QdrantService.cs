@@ -117,7 +117,7 @@ public class QdrantService : IQdrantService
 
     /// <summary>
     /// Index document chunks with embeddings
-    /// OPS-02: Now with OpenTelemetry metrics tracking
+    /// OPS-02: Now with OpenTelemetry metrics tracking and distributed tracing
     /// </summary>
     public async Task<IndexResult> IndexDocumentChunksAsync(
         string gameId,
@@ -125,8 +125,17 @@ public class QdrantService : IQdrantService
         List<DocumentChunk> chunks,
         CancellationToken ct = default)
     {
+        // OPS-02: Create distributed trace span for vector indexing
+        using var activity = MeepleAiActivitySources.VectorSearch.StartActivity("QdrantService.IndexDocumentChunks");
+        activity?.SetTag("game.id", gameId);
+        activity?.SetTag("pdf.id", pdfId);
+        activity?.SetTag("chunks.count", chunks?.Count ?? 0);
+        activity?.SetTag("collection", CollectionName);
+
         if (chunks == null || chunks.Count == 0)
         {
+            activity?.SetTag("success", false);
+            activity?.SetTag("error", "No chunks to index");
             return IndexResult.CreateFailure("No chunks to index");
         }
 
@@ -174,6 +183,10 @@ public class QdrantService : IQdrantService
 
             _logger.LogInformation("Successfully indexed {Count} chunks for PDF {PdfId}", chunks.Count, pdfId);
 
+            // OPS-02: Add trace attributes for successful operation
+            activity?.SetTag("success", true);
+            activity?.SetTag("indexed.count", chunks.Count);
+
             // OPS-02: Record metrics
             stopwatch.Stop();
             MeepleAiMetrics.VectorIndexingDuration.Record(stopwatch.Elapsed.TotalMilliseconds, new TagList { { "collection", CollectionName } });
@@ -183,13 +196,20 @@ public class QdrantService : IQdrantService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to index document chunks for PDF {PdfId}", pdfId);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
             return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
         }
     }
 
     /// <summary>
     /// Search for similar chunks filtered by game identifier
-    /// OPS-02: Now with OpenTelemetry metrics tracking
+    /// OPS-02: Now with OpenTelemetry metrics tracking and distributed tracing
     /// </summary>
     public virtual async Task<SearchResult> SearchAsync(
         string gameId,
@@ -197,6 +217,13 @@ public class QdrantService : IQdrantService
         int limit = 5,
         CancellationToken ct = default)
     {
+        // OPS-02: Create distributed trace span for vector search
+        using var activity = MeepleAiActivitySources.VectorSearch.StartActivity("QdrantService.Search");
+        activity?.SetTag("game.id", gameId);
+        activity?.SetTag("limit", limit);
+        activity?.SetTag("collection", CollectionName);
+        activity?.SetTag("vector.dimension", queryEmbedding?.Length ?? 0);
+
         // OPS-02: Start tracking duration
         var stopwatch = Stopwatch.StartNew();
 
@@ -238,6 +265,14 @@ public class QdrantService : IQdrantService
 
             _logger.LogInformation("Found {Count} results", results.Count);
 
+            // OPS-02: Add trace attributes for successful operation
+            activity?.SetTag("results.count", results.Count);
+            activity?.SetTag("success", true);
+            if (results.Count > 0)
+            {
+                activity?.SetTag("top.score", results[0].Score);
+            }
+
             // OPS-02: Record metrics
             stopwatch.Stop();
             MeepleAiMetrics.RecordVectorSearch(stopwatch.Elapsed.TotalMilliseconds, results.Count, CollectionName);
@@ -247,6 +282,13 @@ public class QdrantService : IQdrantService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Search failed for game {GameId}", gameId);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
             return SearchResult.CreateFailure($"Search failed: {ex.Message}");
         }
     }

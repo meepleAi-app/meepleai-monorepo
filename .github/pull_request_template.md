@@ -1,6 +1,7 @@
 ## Summary
 
 <!-- Briefly describe what this PR does -->
+<!-- See [Contributing Guidelines](../CONTRIBUTING.md) for detailed PR process -->
 
 ## Related Issue
 
@@ -39,7 +40,7 @@ Closes #
 - [ ] Integration tests added/updated
 - [ ] E2E tests added/updated (if applicable)
 - [ ] All tests passing locally
-- [ ] **Test names follow BDD convention** (see [Testing Guidelines](../README.test.md))
+- [ ] **Test names follow BDD convention** (see [Testing Guidelines](../CONTRIBUTING.md#testing-guidelines))
 
 ### Manual Testing
 
@@ -49,14 +50,15 @@ Closes #
 
 ## Checklist
 
-- [ ] Code follows project style guidelines
+- [ ] Code follows project style guidelines (see [CONTRIBUTING.md](../CONTRIBUTING.md#coding-standards))
 - [ ] Self-review of code completed
 - [ ] Comments added for complex logic
 - [ ] Documentation updated (if applicable)
 - [ ] No new warnings introduced
 - [ ] Tests added/updated and passing
-- [ ] **Test names follow BDD-style naming convention**
+- [ ] **Test names follow BDD-style naming convention** (see [Testing Guidelines](../CONTRIBUTING.md#testing-guidelines))
 - [ ] Changes are backwards compatible (or breaking changes documented)
+- [ ] No secrets or API keys committed (see [SECURITY.md](../SECURITY.md))
 
 ## Screenshots/Recordings (if applicable)
 

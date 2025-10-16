@@ -8,6 +8,13 @@ export const getApiBase = (): string => {
   return API_BASE_FALLBACK;
 };
 
+// TypeScript types for session management (AUTH-05)
+export interface SessionStatusResponse {
+  expiresAt: string;
+  lastSeenAt: string | null;
+  remainingMinutes: number;
+}
+
 // TypeScript types for RuleSpec comments
 export interface RuleSpecComment {
   id: string;

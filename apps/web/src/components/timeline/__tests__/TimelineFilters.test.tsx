@@ -2,7 +2,12 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TimelineFilters } from '../TimelineFilters';
-import { TimelineFilters as TimelineFiltersType, DEFAULT_FILTERS } from '@/lib/timeline-types';
+import {
+  TimelineFilters as TimelineFiltersType,
+  TimelineEventType,
+  TimelineEventStatus,
+  DEFAULT_FILTERS
+} from '@/lib/timeline-types';
 
 describe('TimelineFilters Component', () => {
   const mockOnFiltersChange = jest.fn();
@@ -173,7 +178,7 @@ describe('TimelineFilters Component', () => {
 
     it('checks event types that are in the filter', () => {
       const filters: TimelineFiltersType = {
-        eventTypes: new Set(['message', 'error']),
+        eventTypes: new Set(['message', 'error'] as TimelineEventType[]),
         statuses: DEFAULT_FILTERS.statuses
       };
 
@@ -200,7 +205,7 @@ describe('TimelineFilters Component', () => {
     it('toggles event type when checkbox is clicked', async () => {
       const user = userEvent.setup();
       const filters: TimelineFiltersType = {
-        eventTypes: new Set(['message']),
+        eventTypes: new Set(['message'] as TimelineEventType[]),
         statuses: DEFAULT_FILTERS.statuses
       };
 
@@ -228,7 +233,7 @@ describe('TimelineFilters Component', () => {
     it('selects all event types when "Tutti" button is clicked', async () => {
       const user = userEvent.setup();
       const filters: TimelineFiltersType = {
-        eventTypes: new Set(['message']),
+        eventTypes: new Set(['message'] as TimelineEventType[]),
         statuses: DEFAULT_FILTERS.statuses
       };
 
@@ -294,7 +299,7 @@ describe('TimelineFilters Component', () => {
     it('checks statuses that are in the filter', () => {
       const filters: TimelineFiltersType = {
         eventTypes: DEFAULT_FILTERS.eventTypes,
-        statuses: new Set(['success', 'error'])
+        statuses: new Set(['success', 'error'] as TimelineEventStatus[])
       };
 
       render(
@@ -323,7 +328,7 @@ describe('TimelineFilters Component', () => {
       const user = userEvent.setup();
       const filters: TimelineFiltersType = {
         eventTypes: DEFAULT_FILTERS.eventTypes,
-        statuses: new Set(['success'])
+        statuses: new Set(['success'] as TimelineEventStatus[])
       };
 
       render(
@@ -351,7 +356,7 @@ describe('TimelineFilters Component', () => {
       const user = userEvent.setup();
       const filters: TimelineFiltersType = {
         eventTypes: DEFAULT_FILTERS.eventTypes,
-        statuses: new Set(['success'])
+        statuses: new Set(['success'] as TimelineEventStatus[])
       };
 
       render(
@@ -399,8 +404,8 @@ describe('TimelineFilters Component', () => {
     it('resets all filters when reset button is clicked', async () => {
       const user = userEvent.setup();
       const modifiedFilters: TimelineFiltersType = {
-        eventTypes: new Set(['message']),
-        statuses: new Set(['success']),
+        eventTypes: new Set(['message'] as TimelineEventType[]),
+        statuses: new Set(['success'] as TimelineEventStatus[]),
         searchText: 'custom search'
       };
 

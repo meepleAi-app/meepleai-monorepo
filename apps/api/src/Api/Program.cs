@@ -191,6 +191,9 @@ builder.Services.AddScoped<IChessKnowledgeService, ChessKnowledgeService>();
 // CHESS-04: Chess conversational agent service
 builder.Services.AddScoped<IChessAgentService, ChessAgentService>();
 
+// AI-07: Prompt versioning and management service
+builder.Services.AddScoped<IPromptManagementService, PromptManagementService>();
+
 // API-01: OpenAPI/Swagger configuration
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -2142,6 +2145,236 @@ v1Api.MapGet("/users/me/sessions", async (HttpContext context, ISessionManagemen
 
     var sessions = await sessionManagement.GetUserSessionsAsync(session.User.Id, ct);
     return Results.Json(sessions);
+});
+
+// AI-07: Prompt versioning and management endpoints
+
+// Create prompt template (Admin only)
+v1Api.MapPost("/prompts", async (CreatePromptTemplateRequest request, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        logger.LogWarning("User {UserId} with role {Role} attempted to create prompt template without admin permission",
+            session.User.Id, session.User.Role);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation("Admin {AdminId} creating prompt template '{TemplateName}'", session.User.Id, request.Name);
+        var response = await promptManagement.CreatePromptTemplateAsync(request, session.User.Id, ct);
+        logger.LogInformation("Prompt template {TemplateId} created successfully", response.Template.Id);
+        return Results.Created($"/api/v1/prompts/{response.Template.Id}", response);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Failed to create prompt template: {Error}", ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+    catch (ArgumentException ex)
+    {
+        logger.LogWarning("Invalid prompt template request: {Error}", ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+// Create new version of prompt template (Admin only)
+v1Api.MapPost("/prompts/{templateId}/versions", async (string templateId, CreatePromptVersionRequest request, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        logger.LogWarning("User {UserId} with role {Role} attempted to create prompt version without admin permission",
+            session.User.Id, session.User.Role);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation("Admin {AdminId} creating new version for prompt template {TemplateId}", session.User.Id, templateId);
+        var version = await promptManagement.CreatePromptVersionAsync(templateId, request, session.User.Id, ct);
+        logger.LogInformation("Prompt version {VersionId} (v{VersionNumber}) created successfully", version.Id, version.VersionNumber);
+        return Results.Created($"/api/v1/prompts/{templateId}/versions/{version.VersionNumber}", version);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Failed to create prompt version: {Error}", ex.Message);
+        return Results.NotFound(new { error = ex.Message });
+    }
+    catch (ArgumentException ex)
+    {
+        logger.LogWarning("Invalid prompt version request: {Error}", ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+// Get version history for prompt template (Admin only)
+v1Api.MapGet("/prompts/{templateId}/versions", async (string templateId, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        logger.LogWarning("User {UserId} with role {Role} attempted to view prompt version history without admin permission",
+            session.User.Id, session.User.Role);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        var history = await promptManagement.GetVersionHistoryAsync(templateId, ct);
+        return Results.Json(history);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Failed to get version history: {Error}", ex.Message);
+        return Results.NotFound(new { error = ex.Message });
+    }
+});
+
+// Get active version of prompt template (Authenticated users)
+v1Api.MapGet("/prompts/{templateId}/versions/active", async (string templateId, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    // Get template to retrieve name
+    var template = await promptManagement.GetTemplateAsync(templateId, ct);
+    if (template == null)
+    {
+        return Results.NotFound(new { error = "Template not found" });
+    }
+
+    var activeVersion = await promptManagement.GetActiveVersionAsync(template.Name, ct);
+    if (activeVersion == null)
+    {
+        return Results.NotFound(new { error = "No active version found for this template" });
+    }
+
+    return Results.Json(activeVersion);
+});
+
+// Activate version (rollback capability) (Admin only)
+v1Api.MapPut("/prompts/{templateId}/versions/{versionId}/activate", async (string templateId, string versionId, ActivatePromptVersionRequest request, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        logger.LogWarning("User {UserId} with role {Role} attempted to activate prompt version without admin permission",
+            session.User.Id, session.User.Role);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation("Admin {AdminId} activating version {VersionId} for template {TemplateId}", session.User.Id, versionId, templateId);
+        var activatedVersion = await promptManagement.ActivateVersionAsync(templateId, versionId, session.User.Id, request.Reason, ct);
+        logger.LogInformation("Version {VersionId} (v{VersionNumber}) activated successfully", activatedVersion.Id, activatedVersion.VersionNumber);
+        return Results.Json(activatedVersion);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Failed to activate prompt version: {Error}", ex.Message);
+        return Results.NotFound(new { error = ex.Message });
+    }
+    catch (ArgumentException ex)
+    {
+        logger.LogWarning("Invalid activation request: {Error}", ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+// Get audit log for prompt template (Admin only)
+v1Api.MapGet("/prompts/{templateId}/audit-log", async (string templateId, int limit, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        logger.LogWarning("User {UserId} with role {Role} attempted to view audit log without admin permission",
+            session.User.Id, session.User.Role);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        var auditLog = await promptManagement.GetAuditLogAsync(templateId, limit, ct);
+        return Results.Json(auditLog);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Failed to get audit log: {Error}", ex.Message);
+        return Results.NotFound(new { error = ex.Message });
+    }
+    catch (ArgumentException ex)
+    {
+        logger.LogWarning("Invalid audit log request: {Error}", ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+// List all prompt templates (Admin only)
+v1Api.MapGet("/prompts", async (string? category, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        logger.LogWarning("User {UserId} with role {Role} attempted to list prompt templates without admin permission",
+            session.User.Id, session.User.Role);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var templates = await promptManagement.ListTemplatesAsync(category, ct);
+    return Results.Json(templates);
+});
+
+// Get specific prompt template (Admin only)
+v1Api.MapGet("/prompts/{templateId}", async (string templateId, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        logger.LogWarning("User {UserId} with role {Role} attempted to get prompt template without admin permission",
+            session.User.Id, session.User.Role);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var template = await promptManagement.GetTemplateAsync(templateId, ct);
+    if (template == null)
+    {
+        return Results.NotFound(new { error = "Template not found" });
+    }
+
+    return Results.Json(template);
 });
 
 // API-04: API Key Management endpoints

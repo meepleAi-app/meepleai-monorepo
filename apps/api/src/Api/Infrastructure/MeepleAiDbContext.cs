@@ -26,6 +26,9 @@ public class MeepleAiDbContext : DbContext
     public DbSet<AgentFeedbackEntity> AgentFeedbacks => Set<AgentFeedbackEntity>();
     public DbSet<N8nConfigEntity> N8nConfigs => Set<N8nConfigEntity>();
     public DbSet<RuleSpecCommentEntity> RuleSpecComments => Set<RuleSpecCommentEntity>();
+    public DbSet<PromptTemplateEntity> PromptTemplates => Set<PromptTemplateEntity>();
+    public DbSet<PromptVersionEntity> PromptVersions => Set<PromptVersionEntity>();
+    public DbSet<PromptAuditLogEntity> PromptAuditLogs => Set<PromptAuditLogEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -363,6 +366,79 @@ public class MeepleAiDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(e => new { e.GameId, e.Version });
             entity.HasIndex(e => e.AtomId);
+        });
+
+        modelBuilder.Entity<PromptTemplateEntity>(entity =>
+        {
+            entity.ToTable("prompt_templates");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(128);
+            entity.Property(e => e.Description).HasMaxLength(512);
+            entity.Property(e => e.Category).HasMaxLength(64);
+            entity.Property(e => e.CreatedByUserId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.HasOne(e => e.CreatedBy)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => e.Name).IsUnique();
+            entity.HasIndex(e => e.Category);
+            entity.HasIndex(e => e.CreatedAt);
+        });
+
+        modelBuilder.Entity<PromptVersionEntity>(entity =>
+        {
+            entity.ToTable("prompt_versions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
+            entity.Property(e => e.TemplateId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.VersionNumber).IsRequired();
+            entity.Property(e => e.Content).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired();
+            entity.Property(e => e.CreatedByUserId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.Metadata).HasMaxLength(4096);
+            entity.HasOne(e => e.Template)
+                .WithMany(t => t.Versions)
+                .HasForeignKey(e => e.TemplateId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.CreatedBy)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => new { e.TemplateId, e.VersionNumber }).IsUnique();
+            entity.HasIndex(e => new { e.TemplateId, e.IsActive });
+            entity.HasIndex(e => e.CreatedAt);
+        });
+
+        modelBuilder.Entity<PromptAuditLogEntity>(entity =>
+        {
+            entity.ToTable("prompt_audit_logs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
+            entity.Property(e => e.TemplateId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.VersionId).HasMaxLength(64);
+            entity.Property(e => e.Action).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.ChangedByUserId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.ChangedAt).IsRequired();
+            entity.Property(e => e.Details).HasMaxLength(2048);
+            entity.HasOne(e => e.Template)
+                .WithMany(t => t.AuditLogs)
+                .HasForeignKey(e => e.TemplateId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.Version)
+                .WithMany(v => v.AuditLogs)
+                .HasForeignKey(e => e.VersionId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(e => e.ChangedBy)
+                .WithMany()
+                .HasForeignKey(e => e.ChangedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => e.TemplateId);
+            entity.HasIndex(e => e.VersionId);
+            entity.HasIndex(e => e.ChangedAt);
+            entity.HasIndex(e => e.Action);
         });
     }
 }

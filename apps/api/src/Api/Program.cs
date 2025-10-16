@@ -22,33 +22,13 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Api.Observability;
+// OPS-04: Structured logging imports
+using Api.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog
-var seqUrl = builder.Configuration["SEQ_URL"] ?? "http://seq:5341";
-var seqApiKey = builder.Configuration["SEQ_API_KEY"];
-
-var loggerConfig = new LoggerConfiguration()
-    .MinimumLevel.Information()
-    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
-    .Enrich.FromLogContext()
-    .Enrich.WithMachineName()
-    .Enrich.WithEnvironmentName()
-    .WriteTo.Console(
-        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}");
-
-// OPS-01: Add Seq sink if URL is configured
-if (!string.IsNullOrWhiteSpace(seqUrl))
-{
-    loggerConfig = loggerConfig.WriteTo.Seq(
-        serverUrl: seqUrl,
-        apiKey: seqApiKey,
-        restrictedToMinimumLevel: LogEventLevel.Information);
-}
-
-Log.Logger = loggerConfig.CreateLogger();
+// OPS-04: Configure Serilog with environment-based settings and sensitive data redaction
+Log.Logger = LoggingConfiguration.ConfigureSerilog(builder).CreateLogger();
 
 builder.Host.UseSerilog();
 

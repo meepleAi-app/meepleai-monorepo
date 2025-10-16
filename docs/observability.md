@@ -336,18 +336,91 @@ The structured approach allows Seq to index and search by `PdfId`.
 
 3. **Check log enrichment** in Seq - ensure `RequestId` property is present
 
+## Enhanced Logging (OPS-04)
+
+### Sensitive Data Redaction
+
+MeepleAI automatically redacts sensitive data from all logs to prevent secrets from appearing in Seq or console output.
+
+**Automatically Redacted**:
+- Passwords (`password`, `passwd`, `pwd`)
+- API keys (`apikey`, `api_key`) - including MeepleAI format (`mpl_live_xxx`, `mpl_test_xxx`)
+- Tokens (`token`, `bearer`, `authorization`, JWT tokens)
+- Connection strings with passwords
+- Private keys, encryption keys, client secrets
+- Session IDs, cookies, CSRF tokens
+
+**Example**:
+```csharp
+// Input
+var loginData = new { Username = "admin", Password = "secret123", ApiKey = "mpl_live_abc..." };
+logger.LogInformation("Login attempt: {@LoginData}", loginData);
+
+// Output in logs
+// Login attempt: { Username: "admin", Password: "[REDACTED]", ApiKey: "[REDACTED]" }
+```
+
+### Environment-Based Log Levels
+
+Log levels are automatically configured based on environment:
+
+| Environment  | Console Level | Seq Level | Default Level |
+|--------------|---------------|-----------|---------------|
+| Development  | Debug         | Debug     | Debug         |
+| Staging      | Information   | Debug     | Information   |
+| Production   | Warning       | Debug     | Information   |
+
+**Override via Configuration**:
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "MyNamespace.MyService": "Debug"
+    }
+  }
+}
+```
+
+### Structured Logging Best Practices
+
+**Good** - Use structured logging with `@` destructuring:
+```csharp
+logger.LogInformation("PDF uploaded: {PdfId}, Game: {@Game}", pdfId, game);
+```
+
+**Bad** - String interpolation loses structure and bypasses redaction:
+```csharp
+logger.LogInformation($"PDF {pdfId} uploaded for game {game}");
+```
+
+**Good** - Log objects with sensitive data (auto-redacted):
+```csharp
+logger.LogInformation("User authentication: {@AuthData}", authData);
+```
+
+**Bad** - Manual string concatenation (secrets exposed):
+```csharp
+logger.LogInformation($"User {user.Email} password {user.Password}");
+```
+
 ## References
 
 - **Health Checks**: `Program.cs:162-177`, `Program.cs:347-378`
-- **Serilog Configuration**: `Program.cs:22-45`
-- **Request Logging**: `Program.cs:215-231`
-- **Correlation IDs**: `Program.cs:234-238`
+- **Serilog Configuration**: `Api/Logging/LoggingConfiguration.cs`
+- **Sensitive Data Redaction**: `Api/Logging/SensitiveDataDestructuringPolicy.cs`
+- **Log Enrichers**: `Api/Logging/LoggingEnrichers.cs`
+- **Request Logging**: `Program.cs:412-428`
+- **Correlation IDs**: `Program.cs:430-435`
 - **Seq Configuration**: `infra/docker-compose.yml:52-63`
 - **Custom Health Check**: `Infrastructure/QdrantHealthCheck.cs`
+- **OPS-04 Technical Design**: `docs/tecnic/ops-04-structured-logging-design.md`
 
 ## Next Steps (Future OPS Issues)
 
-- **OPS-02**: Add OpenTelemetry for distributed tracing with Jaeger/Tempo
-- **OPS-03**: Implement frontend error handling and error boundaries
-- **OPS-04**: Enhanced logging with structured error context
+- ~~**OPS-02**: Add OpenTelemetry for distributed tracing with Jaeger/Tempo~~ (Completed)
+- ~~**OPS-03**: Implement frontend error handling and error boundaries~~ (In Progress - #293)
+- ~~**OPS-04**: Enhanced logging with structured error context~~ (Completed - #294)
 - **OPS-05**: Error monitoring and alerting with PagerDuty/Slack integration
+- **OPS-06**: Log sampling and distributed tracing improvements

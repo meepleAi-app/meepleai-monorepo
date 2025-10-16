@@ -91,7 +91,7 @@ function CitationModal({
               border: "none",
               fontSize: 24,
               cursor: "pointer",
-              color: "#94a3b8",
+              color: "#64748b",
               padding: 0,
               width: 32,
               height: 32,
@@ -120,11 +120,11 @@ function CitationModal({
                 <span style={{ fontWeight: 500, fontSize: 14, color: "#202124" }}>
                   {snippet.source}
                 </span>
-                <span style={{ fontSize: 12, color: "#94a3b8" }}>
+                <span style={{ fontSize: 12, color: "#64748b" }}>
                   Page {snippet.page}
                 </span>
               </div>
-              <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>
+              <div style={{ fontSize: 13, color: "#64748b", lineHeight: 1.5 }}>
                 {snippet.text}
               </div>
             </div>
@@ -188,7 +188,7 @@ function SetupStepCard({
                   fontWeight: 500,
                   padding: "2px 8px",
                   background: "#e8eaed",
-                  color: "#94a3b8",
+                  color: "#64748b",
                   borderRadius: 12
                 }}
               >
@@ -201,7 +201,7 @@ function SetupStepCard({
           <div
             style={{
               fontSize: 14,
-              color: "#94a3b8",
+              color: "#64748b",
               lineHeight: 1.6,
               marginBottom: 12,
               textDecoration: isCompleted ? "line-through" : "none",
@@ -452,7 +452,7 @@ export default function SetupPage() {
             <div style={{ flex: 1 }}>
               <label
                 htmlFor="gameSelect"
-                style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14, color: "#94a3b8" }}
+                style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14, color: "#64748b" }}
               >
                 Game:
               </label>
@@ -526,10 +526,10 @@ export default function SetupPage() {
               textAlign: "center"
             }}
           >
-            <div style={{ fontSize: 16, color: "#94a3b8", marginBottom: 16 }}>
+            <div style={{ fontSize: 16, color: "#64748b", marginBottom: 16 }}>
               Generating your setup guide...
             </div>
-            <div style={{ fontSize: 14, color: "#9aa0a6" }}>
+            <div style={{ fontSize: 14, color: "#64748b" }}>
               This may take a few moments while we retrieve the best instructions from the rulebook.
             </div>
           </div>
@@ -553,7 +553,7 @@ export default function SetupPage() {
                   <h2 style={{ margin: "0 0 8px 0", fontSize: 20, fontWeight: 600 }}>
                     {setupGuide.gameTitle}
                   </h2>
-                  <div style={{ fontSize: 14, color: "#94a3b8" }}>
+                  <div style={{ fontSize: 14, color: "#64748b" }}>
                     Estimated setup time: {setupGuide.estimatedSetupTimeMinutes} minutes
                   </div>
                 </div>
@@ -563,7 +563,7 @@ export default function SetupPage() {
                   style={{
                     padding: "8px 16px",
                     background: completedSteps.size === 0 ? "#e8eaed" : "#ea4335",
-                    color: completedSteps.size === 0 ? "#9aa0a6" : "white",
+                    color: completedSteps.size === 0 ? "#64748b" : "white",
                     border: "none",
                     borderRadius: 4,
                     fontSize: 13,
@@ -630,7 +630,7 @@ export default function SetupPage() {
 
               {/* AI Confidence */}
               {setupGuide.confidence !== null && (
-                <div style={{ marginTop: 12, fontSize: 12, color: "#94a3b8" }}>
+                <div style={{ marginTop: 12, fontSize: 12, color: "#64748b" }}>
                   AI Confidence: {Math.round(setupGuide.confidence * 100)}%
                 </div>
               )}
@@ -666,7 +666,7 @@ export default function SetupPage() {
             <h3 style={{ margin: "0 0 8px 0", fontSize: 18, color: "#202124" }}>
               No Setup Guide Yet
             </h3>
-            <p style={{ margin: 0, fontSize: 14, color: "#94a3b8" }}>
+            <p style={{ margin: 0, fontSize: 14, color: "#64748b" }}>
               Select a game and click &quot;Generate Setup Guide&quot; to get started with step-by-step instructions.
             </p>
           </div>

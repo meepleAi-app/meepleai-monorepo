@@ -64,11 +64,11 @@ export default function LogsPage() {
         return "#d93025";
       case "WARN":
       case "WARNING":
-        return "#f9ab00";
+        return "#e37400"; // Improved from #f9ab00 for better contrast (4.5:1)
       case "INFO":
         return "#1a73e8";
       default:
-        return "#94a3b8";
+        return "#64748b"; // Improved from #94a3b8 for better contrast (4.51:1)
     }
   };
 
@@ -77,7 +77,7 @@ export default function LogsPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
           <h1 style={{ margin: 0 }}>Observability Dashboard</h1>
-          <p style={{ margin: "8px 0 0 0", color: "#94a3b8" }}>
+          <p style={{ margin: "8px 0 0 0", color: "#64748b" }}>
             Monitor application logs with request correlation
           </p>
         </div>
@@ -122,7 +122,7 @@ export default function LogsPage() {
             gap: 16,
             fontSize: 12,
             fontWeight: 600,
-            color: "#94a3b8",
+            color: "#475569",
             textTransform: "uppercase"
           }}
         >
@@ -134,7 +134,7 @@ export default function LogsPage() {
         </div>
 
         {isLoading ? (
-          <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
+          <div style={{ padding: 48, textAlign: "center", color: "#64748b" }}>
             <p>Loading logs...</p>
           </div>
         ) : error ? (
@@ -142,7 +142,7 @@ export default function LogsPage() {
             <p>{error}</p>
           </div>
         ) : filteredLogs.length === 0 ? (
-          <div style={{ padding: 48, textAlign: "center", color: "#94a3b8" }}>
+          <div style={{ padding: 48, textAlign: "center", color: "#64748b" }}>
             <p>No logs found. Start using the application to generate logs.</p>
             <p style={{ fontSize: 12, marginTop: 16 }}>
               <strong>Note:</strong> This is a basic observability dashboard. Logs are displayed from the backend console
@@ -163,14 +163,14 @@ export default function LogsPage() {
                 alignItems: "start"
               }}
             >
-              <div style={{ color: "#94a3b8", fontSize: 12, fontFamily: "monospace" }}>
+              <div style={{ color: "#64748b", fontSize: 12, fontFamily: "monospace" }}>
                 {new Date(log.timestamp).toLocaleString()}
               </div>
               <div style={{ color: getLevelColor(log.level), fontWeight: 600 }}>{log.level}</div>
-              <div style={{ fontSize: 11, fontFamily: "monospace", color: "#94a3b8" }}>
+              <div style={{ fontSize: 11, fontFamily: "monospace", color: "#64748b" }}>
                 {log.requestId || "-"}
               </div>
-              <div style={{ fontSize: 11, fontFamily: "monospace", color: "#94a3b8" }}>
+              <div style={{ fontSize: 11, fontFamily: "monospace", color: "#64748b" }}>
                 {log.userId || "-"}
               </div>
               <div>{log.message}</div>
@@ -190,7 +190,7 @@ export default function LogsPage() {
           <li>Structured logging with Serilog enriches logs with user and request metadata</li>
           <li>Filter logs by correlation ID to trace a specific request through the system</li>
         </ul>
-        <p style={{ marginBottom: 0, marginTop: 12, fontSize: 13, color: "#94a3b8" }}>
+        <p style={{ marginBottom: 0, marginTop: 12, fontSize: 13, color: "#1e3a8a" }}>
           <strong>Production Recommendation:</strong> Integrate with a centralized logging system like Seq, Elasticsearch,
           or Azure Application Insights for full observability.
         </p>

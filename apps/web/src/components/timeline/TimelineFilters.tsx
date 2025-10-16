@@ -107,7 +107,7 @@ export function TimelineFilters({
           style={{
             marginTop: 16,
             fontSize: 11,
-            color: "#94a3b8",
+            color: "#64748b",
             textAlign: "center",
             writingMode: "vertical-rl",
             transform: "rotate(180deg)"
@@ -219,7 +219,7 @@ export function TimelineFilters({
                   padding: "2px 6px",
                   fontSize: 10,
                   background: "#f1f3f4",
-                  color: "#94a3b8",
+                  color: "#64748b",
                   border: "none",
                   borderRadius: 3,
                   cursor: "pointer"
@@ -303,7 +303,7 @@ export function TimelineFilters({
                   padding: "2px 6px",
                   fontSize: 10,
                   background: "#f1f3f4",
-                  color: "#94a3b8",
+                  color: "#64748b",
                   border: "none",
                   borderRadius: 3,
                   cursor: "pointer"
@@ -364,7 +364,7 @@ export function TimelineFilters({
             width: "100%",
             padding: 10,
             background: "#f1f3f4",
-            color: "#94a3b8",
+            color: "#64748b",
             border: "none",
             borderRadius: 4,
             fontSize: 13,

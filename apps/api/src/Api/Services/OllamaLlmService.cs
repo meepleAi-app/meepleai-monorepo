@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -120,6 +121,110 @@ public class OllamaLlmService : ILlmService
     {
         // Rough estimation: ~4 characters per token for English text
         return string.IsNullOrWhiteSpace(text) ? 0 : text.Length / 4;
+    }
+
+    /// <summary>
+    /// CHAT-01: Generate a streaming chat completion response with token-by-token delivery
+    /// </summary>
+    public async IAsyncEnumerable<string> GenerateCompletionStreamAsync(
+        string systemPrompt,
+        string userPrompt,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(userPrompt))
+        {
+            _logger.LogWarning("Empty user prompt provided for streaming completion");
+            yield break;
+        }
+
+        var messages = new List<OllamaMessage>();
+
+        if (!string.IsNullOrWhiteSpace(systemPrompt))
+        {
+            messages.Add(new OllamaMessage { Role = "system", Content = systemPrompt });
+        }
+
+        messages.Add(new OllamaMessage { Role = "user", Content = userPrompt });
+
+        var request = new OllamaChatRequest
+        {
+            Model = ChatModel,
+            Messages = messages,
+            Stream = true, // Enable streaming
+            Options = new OllamaOptions
+            {
+                Temperature = 0.3f,
+                NumPredict = 500
+            }
+        };
+
+        var json = JsonSerializer.Serialize(request);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        _logger.LogInformation("Starting streaming chat completion using Ollama {Model}", ChatModel);
+
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/chat")
+        {
+            Content = content
+        };
+
+        HttpResponseMessage? response = null;
+
+        try
+        {
+            response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync(ct);
+                _logger.LogError("Ollama streaming API error: {Status} - {Body}", response.StatusCode, errorBody);
+                yield break;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initiating streaming chat completion");
+            response?.Dispose();
+            yield break;
+        }
+
+        // Process stream without try-catch to allow yield return
+        using (response)
+        {
+            using var stream = await response.Content.ReadAsStreamAsync(ct);
+            using var reader = new StreamReader(stream);
+
+            while (!reader.EndOfStream && !ct.IsCancellationRequested)
+            {
+                var line = await reader.ReadLineAsync(ct);
+
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                OllamaChatResponse? chunk = null;
+                try
+                {
+                    chunk = JsonSerializer.Deserialize<OllamaChatResponse>(line);
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning(ex, "Failed to parse streaming chunk: {Line}", line);
+                    continue;
+                }
+
+                var delta = chunk?.Message?.Content;
+                if (!string.IsNullOrEmpty(delta))
+                {
+                    yield return delta;
+                }
+
+                if (chunk?.Done == true)
+                {
+                    _logger.LogInformation("Streaming completion finished");
+                    break;
+                }
+            }
+        }
     }
 }
 

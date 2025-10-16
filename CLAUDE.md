@@ -126,6 +126,28 @@ tools/             - PowerShell scripts
   - `SessionManagementEndpointsTests.cs` - Integration tests with auth
   - `SessionAutoRevocationServiceTests.cs` - Background service tests
 
+**Streaming Responses** (CHAT-01):
+- **ILlmService** (`Services/ILlmService.cs`, `Services/LlmService.cs`): Token-by-token streaming support
+  - `GenerateCompletionStreamAsync()` - Returns `IAsyncEnumerable<string>` for streaming tokens
+  - Supports both OpenRouter and Ollama LLM backends
+  - Proper SSE format parsing with cancellation support
+- **IStreamingQaService** (`Services/IStreamingQaService.cs`, `Services/StreamingQaService.cs`): Progressive QA responses via SSE
+  - `AskStreamAsync(gameId, query, chatId?)` - Streams QA response with events
+  - Event flow: StateUpdate → Citations → Token(s) → Complete
+  - Integrates with AI-05 response caching (simulates streaming for cached responses)
+  - Tracks tokens, confidence, and snippets for logging
+- **SSE Endpoint** (`Program.cs:1165-1343`):
+  - `POST /api/v1/agents/qa/stream` - Server-Sent Events endpoint for streaming QA
+  - SSE headers: `Content-Type: text/event-stream`, `Cache-Control: no-cache`, `Connection: keep-alive`
+  - Chat persistence of complete response after streaming
+  - AI request logging with latency, tokens, and confidence metrics
+  - Error events sent to client on failure
+- **Event Types** (`Models/Contracts.cs`):
+  - `StreamingEventType.Token` - Individual LLM token
+  - `StreamingToken(string token)` - Token data model
+  - Reuses existing: StateUpdate, Citations, Complete, Error, Heartbeat
+- **Docs**: `docs/issue/chat-01-streaming-sse-implementation.md` - Complete implementation guide
+
 **Setup Guide Generation** (AI-03):
 - **SetupGuideService** (`Services/SetupGuideService.cs`): RAG-powered game setup wizard
   - `GenerateSetupGuideAsync(gameId, chatId?)` - LLM synthesizes setup steps from RAG context

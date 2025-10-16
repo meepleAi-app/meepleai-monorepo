@@ -14,6 +14,14 @@ public interface ILlmService
         string systemPrompt,
         string userPrompt,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// CHAT-01: Generate a streaming chat completion response with token-by-token delivery
+    /// </summary>
+    IAsyncEnumerable<string> GenerateCompletionStreamAsync(
+        string systemPrompt,
+        string userPrompt,
+        CancellationToken ct = default);
 }
 
 /// <summary>

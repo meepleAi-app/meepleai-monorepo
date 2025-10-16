@@ -1,6 +1,7 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "../lib/api";
+import { useChatStreaming } from "../lib/hooks/useChatStreaming";
 
 // Type definitions
 type AuthUser = {
@@ -124,6 +125,42 @@ export default function ChatPage() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
+
+  // Streaming hook
+  const [streamingState, streamingControls] = useChatStreaming({
+    onComplete: useCallback(
+      (answer: string, snippets: Snippet[], metadata: { totalTokens: number; confidence: number | null }) => {
+        // Add completed assistant message to chat
+        const assistantMessage: Message = {
+          id: `stream-${Date.now()}`,
+          role: "assistant",
+          content: answer,
+          snippets,
+          feedback: null,
+          endpoint: "qa",
+          gameId: selectedGameId ?? undefined,
+          timestamp: new Date(),
+        };
+
+        setMessages((prev) => [...prev, assistantMessage]);
+
+        // Update chat's lastMessageAt
+        if (activeChatId) {
+          setChats((prev) =>
+            prev.map((c) =>
+              c.id === activeChatId ? { ...c, lastMessageAt: new Date().toISOString() } : c
+            )
+          );
+        }
+      },
+      [selectedGameId, activeChatId]
+    ),
+    onError: useCallback((error: string) => {
+      setErrorMessage(error);
+      // Remove the temporary user message on error
+      setMessages((prev) => prev.filter((m) => !m.id.startsWith("temp-user-")));
+    }, []),
+  });
 
   // Load current user on mount
   useEffect(() => {
@@ -380,37 +417,8 @@ export default function ChatPage() {
         }
       }
 
-      // Send message with chatId
-      const res = await api.post<QaResponse>("/api/v1/agents/qa", {
-        gameId: selectedGameId,
-        query: userMessageContent,
-        chatId: chatId
-      });
-
-      const tempAssistantId = `temp-assistant-${Date.now()}`;
-
-      const assistantMessage: Message = {
-        id: tempAssistantId,
-        role: "assistant",
-        content: res.answer,
-        snippets: formatSnippets(res.snippets),
-        feedback: null,
-        endpoint: "qa",
-        gameId: selectedGameId,
-        timestamp: new Date(),
-        backendMessageId: res.messageId
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
-
-      // Update chat's lastMessageAt in the list
-      if (chatId) {
-        setChats((prev) =>
-          prev.map((c) =>
-            c.id === chatId ? { ...c, lastMessageAt: new Date().toISOString() } : c
-          )
-        );
-      }
+      // Start streaming response
+      streamingControls.startStreaming(selectedGameId, userMessageContent, chatId);
     } catch (err) {
       console.error("Error sending message:", err);
       setErrorMessage("Errore nella comunicazione con l'agente. Riprova.");
@@ -890,7 +898,87 @@ export default function ChatPage() {
             </ul>
           )}
 
-          {isSendingMessage && (
+          {/* Streaming Response */}
+          {streamingState.isStreaming && (
+            <div style={{ display: "flex", alignItems: "flex-start", marginBottom: 24 }}>
+              <div
+                style={{
+                  maxWidth: "75%",
+                  padding: 12,
+                  borderRadius: 8,
+                  background: "#f1f3f4",
+                  fontSize: 14
+                }}
+              >
+                <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 12, color: "#64748b", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>MeepleAI</span>
+                  <button
+                    onClick={() => streamingControls.stopStreaming()}
+                    aria-label="Stop streaming"
+                    style={{
+                      padding: "2px 8px",
+                      background: "#ea4335",
+                      color: "white",
+                      border: "none",
+                      borderRadius: 3,
+                      fontSize: 11,
+                      cursor: "pointer"
+                    }}
+                    title="Interrompi risposta"
+                  >
+                    ⏹ Stop
+                  </button>
+                </div>
+
+                {/* State indicator */}
+                {streamingState.state && (
+                  <div style={{ color: "#64748b", fontSize: 12, fontStyle: "italic", marginBottom: 8 }}>
+                    {streamingState.state}
+                  </div>
+                )}
+
+                {/* Streaming content */}
+                {streamingState.currentAnswer ? (
+                  <div style={{ whiteSpace: "pre-wrap" }}>
+                    {streamingState.currentAnswer}
+                    <span style={{ opacity: 0.7 }}>▋</span>
+                  </div>
+                ) : (
+                  <div style={{ color: "#64748b" }}>Sto pensando...</div>
+                )}
+
+                {/* Citations (if available during streaming) */}
+                {streamingState.snippets && streamingState.snippets.length > 0 && (
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #dadce0" }}>
+                    <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8, color: "#64748b" }}>
+                      Fonti:
+                    </div>
+                    {streamingState.snippets.map((snippet, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          marginBottom: 8,
+                          padding: 8,
+                          background: "#ffffff",
+                          border: "1px solid #dadce0",
+                          borderRadius: 4,
+                          fontSize: 12
+                        }}
+                      >
+                        <div style={{ fontWeight: 500, marginBottom: 4 }}>
+                          {getSnippetLabel(snippet)}
+                        </div>
+                        <div style={{ color: "#64748b", fontSize: 11 }}>{snippet.text}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Legacy loading state (fallback) */}
+          {isSendingMessage && !streamingState.isStreaming && (
             <div style={{ display: "flex", alignItems: "flex-start", marginBottom: 24 }}>
               <div
                 style={{
@@ -930,7 +1018,7 @@ export default function ChatPage() {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Fai una domanda sul gioco..."
-            disabled={isSendingMessage || !selectedGameId || !selectedAgentId}
+            disabled={isSendingMessage || streamingState.isStreaming || !selectedGameId || !selectedAgentId}
             aria-label="Message input"
             style={{
               flex: 1,
@@ -942,12 +1030,12 @@ export default function ChatPage() {
           />
           <button
             type="submit"
-            disabled={isSendingMessage || !inputValue.trim() || !selectedGameId || !selectedAgentId}
+            disabled={isSendingMessage || streamingState.isStreaming || !inputValue.trim() || !selectedGameId || !selectedAgentId}
             aria-label="Send message"
             style={{
               padding: "12px 24px",
               background:
-                isSendingMessage || !inputValue.trim() || !selectedGameId || !selectedAgentId
+                isSendingMessage || streamingState.isStreaming || !inputValue.trim() || !selectedGameId || !selectedAgentId
                   ? "#dadce0"
                   : "#0070f3",
               color: "white",
@@ -956,12 +1044,12 @@ export default function ChatPage() {
               fontSize: 14,
               fontWeight: 500,
               cursor:
-                isSendingMessage || !inputValue.trim() || !selectedGameId || !selectedAgentId
+                isSendingMessage || streamingState.isStreaming || !inputValue.trim() || !selectedGameId || !selectedAgentId
                   ? "not-allowed"
                   : "pointer"
             }}
           >
-            {isSendingMessage ? "Invio..." : "Invia"}
+            {isSendingMessage || streamingState.isStreaming ? "Invio..." : "Invia"}
           </button>
         </form>
       </div>

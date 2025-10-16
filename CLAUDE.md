@@ -270,7 +270,9 @@ cd apps/web && pnpm dev                                                         
 - **Database**: `docs/database-schema.md` - Complete DB schema reference
 - **Observability**: `docs/observability.md` - Health checks, logging, Seq dashboard, correlation IDs (OPS-01)
 - **OpenTelemetry**: `docs/ops-02-opentelemetry-design.md` - Distributed tracing & metrics architecture (OPS-02)
-- **Workflows**: `docs/N8N-01-README.md` - n8n workflow automation guide
+- **n8n Workflows**: `docs/guide/n8n-integration-guide.md` - n8n webhook integrations (N8N-01: Explain, N8N-03: Q&A)
+  - Technical designs: `docs/technic/n8n-webhook-explain-design.md`, `docs/technic/n8n-webhook-qa-design.md`
+  - Workflow JSONs: `infra/init/n8n/agent-explain-orchestrator.json`, `infra/init/n8n/agent-qa-webhook.json`
 - **Coverage**: `docs/code-coverage.md` - Coverage measurement & tracking
 - **Security Scanning**: `docs/security-scanning.md` - CI security scanning guide
 - **Schemas**: `schemas/README.md` - RuleSpec v0 schema reference

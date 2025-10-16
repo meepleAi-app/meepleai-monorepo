@@ -18,7 +18,13 @@ jest.mock('../../lib/api', () => ({
   api: {
     get: jest.fn(),
     post: jest.fn(),
-    put: jest.fn()
+    put: jest.fn(),
+    ruleSpecComments: {
+      getComments: jest.fn(),
+      createComment: jest.fn(),
+      updateComment: jest.fn(),
+      deleteComment: jest.fn()
+    }
   }
 }));
 

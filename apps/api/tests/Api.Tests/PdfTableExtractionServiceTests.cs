@@ -484,4 +484,117 @@ Row A1          Row A2
 
         Assert.NotEmpty(result.Diagrams);
     }
+
+    [Fact]
+    public void ConvertTableToAtomicRules_WithComplexTable_CreatesWellFormattedRules()
+    {
+        // Arrange - Complex table with multiple columns
+        var table = new PdfTable
+        {
+            PageNumber = 5,
+            Headers = new List<string> { "Action", "Cost", "Effect", "Timing" },
+            Rows = new List<string[]>
+            {
+                new[] { "Move", "1 Action", "Move up to 3 spaces", "Any time" },
+                new[] { "Attack", "1 Action", "Deal 2 damage", "Combat phase" },
+                new[] { "Rest", "Free", "Gain 1 health", "End of turn" }
+            },
+            ColumnCount = 4
+        };
+
+        // Act
+        var rules = InvokeConvertTableToAtomicRules(table);
+
+        // Assert
+        Assert.Equal(3, rules.Count);
+        Assert.All(rules, rule =>
+        {
+            Assert.Contains("[Table on page 5]", rule);
+            Assert.Contains(":", rule);
+        });
+
+        // First rule should contain all non-empty columns
+        Assert.Contains("Action: Move", rules[0]);
+        Assert.Contains("Cost: 1 Action", rules[0]);
+        Assert.Contains("Effect: Move up to 3 spaces", rules[0]);
+        Assert.Contains("Timing: Any time", rules[0]);
+
+        // Rules should be properly delimited
+        Assert.All(rules, rule => Assert.Contains("; ", rule));
+    }
+
+    [Fact]
+    public void ConvertTableToAtomicRules_WithEmptyTable_ReturnsEmptyList()
+    {
+        // Arrange - Empty table
+        var table = new PdfTable
+        {
+            PageNumber = 1,
+            Headers = new List<string>(),
+            Rows = new List<string[]>(),
+            ColumnCount = 0
+        };
+
+        // Act
+        var rules = InvokeConvertTableToAtomicRules(table);
+
+        // Assert
+        Assert.Empty(rules);
+    }
+
+    [Fact]
+    public void ConvertTableToAtomicRules_WithTableWithoutRows_ReturnsEmptyList()
+    {
+        // Arrange - Table with headers but no data
+        var table = new PdfTable
+        {
+            PageNumber = 1,
+            Headers = new List<string> { "Column1", "Column2" },
+            Rows = new List<string[]>(),
+            ColumnCount = 2
+        };
+
+        // Act
+        var rules = InvokeConvertTableToAtomicRules(table);
+
+        // Assert
+        Assert.Empty(rules);
+    }
+
+    [Fact]
+    public void ConvertTableToAtomicRules_WithMultiColumnTable_PreservesAllData()
+    {
+        // Arrange - Wide table with many columns
+        var table = new PdfTable
+        {
+            PageNumber = 7,
+            Headers = new List<string> { "A", "B", "C", "D", "E", "F" },
+            Rows = new List<string[]>
+            {
+                new[] { "1", "2", "3", "4", "5", "6" }
+            },
+            ColumnCount = 6
+        };
+
+        // Act
+        var rules = InvokeConvertTableToAtomicRules(table);
+
+        // Assert
+        Assert.Single(rules);
+        var rule = rules[0];
+
+        // All headers should be present
+        for (char c = 'A'; c <= 'F'; c++)
+        {
+            Assert.Contains($"{c}:", rule);
+        }
+
+        // All values should be present
+        for (int i = 1; i <= 6; i++)
+        {
+            Assert.Contains(i.ToString(), rule);
+        }
+    }
+
 }
+

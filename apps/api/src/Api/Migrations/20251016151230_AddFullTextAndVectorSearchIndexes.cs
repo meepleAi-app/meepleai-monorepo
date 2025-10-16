@@ -7,20 +7,31 @@ namespace Api.Migrations
     /// <inheritdoc />
     public partial class AddFullTextAndVectorSearchIndexes : Migration
     {
+        // IMPORTANT: Set to false to allow CREATE INDEX CONCURRENTLY
+        // CONCURRENTLY cannot run inside a transaction, but prevents table locks
+        protected override bool IsTransactional => false;
+
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             // ===================================================================
-            // DB-03: Full-Text Search Indexes for PDF and RuleSpec
+            // DB-03: Full-Text Search Indexes for PDF and RuleSpec (NON-BLOCKING)
             // ===================================================================
             // Requirement: Query searches on demo dataset < 200ms
             // These GIN indexes enable fast full-text search on PostgreSQL
+            //
+            // IMPORTANT: Using CREATE INDEX CONCURRENTLY to avoid blocking production traffic
+            // - Does NOT take ACCESS EXCLUSIVE lock (only SHARE UPDATE EXCLUSIVE)
+            // - Allows concurrent INSERT/UPDATE/DELETE operations
+            // - Takes longer to build but safe for production with active traffic
+            // - Cannot be run inside a transaction (IsTransactional = false)
+            // - Does not support IF NOT EXISTS (will fail if index already exists)
 
             // 1. Full-text search index on pdf_documents.ExtractedText
             // Enables: SELECT * FROM pdf_documents WHERE to_tsvector('english', "ExtractedText") @@ plainto_tsquery('search term')
             // Use case: User searches for keywords in uploaded PDF rulebooks
             migrationBuilder.Sql(@"
-                CREATE INDEX IF NOT EXISTS ""IX_pdf_documents_ExtractedText_GIN""
+                CREATE INDEX CONCURRENTLY ""IX_pdf_documents_ExtractedText_GIN""
                 ON pdf_documents USING GIN (to_tsvector('english', COALESCE(""ExtractedText"", '')));
             ");
 
@@ -28,12 +39,12 @@ namespace Api.Migrations
             // Enables: SELECT * FROM rule_atoms WHERE to_tsvector('english', ""Text"") @@ plainto_tsquery('search term')
             // Use case: Search within structured rule components (setup, actions, victory conditions)
             migrationBuilder.Sql(@"
-                CREATE INDEX IF NOT EXISTS ""IX_rule_atoms_Text_GIN""
+                CREATE INDEX CONCURRENTLY ""IX_rule_atoms_Text_GIN""
                 ON rule_atoms USING GIN (to_tsvector('english', ""Text""));
             ");
 
             // ===================================================================
-            // DB-03: Composite Indexes for Filtered Queries
+            // DB-03: Composite Indexes for Filtered Queries (NON-BLOCKING)
             // ===================================================================
             // Optimizes common query patterns with multiple WHERE conditions
 
@@ -41,7 +52,7 @@ namespace Api.Migrations
             // Enables: SELECT * FROM pdf_documents WHERE "GameId" = ? AND "ProcessingStatus" = 'completed'
             // Use case: List all completed PDFs for a specific game (very common in RAG pipeline)
             migrationBuilder.Sql(@"
-                CREATE INDEX IF NOT EXISTS ""IX_pdf_documents_GameId_ProcessingStatus""
+                CREATE INDEX CONCURRENTLY ""IX_pdf_documents_GameId_ProcessingStatus""
                 ON pdf_documents (""GameId"", ""ProcessingStatus"");
             ");
 
@@ -50,7 +61,7 @@ namespace Api.Migrations
             // Use case: Show most recent PDFs for a game (admin dashboard, upload history)
             // Note: Complements existing IX_pdf_documents_UploadedByUserId_UploadedAt_Desc
             migrationBuilder.Sql(@"
-                CREATE INDEX IF NOT EXISTS ""IX_pdf_documents_GameId_UploadedAt_Desc""
+                CREATE INDEX CONCURRENTLY ""IX_pdf_documents_GameId_UploadedAt_Desc""
                 ON pdf_documents (""GameId"", ""UploadedAt"" DESC);
             ");
 
@@ -58,7 +69,7 @@ namespace Api.Migrations
             // Enables: SELECT * FROM rule_atoms WHERE "RuleSpecId" = ? AND "Text" LIKE '%keyword%'
             // Use case: Search within a specific rule specification version
             migrationBuilder.Sql(@"
-                CREATE INDEX IF NOT EXISTS ""IX_rule_atoms_RuleSpecId_Text""
+                CREATE INDEX CONCURRENTLY ""IX_rule_atoms_RuleSpecId_Text""
                 ON rule_atoms (""RuleSpecId"", ""Text"");
             ");
 
@@ -70,12 +81,13 @@ namespace Api.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            // Drop indexes in reverse order
-            migrationBuilder.Sql(@"DROP INDEX IF EXISTS ""IX_rule_atoms_RuleSpecId_Text"";");
-            migrationBuilder.Sql(@"DROP INDEX IF EXISTS ""IX_pdf_documents_GameId_UploadedAt_Desc"";");
-            migrationBuilder.Sql(@"DROP INDEX IF EXISTS ""IX_pdf_documents_GameId_ProcessingStatus"";");
-            migrationBuilder.Sql(@"DROP INDEX IF EXISTS ""IX_rule_atoms_Text_GIN"";");
-            migrationBuilder.Sql(@"DROP INDEX IF EXISTS ""IX_pdf_documents_ExtractedText_GIN"";");
+            // Drop indexes in reverse order using CONCURRENTLY to avoid blocking
+            // CONCURRENTLY ensures the drop operation doesn't lock the table
+            migrationBuilder.Sql(@"DROP INDEX CONCURRENTLY IF EXISTS ""IX_rule_atoms_RuleSpecId_Text"";");
+            migrationBuilder.Sql(@"DROP INDEX CONCURRENTLY IF EXISTS ""IX_pdf_documents_GameId_UploadedAt_Desc"";");
+            migrationBuilder.Sql(@"DROP INDEX CONCURRENTLY IF EXISTS ""IX_pdf_documents_GameId_ProcessingStatus"";");
+            migrationBuilder.Sql(@"DROP INDEX CONCURRENTLY IF EXISTS ""IX_rule_atoms_Text_GIN"";");
+            migrationBuilder.Sql(@"DROP INDEX CONCURRENTLY IF EXISTS ""IX_pdf_documents_ExtractedText_GIN"";");
         }
     }
 }

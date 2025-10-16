@@ -16,6 +16,11 @@ Opzioni:
 ║  PROCESSO AUTOMATIZZATO DI CHIUSURA    ║
 ╚════════════════════════════════════════╝
 
+🔗 INTEGRAZIONE CON @issue-manager:
+   Questo workflow si integra con @issue-manager. L'issue deve essere
+   iniziata con /issue start #id che crea il branch feature.
+   @close-issue userà quel branch per creare la PR e fare il merge.
+
 Il workflow prevede 5 step sequenziali:
 1. Code Review 🔍
 2. Creazione Pull Request 📤
@@ -34,11 +39,15 @@ STEP 1: CODE REVIEW 🔍
 
 Obiettivo: Validare qualità del codice
 
+⚠️ PREREQUISITO: Branch già creato da @issue-manager
+   Il branch feature deve essere già esistente (creato con /issue start)
+
 Azioni:
-1. Identifica branch associato all'issue
-2. Recupera tutti i commit del branch
-3. Analizza file modificati
-4. Esegui controlli automatici:
+1. Recupera branch dal metadata issue (salvato da @issue-manager)
+2. Verifica branch esistente e checkout
+3. Recupera tutti i commit del branch
+4. Analizza file modificati
+5. Esegui controlli automatici:
    ✓ Coding standards compliance
    ✓ Best practices
    ✓ Security vulnerabilities
@@ -87,8 +96,12 @@ STEP 2: CREAZIONE PULL REQUEST 📤
 
 Obiettivo: Creare PR completa e ben documentata
 
+⚠️ NOTA: Usa branch esistente creato da @issue-manager
+   Non creare nuovo branch, usa quello dal metadata issue
+
 Azioni:
-1. Genera titolo PR descrittivo
+1. Verifica branch corrente (deve essere quello della issue)
+2. Genera titolo PR descrittivo
    Format: "[Type] Brief description (closes #[id])"
    Example: "Fix: Resolve authentication timeout (closes #1234)"
 
@@ -401,7 +414,16 @@ ERROR: Issue not found
 
 ERROR: No branch
 ❌ No branch associated with issue
-➡️ Create branch and link commits
+➡️ ERRORE CRITICO: Issue non iniziata con workflow corretto
+
+💡 Soluzione:
+1. L'issue deve essere iniziata con @issue-manager /issue start #id
+2. Questo crea automaticamente il branch e lo salva nel metadata
+3. Se hai già commits, puoi:
+   - Usare @issue-manager /issue start #id per creare branch ora
+   - Oppure fare cherry-pick dei commits nel nuovo branch
+
+⚠️ NON creare branch manualmente - usa sempre il workflow
 
 ERROR: Merge conflicts
 ❌ Conflicts detected in:

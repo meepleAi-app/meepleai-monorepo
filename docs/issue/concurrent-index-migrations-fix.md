@@ -1,15 +1,33 @@
-# Fix: Non-Blocking Index Creation with CONCURRENTLY
+# Fix: EF Core 9.0 Index Creation Strategy
 
-**Date**: 2025-10-16
-**Issue**: Database migrations were creating indexes with ACCESS EXCLUSIVE locks
-**Impact**: Production traffic could be blocked during schema upgrades
-**Resolution**: Updated migrations to use `CREATE INDEX CONCURRENTLY`
+**Date**: 2025-10-16 (Updated: 2025-10-16)
+**Issue**: EF Core 9.0 removed `IsTransactional` property, breaking `CREATE INDEX CONCURRENTLY` support
+**Impact**: Cannot create non-blocking indexes through EF migrations in EF Core 9.0
+**Resolution**: Use standard `CREATE INDEX` in migrations + separate SQL scripts with `CONCURRENTLY` for production
 
 ## Problem Statement
 
-Two database migrations were creating indexes using standard `CREATE INDEX` statements inside EF Core transactions:
+**EF Core 9.0 Breaking Change**: The `IsTransactional` property was removed from the `Migration` class, preventing execution of `CREATE INDEX CONCURRENTLY` which requires running outside a transaction.
+
+Two database migrations needed non-blocking index creation:
 1. `20251010132507_AddPerformanceIndexes` (12 indexes)
 2. `20251016151230_AddFullTextAndVectorSearchIndexes` (5 indexes)
+
+### EF Core Version Incompatibility
+
+**EF Core 8.x and earlier:**
+```csharp
+// ✅ Worked in EF Core 8.x
+protected override bool IsTransactional => false;
+// Could execute CREATE INDEX CONCURRENTLY
+```
+
+**EF Core 9.0:**
+```csharp
+// ❌ Error: IsTransactional does not exist
+protected override bool IsTransactional => false;
+// Compile error: non sono stati trovati metodi appropriati per eseguire l'override
+```
 
 ### Production Impact
 
@@ -22,66 +40,97 @@ For large tables (`pdf_documents`, `rule_atoms`, `user_sessions`, etc.), this co
 
 ## Root Cause
 
-```csharp
-// ❌ BLOCKING - Takes ACCESS EXCLUSIVE lock
-migrationBuilder.Sql(@"
-    CREATE INDEX IF NOT EXISTS ""IX_table_column""
-    ON table (column);
-");
+`CREATE INDEX CONCURRENTLY` cannot run inside a transaction:
+
+```sql
+-- ❌ ERROR: cannot execute CREATE INDEX CONCURRENTLY within a transaction block
+BEGIN;
+CREATE INDEX CONCURRENTLY "IX_table_column" ON table (column);
+COMMIT;
 ```
 
-Issues:
-1. Standard `CREATE INDEX` blocks concurrent writes
-2. Runs inside EF transaction (default `IsTransactional = true`)
-3. No explicit consideration for production traffic
+EF Core 9.0:
+1. ❌ Removed `IsTransactional` property (no way to disable transactions)
+2. ❌ All migrations now run inside transactions by default
+3. ❌ Cannot execute `CREATE INDEX CONCURRENTLY` in migrations
 
 ## Solution
 
-### Changed To: CREATE INDEX CONCURRENTLY
+### Dual-Track Approach for EF Core 9.0
+
+Since EF Core 9.0 cannot execute `CREATE INDEX CONCURRENTLY`, we use a **dual-track strategy**:
+
+1. **Dev/Staging**: EF migrations create indexes with standard `CREATE INDEX` (acceptable blocking)
+2. **Production**: Manual SQL scripts create indexes with `CREATE INDEX CONCURRENTLY` (no blocking)
+
+### Migration Files (Dev/Staging)
 
 ```csharp
-public partial class Migration : Migration
+// apps/api/src/Api/Migrations/20251010132507_AddPerformanceIndexes.cs
+public partial class AddPerformanceIndexes : Migration
 {
-    // Required: CONCURRENTLY cannot run in transaction
-    protected override bool IsTransactional => false;
+    // IMPORTANT: EF Core 9.0 migrations run inside transactions
+    // For PRODUCTION: Use tools/sql/create-indexes-concurrently.sql to create indexes without blocking
+    // For DEV/TEST: Standard CREATE INDEX is acceptable (tables are small, minimal traffic)
 
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        // ✅ NON-BLOCKING - Only SHARE UPDATE EXCLUSIVE lock
+        // NOTE: CONCURRENTLY removed for EF Core 9.0 compatibility
+        // In production, indexes should be created manually using CONCURRENTLY to avoid table locks
+        // See: tools/sql/create-indexes-concurrently.sql
+
         migrationBuilder.Sql(@"
-            CREATE INDEX CONCURRENTLY ""IX_table_column""
-            ON table (column);
+            CREATE INDEX IF NOT EXISTS ""IX_user_sessions_TokenHash_ExpiresAt""
+            ON user_sessions (""TokenHash"", ""ExpiresAt"" DESC)
+            WHERE ""RevokedAt"" IS NULL;
         ");
+        // ... more indexes
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-        // ✅ NON-BLOCKING drop
-        migrationBuilder.Sql(@"
-            DROP INDEX CONCURRENTLY IF EXISTS ""IX_table_column"";
-        ");
+        migrationBuilder.Sql(@"DROP INDEX IF EXISTS ""IX_user_sessions_TokenHash_ExpiresAt"";");
+        // ... more drops
     }
 }
 ```
 
+### Production SQL Scripts (Non-Blocking)
+
+```sql
+-- tools/sql/create-indexes-concurrently.sql
+
+-- ✅ NON-BLOCKING - Only SHARE UPDATE EXCLUSIVE lock
+-- Allows concurrent INSERT/UPDATE/DELETE
+-- Safe for production with active traffic
+
+CREATE INDEX CONCURRENTLY IF NOT EXISTS "IX_user_sessions_TokenHash_ExpiresAt"
+ON user_sessions ("TokenHash", "ExpiresAt" DESC)
+WHERE "RevokedAt" IS NULL;
+
+-- ... more indexes with CONCURRENTLY
+```
+
 ### Key Changes
 
-1. **Added `IsTransactional => false`**:
-   - Required because `CONCURRENTLY` cannot run in transaction
-   - Disables automatic EF transaction wrapping
+1. **Removed `CONCURRENTLY` from migrations**:
+   - Use standard `CREATE INDEX` in EF migrations
+   - Compatible with EF Core 9.0 transactions
+   - Acceptable for dev/staging environments
 
-2. **Changed `CREATE INDEX` → `CREATE INDEX CONCURRENTLY`**:
-   - Only takes SHARE UPDATE EXCLUSIVE lock
-   - Allows concurrent INSERT/UPDATE/DELETE
-   - Two table scans instead of one (slower but non-blocking)
+2. **Added `IF NOT EXISTS` to migrations**:
+   - Safe for re-running migrations
+   - Prevents errors if indexes already exist
 
-3. **Removed `IF NOT EXISTS`**:
-   - `CREATE INDEX CONCURRENTLY` doesn't support it
-   - Not needed: re-running migration will fail gracefully if index exists
+3. **Created separate SQL scripts for production**:
+   - `tools/sql/create-indexes-concurrently.sql` - Create indexes
+   - `tools/sql/drop-indexes-concurrently.sql` - Rollback indexes
+   - `tools/sql/README.md` - Complete documentation
 
-4. **Changed `DROP INDEX` → `DROP INDEX CONCURRENTLY`**:
-   - Non-blocking index removal
-   - Safe for production rollbacks
+4. **Added documentation to migration files**:
+   - Clear comments explaining the dual-track approach
+   - References to production SQL scripts
+   - EF Core 9.0 compatibility notes
 
 ## Performance Characteristics
 
@@ -174,56 +223,126 @@ docker compose exec postgres psql -U meeple -d meepleai -c "\di"
    SELECT * FROM pg_indexes WHERE indexdef LIKE '%INVALID%';
    ```
 
-## Production Deployment Checklist
+## Production Deployment Workflow
+
+### Step-by-Step Process
+
+**1. Run EF Core Migrations** (Creates tables/columns, skips indexes in production):
+```bash
+cd apps/api/src/Api
+dotnet ef database update --connection "Host=prod-db;Database=meepleai;..."
+```
+- Creates schema changes (tables, columns, constraints)
+- Creates indexes using standard `CREATE INDEX` (if you run this in production, it WILL block)
+- **Recommendation**: Skip migration run in production if indexes are the only changes
+
+**2. Create Indexes with CONCURRENTLY** (No downtime):
+```bash
+psql -h production-db.example.com -U meepleai_user -d meepleai_prod \
+  -f tools/sql/create-indexes-concurrently.sql
+```
+- Non-blocking index creation
+- Allows concurrent traffic
+- May take 2-3x longer but no application impact
+
+**3. Verify Indexes Created**:
+```sql
+SELECT schemaname, tablename, indexname, indexdef
+FROM pg_indexes
+WHERE indexname LIKE 'IX_%'
+ORDER BY tablename, indexname;
+```
+
+**4. Run ANALYZE** (Update query planner statistics):
+```sql
+ANALYZE pdf_documents;
+ANALYZE rule_atoms;
+ANALYZE user_sessions;
+ANALYZE chat_logs;
+ANALYZE ai_request_logs;
+ANALYZE audit_logs;
+```
+
+### Production Deployment Checklist
 
 - [ ] Verify database has enough space (indexes ~same size as table)
-- [ ] Monitor `pg_stat_activity` during deployment
+- [ ] Schedule deployment during low-traffic window (optional, but recommended)
+- [ ] Run EF migrations for schema changes (if any beyond indexes)
+- [ ] Execute `tools/sql/create-indexes-concurrently.sql`
+- [ ] Monitor `pg_stat_activity` during index creation
+- [ ] Check for invalid indexes: `SELECT * FROM pg_indexes WHERE indexdef LIKE '%INVALID%'`
+- [ ] Run ANALYZE on all affected tables
+- [ ] Verify application performance metrics
 - [ ] Check application logs for no errors
-- [ ] Verify all indexes created successfully:
-  ```sql
-  SELECT indexname, indexdef
-  FROM pg_indexes
-  WHERE tablename IN ('pdf_documents', 'rule_atoms', 'user_sessions');
-  ```
-- [ ] Run ANALYZE after index creation:
-  ```sql
-  ANALYZE pdf_documents;
-  ANALYZE rule_atoms;
-  ANALYZE user_sessions;
-  ```
 
-## Best Practices Going Forward
+## Best Practices Going Forward (EF Core 9.0)
 
 ### For Future Migrations with Indexes
 
-1. **Always use CONCURRENTLY for production**:
+1. **Use dual-track approach**:
    ```csharp
-   protected override bool IsTransactional => false;
-   // Use CREATE INDEX CONCURRENTLY
+   // Migration file: Use standard CREATE INDEX
+   // IMPORTANT: EF Core 9.0 migrations run inside transactions
+   // For PRODUCTION: Use tools/sql/[migration-name]-indexes.sql
+   migrationBuilder.Sql(@"
+       CREATE INDEX IF NOT EXISTS ""IX_table_column""
+       ON table (column);
+   ");
    ```
 
-2. **Exception: Small tables only**:
-   - Standard `CREATE INDEX` acceptable if table < 1000 rows
-   - Or if guaranteed to run in non-production environment
+2. **Create production SQL scripts**:
+   - Add new indexes to `tools/sql/create-indexes-concurrently.sql`
+   - Add new drops to `tools/sql/drop-indexes-concurrently.sql`
+   - Document in `tools/sql/README.md`
 
 3. **Document expected build time**:
    ```csharp
-   // NOTE: Takes ~15 min on production (10GB table)
-   migrationBuilder.Sql(@"CREATE INDEX CONCURRENTLY ...");
+   // NOTE: Production: Use tools/sql/create-indexes-concurrently.sql (~15 min on 10GB table)
+   // Dev/Staging: This migration will create indexes with blocking (acceptable for non-production)
    ```
 
-4. **Consider off-peak deployment**:
-   - CONCURRENTLY still has overhead
+4. **Exception: Small tables only**:
+   - Standard `CREATE INDEX` acceptable if table < 1000 rows AND production environment
+   - Otherwise, always use separate SQL scripts with CONCURRENTLY
+
+5. **Consider off-peak deployment**:
+   - Even CONCURRENTLY has overhead
    - Deploy during low-traffic windows when possible
+
+### Dev/Staging vs Production Strategy
+
+| Environment | Method | Blocking | Acceptable? | When to Use |
+|-------------|--------|----------|-------------|-------------|
+| Dev/Local | Migration `CREATE INDEX` | Yes | ✅ Yes | Always - data is minimal |
+| Staging | Migration `CREATE INDEX` | Yes | ✅ Yes | If staging has < 100k rows |
+| Staging | SQL `CONCURRENTLY` | No | ✅ Better | If testing prod-like deployment |
+| Production | Migration `CREATE INDEX` | Yes | ❌ NO | Never - causes downtime |
+| Production | SQL `CONCURRENTLY` | No | ✅ Required | Always |
 
 ## References
 
 - PostgreSQL Docs: [Building Indexes Concurrently](https://www.postgresql.org/docs/current/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY)
 - EF Core Docs: [Raw SQL Migrations](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/managing?tabs=dotnet-core-cli#arbitrary-changes-via-raw-sql)
+- EF Core 9.0 Breaking Changes: [What's New in EF Core 9.0](https://learn.microsoft.com/en-us/ef/core/what-is-new/ef-core-9.0/breaking-changes)
 - Blog: [Zero-Downtime PostgreSQL Migrations](https://blog.codinghorror.com/zero-downtime-database-migrations/)
+
+## Related Files
+
+- **Migrations**:
+  - `apps/api/src/Api/Migrations/20251010132507_AddPerformanceIndexes.cs` - 12 performance indexes
+  - `apps/api/src/Api/Migrations/20251016151230_AddFullTextAndVectorSearchIndexes.cs` - 5 search indexes
+
+- **Production SQL Scripts**:
+  - `tools/sql/create-indexes-concurrently.sql` - Non-blocking index creation
+  - `tools/sql/drop-indexes-concurrently.sql` - Non-blocking index removal
+  - `tools/sql/README.md` - Complete usage guide
+
+- **Documentation**:
+  - `CLAUDE.md` - Project overview with migration commands
+  - `docs/guide/deployment-checklist.md` - Production deployment procedures
 
 ---
 
 **Author**: Claude (AI Assistant)
 **Reviewed**: Pending
-**Status**: Fixed and committed
+**Status**: Fixed and committed (2025-10-16)

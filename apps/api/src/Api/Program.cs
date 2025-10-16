@@ -173,6 +173,9 @@ builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<ISessionManagementService, SessionManagementService>();
 builder.Services.AddHostedService<SessionAutoRevocationService>();
 
+// AI-06: RAG offline evaluation service
+builder.Services.AddScoped<IRagEvaluationService, RagEvaluationService>();
+
 // API-01: API key authentication service
 builder.Services.AddScoped<ApiKeyAuthenticationService>();
 

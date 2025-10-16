@@ -156,6 +156,29 @@ tools/             - PowerShell scripts
   - **Frontend Unit**: `pages/__tests__/setup.test.tsx` - Component behavior, authentication, data loading, step interactions, citations modal, edge cases
   - **E2E**: `e2e/setup.spec.ts` - Full user flow, authentication gate, guide generation, step completion, progress tracking, citation modal interactions
 
+**RAG Offline Evaluation** (AI-06):
+- **RagEvaluationService** (`Services/RagEvaluationService.cs`): Comprehensive IR metrics for RAG system
+  - `LoadDatasetAsync(filePath)` - Load test queries from JSON
+  - `EvaluateAsync(dataset, topK, thresholds?)` - Run evaluation with quality gates
+  - `GenerateMarkdownReport(report)` - Human-readable report with tables
+  - `GenerateJsonReport(report)` - Machine-readable JSON output
+  - Calculates: Precision@K (K=1,3,5,10), Recall@K, Mean Reciprocal Rank (MRR), latency percentiles (p50, p95, p99)
+  - Quality thresholds: P@5 ≥ 0.70, MRR ≥ 0.60, Latency p95 ≤ 2000ms, Success rate ≥ 95%
+- **Test Dataset** (`tests/Api.Tests/TestData/rag-evaluation-dataset.json`): 24 queries
+  - 8 Tic-Tac-Toe queries (setup, gameplay, winning conditions)
+  - 16 Chess queries (setup, piece movement, special moves, draw conditions)
+  - Ground truth answers and relevant document IDs for recall calculation
+  - Difficulty levels (easy, medium, hard) and categories for analysis
+- **CI Integration** (`.github/workflows/ci.yml`): `rag-evaluation` job
+  - Runs integration tests with Testcontainers (Postgres + Qdrant)
+  - Generates evaluation report (markdown summary)
+  - Uploads artifacts (30-day retention)
+  - Enforces quality gates (fails CI if thresholds not met)
+- **Tests**: 28+ tests (20 unit + 8 integration)
+  - `RagEvaluationServiceTests.cs` - Metric calculations, edge cases, report generation
+  - `RagEvaluationIntegrationTests.cs` - End-to-end with real Qdrant, quality gate enforcement
+- **Docs**: `docs/ai-06-rag-evaluation.md` - Complete guide with metrics explanations, troubleshooting
+
 **Vector Pipeline**: PDF → PdfTextExtractionService → TextChunkingService → EmbeddingService (OpenRouter) → QdrantService → RagService (search)
 
 **API Versioning** (API-01):
@@ -270,6 +293,7 @@ cd apps/web && pnpm dev                                                         
 - **Database**: `docs/database-schema.md` - Complete DB schema reference
 - **Observability**: `docs/observability.md` - Health checks, logging, Seq dashboard, correlation IDs (OPS-01)
 - **OpenTelemetry**: `docs/ops-02-opentelemetry-design.md` - Distributed tracing & metrics architecture (OPS-02)
+- **RAG Evaluation**: `docs/ai-06-rag-evaluation.md` - Offline evaluation system, IR metrics, quality gates (AI-06)
 - **n8n Workflows**: `docs/guide/n8n-integration-guide.md` - n8n webhook integrations (N8N-01: Explain, N8N-03: Q&A)
   - Technical designs: `docs/technic/n8n-webhook-explain-design.md`, `docs/technic/n8n-webhook-qa-design.md`
   - Workflow JSONs: `infra/init/n8n/agent-explain-orchestrator.json`, `infra/init/n8n/agent-qa-webhook.json`

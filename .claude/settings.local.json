@@ -166,7 +166,11 @@
       "Bash(dotnet format:*)",
       "Bash(Where-Object { $_ame -eq \"CodeQL Security Analysis (csharp)\" })",
       "Bash(Format-Table name,state,conclusion)",
-      "SlashCommand(/close-issue:*)"
+      "SlashCommand(/close-issue:*)",
+      "Bash(git merge:*)",
+      "Bash(Select-String -Pattern \"Passed|Failed|Total tests|Test Run|error|warning\" -Context 0,1)",
+      "Bash(Select-String -Pattern \"(error|warning|Build succeeded|Build FAILED)\" -Context 0,2)",
+      "Bash(git cherry-pick:*)"
     ],
     "deny": [],
     "ask": []

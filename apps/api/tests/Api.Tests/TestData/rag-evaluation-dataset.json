@@ -1,0 +1,229 @@
+{
+  "name": "MeepleAI RAG Evaluation Dataset v1.0",
+  "version": "1.0",
+  "createdAt": "2025-10-16T00:00:00Z",
+  "metadata": {
+    "description": "Comprehensive evaluation dataset for RAG system covering Tic-Tac-Toe and Chess rules",
+    "games": "tic-tac-toe, chess",
+    "queryCount": "24",
+    "coverage": "setup, gameplay, winning conditions, edge cases"
+  },
+  "queries": [
+    {
+      "id": "ttt-001",
+      "gameId": "tic-tac-toe",
+      "query": "How many players can play Tic-Tac-Toe?",
+      "groundTruthAnswer": "Two players",
+      "relevantDocIds": ["ttt-rulebook-001"],
+      "difficulty": "easy",
+      "category": "setup"
+    },
+    {
+      "id": "ttt-002",
+      "gameId": "tic-tac-toe",
+      "query": "What size is the game board?",
+      "groundTruthAnswer": "3x3 grid",
+      "relevantDocIds": ["ttt-rulebook-001"],
+      "difficulty": "easy",
+      "category": "setup"
+    },
+    {
+      "id": "ttt-003",
+      "gameId": "tic-tac-toe",
+      "query": "How do you win in Tic-Tac-Toe?",
+      "groundTruthAnswer": "Get three of your marks in a row (horizontal, vertical, or diagonal)",
+      "relevantDocIds": ["ttt-rulebook-001"],
+      "difficulty": "easy",
+      "category": "winning"
+    },
+    {
+      "id": "ttt-004",
+      "gameId": "tic-tac-toe",
+      "query": "Who goes first?",
+      "groundTruthAnswer": "Player X goes first",
+      "relevantDocIds": ["ttt-rulebook-001"],
+      "difficulty": "easy",
+      "category": "gameplay"
+    },
+    {
+      "id": "ttt-005",
+      "gameId": "tic-tac-toe",
+      "query": "Can you place your mark on an already occupied space?",
+      "groundTruthAnswer": "No, you cannot place a mark on an occupied space",
+      "relevantDocIds": ["ttt-rulebook-001"],
+      "difficulty": "medium",
+      "category": "rules"
+    },
+    {
+      "id": "ttt-006",
+      "gameId": "tic-tac-toe",
+      "query": "What happens if all spaces are filled and no one has three in a row?",
+      "groundTruthAnswer": "The game is a draw/tie",
+      "relevantDocIds": ["ttt-rulebook-001"],
+      "difficulty": "medium",
+      "category": "winning"
+    },
+    {
+      "id": "ttt-007",
+      "gameId": "tic-tac-toe",
+      "query": "How many different ways can you win?",
+      "groundTruthAnswer": "Eight ways: three rows, three columns, two diagonals",
+      "relevantDocIds": ["ttt-rulebook-001"],
+      "difficulty": "medium",
+      "category": "winning"
+    },
+    {
+      "id": "ttt-008",
+      "gameId": "tic-tac-toe",
+      "query": "Can you move a mark after placing it?",
+      "groundTruthAnswer": "No, once placed, marks cannot be moved",
+      "relevantDocIds": ["ttt-rulebook-001"],
+      "difficulty": "easy",
+      "category": "rules"
+    },
+    {
+      "id": "chess-001",
+      "gameId": "chess",
+      "query": "How many pieces does each player start with?",
+      "groundTruthAnswer": "16 pieces: 8 pawns, 2 rooks, 2 knights, 2 bishops, 1 queen, 1 king",
+      "relevantDocIds": ["chess-rulebook-001"],
+      "difficulty": "easy",
+      "category": "setup"
+    },
+    {
+      "id": "chess-002",
+      "gameId": "chess",
+      "query": "What is the size of a chess board?",
+      "groundTruthAnswer": "8x8 squares, 64 squares total",
+      "relevantDocIds": ["chess-rulebook-001"],
+      "difficulty": "easy",
+      "category": "setup"
+    },
+    {
+      "id": "chess-003",
+      "gameId": "chess",
+      "query": "How does a pawn move?",
+      "groundTruthAnswer": "Moves forward one square, or two squares on first move. Captures diagonally forward one square.",
+      "relevantDocIds": ["chess-rulebook-001"],
+      "difficulty": "easy",
+      "category": "piece-movement"
+    },
+    {
+      "id": "chess-004",
+      "gameId": "chess",
+      "query": "How does a knight move?",
+      "groundTruthAnswer": "Moves in an L-shape: two squares in one direction and one square perpendicular, can jump over pieces",
+      "relevantDocIds": ["chess-rulebook-001"],
+      "difficulty": "medium",
+      "category": "piece-movement"
+    },
+    {
+      "id": "chess-005",
+      "gameId": "chess",
+      "query": "What is castling?",
+      "groundTruthAnswer": "A special move involving the king and rook where the king moves two squares toward a rook and the rook moves to the square the king crossed",
+      "relevantDocIds": ["chess-rulebook-001"],
+      "difficulty": "hard",
+      "category": "special-moves"
+    },
+    {
+      "id": "chess-006",
+      "gameId": "chess",
+      "query": "What is en passant?",
+      "groundTruthAnswer": "A special pawn capture that can occur when a pawn moves two squares forward from its starting position and lands beside an opponent's pawn",
+      "relevantDocIds": ["chess-rulebook-001"],
+      "difficulty": "hard",
+      "category": "special-moves"
+    },
+    {
+      "id": "chess-007",
+      "gameId": "chess",
+      "query": "How do you win at chess?",
+      "groundTruthAnswer": "Checkmate your opponent's king, or opponent resigns",
+      "relevantDocIds": ["chess-rulebook-001"],
+      "difficulty": "easy",
+      "category": "winning"
+    },
+    {
+      "id": "chess-008",
+      "gameId": "chess",
+      "query": "What is checkmate?",
+      "groundTruthAnswer": "When the king is in check and has no legal move to escape check",
+      "relevantDocIds": ["chess-rulebook-001"],
+      "difficulty": "medium",
+      "category": "winning"
+    },
+    {
+      "id": "chess-009",
+      "gameId": "chess",
+      "query": "What is stalemate?",
+      "groundTruthAnswer": "When a player has no legal moves but is not in check. The game ends in a draw.",
+      "relevantDocIds": ["chess-rulebook-001"],
+      "difficulty": "medium",
+      "category": "draw-conditions"
+    },
+    {
+      "id": "chess-010",
+      "gameId": "chess",
+      "query": "Can a pawn move backwards?",
+      "groundTruthAnswer": "No, pawns can only move forward",
+      "relevantDocIds": ["chess-rulebook-001"],
+      "difficulty": "easy",
+      "category": "piece-movement"
+    },
+    {
+      "id": "chess-011",
+      "gameId": "chess",
+      "query": "What happens when a pawn reaches the opposite end of the board?",
+      "groundTruthAnswer": "The pawn is promoted to a queen, rook, bishop, or knight (player's choice, usually queen)",
+      "relevantDocIds": ["chess-rulebook-001"],
+      "difficulty": "medium",
+      "category": "special-moves"
+    },
+    {
+      "id": "chess-012",
+      "gameId": "chess",
+      "query": "Which piece can move in any direction any number of squares?",
+      "groundTruthAnswer": "The queen",
+      "relevantDocIds": ["chess-rulebook-001"],
+      "difficulty": "easy",
+      "category": "piece-movement"
+    },
+    {
+      "id": "chess-013",
+      "gameId": "chess",
+      "query": "Can you castle if your king has already moved?",
+      "groundTruthAnswer": "No, castling is only legal if the king has not moved",
+      "relevantDocIds": ["chess-rulebook-001"],
+      "difficulty": "medium",
+      "category": "special-moves"
+    },
+    {
+      "id": "chess-014",
+      "gameId": "chess",
+      "query": "Can you castle while in check?",
+      "groundTruthAnswer": "No, you cannot castle while in check, through check, or into check",
+      "relevantDocIds": ["chess-rulebook-001"],
+      "difficulty": "hard",
+      "category": "special-moves"
+    },
+    {
+      "id": "chess-015",
+      "gameId": "chess",
+      "query": "What is the three-fold repetition rule?",
+      "groundTruthAnswer": "If the same position occurs three times with the same player to move, the game can be declared a draw",
+      "relevantDocIds": ["chess-rulebook-001"],
+      "difficulty": "hard",
+      "category": "draw-conditions"
+    },
+    {
+      "id": "chess-016",
+      "gameId": "chess",
+      "query": "What is the fifty-move rule?",
+      "groundTruthAnswer": "If fifty moves are made by each player without a pawn move or capture, the game can be declared a draw",
+      "relevantDocIds": ["chess-rulebook-001"],
+      "difficulty": "hard",
+      "category": "draw-conditions"
+    }
+  ]
+}

@@ -9,6 +9,7 @@ Azioni disponibili:
 - /issue show #id                → Mostra dettagli issue specifica
 - /issue search [query]          → Cerca issue per keyword
 - /issue status #id              → Verifica stato e progressi
+- /issue start #id               → Inizia lavoro su issue (crea branch + assegna)
 - /issue assign #id @user        → Assegna issue a utente
 - /issue update #id [campo=valore] → Aggiorna campi issue
 - /issue comment #id [testo]     → Aggiungi commento
@@ -33,6 +34,63 @@ Per ogni comando esegui:
    - Mostra risultato dell'azione
    - Evidenzia cambiamenti effettuati
    - Suggerisci azioni successive
+
+=== COMANDO START - INIZIA LAVORO SU ISSUE ===
+
+Il comando /issue start #id automatizza l'inizio del lavoro su una issue:
+
+STEP 0: CREAZIONE BRANCH & SETUP 🚀
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Obiettivo: Preparare ambiente di lavoro per l'issue
+
+Azioni:
+1. Verifica issue esistente e stato (deve essere "open")
+2. Recupera metadata issue (titolo, labels, tipo)
+3. Genera nome branch secondo convenzione:
+   Format: [tipo]/issue-[numero]-[slug]
+   Examples:
+   - feature/issue-1234-add-dark-mode
+   - fix/issue-5678-auth-timeout
+   - refactor/issue-9012-cleanup-services
+
+4. Crea branch da main:
+   git checkout main
+   git pull origin main
+   git checkout -b [branch-name]
+
+5. Assegna issue all'utente corrente
+6. Aggiorna label con "in-progress"
+7. Aggiungi commento automatico:
+   "🚀 Started work on this issue
+    Branch: [branch-name]
+
+    Workflow initiated by @issue-manager"
+
+Output:
+
+✅ ISSUE #[id] - WORK STARTED
+
+🌿 Branch Created:
+   Name: [branch-name]
+   Base: main
+   Current: [branch-name]
+
+📋 Issue Updated:
+   Status: In Progress
+   Assignee: @[current-user]
+   Labels: [existing-labels, in-progress]
+
+💡 Next Steps:
+1. Implement changes in branch [branch-name]
+2. Commit frequently with clear messages
+3. When ready, use @close-issue to complete workflow
+
+⚠️ Remember:
+- Branch name saved in issue metadata
+- @close-issue will use this branch for PR
+- Keep branch updated with main regularly
+
    === FORMATO OUTPUT ===
 
 Usa questo formato per le risposte:
@@ -106,6 +164,9 @@ User: @issue-manager /issue list open
 
 User: @issue-manager /issue show #1234
 → Dettagli completi issue 1234
+
+User: @issue-manager /issue start #1234
+→ Crea branch, assegna issue, prepara workflow
 
 User: @issue-manager /issue search "login bug"
 → Cerca issue relative a login bug

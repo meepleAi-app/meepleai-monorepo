@@ -552,15 +552,26 @@ export default function UploadPage() {
       review: '3. Review',
       publish: '4. Publish'
     };
+    const currentStepIndex = steps.indexOf(currentStep);
+    const currentStepLabel = stepLabels[currentStep];
 
     return (
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px', padding: '20px 0' }}>
+      <div
+        role="navigation"
+        aria-label={`Wizard progress: ${currentStepLabel} (Step ${currentStepIndex + 1} of ${steps.length})`}
+        style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px', padding: '20px 0' }}
+      >
         {steps.map((step, index) => {
           const isActive = currentStep === step;
           const isPast = steps.indexOf(currentStep) > index;
           return (
-            <div key={step} style={{ flex: 1, textAlign: 'center' }}>
+            <div
+              key={step}
+              aria-current={isActive ? 'step' : undefined}
+              style={{ flex: 1, textAlign: 'center' }}
+            >
               <div
+                aria-hidden="true"
                 style={{
                   width: '40px',
                   height: '40px',
@@ -594,8 +605,9 @@ export default function UploadPage() {
         </Link>
       </div>
 
-      <h1 style={{ marginBottom: '10px' }}>PDF Import Wizard</h1>
-      <p style={{ color: '#666', marginBottom: '30px' }}>Upload, parse, review, and publish game rules</p>
+      <main id="main-content">
+        <h1 style={{ marginBottom: '10px' }}>PDF Import Wizard</h1>
+        <p style={{ color: '#666', marginBottom: '30px' }}>Upload, parse, review, and publish game rules</p>
 
       {isUnauthorizedRole ? (
         renderUnauthorizedState()
@@ -1180,6 +1192,7 @@ export default function UploadPage() {
           )}
         </>
       )}
+      </main>
     </div>
   );
 }

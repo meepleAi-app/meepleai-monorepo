@@ -465,7 +465,7 @@ export default function ChatPage() {
   // Render login required state
   if (!authUser) {
     return (
-      <main style={{ padding: 24, maxWidth: 900, margin: "0 auto", fontFamily: "sans-serif" }}>
+      <main id="main-content" style={{ padding: 24, maxWidth: 900, margin: "0 auto", fontFamily: "sans-serif" }}>
         <Link href="/" style={{ color: "#0070f3", textDecoration: "none" }}>
           ← Torna alla Home
         </Link>
@@ -502,6 +502,7 @@ export default function ChatPage() {
   // Main chat interface
   return (
     <main
+      id="main-content"
       style={{
         display: "flex",
         height: "100vh",
@@ -511,6 +512,7 @@ export default function ChatPage() {
     >
       {/* Sidebar */}
       <aside
+        aria-label="Chat sidebar with game selection and chat history"
         style={{
           width: sidebarCollapsed ? 0 : 320,
           minWidth: sidebarCollapsed ? 0 : 320,
@@ -592,6 +594,7 @@ export default function ChatPage() {
           <button
             onClick={() => void createNewChat()}
             disabled={!selectedGameId || !selectedAgentId || isCreatingChat}
+            aria-label="Create new chat"
             style={{
               width: "100%",
               padding: 10,
@@ -609,9 +612,9 @@ export default function ChatPage() {
         </div>
 
         {/* Chat List */}
-        <div style={{ flex: 1, overflowY: "auto", padding: 8 }}>
+        <nav aria-label="Chat history" style={{ flex: 1, overflowY: "auto", padding: 8 }}>
           {isLoadingChats ? (
-            <div style={{ padding: 16, textAlign: "center", color: "#5f6368", fontSize: 13 }}>
+            <div role="status" aria-live="polite" style={{ padding: 16, textAlign: "center", color: "#5f6368", fontSize: 13 }}>
               Caricamento chat...
             </div>
           ) : chats.length === 0 ? (
@@ -619,48 +622,60 @@ export default function ChatPage() {
               Nessuna chat. Creane una nuova!
             </div>
           ) : (
-            chats.map((chat) => (
-              <div
-                key={chat.id}
-                style={{
-                  padding: 12,
-                  marginBottom: 8,
-                  background: activeChatId === chat.id ? "#e8f0fe" : "white",
-                  border: `1px solid ${activeChatId === chat.id ? "#1a73e8" : "#dadce0"}`,
-                  borderRadius: 4,
-                  cursor: "pointer",
-                  position: "relative",
-                  fontSize: 13
-                }}
-                onClick={() => void loadChatHistory(chat.id)}
-              >
-                <div style={{ fontWeight: 500, marginBottom: 4 }}>{chat.agentName}</div>
-                <div style={{ fontSize: 11, color: "#5f6368" }}>{formatChatPreview(chat)}</div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void deleteChat(chat.id);
-                  }}
+            <ul role="list" style={{ listStyle: "none", margin: 0, padding: 0 }}>
+              {chats.map((chat) => (
+                <li
+                  key={chat.id}
                   style={{
-                    position: "absolute",
-                    top: 8,
-                    right: 8,
-                    padding: "4px 8px",
-                    background: "#ea4335",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 3,
-                    fontSize: 11,
-                    cursor: "pointer"
+                    padding: 12,
+                    marginBottom: 8,
+                    background: activeChatId === chat.id ? "#e8f0fe" : "white",
+                    border: `1px solid ${activeChatId === chat.id ? "#1a73e8" : "#dadce0"}`,
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    position: "relative",
+                    fontSize: 13
                   }}
-                  title="Elimina chat"
+                  onClick={() => void loadChatHistory(chat.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      void loadChatHistory(chat.id);
+                    }
+                  }}
+                  aria-current={activeChatId === chat.id ? "true" : undefined}
                 >
-                  🗑️
-                </button>
-              </div>
-            ))
+                  <div style={{ fontWeight: 500, marginBottom: 4 }}>{chat.agentName}</div>
+                  <div style={{ fontSize: 11, color: "#5f6368" }}>{formatChatPreview(chat)}</div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void deleteChat(chat.id);
+                    }}
+                    aria-label={`Delete chat with ${chat.agentName}`}
+                    style={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      padding: "4px 8px",
+                      background: "#ea4335",
+                      color: "white",
+                      border: "none",
+                      borderRadius: 3,
+                      fontSize: 11,
+                      cursor: "pointer"
+                    }}
+                    title="Elimina chat"
+                  >
+                    🗑️
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
-        </div>
+        </nav>
       </aside>
 
       {/* Main Content */}
@@ -679,6 +694,8 @@ export default function ChatPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              aria-label={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
+              aria-expanded={!sidebarCollapsed}
               style={{
                 padding: "8px 12px",
                 background: "#f1f3f4",
@@ -722,6 +739,8 @@ export default function ChatPage() {
         {/* Error Message */}
         {errorMessage && (
           <div
+            role="alert"
+            aria-live="polite"
             style={{
               margin: 16,
               padding: 12,
@@ -737,6 +756,8 @@ export default function ChatPage() {
 
         {/* Messages Area */}
         <div
+          role="region"
+          aria-label="Chat messages"
           style={{
             flex: 1,
             overflowY: "auto",
@@ -745,7 +766,7 @@ export default function ChatPage() {
           }}
         >
           {isLoadingMessages ? (
-            <div style={{ textAlign: "center", padding: 48, color: "#5f6368" }}>
+            <div role="status" aria-live="polite" style={{ textAlign: "center", padding: 48, color: "#5f6368" }}>
               <p style={{ fontSize: 16 }}>Caricamento messaggi...</p>
             </div>
           ) : messages.length === 0 ? (
@@ -758,16 +779,18 @@ export default function ChatPage() {
               </p>
             </div>
           ) : (
-            messages.map((msg) => (
-              <div
-                key={msg.id}
-                style={{
-                  marginBottom: 24,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: msg.role === "user" ? "flex-end" : "flex-start"
-                }}
-              >
+            <ul role="log" aria-live="polite" aria-atomic="false" style={{ listStyle: "none", margin: 0, padding: 0 }}>
+              {messages.map((msg) => (
+                <li
+                  key={msg.id}
+                  aria-label={`${msg.role === "user" ? "Your message" : "AI response"}`}
+                  style={{
+                    marginBottom: 24,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: msg.role === "user" ? "flex-end" : "flex-start"
+                  }}
+                >
                 {/* Message Bubble */}
                 <div
                   style={{
@@ -814,9 +837,11 @@ export default function ChatPage() {
 
                 {/* Feedback buttons (only for assistant messages) */}
                 {msg.role === "assistant" && (
-                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                  <div role="group" aria-label="Message feedback" style={{ display: "flex", gap: 8, marginTop: 8 }}>
                     <button
                       onClick={() => void setFeedback(msg.id, "helpful")}
+                      aria-label="Mark as helpful"
+                      aria-pressed={msg.feedback === "helpful"}
                       style={{
                         padding: "4px 8px",
                         background: msg.feedback === "helpful" ? "#34a853" : "#f1f3f4",
@@ -835,6 +860,8 @@ export default function ChatPage() {
                     </button>
                     <button
                       onClick={() => void setFeedback(msg.id, "not-helpful")}
+                      aria-label="Mark as not helpful"
+                      aria-pressed={msg.feedback === "not-helpful"}
                       style={{
                         padding: "4px 8px",
                         background: msg.feedback === "not-helpful" ? "#ea4335" : "#f1f3f4",
@@ -858,8 +885,9 @@ export default function ChatPage() {
                 <div style={{ fontSize: 11, color: "#9aa0a6", marginTop: 4 }}>
                   {msg.timestamp.toLocaleTimeString()}
                 </div>
-              </div>
-            ))
+              </li>
+            ))}
+            </ul>
           )}
 
           {isSendingMessage && (
@@ -893,12 +921,17 @@ export default function ChatPage() {
             gap: 8
           }}
         >
+          <label htmlFor="message-input" className="sr-only">
+            Ask a question about the game
+          </label>
           <input
+            id="message-input"
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Fai una domanda sul gioco..."
             disabled={isSendingMessage || !selectedGameId || !selectedAgentId}
+            aria-label="Message input"
             style={{
               flex: 1,
               padding: 12,
@@ -910,6 +943,7 @@ export default function ChatPage() {
           <button
             type="submit"
             disabled={isSendingMessage || !inputValue.trim() || !selectedGameId || !selectedAgentId}
+            aria-label="Send message"
             style={{
               padding: "12px 24px",
               background:

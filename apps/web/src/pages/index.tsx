@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { motion, AnimatePresence } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { api } from "../lib/api";
+import { AccessibleModal, AccessibleFormInput, AccessibleButton } from "@/components/accessible";
 
 type AuthUser = {
   id: string;
@@ -108,7 +109,7 @@ export default function Home() {
             <span className="text-4xl">🎲</span>
             <span className="text-2xl font-bold gradient-text">MeepleAI</span>
           </Link>
-          <nav className="hidden md:flex items-center gap-6">
+          <nav aria-label="Main navigation" className="hidden md:flex items-center gap-6">
             {authUser ? (
               <>
                 <Link href="/chat" className="text-slate-300 hover:text-white transition-colors">
@@ -125,7 +126,11 @@ export default function Home() {
                     Admin
                   </Link>
                 )}
-                <button onClick={logout} className="btn-secondary text-sm py-2 px-4">
+                <button
+                  onClick={logout}
+                  className="btn-secondary text-sm py-2 px-4"
+                  aria-label="Logout from MeepleAI"
+                >
                   Logout
                 </button>
               </>
@@ -138,8 +143,10 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section ref={heroRef} className="relative min-h-screen flex items-center px-6 py-20">
+      {/* Main Content */}
+      <main id="main-content">
+        {/* Hero Section */}
+        <section ref={heroRef} className="relative min-h-screen flex items-center px-6 py-20">
         <div className="max-w-7xl mx-auto w-full grid md:grid-cols-2 gap-12 items-center">
           {/* Hero Content */}
           <motion.div
@@ -316,6 +323,7 @@ export default function Home() {
           </motion.button>
         </motion.div>
       </section>
+      </main>
 
       {/* Footer */}
       <footer className="py-16 px-6 bg-slate-950 border-t border-white/10">
@@ -362,145 +370,154 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Auth Modal */}
-      <AnimatePresence>
-        {showAuthModal && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowAuthModal(false)}
-              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      {/* Auth Modal - WCAG 2.1 AA Compliant */}
+      <AccessibleModal
+        isOpen={showAuthModal}
+        onClose={() => {
+          setShowAuthModal(false);
+          setErrorMessage("");
+        }}
+        title={authMode === "login" ? "Login to MeepleAI" : "Create Your Account"}
+        description="Sign in to access AI-powered board game rules assistance"
+        size="md"
+      >
+        <div className="space-y-6">
+          {/* Tab Navigation with ARIA */}
+          <div role="tablist" aria-label="Authentication mode" className="flex gap-2 border-b border-white/10">
+            <button
+              role="tab"
+              aria-selected={authMode === "login"}
+              aria-controls="auth-panel"
+              id="login-tab"
+              onClick={() => {
+                setAuthMode("login");
+                setErrorMessage("");
+              }}
+              className={`px-6 py-3 font-medium transition-all ${
+                authMode === "login"
+                  ? "text-primary-500 border-b-2 border-primary-500"
+                  : "text-slate-400 hover:text-white"
+              }`}
             >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                onClick={(e) => e.stopPropagation()}
-                className="bg-slate-900 border border-white/10 rounded-2xl p-8 max-w-md w-full relative"
-              >
-                <button
-                  onClick={() => setShowAuthModal(false)}
-                  className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors text-2xl"
+              Login
+            </button>
+            <button
+              role="tab"
+              aria-selected={authMode === "register"}
+              aria-controls="auth-panel"
+              id="register-tab"
+              onClick={() => {
+                setAuthMode("register");
+                setErrorMessage("");
+              }}
+              className={`px-6 py-3 font-medium transition-all ${
+                authMode === "register"
+                  ? "text-primary-500 border-b-2 border-primary-500"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              Register
+            </button>
+          </div>
+
+          {/* Error Message with Alert Role */}
+          {errorMessage && (
+            <div
+              role="alert"
+              aria-live="polite"
+              className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg"
+            >
+              {errorMessage}
+            </div>
+          )}
+
+          {/* Tab Panel */}
+          <div
+            id="auth-panel"
+            role="tabpanel"
+            aria-labelledby={authMode === "login" ? "login-tab" : "register-tab"}
+          >
+            {authMode === "login" ? (
+              <form onSubmit={handleLogin} className="space-y-4">
+                <AccessibleFormInput
+                  label="Email"
+                  type="email"
+                  value={loginForm.email}
+                  onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                  required
+                  inputClassName="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white"
+                />
+                <AccessibleFormInput
+                  label="Password"
+                  type="password"
+                  value={loginForm.password}
+                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                  required
+                  inputClassName="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white"
+                />
+                <AccessibleButton
+                  type="submit"
+                  variant="primary"
+                  className="w-full mt-6"
                 >
-                  ✕
-                </button>
-
-                <div className="flex gap-2 mb-6 border-b border-white/10">
-                  <button
-                    onClick={() => setAuthMode("login")}
-                    className={`px-6 py-3 font-medium transition-all ${
-                      authMode === "login"
-                        ? "text-primary-500 border-b-2 border-primary-500"
-                        : "text-slate-400 hover:text-white"
-                    }`}
+                  Login
+                </AccessibleButton>
+              </form>
+            ) : (
+              <form onSubmit={handleRegister} className="space-y-4">
+                <AccessibleFormInput
+                  label="Email"
+                  type="email"
+                  value={registerForm.email}
+                  onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
+                  required
+                  inputClassName="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white"
+                />
+                <AccessibleFormInput
+                  label="Password"
+                  type="password"
+                  value={registerForm.password}
+                  onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
+                  required
+                  hint="Must be at least 8 characters"
+                  inputClassName="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white"
+                  minLength={8}
+                />
+                <AccessibleFormInput
+                  label="Display Name"
+                  value={registerForm.displayName}
+                  onChange={(e) => setRegisterForm({ ...registerForm, displayName: e.target.value })}
+                  hint="Optional - How you'll appear to other users"
+                  inputClassName="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white"
+                />
+                <div className="space-y-2">
+                  <label htmlFor="register-role" className="block text-sm font-medium text-slate-300">
+                    Role
+                  </label>
+                  <select
+                    id="register-role"
+                    value={registerForm.role}
+                    onChange={(e) => setRegisterForm({ ...registerForm, role: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white outline-none focus:border-primary-500 transition-colors"
+                    aria-label="Select user role"
                   >
-                    Login
-                  </button>
-                  <button
-                    onClick={() => setAuthMode("register")}
-                    className={`px-6 py-3 font-medium transition-all ${
-                      authMode === "register"
-                        ? "text-primary-500 border-b-2 border-primary-500"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    Register
-                  </button>
+                    <option value="User">User</option>
+                    <option value="Editor">Editor</option>
+                    <option value="Admin">Admin</option>
+                  </select>
                 </div>
-
-                {errorMessage && (
-                  <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg mb-4">
-                    {errorMessage}
-                  </div>
-                )}
-
-                {authMode === "login" ? (
-                  <form onSubmit={handleLogin} className="space-y-4">
-                    <div className="space-y-2">
-                      <label htmlFor="login-email" className="text-sm font-medium text-slate-300">Email</label>
-                      <input
-                        id="login-email"
-                        type="email"
-                        value={loginForm.email}
-                        onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white outline-none focus:border-primary-500 transition-colors"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="login-password" className="text-sm font-medium text-slate-300">Password</label>
-                      <input
-                        id="login-password"
-                        type="password"
-                        value={loginForm.password}
-                        onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white outline-none focus:border-primary-500 transition-colors"
-                        required
-                      />
-                    </div>
-                    <button type="submit" className="w-full btn-primary mt-6">
-                      Login
-                    </button>
-                  </form>
-                ) : (
-                  <form onSubmit={handleRegister} className="space-y-4">
-                    <div className="space-y-2">
-                      <label htmlFor="register-email" className="text-sm font-medium text-slate-300">Email</label>
-                      <input
-                        id="register-email"
-                        type="email"
-                        value={registerForm.email}
-                        onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white outline-none focus:border-primary-500 transition-colors"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="register-password" className="text-sm font-medium text-slate-300">Password (min 8 characters)</label>
-                      <input
-                        id="register-password"
-                        type="password"
-                        value={registerForm.password}
-                        onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white outline-none focus:border-primary-500 transition-colors"
-                        required
-                        minLength={8}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="register-displayName" className="text-sm font-medium text-slate-300">Display Name (optional)</label>
-                      <input
-                        id="register-displayName"
-                        value={registerForm.displayName}
-                        onChange={(e) => setRegisterForm({ ...registerForm, displayName: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white outline-none focus:border-primary-500 transition-colors"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="register-role" className="text-sm font-medium text-slate-300">Role</label>
-                      <select
-                        id="register-role"
-                        value={registerForm.role}
-                        onChange={(e) => setRegisterForm({ ...registerForm, role: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white outline-none focus:border-primary-500 transition-colors"
-                      >
-                        <option value="User">User</option>
-                        <option value="Editor">Editor</option>
-                        <option value="Admin">Admin</option>
-                      </select>
-                    </div>
-                    <button type="submit" className="w-full btn-primary mt-6">
-                      Create Account
-                    </button>
-                  </form>
-                )}
-              </motion.div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+                <AccessibleButton
+                  type="submit"
+                  variant="primary"
+                  className="w-full mt-6"
+                >
+                  Create Account
+                </AccessibleButton>
+              </form>
+            )}
+          </div>
+        </div>
+      </AccessibleModal>
     </div>
   );
 }

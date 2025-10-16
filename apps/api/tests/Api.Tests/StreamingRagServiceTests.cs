@@ -601,4 +601,54 @@ public class StreamingRagServiceTests
             Assert.True(evt.Timestamp <= DateTime.UtcNow);
         });
     }
+
+    [Fact]
+    public async Task ExplainStreamAsync_WithSearchResultsButEmptyText_ReturnsEmptyScriptChunk()
+    {
+        // Arrange
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
+
+        // Search results with empty or whitespace-only text
+        var searchResults = new List<SearchResultItem>
+        {
+            new() { Text = "", PdfId = "pdf-1", Page = 1, Score = 0.95f },
+            new() { Text = "   ", PdfId = "pdf-1", Page = 2, Score = 0.90f }
+        };
+
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
+
+        var streamingService = new StreamingRagService(
+            dbContext,
+            mockEmbedding.Object,
+            mockQdrant.Object,
+            _mockLogger.Object);
+
+        // Act
+        var events = await CollectEventsAsync(
+            streamingService.ExplainStreamAsync("game1", "test topic", CancellationToken.None));
+
+        // Assert
+        Assert.NotEmpty(events);
+
+        // Should still emit all event types including at least one ScriptChunk (even if empty)
+        var scriptChunkEvents = events.Where(e => e.Type == StreamingEventType.ScriptChunk).ToList();
+        Assert.NotEmpty(scriptChunkEvents);
+
+        // When script is empty, ChunkScript returns a single empty chunk
+        var firstChunk = Assert.IsType<StreamingScriptChunk>(scriptChunkEvents[0].Data);
+        Assert.Equal(0, firstChunk.chunkIndex);
+        Assert.Equal(scriptChunkEvents.Count, firstChunk.totalChunks);
+
+        // Complete event should still be emitted
+        var completeEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Complete);
+        Assert.NotNull(completeEvent);
+    }
 }

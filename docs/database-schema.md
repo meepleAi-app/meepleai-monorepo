@@ -3,7 +3,7 @@
 > **Last Updated**: 2025-10-09
 > **Schema Version**: InitialGlobalSchema (Migration: 20251010153000)
 > **Database**: PostgreSQL 16.4
-> **ORM**: Entity Framework Core 8.0
+> **ORM**: Entity Framework Core 9.0
 
 ## Overview
 

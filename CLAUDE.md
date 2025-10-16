@@ -284,3 +284,4 @@ cd apps/web && pnpm dev                                                         
 - **Auth issues**: Check `SessionCookieConfiguration`, verify `user_sessions` table, check browser cookie settings
 - **Health check failures**: `curl http://localhost:8080/health` - Check Postgres/Redis/Qdrant status. See `docs/observability.md`
 - **Seq not receiving logs**: Verify `SEQ_URL` in env, check `docker compose logs seq`, test `curl http://localhost:5341/api`
+- i documenti guida mettili in ./docs/guide, i documenti tecnici in ./docs/tecnic, i documenti sulle risoluzioni issue/pr in ./docs/issue, i documenti sull'app in ./docs

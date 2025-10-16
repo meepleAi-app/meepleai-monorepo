@@ -23,7 +23,7 @@ Questa guida è progettata per AI coding assistants (Claude Code, GitHub Copilot
 
 ### Tech Stack
 
-- **Backend**: ASP.NET Core 8.0 (C#), Entity Framework Core, Minimal APIs
+- **Backend**: ASP.NET Core 9.0 (C#), Entity Framework Core, Minimal APIs
 - **Frontend**: Next.js 14, React 18, TypeScript
 - **Database**: PostgreSQL 16, Qdrant (vector DB), Redis (cache)
 - **Testing**: xUnit (backend), Jest + Playwright (frontend)
@@ -388,7 +388,7 @@ git branch -d feature/DOC-02-agents-md
 
 ## ✅ Convenzioni di Test
 
-Seguiamo **BDD-style naming** per tutti i test. Consulta [README.test.md](./README.test.md) per la guida completa.
+Seguiamo **BDD-style naming** per tutti i test. Consulta [testing-guide.md](./testing-guide.md) per la guida completa.
 
 ### Quick Reference
 
@@ -606,11 +606,11 @@ git push
 
 ## 🔗 Risorse Aggiuntive
 
-- **[CLAUDE.md](./CLAUDE.md)** - Guida tecnica completa per Claude Code
-- **[README.md](./README.md)** - Overview del progetto e quick start
-- **[README.test.md](./README.test.md)** - Guida dettagliata BDD testing
-- **[docs/code-coverage.md](./docs/code-coverage.md)** - Misurazione coverage
-- **[.github/workflows/ci.yml](./.github/workflows/ci.yml)** - Pipeline CI/CD
+- **[CLAUDE.md](../../CLAUDE.md)** - Guida tecnica completa per Claude Code
+- **[README.md](../../README.md)** - Overview del progetto e quick start
+- **[testing-guide.md](./testing-guide.md)** - Guida dettagliata BDD testing
+- **[docs/code-coverage.md](../code-coverage.md)** - Misurazione coverage
+- **[.github/workflows/ci.yml](../../.github/workflows/ci.yml)** - Pipeline CI/CD
 
 ## 🤖 Note per AI Assistants
 

@@ -20,14 +20,14 @@ MeepleAI helps players quickly find answers to gameplay questions by processing 
 ## 🏗️ Architecture
 
 **Monorepo Structure**:
-- `apps/api` - ASP.NET Core 8.0 backend
+- `apps/api` - ASP.NET Core 9.0 backend
 - `apps/web` - Next.js 14 frontend
 - `infra` - Docker Compose infrastructure
 - `docs` - Technical documentation
 - `tools` - Automation scripts
 
 **Tech Stack**:
-- **Backend**: C# / .NET 8, EF Core, Minimal APIs
+- **Backend**: C# / .NET 9, EF Core, Minimal APIs
 - **Frontend**: TypeScript, React 18, Next.js 14
 - **Databases**: PostgreSQL, Qdrant (vector DB), Redis (cache)
 - **AI/ML**: OpenRouter API (embeddings & LLM)
@@ -77,9 +77,9 @@ MeepleAI helps players quickly find answers to gameplay questions by processing 
 
 ## 📚 Documentation
 
-- **[AGENTS.md](./AGENTS.md)** - Guide for AI coding assistants (conventions, workflow, prompts)
+- **[AI Agents Guide](./docs/guide/agents-guide.md)** - Guide for AI coding assistants (conventions, workflow, prompts)
 - **[CLAUDE.md](./CLAUDE.md)** - Comprehensive development guide
-- **[Testing Guidelines](./README.test.md)** - BDD-style test naming conventions
+- **[Testing Guidelines](./docs/guide/testing-guide.md)** - BDD-style test naming conventions
 - **[Code Coverage](./docs/code-coverage.md)** - Coverage measurement and tracking
 - **[Codecov Setup](./docs/codecov-setup.md)** - CI/CD coverage integration
 - **[Architecture Docs](./docs/)** - Technical documentation
@@ -208,7 +208,7 @@ cp infra/env/n8n.env.dev.example infra/env/n8n.env.dev
    pip install pre-commit
    pre-commit install
    ```
-2. Follow [BDD-style test naming conventions](./README.test.md)
+2. Follow [BDD-style test naming conventions](./docs/guide/testing-guide.md)
 3. Ensure tests pass: `dotnet test` (API) and `pnpm test` (Web)
 4. Maintain 90% coverage for frontend
 5. Run linting: `pnpm lint` (Web)
@@ -288,7 +288,7 @@ See [LICENSE](./LICENSE) for full terms.
 
 ## 🔗 Resources
 
-- **API Documentation**: OpenAPI/Swagger at `/swagger`
+- **API Documentation**: OpenAPI/Swagger at `/api/docs`
 - **Code Coverage**: [Codecov Dashboard](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo)
 - **CI/CD**: [GitHub Actions](https://github.com/DegrassiAaron/meepleai-monorepo/actions)
 - **Issues**: [GitHub Issues](https://github.com/DegrassiAaron/meepleai-monorepo/issues)

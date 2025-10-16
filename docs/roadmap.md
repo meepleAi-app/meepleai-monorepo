@@ -5,7 +5,7 @@
 **MeepleAI** è un assistente AI per regolamenti di giochi da tavolo che processa PDF di regolamenti, fornisce ricerca semantica tramite vector embeddings e risponde intelligentemente a domande sul gameplay.
 
 **Tech Stack:**
-- Backend: ASP.NET Core 8.0, PostgreSQL, Qdrant, Redis
+- Backend: ASP.NET Core 9.0, PostgreSQL, Qdrant, Redis
 - Frontend: Next.js 14, React 18, TypeScript
 - AI: OpenRouter API (embeddings + LLM)
 - Infra: Docker Compose, n8n

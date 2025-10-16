@@ -673,7 +673,7 @@ docker compose up -d --build
 
 - **Web App**: http://localhost:3000
 - **API**: http://localhost:8080
-- **API Swagger**: http://localhost:8080/swagger (se abilitato)
+- **API Swagger**: http://localhost:8080/api/docs (se abilitato)
 - **n8n**: http://localhost:5678
 - **Qdrant Dashboard**: http://localhost:6333/dashboard
 - **PostgreSQL**: localhost:5432
@@ -692,10 +692,10 @@ docker compose up -d --build
 
 ## Risorse Aggiuntive
 
-- **[CLAUDE.md](./CLAUDE.md)** - Documentazione completa per sviluppatori
-- **[README.md](./README.md)** - Panoramica del progetto
-- **[docs/](./docs/)** - Documentazione tecnica dettagliata
-- **[schemas/README.md](./schemas/README.md)** - Specifiche RuleSpec v0
+- **[CLAUDE.md](../../CLAUDE.md)** - Documentazione completa per sviluppatori
+- **[README.md](../../README.md)** - Panoramica del progetto
+- **[docs/](../)** - Documentazione tecnica dettagliata
+- **[schemas/README.md](../../schemas/README.md)** - Specifiche RuleSpec v0
 
 ---
 

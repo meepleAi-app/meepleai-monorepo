@@ -159,7 +159,13 @@
       "mcp__github-project-manager__github_search_code",
       "mcp__magic__magic_generate",
       "Bash(Select-String -Pattern \"FAIL|PASS|Error|Total tests|Test Run|Succeeded|Failed\" -Context 0,1)",
-      "Bash(Select-String -Pattern \"PASS|FAIL|Tests:|Test Suites:|Ran all test|error|warning\" -Context 0,1)"
+      "Bash(Select-String -Pattern \"PASS|FAIL|Tests:|Test Suites:|Ran all test|error|warning\" -Context 0,1)",
+      "Bash(Select-String -Pattern \"Passed|Failed|Total tests|Test Run|Passed!|Failed!\" -Context 1,2)",
+      "Bash(git mv:*)",
+      "Bash(Select-String -Pattern \"Superato|Non superato|Ignorato|Totale\" -Context 0,1)",
+      "Bash(dotnet format:*)",
+      "Bash(Where-Object { $_ame -eq \"CodeQL Security Analysis (csharp)\" })",
+      "Bash(Format-Table name,state,conclusion)"
     ],
     "deny": [],
     "ask": []

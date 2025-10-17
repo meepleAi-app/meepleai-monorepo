@@ -1109,8 +1109,21 @@ describe('ChatPage', () => {
           expect(screen.getByText('How do I castle?')).toBeInTheDocument();
         });
 
+        // Mock streaming state to show loading indicator when startStreaming is called
         // Don't trigger onComplete to keep the loading state visible
-        // mockStartStreaming will be called but won't complete
+        (useChatStreaming as jest.Mock).mockReturnValue([
+          {
+            isStreaming: true,
+            currentAnswer: '',
+            snippets: [],
+            state: null,
+            error: null
+          },
+          {
+            startStreaming: mockStartStreaming,
+            stopStreaming: mockStopStreaming
+          }
+        ]);
 
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
         await user.type(input, 'Test message');
@@ -1506,7 +1519,7 @@ describe('ChatPage', () => {
 
       mockApi.post.mockResolvedValueOnce({});
 
-      const helpfulButtons = screen.getAllByRole('button', { name: /👍 Utile/i });
+      const helpfulButtons = screen.getAllByRole('button', { name: /Mark as helpful/i });
       await user.click(helpfulButtons[0]);
 
       await waitFor(() => {
@@ -1540,7 +1553,7 @@ describe('ChatPage', () => {
 
       mockApi.post.mockResolvedValueOnce({});
 
-      const notHelpfulButtons = screen.getAllByRole('button', { name: /👎 Non utile/i });
+      const notHelpfulButtons = screen.getAllByRole('button', { name: /Mark as not helpful/i });
       await user.click(notHelpfulButtons[0]);
 
       await waitFor(() => {
@@ -1575,7 +1588,7 @@ describe('ChatPage', () => {
       mockApi.post.mockResolvedValueOnce({});
       mockApi.post.mockResolvedValueOnce({});
 
-      const helpfulButtons = screen.getAllByRole('button', { name: /👍 Utile/i });
+      const helpfulButtons = screen.getAllByRole('button', { name: /Mark as helpful/i });
 
       // First click
       await user.click(helpfulButtons[0]);
@@ -1625,8 +1638,8 @@ describe('ChatPage', () => {
       mockApi.post.mockResolvedValueOnce({});
       mockApi.post.mockResolvedValueOnce({});
 
-      const helpfulButtons = screen.getAllByRole('button', { name: /👍 Utile/i });
-      const notHelpfulButtons = screen.getAllByRole('button', { name: /👎 Non utile/i });
+      const helpfulButtons = screen.getAllByRole('button', { name: /Mark as helpful/i });
+      const notHelpfulButtons = screen.getAllByRole('button', { name: /Mark as not helpful/i });
 
       // First click helpful
       await user.click(helpfulButtons[0]);
@@ -1668,7 +1681,7 @@ describe('ChatPage', () => {
 
       mockApi.post.mockRejectedValueOnce(new Error('Feedback failed'));
 
-      const helpfulButtons = screen.getAllByRole('button', { name: /👍 Utile/i });
+      const helpfulButtons = screen.getAllByRole('button', { name: /Mark as helpful/i });
       const originalStyle = helpfulButtons[0].style.background;
 
       await user.click(helpfulButtons[0]);
@@ -1701,7 +1714,7 @@ describe('ChatPage', () => {
 
       mockApi.post.mockResolvedValueOnce({});
 
-      const helpfulButtons = screen.getAllByRole('button', { name: /👍 Utile/i });
+      const helpfulButtons = screen.getAllByRole('button', { name: /Mark as helpful/i });
       await user.click(helpfulButtons[0]);
 
       // Should use backend message ID 'msg-2' from mockChatWithHistory
@@ -1731,8 +1744,8 @@ describe('ChatPage', () => {
       });
 
       // Count feedback buttons (should only be for assistant messages)
-      const helpfulButtons = screen.getAllByRole('button', { name: /👍 Utile/i });
-      const notHelpfulButtons = screen.getAllByRole('button', { name: /👎 Non utile/i });
+      const helpfulButtons = screen.getAllByRole('button', { name: /Mark as helpful/i });
+      const notHelpfulButtons = screen.getAllByRole('button', { name: /Mark as not helpful/i });
 
       // Only 1 assistant message in history
       expect(helpfulButtons.length).toBe(1);
@@ -1953,16 +1966,19 @@ describe('ChatPage', () => {
         expect(screen.getByText('How do I castle?')).toBeInTheDocument();
       });
 
-      // Response without messageId
-      mockApi.post.mockResolvedValueOnce({
-        answer: 'Answer without ID',
-        snippets: []
+      // Mock streaming to trigger onComplete without messageId
+      mockStartStreaming.mockImplementation(() => {
+        if (mockOnComplete) {
+          setTimeout(() => {
+            mockOnComplete!('Answer without ID', [], { totalTokens: 5, confidence: 0.90 });
+          }, 0);
+        }
       });
 
       const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
       await user.type(input, 'Question');
 
-      const sendButton = screen.getByRole('button', { name: /Invia/i });
+      const sendButton = screen.getByRole('button', { name: /Send message/i });
       await user.click(sendButton);
 
       await waitFor(() => {
@@ -1972,7 +1988,7 @@ describe('ChatPage', () => {
       // Feedback should still work (using frontend ID)
       mockApi.post.mockResolvedValueOnce({});
 
-      const helpfulButtons = screen.getAllByRole('button', { name: /👍 Utile/i });
+      const helpfulButtons = screen.getAllByRole('button', { name: /Mark as helpful/i });
       await user.click(helpfulButtons[helpfulButtons.length - 1]); // Last one (new message)
 
       await waitFor(() => {
@@ -2000,7 +2016,7 @@ describe('ChatPage', () => {
       const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
       await user.type(input, 'First message');
 
-      const sendButton = screen.getByRole('button', { name: /Invia/i });
+      const sendButton = screen.getByRole('button', { name: /Send message/i });
       await user.click(sendButton);
 
       await waitFor(() => {
@@ -2175,7 +2191,7 @@ describe('ChatPage', () => {
       const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
       await user.type(input, 'Test streaming question');
 
-      const sendButton = screen.getByRole('button', { name: /Invia/i });
+      const sendButton = screen.getByRole('button', { name: /Send message/i });
       await user.click(sendButton);
 
       await waitFor(() => {
@@ -2185,9 +2201,8 @@ describe('ChatPage', () => {
 
     it('shows legacy loading state when sending but not streaming', async () => {
       setupAuthenticatedState();
-      mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
 
-      // Mock post to never resolve (simulates loading state)
+      // Mock post to never resolve (simulates chat creation hanging)
       mockApi.post.mockImplementation(() => new Promise(() => {}));
 
       render(<ChatPage />);
@@ -2196,21 +2211,14 @@ describe('ChatPage', () => {
 
       const user = userEvent.setup();
 
-      // Load a chat
-      const chatItems = screen.getAllByText('Chess Expert');
-      await user.click(chatItems[chatItems.length - 1]);
-
-      await waitFor(() => {
-        expect(screen.getByText('How do I castle?')).toBeInTheDocument();
-      });
-
+      // Don't load a chat - send message without active chat to trigger chat creation
       const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
       await user.type(input, 'Question');
 
-      const sendButton = screen.getByRole('button', { name: /Invia/i });
+      const sendButton = screen.getByRole('button', { name: /Send message/i });
       await user.click(sendButton);
 
-      // Should show legacy loading (not streaming UI since isStreaming is false)
+      // Should show legacy loading (not streaming UI since isStreaming is false and chat creation is hanging)
       await waitFor(() => {
         const loadingMessages = screen.getAllByText(/Sto pensando.../i);
         expect(loadingMessages.length).toBeGreaterThan(0);

@@ -71,6 +71,7 @@ public class StreamingQaService : IStreamingQaService
             var words = cachedResponse.answer.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             for (int i = 0; i < words.Length; i++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var token = i == 0 ? words[i] : " " + words[i];
                 yield return CreateEvent(StreamingEventType.Token, new StreamingToken(token));
 
@@ -182,6 +183,7 @@ ANSWER:";
 
         await foreach (var token in _llmService.GenerateCompletionStreamAsync(systemPrompt, userPrompt, cancellationToken))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             answerBuilder.Append(token);
             tokenCount++;
             yield return CreateEvent(StreamingEventType.Token, new StreamingToken(token));

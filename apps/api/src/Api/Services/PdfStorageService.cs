@@ -210,11 +210,11 @@ public class PdfStorageService
 
                     if (qdrantService != null)
                     {
-                        var deleteResult = await qdrantService.DeleteDocumentAsync(gameId, pdfId, ct);
-                        if (!deleteResult.Success)
+                        var deleteResult = await qdrantService.DeleteDocumentAsync(pdfId, ct);
+                        if (!deleteResult)
                         {
-                            _logger.LogWarning("Failed to delete vectors from Qdrant for PDF {PdfId}: {Error}",
-                                pdfId, deleteResult.ErrorMessage);
+                            _logger.LogWarning("Failed to delete vectors from Qdrant for PDF {PdfId}",
+                                pdfId);
                         }
                     }
                 }

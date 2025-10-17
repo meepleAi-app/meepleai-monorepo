@@ -1804,6 +1804,75 @@ v1Api.MapGet("/pdfs/{pdfId}/text", async (string pdfId, HttpContext context, Mee
     return Results.Json(pdf);
 });
 
+// SEC-02: Delete PDF with Row-Level Security
+v1Api.MapDelete("/pdf/{pdfId}", async (string pdfId, HttpContext context, PdfStorageService pdfStorage, AuditService auditService, MeepleAiDbContext db, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    // Load PDF to check ownership
+    var pdf = await db.PdfDocuments
+        .Where(p => p.Id == pdfId)
+        .Select(p => new { p.Id, p.UploadedByUserId, p.GameId })
+        .FirstOrDefaultAsync(ct);
+
+    if (pdf == null)
+    {
+        return Results.NotFound(new { error = "PDF not found" });
+    }
+
+    // RLS: Check permissions
+    bool isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+    bool isOwner = pdf.UploadedByUserId == session.User.Id;
+
+    if (!isAdmin && !isOwner)
+    {
+        // Audit log access denial
+        await auditService.LogAsync(
+            session.User.Id,
+            "ACCESS_DENIED",
+            "PdfDocument",
+            pdfId,
+            "Denied",
+            $"User attempted to delete PDF owned by another user. User role: {session.User.Role}, Owner: {pdf.UploadedByUserId}. RLS scope: own resources only.",
+            null,
+            null,
+            ct);
+
+        logger.LogWarning("User {UserId} with role {Role} denied access to delete PDF {PdfId} (owner: {OwnerId})",
+            session.User.Id, session.User.Role, pdfId, pdf.UploadedByUserId);
+
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    // Delete PDF
+    var result = await pdfStorage.DeletePdfAsync(pdfId, ct);
+
+    if (!result.Success)
+    {
+        logger.LogError("Failed to delete PDF {PdfId}: {Error}", pdfId, result.Message);
+        return Results.BadRequest(new { error = result.Message });
+    }
+
+    logger.LogInformation("User {UserId} deleted PDF {PdfId}", session.User.Id, pdfId);
+
+    // Audit log successful deletion
+    await auditService.LogAsync(
+        session.User.Id,
+        "DELETE",
+        "PdfDocument",
+        pdfId,
+        "Success",
+        $"PDF deleted successfully by user with role: {session.User.Role}",
+        null,
+        null,
+        ct);
+
+    return Results.NoContent();
+});
+
 v1Api.MapPost("/ingest/pdf/{pdfId}/rulespec", async (string pdfId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)

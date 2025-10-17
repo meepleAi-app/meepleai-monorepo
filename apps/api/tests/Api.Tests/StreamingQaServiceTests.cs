@@ -322,7 +322,7 @@ public class StreamingQaServiceTests
         Assert.NotNull(complete);
         Assert.Equal(5, complete!.completionTokens); // 5 tokens
         Assert.Equal(5, complete.totalTokens);
-        Assert.Equal(0.95, complete.confidence); // Max score from search results
+        Assert.Equal(0.95, complete.confidence!.Value, precision: 2); // Max score from search results (with floating point tolerance)
 
         // Verify cache write
         mockCache.Verify(
@@ -634,7 +634,7 @@ public class StreamingQaServiceTests
         var completeEvent = events.First(e => e.Type == StreamingEventType.Complete);
         var complete = completeEvent.Data as StreamingComplete;
         Assert.NotNull(complete);
-        Assert.Equal(0.98, complete!.confidence); // Max score
+        Assert.Equal(0.98, complete!.confidence!.Value, precision: 2); // Max score (with floating point tolerance)
     }
 
     /// <summary>

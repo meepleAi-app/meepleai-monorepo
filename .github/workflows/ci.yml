@@ -162,8 +162,8 @@ jobs:
           POSTGRES_DB: meepleai_test
         options: >-
           --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
+          --health-interval 5s
+          --health-timeout 3s
           --health-retries 5
         ports:
           - 5432:5432
@@ -184,20 +184,27 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('apps/api/**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
       - name: Restore
         run: dotnet restore
       - name: Build
-        run: dotnet build
+        run: dotnet build --no-restore
       - name: Verify Qdrant is ready
         run: |
           echo "Waiting for Qdrant to be ready..."
-          for i in {1..30}; do
+          for i in {1..20}; do
             if curl -f http://localhost:6333/healthz > /dev/null 2>&1; then
-              echo "Qdrant is ready!"
+              echo "Qdrant is ready after $i attempts!"
               break
             fi
             echo "Attempt $i: Qdrant not ready yet, waiting..."
-            sleep 2
+            sleep 1
           done
           curl -v http://localhost:6333/healthz || echo "Qdrant health check failed"
       - name: Test with Coverage
@@ -212,6 +219,7 @@ jobs:
           dotnet test \
             --filter "FullyQualifiedName~GameEndpointsTests|FullyQualifiedName~ApiEndpointIntegrationTests|FullyQualifiedName~LogsEndpointTests|FullyQualifiedName~PdfIngestEndpointsTests|FullyQualifiedName~PdfUploadEndpointsTests|FullyQualifiedName~RateLimitingIntegrationTests|FullyQualifiedName~RuleSpecHistoryIntegrationTests|FullyQualifiedName~OpenTelemetryIntegrationTests" \
             --logger "console;verbosity=normal" \
+            --no-build \
             -p:CollectCoverage=true \
             -p:CoverletOutputFormat=lcov \
             -p:CoverletOutput=./tests/Api.Tests/coverage/
@@ -295,8 +303,8 @@ jobs:
           POSTGRES_DB: meepleai_test
         options: >-
           --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
+          --health-interval 5s
+          --health-timeout 3s
           --health-retries 5
         ports:
           - 5432:5432
@@ -317,6 +325,14 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('apps/api/**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Restore
         run: dotnet restore
 
@@ -326,13 +342,13 @@ jobs:
       - name: Verify Qdrant is ready
         run: |
           echo "Waiting for Qdrant to be ready..."
-          for i in {1..30}; do
+          for i in {1..20}; do
             if curl -f http://localhost:6333/healthz > /dev/null 2>&1; then
-              echo "Qdrant is ready!"
+              echo "Qdrant is ready after $i attempts!"
               break
             fi
             echo "Attempt $i: Qdrant not ready yet, waiting..."
-            sleep 2
+            sleep 1
           done
           curl -v http://localhost:6333/healthz || echo "Qdrant health check failed"
 

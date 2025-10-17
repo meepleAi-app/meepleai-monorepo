@@ -138,7 +138,7 @@ export function SessionWarningModal({
             variant="secondary"
             onClick={onLogOut}
             className="flex-1"
-            ariaLabel="Log out now"
+            aria-label="Log out now"
           >
             Log Out Now
           </AccessibleButton>
@@ -147,7 +147,7 @@ export function SessionWarningModal({
             variant="primary"
             onClick={onStayLoggedIn}
             className="flex-1"
-            ariaLabel="Stay logged in and extend session"
+            aria-label="Stay logged in and extend session"
           >
             Stay Logged In
           </AccessibleButton>

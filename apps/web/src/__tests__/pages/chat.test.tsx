@@ -1290,10 +1290,13 @@ describe('ChatPage', () => {
           expect(screen.getByText('How do I castle?')).toBeInTheDocument();
         });
 
-        mockApi.post.mockResolvedValueOnce({
-          answer: 'Test answer',
-          snippets: [],
-          messageId: 'msg-3'
+        // Mock streaming to trigger onComplete
+        mockStartStreaming.mockImplementation(() => {
+          if (mockOnComplete) {
+            setTimeout(() => {
+              mockOnComplete!('Test answer', [], { totalTokens: 5, confidence: 0.90 });
+            }, 0);
+          }
         });
 
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);

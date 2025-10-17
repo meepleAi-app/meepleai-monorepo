@@ -51,6 +51,39 @@ export interface SessionStatusResponse {
   remainingMinutes: number;
 }
 
+// Enhanced error class with correlation ID (PDF-06)
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public statusCode?: number,
+    public correlationId?: string,
+    public response?: Response
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+/**
+ * Creates an enhanced error with correlation ID from response
+ */
+async function createApiError(path: string, response: Response): Promise<ApiError> {
+  const correlationId = response.headers.get('X-Correlation-Id') || undefined;
+  let errorMessage = `API ${path} ${response.status}`;
+
+  // Try to extract error message from response body
+  try {
+    const body = await response.json();
+    if (body?.error) {
+      errorMessage = body.error;
+    }
+  } catch {
+    // If JSON parsing fails, use default message
+  }
+
+  return new ApiError(errorMessage, response.status, correlationId, response);
+}
+
 export const api = {
   async get<T>(path: string): Promise<T | null> {
     const res = await fetch(`${getApiBase()}${path}`, {
@@ -61,7 +94,7 @@ export const api = {
       return null;
     }
     if (!res.ok) {
-      throw new Error(`API ${path} ${res.status}`);
+      throw await createApiError(path, res);
     }
     return res.json();
   },
@@ -73,10 +106,11 @@ export const api = {
       body: JSON.stringify(body ?? {})
     });
     if (res.status === 401) {
-      throw new Error("Unauthorized");
+      const correlationId = res.headers.get('X-Correlation-Id') || undefined;
+      throw new ApiError("Unauthorized", 401, correlationId, res);
     }
     if (!res.ok) {
-      throw new Error(`API ${path} ${res.status}`);
+      throw await createApiError(path, res);
     }
     return res.json();
   },
@@ -88,10 +122,11 @@ export const api = {
       body: JSON.stringify(body)
     });
     if (res.status === 401) {
-      throw new Error("Unauthorized");
+      const correlationId = res.headers.get('X-Correlation-Id') || undefined;
+      throw new ApiError("Unauthorized", 401, correlationId, res);
     }
     if (!res.ok) {
-      throw new Error(`API ${path} ${res.status}`);
+      throw await createApiError(path, res);
     }
     return res.json();
   },
@@ -101,10 +136,11 @@ export const api = {
       credentials: "include"
     });
     if (res.status === 401) {
-      throw new Error("Unauthorized");
+      const correlationId = res.headers.get('X-Correlation-Id') || undefined;
+      throw new ApiError("Unauthorized", 401, correlationId, res);
     }
     if (!res.ok) {
-      throw new Error(`API ${path} ${res.status}`);
+      throw await createApiError(path, res);
     }
     // DELETE returns 204 NoContent, no body to parse
   },

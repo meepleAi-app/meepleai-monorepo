@@ -6,7 +6,10 @@ import {
   useEffect,
   useState
 } from 'react';
-import { api } from '../lib/api';
+import { api, ApiError } from '../lib/api';
+import { categorizeError, type CategorizedError, extractCorrelationId } from '../lib/errorUtils';
+import { retryWithBackoff, isRetryableError } from '../lib/retryUtils';
+import { ErrorDisplay } from '../components/ErrorDisplay';
 
 interface PdfDocument {
   id: string;
@@ -94,6 +97,8 @@ export default function UploadPage() {
   const [pollingError, setPollingError] = useState<string | null>(null);
   const [autoAdvanceTriggered, setAutoAdvanceTriggered] = useState(false);
   const [retryingPdfId, setRetryingPdfId] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<CategorizedError | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -296,23 +301,42 @@ export default function UploadPage() {
 
     setUploading(true);
     setMessage('');
+    setUploadError(null);
 
     try {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('gameId', confirmedGameId);
 
-      const response = await fetch(`${API_BASE}/api/v1/ingest/pdf`, {
-        method: 'POST',
-        body: formData,
-        credentials: 'include'
-      });
+      // Use retry logic with exponential backoff for transient errors
+      const response = await retryWithBackoff(
+        async () => {
+          const res = await fetch(`${API_BASE}/api/v1/ingest/pdf`, {
+            method: 'POST',
+            body: formData,
+            credentials: 'include'
+          });
 
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        setMessage(`❌ Upload failed: ${error.error ?? response.statusText}`);
-        return;
-      }
+          if (!res.ok) {
+            const correlationId = extractCorrelationId(res);
+            const errorBody = await res.json().catch(() => ({}));
+            const errorMessage = errorBody.error ?? res.statusText;
+
+            const apiError = new ApiError(errorMessage, res.status, correlationId, res);
+            throw apiError;
+          }
+
+          return res;
+        },
+        {
+          maxAttempts: 3,
+          shouldRetry: (error) => isRetryableError(error),
+          onRetry: (error, attempt, delayMs) => {
+            setRetryCount(attempt);
+            setMessage(`⏳ Upload failed. Retrying (attempt ${attempt}/3) in ${Math.round(delayMs / 1000)}s...`);
+          }
+        }
+      );
 
       const data = (await response.json()) as { documentId: string };
       setDocumentId(data.documentId);
@@ -321,10 +345,18 @@ export default function UploadPage() {
       setPollingError(null);
       setAutoAdvanceTriggered(false);
       setRuleSpec(null);
+      setUploadError(null);
+      setRetryCount(0);
       setMessage(`✅ PDF uploaded successfully! Document ID: ${data.documentId}`);
       setCurrentStep('parse');
     } catch (error) {
-      setMessage(`❌ Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Categorize the error and display user-friendly message
+      const correlationId = error instanceof ApiError ? error.correlationId : undefined;
+      const response = error instanceof ApiError ? error.response : undefined;
+
+      const categorized = categorizeError(error, response, correlationId);
+      setUploadError(categorized);
+      setMessage(''); // Clear generic message, use ErrorDisplay component instead
     } finally {
       setUploading(false);
     }
@@ -372,6 +404,8 @@ export default function UploadPage() {
     setPollingError(null);
     setAutoAdvanceTriggered(false);
     setRetryingPdfId(null);
+    setUploadError(null);
+    setRetryCount(0);
     setMessage('');
     const fileInput = document.getElementById('fileInput') as HTMLInputElement | null;
     if (fileInput) {
@@ -615,11 +649,29 @@ export default function UploadPage() {
         <>
           {renderStepIndicator()}
 
-          {message && (
+          {uploadError && (
+            <ErrorDisplay
+              error={uploadError}
+              onRetry={uploadError.canRetry ? () => {
+                setUploadError(null);
+                const form = document.querySelector('form') as HTMLFormElement | null;
+                if (form) {
+                  void handleUpload({ preventDefault: () => {} } as FormEvent<HTMLFormElement>);
+                }
+              } : undefined}
+              onDismiss={() => {
+                setUploadError(null);
+                setMessage('');
+              }}
+              showTechnicalDetails={true}
+            />
+          )}
+
+          {!uploadError && message && (
             <div
               style={{
                 padding: '16px',
-                backgroundColor: message.startsWith('✅') ? '#e8f5e9' : '#ffebee',
+                backgroundColor: message.startsWith('✅') ? '#e8f5e9' : message.startsWith('⏳') ? '#fff9e6' : '#ffebee',
                 borderRadius: '4px',
                 marginBottom: '20px',
                 fontSize: '14px'

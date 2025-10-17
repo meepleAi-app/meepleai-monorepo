@@ -173,6 +173,46 @@ if (typeof global.ReadableStream === 'undefined') {
   };
 }
 
+// Mock fetch Response and Headers for API testing (PDF-06)
+if (typeof global.Response === 'undefined') {
+  global.Response = class Response {
+    constructor(body, init = {}) {
+      this.body = body;
+      this.ok = (init.status || 200) >= 200 && (init.status || 200) < 300;
+      this.status = init.status || 200;
+      this.statusText = init.statusText || '';
+
+      // Create proper headers object
+      this.headers = {
+        _map: new Map(),
+        get(key) {
+          return this._map.get(key.toLowerCase()) || null;
+        },
+        set(key, value) {
+          this._map.set(key.toLowerCase(), value);
+        },
+        has(key) {
+          return this._map.has(key.toLowerCase());
+        }
+      };
+
+      if (init.headers) {
+        Object.entries(init.headers).forEach(([key, value]) => {
+          this.headers.set(key, value);
+        });
+      }
+    }
+
+    json() {
+      return Promise.resolve(this.body ? JSON.parse(this.body) : {});
+    }
+
+    text() {
+      return Promise.resolve(this.body || '');
+    }
+  };
+}
+
 beforeEach(() => {
   const state = typeof expect !== 'undefined' ? expect.getState?.() : undefined;
   if (state?.testPath?.includes('src/pages/__tests__/admin.test.tsx')) {

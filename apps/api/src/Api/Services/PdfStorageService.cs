@@ -67,23 +67,25 @@ public class PdfStorageService
         // Validate file
         if (file == null || file.Length == 0)
         {
-            return new PdfUploadResult(false, "No file provided", null);
+            return new PdfUploadResult(false, "No file provided. Please select a PDF file to upload.", null);
         }
 
         if (file.Length > MaxFileSizeBytes)
         {
-            return new PdfUploadResult(false, $"File size exceeds maximum allowed size of {MaxFileSizeBytes / 1024 / 1024} MB", null);
+            var sizeMB = file.Length / 1024.0 / 1024.0;
+            var maxMB = MaxFileSizeBytes / 1024 / 1024;
+            return new PdfUploadResult(false, $"File is too large ({sizeMB:F1}MB). Maximum size is {maxMB}MB. Try compressing the PDF or splitting into smaller files.", null);
         }
 
         if (!AllowedContentTypes.Contains(file.ContentType))
         {
-            return new PdfUploadResult(false, $"Invalid file type. Only PDF files are allowed.", null);
+            return new PdfUploadResult(false, $"Invalid file type ({file.ContentType}). Only PDF files are allowed. Please ensure your file has a .pdf extension.", null);
         }
 
         var fileName = Path.GetFileName(file.FileName);
         if (string.IsNullOrWhiteSpace(fileName))
         {
-            return new PdfUploadResult(false, "Invalid file name", null);
+            return new PdfUploadResult(false, "Invalid file name. The file must have a valid name.", null);
         }
 
         // Verify game exists
@@ -93,7 +95,7 @@ public class PdfStorageService
 
         if (game == null)
         {
-            return new PdfUploadResult(false, "Game not found or access denied", null);
+            return new PdfUploadResult(false, "Game not found. Please select a valid game before uploading.", null);
         }
 
         try
@@ -150,7 +152,7 @@ public class PdfStorageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to upload PDF for game {GameId}", gameId);
-            return new PdfUploadResult(false, "Failed to upload PDF: " + ex.Message, null);
+            return new PdfUploadResult(false, "Unable to upload PDF due to a server error. Please try again or contact support if the problem persists.", null);
         }
     }
 

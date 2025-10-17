@@ -108,10 +108,52 @@ export default function ChatPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
 
-  // Chat management
-  const [chats, setChats] = useState<Chat[]>([]);
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  // CHAT-03: Multi-game chat management with per-game state preservation
+  type GameChatState = {
+    chats: Chat[];
+    activeChatId: string | null;
+    messages: Message[];
+  };
+  const [chatStatesByGame, setChatStatesByGame] = useState<Map<string, GameChatState>>(new Map());
+
+  // Derived state for current game
+  const currentGameState = selectedGameId ? chatStatesByGame.get(selectedGameId) : undefined;
+  const chats = currentGameState?.chats ?? [];
+  const activeChatId = currentGameState?.activeChatId ?? null;
+  const messages = currentGameState?.messages ?? [];
+
+  // Helper functions for game-specific state updates
+  const setChats = (updater: React.SetStateAction<Chat[]>) => {
+    if (!selectedGameId) return;
+    setChatStatesByGame(prev => {
+      const newMap = new Map(prev);
+      const currentState = newMap.get(selectedGameId) || { chats: [], activeChatId: null, messages: [] };
+      const newChats = typeof updater === 'function' ? updater(currentState.chats) : updater;
+      newMap.set(selectedGameId, { ...currentState, chats: newChats });
+      return newMap;
+    });
+  };
+
+  const setActiveChatId = (chatId: string | null) => {
+    if (!selectedGameId) return;
+    setChatStatesByGame(prev => {
+      const newMap = new Map(prev);
+      const currentState = newMap.get(selectedGameId) || { chats: [], activeChatId: null, messages: [] };
+      newMap.set(selectedGameId, { ...currentState, activeChatId: chatId });
+      return newMap;
+    });
+  };
+
+  const setMessages = (updater: React.SetStateAction<Message[]>) => {
+    if (!selectedGameId) return;
+    setChatStatesByGame(prev => {
+      const newMap = new Map(prev);
+      const currentState = newMap.get(selectedGameId) || { chats: [], activeChatId: null, messages: [] };
+      const newMessages = typeof updater === 'function' ? updater(currentState.messages) : updater;
+      newMap.set(selectedGameId, { ...currentState, messages: newMessages });
+      return newMap;
+    });
+  };
 
   // UI state
   const [inputValue, setInputValue] = useState<string>("");
@@ -175,23 +217,25 @@ export default function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authUser]);
 
-  // Load agents and chats when game is selected
+  // CHAT-03: Load agents and chats when game is selected (preserve per-game state)
   useEffect(() => {
     if (selectedGameId) {
       void loadAgents(selectedGameId);
-      void loadChats(selectedGameId);
-      // Reset active chat when game changes
-      setActiveChatId(null);
-      setMessages([]);
+
+      // Only load chats if this game hasn't been loaded yet
+      const gameState = chatStatesByGame.get(selectedGameId);
+      if (!gameState) {
+        void loadChats(selectedGameId);
+      }
+      // Note: We do NOT reset activeChatId or messages - they're preserved per-game
+
+      // Reset agent selection when switching games
       setSelectedAgentId(null);
     } else {
       setAgents([]);
-      setChats([]);
-      setActiveChatId(null);
-      setMessages([]);
       setSelectedAgentId(null);
     }
-  }, [selectedGameId]);
+  }, [selectedGameId, chatStatesByGame]);
 
   const loadCurrentUser = async () => {
     try {
@@ -250,11 +294,23 @@ export default function ChatPage() {
     setIsLoadingChats(true);
     try {
       const chatsList = await api.get<Chat[]>(`/api/v1/chats?gameId=${gameId}`);
-      setChats(chatsList ?? []);
+
+      // CHAT-03: Update chats for specific game
+      setChatStatesByGame(prev => {
+        const newMap = new Map(prev);
+        const currentState = newMap.get(gameId) || { chats: [], activeChatId: null, messages: [] };
+        newMap.set(gameId, { ...currentState, chats: chatsList ?? [] });
+        return newMap;
+      });
     } catch (err) {
       console.error("Error loading chats:", err);
       // Don't show error to user - empty chat list is acceptable
-      setChats([]);
+      setChatStatesByGame(prev => {
+        const newMap = new Map(prev);
+        const currentState = newMap.get(gameId) || { chats: [], activeChatId: null, messages: [] };
+        newMap.set(gameId, { ...currentState, chats: [] });
+        return newMap;
+      });
     } finally {
       setIsLoadingChats(false);
     }
@@ -296,8 +352,14 @@ export default function ChatPage() {
           };
         });
 
-        setMessages(loadedMessages);
-        setActiveChatId(chatId);
+        // CHAT-03: Update messages for the chat's game
+        const chatGameId = chatWithHistory.gameId;
+        setChatStatesByGame(prev => {
+          const newMap = new Map(prev);
+          const currentState = newMap.get(chatGameId) || { chats: [], activeChatId: null, messages: [] };
+          newMap.set(chatGameId, { ...currentState, messages: loadedMessages, activeChatId: chatId });
+          return newMap;
+        });
 
         // Update selected game and agent to match the chat
         if (selectedGameId !== chatWithHistory.gameId) {
@@ -534,7 +596,27 @@ export default function ChatPage() {
       >
         {/* Sidebar Header */}
         <div style={{ padding: 16, borderBottom: "1px solid #dadce0" }}>
-          <h2 style={{ margin: 0, fontSize: 18, marginBottom: 16 }}>MeepleAI Chat</h2>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <h2 style={{ margin: 0, fontSize: 18 }}>MeepleAI Chat</h2>
+            {/* CHAT-03: Game context badge */}
+            {selectedGameId && (
+              <div
+                style={{
+                  padding: "4px 12px",
+                  background: "#e8f0fe",
+                  color: "#1a73e8",
+                  borderRadius: 12,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  border: "1px solid #1a73e8"
+                }}
+                title={`Currently chatting about: ${games.find(g => g.id === selectedGameId)?.name ?? "Unknown game"}`}
+                aria-label={`Active game context: ${games.find(g => g.id === selectedGameId)?.name ?? "Unknown game"}`}
+              >
+                {games.find(g => g.id === selectedGameId)?.name ?? "..."}
+              </div>
+            )}
+          </div>
 
           {/* Game Selector */}
           <div style={{ marginBottom: 12 }}>
@@ -542,7 +624,7 @@ export default function ChatPage() {
               htmlFor="gameSelect"
               style={{ display: "block", marginBottom: 6, fontWeight: 500, fontSize: 13 }}
             >
-              Gioco:
+              Cambia Gioco:
             </label>
             <select
               id="gameSelect"

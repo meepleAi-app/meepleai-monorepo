@@ -1330,12 +1330,15 @@ describe('ChatPage', () => {
           expect(screen.getByText('Castling is a special move...')).toBeInTheDocument();
         });
 
-        mockApi.post.mockResolvedValueOnce({
-          answer: 'More info',
-          snippets: [
-            { text: 'Rule detail', source: 'manual.pdf', page: 10, line: null }
-          ],
-          messageId: 'msg-3'
+        // Mock streaming to trigger onComplete with snippets
+        mockStartStreaming.mockImplementation(() => {
+          if (mockOnComplete) {
+            setTimeout(() => {
+              mockOnComplete!('More info', [
+                { text: 'Rule detail', source: 'manual.pdf', page: 10, line: null }
+              ], { totalTokens: 10, confidence: 0.95 });
+            }, 0);
+          }
         });
 
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
@@ -1369,12 +1372,15 @@ describe('ChatPage', () => {
           expect(screen.getByText('How do I castle?')).toBeInTheDocument();
         });
 
-        mockApi.post.mockResolvedValueOnce({
-          answer: 'Info',
-          snippets: [
-            { text: 'Text without page', source: 'doc.txt', page: null, line: null }
-          ],
-          messageId: 'msg-3'
+        // Mock streaming to trigger onComplete with snippets (no page number)
+        mockStartStreaming.mockImplementation(() => {
+          if (mockOnComplete) {
+            setTimeout(() => {
+              mockOnComplete!('Info', [
+                { text: 'Text without page', source: 'doc.txt', page: null, line: null }
+              ], { totalTokens: 10, confidence: 0.95 });
+            }, 0);
+          }
         });
 
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
@@ -1415,10 +1421,13 @@ describe('ChatPage', () => {
           expect(screen.queryByText(/Nessun messaggio ancora/i)).toBeInTheDocument();
         });
 
-        mockApi.post.mockResolvedValueOnce({
-          answer: 'Simple answer',
-          snippets: [],
-          messageId: 'msg-1'
+        // Mock streaming to trigger onComplete without snippets
+        mockStartStreaming.mockImplementation(() => {
+          if (mockOnComplete) {
+            setTimeout(() => {
+              mockOnComplete!('Simple answer', [], { totalTokens: 5, confidence: 0.90 });
+            }, 0);
+          }
         });
 
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);

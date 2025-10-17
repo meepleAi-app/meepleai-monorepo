@@ -311,7 +311,9 @@ public class PdfStorageServiceTests
 
             var textExtractionMock = new Mock<PdfTextExtractionService>(
                 MockBehavior.Strict,
-                Mock.Of<ILogger<PdfTextExtractionService>>());
+                Mock.Of<ILogger<PdfTextExtractionService>>(),
+                Mock.Of<IConfiguration>(),
+                (IOcrService?)null);
             textExtractionMock
                 .Setup(s => s.ExtractTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(PdfTextExtractionResult.CreateSuccess("chunk-one\nchunk-two", 1, 18));

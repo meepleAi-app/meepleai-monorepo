@@ -1,18 +1,11 @@
 using Api.Infrastructure;
 using Api.Logging;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
-using System.Net.Http.Headers;
-using System.Security.Claims;
-using System.Text;
 using Xunit;
 
 namespace Api.Tests.Logging;
@@ -21,21 +14,16 @@ namespace Api.Tests.Logging;
 /// OPS-04: Integration tests for structured logging across the request lifecycle.
 /// Tests correlation ID propagation, sensitive data redaction, and environment-based configuration.
 /// </summary>
-public class LoggingIntegrationTests : IClassFixture<LoggingIntegrationTestFactory>, IDisposable
+public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDisposable
 {
-    private readonly LoggingIntegrationTestFactory _factory;
+    private readonly LoggingTestFactory _factory;
     private readonly HttpClient _client;
-    private readonly SqliteConnection _connection;
     private readonly IDisposable _logContext;
 
-    public LoggingIntegrationTests(LoggingIntegrationTestFactory factory)
+    public LoggingIntegrationTests(LoggingTestFactory factory)
     {
         _factory = factory;
         _client = factory.CreateClient();
-
-        // Setup SQLite in-memory database
-        _connection = new SqliteConnection("DataSource=:memory:");
-        _connection.Open();
 
         // Enable test correlator for log assertions
         _logContext = TestCorrelator.CreateContext();
@@ -296,59 +284,37 @@ public class LoggingIntegrationTests : IClassFixture<LoggingIntegrationTestFacto
     public void Dispose()
     {
         _logContext?.Dispose();
-        _connection?.Dispose();
         _client?.Dispose();
     }
 }
 
 /// <summary>
-/// Custom WebApplicationFactory for logging integration tests.
-/// Configures test environment with Serilog and test correlator.
+/// Custom test factory for logging tests that configures Serilog with TestCorrelator.
+/// Extends the standard WebApplicationFactoryFixture with test-specific logging setup.
 /// </summary>
-public class LoggingIntegrationTestFactory : WebApplicationFactory<Program>
+public class LoggingTestFactory : WebApplicationFactoryFixture
 {
-    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Development");
+        // Call base configuration first (sets up SQLite, mocks, etc.)
+        base.ConfigureWebHost(builder);
 
-        builder.ConfigureTestServices(services =>
+        // Override logging configuration at host builder level for Serilog
+        builder.ConfigureLogging((context, logging) =>
         {
-            // Remove existing DbContext
-            var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<MeepleAiDbContext>));
-            if (descriptor != null)
-            {
-                services.Remove(descriptor);
-            }
+            // Clear all providers
+            logging.ClearProviders();
 
-            // Add in-memory SQLite database for tests
-            services.AddDbContext<MeepleAiDbContext>(options =>
-            {
-                options.UseSqlite("DataSource=:memory:");
-            });
+            // Add Serilog with TestCorrelator
+            var logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .Destructure.With<SensitiveDataDestructuringPolicy>()
+                .Enrich.FromLogContext()
+                .Enrich.WithProperty("Environment", "Testing")
+                .WriteTo.TestCorrelator() // Enables log assertions in tests
+                .CreateLogger();
 
-            // Build service provider and ensure database is created
-            var sp = services.BuildServiceProvider();
-            using var scope = sp.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            db.Database.OpenConnection();
-            db.Database.EnsureCreated();
-        });
-
-        // Configure Serilog with test correlator
-        builder.ConfigureServices((context, services) =>
-        {
-            services.AddLogging(loggingBuilder =>
-            {
-                loggingBuilder.ClearProviders();
-                var logger = new LoggerConfiguration()
-                    .MinimumLevel.Debug()
-                    .Destructure.With<SensitiveDataDestructuringPolicy>()
-                    .Enrich.FromLogContext()
-                    .Enrich.WithProperty("Environment", "Development")
-                    .WriteTo.TestCorrelator() // Enables log assertions in tests
-                    .CreateLogger();
-                loggingBuilder.AddSerilog(logger);
-            });
+            logging.AddSerilog(logger, dispose: true);
         });
     }
 }

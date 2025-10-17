@@ -39,17 +39,16 @@ public class ChessAgentService : IChessAgentService
             return CreateEmptyResponse("Please provide a question.");
         }
 
-        // Check cache first
-        var cacheKey = _cache.GenerateQaCacheKey(ChessGameId, $"{request.question}|{request.fenPosition ?? ""}");
-        var cachedResponse = await _cache.GetAsync<ChessAgentResponse>(cacheKey, ct);
-        if (cachedResponse != null)
-        {
-            LogInformation("Returning cached chess agent response");
-            return cachedResponse;
-        }
-
         try
         {
+            // Check cache first
+            var cacheKey = _cache.GenerateQaCacheKey(ChessGameId, $"{request.question}|{request.fenPosition ?? ""}");
+            var cachedResponse = await _cache.GetAsync<ChessAgentResponse>(cacheKey, ct);
+            if (cachedResponse != null)
+            {
+                LogInformation("Returning cached chess agent response");
+                return cachedResponse;
+            }
             // Step 1: Validate FEN position if provided
             bool hasFenPosition = !string.IsNullOrWhiteSpace(request.fenPosition);
             string? fenValidationError = null;

@@ -246,7 +246,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         }
 
         // And: User can no longer use that session
-        var userRequest = new HttpRequestMessage(HttpMethod.Get, "/users/me/sessions");
+        var userRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/sessions");
         AddCookies(userRequest, userCookies);
         var userResponse = await client.SendAsync(userRequest);
         Assert.Equal(HttpStatusCode.Unauthorized, userResponse.StatusCode);
@@ -359,7 +359,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         }
 
         // And: User cannot use previous sessions
-        var userRequest1 = new HttpRequestMessage(HttpMethod.Get, "/users/me/sessions");
+        var userRequest1 = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/sessions");
         AddCookies(userRequest1, cookies1);
         var userResponse1 = await client.SendAsync(userRequest1);
         Assert.Equal(HttpStatusCode.Unauthorized, userResponse1.StatusCode);
@@ -440,7 +440,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User requests their own sessions
-        var request = new HttpRequestMessage(HttpMethod.Get, "/users/me/sessions");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/sessions");
         AddCookies(request, cookies1);
 
         var response = await client.SendAsync(request);
@@ -482,7 +482,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Unauthenticated request
-        var response = await client.GetAsync("/users/me/sessions");
+        var response = await client.GetAsync("/api/v1/users/me/sessions");
 
         // Then: HTTP 401 Unauthorized
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);

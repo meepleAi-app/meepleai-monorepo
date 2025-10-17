@@ -174,6 +174,10 @@ builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<ISessionManagementService, SessionManagementService>();
 builder.Services.AddHostedService<SessionAutoRevocationService>();
 
+// AUTH-04: Password reset services
+builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+
 // AI-06: RAG offline evaluation service
 builder.Services.AddScoped<IRagEvaluationService, RagEvaluationService>();
 
@@ -852,6 +856,107 @@ v1Api.MapPost("/auth/session/extend", async (
         remainingMinutes);
 
     return Results.Json(response);
+});
+
+// AUTH-04: Password reset endpoints
+v1Api.MapPost("/auth/password-reset/request", async (
+    PasswordResetRequestPayload payload,
+    IPasswordResetService passwordResetService,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    try
+    {
+        if (string.IsNullOrWhiteSpace(payload.Email))
+        {
+            return Results.BadRequest(new { error = "Email is required" });
+        }
+
+        await passwordResetService.RequestPasswordResetAsync(payload.Email, ct);
+
+        // Always return success to prevent email enumeration
+        return Results.Json(new { ok = true, message = "If the email exists, a password reset link has been sent" });
+    }
+    catch (InvalidOperationException ex)
+    {
+        // Rate limit or validation errors
+        logger.LogWarning("Password reset request error: {Message}", ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Password reset request endpoint error");
+        return Results.Problem(detail: "An error occurred processing your request", statusCode: 500);
+    }
+});
+
+v1Api.MapGet("/auth/password-reset/verify", async (
+    string token,
+    IPasswordResetService passwordResetService,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    try
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return Results.BadRequest(new { error = "Token is required" });
+        }
+
+        var isValid = await passwordResetService.ValidateResetTokenAsync(token, ct);
+
+        if (!isValid)
+        {
+            return Results.BadRequest(new { error = "Invalid or expired token" });
+        }
+
+        return Results.Json(new { ok = true, message = "Token is valid" });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Password reset verify endpoint error");
+        return Results.Problem(detail: "An error occurred processing your request", statusCode: 500);
+    }
+});
+
+v1Api.MapPut("/auth/password-reset/confirm", async (
+    PasswordResetConfirmPayload payload,
+    IPasswordResetService passwordResetService,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    try
+    {
+        if (string.IsNullOrWhiteSpace(payload.Token))
+        {
+            return Results.BadRequest(new { error = "Token is required" });
+        }
+
+        if (string.IsNullOrWhiteSpace(payload.NewPassword))
+        {
+            return Results.BadRequest(new { error = "New password is required" });
+        }
+
+        var success = await passwordResetService.ResetPasswordAsync(payload.Token, payload.NewPassword, ct);
+
+        if (!success)
+        {
+            return Results.BadRequest(new { error = "Invalid or expired token" });
+        }
+
+        return Results.Json(new { ok = true, message = "Password has been reset successfully" });
+    }
+    catch (ArgumentException ex)
+    {
+        // Validation errors (password complexity, etc.)
+        logger.LogWarning("Password reset confirm validation error: {Message}", ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Password reset confirm endpoint error");
+        return Results.Problem(detail: "An error occurred processing your request", statusCode: 500);
+    }
 });
 
 // API-01: AI agent endpoints (versioned)

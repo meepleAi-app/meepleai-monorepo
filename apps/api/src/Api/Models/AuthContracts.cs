@@ -71,3 +71,7 @@ public class SessionManagementConfiguration
     /// </summary>
     public int AutoRevocationIntervalHours { get; set; } = 1;
 }
+
+// AUTH-04: Password reset models
+public record PasswordResetRequestPayload(string Email);
+public record PasswordResetConfirmPayload(string Token, string NewPassword);

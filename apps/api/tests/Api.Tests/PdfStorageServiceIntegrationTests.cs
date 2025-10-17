@@ -132,6 +132,18 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
             _tasks.Enqueue(task);
         }
 
+        public void ExecuteWithCancellation(string taskId, Func<CancellationToken, Task> taskFactory)
+        {
+            // For testing, we'll just execute the task without cancellation support
+            _tasks.Enqueue(() => taskFactory(CancellationToken.None));
+        }
+
+        public bool CancelTask(string taskId)
+        {
+            // For testing, we don't actually track cancellation
+            return false;
+        }
+
         public async Task ExecuteNextAsync()
         {
             if (_tasks.Count == 0)

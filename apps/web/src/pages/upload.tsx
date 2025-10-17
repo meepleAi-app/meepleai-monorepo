@@ -10,6 +10,7 @@ import { api, ApiError } from '../lib/api';
 import { categorizeError, type CategorizedError, extractCorrelationId } from '../lib/errorUtils';
 import { retryWithBackoff, isRetryableError } from '../lib/retryUtils';
 import { ErrorDisplay } from '../components/ErrorDisplay';
+import { ProcessingProgress } from '../components/ProcessingProgress';
 
 interface PdfDocument {
   id: string;
@@ -165,6 +166,7 @@ export default function UploadPage() {
   const [retryCount, setRetryCount] = useState(0);
   const [validating, setValidating] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [showProcessingProgress, setShowProcessingProgress] = useState(false);
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -441,6 +443,7 @@ export default function UploadPage() {
       setRuleSpec(null);
       setUploadError(null);
       setRetryCount(0);
+      setShowProcessingProgress(true);
       setMessage(`✅ PDF uploaded successfully! Document ID: ${data.documentId}`);
       setCurrentStep('parse');
     } catch (error) {
@@ -502,6 +505,7 @@ export default function UploadPage() {
     setRetryCount(0);
     setValidating(false);
     setValidationErrors({});
+    setShowProcessingProgress(false);
     setMessage('');
     const fileInput = document.getElementById('fileInput') as HTMLInputElement | null;
     if (fileInput) {
@@ -585,6 +589,19 @@ export default function UploadPage() {
       setRetryingPdfId(null);
     }
   };
+
+  const handleProcessingComplete = useCallback(async () => {
+    // Refresh PDF list and trigger parse
+    if (confirmedGameId) {
+      await loadPdfs(confirmedGameId);
+    }
+    // The auto-advance effect will trigger handleParse when status is completed
+  }, [confirmedGameId, loadPdfs]);
+
+  const handleProcessingError = useCallback((error: string) => {
+    setMessage(`❌ Processing failed: ${error}`);
+    setProcessingError(error);
+  }, []);
 
   const handleCreateGame = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1091,53 +1108,69 @@ export default function UploadPage() {
               <p style={{ marginTop: '16px', marginBottom: '24px', color: '#666' }}>
                 Document ID: <strong>{documentId}</strong>
               </p>
-              <div style={{ marginBottom: '24px' }}>
-                <div
-                  role="progressbar"
-                  aria-label="PDF processing progress"
-                  aria-valuenow={processingProgress}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  style={{
-                    width: '100%',
-                    backgroundColor: '#e5e7eb',
-                    borderRadius: '999px',
-                    height: '12px',
-                    overflow: 'hidden',
-                    marginBottom: '12px'
-                  }}
-                >
-                  <div
-                    style={{
-                      width: `${processingProgress}%`,
-                      transition: 'width 0.6s ease',
-                      backgroundColor:
-                        effectiveProcessingStatus === 'completed'
-                          ? '#34a853'
-                          : effectiveProcessingStatus === 'failed'
-                            ? '#d93025'
-                            : '#0070f3',
-                      height: '100%'
-                    }}
+
+              {/* PDF-08: New ProcessingProgress Component */}
+              {showProcessingProgress && documentId && (
+                <div style={{ marginBottom: '24px' }}>
+                  <ProcessingProgress
+                    pdfId={documentId}
+                    onComplete={handleProcessingComplete}
+                    onError={handleProcessingError}
                   />
                 </div>
-                <p style={{ marginBottom: '8px', color: '#444' }}>
-                  Processing status: <strong>{statusLabels[effectiveProcessingStatus]}</strong>
-                </p>
-                {pollingError && (
-                  <p style={{ color: '#d93025', marginBottom: '8px' }}>
-                    Status refresh failed: {pollingError}
+              )}
+
+              {/* Fallback: Old progress bar for backward compatibility */}
+              {!showProcessingProgress && (
+                <div style={{ marginBottom: '24px' }}>
+                  <div
+                    role="progressbar"
+                    aria-label="PDF processing progress"
+                    aria-valuenow={processingProgress}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    style={{
+                      width: '100%',
+                      backgroundColor: '#e5e7eb',
+                      borderRadius: '999px',
+                      height: '12px',
+                      overflow: 'hidden',
+                      marginBottom: '12px'
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${processingProgress}%`,
+                        transition: 'width 0.6s ease',
+                        backgroundColor:
+                          effectiveProcessingStatus === 'completed'
+                            ? '#34a853'
+                            : effectiveProcessingStatus === 'failed'
+                              ? '#d93025'
+                              : '#0070f3',
+                        height: '100%'
+                      }}
+                    />
+                  </div>
+                  <p style={{ marginBottom: '8px', color: '#444' }}>
+                    Processing status: <strong>{statusLabels[effectiveProcessingStatus]}</strong>
                   </p>
-                )}
-                {processingError && effectiveProcessingStatus === 'failed' && (
-                  <p style={{ color: '#d93025', marginBottom: '8px' }}>
-                    Processing error: {processingError}
+                  {pollingError && (
+                    <p style={{ color: '#d93025', marginBottom: '8px' }}>
+                      Status refresh failed: {pollingError}
+                    </p>
+                  )}
+                  {processingError && effectiveProcessingStatus === 'failed' && (
+                    <p style={{ color: '#d93025', marginBottom: '8px' }}>
+                      Processing error: {processingError}
+                    </p>
+                  )}
+                  <p style={{ marginBottom: 0, color: '#666' }}>
+                    The wizard will automatically continue once processing is completed.
                   </p>
-                )}
-                <p style={{ marginBottom: 0, color: '#666' }}>
-                  The wizard will automatically continue once processing is completed.
-                </p>
-              </div>
+                </div>
+              )}
+
               <button
                 onClick={() => void handleParse()}
                 disabled={parsing || effectiveProcessingStatus !== 'completed'}

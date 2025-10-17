@@ -51,6 +51,21 @@ export interface SessionStatusResponse {
   remainingMinutes: number;
 }
 
+// PERF-03: Cache statistics types
+export interface TopQuestion {
+  question: string;
+  hitCount: number;
+  lastHitAt: string;
+}
+
+export interface CacheStats {
+  hitRate: number;
+  missRate: number;
+  totalRequests: number;
+  cacheSize: number;
+  topQuestions: TopQuestion[];
+}
+
 // Enhanced error class with correlation ID (PDF-06)
 export class ApiError extends Error {
   constructor(
@@ -188,6 +203,37 @@ export const api = {
 
     async deleteComment(gameId: string, commentId: string): Promise<void> {
       return api.delete(`/api/v1/games/${gameId}/rulespec/comments/${commentId}`);
+    }
+  },
+
+  // PERF-03: Cache management API
+  cache: {
+    async getStats(gameId?: string): Promise<CacheStats | null> {
+      const path = gameId
+        ? `/api/v1/admin/cache/stats?gameId=${encodeURIComponent(gameId)}`
+        : `/api/v1/admin/cache/stats`;
+      return api.get<CacheStats>(path);
+    },
+
+    async invalidateGameCache(gameId: string): Promise<void> {
+      return api.delete(`/api/v1/admin/cache/games/${encodeURIComponent(gameId)}`);
+    },
+
+    async invalidateByTag(tag: string): Promise<void> {
+      return api.delete(`/api/v1/admin/cache/tags/${encodeURIComponent(tag)}`);
+    }
+  },
+
+  // PDF-08: PDF processing progress API
+  pdf: {
+    async getProcessingProgress(pdfId: string): Promise<import('../types/pdf').ProcessingProgress | null> {
+      return api.get<import('../types/pdf').ProcessingProgress>(
+        `/api/v1/pdfs/${encodeURIComponent(pdfId)}/progress`
+      );
+    },
+
+    async cancelProcessing(pdfId: string): Promise<void> {
+      return api.delete(`/api/v1/pdfs/${encodeURIComponent(pdfId)}/processing`);
     }
   }
 };

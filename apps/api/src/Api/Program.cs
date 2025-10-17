@@ -980,7 +980,7 @@ v1Api.MapPut("/auth/password-reset/confirm", async (
 });
 
 // API-01: AI agent endpoints (versioned)
-v1Api.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService rag, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService rag, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, bool bypassCache = false, CancellationToken ct = default) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -993,8 +993,8 @@ v1Api.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagServic
     }
 
     var startTime = DateTime.UtcNow;
-    logger.LogInformation("QA request from user {UserId} for game {GameId}: {Query}",
-        session.User.Id, req.gameId, req.query);
+    logger.LogInformation("QA request from user {UserId} for game {GameId}: {Query} (bypassCache: {BypassCache})",
+        session.User.Id, req.gameId, req.query, bypassCache);
 
     try
     {
@@ -1006,11 +1006,12 @@ v1Api.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagServic
                 session.User.Id,
                 "user",
                 req.query,
-                new { endpoint = "qa", gameId = req.gameId },
+                new { endpoint = "qa", gameId = req.gameId, bypassCache },
                 ct);
         }
 
-        var resp = await rag.AskAsync(req.gameId, req.query, ct);
+        // PERF-03: Support cache bypass via query parameter
+        var resp = await rag.AskAsync(req.gameId, req.query, bypassCache, ct);
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
         logger.LogInformation("QA response delivered for game {GameId}", req.gameId);
@@ -1114,7 +1115,14 @@ v1Api.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagServic
 
         throw;
     }
-});
+})
+.WithName("QaAgent")
+.WithDescription("Ask a question about game rules using RAG (Retrieval-Augmented Generation)")
+.WithTags("AI Agents")
+.Produces<QaResponse>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status500InternalServerError);
 
 v1Api.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, RagService rag, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
 {
@@ -2039,6 +2047,104 @@ v1Api.MapDelete("/pdf/{pdfId}", async (string pdfId, HttpContext context, PdfSto
     return Results.NoContent();
 });
 
+// PDF-08: Get PDF processing progress
+v1Api.MapGet("/pdfs/{pdfId}/progress", async (string pdfId, HttpContext context, MeepleAiDbContext db, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    var pdf = await db.PdfDocuments
+        .Where(p => p.Id == pdfId)
+        .Select(p => new
+        {
+            p.Id,
+            p.UploadedByUserId,
+            p.ProcessingProgressJson
+        })
+        .FirstOrDefaultAsync(ct);
+
+    if (pdf == null)
+    {
+        return Results.NotFound(new { error = "PDF not found" });
+    }
+
+    // Authorization: User can only view their own PDFs unless admin
+    if (pdf.UploadedByUserId != session.User.Id &&
+        !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.Forbid();
+    }
+
+    // Deserialize progress from JSON
+    ProcessingProgress? progress = null;
+    if (!string.IsNullOrEmpty(pdf.ProcessingProgressJson))
+    {
+        try
+        {
+            progress = System.Text.Json.JsonSerializer.Deserialize<ProcessingProgress>(pdf.ProcessingProgressJson);
+        }
+        catch (Exception ex)
+        {
+            // Log error but return null progress instead of failing
+            var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogWarning(ex, "Failed to deserialize progress for PDF {PdfId}", pdfId);
+        }
+    }
+
+    return Results.Ok(progress);
+})
+.RequireAuthorization()
+.WithName("GetPdfProcessingProgress");
+
+// PDF-08: Cancel PDF processing
+v1Api.MapDelete("/pdfs/{pdfId}/processing", async (string pdfId, HttpContext context, MeepleAiDbContext db, IBackgroundTaskService backgroundTaskService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    var pdf = await db.PdfDocuments
+        .Where(p => p.Id == pdfId)
+        .Select(p => new { p.Id, p.UploadedByUserId, p.ProcessingStatus })
+        .FirstOrDefaultAsync(ct);
+
+    if (pdf == null)
+    {
+        return Results.NotFound(new { error = "PDF not found" });
+    }
+
+    // Authorization: User can only cancel their own PDFs unless admin
+    if (pdf.UploadedByUserId != session.User.Id &&
+        !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.Forbid();
+    }
+
+    // Check if processing is active
+    if (pdf.ProcessingStatus == "completed" || pdf.ProcessingStatus == "failed")
+    {
+        return Results.BadRequest(new { error = "Processing already completed or failed" });
+    }
+
+    // Cancel the background task
+    var cancelled = backgroundTaskService.CancelTask(pdfId);
+
+    if (!cancelled)
+    {
+        logger.LogWarning("Failed to cancel processing for PDF {PdfId} - task not found", pdfId);
+        return Results.BadRequest(new { error = "Processing task not found or already completed" });
+    }
+
+    logger.LogInformation("User {UserId} cancelled processing for PDF {PdfId}", session.User.Id, pdfId);
+
+    return Results.Ok(new { message = "Processing cancellation requested" });
+})
+.RequireAuthorization()
+.WithName("CancelPdfProcessing");
+
 v1Api.MapPost("/ingest/pdf/{pdfId}/rulespec", async (string pdfId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
@@ -2677,6 +2783,124 @@ v1Api.MapGet("/users/me/sessions", async (HttpContext context, ISessionManagemen
     var sessions = await sessionManagement.GetUserSessionsAsync(session.User.Id, ct);
     return Results.Json(sessions);
 });
+
+// PERF-03: Cache management endpoints
+v1Api.MapGet("/admin/cache/stats", async (HttpContext context, IAiResponseCacheService cacheService, string? gameId = null, CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        var stats = await cacheService.GetCacheStatsAsync(gameId, ct);
+        return Results.Json(stats);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(detail: $"Failed to retrieve cache stats: {ex.Message}", statusCode: 500);
+    }
+})
+.WithName("GetCacheStats")
+.WithDescription("Get cache statistics with optional game filter (Admin only)")
+.WithTags("Admin", "Cache")
+.Produces<CacheStats>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden)
+.Produces(StatusCodes.Status500InternalServerError);
+
+v1Api.MapDelete("/admin/cache/games/{gameId}", async (string gameId, HttpContext context, IAiResponseCacheService cacheService, MeepleAiDbContext dbContext, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    if (string.IsNullOrWhiteSpace(gameId))
+    {
+        return Results.BadRequest(new { error = "gameId is required" });
+    }
+
+    // Validate game exists
+    var gameExists = await dbContext.Games.AnyAsync(g => g.Id == gameId, ct);
+    if (!gameExists)
+    {
+        logger.LogWarning("Admin {AdminId} attempted to invalidate cache for non-existent game {GameId}", session.User.Id, gameId);
+        return Results.NotFound(new { error = $"Game with ID '{gameId}' not found" });
+    }
+
+    try
+    {
+        logger.LogInformation("Admin {AdminId} invalidating cache for game {GameId}", session.User.Id, gameId);
+        await cacheService.InvalidateGameAsync(gameId, ct);
+        logger.LogInformation("Successfully invalidated cache for game {GameId}", gameId);
+        return Results.Json(new { ok = true, message = $"Cache invalidated for game '{gameId}'" });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to invalidate cache for game {GameId}", gameId);
+        return Results.Problem(detail: $"Failed to invalidate cache: {ex.Message}", statusCode: 500);
+    }
+})
+.WithName("InvalidateGameCache")
+.WithDescription("Invalidate all cached responses for a specific game (Admin only)")
+.WithTags("Admin", "Cache")
+.Produces(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden)
+.Produces(StatusCodes.Status404NotFound)
+.Produces(StatusCodes.Status500InternalServerError);
+
+v1Api.MapDelete("/admin/cache/tags/{tag}", async (string tag, HttpContext context, IAiResponseCacheService cacheService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    if (string.IsNullOrWhiteSpace(tag))
+    {
+        return Results.BadRequest(new { error = "tag is required" });
+    }
+
+    try
+    {
+        logger.LogInformation("Admin {AdminId} invalidating cache by tag {Tag}", session.User.Id, tag);
+        await cacheService.InvalidateByCacheTagAsync(tag, ct);
+        logger.LogInformation("Successfully invalidated cache by tag {Tag}", tag);
+        return Results.Json(new { ok = true, message = $"Cache invalidated for tag '{tag}'" });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to invalidate cache by tag {Tag}", tag);
+        return Results.Problem(detail: $"Failed to invalidate cache: {ex.Message}", statusCode: 500);
+    }
+})
+.WithName("InvalidateCacheByTag")
+.WithDescription("Invalidate cache entries by tag (e.g., game:chess, pdf:abc123) (Admin only)")
+.WithTags("Admin", "Cache")
+.Produces(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden)
+.Produces(StatusCodes.Status500InternalServerError);
 
 // AI-07: Prompt versioning and management endpoints
 

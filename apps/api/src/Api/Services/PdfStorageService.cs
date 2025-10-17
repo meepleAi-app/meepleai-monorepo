@@ -1,6 +1,7 @@
 using System.Linq;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -135,8 +136,23 @@ public class PdfStorageService
 
             _logger.LogInformation("Created PDF document record {PdfId} for game {GameId}", fileId, gameId);
 
-            // Extract text asynchronously (PDF-02)
-            _backgroundTaskService.Execute(() => ExtractTextAsync(fileId, filePath));
+            // PDF-08: Initialize progress tracking
+            pdfDoc.ProcessingProgress = new ProcessingProgress
+            {
+                CurrentStep = ProcessingStep.Uploading,
+                PercentComplete = 20, // Upload completed
+                ElapsedTime = TimeSpan.Zero,
+                EstimatedTimeRemaining = null,
+                PagesProcessed = 0,
+                TotalPages = 0,
+                StartedAt = DateTime.UtcNow,
+                CompletedAt = null,
+                ErrorMessage = null
+            };
+            await _db.SaveChangesAsync(ct);
+
+            // Extract text asynchronously (PDF-02) with cancellation support (PDF-08)
+            _backgroundTaskService.ExecuteWithCancellation(fileId, (cancellationToken) => ProcessPdfAsync(fileId, filePath, cancellationToken));
 
             await InvalidateCacheSafelyAsync(gameId, ct, "PDF upload");
 
@@ -260,7 +276,245 @@ public class PdfStorageService
     }
 
     /// <summary>
-    /// Extracts text from PDF asynchronously and updates database
+    /// PDF-08: Main processing pipeline with progress tracking
+    /// </summary>
+    private async Task ProcessPdfAsync(string pdfId, string filePath, CancellationToken ct)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var startTime = DateTime.UtcNow;
+
+        try
+        {
+            var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfId }, ct);
+            if (pdfDoc == null)
+            {
+                _logger.LogError("PDF document {PdfId} not found for processing", pdfId);
+                return;
+            }
+
+            // Step 1: Extract text (20-40%)
+            await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, 0, 0, startTime, null, ct);
+            var extractResult = await _textExtractionService.ExtractTextAsync(filePath);
+
+            if (!extractResult.Success)
+            {
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractResult.ErrorMessage, ct);
+                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingError = extractResult.ErrorMessage;
+                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                await db.SaveChangesAsync(ct);
+                return;
+            }
+
+            pdfDoc.ExtractedText = extractResult.ExtractedText;
+            pdfDoc.PageCount = extractResult.PageCount;
+            pdfDoc.CharacterCount = extractResult.CharacterCount;
+            await db.SaveChangesAsync(ct);
+
+            // Extract structured content (tables, diagrams)
+            var tableExtractionService = scope.ServiceProvider.GetService<PdfTableExtractionService>() ?? _tableExtractionService;
+            if (tableExtractionService != null)
+            {
+                var structuredResult = await tableExtractionService.ExtractStructuredContentAsync(filePath);
+                if (structuredResult.Success)
+                {
+                    pdfDoc.ExtractedTables = System.Text.Json.JsonSerializer.Serialize(structuredResult.Tables);
+                    pdfDoc.ExtractedDiagrams = System.Text.Json.JsonSerializer.Serialize(
+                        structuredResult.Diagrams.Select(d => new
+                        {
+                            d.PageNumber,
+                            d.DiagramType,
+                            d.Description,
+                            d.Width,
+                            d.Height
+                        }));
+                    pdfDoc.AtomicRules = System.Text.Json.JsonSerializer.Serialize(structuredResult.AtomicRules);
+                    pdfDoc.TableCount = structuredResult.TableCount;
+                    pdfDoc.DiagramCount = structuredResult.DiagramCount;
+                    pdfDoc.AtomicRuleCount = structuredResult.AtomicRuleCount;
+                    await db.SaveChangesAsync(ct);
+                }
+            }
+
+            var totalPages = extractResult.PageCount;
+            await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, totalPages, totalPages, startTime, null, ct);
+
+            // Step 2: Chunk text (40-60%)
+            await UpdateProgressAsync(db, pdfId, ProcessingStep.Chunking, 0, totalPages, startTime, null, ct);
+            var chunkingService = _textChunkingServiceOverride ?? scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
+            var textChunks = chunkingService.PrepareForEmbedding(extractResult.ExtractedText);
+
+            if (textChunks.Count == 0)
+            {
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, "No chunks generated from text", ct);
+                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingError = "No chunks generated from text";
+                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                await db.SaveChangesAsync(ct);
+                return;
+            }
+
+            _logger.LogInformation("Generated {ChunkCount} chunks for PDF {PdfId}", textChunks.Count, pdfId);
+            await UpdateProgressAsync(db, pdfId, ProcessingStep.Chunking, totalPages, totalPages, startTime, null, ct);
+
+            // Step 3: Generate embeddings (60-80%)
+            await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, 0, totalPages, startTime, null, ct);
+            var embeddingService = _embeddingServiceOverride ?? scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
+            var texts = textChunks.Select(c => c.Text).ToList();
+            var embeddingResult = await embeddingService.GenerateEmbeddingsAsync(texts);
+
+            if (!embeddingResult.Success)
+            {
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, $"Embedding generation failed: {embeddingResult.ErrorMessage}", ct);
+                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingError = embeddingResult.ErrorMessage;
+                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                await db.SaveChangesAsync(ct);
+                return;
+            }
+
+            await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, totalPages, totalPages, startTime, null, ct);
+
+            // Step 4: Index in Qdrant (80-100%)
+            await UpdateProgressAsync(db, pdfId, ProcessingStep.Indexing, 0, totalPages, startTime, null, ct);
+            var qdrantService = _qdrantServiceOverride ?? scope.ServiceProvider.GetRequiredService<IQdrantService>();
+
+            var documentChunks = new List<DocumentChunk>();
+            for (int i = 0; i < textChunks.Count; i++)
+            {
+                documentChunks.Add(new DocumentChunk
+                {
+                    Text = textChunks[i].Text,
+                    Embedding = embeddingResult.Embeddings[i],
+                    Page = textChunks[i].Page,
+                    CharStart = textChunks[i].CharStart,
+                    CharEnd = textChunks[i].CharEnd
+                });
+            }
+
+            var indexResult = await qdrantService.IndexDocumentChunksAsync(pdfDoc.GameId, pdfId, documentChunks);
+
+            if (!indexResult.Success)
+            {
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, $"Qdrant indexing failed: {indexResult.ErrorMessage}", ct);
+                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingError = indexResult.ErrorMessage;
+                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                await db.SaveChangesAsync(ct);
+                return;
+            }
+
+            // Update vector document
+            var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId, ct);
+            if (vectorDoc == null)
+            {
+                vectorDoc = new VectorDocumentEntity
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    GameId = pdfDoc.GameId,
+                    PdfDocumentId = pdfId,
+                    IndexingStatus = "completed",
+                    ChunkCount = indexResult.IndexedCount,
+                    TotalCharacters = extractResult.ExtractedText.Length,
+                    IndexedAt = DateTime.UtcNow
+                };
+                db.VectorDocuments.Add(vectorDoc);
+            }
+            else
+            {
+                vectorDoc.IndexingStatus = "completed";
+                vectorDoc.ChunkCount = indexResult.IndexedCount;
+                vectorDoc.TotalCharacters = extractResult.ExtractedText.Length;
+                vectorDoc.IndexedAt = DateTime.UtcNow;
+            }
+
+            // Step 5: Complete (100%)
+            await UpdateProgressAsync(db, pdfId, ProcessingStep.Completed, totalPages, totalPages, startTime, null, ct);
+            pdfDoc.ProcessingStatus = "completed";
+            pdfDoc.ProcessedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+
+            await InvalidateCacheSafelyAsync(pdfDoc.GameId, ct, "PDF processing");
+
+            _logger.LogInformation("PDF processing completed for {PdfId}: {ChunkCount} chunks indexed", pdfId, indexResult.IndexedCount);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("PDF processing cancelled for {PdfId}", pdfId);
+            await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, "Processing cancelled by user", ct);
+
+            var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfId }, CancellationToken.None);
+            if (pdfDoc != null)
+            {
+                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingError = "Processing cancelled by user";
+                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                await db.SaveChangesAsync(CancellationToken.None);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "PDF processing failed for {PdfId}", pdfId);
+            await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, ex.Message, CancellationToken.None);
+
+            var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfId }, CancellationToken.None);
+            if (pdfDoc != null)
+            {
+                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingError = ex.Message;
+                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                await db.SaveChangesAsync(CancellationToken.None);
+            }
+        }
+    }
+
+    /// <summary>
+    /// PDF-08: Updates processing progress in database
+    /// </summary>
+    private async Task UpdateProgressAsync(
+        MeepleAiDbContext db,
+        string pdfId,
+        ProcessingStep step,
+        int pagesProcessed,
+        int totalPages,
+        DateTime startTime,
+        string? errorMessage,
+        CancellationToken ct)
+    {
+        try
+        {
+            var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfId }, ct);
+            if (pdfDoc == null) return;
+
+            var elapsed = DateTime.UtcNow - startTime;
+            var percentComplete = ProcessingProgress.CalculatePercentComplete(step, pagesProcessed, totalPages);
+            var estimatedRemaining = ProcessingProgress.EstimateTimeRemaining(percentComplete, elapsed);
+
+            pdfDoc.ProcessingProgress = new ProcessingProgress
+            {
+                CurrentStep = step,
+                PercentComplete = percentComplete,
+                ElapsedTime = elapsed,
+                EstimatedTimeRemaining = estimatedRemaining,
+                PagesProcessed = pagesProcessed,
+                TotalPages = totalPages,
+                StartedAt = startTime,
+                CompletedAt = step == ProcessingStep.Completed || step == ProcessingStep.Failed ? DateTime.UtcNow : null,
+                ErrorMessage = errorMessage
+            };
+
+            await db.SaveChangesAsync(ct);
+            _logger.LogDebug("Updated progress for PDF {PdfId}: {Step} {Percent}%", pdfId, step, percentComplete);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to update progress for PDF {PdfId}", pdfId);
+        }
+    }
+
+    /// <summary>
+    /// Extracts text from PDF asynchronously and updates database (Legacy method, kept for backward compatibility)
     /// </summary>
     private async Task ExtractTextAsync(string pdfId, string filePath)
     {

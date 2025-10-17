@@ -1,3 +1,7 @@
+using System.Text.Json;
+using System.ComponentModel.DataAnnotations.Schema;
+using Api.Models;
+
 namespace Api.Infrastructure.Entities;
 
 public class PdfDocumentEntity
@@ -27,6 +31,20 @@ public class PdfDocumentEntity
     public int? TableCount { get; set; }
     public int? DiagramCount { get; set; }
     public int? AtomicRuleCount { get; set; }
+
+    // PDF-08: Progress tracking
+    public string? ProcessingProgressJson { get; set; }
+
+    [NotMapped]
+    public ProcessingProgress? ProcessingProgress
+    {
+        get => ProcessingProgressJson == null
+            ? null
+            : JsonSerializer.Deserialize<ProcessingProgress>(ProcessingProgressJson);
+        set => ProcessingProgressJson = value == null
+            ? null
+            : JsonSerializer.Serialize(value);
+    }
 
     public GameEntity Game { get; set; } = default!;
     public UserEntity UploadedBy { get; set; } = default!;

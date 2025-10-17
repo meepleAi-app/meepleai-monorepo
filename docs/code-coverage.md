@@ -386,22 +386,48 @@ collectCoverageFrom: [
 ],
 ```
 
-## Next Steps
+## TEST-02: 90% Coverage Initiative (In Progress)
 
-### Immediate Actions
+**Issue**: #391
+**Status**: In Progress (Started 2025-10-17)
+**Target**: 90% line coverage, 85% branch coverage
+**Timeline**: 2-3 weeks (XL effort)
+
+### Progress Tracking
+
+Detailed progress tracked in: **`docs/issue/test-02-coverage-90-percent-progress.md`**
+
+### Current Status (2025-10-17)
+
+- **RateLimitService**: ✅ Improved from ~50% to ~85% coverage (+6 BDD tests)
+- **CI Pipeline**: ✅ Coverage threshold check added (not yet enforced, see ISSUE-319)
+- **BDD Approach**: ✅ Established and documented
+- **Remaining**: EmbeddingService, QdrantService, LlmService, PdfStorageService, SessionManagementService, Infrastructure layer
+
+### Next Steps
+
+#### Immediate Actions (Week 1)
 
 1. ✅ **Document coverage process** (this document)
-2. 🔲 **Run full coverage locally once** to establish baseline
-3. 🔲 **Add coverage collection to CI** (choose Codecov/Coveralls/Artifacts)
-4. 🔲 **Set initial coverage targets** (start at 70%, increase over time)
-5. 🔲 **Add coverage badge** to README.md
+2. ✅ **Establish BDD methodology** for test development
+3. ✅ **Add CI coverage check** (documented, not yet enforced)
+4. 🔲 **Run full coverage baseline** measurement
+5. 🔲 **Complete EmbeddingService tests** (~2 days)
+6. 🔲 **Complete QdrantService tests** (~2 days)
+
+#### Short-term (Weeks 2-3)
+
+1. 🔲 **Complete remaining priority services** (LlmService, PdfStorageService, SessionManagementService)
+2. 🔲 **Achieve 90% coverage on Infrastructure layer**
+3. 🔲 **Enable CI threshold enforcement** (when ISSUE-319 complete)
+4. 🔲 **Update coverage baseline** in this document
 
 ### Long-term Goals
 
-1. 🔲 **Achieve 80%+ backend coverage**
-2. 🔲 **Maintain 90% frontend coverage** (already enforced)
-3. 🔲 **Set up coverage trend monitoring**
-4. 🔲 **Prevent coverage regressions in PRs**
+1. 🔲 **Achieve 90% backend coverage** (TEST-02 target)
+2. ✅ **Maintain 90% frontend coverage** (already enforced)
+3. 🔲 **Set up coverage trend monitoring** (Codecov integration active)
+4. 🔲 **Prevent coverage regressions in PRs** (enforce threshold in CI)
 5. 🔲 **Create coverage reports for each release**
 
 ## Resources

@@ -18,7 +18,9 @@ public class EmbeddingServiceTests
     {
         _loggerMock = new Mock<ILogger<EmbeddingService>>();
         _configMock = new Mock<IConfiguration>();
-        _configMock.Setup(c => c["OPENROUTER_API_KEY"]).Returns("test-api-key");
+        // Configure OpenAI provider for existing tests (they use OpenAI-compatible API)
+        _configMock.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("openai");
+        _configMock.Setup(c => c["OPENAI_API_KEY"]).Returns("test-api-key");
     }
 
     [Fact]
@@ -186,7 +188,7 @@ public class EmbeddingServiceTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.Equal("No embeddings returned from API", result.ErrorMessage);
+        Assert.Equal("No embeddings returned from OpenAI", result.ErrorMessage);
         Assert.Empty(result.Embeddings);
     }
 
@@ -211,9 +213,10 @@ public class EmbeddingServiceTests
     [Fact]
     public void Constructor_MissingApiKey_ThrowsException()
     {
-        // Arrange
+        // Arrange - OpenAI provider without API key
         var configWithoutKey = new Mock<IConfiguration>();
-        configWithoutKey.Setup(c => c["OPENROUTER_API_KEY"]).Returns((string?)null);
+        configWithoutKey.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("openai");
+        configWithoutKey.Setup(c => c["OPENAI_API_KEY"]).Returns((string?)null);
 
         var httpClientFactoryMock = new Mock<IHttpClientFactory>();
 
@@ -274,4 +277,475 @@ public class EmbeddingServiceTests
             }
         });
     }
+
+    #region BDD Scenarios - TEST-02: Additional Coverage Tests
+
+    /// <summary>
+    /// BDD Scenario: Ollama provider generates embeddings successfully
+    /// Given: EMBEDDING_PROVIDER is set to "ollama"
+    /// When: GenerateEmbeddingsAsync is called with 3 texts
+    /// Then: Makes 3 sequential POST requests to /api/embeddings and returns 3 embeddings
+    /// </summary>
+    [Fact]
+    public async Task GenerateEmbeddingsAsync_OllamaProvider_ReturnsMultipleEmbeddings()
+    {
+        // Arrange - Ollama provider configuration
+        var ollamaConfig = new Mock<IConfiguration>();
+        ollamaConfig.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("ollama");
+        ollamaConfig.Setup(c => c["OLLAMA_URL"]).Returns("http://localhost:11434");
+        ollamaConfig.Setup(c => c["EMBEDDING_MODEL"]).Returns("nomic-embed-text");
+
+        var callCount = 0;
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.Is<HttpRequestMessage>(req => req.RequestUri!.PathAndQuery == "/api/embeddings"),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(() =>
+            {
+                callCount++;
+                var ollamaResponse = JsonSerializer.Serialize(new
+                {
+                    embedding = Enumerable.Repeat(0.1f, 768).ToArray() // Ollama nomic-embed-text is 768 dims
+                });
+                return new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent(ollamaResponse)
+                };
+            });
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+
+        var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        httpClientFactoryMock.Setup(f => f.CreateClient("Ollama")).Returns(httpClient);
+
+        var service = new EmbeddingService(httpClientFactoryMock.Object, ollamaConfig.Object, _loggerMock.Object);
+
+        // Act
+        var texts = new List<string> { "text 1", "text 2", "text 3" };
+        var result = await service.GenerateEmbeddingsAsync(texts);
+
+        // Assert - Ollama processes one text at a time
+        Assert.True(result.Success);
+        Assert.Null(result.ErrorMessage);
+        Assert.Equal(3, result.Embeddings.Count);
+        Assert.Equal(3, callCount); // Verify 3 separate API calls
+        Assert.All(result.Embeddings, embedding => Assert.Equal(768, embedding.Length));
+    }
+
+    /// <summary>
+    /// BDD Scenario: Ollama provider handles API error gracefully
+    /// Given: EMBEDDING_PROVIDER is "ollama" and Ollama API returns 500 Internal Server Error
+    /// When: GenerateEmbeddingsAsync is called
+    /// Then: Logs error with status code and body, returns failure result
+    /// </summary>
+    [Fact]
+    public async Task GenerateEmbeddingsAsync_OllamaApiError_LogsErrorAndReturnsFailure()
+    {
+        // Arrange - Ollama returns error
+        var ollamaConfig = new Mock<IConfiguration>();
+        ollamaConfig.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("ollama");
+        ollamaConfig.Setup(c => c["OLLAMA_URL"]).Returns("http://localhost:11434");
+
+        var errorBody = "{\"error\": \"Model not found\"}";
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.InternalServerError,
+                Content = new StringContent(errorBody)
+            });
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+
+        var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        httpClientFactoryMock.Setup(f => f.CreateClient("Ollama")).Returns(httpClient);
+
+        var mockLogger = new Mock<ILogger<EmbeddingService>>();
+        var service = new EmbeddingService(httpClientFactoryMock.Object, ollamaConfig.Object, mockLogger.Object);
+
+        // Act
+        var result = await service.GenerateEmbeddingAsync("test text");
+
+        // Assert - Failure result
+        Assert.False(result.Success);
+        Assert.Contains("API error", result.ErrorMessage);
+        Assert.Contains("500", result.ErrorMessage);
+        Assert.Empty(result.Embeddings);
+
+        // Assert - Error was logged
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) =>
+                    state.ToString()!.Contains("Ollama embeddings API error") &&
+                    state.ToString()!.Contains("500") &&
+                    state.ToString()!.Contains(errorBody)),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// BDD Scenario: Ollama provider handles empty embedding response
+    /// Given: EMBEDDING_PROVIDER is "ollama" and Ollama returns empty embedding array
+    /// When: GenerateEmbeddingsAsync is called
+    /// Then: Returns failure with "No embedding returned from Ollama"
+    /// </summary>
+    [Fact]
+    public async Task GenerateEmbeddingsAsync_OllamaEmptyEmbedding_ReturnsFailure()
+    {
+        // Arrange - Ollama returns empty embedding
+        var ollamaConfig = new Mock<IConfiguration>();
+        ollamaConfig.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("ollama");
+        ollamaConfig.Setup(c => c["OLLAMA_URL"]).Returns("http://localhost:11434");
+
+        var emptyEmbeddingResponse = JsonSerializer.Serialize(new
+        {
+            embedding = Array.Empty<float>()
+        });
+
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(emptyEmbeddingResponse)
+            });
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+
+        var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        httpClientFactoryMock.Setup(f => f.CreateClient("Ollama")).Returns(httpClient);
+
+        var service = new EmbeddingService(httpClientFactoryMock.Object, ollamaConfig.Object, _loggerMock.Object);
+
+        // Act
+        var result = await service.GenerateEmbeddingAsync("test text");
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal("No embedding returned from Ollama", result.ErrorMessage);
+        Assert.Empty(result.Embeddings);
+    }
+
+    /// <summary>
+    /// BDD Scenario: Ollama provider handles null embedding response
+    /// Given: EMBEDDING_PROVIDER is "ollama" and Ollama returns null embedding
+    /// When: GenerateEmbeddingsAsync is called
+    /// Then: Returns failure with "No embedding returned from Ollama"
+    /// </summary>
+    [Fact]
+    public async Task GenerateEmbeddingsAsync_OllamaNullEmbedding_ReturnsFailure()
+    {
+        // Arrange - Ollama returns null embedding
+        var ollamaConfig = new Mock<IConfiguration>();
+        ollamaConfig.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("ollama");
+        ollamaConfig.Setup(c => c["OLLAMA_URL"]).Returns("http://localhost:11434");
+
+        var nullEmbeddingResponse = JsonSerializer.Serialize(new
+        {
+            embedding = (float[]?)null
+        });
+
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(nullEmbeddingResponse)
+            });
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri("http://localhost:11434")
+        };
+
+        var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        httpClientFactoryMock.Setup(f => f.CreateClient("Ollama")).Returns(httpClient);
+
+        var service = new EmbeddingService(httpClientFactoryMock.Object, ollamaConfig.Object, _loggerMock.Object);
+
+        // Act
+        var result = await service.GenerateEmbeddingAsync("test text");
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal("No embedding returned from Ollama", result.ErrorMessage);
+        Assert.Empty(result.Embeddings);
+    }
+
+    /// <summary>
+    /// BDD Scenario: Constructor with unsupported provider throws exception
+    /// Given: EMBEDDING_PROVIDER is set to unsupported value "azure"
+    /// When: EmbeddingService is constructed
+    /// Then: InvalidOperationException is thrown with message about unsupported provider
+    /// </summary>
+    [Fact]
+    public void Constructor_UnsupportedProvider_ThrowsException()
+    {
+        // Arrange
+        var configWithUnsupportedProvider = new Mock<IConfiguration>();
+        configWithUnsupportedProvider.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("azure");
+
+        var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new EmbeddingService(httpClientFactoryMock.Object, configWithUnsupportedProvider.Object, _loggerMock.Object));
+
+        Assert.Contains("Unsupported embedding provider: azure", exception.Message);
+        Assert.Contains("Use 'ollama' or 'openai'", exception.Message);
+    }
+
+    /// <summary>
+    /// BDD Scenario: OpenAI provider without API key throws exception
+    /// Given: EMBEDDING_PROVIDER is "openai" but OPENAI_API_KEY is not configured
+    /// When: EmbeddingService is constructed
+    /// Then: InvalidOperationException is thrown with message about missing API key
+    /// </summary>
+    [Fact]
+    public void Constructor_OpenAIWithoutApiKey_ThrowsException()
+    {
+        // Arrange
+        var configWithoutApiKey = new Mock<IConfiguration>();
+        configWithoutApiKey.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("openai");
+        configWithoutApiKey.Setup(c => c["OPENAI_API_KEY"]).Returns((string?)null);
+
+        var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new EmbeddingService(httpClientFactoryMock.Object, configWithoutApiKey.Object, _loggerMock.Object));
+
+        Assert.Contains("OPENAI_API_KEY not configured", exception.Message);
+    }
+
+    /// <summary>
+    /// BDD Scenario: OpenAI provider handles null data in response
+    /// Given: EMBEDDING_PROVIDER is "openai" and API returns response with data: null
+    /// When: GenerateEmbeddingsAsync is called
+    /// Then: Returns failure with "No embeddings returned from OpenAI"
+    /// </summary>
+    [Fact]
+    public async Task GenerateEmbeddingsAsync_OpenAINullData_ReturnsFailure()
+    {
+        // Arrange - OpenAI returns null data
+        var openaiConfig = new Mock<IConfiguration>();
+        openaiConfig.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("openai");
+        openaiConfig.Setup(c => c["OPENAI_API_KEY"]).Returns("test-key");
+
+        var nullDataResponse = JsonSerializer.Serialize(new
+        {
+            data = (object[]?)null,
+            model = "text-embedding-3-small"
+        });
+
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(nullDataResponse)
+            });
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri("https://api.openai.com/v1/")
+        };
+
+        var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        httpClientFactoryMock.Setup(f => f.CreateClient("OpenAI")).Returns(httpClient);
+
+        var service = new EmbeddingService(httpClientFactoryMock.Object, openaiConfig.Object, _loggerMock.Object);
+
+        // Act
+        var result = await service.GenerateEmbeddingAsync("test text");
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal("No embeddings returned from OpenAI", result.ErrorMessage);
+        Assert.Empty(result.Embeddings);
+    }
+
+    /// <summary>
+    /// BDD Scenario: OpenAI provider sorts embeddings by index
+    /// Given: EMBEDDING_PROVIDER is "openai" and API returns embeddings with indices [2, 0, 1]
+    /// When: GenerateEmbeddingsAsync is called with 3 texts
+    /// Then: Returned embeddings are sorted by index [0, 1, 2]
+    /// </summary>
+    [Fact]
+    public async Task GenerateEmbeddingsAsync_OpenAIUnorderedIndices_SortsEmbeddingsByIndex()
+    {
+        // Arrange - OpenAI returns unordered indices
+        var openaiConfig = new Mock<IConfiguration>();
+        openaiConfig.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("openai");
+        openaiConfig.Setup(c => c["OPENAI_API_KEY"]).Returns("test-key");
+
+        // Create embeddings with different values and unordered indices
+        var unorderedResponse = JsonSerializer.Serialize(new
+        {
+            data = new[]
+            {
+                new { @object = "embedding", embedding = Enumerable.Repeat(0.3f, 1536).ToArray(), index = 2 },
+                new { @object = "embedding", embedding = Enumerable.Repeat(0.1f, 1536).ToArray(), index = 0 },
+                new { @object = "embedding", embedding = Enumerable.Repeat(0.2f, 1536).ToArray(), index = 1 }
+            },
+            model = "text-embedding-3-small"
+        });
+
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(unorderedResponse)
+            });
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri("https://api.openai.com/v1/")
+        };
+
+        var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        httpClientFactoryMock.Setup(f => f.CreateClient("OpenAI")).Returns(httpClient);
+
+        var service = new EmbeddingService(httpClientFactoryMock.Object, openaiConfig.Object, _loggerMock.Object);
+
+        // Act
+        var result = await service.GenerateEmbeddingsAsync(new List<string> { "text 0", "text 1", "text 2" });
+
+        // Assert - Embeddings should be sorted by index
+        Assert.True(result.Success);
+        Assert.Equal(3, result.Embeddings.Count);
+        // Verify order by checking first element value (should be 0.1f for index 0, then 0.2f for index 1, then 0.3f for index 2)
+        Assert.Equal(0.1f, result.Embeddings[0][0]);
+        Assert.Equal(0.2f, result.Embeddings[1][0]);
+        Assert.Equal(0.3f, result.Embeddings[2][0]);
+    }
+
+    /// <summary>
+    /// BDD Scenario: Provider configuration is case-insensitive
+    /// Given: EMBEDDING_PROVIDER is set to "OLLAMA" (uppercase)
+    /// When: EmbeddingService is constructed
+    /// Then: Ollama provider is configured correctly (case-insensitive check)
+    /// </summary>
+    [Fact]
+    public void Constructor_ProviderNameUppercase_ConfiguresCorrectly()
+    {
+        // Arrange
+        var configWithUppercaseProvider = new Mock<IConfiguration>();
+        configWithUppercaseProvider.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("OLLAMA");
+        configWithUppercaseProvider.Setup(c => c["OLLAMA_URL"]).Returns("http://localhost:11434");
+
+        var httpClient = new HttpClient { BaseAddress = new Uri("http://localhost:11434") };
+        var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        httpClientFactoryMock.Setup(f => f.CreateClient("Ollama")).Returns(httpClient);
+
+        // Act - Should not throw exception
+        var service = new EmbeddingService(httpClientFactoryMock.Object, configWithUppercaseProvider.Object, _loggerMock.Object);
+
+        // Assert - Service was created successfully (implicit assertion)
+        Assert.NotNull(service);
+    }
+
+    /// <summary>
+    /// BDD Scenario: Successful embedding generation logs information with count
+    /// Given: API returns embeddings successfully
+    /// When: GenerateEmbeddingsAsync is called with 2 texts
+    /// Then: Information log is written with embedding count (2)
+    /// </summary>
+    [Fact]
+    public async Task GenerateEmbeddingsAsync_Success_LogsInformationWithCount()
+    {
+        // Arrange - OpenAI successful response
+        var openaiConfig = new Mock<IConfiguration>();
+        openaiConfig.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("openai");
+        openaiConfig.Setup(c => c["OPENAI_API_KEY"]).Returns("test-key");
+
+        var successResponse = JsonSerializer.Serialize(new
+        {
+            data = new[]
+            {
+                new { @object = "embedding", embedding = Enumerable.Repeat(0.1f, 1536).ToArray(), index = 0 },
+                new { @object = "embedding", embedding = Enumerable.Repeat(0.2f, 1536).ToArray(), index = 1 }
+            },
+            model = "text-embedding-3-small"
+        });
+
+        var handlerMock = new Mock<HttpMessageHandler>();
+        handlerMock.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(successResponse)
+            });
+
+        var httpClient = new HttpClient(handlerMock.Object)
+        {
+            BaseAddress = new Uri("https://api.openai.com/v1/")
+        };
+
+        var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        httpClientFactoryMock.Setup(f => f.CreateClient("OpenAI")).Returns(httpClient);
+
+        var mockLogger = new Mock<ILogger<EmbeddingService>>();
+        var service = new EmbeddingService(httpClientFactoryMock.Object, openaiConfig.Object, mockLogger.Object);
+
+        // Act
+        var result = await service.GenerateEmbeddingsAsync(new List<string> { "text 1", "text 2" });
+
+        // Assert - Success result
+        Assert.True(result.Success);
+        Assert.Equal(2, result.Embeddings.Count);
+
+        // Assert - Info log with count was written
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) =>
+                    state.ToString()!.Contains("Successfully generated 2 embeddings")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    #endregion
 }

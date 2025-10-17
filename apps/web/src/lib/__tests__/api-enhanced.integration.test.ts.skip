@@ -2,27 +2,26 @@
  * Integration tests for enhanced API client
  */
 
+// Mock fetch BEFORE any imports
+const mockFetch = jest.fn();
+global.fetch = mockFetch as any;
+
 import { apiEnhanced } from '../api-enhanced';
 import { ApiError, NetworkError } from '../errors';
 
-// Mock fetch globally
-global.fetch = jest.fn();
-
 describe('apiEnhanced integration tests', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.useFakeTimers();
+    mockFetch.mockClear();
   });
 
   afterEach(() => {
-    jest.runOnlyPendingTimers();
     jest.useRealTimers();
   });
 
   describe('successful requests', () => {
     it('should make successful GET request', async () => {
       const mockData = { id: '123', name: 'Test Game' };
-      (fetch as jest.Mock).mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
         headers: new Headers({ 'X-Correlation-Id': 'corr-123' }),
@@ -32,8 +31,8 @@ describe('apiEnhanced integration tests', () => {
       const result = await apiEnhanced.get('/api/v1/games/123');
 
       expect(result).toEqual(mockData);
-      expect(fetch).toHaveBeenCalledTimes(1);
-      expect(fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/api/v1/games/123'),
         expect.objectContaining({
           method: 'GET',
@@ -46,7 +45,7 @@ describe('apiEnhanced integration tests', () => {
       const requestBody = { name: 'New Game' };
       const mockData = { id: '456', name: 'New Game' };
 
-      (fetch as jest.Mock).mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         status: 201,
         headers: new Headers({ 'X-Correlation-Id': 'corr-456' }),
@@ -56,7 +55,7 @@ describe('apiEnhanced integration tests', () => {
       const result = await apiEnhanced.post('/api/v1/games', requestBody);
 
       expect(result).toEqual(mockData);
-      expect(fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/api/v1/games'),
         expect.objectContaining({
           method: 'POST',
@@ -70,7 +69,7 @@ describe('apiEnhanced integration tests', () => {
       const requestBody = { name: 'Updated Game' };
       const mockData = { id: '789', name: 'Updated Game' };
 
-      (fetch as jest.Mock).mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
         headers: new Headers(),
@@ -80,7 +79,7 @@ describe('apiEnhanced integration tests', () => {
       const result = await apiEnhanced.put('/api/v1/games/789', requestBody);
 
       expect(result).toEqual(mockData);
-      expect(fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/api/v1/games/789'),
         expect.objectContaining({
           method: 'PUT',
@@ -90,7 +89,7 @@ describe('apiEnhanced integration tests', () => {
     });
 
     it('should make successful DELETE request', async () => {
-      (fetch as jest.Mock).mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         status: 204,
         headers: new Headers()
@@ -98,7 +97,7 @@ describe('apiEnhanced integration tests', () => {
 
       await apiEnhanced.delete('/api/v1/games/123');
 
-      expect(fetch).toHaveBeenCalledWith(
+      expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/api/v1/games/123'),
         expect.objectContaining({
           method: 'DELETE'
@@ -109,7 +108,7 @@ describe('apiEnhanced integration tests', () => {
 
   describe('error handling', () => {
     it('should return null for 401 on GET request', async () => {
-      (fetch as jest.Mock).mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: false,
         status: 401,
         statusText: 'Unauthorized',
@@ -122,7 +121,7 @@ describe('apiEnhanced integration tests', () => {
     });
 
     it('should throw ApiError for 404', async () => {
-      (fetch as jest.Mock).mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: false,
         status: 404,
         statusText: 'Not Found',
@@ -141,7 +140,7 @@ describe('apiEnhanced integration tests', () => {
     });
 
     it('should throw ApiError for 500', async () => {
-      (fetch as jest.Mock).mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
@@ -152,7 +151,7 @@ describe('apiEnhanced integration tests', () => {
     });
 
     it('should throw NetworkError on connection failure', async () => {
-      (fetch as jest.Mock).mockRejectedValue(new TypeError('Failed to fetch'));
+      mockFetch.mockRejectedValue(new TypeError('Failed to fetch'));
 
       await expect(apiEnhanced.get('/api/v1/games')).rejects.toThrow(NetworkError);
     });
@@ -160,9 +159,10 @@ describe('apiEnhanced integration tests', () => {
 
   describe('retry logic', () => {
     it('should retry on 500 error and succeed', async () => {
+      jest.useFakeTimers();
       const mockData = { id: '123', name: 'Test Game' };
 
-      (fetch as jest.Mock)
+      mockFetch
         .mockResolvedValueOnce({
           ok: false,
           status: 500,
@@ -178,19 +178,20 @@ describe('apiEnhanced integration tests', () => {
 
       const promise = apiEnhanced.get('/api/v1/games/123');
 
-      // Advance timers for retry delay
-      await jest.advanceTimersByTimeAsync(1000);
+      // Run all pending timers to execute retry delay
+      await jest.runAllTimersAsync();
 
       const result = await promise;
 
       expect(result).toEqual(mockData);
-      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
     it('should retry on network error and succeed', async () => {
+      jest.useFakeTimers();
       const mockData = { id: '123', name: 'Test Game' };
 
-      (fetch as jest.Mock)
+      mockFetch
         .mockRejectedValueOnce(new TypeError('Network error'))
         .mockResolvedValueOnce({
           ok: true,
@@ -201,16 +202,16 @@ describe('apiEnhanced integration tests', () => {
 
       const promise = apiEnhanced.get('/api/v1/games/123');
 
-      await jest.advanceTimersByTimeAsync(1000);
+      await jest.runAllTimersAsync();
 
       const result = await promise;
 
       expect(result).toEqual(mockData);
-      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
     it('should not retry 404 errors', async () => {
-      (fetch as jest.Mock).mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: false,
         status: 404,
         statusText: 'Not Found',
@@ -219,11 +220,12 @@ describe('apiEnhanced integration tests', () => {
 
       await expect(apiEnhanced.get('/api/v1/games/999')).rejects.toThrow(ApiError);
 
-      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
     it('should use exponential backoff for retries', async () => {
-      (fetch as jest.Mock).mockResolvedValue({
+      jest.useFakeTimers();
+      mockFetch.mockResolvedValue({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
@@ -232,24 +234,18 @@ describe('apiEnhanced integration tests', () => {
 
       const promise = apiEnhanced.get('/api/v1/games/123');
 
-      // First attempt fails immediately
-      await jest.advanceTimersByTimeAsync(10);
-
-      // Second attempt after 1000ms
-      await jest.advanceTimersByTimeAsync(1000);
-
-      // Third attempt after 2000ms
-      await jest.advanceTimersByTimeAsync(2000);
+      await jest.runAllTimersAsync();
 
       await expect(promise).rejects.toThrow(ApiError);
 
-      expect(fetch).toHaveBeenCalledTimes(3); // Default maxAttempts
+      expect(mockFetch).toHaveBeenCalledTimes(3); // Default maxAttempts
     });
 
     it('should respect custom retry config', async () => {
+      jest.useFakeTimers();
       const mockData = { id: '123', name: 'Test Game' };
 
-      (fetch as jest.Mock)
+      mockFetch
         .mockResolvedValueOnce({
           ok: false,
           status: 500,
@@ -271,16 +267,16 @@ describe('apiEnhanced integration tests', () => {
         }
       });
 
-      await jest.advanceTimersByTimeAsync(500);
+      await jest.runAllTimersAsync();
 
       const result = await promise;
 
       expect(result).toEqual(mockData);
-      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch).toHaveBeenCalledTimes(2);
     });
 
     it('should skip retry when skipRetry is true', async () => {
-      (fetch as jest.Mock).mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: false,
         status: 500,
         headers: new Headers()
@@ -290,13 +286,14 @@ describe('apiEnhanced integration tests', () => {
         apiEnhanced.get('/api/v1/games/123', { skipRetry: true })
       ).rejects.toThrow(ApiError);
 
-      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('timeout handling', () => {
     it('should timeout if request exceeds timeout', async () => {
-      (fetch as jest.Mock).mockImplementation(
+      jest.useFakeTimers();
+      mockFetch.mockImplementation(
         () =>
           new Promise((resolve) => {
             setTimeout(
@@ -314,16 +311,17 @@ describe('apiEnhanced integration tests', () => {
 
       const promise = apiEnhanced.get('/api/v1/slow', { timeout: 2000, skipRetry: true });
 
+      // Advance only to timeout threshold
       await jest.advanceTimersByTimeAsync(2000);
 
       await expect(promise).rejects.toThrow();
-    }, 10000);
+    });
   });
 
   describe('correlation ID tracking', () => {
     it('should extract and track correlation ID from response', async () => {
       const mockData = { id: '123' };
-      (fetch as jest.Mock).mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
         headers: new Headers({ 'X-Correlation-Id': 'test-corr-123' }),
@@ -335,11 +333,11 @@ describe('apiEnhanced integration tests', () => {
       expect(response.correlationId).toBe('test-corr-123');
       expect(response.data).toEqual(mockData);
       expect(response.statusCode).toBe(200);
-    }, 10000);
+    });
 
     it('should handle missing correlation ID', async () => {
       const mockData = { id: '123' };
-      (fetch as jest.Mock).mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
         headers: new Headers(),
@@ -349,13 +347,13 @@ describe('apiEnhanced integration tests', () => {
       const response = await apiEnhanced.getWithMetadata('/api/v1/games/123');
 
       expect(response.correlationId).toBeUndefined();
-    }, 10000);
+    });
   });
 
   describe('different content types', () => {
     it('should handle JSON response', async () => {
       const mockData = { id: '123', name: 'Test' };
-      (fetch as jest.Mock).mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
         headers: new Headers({ 'content-type': 'application/json' }),
@@ -368,7 +366,7 @@ describe('apiEnhanced integration tests', () => {
     });
 
     it('should handle 204 No Content response', async () => {
-      (fetch as jest.Mock).mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         status: 204,
         headers: new Headers()
@@ -380,7 +378,7 @@ describe('apiEnhanced integration tests', () => {
     });
 
     it('should handle text response', async () => {
-      (fetch as jest.Mock).mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: true,
         status: 200,
         headers: new Headers({ 'content-type': 'text/plain' }),

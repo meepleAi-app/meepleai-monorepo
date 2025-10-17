@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import handler from "../health";
+import handler from "../../../pages/api/health";
 
 describe("health API handler", () => {
   it("responds with status 200 and ok true", () => {

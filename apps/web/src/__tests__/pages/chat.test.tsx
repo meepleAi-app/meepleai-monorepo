@@ -7,21 +7,33 @@ import { useChatStreaming } from '../../lib/hooks/useChatStreaming';
 // Mock the useChatStreaming hook
 const mockStartStreaming = jest.fn();
 const mockStopStreaming = jest.fn();
+let mockOnComplete: ((answer: string, snippets: any[], metadata: any) => void) | null = null;
+let mockOnError: ((error: string) => void) | null = null;
 
 jest.mock('../../lib/hooks/useChatStreaming', () => ({
-  useChatStreaming: jest.fn(() => [
-    {
-      isStreaming: false,
-      currentAnswer: '',
-      snippets: [],
-      state: null,
-      error: null
-    },
-    {
-      startStreaming: mockStartStreaming,
-      stopStreaming: mockStopStreaming
+  useChatStreaming: jest.fn((callbacks?: { onComplete?: any; onError?: any }) => {
+    // Capture callbacks for later use
+    if (callbacks?.onComplete) {
+      mockOnComplete = callbacks.onComplete;
     }
-  ])
+    if (callbacks?.onError) {
+      mockOnError = callbacks.onError;
+    }
+
+    return [
+      {
+        isStreaming: false,
+        currentAnswer: '',
+        snippets: [],
+        state: null,
+        error: null
+      },
+      {
+        startStreaming: mockStartStreaming,
+        stopStreaming: mockStopStreaming
+      }
+    ];
+  })
 }));
 
 // Mock the API client
@@ -123,22 +135,34 @@ describe('ChatPage', () => {
     mockApi.delete.mockReset();
     mockStartStreaming.mockReset();
     mockStopStreaming.mockReset();
+    mockOnComplete = null;
+    mockOnError = null;
     window.confirm = originalConfirm;
 
-    // Reset useChatStreaming mock to default state
-    (useChatStreaming as jest.Mock).mockReturnValue([
-      {
-        isStreaming: false,
-        currentAnswer: '',
-        snippets: [],
-        state: null,
-        error: null
-      },
-      {
-        startStreaming: mockStartStreaming,
-        stopStreaming: mockStopStreaming
+    // Reset useChatStreaming mock to default state with callback capturing
+    (useChatStreaming as jest.Mock).mockImplementation((callbacks?: { onComplete?: any; onError?: any }) => {
+      // Capture callbacks for later use
+      if (callbacks?.onComplete) {
+        mockOnComplete = callbacks.onComplete;
       }
-    ]);
+      if (callbacks?.onError) {
+        mockOnError = callbacks.onError;
+      }
+
+      return [
+        {
+          isStreaming: false,
+          currentAnswer: '',
+          snippets: [],
+          state: null,
+          error: null
+        },
+        {
+          startStreaming: mockStartStreaming,
+          stopStreaming: mockStopStreaming
+        }
+      ];
+    });
   });
 
   afterEach(() => {
@@ -933,12 +957,6 @@ describe('ChatPage', () => {
         });
 
         // Send a message
-        mockApi.post.mockResolvedValueOnce({
-          answer: 'Castling is only possible when...',
-          snippets: [],
-          messageId: 'msg-3'
-        });
-
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
         await user.type(input, 'Can I castle now?');
 
@@ -946,11 +964,7 @@ describe('ChatPage', () => {
         await user.click(sendButton);
 
         await waitFor(() => {
-          expect(mockApi.post).toHaveBeenCalledWith('/api/v1/agents/qa', {
-            gameId: 'game-1',
-            query: 'Can I castle now?',
-            chatId: 'chat-1'
-          });
+          expect(mockStartStreaming).toHaveBeenCalledWith('game-1', 'Can I castle now?', 'chat-1');
         });
       });
 
@@ -977,11 +991,6 @@ describe('ChatPage', () => {
         };
 
         mockApi.post.mockResolvedValueOnce(newChat);
-        mockApi.post.mockResolvedValueOnce({
-          answer: 'Great question!',
-          snippets: [],
-          messageId: 'msg-1'
-        });
 
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
         await user.type(input, 'First message');
@@ -990,18 +999,14 @@ describe('ChatPage', () => {
         await user.click(sendButton);
 
         await waitFor(() => {
-          expect(mockApi.post).toHaveBeenNthCalledWith(1, '/api/v1/chats', {
+          expect(mockApi.post).toHaveBeenCalledWith('/api/v1/chats', {
             gameId: 'game-1',
             agentId: 'agent-1'
           });
         });
 
         await waitFor(() => {
-          expect(mockApi.post).toHaveBeenNthCalledWith(2, '/api/v1/agents/qa', {
-            gameId: 'game-1',
-            query: 'First message',
-            chatId: 'chat-new'
-          });
+          expect(mockStartStreaming).toHaveBeenCalledWith('game-1', 'First message', 'chat-new');
         });
       });
 
@@ -1023,10 +1028,14 @@ describe('ChatPage', () => {
           expect(screen.getByText('How do I castle?')).toBeInTheDocument();
         });
 
-        mockApi.post.mockResolvedValueOnce({
-          answer: 'You can castle when there are no pieces between...',
-          snippets: [],
-          messageId: 'msg-3'
+        // Mock the streaming to trigger onComplete when startStreaming is called
+        mockStartStreaming.mockImplementation(() => {
+          if (mockOnComplete) {
+            // Use setTimeout to make the callback asynchronous
+            setTimeout(() => {
+              mockOnComplete!('You can castle when there are no pieces between...', [], { totalTokens: 10, confidence: 0.95 });
+            }, 0);
+          }
         });
 
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);

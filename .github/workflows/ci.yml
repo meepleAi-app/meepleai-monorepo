@@ -226,6 +226,24 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+      # TEST-02: Enforce 90% coverage threshold
+      - name: Check Coverage Threshold (90%)
+        env:
+          CI: true
+          OPENROUTER_API_KEY: test-key-for-ci
+          QDRANT_URL: http://127.0.0.1:6333
+          ConnectionStrings__Postgres: Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100
+        run: |
+          echo "::notice::TEST-02: Checking 90% coverage threshold enforcement"
+          echo "Note: Currently collecting coverage from filtered test set (ISSUE-319)"
+          echo "Full coverage enforcement will be enabled when all tests are migrated"
+
+          # TODO: Enable threshold enforcement when all tests use IAsyncLifetime
+          # dotnet test -p:Threshold=90 -p:ThresholdType=line --no-build
+
+          echo "::warning::Coverage threshold check is documented but not yet enforced"
+          echo "::warning::Track progress in docs/issue/test-02-coverage-90-percent-progress.md"
+
   validate-observability-configs:
     needs: changes
     name: Validate Prometheus & Alertmanager Configs

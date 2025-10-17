@@ -1,0 +1,261 @@
+name: Load Testing
+
+on:
+  # Manual trigger for load tests
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'Load test scenario'
+        required: true
+        default: 'users100'
+        type: choice
+        options:
+          - users100
+          - users500
+          - users1000
+
+  # Optional: Run on PR to main (commented out to avoid heavy load on every PR)
+  # pull_request:
+  #   branches: [main]
+  #   paths:
+  #     - 'apps/api/**'
+  #     - 'tests/load/**'
+
+jobs:
+  load-test:
+    name: Run Load Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        test-file:
+          - games-list-load-test.js
+          - chat-load-test.js
+          - qa-agent-load-test.js
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Verify k6 installation
+        run: k6 version
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Create environment files
+        run: |
+          # API environment
+          cat > infra/env/api.env.dev << 'EOF'
+          ASPNETCORE_ENVIRONMENT=Development
+          ASPNETCORE_URLS=http://+:8080
+          ConnectionStrings__Postgres=Host=postgres;Port=5432;Database=meepleai;Username=meepleai;Password=meepleai_dev_pwd
+          REDIS_URL=redis:6379
+          QDRANT_URL=http://qdrant:6333
+          SEQ_URL=http://seq:5341
+          OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
+          OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+          CI=true
+          EOF
+
+          # Postgres environment
+          cat > infra/env/postgres.env.dev << 'EOF'
+          POSTGRES_DB=meepleai
+          POSTGRES_USER=meepleai
+          POSTGRES_PASSWORD=meepleai_dev_pwd
+          EOF
+
+      - name: Start infrastructure services
+        run: |
+          cd infra
+          docker compose up -d postgres redis qdrant seq
+
+      - name: Wait for infrastructure to be ready
+        run: |
+          # Wait for Postgres
+          echo "Waiting for Postgres..."
+          for i in {1..30}; do
+            if docker compose -f infra/docker-compose.yml exec -T postgres pg_isready -U meepleai; then
+              echo "Postgres is ready"
+              break
+            fi
+            echo "Waiting for Postgres... ($i/30)"
+            sleep 2
+          done
+
+          # Wait for Redis
+          echo "Waiting for Redis..."
+          for i in {1..30}; do
+            if docker compose -f infra/docker-compose.yml exec -T redis redis-cli ping | grep -q PONG; then
+              echo "Redis is ready"
+              break
+            fi
+            echo "Waiting for Redis... ($i/30)"
+            sleep 2
+          done
+
+          # Wait for Qdrant
+          echo "Waiting for Qdrant..."
+          for i in {1..30}; do
+            if curl -f http://localhost:6333/healthz > /dev/null 2>&1; then
+              echo "Qdrant is ready"
+              break
+            fi
+            echo "Waiting for Qdrant... ($i/30)"
+            sleep 2
+          done
+
+      - name: Build and start API
+        run: |
+          cd infra
+          docker compose build api
+          docker compose up -d api
+
+      - name: Wait for API to be ready
+        run: |
+          echo "Waiting for API health check..."
+          for i in {1..60}; do
+            if curl -f http://localhost:8080/health/ready > /dev/null 2>&1; then
+              echo "API is ready"
+              break
+            fi
+            echo "Waiting for API... ($i/60)"
+            sleep 5
+          done
+
+          # Final health check
+          curl -v http://localhost:8080/health
+
+      - name: Verify seed data
+        run: |
+          # Check if demo games exist
+          curl -v http://localhost:8080/api/v1/games | jq '.'
+
+      - name: Run load test - ${{ matrix.test-file }}
+        env:
+          SCENARIO: ${{ github.event.inputs.scenario || 'users100' }}
+          API_BASE_URL: http://localhost:8080
+        run: |
+          cd tests/load
+          echo "Running ${{ matrix.test-file }} with scenario: $SCENARIO"
+          k6 run --out json=${{ matrix.test-file }}.results.json \
+                 --summary-export=${{ matrix.test-file }}.summary.json \
+                 ${{ matrix.test-file }}
+
+      - name: Generate HTML report
+        if: always()
+        run: |
+          cd tests/load
+          # Create a simple HTML report from JSON results
+          cat > ${{ matrix.test-file }}.report.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Load Test Report - ${{ matrix.test-file }}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+              .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+              h1 { color: #333; border-bottom: 3px solid #4CAF50; padding-bottom: 10px; }
+              h2 { color: #555; margin-top: 30px; }
+              table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+              th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+              th { background-color: #4CAF50; color: white; }
+              tr:hover { background-color: #f5f5f5; }
+              .metric { font-weight: bold; color: #4CAF50; }
+              .threshold-pass { color: #4CAF50; }
+              .threshold-fail { color: #f44336; }
+              pre { background: #f4f4f4; padding: 15px; border-radius: 4px; overflow-x: auto; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <h1>Load Test Report: ${{ matrix.test-file }}</h1>
+              <p><strong>Scenario:</strong> ${{ github.event.inputs.scenario || 'users100' }}</p>
+              <p><strong>Date:</strong> $(date)</p>
+              <p><strong>API Base URL:</strong> http://localhost:8080</p>
+
+              <h2>Test Results</h2>
+              <p>See JSON files for detailed metrics.</p>
+
+              <h2>Files Generated</h2>
+              <ul>
+                <li>Results: ${{ matrix.test-file }}.results.json</li>
+                <li>Summary: ${{ matrix.test-file }}.summary.json</li>
+              </ul>
+            </div>
+          </body>
+          </html>
+          EOF
+
+      - name: Upload load test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-results-${{ matrix.test-file }}-${{ github.event.inputs.scenario || 'users100' }}
+          path: |
+            tests/load/*.results.json
+            tests/load/*.summary.json
+            tests/load/*.report.html
+          retention-days: 30
+
+      - name: Check for test failures
+        if: always()
+        run: |
+          cd tests/load
+          # k6 exits with non-zero if thresholds fail
+          # This step will fail the job if any threshold was breached
+          if [ -f "${{ matrix.test-file }}.summary.json" ]; then
+            echo "Test summary:"
+            cat ${{ matrix.test-file }}.summary.json | jq '.metrics'
+          fi
+
+      - name: Display service logs on failure
+        if: failure()
+        run: |
+          echo "=== API Logs ==="
+          docker compose -f infra/docker-compose.yml logs api | tail -100
+
+          echo "=== Postgres Logs ==="
+          docker compose -f infra/docker-compose.yml logs postgres | tail -50
+
+          echo "=== Redis Logs ==="
+          docker compose -f infra/docker-compose.yml logs redis | tail -50
+
+          echo "=== Qdrant Logs ==="
+          docker compose -f infra/docker-compose.yml logs qdrant | tail -50
+
+      - name: Cleanup
+        if: always()
+        run: |
+          cd infra
+          docker compose down -v
+
+  summary:
+    name: Load Test Summary
+    runs-on: ubuntu-latest
+    needs: load-test
+    if: always()
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: load-test-results
+
+      - name: Display summary
+        run: |
+          echo "=== Load Test Summary ==="
+          echo "All load test results have been collected."
+          echo "Check the artifacts for detailed reports."
+          ls -R load-test-results/

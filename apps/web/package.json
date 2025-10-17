@@ -21,10 +21,13 @@
     "chess.js": "^1.4.0",
     "framer-motion": "^12.23.24",
     "next": "15.5.4",
+    "pdfjs-dist": "^5.4.296",
     "react": "18.3.1",
     "react-chessboard": "^4.6.0",
     "react-dom": "18.3.1",
     "react-intersection-observer": "^9.16.0",
+    "react-pdf": "^10.2.0",
+    "react-window": "^2.2.1",
     "recharts": "^3.2.1"
   },
   "devDependencies": {
@@ -41,6 +44,7 @@
     "@types/node": "24.7.2",
     "@types/react": "18.2.66",
     "@types/react-dom": "18.2.22",
+    "@types/react-window": "^2.0.0",
     "autoprefixer": "^10.4.21",
     "eslint": "8.57.0",
     "eslint-config-next": "14.2.12",

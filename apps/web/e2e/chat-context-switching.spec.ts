@@ -44,7 +44,12 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
   test('preserves conversation history when switching between games', async ({ page }) => {
     // Step 1: Select Chess game
     const gameSelector = page.locator('#gameSelect');
-    await gameSelector.selectOption({ label: /chess/i });
+    // Get the option by text and select by value
+    const chessOption = await page.locator('#gameSelect option').filter({ hasText: /chess/i }).first();
+    const chessValue = await chessOption.getAttribute('value');
+    if (chessValue) {
+      await gameSelector.selectOption(chessValue);
+    }
 
     // Wait for agents to load
     await page.waitForSelector('#agentSelect option:not(:disabled)', { timeout: 10000 });
@@ -70,7 +75,11 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     // Note: We're testing the UI, not waiting for AI response (which may be slow/unavailable in tests)
 
     // Step 3: Switch to Checkers game
-    await gameSelector.selectOption({ label: /checkers|tic.tac.toe/i }); // Use available games
+    const checkersOption = await page.locator('#gameSelect option').filter({ hasText: /checkers|tic.tac.toe/i }).first();
+    const checkersValue = await checkersOption.getAttribute('value');
+    if (checkersValue) {
+      await gameSelector.selectOption(checkersValue);
+    }
 
     // Verify game context badge updated
     await expect(contextBadge).not.toContainText(/chess/i);
@@ -92,7 +101,11 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     await expect(page.locator('.message, [role="log"] li').filter({ hasText: 'backwards' }).first()).toBeVisible({ timeout: 15000 });
 
     // Step 5: Switch back to Chess
-    await gameSelector.selectOption({ label: /chess/i });
+    const chessOption2 = await page.locator('#gameSelect option').filter({ hasText: /chess/i }).first();
+    const chessValue2 = await chessOption2.getAttribute('value');
+    if (chessValue2) {
+      await gameSelector.selectOption(chessValue2);
+    }
 
     // Wait for page to update
     await page.waitForTimeout(500);
@@ -108,7 +121,11 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     await expect(checkersMessages).not.toBeVisible();
 
     // Step 7: Switch back to Checkers/Tic-Tac-Toe to verify its history was preserved
-    await gameSelector.selectOption({ label: /checkers|tic.tac.toe/i });
+    const checkersOption2 = await page.locator('#gameSelect option').filter({ hasText: /checkers|tic.tac.toe/i }).first();
+    const checkersValue2 = await checkersOption2.getAttribute('value');
+    if (checkersValue2) {
+      await gameSelector.selectOption(checkersValue2);
+    }
 
     // Wait for page to update
     await page.waitForTimeout(500);
@@ -136,7 +153,11 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     // (depending on implementation)
 
     // Select Chess
-    await gameSelector.selectOption({ label: /chess/i });
+    const chessOption = await page.locator('#gameSelect option').filter({ hasText: /chess/i }).first();
+    const chessValue = await chessOption.getAttribute('value');
+    if (chessValue) {
+      await gameSelector.selectOption(chessValue);
+    }
     await page.waitForTimeout(300);
 
     // Verify badge shows Chess
@@ -144,7 +165,11 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     await expect(contextBadge).toContainText(/chess/i);
 
     // Switch to another game
-    await gameSelector.selectOption({ label: /tic.tac.toe/i });
+    const ticTacToeOption = await page.locator('#gameSelect option').filter({ hasText: /tic.tac.toe/i }).first();
+    const ticTacToeValue = await ticTacToeOption.getAttribute('value');
+    if (ticTacToeValue) {
+      await gameSelector.selectOption(ticTacToeValue);
+    }
     await page.waitForTimeout(300);
 
     // Verify badge updated
@@ -162,7 +187,11 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     const gameSelector = page.locator('#gameSelect');
 
     // Select Chess and create a chat
-    await gameSelector.selectOption({ label: /chess/i });
+    const chessOption = await page.locator('#gameSelect option').filter({ hasText: /chess/i }).first();
+    const chessValue = await chessOption.getAttribute('value');
+    if (chessValue) {
+      await gameSelector.selectOption(chessValue);
+    }
     await page.waitForSelector('#agentSelect option:not(:disabled)', { timeout: 10000 });
 
     const agentSelector = page.locator('#agentSelect');
@@ -179,7 +208,11 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     const chessChats = await page.locator('[role="list"] [role="button"], nav[aria-label="Chat history"] li').count();
 
     // Switch to different game
-    await gameSelector.selectOption({ label: /tic.tac.toe/i });
+    const ticTacToeOption = await page.locator('#gameSelect option').filter({ hasText: /tic.tac.toe/i }).first();
+    const ticTacToeValue = await ticTacToeOption.getAttribute('value');
+    if (ticTacToeValue) {
+      await gameSelector.selectOption(ticTacToeValue);
+    }
     await page.waitForTimeout(500);
 
     // Chat list should be different (either empty or different chats)
@@ -205,7 +238,11 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
 
     // Setup: Create conversations in two games
     // Game 1: Chess
-    await gameSelector.selectOption({ label: /chess/i });
+    const chessOption = await page.locator('#gameSelect option').filter({ hasText: /chess/i }).first();
+    const chessValue = await chessOption.getAttribute('value');
+    if (chessValue) {
+      await gameSelector.selectOption(chessValue);
+    }
     await page.waitForSelector('#agentSelect option:not(:disabled)', { timeout: 10000 });
     const agentSelector = page.locator('#agentSelect');
     await agentSelector.selectOption({ index: 1 });
@@ -215,7 +252,11 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     await page.waitForTimeout(1000);
 
     // Game 2: Tic-Tac-Toe
-    await gameSelector.selectOption({ label: /tic.tac.toe/i });
+    const ticTacToeOption = await page.locator('#gameSelect option').filter({ hasText: /tic.tac.toe/i }).first();
+    const ticTacToeValue = await ticTacToeOption.getAttribute('value');
+    if (ticTacToeValue) {
+      await gameSelector.selectOption(ticTacToeValue);
+    }
     await page.waitForSelector('#agentSelect option:not(:disabled)', { timeout: 10000 });
     await agentSelector.selectOption({ index: 1 });
 
@@ -226,7 +267,11 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     // Rapid switching test
     for (let i = 0; i < 3; i++) {
       // Switch to Chess
-      await gameSelector.selectOption({ label: /chess/i });
+      const chessOption2 = await page.locator('#gameSelect option').filter({ hasText: /chess/i }).first();
+      const chessValue2 = await chessOption2.getAttribute('value');
+      if (chessValue2) {
+        await gameSelector.selectOption(chessValue2);
+      }
       await page.waitForTimeout(200);
 
       // Verify Chess message exists
@@ -236,7 +281,11 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
       await expect(messagesArea.locator('text=Tic-Tac-Toe question 1')).not.toBeVisible();
 
       // Switch to Tic-Tac-Toe
-      await gameSelector.selectOption({ label: /tic.tac.toe/i });
+      const ticTacToeOption2 = await page.locator('#gameSelect option').filter({ hasText: /tic.tac.toe/i }).first();
+      const ticTacToeValue2 = await ticTacToeOption2.getAttribute('value');
+      if (ticTacToeValue2) {
+        await gameSelector.selectOption(ticTacToeValue2);
+      }
       await page.waitForTimeout(200);
 
       // Verify Tic-Tac-Toe message exists

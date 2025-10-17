@@ -48,7 +48,7 @@ describe('retryUtils', () => {
       const error = new Error('Persistent failure');
       const fn = jest.fn().mockRejectedValue(error);
 
-      const promise = retryWithBackoff(fn, { maxAttempts: 3 }).catch(e => e);
+      const promise = retryWithBackoff(fn, { maxAttempts: 3 }).catch((e: Error) => e);
 
       // Fast-forward through all delays
       await jest.runAllTimersAsync();
@@ -56,7 +56,7 @@ describe('retryUtils', () => {
       const result = await promise;
 
       expect(result).toBeInstanceOf(Error);
-      expect(result.message).toBe('Persistent failure');
+      expect((result as Error).message).toBe('Persistent failure');
       expect(fn).toHaveBeenCalledTimes(3);
     });
 
@@ -68,7 +68,7 @@ describe('retryUtils', () => {
         maxAttempts: 3,
         initialDelayMs: 1000,
         onRetry
-      }).catch(e => e);
+      }).catch((e: Error) => e);
 
       await jest.runAllTimersAsync();
       await promise;
@@ -88,7 +88,7 @@ describe('retryUtils', () => {
         initialDelayMs: 1000,
         maxDelayMs: 2000,
         onRetry
-      }).catch(e => e);
+      }).catch((e: Error) => e);
 
       await jest.runAllTimersAsync();
       await promise;
@@ -121,7 +121,7 @@ describe('retryUtils', () => {
         maxAttempts: 2,
         initialDelayMs: 500,
         onRetry
-      }).catch(e => e);
+      }).catch((e: Error) => e);
 
       await jest.runAllTimersAsync();
       await promise;
@@ -208,7 +208,7 @@ describe('retryUtils', () => {
       const promise = retryableFetch();
       await jest.runAllTimersAsync();
 
-      const result = await promise;
+      const result = await promise as Response;
 
       expect(result).toBe(successResponse);
       expect(fetchFn).toHaveBeenCalledTimes(2);
@@ -236,7 +236,7 @@ describe('retryUtils', () => {
         onRetry
       });
 
-      const promise = retryableFetch().catch(e => e);
+      const promise = retryableFetch().catch((e: Error) => e);
       await jest.runAllTimersAsync();
       await promise;
 
@@ -289,7 +289,7 @@ describe('retryUtils', () => {
 
       await jest.runAllTimersAsync();
 
-      const result = await promise;
+      const result = await promise as Response;
 
       expect(result).toBe(successResponse);
       expect(fn).toHaveBeenCalledTimes(2);

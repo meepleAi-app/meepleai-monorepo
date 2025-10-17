@@ -96,6 +96,83 @@ global.IntersectionObserver = class IntersectionObserver {
   }
 };
 
+// Mock ReadableStream for SSE streaming tests
+if (typeof global.ReadableStream === 'undefined') {
+  global.ReadableStream = class ReadableStream {
+    constructor(underlyingSource) {
+      this.underlyingSource = underlyingSource;
+      this._chunks = [];
+      this._closed = false;
+
+      // Create real controller that captures enqueued chunks
+      this.controller = {
+        enqueue: (chunk) => {
+          this._chunks.push(chunk);
+        },
+        close: () => {
+          this._closed = true;
+        },
+        error: (err) => {
+          this._error = err;
+        },
+      };
+
+      // Start the underlying source
+      if (underlyingSource && underlyingSource.start) {
+        underlyingSource.start(this.controller);
+      }
+    }
+
+    getReader() {
+      let index = 0;
+      const chunks = this._chunks;
+      const closed = () => this._closed;
+      const error = () => this._error;
+
+      return {
+        read: async () => {
+          // Check for errors
+          if (error()) {
+            throw error();
+          }
+
+          // Return chunks that have been enqueued
+          if (index < chunks.length) {
+            return { value: chunks[index++], done: false };
+          }
+
+          // If stream is closed and no more chunks, return done
+          if (closed()) {
+            return { done: true };
+          }
+
+          // Wait a bit for more chunks (simulate async behavior)
+          await new Promise(resolve => setTimeout(resolve, 10));
+
+          // Check again after waiting
+          if (index < chunks.length) {
+            return { value: chunks[index++], done: false };
+          }
+
+          if (closed()) {
+            return { done: true };
+          }
+
+          // If still not closed, return done anyway to avoid infinite loop
+          return { done: true };
+        },
+        cancel: jest.fn(),
+        releaseLock: jest.fn(),
+      };
+    }
+
+    cancel() {
+      this._closed = true;
+      return Promise.resolve();
+    }
+  };
+}
+
 beforeEach(() => {
   const state = typeof expect !== 'undefined' ? expect.getState?.() : undefined;
   if (state?.testPath?.includes('src/pages/__tests__/admin.test.tsx')) {

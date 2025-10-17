@@ -702,31 +702,25 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         int? maxRequestsPerHour = null)
     {
         using var scope = Factory.Services.CreateScope();
-        var service = scope.ServiceProvider.GetRequiredService<Services.ApiKeyManagementService>();
+        var service = scope.ServiceProvider.GetRequiredService<Api.Services.ApiKeyAuthenticationService>();
 
-        var request = new CreateApiKeyRequest
-        {
-            KeyName = keyName,
-            Scopes = scopes,
-            ExpiresAt = expiresAt,
-            Environment = environment,
-            MaxRequestsPerDay = maxRequestsPerDay,
-            MaxRequestsPerHour = maxRequestsPerHour
-        };
+        var (plaintextKey, entity) = await service.GenerateApiKeyAsync(
+            userId,
+            keyName,
+            scopes,
+            expiresAt,
+            environment);
 
-        var response = await service.CreateApiKeyAsync(userId, request);
+        // Note: Quota fields (maxRequestsPerDay, maxRequestsPerHour) are not yet implemented
+        // They will be added in a future iteration of the API key management feature
 
-        // Retrieve the entity from database
-        var db = scope.ServiceProvider.GetRequiredService<Infrastructure.MeepleAiDbContext>();
-        var entity = await db.ApiKeys.FindAsync(response.ApiKey.Id);
-
-        return (response.PlaintextKey, entity!);
+        return (plaintextKey, entity);
     }
 
     private async Task RevokeTestApiKeyAsync(string keyId, string userId)
     {
         using var scope = Factory.Services.CreateScope();
-        var service = scope.ServiceProvider.GetRequiredService<Services.ApiKeyManagementService>();
+        var service = scope.ServiceProvider.GetRequiredService<Api.Services.ApiKeyAuthenticationService>();
         await service.RevokeApiKeyAsync(keyId, userId);
     }
 

@@ -1,7 +1,6 @@
 name: Load Testing
 
 on:
-  # Manual trigger for load tests
   workflow_dispatch:
     inputs:
       scenario:
@@ -14,116 +13,185 @@ on:
           - users500
           - users1000
 
-  # Optional: Run on PR to main (commented out to avoid heavy load on every PR)
-  # pull_request:
-  #   branches: [main]
-  #   paths:
-  #     - 'apps/api/**'
-  #     - 'tests/load/**'
+# Optimization: Share environment variables across jobs
+env:
+  POSTGRES_USER: meeple
+  POSTGRES_PASSWORD: meeplepass
+  POSTGRES_DB: meepleai
+  DOTNET_VERSION: '9.0.x'
+  K6_VERSION: '0.53.0'
 
 jobs:
-  load-test:
-    name: Run Load Tests
+  # Optimization 1: Shared setup job for common dependencies
+  setup:
+    name: Setup Dependencies
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    strategy:
-      matrix:
-        test-file:
-          - games-list-load-test.js
-          - chat-load-test.js
-          - qa-agent-load-test.js
+    outputs:
+      cache-hit-nuget: ${{ steps.cache-nuget.outputs.cache-hit }}
+      cache-hit-k6: ${{ steps.cache-k6.outputs.cache-hit }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Optimization 2: Cache .NET NuGet packages
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        id: cache-nuget
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore .NET dependencies
+        if: steps.cache-nuget.outputs.cache-hit != 'true'
+        run: |
+          cd apps/api
+          dotnet restore
+
+      # Optimization 3: Cache k6 installation
+      - name: Cache k6
+        id: cache-k6
+        uses: actions/cache@v4
+        with:
+          path: /usr/bin/k6
+          key: ${{ runner.os }}-k6-${{ env.K6_VERSION }}
+          restore-keys: |
+            ${{ runner.os }}-k6-
+
       - name: Install k6
+        if: steps.cache-k6.outputs.cache-hit != 'true'
         run: |
           sudo gpg -k
-          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 \
+            --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | \
+            sudo tee /etc/apt/sources.list.d/k6.list
           sudo apt-get update
           sudo apt-get install k6
 
-      - name: Verify k6 installation
-        run: k6 version
+  # Optimization 4: Shared infrastructure job
+  infrastructure:
+    name: Start Infrastructure
+    runs-on: ubuntu-latest
+    needs: setup
+
+    # Optimization 5: Use service containers instead of docker-compose
+    services:
+      postgres:
+        image: postgres:16.4-alpine3.20
+        env:
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+      redis:
+        image: redis:7.4.1-alpine3.20
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+      qdrant:
+        image: qdrant/qdrant:v1.12.4
+        ports:
+          - 6333:6333
+          - 6334:6334
+        options: >-
+          --health-cmd "curl -f http://localhost:6333/healthz || exit 1"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore NuGet cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
       - name: Setup environment files
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY || 'sk-or-test-key-placeholder' }}
         run: |
-          # Copy example files to actual files
           cd infra/env
           cp api.env.dev.example api.env.dev
-          cp n8n.env.dev.example n8n.env.dev
-          cp web.env.dev.example web.env.dev
-
-          # Update API env with CI-specific values
-          # Replace OPENROUTER_API_KEY placeholder with actual value
           sed -i "s|OPENROUTER_API_KEY=.*|OPENROUTER_API_KEY=${OPENROUTER_API_KEY}|" api.env.dev
 
-          echo "Environment files configured:"
-          ls -la
+      # Optimization 6: Docker Buildx with GitHub Actions cache
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Start infrastructure services
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Build API with cache
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/api
+          file: ./apps/api/src/Api/Dockerfile
+          push: false
+          load: true
+          tags: meepleai-api:latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      # Optimization 7: Move cache to avoid growing indefinitely
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Start API container
         env:
-          POSTGRES_USER: meeple
-          POSTGRES_PASSWORD: meeplepass
-          POSTGRES_DB: meepleai
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
         run: |
-          cd infra
-          docker compose up -d postgres redis qdrant seq
-
-      - name: Wait for infrastructure to be ready
-        run: |
-          # Wait for Postgres
-          echo "Waiting for Postgres..."
-          for i in {1..30}; do
-            if docker compose -f infra/docker-compose.yml exec -T postgres pg_isready -U meeple; then
-              echo "Postgres is ready"
-              break
-            fi
-            echo "Waiting for Postgres... ($i/30)"
-            sleep 2
-          done
-
-          # Wait for Redis
-          echo "Waiting for Redis..."
-          for i in {1..30}; do
-            if docker compose -f infra/docker-compose.yml exec -T redis redis-cli ping | grep -q PONG; then
-              echo "Redis is ready"
-              break
-            fi
-            echo "Waiting for Redis... ($i/30)"
-            sleep 2
-          done
-
-          # Wait for Qdrant
-          echo "Waiting for Qdrant..."
-          for i in {1..30}; do
-            if curl -f http://localhost:6333/healthz > /dev/null 2>&1; then
-              echo "Qdrant is ready"
-              break
-            fi
-            echo "Waiting for Qdrant... ($i/30)"
-            sleep 2
-          done
-
-      - name: Build and start API
-        env:
-          POSTGRES_USER: meeple
-          POSTGRES_PASSWORD: meeplepass
-          POSTGRES_DB: meepleai
-        run: |
-          cd infra
-          docker compose build api
-          docker compose up -d api
+          docker run -d \
+            --name api \
+            --network host \
+            -e ASPNETCORE_ENVIRONMENT=Development \
+            -e ASPNETCORE_URLS=http://+:8080 \
+            -e ConnectionStrings__Postgres="Host=localhost;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}" \
+            -e REDIS_URL=localhost:6379 \
+            -e QDRANT_URL=http://localhost:6333 \
+            -e SEQ_URL=http://localhost:5341 \
+            -e OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY || 'sk-or-test-key-placeholder' }} \
+            -e CI=true \
+            meepleai-api:latest
 
       - name: Wait for API to be ready
         run: |
@@ -142,8 +210,140 @@ jobs:
 
       - name: Verify seed data
         run: |
-          # Check if demo games exist
           curl -v http://localhost:8080/api/v1/games | jq '.'
+
+      # Save API image as artifact for load test jobs
+      - name: Save API image
+        run: |
+          docker save meepleai-api:latest | gzip > /tmp/api-image.tar.gz
+
+      - name: Upload API image
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-image
+          path: /tmp/api-image.tar.gz
+          retention-days: 1
+
+  # Optimization 8: Load test jobs use shared infrastructure
+  load-test:
+    name: Run Load Tests
+    runs-on: ubuntu-latest
+    needs: [setup, infrastructure]
+    timeout-minutes: 20
+
+    strategy:
+      matrix:
+        test-file:
+          - games-list-load-test.js
+          - chat-load-test.js
+          - qa-agent-load-test.js
+
+    # Optimization 9: Reuse service containers from infrastructure job
+    services:
+      postgres:
+        image: postgres:16.4-alpine3.20
+        env:
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+      redis:
+        image: redis:7.4.1-alpine3.20
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+      qdrant:
+        image: qdrant/qdrant:v1.12.4
+        ports:
+          - 6333:6333
+          - 6334:6334
+        options: >-
+          --health-cmd "curl -f http://localhost:6333/healthz || exit 1"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Optimization 10: Restore k6 from cache (instant if cached)
+      - name: Restore k6 cache
+        uses: actions/cache@v4
+        with:
+          path: /usr/bin/k6
+          key: ${{ runner.os }}-k6-${{ env.K6_VERSION }}
+          restore-keys: |
+            ${{ runner.os }}-k6-
+
+      - name: Verify k6 installation
+        run: k6 version
+
+      # Optimization 11: Download pre-built API image
+      - name: Download API image
+        uses: actions/download-artifact@v4
+        with:
+          name: api-image
+          path: /tmp
+
+      - name: Load API image
+        run: |
+          docker load < /tmp/api-image.tar.gz
+
+      - name: Setup environment files
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY || 'sk-or-test-key-placeholder' }}
+        run: |
+          cd infra/env
+          cp api.env.dev.example api.env.dev
+          sed -i "s|OPENROUTER_API_KEY=.*|OPENROUTER_API_KEY=${OPENROUTER_API_KEY}|" api.env.dev
+
+      - name: Start API container
+        env:
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+        run: |
+          docker run -d \
+            --name api \
+            --network host \
+            -e ASPNETCORE_ENVIRONMENT=Development \
+            -e ASPNETCORE_URLS=http://+:8080 \
+            -e ConnectionStrings__Postgres="Host=localhost;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}" \
+            -e REDIS_URL=localhost:6379 \
+            -e QDRANT_URL=http://localhost:6333 \
+            -e SEQ_URL=http://localhost:5341 \
+            -e OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY || 'sk-or-test-key-placeholder' }} \
+            -e CI=true \
+            meepleai-api:latest
+
+      - name: Wait for API to be ready
+        run: |
+          echo "Waiting for API health check..."
+          for i in {1..30}; do
+            if curl -f http://localhost:8080/health/ready > /dev/null 2>&1; then
+              echo "API is ready"
+              exit 0
+            fi
+            echo "Waiting for API... ($i/30)"
+            sleep 3
+          done
+
+          echo "API failed to start"
+          docker logs api
+          exit 1
 
       - name: Run load test - ${{ matrix.test-file }}
         env:
@@ -160,7 +360,6 @@ jobs:
         if: always()
         run: |
           cd tests/load
-          # Create a simple HTML report from JSON results
           cat > ${{ matrix.test-file }}.report.html << 'EOF'
           <!DOCTYPE html>
           <html>
@@ -187,6 +386,7 @@ jobs:
               <p><strong>Scenario:</strong> ${{ github.event.inputs.scenario || 'users100' }}</p>
               <p><strong>Date:</strong> $(date)</p>
               <p><strong>API Base URL:</strong> http://localhost:8080</p>
+              <p><strong>Optimizations:</strong> Docker cache, NuGet cache, k6 cache, service containers</p>
 
               <h2>Test Results</h2>
               <p>See JSON files for detailed metrics.</p>
@@ -216,8 +416,6 @@ jobs:
         if: always()
         run: |
           cd tests/load
-          # k6 exits with non-zero if thresholds fail
-          # This step will fail the job if any threshold was breached
           if [ -f "${{ matrix.test-file }}.summary.json" ]; then
             echo "Test summary:"
             cat ${{ matrix.test-file }}.summary.json | jq '.metrics'
@@ -227,22 +425,13 @@ jobs:
         if: failure()
         run: |
           echo "=== API Logs ==="
-          docker compose -f infra/docker-compose.yml logs api | tail -100
-
-          echo "=== Postgres Logs ==="
-          docker compose -f infra/docker-compose.yml logs postgres | tail -50
-
-          echo "=== Redis Logs ==="
-          docker compose -f infra/docker-compose.yml logs redis | tail -50
-
-          echo "=== Qdrant Logs ==="
-          docker compose -f infra/docker-compose.yml logs qdrant | tail -50
+          docker logs api | tail -100
 
       - name: Cleanup
         if: always()
         run: |
-          cd infra
-          docker compose down -v
+          docker stop api || true
+          docker rm api || true
 
   summary:
     name: Load Test Summary
@@ -261,4 +450,13 @@ jobs:
           echo "=== Load Test Summary ==="
           echo "All load test results have been collected."
           echo "Check the artifacts for detailed reports."
+          echo ""
+          echo "Optimizations applied:"
+          echo "  ✅ NuGet package caching"
+          echo "  ✅ Docker layer caching with Buildx"
+          echo "  ✅ k6 binary caching"
+          echo "  ✅ GitHub Actions service containers"
+          echo "  ✅ Shared setup job"
+          echo "  ✅ Pre-built API image artifact"
+          echo ""
           ls -R load-test-results/

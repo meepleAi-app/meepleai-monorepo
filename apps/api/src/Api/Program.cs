@@ -921,7 +921,9 @@ v1Api.MapGet("/auth/password-reset/verify", async (
 
 v1Api.MapPut("/auth/password-reset/confirm", async (
     PasswordResetConfirmPayload payload,
+    HttpContext context,
     IPasswordResetService passwordResetService,
+    AuthService authService,
     ILogger<Program> logger,
     CancellationToken ct) =>
 {
@@ -937,11 +939,27 @@ v1Api.MapPut("/auth/password-reset/confirm", async (
             return Results.BadRequest(new { error = "New password is required" });
         }
 
-        var success = await passwordResetService.ResetPasswordAsync(payload.Token, payload.NewPassword, ct);
+        // Tuple destructuring for userId
+        var (success, userId) = await passwordResetService.ResetPasswordAsync(
+            payload.Token,
+            payload.NewPassword,
+            ct);
 
-        if (!success)
+        if (!success || userId == null)
         {
-            return Results.BadRequest(new { error = "Invalid or expired token" });
+            return Results.NotFound(new { error = "Invalid or expired token" });
+        }
+
+        // Create new session for auto-login
+        var sessionResult = await authService.CreateSessionForUserAsync(
+            userId,
+            context.Connection.RemoteIpAddress?.ToString(),
+            context.Request.Headers.UserAgent.ToString(),
+            ct);
+
+        if (sessionResult != null)
+        {
+            WriteSessionCookie(context, sessionResult.SessionToken, sessionResult.ExpiresAt);
         }
 
         return Results.Json(new { ok = true, message = "Password has been reset successfully" });

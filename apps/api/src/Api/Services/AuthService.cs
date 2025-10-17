@@ -109,6 +109,30 @@ public class AuthService
         return new AuthResult(ToDto(user), session.Token, session.Entity.ExpiresAt);
     }
 
+    /// <summary>
+    /// Creates a new session for a user by their ID (used for password reset auto-login).
+    /// </summary>
+    public async Task<AuthResult?> CreateSessionForUserAsync(
+        string userId,
+        string? ipAddress,
+        string? userAgent,
+        CancellationToken ct = default)
+    {
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
+        if (user == null)
+        {
+            return null;
+        }
+
+        var session = CreateSessionEntity(user, ipAddress, userAgent, now);
+        _db.UserSessions.Add(session.Entity);
+        await _db.SaveChangesAsync(ct);
+
+        return new AuthResult(ToDto(user), session.Token, session.Entity.ExpiresAt);
+    }
+
     public async Task<ActiveSession?> ValidateSessionAsync(string token, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(token))

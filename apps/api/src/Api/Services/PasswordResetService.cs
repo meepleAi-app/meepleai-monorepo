@@ -13,14 +13,14 @@ public class PasswordResetService : IPasswordResetService
     private const int RateLimitPerHour = 3;
     private readonly MeepleAiDbContext _db;
     private readonly IEmailService _emailService;
-    private readonly RateLimitService _rateLimitService;
+    private readonly IRateLimitService _rateLimitService;
     private readonly ILogger<PasswordResetService> _logger;
     private readonly TimeProvider _timeProvider;
 
     public PasswordResetService(
         MeepleAiDbContext db,
         IEmailService emailService,
-        RateLimitService rateLimitService,
+        IRateLimitService rateLimitService,
         ILogger<PasswordResetService> logger,
         TimeProvider? timeProvider = null)
     {
@@ -165,7 +165,7 @@ public class PasswordResetService : IPasswordResetService
         return true;
     }
 
-    public async Task<bool> ResetPasswordAsync(
+    public async Task<(bool Success, string? UserId)> ResetPasswordAsync(
         string token,
         string newPassword,
         CancellationToken ct = default)
@@ -198,7 +198,7 @@ public class PasswordResetService : IPasswordResetService
         if (resetToken == null)
         {
             _logger.LogWarning("Invalid password reset token");
-            return false;
+            return (false, null);
         }
 
         if (resetToken.IsUsed)
@@ -206,7 +206,7 @@ public class PasswordResetService : IPasswordResetService
             _logger.LogWarning(
                 "Attempt to reuse password reset token: {TokenId}",
                 resetToken.Id);
-            return false;
+            return (false, null);
         }
 
         if (resetToken.ExpiresAt <= now)
@@ -214,7 +214,7 @@ public class PasswordResetService : IPasswordResetService
             _logger.LogInformation(
                 "Expired password reset token: {TokenId}",
                 resetToken.Id);
-            return false;
+            return (false, null);
         }
 
         // Mark token as used
@@ -227,7 +227,7 @@ public class PasswordResetService : IPasswordResetService
             _logger.LogError(
                 "User not found for password reset token: {TokenId}",
                 resetToken.Id);
-            return false;
+            return (false, null);
         }
 
         user.PasswordHash = HashPassword(newPassword);
@@ -248,7 +248,7 @@ public class PasswordResetService : IPasswordResetService
             "Password reset completed for user: {UserId}",
             user.Id);
 
-        return true;
+        return (true, user.Id);
     }
 
     private static string HashToken(string token)

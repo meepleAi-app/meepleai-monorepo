@@ -161,7 +161,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         // Revoke the key
         using (var scope = Factory.Services.CreateScope())
         {
-            var apiKeyService = scope.ServiceProvider.GetRequiredService<Services.ApiKeyAuthenticationService>();
+            var apiKeyService = scope.ServiceProvider.GetRequiredService<Api.Services.ApiKeyAuthenticationService>();
             await apiKeyService.RevokeApiKeyAsync(apiKeyEntity.Id, user.Id);
         }
 
@@ -305,7 +305,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         // And: Key is revoked
         using (var scope = Factory.Services.CreateScope())
         {
-            var apiKeyService = scope.ServiceProvider.GetRequiredService<Services.ApiKeyAuthenticationService>();
+            var apiKeyService = scope.ServiceProvider.GetRequiredService<Api.Services.ApiKeyAuthenticationService>();
             await apiKeyService.RevokeApiKeyAsync(apiKeyEntity.Id, user.Id);
         }
 

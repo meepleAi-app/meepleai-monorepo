@@ -447,7 +447,7 @@ public abstract class IntegrationTestBase : IClassFixture<WebApplicationFactoryF
     {
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var apiKeyService = scope.ServiceProvider.GetRequiredService<Services.ApiKeyAuthenticationService>();
+        var apiKeyService = scope.ServiceProvider.GetRequiredService<Api.Services.ApiKeyAuthenticationService>();
 
         var (plaintextKey, entity) = await apiKeyService.GenerateApiKeyAsync(
             userId,

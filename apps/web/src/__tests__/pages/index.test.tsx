@@ -167,7 +167,7 @@ describe('Home page (Landing Page)', () => {
 
       expect(screen.getByRole('link', { name: 'Chess' })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Upload' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
+      expect(await screen.findByRole('button', { name: /logout/i })).toBeInTheDocument();
     });
 
     it('shows Admin link for admin users', async () => {
@@ -242,7 +242,7 @@ describe('Home page (Landing Page)', () => {
       });
 
       // Find Register tab
-      const registerTab = screen.getByRole('tab', { name: 'Register' });
+      const registerTab = await screen.findByRole('tab', { name: 'Register' });
       await user.click(registerTab);
 
       // Should change modal title
@@ -492,19 +492,28 @@ describe('Home page (Landing Page)', () => {
       const getStartedButtons = screen.getAllByText('Get Started Free');
       await user.click(getStartedButtons[0]);
 
+      // Wait for modal AND form to be visible
       await waitFor(() => {
         expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+        expect(screen.getByRole('tabpanel')).toBeInTheDocument();
       });
 
-      // Fill login form
-      const emailInput = screen.getByLabelText('Email');
-      const passwordInput = screen.getByLabelText('Password');
+      // Get the tab panel and find inputs within it
+      const tabPanel = screen.getByRole('tabpanel');
+
+      // Find inputs by role instead of label text
+      const inputs = await within(tabPanel).findAllByRole('textbox', {}, { timeout: 3000 });
+      const emailInput = inputs[0]; // First input should be email
+
+      // Password input has type="password" so it won't have textbox role
+      const passwordInput = tabPanel.querySelector('input[type="password"]') as HTMLInputElement;
+      expect(passwordInput).toBeInTheDocument();
 
       await user.type(emailInput, 'test@example.com');
       await user.type(passwordInput, 'password123');
 
       // Submit
-      const loginButton = screen.getByRole('button', { name: 'Login' });
+      const loginButton = await screen.findByRole('button', { name: 'Login' });
       await user.click(loginButton);
 
       await waitFor(() => {
@@ -544,18 +553,29 @@ describe('Home page (Landing Page)', () => {
       });
 
       // Switch to register tab
-      const registerTab = screen.getByRole('tab', { name: 'Register' });
+      const registerTab = await screen.findByRole('tab', { name: 'Register' });
       await user.click(registerTab);
 
       await waitFor(() => {
         expect(screen.getByText('Create Your Account')).toBeInTheDocument();
+        expect(screen.getByRole('tabpanel')).toBeInTheDocument();
       });
 
-      // Fill register form
-      const emailInput = screen.getByLabelText('Email');
-      const passwordInput = screen.getByLabelText('Password');
-      const displayNameInput = screen.getByLabelText('Display Name');
-      const roleSelect = screen.getByLabelText(/Select user role/i);
+      // Get the tab panel and find inputs within it
+      const tabPanel = screen.getByRole('tabpanel');
+
+      // Find inputs by role - register form has 3 text inputs: email, password (but it's type=password), display name
+      const inputs = await within(tabPanel).findAllByRole('textbox', {}, { timeout: 3000 });
+      const emailInput = inputs[0]; // First input: email (type="email" has textbox role)
+      const displayNameInput = inputs[1]; // Third input: display name
+
+      // Password input has type="password" so won't have textbox role
+      const passwordInput = tabPanel.querySelector('input[type="password"]') as HTMLInputElement;
+      expect(passwordInput).toBeInTheDocument();
+
+      // Role select
+      const roleSelect = tabPanel.querySelector('select') as HTMLSelectElement;
+      expect(roleSelect).toBeInTheDocument();
 
       await user.type(emailInput, 'new@example.com');
       await user.type(passwordInput, 'newpassword123');
@@ -594,10 +614,14 @@ describe('Home page (Landing Page)', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+        expect(screen.getByRole('tabpanel')).toBeInTheDocument();
       });
 
-      const emailInput = screen.getByLabelText('Email');
-      const passwordInput = screen.getByLabelText('Password');
+      // Get the tab panel and find inputs within it
+      const tabPanel = screen.getByRole('tabpanel');
+      const inputs = await within(tabPanel).findAllByRole('textbox', {}, { timeout: 3000 });
+      const emailInput = inputs[0];
+      const passwordInput = tabPanel.querySelector('input[type="password"]') as HTMLInputElement;
 
       await user.type(emailInput, 'bad@example.com');
       await user.type(passwordInput, 'wrongpassword');
@@ -629,15 +653,19 @@ describe('Home page (Landing Page)', () => {
       });
 
       // Switch to register tab
-      const registerTab = screen.getByRole('tab', { name: 'Register' });
+      const registerTab = await screen.findByRole('tab', { name: 'Register' });
       await user.click(registerTab);
 
       await waitFor(() => {
         expect(screen.getByText('Create Your Account')).toBeInTheDocument();
+        expect(screen.getByRole('tabpanel')).toBeInTheDocument();
       });
 
-      const emailInput = screen.getByLabelText('Email');
-      const passwordInput = screen.getByLabelText('Password');
+      // Get the tab panel and find inputs within it
+      const tabPanel = screen.getByRole('tabpanel');
+      const inputs = await within(tabPanel).findAllByRole('textbox', {}, { timeout: 3000 });
+      const emailInput = inputs[0];
+      const passwordInput = tabPanel.querySelector('input[type="password"]') as HTMLInputElement;
 
       await user.type(emailInput, 'existing@example.com');
       await user.type(passwordInput, 'password123');
@@ -666,11 +694,14 @@ describe('Home page (Landing Page)', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+        expect(screen.getByRole('tabpanel')).toBeInTheDocument();
       });
 
-      // Trigger login error
-      const emailInput = screen.getByLabelText('Email');
-      const passwordInput = screen.getByLabelText('Password');
+      // Get the tab panel and find inputs within it
+      const tabPanel = screen.getByRole('tabpanel');
+      const inputs = await within(tabPanel).findAllByRole('textbox', {}, { timeout: 3000 });
+      const emailInput = inputs[0];
+      const passwordInput = tabPanel.querySelector('input[type="password"]') as HTMLInputElement;
 
       await user.type(emailInput, 'test@example.com');
       await user.type(passwordInput, 'wrong');
@@ -683,7 +714,7 @@ describe('Home page (Landing Page)', () => {
       });
 
       // Switch to register tab - error should clear
-      const registerTab = screen.getByRole('tab', { name: 'Register' });
+      const registerTab = await screen.findByRole('tab', { name: 'Register' });
       await user.click(registerTab);
 
       await waitFor(() => {
@@ -707,11 +738,14 @@ describe('Home page (Landing Page)', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+        expect(screen.getByRole('tabpanel')).toBeInTheDocument();
       });
 
-      // Trigger error
-      const emailInput = screen.getByLabelText('Email');
-      const passwordInput = screen.getByLabelText('Password');
+      // Get the tab panel and find inputs within it
+      const tabPanel = screen.getByRole('tabpanel');
+      const inputs = await within(tabPanel).findAllByRole('textbox', {}, { timeout: 3000 });
+      const emailInput = inputs[0];
+      const passwordInput = tabPanel.querySelector('input[type="password"]') as HTMLInputElement;
 
       await user.type(emailInput, 'test@example.com');
       await user.type(passwordInput, 'wrong');
@@ -754,16 +788,19 @@ describe('Home page (Landing Page)', () => {
       });
 
       // Switch to register tab
-      const registerTab = screen.getByRole('tab', { name: 'Register' });
+      const registerTab = await screen.findByRole('tab', { name: 'Register' });
       await user.click(registerTab);
 
       await waitFor(() => {
         expect(screen.getByText('Create Your Account')).toBeInTheDocument();
+        expect(screen.getByRole('tabpanel')).toBeInTheDocument();
       });
 
-      // Fill only required fields
-      const emailInput = screen.getByLabelText('Email');
-      const passwordInput = screen.getByLabelText('Password');
+      // Get the tab panel and find inputs within it
+      const tabPanel = screen.getByRole('tabpanel');
+      const inputs = await within(tabPanel).findAllByRole('textbox', {}, { timeout: 3000 });
+      const emailInput = inputs[0];
+      const passwordInput = tabPanel.querySelector('input[type="password"]') as HTMLInputElement;
 
       await user.type(emailInput, 'minimal@example.com');
       await user.type(passwordInput, 'password123');
@@ -833,10 +870,14 @@ describe('Home page (Landing Page)', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+        expect(screen.getByRole('tabpanel')).toBeInTheDocument();
       });
 
-      const emailInput = screen.getByLabelText('Email');
-      const passwordInput = screen.getByLabelText('Password');
+      // Get the tab panel and find inputs within it
+      const tabPanel = screen.getByRole('tabpanel');
+      const inputs = await within(tabPanel).findAllByRole('textbox', {}, { timeout: 3000 });
+      const emailInput = inputs[0];
+      const passwordInput = tabPanel.querySelector('input[type="password"]') as HTMLInputElement;
 
       await user.type(emailInput, 'test@example.com');
       await user.type(passwordInput, 'password');
@@ -868,15 +909,19 @@ describe('Home page (Landing Page)', () => {
       });
 
       // Switch to register tab
-      const registerTab = screen.getByRole('tab', { name: 'Register' });
+      const registerTab = await screen.findByRole('tab', { name: 'Register' });
       await user.click(registerTab);
 
       await waitFor(() => {
         expect(screen.getByText('Create Your Account')).toBeInTheDocument();
+        expect(screen.getByRole('tabpanel')).toBeInTheDocument();
       });
 
-      const emailInput = screen.getByLabelText('Email');
-      const passwordInput = screen.getByLabelText('Password');
+      // Get the tab panel and find inputs within it
+      const tabPanel = screen.getByRole('tabpanel');
+      const inputs = await within(tabPanel).findAllByRole('textbox', {}, { timeout: 3000 });
+      const emailInput = inputs[0];
+      const passwordInput = tabPanel.querySelector('input[type="password"]') as HTMLInputElement;
 
       await user.type(emailInput, 'test@example.com');
       await user.type(passwordInput, 'password123');
@@ -908,7 +953,7 @@ describe('Home page (Landing Page)', () => {
       });
 
       // Switch to register tab
-      const registerTab = screen.getByRole('tab', { name: 'Register' });
+      const registerTab = await screen.findByRole('tab', { name: 'Register' });
       await user.click(registerTab);
 
       await waitFor(() => {
@@ -916,7 +961,7 @@ describe('Home page (Landing Page)', () => {
       });
 
       // Check all role options exist
-      const roleSelect = screen.getByLabelText(/Select user role/i);
+      const roleSelect = await screen.findByLabelText(/Select user role/i);
       expect(roleSelect).toBeInTheDocument();
 
       const options = within(roleSelect as HTMLElement).getAllByRole('option');

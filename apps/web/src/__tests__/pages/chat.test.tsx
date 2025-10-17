@@ -140,6 +140,14 @@ describe('ChatPage', () => {
     window.confirm = originalConfirm;
 
     // Reset useChatStreaming mock to default state with callback capturing
+    let mockStreamingState = {
+      isStreaming: false,
+      currentAnswer: '',
+      snippets: [],
+      state: null,
+      error: null
+    };
+
     (useChatStreaming as jest.Mock).mockImplementation((callbacks?: { onComplete?: any; onError?: any }) => {
       // Capture callbacks for later use
       if (callbacks?.onComplete) {
@@ -150,13 +158,7 @@ describe('ChatPage', () => {
       }
 
       return [
-        {
-          isStreaming: false,
-          currentAnswer: '',
-          snippets: [],
-          state: null,
-          error: null
-        },
+        mockStreamingState,
         {
           startStreaming: mockStartStreaming,
           stopStreaming: mockStopStreaming
@@ -1107,7 +1109,8 @@ describe('ChatPage', () => {
           expect(screen.getByText('How do I castle?')).toBeInTheDocument();
         });
 
-        mockApi.post.mockImplementation(() => new Promise(() => {})); // Never resolves
+        // Don't trigger onComplete to keep the loading state visible
+        // mockStartStreaming will be called but won't complete
 
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
         await user.type(input, 'Test message');
@@ -1221,7 +1224,14 @@ describe('ChatPage', () => {
           expect(screen.getByText('How do I castle?')).toBeInTheDocument();
         });
 
-        mockApi.post.mockRejectedValueOnce(new Error('API failed'));
+        // Mock streaming to trigger onError
+        mockStartStreaming.mockImplementation(() => {
+          if (mockOnError) {
+            setTimeout(() => {
+              mockOnError!('Errore nella comunicazione con l\'agente. Riprova.');
+            }, 0);
+          }
+        });
 
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
         await user.type(input, 'Failed message');

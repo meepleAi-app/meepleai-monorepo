@@ -173,6 +173,91 @@ public class PdfStorageService
     }
 
     /// <summary>
+    /// Deletes a PDF document and all associated data
+    /// </summary>
+    /// <param name="pdfId">ID of the PDF to delete</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>Result indicating success or failure with error message</returns>
+    public async Task<PdfDeleteResult> DeletePdfAsync(string pdfId, CancellationToken ct = default)
+    {
+        try
+        {
+            var pdfDoc = await _db.PdfDocuments
+                .FirstOrDefaultAsync(p => p.Id == pdfId, ct);
+
+            if (pdfDoc == null)
+            {
+                return new PdfDeleteResult(false, "PDF not found", null);
+            }
+
+            var gameId = pdfDoc.GameId;
+            var filePath = pdfDoc.FilePath;
+
+            // Delete associated vector document if exists
+            var vectorDoc = await _db.VectorDocuments
+                .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId, ct);
+
+            if (vectorDoc != null)
+            {
+                _db.VectorDocuments.Remove(vectorDoc);
+                _logger.LogInformation("Removed vector document for PDF {PdfId}", pdfId);
+
+                // Delete vectors from Qdrant
+                try
+                {
+                    var qdrantService = _qdrantServiceOverride
+                        ?? _scopeFactory.CreateScope().ServiceProvider.GetService<IQdrantService>();
+
+                    if (qdrantService != null)
+                    {
+                        var deleteResult = await qdrantService.DeleteDocumentAsync(gameId, pdfId, ct);
+                        if (!deleteResult.Success)
+                        {
+                            _logger.LogWarning("Failed to delete vectors from Qdrant for PDF {PdfId}: {Error}",
+                                pdfId, deleteResult.ErrorMessage);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error deleting vectors from Qdrant for PDF {PdfId}", pdfId);
+                }
+            }
+
+            // Delete PDF document record
+            _db.PdfDocuments.Remove(pdfDoc);
+            await _db.SaveChangesAsync(ct);
+
+            _logger.LogInformation("Deleted PDF document record {PdfId}", pdfId);
+
+            // Delete physical file
+            try
+            {
+                if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                    _logger.LogInformation("Deleted physical file at {FilePath}", filePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete physical file for PDF {PdfId} at {FilePath}", pdfId, filePath);
+                // Don't fail the operation if file deletion fails
+            }
+
+            // Invalidate cache
+            await InvalidateCacheSafelyAsync(gameId, ct, "PDF deletion");
+
+            return new PdfDeleteResult(true, "PDF deleted successfully", gameId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete PDF {PdfId}", pdfId);
+            return new PdfDeleteResult(false, $"Failed to delete PDF: {ex.Message}", null);
+        }
+    }
+
+    /// <summary>
     /// Extracts text from PDF asynchronously and updates database
     /// </summary>
     private async Task ExtractTextAsync(string pdfId, string filePath)
@@ -434,6 +519,8 @@ public class PdfStorageService
 }
 
 public record PdfUploadResult(bool Success, string Message, PdfDocumentDto? Document);
+
+public record PdfDeleteResult(bool Success, string Message, string? GameId);
 
 public record PdfDocumentDto
 {

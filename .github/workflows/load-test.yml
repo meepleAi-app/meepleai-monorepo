@@ -54,29 +54,28 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Create environment files
+      - name: Setup environment files
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY || 'sk-or-test-key-placeholder' }}
         run: |
-          # API environment
-          cat > infra/env/api.env.dev << 'EOF'
-          ASPNETCORE_ENVIRONMENT=Development
-          ASPNETCORE_URLS=http://+:8080
-          ConnectionStrings__Postgres=Host=postgres;Port=5432;Database=meepleai;Username=meepleai;Password=meepleai_dev_pwd
-          REDIS_URL=redis:6379
-          QDRANT_URL=http://qdrant:6333
-          SEQ_URL=http://seq:5341
-          OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
-          OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
-          CI=true
-          EOF
+          # Copy example files to actual files
+          cd infra/env
+          cp api.env.dev.example api.env.dev
+          cp n8n.env.dev.example n8n.env.dev
+          cp web.env.dev.example web.env.dev
 
-          # Postgres environment
-          cat > infra/env/postgres.env.dev << 'EOF'
-          POSTGRES_DB=meepleai
-          POSTGRES_USER=meepleai
-          POSTGRES_PASSWORD=meepleai_dev_pwd
-          EOF
+          # Update API env with CI-specific values
+          # Replace OPENROUTER_API_KEY placeholder with actual value
+          sed -i "s|OPENROUTER_API_KEY=.*|OPENROUTER_API_KEY=${OPENROUTER_API_KEY}|" api.env.dev
+
+          echo "Environment files configured:"
+          ls -la
 
       - name: Start infrastructure services
+        env:
+          POSTGRES_USER: meeple
+          POSTGRES_PASSWORD: meeplepass
+          POSTGRES_DB: meepleai
         run: |
           cd infra
           docker compose up -d postgres redis qdrant seq
@@ -86,7 +85,7 @@ jobs:
           # Wait for Postgres
           echo "Waiting for Postgres..."
           for i in {1..30}; do
-            if docker compose -f infra/docker-compose.yml exec -T postgres pg_isready -U meepleai; then
+            if docker compose -f infra/docker-compose.yml exec -T postgres pg_isready -U meeple; then
               echo "Postgres is ready"
               break
             fi
@@ -117,6 +116,10 @@ jobs:
           done
 
       - name: Build and start API
+        env:
+          POSTGRES_USER: meeple
+          POSTGRES_PASSWORD: meeplepass
+          POSTGRES_DB: meepleai
         run: |
           cd infra
           docker compose build api

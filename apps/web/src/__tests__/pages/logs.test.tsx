@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import LogsPage from '../logs';
-import { api } from '../../lib/api';
+import LogsPage from '../../pages/logs';
+import { api } from '../../pages/../lib/api';
 
 jest.mock('../../lib/api', () => ({
   api: {

@@ -6,7 +6,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
-import ChessPage from '../chess';
+import ChessPage from '../../pages/chess';
 
 // Extend Jest matchers
 expect.extend(toHaveNoViolations);

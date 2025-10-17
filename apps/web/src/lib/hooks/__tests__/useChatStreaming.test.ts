@@ -1,5 +1,10 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useChatStreaming } from '../useChatStreaming';
+import { TextEncoder, TextDecoder } from 'util';
+
+// Polyfill TextEncoder/TextDecoder for jsdom
+global.TextEncoder = TextEncoder as any;
+global.TextDecoder = TextDecoder as any;
 
 // Mock fetch globally
 const mockFetch = jest.fn();

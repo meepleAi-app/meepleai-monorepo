@@ -4,7 +4,7 @@ const initialApiBaseEnv = process.env.NEXT_PUBLIC_API_BASE;
 if (!process.env.NEXT_PUBLIC_API_BASE) {
   process.env.NEXT_PUBLIC_API_BASE = 'http://api.test';
 }
-const N8nWorkflowManagement = require('../n8n').default;
+const N8nWorkflowManagement = require('../../pages/n8n').default;
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -72,7 +72,7 @@ describe('N8nWorkflowManagement', () => {
     delete process.env.NEXT_PUBLIC_API_BASE;
 
     jest.isolateModules(() => {
-      const { apiBase } = require('../n8n');
+      const { apiBase } = require('../../pages/n8n');
       expect(apiBase).toBe('http://localhost:8080');
     });
   });

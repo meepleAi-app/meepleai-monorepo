@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import ChessPage from "../chess";
+import ChessPage from "../../pages/chess";
 import { api } from "../../lib/api";
 
 // Mock the API

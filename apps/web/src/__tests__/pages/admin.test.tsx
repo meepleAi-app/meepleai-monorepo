@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import AdminDashboard from '../admin';
-import { API_BASE_FALLBACK } from '../../lib/api';
+import AdminDashboard from '../../pages/admin';
+import { API_BASE_FALLBACK } from '../../pages/../lib/api';
 
 type FetchMock = jest.MockedFunction<typeof fetch>;
 
@@ -24,7 +24,7 @@ describe('AdminDashboard', () => {
   const apiBase = 'https://api.example.com';
 
   const loadAdminDashboard = () => {
-    const adminPath = require.resolve('../admin');
+    const adminPath = require.resolve('../../pages/admin');
     const apiCacheKeys = Object.keys(require.cache).filter((key) => key.includes('lib/api'));
 
     delete require.cache[adminPath];
@@ -32,7 +32,7 @@ describe('AdminDashboard', () => {
       delete require.cache[key];
     });
 
-    return require('../admin').default;
+    return require('../../pages/admin').default;
   };
 
   beforeAll(() => {

@@ -8,12 +8,12 @@
  */
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import UploadPage from '../upload';
+import UploadPage from '../../pages/upload';
 import {
   setupUploadMocks,
   createAuthMock,
   createGameMock
-} from '../../__tests__/fixtures/upload-mocks';
+} from '../../pages/../__tests__/fixtures/upload-mocks';
 
 describe('UploadPage - Edge Cases', () => {
   const originalFetch = global.fetch;

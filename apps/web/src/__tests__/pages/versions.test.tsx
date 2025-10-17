@@ -1,8 +1,8 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { NextRouter } from 'next/router';
-import VersionHistory from '../versions';
-import { api } from '../../lib/api';
+import VersionHistory from '../../pages/versions';
+import { api } from '../../pages/../lib/api';
 import { useRouter } from 'next/router';
 
 type AuthResponse = {

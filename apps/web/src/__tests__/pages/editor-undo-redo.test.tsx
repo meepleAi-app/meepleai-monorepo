@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import RuleSpecEditor from '../editor';
-import { api } from '../../lib/api';
+import RuleSpecEditor from '../../pages/editor';
+import { api } from '../../pages/../lib/api';
 import { useRouter, type NextRouter } from 'next/router';
 
 jest.mock('../../lib/api', () => ({

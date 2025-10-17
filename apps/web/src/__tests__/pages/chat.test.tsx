@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import ChatPage from '../chat';
-import { api } from '../../lib/api';
+import ChatPage from '../../pages/chat';
+import { api } from '../../pages/../lib/api';
 
 // Mock the API client
 jest.mock('../../lib/api', () => ({

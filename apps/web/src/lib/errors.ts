@@ -197,7 +197,8 @@ export function sanitizeError(error: Error): Record<string, unknown> {
 
   if (error instanceof ApiError) {
     sanitized.statusCode = error.statusCode;
-    sanitized.endpoint = error.endpoint.replace(/\/([\w-]{36})\//g, '/{id}/'); // Replace UUIDs
+    // Replace UUIDs (8-4-4-4-12 hex format) with {id} - matches UUIDs anywhere in path
+    sanitized.endpoint = error.endpoint.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '{id}');
     sanitized.method = error.method;
     sanitized.correlationId = error.correlationId;
   }

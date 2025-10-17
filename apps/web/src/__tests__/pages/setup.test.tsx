@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import SetupPage from '../setup';
+import SetupPage from '../../pages/setup';
 import { api } from '../../lib/api';
 
 // Mock the API client

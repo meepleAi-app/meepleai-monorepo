@@ -147,7 +147,8 @@ builder.Services.AddScoped<ITextChunkingService, TextChunkingService>();
 builder.Services.AddScoped<PdfIndexingService>();
 
 // AI-05: AI response caching
-builder.Services.AddSingleton<IAiResponseCacheService, AiResponseCacheService>();
+// PERF-03: Changed from Singleton to Scoped due to MeepleAiDbContext dependency
+builder.Services.AddScoped<IAiResponseCacheService, AiResponseCacheService>();
 
 // PERF-02: Session caching (Phase 2 optimization)
 builder.Services.AddSingleton<ISessionCacheService, SessionCacheService>();

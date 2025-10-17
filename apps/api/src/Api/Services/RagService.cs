@@ -37,15 +37,17 @@ public class RagService
     /// <summary>
     /// AI-04: Answer question using RAG with LLM generation and anti-hallucination
     /// AI-05: Now with caching support for reduced latency
+    /// PERF-03: Added bypassCache parameter to force fresh LLM responses
     /// OPS-02: Now with OpenTelemetry metrics tracking and distributed tracing
     /// </summary>
-    public async Task<QaResponse> AskAsync(string gameId, string query, CancellationToken cancellationToken = default)
+    public async Task<QaResponse> AskAsync(string gameId, string query, bool bypassCache = false, CancellationToken cancellationToken = default)
     {
         // OPS-02: Create distributed trace span for RAG Q&A operation
         using var activity = MeepleAiActivitySources.Rag.StartActivity("RagService.Ask");
         activity?.SetTag("game.id", gameId);
         activity?.SetTag("query.length", query?.Length ?? 0);
         activity?.SetTag("operation", "qa");
+        activity?.SetTag("cache.bypass", bypassCache);
 
         // OPS-02: Start tracking duration
         var stopwatch = Stopwatch.StartNew();
@@ -56,13 +58,20 @@ public class RagService
             return new QaResponse("Please provide a question.", Array.Empty<Snippet>());
         }
 
-        // AI-05: Check cache first
+        // AI-05: Check cache first (unless bypassed)
         var cacheKey = _cache.GenerateQaCacheKey(gameId, query);
-        var cachedResponse = await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken);
-        if (cachedResponse != null)
+        if (!bypassCache)
         {
-            LogInformation("Returning cached QA response for game {GameId}", gameId);
-            return cachedResponse;
+            var cachedResponse = await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken);
+            if (cachedResponse != null)
+            {
+                LogInformation("Returning cached QA response for game {GameId}", gameId);
+                return cachedResponse;
+            }
+        }
+        else
+        {
+            LogInformation("Cache bypassed for game {GameId} (Fresh Answer requested)", gameId);
         }
 
         try

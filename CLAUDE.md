@@ -54,7 +54,7 @@ tools/             - PowerShell scripts
 
 **Services** (DI in `Program.cs:100-139`):
 - **AI/RAG**: EmbeddingService, QdrantService, TextChunkingService (512 chars, 50 overlap), RagService, LlmService (OpenRouter)
-- **PDF**: PdfStorageService, PdfTextExtractionService (Docnet.Core), PdfTableExtractionService (iText7)
+- **PDF**: PdfStorageService, PdfTextExtractionService (Docnet.Core), PdfTableExtractionService (iText7), PdfValidationService (PDF-09)
 - **Domain**: GameService, RuleSpecService, RuleSpecDiffService, SetupGuideService
 - **Infra**: AuthService (session cookies), SessionManagementService, SessionAutoRevocationService, AuditService, AiRequestLogService, AiResponseCacheService (Redis), RateLimitService, N8nConfigService, BackgroundTaskService
 
@@ -202,6 +202,34 @@ tools/             - PowerShell scripts
 - **Docs**: `docs/ai-06-rag-evaluation.md` - Complete guide with metrics explanations, troubleshooting
 
 **Vector Pipeline**: PDF → PdfTextExtractionService → TextChunkingService → EmbeddingService (OpenRouter) → QdrantService → RagService (search)
+
+**PDF Validation** (PDF-09):
+- **PdfValidationService** (`Services/PdfValidationService.cs`): Pre-upload PDF validation
+  - `ValidateAsync(stream, fileName)` - Comprehensive validation: magic bytes, structure, page count, PDF version
+  - `ValidateFileSize(bytes)` - File size validation (max 100MB configurable)
+  - `ValidateMimeType(contentType)` - MIME type validation (application/pdf)
+  - Thread-safe with Docnet.Core semaphore
+  - Returns structured errors: `{ "error": "validation_failed", "details": { "fileSize": "...", "pageCount": "..." } }`
+- **Configuration** (`appsettings.json:PdfProcessing`):
+  - `MaxFileSizeBytes`: 104857600 (100 MB)
+  - `MaxPageCount`: 500
+  - `MinPageCount`: 1
+  - `MinPdfVersion`: "1.4"
+  - `AllowedContentTypes`: ["application/pdf"]
+- **Client-Side Validation** (`pages/upload.tsx`):
+  - MIME type check (application/pdf)
+  - File size check (100MB limit)
+  - PDF magic bytes validation (%PDF-)
+  - Real-time validation on file selection
+  - Visual feedback (red border, error list, success indicator)
+- **Server-Side Endpoint** (`Program.cs:1810+`):
+  - Validates before `PdfStorageService.UploadPdfAsync()`
+  - Returns 400 Bad Request with structured error details
+  - Falls back to upload on validation success
+- **Tests**: 42 tests (33 unit + 9 integration)
+  - `PdfValidationServiceTests.cs` - File size, MIME, magic bytes, page count, PDF version, structure
+  - `PdfUploadValidationIntegrationTests.cs` - End-to-end validation flow, error responses
+- **Docs**: `docs/issue/pdf-09-validation-implementation.md` - Complete implementation guide
 
 **API Versioning** (API-01):
 - **URL Path Strategy**: All API endpoints under `/api/v1/*`

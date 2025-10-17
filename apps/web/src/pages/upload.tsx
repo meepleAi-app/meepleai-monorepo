@@ -73,6 +73,70 @@ const AUTHORIZED_ROLES = new Set(['admin', 'editor']);
 const POLL_INTERVAL_MS = 2000;
 const POLL_RETRY_MS = 4000;
 
+// PDF-09: Validation constants
+const MAX_PDF_SIZE_BYTES = 104857600; // 100 MB
+const ALLOWED_MIME_TYPES = ['application/pdf'];
+const PDF_MAGIC_BYTES = '%PDF-';
+
+interface ValidationResult {
+  isValid: boolean;
+  errors: Record<string, string>;
+}
+
+// PDF-09: Client-side PDF validation helper
+async function validatePdfFile(file: File): Promise<ValidationResult> {
+  const errors: Record<string, string> = {};
+
+  // MIME type check
+  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    errors.fileType = `File must be a PDF (type: ${file.type})`;
+  }
+
+  // Size check
+  if (file.size > MAX_PDF_SIZE_BYTES) {
+    const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+    const maxMB = (MAX_PDF_SIZE_BYTES / 1024 / 1024).toFixed(0);
+    errors.fileSize = `File size (${sizeMB} MB) exceeds maximum of ${maxMB} MB`;
+  }
+
+  if (file.size === 0) {
+    errors.fileSize = 'File is empty';
+  }
+
+  // Magic bytes check
+  try {
+    const header = await readFileHeader(file, 5);
+    if (header !== PDF_MAGIC_BYTES) {
+      errors.fileFormat = 'Invalid PDF file format';
+    }
+  } catch (error) {
+    errors.fileFormat = 'Unable to read file header';
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
+}
+
+// Helper to read file header
+async function readFileHeader(file: File, bytesToRead: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        const bytes = new Uint8Array(e.target.result as ArrayBuffer);
+        const header = String.fromCharCode(...Array.from(bytes));
+        resolve(header);
+      } else {
+        reject(new Error('Failed to read file'));
+      }
+    };
+    reader.onerror = () => reject(new Error('FileReader error'));
+    reader.readAsArrayBuffer(file.slice(0, bytesToRead));
+  });
+}
+
 export default function UploadPage() {
   const [currentStep, setCurrentStep] = useState<WizardStep>('upload');
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -99,6 +163,8 @@ export default function UploadPage() {
   const [retryingPdfId, setRetryingPdfId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<CategorizedError | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [validating, setValidating] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -279,10 +345,38 @@ export default function UploadPage() {
     }
   }, [autoAdvanceTriggered, currentStep, documentId, handleParse, processingStatus]);
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      setFile(event.target.files[0]);
-      setMessage('');
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (!selectedFile) {
+      setFile(null);
+      setValidationErrors({});
+      return;
+    }
+
+    // PDF-09: Validate file before accepting
+    setValidating(true);
+    setMessage('');
+    setValidationErrors({});
+
+    try {
+      const validation = await validatePdfFile(selectedFile);
+
+      if (!validation.isValid) {
+        setValidationErrors(validation.errors);
+        setFile(null);
+        // Reset file input
+        event.target.value = '';
+      } else {
+        setFile(selectedFile);
+        setValidationErrors({});
+      }
+    } catch (error) {
+      console.error('Validation error:', error);
+      setMessage('Failed to validate file. Please try again.');
+      setFile(null);
+      event.target.value = '';
+    } finally {
+      setValidating(false);
     }
   };
 
@@ -406,6 +500,8 @@ export default function UploadPage() {
     setRetryingPdfId(null);
     setUploadError(null);
     setRetryCount(0);
+    setValidating(false);
+    setValidationErrors({});
     setMessage('');
     const fileInput = document.getElementById('fileInput') as HTMLInputElement | null;
     if (fileInput) {
@@ -829,18 +925,44 @@ export default function UploadPage() {
                     type="file"
                     accept="application/pdf"
                     onChange={handleFileChange}
+                    disabled={validating}
                     style={{
                       width: '100%',
                       padding: '12px',
-                      border: '1px solid #ddd',
+                      border: `1px solid ${Object.keys(validationErrors).length > 0 ? '#d93025' : '#ddd'}`,
                       borderRadius: '4px',
                       fontSize: '16px'
                     }}
                   />
-                  {file && (
+                  {validating && (
                     <p style={{ marginTop: '8px', fontSize: '14px', color: '#666' }}>
+                      Validating file...
+                    </p>
+                  )}
+                  {file && Object.keys(validationErrors).length === 0 && (
+                    <p style={{ marginTop: '8px', fontSize: '14px', color: '#34a853' }}>
                       Selected: {file.name} ({formatFileSize(file.size)})
                     </p>
+                  )}
+                  {Object.keys(validationErrors).length > 0 && (
+                    <div style={{
+                      marginTop: '8px',
+                      padding: '12px',
+                      backgroundColor: '#ffebee',
+                      borderRadius: '4px',
+                      border: '1px solid #d93025'
+                    }}>
+                      <p style={{ margin: '0 0 8px 0', fontWeight: 600, color: '#d93025' }}>
+                        Validation Failed:
+                      </p>
+                      <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                        {Object.entries(validationErrors).map(([key, message]) => (
+                          <li key={key} style={{ color: '#d93025', fontSize: '14px' }}>
+                            {message}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
 

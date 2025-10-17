@@ -91,6 +91,7 @@ if (forwardedHeadersEnabled)
 builder.Services.Configure<SessionCookieConfiguration>(builder.Configuration.GetSection("Authentication:SessionCookie"));
 builder.Services.Configure<SessionManagementConfiguration>(builder.Configuration.GetSection("Authentication:SessionManagement"));
 builder.Services.Configure<RateLimitConfiguration>(builder.Configuration.GetSection("RateLimit"));
+builder.Services.Configure<PdfProcessingConfiguration>(builder.Configuration.GetSection("PdfProcessing"));
 
 // Only configure Postgres in non-test environments (tests will override with SQLite)
 if (!builder.Environment.IsEnvironment("Testing"))
@@ -166,6 +167,7 @@ builder.Services.AddScoped<AgentFeedbackService>();
 builder.Services.AddScoped<RateLimitService>();
 builder.Services.AddScoped<PdfTextExtractionService>();
 builder.Services.AddScoped<PdfTableExtractionService>();
+builder.Services.AddScoped<IPdfValidationService, PdfValidationService>(); // PDF-09: PDF validation service
 builder.Services.AddScoped<PdfStorageService>();
 builder.Services.AddScoped<N8nConfigService>();
 builder.Services.AddScoped<ChatService>();
@@ -1805,7 +1807,7 @@ v1Api.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context
     }
 });
 
-v1Api.MapPost("/ingest/pdf", async (HttpContext context, PdfStorageService pdfStorage, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/ingest/pdf", async (HttpContext context, IPdfValidationService pdfValidation, PdfStorageService pdfStorage, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1827,7 +1829,41 @@ v1Api.MapPost("/ingest/pdf", async (HttpContext context, PdfStorageService pdfSt
         return Results.BadRequest(new { error = "gameId is required" });
     }
 
+    if (file == null || file.Length == 0)
+    {
+        return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string> { ["file"] = "No file provided" } });
+    }
+
     logger.LogInformation("User {UserId} uploading PDF for game {GameId}", session.User.Id, gameId);
+
+    // PDF-09: Validate file size
+    var sizeValidation = pdfValidation.ValidateFileSize(file.Length);
+    if (!sizeValidation.IsValid)
+    {
+        logger.LogWarning("PDF validation failed for {FileName}: File size validation failed", file.FileName);
+        return Results.BadRequest(new { error = "validation_failed", details = sizeValidation.Errors });
+    }
+
+    // PDF-09: Validate MIME type
+    var mimeValidation = pdfValidation.ValidateMimeType(file.ContentType);
+    if (!mimeValidation.IsValid)
+    {
+        logger.LogWarning("PDF validation failed for {FileName}: MIME type validation failed", file.FileName);
+        return Results.BadRequest(new { error = "validation_failed", details = mimeValidation.Errors });
+    }
+
+    // PDF-09: Deep validation with PDF content
+    using var stream = file.OpenReadStream();
+    var validation = await pdfValidation.ValidateAsync(stream, file.FileName, ct);
+
+    if (!validation.IsValid)
+    {
+        logger.LogWarning("PDF validation failed for {FileName}: {@Errors}", file.FileName, validation.Errors);
+        return Results.BadRequest(new { error = "validation_failed", details = validation.Errors });
+    }
+
+    // Reset stream position for processing
+    stream.Position = 0;
 
     var result = await pdfStorage.UploadPdfAsync(gameId, session.User.Id, file!, ct);
 

@@ -17,6 +17,22 @@ jest.mock('../../lib/api', () => ({
   }
 }));
 
+// Mock framer-motion to avoid animation issues in tests
+jest.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
+    a: ({ children, ...props }: any) => <a {...props}>{children}</a>,
+  },
+  AnimatePresence: ({ children }: any) => <>{children}</>,
+  useInView: () => [null, true],
+}));
+
+// Mock react-intersection-observer
+jest.mock('react-intersection-observer', () => ({
+  useInView: () => [null, true],
+}));
+
 const mockedApi = api as jest.Mocked<typeof api>;
 const useRouterMock = useRouter as jest.MockedFunction<typeof useRouter>;
 
@@ -871,6 +887,151 @@ describe('Home page (Landing Page)', () => {
       await waitFor(() => {
         expect(screen.getByText('Registrazione non riuscita.')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('Additional Coverage', () => {
+    it('renders all role options in register form', async () => {
+      const user = userEvent.setup();
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(mockedApi.get).toHaveBeenCalled();
+      });
+
+      // Open modal
+      const getStartedButtons = screen.getAllByText('Get Started Free');
+      await user.click(getStartedButtons[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+      });
+
+      // Switch to register tab
+      const registerTab = screen.getByRole('tab', { name: 'Register' });
+      await user.click(registerTab);
+
+      await waitFor(() => {
+        expect(screen.getByText('Create Your Account')).toBeInTheDocument();
+      });
+
+      // Check all role options exist
+      const roleSelect = screen.getByLabelText(/Select user role/i);
+      expect(roleSelect).toBeInTheDocument();
+
+      const options = within(roleSelect as HTMLElement).getAllByRole('option');
+      expect(options).toHaveLength(3);
+      expect(options[0]).toHaveValue('User');
+      expect(options[1]).toHaveValue('Editor');
+      expect(options[2]).toHaveValue('Admin');
+    });
+
+    it('switches between login and register tabs with Login tab initially selected', async () => {
+      const user = userEvent.setup();
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(mockedApi.get).toHaveBeenCalled();
+      });
+
+      // Open modal
+      const getStartedButtons = screen.getAllByText('Get Started Free');
+      await user.click(getStartedButtons[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Login to MeepleAI')).toBeInTheDocument();
+      });
+
+      // Check login tab is initially selected
+      const loginTab = screen.getByRole('tab', { name: 'Login' });
+      expect(loginTab).toHaveAttribute('aria-selected', 'true');
+
+      const registerTab = screen.getByRole('tab', { name: 'Register' });
+      expect(registerTab).toHaveAttribute('aria-selected', 'false');
+    });
+  });
+
+  describe('Hero Visual Content', () => {
+    it('renders hero conversation example', async () => {
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(screen.getByText('How does en passant work in chess?')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/En passant is a special pawn capture/i)).toBeInTheDocument();
+      expect(screen.getByText(/Sources: Chess Rules \(FIDE\) - Page 12/i)).toBeInTheDocument();
+    });
+
+    it('renders scroll indicator', async () => {
+      const { container } = render(<Home />);
+
+      await waitFor(() => {
+        expect(mockedApi.get).toHaveBeenCalled();
+      });
+
+      // Check for SVG scroll indicator
+      const svg = container.querySelector('svg.w-6.h-6.text-slate-500');
+      expect(svg).toBeInTheDocument();
+    });
+  });
+
+  describe('Footer Links', () => {
+    it('renders GitHub link', async () => {
+      render(<Home />);
+
+      await waitFor(() => {
+        const githubLink = screen.getByRole('link', { name: 'GitHub' });
+        expect(githubLink).toBeInTheDocument();
+        expect(githubLink).toHaveAttribute('href', 'https://github.com/yourusername/meepleai');
+        expect(githubLink).toHaveAttribute('target', '_blank');
+        expect(githubLink).toHaveAttribute('rel', 'noopener noreferrer');
+      });
+    });
+
+    it('renders Documentation link', async () => {
+      render(<Home />);
+
+      await waitFor(() => {
+        const docsLink = screen.getByRole('link', { name: 'Documentation' });
+        expect(docsLink).toBeInTheDocument();
+        expect(docsLink).toHaveAttribute('href', '/docs');
+      });
+    });
+
+    it('renders API Logs link', async () => {
+      render(<Home />);
+
+      await waitFor(() => {
+        const logsLink = screen.getByRole('link', { name: 'API Logs' });
+        expect(logsLink).toBeInTheDocument();
+        expect(logsLink).toHaveAttribute('href', '/logs');
+      });
+    });
+  });
+
+  describe('Feature Descriptions', () => {
+    it('renders all feature descriptions in How It Works section', async () => {
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Upload any PDF rulebook/i)).toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/Ask questions in natural language/i)).toBeInTheDocument();
+      expect(screen.getByText(/Get instant answers with exact sources/i)).toBeInTheDocument();
+    });
+
+    it('renders all key feature descriptions', async () => {
+      render(<Home />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Advanced AI understands context and meaning/i)).toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/Upload rulebooks for chess/i)).toBeInTheDocument();
+      expect(screen.getByText(/Every answer includes exact page numbers/i)).toBeInTheDocument();
+      expect(screen.getByText(/Create machine-readable rule specifications/i)).toBeInTheDocument();
     });
   });
 });

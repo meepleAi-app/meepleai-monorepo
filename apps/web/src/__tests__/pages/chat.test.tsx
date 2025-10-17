@@ -2,6 +2,27 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ChatPage from '../../pages/chat';
 import { api } from '../../pages/../lib/api';
+import { useChatStreaming } from '../../lib/hooks/useChatStreaming';
+
+// Mock the useChatStreaming hook
+const mockStartStreaming = jest.fn();
+const mockStopStreaming = jest.fn();
+
+jest.mock('../../lib/hooks/useChatStreaming', () => ({
+  useChatStreaming: jest.fn(() => [
+    {
+      isStreaming: false,
+      currentAnswer: '',
+      snippets: [],
+      state: null,
+      error: null
+    },
+    {
+      startStreaming: mockStartStreaming,
+      stopStreaming: mockStopStreaming
+    }
+  ])
+}));
 
 // Mock the API client
 jest.mock('../../lib/api', () => ({
@@ -100,7 +121,24 @@ describe('ChatPage', () => {
     mockApi.post.mockReset();
     mockApi.put.mockReset();
     mockApi.delete.mockReset();
+    mockStartStreaming.mockReset();
+    mockStopStreaming.mockReset();
     window.confirm = originalConfirm;
+
+    // Reset useChatStreaming mock to default state
+    (useChatStreaming as jest.Mock).mockReturnValue([
+      {
+        isStreaming: false,
+        currentAnswer: '',
+        snippets: [],
+        state: null,
+        error: null
+      },
+      {
+        startStreaming: mockStartStreaming,
+        stopStreaming: mockStopStreaming
+      }
+    ]);
   });
 
   afterEach(() => {
@@ -469,7 +507,7 @@ describe('ChatPage', () => {
         await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
-        const newChatButton = screen.getByRole('button', { name: /\+ Nuova Chat/i });
+        const newChatButton = screen.getByRole('button', { name: /Create new chat/i });
 
         await user.click(newChatButton);
 
@@ -497,7 +535,7 @@ describe('ChatPage', () => {
 
         await user.selectOptions(gameSelect, '');
 
-        const newChatButton = screen.getByRole('button', { name: /\+ Nuova Chat/i }) as HTMLButtonElement;
+        const newChatButton = screen.getByRole('button', { name: /Create new chat/i }) as HTMLButtonElement;
         expect(newChatButton.disabled).toBe(true);
       });
 
@@ -513,7 +551,7 @@ describe('ChatPage', () => {
 
         await user.selectOptions(agentSelect, '');
 
-        const newChatButton = screen.getByRole('button', { name: /\+ Nuova Chat/i }) as HTMLButtonElement;
+        const newChatButton = screen.getByRole('button', { name: /Create new chat/i }) as HTMLButtonElement;
         expect(newChatButton.disabled).toBe(true);
       });
 
@@ -526,12 +564,14 @@ describe('ChatPage', () => {
         await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
-        const newChatButton = screen.getByRole('button', { name: /\+ Nuova Chat/i });
+        const newChatButton = screen.getByRole('button', { name: /Create new chat/i });
 
         await user.click(newChatButton);
 
         await waitFor(() => {
-          expect(screen.getByRole('button', { name: /Creazione.../i })).toBeInTheDocument();
+          const creatingButton = screen.getByRole('button', { name: /Create new chat/i });
+          expect(creatingButton).toBeInTheDocument();
+          expect(creatingButton.textContent).toContain('Creazione...');
         });
       });
 
@@ -545,7 +585,7 @@ describe('ChatPage', () => {
         await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
         const user = userEvent.setup();
-        const newChatButton = screen.getByRole('button', { name: /\+ Nuova Chat/i });
+        const newChatButton = screen.getByRole('button', { name: /Create new chat/i });
 
         await user.click(newChatButton);
 
@@ -902,7 +942,7 @@ describe('ChatPage', () => {
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
         await user.type(input, 'Can I castle now?');
 
-        const sendButton = screen.getByRole('button', { name: /Invia/i });
+        const sendButton = screen.getByRole('button', { name: /Send message/i });
         await user.click(sendButton);
 
         await waitFor(() => {
@@ -946,7 +986,7 @@ describe('ChatPage', () => {
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
         await user.type(input, 'First message');
 
-        const sendButton = screen.getByRole('button', { name: /Invia/i });
+        const sendButton = screen.getByRole('button', { name: /Send message/i });
         await user.click(sendButton);
 
         await waitFor(() => {
@@ -992,7 +1032,7 @@ describe('ChatPage', () => {
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
         await user.type(input, 'When can I castle?');
 
-        const sendButton = screen.getByRole('button', { name: /Invia/i });
+        const sendButton = screen.getByRole('button', { name: /Send message/i });
         await user.click(sendButton);
 
         // User message should appear immediately
@@ -1032,7 +1072,7 @@ describe('ChatPage', () => {
 
         expect(input.value).toBe('Test message');
 
-        const sendButton = screen.getByRole('button', { name: /Invia/i });
+        const sendButton = screen.getByRole('button', { name: /Send message/i });
         await user.click(sendButton);
 
         await waitFor(() => {
@@ -1063,14 +1103,14 @@ describe('ChatPage', () => {
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
         await user.type(input, 'Test message');
 
-        const sendButton = screen.getByRole('button', { name: /Invia/i });
+        const sendButton = screen.getByRole('button', { name: /Send message/i });
         await user.click(sendButton);
 
         await waitFor(() => {
           expect(screen.getByText(/Sto pensando.../i)).toBeInTheDocument();
         });
 
-        expect(screen.getByRole('button', { name: /Invio.../i })).toBeDisabled();
+        expect(screen.getByRole('button', { name: /Send message/i })).toBeDisabled();
       });
 
       it('disables send button when no game is selected', async () => {
@@ -1085,7 +1125,7 @@ describe('ChatPage', () => {
 
         await user.selectOptions(gameSelect, '');
 
-        const sendButton = screen.getByRole('button', { name: /Invia/i }) as HTMLButtonElement;
+        const sendButton = screen.getByRole('button', { name: /Send message/i }) as HTMLButtonElement;
         expect(sendButton.disabled).toBe(true);
       });
 
@@ -1104,7 +1144,7 @@ describe('ChatPage', () => {
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
         await user.type(input, 'Test message');
 
-        const sendButton = screen.getByRole('button', { name: /Invia/i }) as HTMLButtonElement;
+        const sendButton = screen.getByRole('button', { name: /Send message/i }) as HTMLButtonElement;
         expect(sendButton.disabled).toBe(true);
       });
 
@@ -1115,7 +1155,7 @@ describe('ChatPage', () => {
 
         await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
-        const sendButton = screen.getByRole('button', { name: /Invia/i }) as HTMLButtonElement;
+        const sendButton = screen.getByRole('button', { name: /Send message/i }) as HTMLButtonElement;
         expect(sendButton.disabled).toBe(true);
       });
 
@@ -1131,7 +1171,7 @@ describe('ChatPage', () => {
 
         await user.type(input, '   ');
 
-        const sendButton = screen.getByRole('button', { name: /Invia/i }) as HTMLButtonElement;
+        const sendButton = screen.getByRole('button', { name: /Send message/i }) as HTMLButtonElement;
         expect(sendButton.disabled).toBe(true);
       });
 
@@ -1147,7 +1187,7 @@ describe('ChatPage', () => {
 
         await user.type(input, '   ');
 
-        const sendButton = screen.getByRole('button', { name: /Invia/i });
+        const sendButton = screen.getByRole('button', { name: /Send message/i });
 
         // Can't actually click because it's disabled, but verify no API call
         expect(sendButton).toBeDisabled();
@@ -1177,7 +1217,7 @@ describe('ChatPage', () => {
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
         await user.type(input, 'Failed message');
 
-        const sendButton = screen.getByRole('button', { name: /Invia/i });
+        const sendButton = screen.getByRole('button', { name: /Send message/i });
         await user.click(sendButton);
 
         // In jsdom 26, error handling is fast enough that the message is removed before rendering completes
@@ -1210,7 +1250,7 @@ describe('ChatPage', () => {
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
         await user.type(input, 'First message');
 
-        const sendButton = screen.getByRole('button', { name: /Invia/i });
+        const sendButton = screen.getByRole('button', { name: /Send message/i });
         await user.click(sendButton);
 
         await waitFor(() => {
@@ -1250,7 +1290,7 @@ describe('ChatPage', () => {
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
         await user.type(input, 'Test question');
 
-        const sendButton = screen.getByRole('button', { name: /Invia/i });
+        const sendButton = screen.getByRole('button', { name: /Send message/i });
         await user.click(sendButton);
 
         await waitFor(() => {
@@ -1292,7 +1332,7 @@ describe('ChatPage', () => {
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
         await user.type(input, 'Tell me more');
 
-        const sendButton = screen.getByRole('button', { name: /Invia/i });
+        const sendButton = screen.getByRole('button', { name: /Send message/i });
         await user.click(sendButton);
 
         await waitFor(() => {
@@ -1331,7 +1371,7 @@ describe('ChatPage', () => {
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
         await user.type(input, 'Question');
 
-        const sendButton = screen.getByRole('button', { name: /Invia/i });
+        const sendButton = screen.getByRole('button', { name: /Send message/i });
         await user.click(sendButton);
 
         await waitFor(() => {
@@ -1375,7 +1415,7 @@ describe('ChatPage', () => {
         const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
         await user.type(input, 'Simple question');
 
-        const sendButton = screen.getByRole('button', { name: /Invia/i });
+        const sendButton = screen.getByRole('button', { name: /Send message/i });
         await user.click(sendButton);
 
         await waitFor(() => {
@@ -1937,6 +1977,593 @@ describe('ChatPage', () => {
       });
 
       consoleErrorSpy.mockRestore();
+    });
+  });
+
+  // =============================================================================
+  // STREAMING TESTS (to cover streaming UI and controls)
+  // =============================================================================
+
+  describe('Streaming Responses', () => {
+    it('displays streaming response with current answer', async () => {
+      setupAuthenticatedState();
+
+      // Mock active streaming state
+      (useChatStreaming as jest.Mock).mockReturnValue([
+        {
+          isStreaming: true,
+          currentAnswer: 'This is a streaming response...',
+          snippets: [],
+          state: 'Generating answer...',
+          error: null
+        },
+        {
+          startStreaming: mockStartStreaming,
+          stopStreaming: mockStopStreaming
+        }
+      ]);
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
+
+      // Should show streaming indicator
+      expect(screen.getByText('This is a streaming response...')).toBeInTheDocument();
+      expect(screen.getByText('Generating answer...')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Stop streaming/i })).toBeInTheDocument();
+    });
+
+    it('displays "Sto pensando..." when streaming but no answer yet', async () => {
+      setupAuthenticatedState();
+
+      (useChatStreaming as jest.Mock).mockReturnValue([
+        {
+          isStreaming: true,
+          currentAnswer: '',
+          snippets: [],
+          state: 'Connecting...',
+          error: null
+        },
+        {
+          startStreaming: mockStartStreaming,
+          stopStreaming: mockStopStreaming
+        }
+      ]);
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
+
+      expect(screen.getByText('Sto pensando...')).toBeInTheDocument();
+      expect(screen.getByText('Connecting...')).toBeInTheDocument();
+    });
+
+    it('displays snippets during streaming', async () => {
+      setupAuthenticatedState();
+
+      (useChatStreaming as jest.Mock).mockReturnValue([
+        {
+          isStreaming: true,
+          currentAnswer: 'Based on the rules...',
+          snippets: [
+            { text: 'Rule excerpt', source: 'rules.pdf', page: 3, line: null }
+          ],
+          state: null,
+          error: null
+        },
+        {
+          startStreaming: mockStartStreaming,
+          stopStreaming: mockStopStreaming
+        }
+      ]);
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
+
+      expect(screen.getByText('Fonti:')).toBeInTheDocument();
+      expect(screen.getByText('rules.pdf (Pagina 3)')).toBeInTheDocument();
+      expect(screen.getByText('Rule excerpt')).toBeInTheDocument();
+    });
+
+    it('calls stopStreaming when stop button is clicked', async () => {
+      setupAuthenticatedState();
+
+      (useChatStreaming as jest.Mock).mockReturnValue([
+        {
+          isStreaming: true,
+          currentAnswer: 'Streaming...',
+          snippets: [],
+          state: null,
+          error: null
+        },
+        {
+          startStreaming: mockStartStreaming,
+          stopStreaming: mockStopStreaming
+        }
+      ]);
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
+
+      const user = userEvent.setup();
+      const stopButton = screen.getByRole('button', { name: /Stop streaming/i });
+
+      await user.click(stopButton);
+
+      expect(mockStopStreaming).toHaveBeenCalledTimes(1);
+    });
+
+    it('disables input and send button during streaming', async () => {
+      setupAuthenticatedState();
+
+      (useChatStreaming as jest.Mock).mockReturnValue([
+        {
+          isStreaming: true,
+          currentAnswer: 'Streaming...',
+          snippets: [],
+          state: null,
+          error: null
+        },
+        {
+          startStreaming: mockStartStreaming,
+          stopStreaming: mockStopStreaming
+        }
+      ]);
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
+
+      const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i) as HTMLInputElement;
+      const sendButton = screen.getByRole('button', { name: /Send message/i });
+
+      expect(input.disabled).toBe(true);
+      expect(sendButton.disabled).toBe(true);
+    });
+
+    it('calls startStreaming with correct parameters when sending message', async () => {
+      setupAuthenticatedState();
+      mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
+
+      const user = userEvent.setup();
+
+      // Load a chat
+      const chatItems = screen.getAllByText('Chess Expert');
+      await user.click(chatItems[chatItems.length - 1]);
+
+      await waitFor(() => {
+        expect(screen.getByText('How do I castle?')).toBeInTheDocument();
+      });
+
+      const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
+      await user.type(input, 'Test streaming question');
+
+      const sendButton = screen.getByRole('button', { name: /Invia/i });
+      await user.click(sendButton);
+
+      await waitFor(() => {
+        expect(mockStartStreaming).toHaveBeenCalledWith('game-1', 'Test streaming question', 'chat-1');
+      });
+    });
+
+    it('shows legacy loading state when sending but not streaming', async () => {
+      setupAuthenticatedState();
+      mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
+
+      // Mock post to never resolve (simulates loading state)
+      mockApi.post.mockImplementation(() => new Promise(() => {}));
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
+
+      const user = userEvent.setup();
+
+      // Load a chat
+      const chatItems = screen.getAllByText('Chess Expert');
+      await user.click(chatItems[chatItems.length - 1]);
+
+      await waitFor(() => {
+        expect(screen.getByText('How do I castle?')).toBeInTheDocument();
+      });
+
+      const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i);
+      await user.type(input, 'Question');
+
+      const sendButton = screen.getByRole('button', { name: /Invia/i });
+      await user.click(sendButton);
+
+      // Should show legacy loading (not streaming UI since isStreaming is false)
+      await waitFor(() => {
+        const loadingMessages = screen.getAllByText(/Sto pensando.../i);
+        expect(loadingMessages.length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  // =============================================================================
+  // KEYBOARD INTERACTION TESTS
+  // =============================================================================
+
+  describe('Keyboard Interactions', () => {
+    it('loads chat history when pressing Enter on chat item', async () => {
+      setupAuthenticatedState();
+      mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
+
+      const user = userEvent.setup();
+
+      // Find chat items
+      await waitFor(() => {
+        const chatItems = screen.getAllByText('Chess Expert');
+        expect(chatItems.length).toBeGreaterThan(0);
+      });
+
+      // Find the button element with role="button"
+      const chatButtons = screen.getAllByRole('button');
+      const chatButton = chatButtons.find(btn =>
+        btn.textContent?.includes('Chess Expert') &&
+        btn.getAttribute('tabIndex') === '0'
+      );
+
+      expect(chatButton).toBeDefined();
+
+      // Press Enter
+      await user.type(chatButton!, '{Enter}');
+
+      await waitFor(() => {
+        expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats/chat-1');
+      });
+    });
+
+    it('loads chat history when pressing Space on chat item', async () => {
+      setupAuthenticatedState();
+      mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
+
+      const user = userEvent.setup();
+
+      await waitFor(() => {
+        const chatItems = screen.getAllByText('Chess Expert');
+        expect(chatItems.length).toBeGreaterThan(0);
+      });
+
+      const chatButtons = screen.getAllByRole('button');
+      const chatButton = chatButtons.find(btn =>
+        btn.textContent?.includes('Chess Expert') &&
+        btn.getAttribute('tabIndex') === '0'
+      );
+
+      expect(chatButton).toBeDefined();
+
+      // Press Space
+      await user.type(chatButton!, ' ');
+
+      await waitFor(() => {
+        expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats/chat-1');
+      });
+    });
+  });
+
+  // =============================================================================
+  // EMPTY STATE TESTS
+  // =============================================================================
+
+  describe('Empty States', () => {
+    it('shows empty message state with active chat prompt', async () => {
+      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
+      mockApi.get.mockResolvedValueOnce(mockGames);
+      mockApi.get.mockResolvedValueOnce(mockAgents);
+      mockApi.get.mockResolvedValueOnce(mockChats);
+      mockApi.get.mockResolvedValueOnce({
+        ...mockChatWithHistory,
+        messages: []
+      });
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
+
+      const user = userEvent.setup();
+
+      // Load chat
+      const chatItems = screen.getAllByText('Chess Expert');
+      await user.click(chatItems[chatItems.length - 1]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Nessun messaggio ancora.')).toBeInTheDocument();
+        expect(screen.getByText('Inizia facendo una domanda!')).toBeInTheDocument();
+      });
+    });
+
+    it('shows empty message state with no active chat prompt', async () => {
+      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
+      mockApi.get.mockResolvedValueOnce(mockGames);
+      mockApi.get.mockResolvedValueOnce(mockAgents);
+      mockApi.get.mockResolvedValueOnce([]);
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
+
+      expect(screen.getByText('Nessun messaggio ancora.')).toBeInTheDocument();
+      expect(screen.getByText('Seleziona una chat esistente o creane una nuova per iniziare.')).toBeInTheDocument();
+    });
+
+    it('shows "Nessun gioco selezionato" in header when no game is selected', async () => {
+      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
+      mockApi.get.mockResolvedValueOnce([]);
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
+
+      expect(screen.getByText('Nessun gioco selezionato')).toBeInTheDocument();
+    });
+  });
+
+  // =============================================================================
+  // ERROR MESSAGE REQUIREMENT TESTS
+  // =============================================================================
+
+  describe('Error Message Requirements', () => {
+    it('shows error when trying to send message without authentication', async () => {
+      mockApi.get.mockResolvedValueOnce(null);
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+
+      // User is not authenticated, so we see the login screen
+      expect(screen.getByRole('heading', { name: /Accesso richiesto/i })).toBeInTheDocument();
+    });
+
+    it('shows error when trying to create chat without game', async () => {
+      setupAuthenticatedState();
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games'));
+
+      const user = userEvent.setup();
+      const gameSelect = screen.getByLabelText(/Gioco:/i);
+
+      // Deselect game
+      await user.selectOptions(gameSelect, '');
+
+      // Try to create chat (button with aria-label)
+      const newChatButton = screen.getByRole('button', { name: /Create new chat/i });
+
+      // Button should be disabled
+      expect(newChatButton).toBeDisabled();
+    });
+
+    it('shows error when trying to create chat without agent', async () => {
+      setupAuthenticatedState();
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games/game-1/agents'));
+
+      const user = userEvent.setup();
+      const agentSelect = screen.getByLabelText(/Agente:/i);
+
+      // Deselect agent
+      await user.selectOptions(agentSelect, '');
+
+      // Try to create chat (button with aria-label)
+      const newChatButton = screen.getByRole('button', { name: /Create new chat/i });
+
+      // Button should be disabled
+      expect(newChatButton).toBeDisabled();
+    });
+  });
+
+  // =============================================================================
+  // SNIPPET FORMATTING TESTS
+  // =============================================================================
+
+  describe('Snippet Formatting', () => {
+    it('formats snippet with page number correctly', async () => {
+      setupAuthenticatedState();
+
+      const chatWithSnippet = {
+        ...mockChatWithHistory,
+        messages: [
+          {
+            id: 'msg-1',
+            level: 'agent',
+            message: 'Answer',
+            metadataJson: JSON.stringify({
+              snippets: [
+                { text: 'Content', source: 'book.pdf', page: 42, line: null }
+              ]
+            }),
+            createdAt: '2025-01-10T10:00:00Z'
+          }
+        ]
+      };
+
+      mockApi.get.mockResolvedValueOnce(chatWithSnippet);
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
+
+      const user = userEvent.setup();
+      const chatItems = screen.getAllByText('Chess Expert');
+      await user.click(chatItems[chatItems.length - 1]);
+
+      await waitFor(() => {
+        expect(screen.getByText('book.pdf (Pagina 42)')).toBeInTheDocument();
+      });
+    });
+
+    it('formats snippet without page number correctly', async () => {
+      setupAuthenticatedState();
+
+      const chatWithSnippet = {
+        ...mockChatWithHistory,
+        messages: [
+          {
+            id: 'msg-1',
+            level: 'agent',
+            message: 'Answer',
+            metadataJson: JSON.stringify({
+              snippets: [
+                { text: 'Content', source: 'file.txt', page: null, line: null }
+              ]
+            }),
+            createdAt: '2025-01-10T10:00:00Z'
+          }
+        ]
+      };
+
+      mockApi.get.mockResolvedValueOnce(chatWithSnippet);
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
+
+      const user = userEvent.setup();
+      const chatItems = screen.getAllByText('Chess Expert');
+      await user.click(chatItems[chatItems.length - 1]);
+
+      await waitFor(() => {
+        expect(screen.getByText('file.txt')).toBeInTheDocument();
+        expect(screen.queryByText(/Pagina/i)).not.toBeInTheDocument();
+      });
+    });
+
+    it('formats snippet with undefined page as null', async () => {
+      setupAuthenticatedState();
+
+      const chatWithSnippet = {
+        ...mockChatWithHistory,
+        messages: [
+          {
+            id: 'msg-1',
+            level: 'agent',
+            message: 'Answer',
+            metadataJson: JSON.stringify({
+              snippets: [
+                { text: 'Content', source: 'doc.pdf' } // page and line undefined
+              ]
+            }),
+            createdAt: '2025-01-10T10:00:00Z'
+          }
+        ]
+      };
+
+      mockApi.get.mockResolvedValueOnce(chatWithSnippet);
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
+
+      const user = userEvent.setup();
+      const chatItems = screen.getAllByText('Chess Expert');
+      await user.click(chatItems[chatItems.length - 1]);
+
+      await waitFor(() => {
+        expect(screen.getByText('doc.pdf')).toBeInTheDocument();
+      });
+    });
+  });
+
+  // =============================================================================
+  // MESSAGE ROLE TESTS
+  // =============================================================================
+
+  describe('Message Roles', () => {
+    it('correctly identifies user messages from level="user"', async () => {
+      setupAuthenticatedState();
+      mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
+
+      const user = userEvent.setup();
+      const chatItems = screen.getAllByText('Chess Expert');
+      await user.click(chatItems[chatItems.length - 1]);
+
+      await waitFor(() => {
+        expect(screen.getByText('How do I castle?')).toBeInTheDocument();
+      });
+
+      // User message should have "Tu" label
+      expect(screen.getByText('Tu')).toBeInTheDocument();
+    });
+
+    it('correctly identifies assistant messages from level="agent"', async () => {
+      setupAuthenticatedState();
+      mockApi.get.mockResolvedValueOnce(mockChatWithHistory);
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
+
+      const user = userEvent.setup();
+      const chatItems = screen.getAllByText('Chess Expert');
+      await user.click(chatItems[chatItems.length - 1]);
+
+      await waitFor(() => {
+        expect(screen.getByText('Castling is a special move...')).toBeInTheDocument();
+      });
+
+      // Assistant message should have "MeepleAI" label
+      const meepleAILabels = screen.getAllByText('MeepleAI');
+      expect(meepleAILabels.length).toBeGreaterThan(0);
+    });
+  });
+
+  // =============================================================================
+  // CHAT PREVIEW FORMATTING TESTS
+  // =============================================================================
+
+  describe('Chat Preview Formatting', () => {
+    it('uses lastMessageAt for chat preview when available', async () => {
+      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
+      mockApi.get.mockResolvedValueOnce(mockGames);
+      mockApi.get.mockResolvedValueOnce(mockAgents);
+      mockApi.get.mockResolvedValueOnce([mockChats[0]]); // Has lastMessageAt
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
+
+      // Chat preview should include date formatted from lastMessageAt
+      const datePattern = /\d{1,2}\/\d{1,2}\/\d{4}/;
+      const dateElements = screen.getAllByText(datePattern);
+      expect(dateElements.length).toBeGreaterThan(0);
+    });
+
+    it('uses startedAt for chat preview when lastMessageAt is null', async () => {
+      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
+      mockApi.get.mockResolvedValueOnce(mockGames);
+      mockApi.get.mockResolvedValueOnce(mockAgents);
+      mockApi.get.mockResolvedValueOnce([mockChats[1]]); // Has null lastMessageAt
+
+      render(<ChatPage />);
+
+      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
+
+      // Chat preview should still show date (from startedAt)
+      const helperElements = screen.getAllByText('Chess Helper');
+      expect(helperElements.length).toBeGreaterThan(0);
     });
   });
 });

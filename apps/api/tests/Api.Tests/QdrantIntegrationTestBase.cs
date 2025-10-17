@@ -93,7 +93,8 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
         // Create QdrantService with Qdrant connection (works for both CI and local)
         var configurationValues = new Dictionary<string, string?>
         {
-            ["QDRANT_URL"] = !string.IsNullOrWhiteSpace(_configuredQdrantUrl) ? _configuredQdrantUrl : _qdrantUrl
+            ["QDRANT_URL"] = !string.IsNullOrWhiteSpace(_configuredQdrantUrl) ? _configuredQdrantUrl : _qdrantUrl,
+            ["EMBEDDING_PROVIDER"] = "openai" // Use OpenAI embedding dimensions (1536) for tests
         };
 
         if (!string.IsNullOrWhiteSpace(_configuredQdrantGrpcPort))

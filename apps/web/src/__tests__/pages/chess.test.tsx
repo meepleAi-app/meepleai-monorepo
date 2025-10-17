@@ -276,7 +276,7 @@ describe("ChessPage", () => {
       await user.click(sendButton);
 
       await waitFor(() => {
-        expect(mockApiPost).toHaveBeenCalledWith("/agents/chess", {
+        expect(mockApiPost).toHaveBeenCalledWith("/api/v1/agents/chess", {
           question: "What is the best opening for white?",
           fenPosition: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
         });
@@ -347,7 +347,7 @@ describe("ChessPage", () => {
       });
 
       // Verify the API was called
-      expect(mockApiPost).toHaveBeenCalledWith("/agents/chess", {
+      expect(mockApiPost).toHaveBeenCalledWith("/api/v1/agents/chess", {
         question: "Play e4",
         fenPosition: expect.any(String)
       });
@@ -525,7 +525,7 @@ describe("ChessPage", () => {
       await user.click(sendButton);
 
       await waitFor(() => {
-        expect(mockApiPost).toHaveBeenCalledWith("/agents/chess", {
+        expect(mockApiPost).toHaveBeenCalledWith("/api/v1/agents/chess", {
           question: "Analyze this position",
           fenPosition: expect.any(String)
         });

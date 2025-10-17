@@ -31,8 +31,17 @@ public class AuthService
     {
         if (string.IsNullOrWhiteSpace(command.Email))
             throw new ArgumentException("Email is required", nameof(command.Email));
+
+        if (!IsValidEmail(command.Email))
+            throw new ArgumentException("Email format is invalid", nameof(command.Email));
+
         if (string.IsNullOrWhiteSpace(command.Password) || command.Password.Length < 8)
             throw new ArgumentException("Password must be at least 8 characters", nameof(command.Password));
+
+        if (string.IsNullOrWhiteSpace(command.DisplayName))
+            throw new ArgumentException("Display name is required", nameof(command.DisplayName));
+        if (command.DisplayName.Trim().Length > 100)
+            throw new ArgumentException("Display name must not exceed 100 characters", nameof(command.DisplayName));
 
         var email = command.Email.Trim().ToLowerInvariant();
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -267,5 +276,28 @@ public class AuthService
         }
 
         return Enum.TryParse<UserRole>(role, true, out var parsed) ? parsed : UserRole.User;
+    }
+
+    private static bool IsValidEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return false;
+
+        var trimmedEmail = email.Trim();
+
+        // Basic email validation: must contain @ and have domain part
+        var atIndex = trimmedEmail.IndexOf('@');
+        if (atIndex <= 0 || atIndex == trimmedEmail.Length - 1)
+            return false;
+
+        var lastAtIndex = trimmedEmail.LastIndexOf('@');
+        if (atIndex != lastAtIndex)
+            return false; // Multiple @ symbols
+
+        var domainPart = trimmedEmail.Substring(atIndex + 1);
+        if (!domainPart.Contains('.'))
+            return false; // No dot in domain
+
+        return true;
     }
 }

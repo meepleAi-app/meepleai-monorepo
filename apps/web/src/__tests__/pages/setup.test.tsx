@@ -579,7 +579,9 @@ describe('SetupPage', () => {
       });
 
       // Click on backdrop (outside the modal content)
-      const backdrop = screen.getByRole('heading', { name: 'References' }).parentElement?.parentElement;
+      // The structure is: backdrop > content > header-container > heading
+      // So we need 3 levels up from the heading to get to the backdrop
+      const backdrop = screen.getByRole('heading', { name: 'References' }).parentElement?.parentElement?.parentElement;
       if (backdrop) {
         await user.click(backdrop);
 

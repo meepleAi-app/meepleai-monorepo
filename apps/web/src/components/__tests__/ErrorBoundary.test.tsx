@@ -30,10 +30,18 @@ describe('ErrorBoundary', () => {
   const originalError = console.error;
   beforeAll(() => {
     console.error = jest.fn();
+    // Mock fetch for logger (not available in jsdom)
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({}),
+      } as Response)
+    );
   });
 
   afterAll(() => {
     console.error = originalError;
+    delete (global as any).fetch;
   });
 
   it('should render children when no error', () => {
@@ -151,7 +159,8 @@ describe('ErrorBoundary', () => {
     const homeButton = screen.getByRole('button', { name: /go to home/i });
     await user.click(homeButton);
 
-    expect(window.location.href).toBe('/');
+    // jsdom sets full URL including protocol/host
+    expect(window.location.href).toMatch(/^https?:\/\/[^/]+\/$/);
   });
 
   it('should show error details when showDetails is true', () => {

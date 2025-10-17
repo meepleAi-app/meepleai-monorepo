@@ -23,6 +23,9 @@ public class QdrantServiceTests
 
     public QdrantServiceTests()
     {
+        // Configure embedding provider to use OpenAI (1536 dimensions) for tests
+        _configurationMock.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("openai");
+
         _sut = new QdrantService(_clientAdapterMock.Object, _configurationMock.Object, _loggerMock.Object);
     }
 

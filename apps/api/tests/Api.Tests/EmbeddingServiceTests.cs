@@ -218,7 +218,9 @@ public class EmbeddingServiceTests
         configWithoutKey.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("openai");
         configWithoutKey.Setup(c => c["OPENAI_API_KEY"]).Returns((string?)null);
 
+        var httpClient = new HttpClient();
         var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        httpClientFactoryMock.Setup(f => f.CreateClient("OpenRouter")).Returns(httpClient);
 
         // Act & Assert
         Assert.Throws<InvalidOperationException>(() =>
@@ -392,7 +394,7 @@ public class EmbeddingServiceTests
                 It.IsAny<EventId>(),
                 It.Is<It.IsAnyType>((state, _) =>
                     state.ToString()!.Contains("Ollama embeddings API error") &&
-                    state.ToString()!.Contains("500") &&
+                    state.ToString()!.Contains("InternalServerError") &&
                     state.ToString()!.Contains(errorBody)),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
@@ -536,7 +538,9 @@ public class EmbeddingServiceTests
         configWithoutApiKey.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("openai");
         configWithoutApiKey.Setup(c => c["OPENAI_API_KEY"]).Returns((string?)null);
 
+        var httpClient = new HttpClient();
         var httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        httpClientFactoryMock.Setup(f => f.CreateClient("OpenRouter")).Returns(httpClient);
 
         // Act & Assert
         var exception = Assert.Throws<InvalidOperationException>(() =>
@@ -579,11 +583,11 @@ public class EmbeddingServiceTests
 
         var httpClient = new HttpClient(handlerMock.Object)
         {
-            BaseAddress = new Uri("https://api.openai.com/v1/")
+            BaseAddress = new Uri("https://openrouter.ai/api/v1/")
         };
 
         var httpClientFactoryMock = new Mock<IHttpClientFactory>();
-        httpClientFactoryMock.Setup(f => f.CreateClient("OpenAI")).Returns(httpClient);
+        httpClientFactoryMock.Setup(f => f.CreateClient("OpenRouter")).Returns(httpClient);
 
         var service = new EmbeddingService(httpClientFactoryMock.Object, openaiConfig.Object, _loggerMock.Object);
 
@@ -636,11 +640,11 @@ public class EmbeddingServiceTests
 
         var httpClient = new HttpClient(handlerMock.Object)
         {
-            BaseAddress = new Uri("https://api.openai.com/v1/")
+            BaseAddress = new Uri("https://openrouter.ai/api/v1/")
         };
 
         var httpClientFactoryMock = new Mock<IHttpClientFactory>();
-        httpClientFactoryMock.Setup(f => f.CreateClient("OpenAI")).Returns(httpClient);
+        httpClientFactoryMock.Setup(f => f.CreateClient("OpenRouter")).Returns(httpClient);
 
         var service = new EmbeddingService(httpClientFactoryMock.Object, openaiConfig.Object, _loggerMock.Object);
 
@@ -719,11 +723,11 @@ public class EmbeddingServiceTests
 
         var httpClient = new HttpClient(handlerMock.Object)
         {
-            BaseAddress = new Uri("https://api.openai.com/v1/")
+            BaseAddress = new Uri("https://openrouter.ai/api/v1/")
         };
 
         var httpClientFactoryMock = new Mock<IHttpClientFactory>();
-        httpClientFactoryMock.Setup(f => f.CreateClient("OpenAI")).Returns(httpClient);
+        httpClientFactoryMock.Setup(f => f.CreateClient("OpenRouter")).Returns(httpClient);
 
         var mockLogger = new Mock<ILogger<EmbeddingService>>();
         var service = new EmbeddingService(httpClientFactoryMock.Object, openaiConfig.Object, mockLogger.Object);

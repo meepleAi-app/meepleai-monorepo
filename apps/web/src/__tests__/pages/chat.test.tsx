@@ -2164,7 +2164,7 @@ describe('ChatPage', () => {
       await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats?gameId=game-1'));
 
       const input = screen.getByPlaceholderText(/Fai una domanda sul gioco/i) as HTMLInputElement;
-      const sendButton = screen.getByRole('button', { name: /Send message/i });
+      const sendButton = screen.getByRole('button', { name: /Send message/i }) as HTMLButtonElement;
 
       expect(input.disabled).toBe(true);
       expect(sendButton.disabled).toBe(true);

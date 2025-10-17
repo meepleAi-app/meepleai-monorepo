@@ -638,6 +638,13 @@ v1Api.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, 
         return Results.BadRequest(new { error = "Invalid request payload" });
     }
 
+    // Validate email and password are not empty
+    if (string.IsNullOrWhiteSpace(payload.Email) || string.IsNullOrWhiteSpace(payload.Password))
+    {
+        logger.LogWarning("Login failed: email or password is empty");
+        return Results.BadRequest(new { error = "Email and password are required" });
+    }
+
     try
     {
         var command = new LoginCommand(

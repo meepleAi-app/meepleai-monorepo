@@ -35,14 +35,14 @@ public class EmbeddingService : IEmbeddingService
         }
         else if (_provider == "openai")
         {
-            // Use OpenAI API
-            _httpClient = httpClientFactory.CreateClient("OpenAI");
-            _httpClient.BaseAddress = new Uri("https://api.openai.com/v1/");
+            // Use OpenRouter API (OpenAI-compatible)
+            _httpClient = httpClientFactory.CreateClient("OpenRouter");
+            _httpClient.BaseAddress = new Uri("https://openrouter.ai/api/v1/");
             _apiKey = config["OPENAI_API_KEY"] ?? throw new InvalidOperationException("OPENAI_API_KEY not configured for OpenAI provider");
             _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
             _embeddingModel = config["EMBEDDING_MODEL"] ?? "text-embedding-3-small";
             _httpClient.Timeout = TimeSpan.FromSeconds(30);
-            _logger.LogInformation("Using OpenAI for embeddings with model {Model}", _embeddingModel);
+            _logger.LogInformation("Using OpenRouter for embeddings with model {Model}", _embeddingModel);
         }
         else
         {
@@ -109,7 +109,7 @@ public class EmbeddingService : IEmbeddingService
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogError("Ollama embeddings API error: {Status} - {Body}", response.StatusCode, responseBody);
-                return EmbeddingResult.CreateFailure($"API error: {response.StatusCode}");
+                return EmbeddingResult.CreateFailure($"API error: {(int)response.StatusCode}");
             }
 
             var ollamaResponse = JsonSerializer.Deserialize<OllamaEmbeddingResponse>(responseBody);
@@ -146,7 +146,7 @@ public class EmbeddingService : IEmbeddingService
         if (!response.IsSuccessStatusCode)
         {
             _logger.LogError("OpenAI embeddings API error: {Status} - {Body}", response.StatusCode, responseBody);
-            return EmbeddingResult.CreateFailure($"API error: {response.StatusCode}");
+            return EmbeddingResult.CreateFailure($"API error: {(int)response.StatusCode}");
         }
 
         var embeddingResponse = JsonSerializer.Deserialize<OpenAIEmbeddingResponse>(responseBody);

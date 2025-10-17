@@ -38,10 +38,10 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         // And: Session cookie is returned
         var cookies = GetCookiesFromResponse(response);
         Assert.NotNull(cookies);
-        Assert.Contains("session_token", cookies.Keys);
+        Assert.Contains("meeple_session", cookies.Keys);
 
         // And: Cookie has correct attributes (HttpOnly, Secure, SameSite)
-        var sessionCookie = cookies["session_token"];
+        var sessionCookie = cookies["meeple_session"];
         Assert.NotNull(sessionCookie);
     }
 
@@ -55,24 +55,28 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
+        // Load user in current scope to avoid EF tracking issues
+        var userInScope = await db.Users.FindAsync(user.Id);
+        Assert.NotNull(userInScope);
+
         var tokenHash = Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes("expired-token")));
         var expiredSession = new UserSessionEntity
         {
             Id = Guid.NewGuid().ToString(),
-            UserId = user.Id,
+            UserId = userInScope.Id,
             TokenHash = tokenHash,
             CreatedAt = DateTime.UtcNow.AddDays(-8), // 8 days ago
             ExpiresAt = DateTime.UtcNow.AddDays(-1), // expired yesterday
             IpAddress = "127.0.0.1",
             UserAgent = "TestAgent",
-            User = user
+            User = userInScope  // Use user from current scope
         };
         db.UserSessions.Add(expiredSession);
         await db.SaveChangesAsync();
 
         var client = Factory.CreateHttpsClient();
         var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
-        request.Headers.Add("Cookie", $"session_token=expired-token");
+        request.Headers.Add("Cookie", $"meeple_session=expired-token");
 
         // When: User tries to access protected endpoint with expired session
         var response = await client.SendAsync(request);
@@ -430,7 +434,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         // Then: Each login creates a different session token
         Assert.Equal(HttpStatusCode.OK, firstLogin.StatusCode);
         Assert.Equal(HttpStatusCode.OK, secondLogin.StatusCode);
-        Assert.NotEqual(firstCookies["session_token"], secondCookies["session_token"]);
+        Assert.NotEqual(firstCookies["meeple_session"], secondCookies["meeple_session"]);
     }
 
     [Fact]

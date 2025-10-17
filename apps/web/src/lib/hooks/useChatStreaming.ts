@@ -175,7 +175,7 @@ export function useChatStreaming(callbacks?: {
 
               // Parse SSE format: "event: eventType\ndata: jsonData"
               const eventMatch = line.match(/event:\s*(\w+)/);
-              const dataMatch = line.match(/data:\s*(.+)/);
+              const dataMatch = line.match(/data:\s*([\s\S]+)/);
 
               if (eventMatch && dataMatch) {
                 const eventType = eventMatch[1] as StreamingEventType;

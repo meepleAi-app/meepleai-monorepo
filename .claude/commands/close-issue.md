@@ -9,6 +9,17 @@
   <instructions>
   Quando ricevi il comando `/close-issue` seguito da un identificativo issue (#idIssue o nomeIssue), esegui la seguente workflow:
 
+  ## 0. Verifica Branch e PR
+  - Recupera i dettagli dell'issue: `gh issue view {issue-id}`
+  - Verifica se esiste già una PR collegata all'issue
+  - SE la PR non esiste:
+    * Verifica il branch corrente: `git branch --show-current`
+    * SE non sei sul branch dell'issue, passa al branch corretto
+    * Crea la PR seguendo le convenzioni del progetto (vedi comando `/issue` Phase 5)
+  - SE la PR esiste:
+    * Verifica lo stato della PR: `gh pr view {pr-number}`
+    * Procedi con la code review
+
   ## 1. Code Review
   - Analizza tutto il codice correlato all'issue specificata
   - Verifica la qualità del codice, best practices e potenziali problemi

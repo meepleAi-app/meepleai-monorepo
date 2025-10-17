@@ -338,7 +338,7 @@ export default function ResetPasswordPage() {
                 <div className="text-center space-y-2">
                   <h1 className="text-3xl font-bold">Reset Password</h1>
                   <p className="text-slate-400">
-                    Enter your email address and we'll send you instructions to reset your password.
+                    Enter your email address and we&apos;ll send you instructions to reset your password.
                   </p>
                 </div>
 
@@ -393,10 +393,10 @@ export default function ResetPasswordPage() {
                 <div className="text-6xl mb-4">✉️</div>
                 <h2 className="text-2xl font-bold text-green-400">Check Your Email</h2>
                 <p className="text-slate-300">
-                  We've sent password reset instructions to <strong>{email}</strong>.
+                  We&apos;ve sent password reset instructions to <strong>{email}</strong>.
                 </p>
                 <p className="text-sm text-slate-400">
-                  Didn't receive the email? Check your spam folder or{" "}
+                  Didn&apos;t receive the email? Check your spam folder or{" "}
                   <button
                     onClick={() => {
                       setRequestSuccess(false);

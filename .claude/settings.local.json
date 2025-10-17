@@ -180,7 +180,14 @@
       "Bash(pnpm audit:a11y:*)",
       "Bash(Select-String -Pattern \"ready|started|compiled\" -Context 0,1)",
       "WebFetch(domain:dequeuniversity.com)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "mcp__upstash-context-7-mcp__resolve-library-id",
+      "mcp__upstash-context-7-mcp__get-library-docs",
+      "Bash(git -C \"D:\\Repositories\\meepleai-monorepo\" add apps/api/src/Api/Program.cs docs/issue/ops-02-jaeger-tracing-fix.md)",
+      "Bash(git -C \"D:\\Repositories\\meepleai-monorepo\" commit -m \"$(cat <<''EOF''\ndocs(ops): document residual service name issue in Jaeger (OPS-02)\n\n## Changes\n- Updated ops-02-jaeger-tracing-fix.md with \"Known Issues\" section\n- Documented that traces ARE working but service name shows as \"jaeger\"\n- Added comprehensive investigation details and next steps\n- Updated Program.cs with definitive ResourceBuilder configuration pattern\n\n## Current Status\n✅ Traces successfully exported to Jaeger\n✅ ASP.NET Core instrumentation working\n✅ Custom Activity Sources implemented\n✅ 20+ unit and integration tests passing\n⚠️  Service name appears as \"jaeger\" instead of \"MeepleAI.Api\" (residual issue)\n\n## Evidence of Partial Success\n- Jaeger UI shows 20+ traces from API requests\n- All HTTP requests are being traced\n- OTLP export is functional\n- Configuration is correct per OpenTelemetry .NET docs\n- API logs confirm: \"Service name: MeepleAI.Api, version: 1.0.0\"\n\n## Problem\nDespite correct configuration, Jaeger service dropdown shows \"jaeger\" \ninstead of \"MeepleAI.Api\". This suggests an issue with how resource \nattributes are serialized in OTLP payload or how Jaeger v2 extracts \nservice names.\n\n## Next Steps\nRequires deeper investigation:\n1. Enable OpenTelemetry SDK debug logging\n2. Capture OTLP traffic to inspect payload\n3. Test with minimal ASP.NET Core example\n4. Consult OpenTelemetry .NET community\n\n## Impact\n- Low: Traces are functional and contain all necessary data\n- Medium: Cannot filter by service name in Jaeger UI\n- Workaround: Use other trace attributes for filtering\n\nRelated: #433\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(Select-String -Pattern \"StreamingQa\" -Context 0,1)",
+      "Bash(Select-String -Pattern \"Passed|Failed|Total tests\" -Context 0,2)",
+      "Bash(pnpm build:*)"
     ],
     "deny": [],
     "ask": []

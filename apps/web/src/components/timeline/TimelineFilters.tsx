@@ -1,6 +1,6 @@
 // UI-04: Timeline filters sidebar component
+import type { TimelineFilters } from "@/lib/timeline-types";
 import {
-  TimelineFilters,
   TimelineEventType,
   TimelineEventStatus,
   getEventTypeLabel,

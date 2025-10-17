@@ -43,7 +43,8 @@ public enum StreamingEventType
     ScriptChunk,    // Incremental script content chunks
     Complete,       // Final event with metadata (tokens, confidence)
     Error,          // Error event
-    Heartbeat       // Keep-alive signal
+    Heartbeat,      // Keep-alive signal
+    Token           // CHAT-01: Individual LLM token for QA/Setup streaming
 }
 
 public record RagStreamingEvent(
@@ -66,6 +67,7 @@ public record StreamingComplete(
 );
 public record StreamingError(string errorMessage, string? errorCode = null);
 public record StreamingHeartbeat(string message = "keep-alive");
+public record StreamingToken(string token); // CHAT-01: Individual LLM token
 
 // AI-03: RAG Setup Guide models
 public record SetupGuideRequest(string gameId, Guid? chatId = null);

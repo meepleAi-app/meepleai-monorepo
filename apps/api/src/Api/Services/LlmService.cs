@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -122,6 +123,114 @@ public class LlmService : ILlmService
             return LlmCompletionResult.CreateFailure($"Error: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// CHAT-01: Generate a streaming chat completion response with token-by-token delivery via SSE
+    /// </summary>
+    public async IAsyncEnumerable<string> GenerateCompletionStreamAsync(
+        string systemPrompt,
+        string userPrompt,
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(userPrompt))
+        {
+            _logger.LogWarning("Empty user prompt provided for streaming completion");
+            yield break;
+        }
+
+        var messages = new List<object>();
+
+        if (!string.IsNullOrWhiteSpace(systemPrompt))
+        {
+            messages.Add(new { role = "system", content = systemPrompt });
+        }
+
+        messages.Add(new { role = "user", content = userPrompt });
+
+        var request = new
+        {
+            model = ChatModel,
+            messages = messages,
+            temperature = 0.3,
+            max_tokens = 500,
+            stream = true // Enable streaming
+        };
+
+        var json = JsonSerializer.Serialize(request);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        _logger.LogInformation("Starting streaming chat completion using {Model}", ChatModel);
+
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "chat/completions")
+        {
+            Content = content
+        };
+
+        HttpResponseMessage? response = null;
+
+        try
+        {
+            response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync(ct);
+                _logger.LogError("OpenRouter streaming API error: {Status} - {Body}", response.StatusCode, errorBody);
+                yield break;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initiating streaming chat completion");
+            response?.Dispose();
+            yield break;
+        }
+
+        // Process stream without try-catch to allow yield return
+        using (response)
+        {
+            using var stream = await response.Content.ReadAsStreamAsync(ct);
+            using var reader = new StreamReader(stream);
+
+            while (!reader.EndOfStream && !ct.IsCancellationRequested)
+            {
+                var line = await reader.ReadLineAsync(ct);
+
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                // SSE format: "data: {json}"
+                if (line.StartsWith("data: "))
+                {
+                    var data = line.Substring(6).Trim();
+
+                    // OpenRouter sends "[DONE]" when stream is complete
+                    if (data == "[DONE]")
+                    {
+                        _logger.LogInformation("Streaming completion finished");
+                        break;
+                    }
+
+                    OpenRouterStreamChunk? chunk = null;
+                    try
+                    {
+                        chunk = JsonSerializer.Deserialize<OpenRouterStreamChunk>(data);
+                    }
+                    catch (JsonException ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to parse streaming chunk: {Data}", data);
+                        continue;
+                    }
+
+                    var delta = chunk?.Choices?[0]?.Delta?.Content;
+                    if (!string.IsNullOrEmpty(delta))
+                    {
+                        yield return delta;
+                    }
+                }
+            }
+        }
+    }
 }
 
 // OpenRouter API response models for chat completion
@@ -168,4 +277,38 @@ internal record ChatUsage
 
     [JsonPropertyName("total_tokens")]
     public int TotalTokens { get; init; }
+}
+
+// CHAT-01: Streaming response models
+internal record OpenRouterStreamChunk
+{
+    [JsonPropertyName("id")]
+    public string Id { get; init; } = string.Empty;
+
+    [JsonPropertyName("choices")]
+    public List<StreamChoice>? Choices { get; init; }
+
+    [JsonPropertyName("model")]
+    public string Model { get; init; } = string.Empty;
+}
+
+internal record StreamChoice
+{
+    [JsonPropertyName("delta")]
+    public StreamDelta? Delta { get; init; }
+
+    [JsonPropertyName("finish_reason")]
+    public string? FinishReason { get; init; }
+
+    [JsonPropertyName("index")]
+    public int Index { get; init; }
+}
+
+internal record StreamDelta
+{
+    [JsonPropertyName("role")]
+    public string? Role { get; init; }
+
+    [JsonPropertyName("content")]
+    public string? Content { get; init; }
 }

@@ -7,6 +7,7 @@
 
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -81,7 +82,7 @@ export default function LoginPage() {
             </p>
 
             <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-              <a
+              <Link
                 href="/"
                 className="
                   block
@@ -102,7 +103,7 @@ export default function LoginPage() {
                 "
               >
                 Return to Home
-              </a>
+              </Link>
             </div>
           </div>
 

@@ -157,6 +157,7 @@ builder.Services.AddScoped<RuleSpecDiffService>();
 builder.Services.AddScoped<RuleSpecCommentService>();
 builder.Services.AddScoped<RagService>();
 builder.Services.AddScoped<IStreamingRagService, StreamingRagService>(); // API-02: Streaming RAG service
+builder.Services.AddScoped<IStreamingQaService, StreamingQaService>(); // CHAT-01: Streaming QA service
 builder.Services.AddScoped<SetupGuideService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AuditService>();
@@ -1148,6 +1149,187 @@ v1Api.MapPost("/agents/explain/stream", async (ExplainRequest req, HttpContext c
     catch (Exception ex)
     {
         logger.LogError(ex, "Error during streaming explain for game {GameId}, topic: {Topic}", req.gameId, req.topic);
+
+        // Send error event if possible
+        try
+        {
+            var errorEvent = new RagStreamingEvent(
+                StreamingEventType.Error,
+                new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
+                DateTime.UtcNow);
+            var json = System.Text.Json.JsonSerializer.Serialize(errorEvent);
+            await context.Response.WriteAsync($"data: {json}\n\n", ct);
+            await context.Response.Body.FlushAsync(ct);
+        }
+        catch
+        {
+            // If we can't send error event, client connection is likely broken
+        }
+    }
+
+    return Results.Empty;
+});
+
+// CHAT-01: Streaming QA endpoint (SSE)
+v1Api.MapPost("/agents/qa/stream", async (QaRequest req, HttpContext context, IStreamingQaService streamingQa, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (string.IsNullOrWhiteSpace(req.gameId))
+    {
+        return Results.BadRequest(new { error = "gameId is required" });
+    }
+
+    var startTime = DateTime.UtcNow;
+    logger.LogInformation("Streaming QA request from user {UserId} for game {GameId}: {Query}",
+        session.User.Id, req.gameId, req.query);
+
+    // Set SSE headers
+    context.Response.Headers["Content-Type"] = "text/event-stream";
+    context.Response.Headers["Cache-Control"] = "no-cache";
+    context.Response.Headers["Connection"] = "keep-alive";
+
+    try
+    {
+        // Persist user query to chat if chatId provided
+        if (req.chatId.HasValue)
+        {
+            await chatService.AddMessageAsync(
+                req.chatId.Value,
+                session.User.Id,
+                "user",
+                req.query,
+                new { endpoint = "qa-stream", gameId = req.gameId },
+                ct);
+        }
+
+        var answerBuilder = new System.Text.StringBuilder();
+        var totalTokens = 0;
+        double? confidence = null;
+        var snippets = new List<Snippet>();
+
+        await foreach (var evt in streamingQa.AskStreamAsync(req.gameId, req.query, req.chatId, ct))
+        {
+            // Serialize event as JSON
+            var json = System.Text.Json.JsonSerializer.Serialize(evt);
+
+            // Write SSE format: "data: {json}\n\n"
+            await context.Response.WriteAsync($"data: {json}\n\n", ct);
+            await context.Response.Body.FlushAsync(ct);
+
+            // Track response data for logging and chat persistence
+            if (evt.Type == StreamingEventType.Token && evt.Data is System.Text.Json.JsonElement tokenElement)
+            {
+                var tokenData = System.Text.Json.JsonSerializer.Deserialize<StreamingToken>(tokenElement.GetRawText());
+                if (tokenData != null)
+                {
+                    answerBuilder.Append(tokenData.token);
+                }
+            }
+            else if (evt.Type == StreamingEventType.Citations && evt.Data is System.Text.Json.JsonElement citationsElement)
+            {
+                var citationsData = System.Text.Json.JsonSerializer.Deserialize<StreamingCitations>(citationsElement.GetRawText());
+                if (citationsData != null)
+                {
+                    snippets = citationsData.citations.ToList();
+                }
+            }
+            else if (evt.Type == StreamingEventType.Complete && evt.Data is System.Text.Json.JsonElement completeElement)
+            {
+                var completeData = System.Text.Json.JsonSerializer.Deserialize<StreamingComplete>(completeElement.GetRawText());
+                if (completeData != null)
+                {
+                    totalTokens = completeData.totalTokens;
+                    confidence = completeData.confidence;
+                }
+            }
+        }
+
+        var answer = answerBuilder.ToString();
+        var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+        logger.LogInformation("Streaming QA completed for game {GameId}, query: {Query}", req.gameId, req.query);
+
+        // Persist agent response to chat if chatId provided
+        if (req.chatId.HasValue && !string.IsNullOrWhiteSpace(answer))
+        {
+            await chatService.AddMessageAsync(
+                req.chatId.Value,
+                session.User.Id,
+                "assistant",
+                answer,
+                new
+                {
+                    endpoint = "qa-stream",
+                    gameId = req.gameId,
+                    totalTokens,
+                    confidence,
+                    snippetCount = snippets.Count
+                },
+                ct);
+        }
+
+        // Log AI request
+        await aiLog.LogRequestAsync(
+            session.User.Id,
+            req.gameId,
+            "qa-stream",
+            req.query,
+            answer?.Length > 500 ? answer.Substring(0, 500) : answer,
+            latencyMs,
+            totalTokens,
+            confidence,
+            "Success",
+            null,
+            context.Connection.RemoteIpAddress?.ToString(),
+            context.Request.Headers.UserAgent.ToString(),
+            completionTokens: totalTokens,
+            ct: ct);
+    }
+    catch (OperationCanceledException)
+    {
+        logger.LogInformation("Streaming QA cancelled by client for game {GameId}, query: {Query}", req.gameId, req.query);
+    }
+    catch (Exception ex)
+    {
+        var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+        logger.LogError(ex, "Error during streaming QA for game {GameId}, query: {Query}", req.gameId, req.query);
+
+        // Persist error to chat if chatId provided
+        if (req.chatId.HasValue)
+        {
+            try
+            {
+                await chatService.AddMessageAsync(
+                    req.chatId.Value,
+                    session.User.Id,
+                    "error",
+                    $"Failed to process streaming QA request: {ex.Message}",
+                    new { endpoint = "qa-stream", gameId = req.gameId, error = ex.GetType().Name },
+                    ct);
+            }
+            catch (Exception chatEx)
+            {
+                logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
+            }
+        }
+
+        // Log failed AI request
+        await aiLog.LogRequestAsync(
+            session.User.Id,
+            req.gameId,
+            "qa-stream",
+            req.query,
+            null,
+            latencyMs,
+            status: "Error",
+            errorMessage: ex.Message,
+            ipAddress: context.Connection.RemoteIpAddress?.ToString(),
+            userAgent: context.Request.Headers.UserAgent.ToString(),
+            ct: ct);
 
         // Send error event if possible
         try

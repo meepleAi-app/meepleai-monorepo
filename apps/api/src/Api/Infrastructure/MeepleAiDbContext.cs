@@ -200,12 +200,42 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.Level).IsRequired().HasMaxLength(16);
             entity.Property(e => e.Message).IsRequired();
             entity.Property(e => e.MetadataJson).HasMaxLength(2048);
+            entity.Property(e => e.SequenceNumber).IsRequired();
             entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.UpdatedAt).IsRequired(false);
+            entity.Property(e => e.IsDeleted).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.DeletedAt).IsRequired(false);
+            entity.Property(e => e.IsInvalidated).IsRequired().HasDefaultValue(false);
+
+            // Relationships
             entity.HasOne(e => e.Chat)
                 .WithMany(c => c.Logs)
                 .HasForeignKey(e => e.ChatId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.DeletedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.DeletedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Indexes
             entity.HasIndex(e => new { e.ChatId, e.CreatedAt });
+            entity.HasIndex(e => e.UserId)
+                .HasDatabaseName("idx_chat_logs_user_id")
+                .HasFilter("\"UserId\" IS NOT NULL");
+            entity.HasIndex(e => e.DeletedAt)
+                .HasDatabaseName("idx_chat_logs_deleted_at")
+                .HasFilter("\"DeletedAt\" IS NOT NULL");
+            entity.HasIndex(e => new { e.ChatId, e.SequenceNumber, e.Level })
+                .HasDatabaseName("idx_chat_logs_chat_id_sequence_role");
+
+            // Global query filter: exclude soft-deleted messages by default
+            entity.HasQueryFilter(e => !e.IsDeleted);
         });
 
         modelBuilder.Entity<PdfDocumentEntity>(entity =>

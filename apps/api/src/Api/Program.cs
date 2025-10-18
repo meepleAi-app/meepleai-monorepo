@@ -3661,6 +3661,109 @@ v1Api.MapDelete("/chats/{chatId:guid}", async (Guid chatId, HttpContext context,
     }
 });
 
+// CHAT-06: Message editing endpoint
+v1Api.MapPut("/chats/{chatId:guid}/messages/{messageId:guid}",
+    async (
+        Guid chatId,
+        Guid messageId,
+        UpdateMessageRequest request,
+        HttpContext context,
+        ChatService chatService,
+        ILogger<Program> logger,
+        CancellationToken ct) =>
+    {
+        if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+        {
+            return Results.Unauthorized();
+        }
+
+        try
+        {
+            logger.LogInformation("User {UserId} updating message {MessageId} in chat {ChatId}", session.User.Id, messageId, chatId);
+            var updatedMessage = await chatService.UpdateMessageAsync(chatId, messageId, request.Content, session.User.Id, ct);
+
+            var response = MapToChatMessageResponse(updatedMessage);
+            logger.LogInformation("Message {MessageId} updated successfully by user {UserId}", messageId, session.User.Id);
+            return Results.Ok(response);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            logger.LogWarning("Message {MessageId} not found in chat {ChatId}: {Error}", messageId, chatId, ex.Message);
+            return Results.NotFound(new { error = "message_not_found", message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            logger.LogWarning("User {UserId} not authorized to update message {MessageId}: {Error}", session.User.Id, messageId, ex.Message);
+            return Results.Problem(statusCode: 403, detail: ex.Message, title: "Forbidden");
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.LogWarning("Invalid operation updating message {MessageId}: {Error}", messageId, ex.Message);
+            return Results.BadRequest(new { error = "invalid_operation", message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error updating message {MessageId} in chat {ChatId}", messageId, chatId);
+            return Results.Problem(statusCode: 500, detail: "An error occurred while updating the message", title: "Internal Server Error");
+        }
+    })
+    .RequireAuthorization()
+    .WithName("UpdateChatMessage")
+    .WithDescription("Edit the content of an existing user message. Invalidates subsequent AI responses. Requires authentication. Users can only edit their own messages.")
+    .WithTags("Chat");
+
+// CHAT-06: Message deletion endpoint
+v1Api.MapDelete("/chats/{chatId:guid}/messages/{messageId:guid}",
+    async (
+        Guid chatId,
+        Guid messageId,
+        HttpContext context,
+        ChatService chatService,
+        ILogger<Program> logger,
+        CancellationToken ct) =>
+    {
+        if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+        {
+            return Results.Unauthorized();
+        }
+
+        var isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+
+        try
+        {
+            logger.LogInformation("User {UserId} deleting message {MessageId} in chat {ChatId} (admin: {IsAdmin})", session.User.Id, messageId, chatId, isAdmin);
+            var deleted = await chatService.DeleteMessageAsync(chatId, messageId, session.User.Id, isAdmin, ct);
+
+            if (!deleted)
+            {
+                logger.LogInformation("Message {MessageId} already deleted", messageId);
+                return Results.Ok(new { message = "Message already deleted" });
+            }
+
+            logger.LogInformation("Message {MessageId} deleted successfully by user {UserId}", messageId, session.User.Id);
+            return Results.NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            logger.LogWarning("Message {MessageId} not found in chat {ChatId}: {Error}", messageId, chatId, ex.Message);
+            return Results.NotFound(new { error = "message_not_found", message = ex.Message });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            logger.LogWarning("User {UserId} not authorized to delete message {MessageId}: {Error}", session.User.Id, messageId, ex.Message);
+            return Results.Problem(statusCode: 403, detail: ex.Message, title: "Forbidden");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error deleting message {MessageId} in chat {ChatId}", messageId, chatId);
+            return Results.Problem(statusCode: 500, detail: "An error occurred while deleting the message", title: "Internal Server Error");
+        }
+    })
+    .RequireAuthorization()
+    .WithName("DeleteChatMessage")
+    .WithDescription("Soft-delete a message. Users can delete their own messages; admins can delete any message. Invalidates subsequent AI responses. Requires authentication.")
+    .WithTags("Chat");
+
 // CHAT-05: Export chat endpoint
 v1Api.MapPost("/chats/{chatId:guid}/export", async (
     Guid chatId,
@@ -3736,6 +3839,26 @@ v1Api.MapGet("/games/{gameId}/agents", async (string gameId, HttpContext context
 });
 
 app.Run();
+
+// CHAT-06: Helper method to map ChatLogEntity to ChatMessageResponse
+static ChatMessageResponse MapToChatMessageResponse(ChatLogEntity entity)
+{
+    return new ChatMessageResponse(
+        entity.Id,
+        entity.ChatId,
+        entity.UserId,
+        entity.Level,
+        entity.Message,
+        entity.SequenceNumber,
+        entity.CreatedAt,
+        entity.UpdatedAt,
+        entity.IsDeleted,
+        entity.DeletedAt,
+        entity.DeletedByUserId,
+        entity.IsInvalidated,
+        entity.MetadataJson
+    );
+}
 
 static CookieOptions CreateSessionCookieOptions(HttpContext context, DateTime expiresAt)
 {

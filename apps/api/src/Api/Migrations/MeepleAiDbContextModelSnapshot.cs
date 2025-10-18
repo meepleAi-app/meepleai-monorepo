@@ -315,6 +315,48 @@ namespace Api.Migrations
                     b.ToTable("audit_logs", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.CacheStatEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("GameId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("game_id");
+
+                    b.Property<long>("HitCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("hit_count");
+
+                    b.Property<DateTime>("LastHitAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_hit_at");
+
+                    b.Property<long>("MissCount")
+                        .HasColumnType("bigint")
+                        .HasColumnName("miss_count");
+
+                    b.Property<string>("QuestionHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("question_hash");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("cache_stats");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.ChatEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -367,6 +409,22 @@ namespace Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedByUserId")
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsInvalidated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("Level")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -380,9 +438,31 @@ namespace Api.Migrations
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)");
 
+                    b.Property<int>("SequenceNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("character varying(64)");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("DeletedAt")
+                        .HasDatabaseName("idx_chat_logs_deleted_at")
+                        .HasFilter("deleted_at IS NOT NULL");
+
+                    b.HasIndex("DeletedByUserId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("idx_chat_logs_user_id")
+                        .HasFilter("user_id IS NOT NULL");
+
                     b.HasIndex("ChatId", "CreatedAt");
+
+                    b.HasIndex("ChatId", "SequenceNumber", "Level")
+                        .HasDatabaseName("idx_chat_logs_chat_id_sequence_role");
 
                     b.ToTable("chat_logs", (string)null);
                 });
@@ -571,6 +651,9 @@ namespace Api.Migrations
                     b.Property<string>("ProcessingError")
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("ProcessingProgressJson")
+                        .HasColumnType("text");
 
                     b.Property<string>("ProcessingStatus")
                         .IsRequired()
@@ -1053,7 +1136,21 @@ namespace Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "DeletedByUser")
+                        .WithMany()
+                        .HasForeignKey("DeletedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Chat");
+
+                    b.Navigation("DeletedByUser");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.N8nConfigEntity", b =>

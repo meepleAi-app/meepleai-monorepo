@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace Api.Models;
 
@@ -178,6 +179,29 @@ public record ChatMessageDto(
 public record CreateChatRequest(
     string GameId,
     string AgentId
+);
+
+// CHAT-06: Message editing and deletion models
+public record UpdateMessageRequest(
+    [Required]
+    [StringLength(10000, MinimumLength = 1, ErrorMessage = "Content must be between 1 and 10000 characters")]
+    string Content
+);
+
+public record ChatMessageResponse(
+    Guid Id,
+    Guid ChatId,
+    string? UserId,
+    string Level,
+    string Content,
+    int SequenceNumber,
+    DateTime CreatedAt,
+    DateTime? UpdatedAt,
+    bool IsDeleted,
+    DateTime? DeletedAt,
+    string? DeletedByUserId,
+    bool IsInvalidated,
+    string? MetadataJson
 );
 
 public record AgentDto(

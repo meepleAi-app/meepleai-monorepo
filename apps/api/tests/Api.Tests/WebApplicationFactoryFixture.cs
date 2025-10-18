@@ -301,17 +301,19 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
 
                     try
                     {
-                        // Ensure the database schema is created
+                        // Use EnsureDeleted + EnsureCreated for clean SQLite test databases
+                        // This avoids migration conflicts between Postgres and SQLite
+                        db.Database.EnsureDeleted();
                         db.Database.EnsureCreated();
 
                         // Verify critical tables exist
                         var canConnect = db.Database.CanConnect();
                         if (!canConnect)
                         {
-                            throw new InvalidOperationException("Cannot connect to SQLite database after EnsureCreated()");
+                            throw new InvalidOperationException("Cannot connect to SQLite database after Migrate()");
                         }
 
-                        // Seed demo data (since EnsureCreated doesn't run migrations)
+                        // Seed demo data (migrations don't seed data)
                         SeedDemoData(db);
 
                         _databaseInitialized = true;

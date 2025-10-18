@@ -42,7 +42,12 @@ jest.mock('../../lib/api', () => ({
     get: jest.fn(),
     post: jest.fn(),
     put: jest.fn(),
-    delete: jest.fn()
+    delete: jest.fn(),
+    chat: {
+      exportChat: jest.fn(),
+      updateMessage: jest.fn(),
+      deleteMessage: jest.fn()
+    }
   }
 }));
 
@@ -133,6 +138,8 @@ describe('ChatPage', () => {
     mockApi.post.mockReset();
     mockApi.put.mockReset();
     mockApi.delete.mockReset();
+    (mockApi.chat.updateMessage as jest.Mock).mockReset();
+    (mockApi.chat.deleteMessage as jest.Mock).mockReset();
     mockStartStreaming.mockReset();
     mockStopStreaming.mockReset();
     mockOnComplete = null;
@@ -2601,6 +2608,435 @@ describe('ChatPage', () => {
       // Chat preview should still show date (from startedAt)
       const helperElements = screen.getAllByText('Chess Helper');
       expect(helperElements.length).toBeGreaterThan(0);
+    });
+  });
+
+  // =============================================================================
+  // CHAT-06: MESSAGE EDIT/DELETE TESTS
+  // =============================================================================
+
+  describe('CHAT-06: Message Edit/Delete', () => {
+    // Mock data fixtures
+    const mockChatWithEditableMessages = {
+      id: 'chat-edit-1',
+      gameId: 'game-1',
+      gameName: 'Chess',
+      agentId: 'agent-1',
+      agentName: 'Chess Expert',
+      startedAt: '2025-01-10T10:00:00Z',
+      lastMessageAt: '2025-01-10T10:15:00Z',
+      messages: [
+        {
+          id: 'msg-user-1',
+          level: 'user',
+          message: 'Original user message',
+          metadataJson: null,
+          createdAt: '2025-01-10T10:00:00Z',
+          updatedAt: null,
+          isDeleted: false,
+          isInvalidated: false
+        },
+        {
+          id: 'msg-ai-1',
+          level: 'assistant',
+          message: 'AI response to original',
+          metadataJson: null,
+          createdAt: '2025-01-10T10:01:00Z',
+          updatedAt: null,
+          isDeleted: false,
+          isInvalidated: false
+        },
+        {
+          id: 'msg-edited',
+          level: 'user',
+          message: 'This message was edited',
+          metadataJson: null,
+          createdAt: '2025-01-10T10:05:00Z',
+          updatedAt: '2025-01-10T10:10:00Z',
+          isDeleted: false,
+          isInvalidated: false
+        },
+        {
+          id: 'msg-invalidated',
+          level: 'assistant',
+          message: 'This AI response is outdated',
+          metadataJson: null,
+          createdAt: '2025-01-10T10:06:00Z',
+          updatedAt: null,
+          isDeleted: false,
+          isInvalidated: true
+        },
+        {
+          id: 'msg-deleted',
+          level: 'user',
+          message: '[Messaggio eliminato]',
+          metadataJson: null,
+          createdAt: '2025-01-10T10:12:00Z',
+          updatedAt: null,
+          isDeleted: true,
+          isInvalidated: false
+        }
+      ]
+    };
+
+    const mockUpdatedMessageResponse = {
+      id: 'msg-user-1',
+      chatId: 'chat-edit-1',
+      userId: 'user-1',
+      level: 'user',
+      content: 'Updated message content',
+      sequenceNumber: 0,
+      createdAt: '2025-01-10T10:00:00Z',
+      updatedAt: '2025-01-10T10:20:00Z',
+      isDeleted: false,
+      deletedAt: null,
+      deletedByUserId: null,
+      isInvalidated: false,
+      metadataJson: null
+    };
+
+    const setupEditableChatState = () => {
+      mockApi.get.mockResolvedValueOnce(mockAuthResponse);
+      mockApi.get.mockResolvedValueOnce(mockGames);
+      mockApi.get.mockResolvedValueOnce(mockAgents);
+      mockApi.get.mockResolvedValueOnce([mockChatWithEditableMessages]);
+      mockApi.get.mockResolvedValueOnce(mockChatWithEditableMessages);
+    };
+
+    describe('Edit Functionality', () => {
+      it('shows edit button only for user messages with backend ID', async () => {
+        setupEditableChatState();
+        render(<ChatPage />);
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+        const user = userEvent.setup();
+        await waitFor(() => screen.getByText('Chess Expert'));
+        await user.click(screen.getByText('Chess Expert'));
+        await waitFor(() => screen.getByText('Original user message'));
+        const editButtons = screen.getAllByTitle('Modifica messaggio');
+        expect(editButtons.length).toBe(2);
+      });
+
+      it('hides edit button for AI/assistant messages', async () => {
+        setupEditableChatState();
+        render(<ChatPage />);
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+        const user = userEvent.setup();
+        await waitFor(() => screen.getByText('Chess Expert'));
+        await user.click(screen.getByText('Chess Expert'));
+        await waitFor(() => screen.getByText('AI response to original'));
+        const aiMessage = screen.getByText('AI response to original').closest('li');
+        const editButtonsInAi = aiMessage ? within(aiMessage as HTMLElement).queryAllByTitle('Modifica messaggio') : [];
+        expect(editButtonsInAi.length).toBe(0);
+      });
+
+      it('hides edit button for deleted messages', async () => {
+        setupEditableChatState();
+        render(<ChatPage />);
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+        const user = userEvent.setup();
+        await waitFor(() => screen.getByText('Chess Expert'));
+        await user.click(screen.getByText('Chess Expert'));
+        await waitFor(() => screen.getByText('[Messaggio eliminato]'));
+        const deletedMessage = screen.getByText('[Messaggio eliminato]').closest('li');
+        const editButtonsInDeleted = deletedMessage ? within(deletedMessage as HTMLElement).queryAllByTitle('Modifica messaggio') : [];
+        expect(editButtonsInDeleted.length).toBe(0);
+      });
+
+      it('clicking edit button shows textarea with current content', async () => {
+        setupEditableChatState();
+        render(<ChatPage />);
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+        const user = userEvent.setup();
+        await waitFor(() => screen.getByText('Chess Expert'));
+        await user.click(screen.getByText('Chess Expert'));
+        await waitFor(() => screen.getByText('Original user message'));
+        const editButtons = screen.getAllByTitle('Modifica messaggio');
+        await user.click(editButtons[0]);
+        await waitFor(() => {
+          const textarea = screen.getByLabelText('Edit message content');
+          expect(textarea).toBeInTheDocument();
+          expect(textarea).toHaveValue('Original user message');
+        });
+        expect(screen.getByText('Salva')).toBeInTheDocument();
+        expect(screen.getByText('Annulla')).toBeInTheDocument();
+      });
+
+      it('save button calls API with correct parameters', async () => {
+        setupEditableChatState();
+        (mockApi.chat.updateMessage as jest.Mock).mockResolvedValueOnce(mockUpdatedMessageResponse);
+        mockApi.get.mockResolvedValueOnce({
+          ...mockChatWithEditableMessages,
+          messages: mockChatWithEditableMessages.messages.map(m =>
+            m.id === 'msg-user-1' ? { ...m, message: 'Updated message content', updatedAt: '2025-01-10T10:20:00Z' } : m
+          )
+        });
+        render(<ChatPage />);
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+        const user = userEvent.setup();
+        await waitFor(() => screen.getByText('Chess Expert'));
+        await user.click(screen.getByText('Chess Expert'));
+        await waitFor(() => screen.getByText('Original user message'));
+        const editButtons = screen.getAllByTitle('Modifica messaggio');
+        await user.click(editButtons[0]);
+        await waitFor(() => screen.getByLabelText('Edit message content'));
+        const textarea = screen.getByLabelText('Edit message content');
+        await user.clear(textarea);
+        await user.type(textarea, 'Updated message content');
+        const saveButton = screen.getByLabelText('Save edited message');
+        await user.click(saveButton);
+        await waitFor(() => {
+          expect(mockApi.chat.updateMessage).toHaveBeenCalledWith('chat-edit-1', 'msg-user-1', 'Updated message content');
+        });
+      });
+
+      it('save button refetches chat history after successful edit', async () => {
+        setupEditableChatState();
+        (mockApi.chat.updateMessage as jest.Mock).mockResolvedValueOnce(mockUpdatedMessageResponse);
+        const updatedChat = {
+          ...mockChatWithEditableMessages,
+          messages: mockChatWithEditableMessages.messages.map(m =>
+            m.id === 'msg-user-1' ? { ...m, message: 'Updated message content', updatedAt: '2025-01-10T10:20:00Z' } : m
+          )
+        };
+        mockApi.get.mockResolvedValueOnce(updatedChat);
+        render(<ChatPage />);
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+        const user = userEvent.setup();
+        await waitFor(() => screen.getByText('Chess Expert'));
+        await user.click(screen.getByText('Chess Expert'));
+        await waitFor(() => screen.getByText('Original user message'));
+        const initialGetCallCount = mockApi.get.mock.calls.length;
+        const editButtons = screen.getAllByTitle('Modifica messaggio');
+        await user.click(editButtons[0]);
+        await waitFor(() => screen.getByLabelText('Edit message content'));
+        const textarea = screen.getByLabelText('Edit message content');
+        await user.clear(textarea);
+        await user.type(textarea, 'Updated message content');
+        const saveButton = screen.getByLabelText('Save edited message');
+        await user.click(saveButton);
+        await waitFor(() => {
+          expect(mockApi.get).toHaveBeenCalledWith('/api/v1/chats/chat-edit-1');
+          expect(mockApi.get.mock.calls.length).toBeGreaterThan(initialGetCallCount);
+        });
+        await waitFor(() => {
+          expect(screen.getByText('Updated message content')).toBeInTheDocument();
+        });
+      });
+
+      it('cancel button reverts to original content without API call', async () => {
+        setupEditableChatState();
+        render(<ChatPage />);
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+        const user = userEvent.setup();
+        await waitFor(() => screen.getByText('Chess Expert'));
+        await user.click(screen.getByText('Chess Expert'));
+        await waitFor(() => screen.getByText('Original user message'));
+        const initialUpdateCallCount = (mockApi.chat.updateMessage as jest.Mock).mock.calls.length;
+        const editButtons = screen.getAllByTitle('Modifica messaggio');
+        await user.click(editButtons[0]);
+        await waitFor(() => screen.getByLabelText('Edit message content'));
+        const textarea = screen.getByLabelText('Edit message content');
+        await user.clear(textarea);
+        await user.type(textarea, 'Modified but not saved');
+        const cancelButton = screen.getByLabelText('Cancel edit');
+        await user.click(cancelButton);
+        await waitFor(() => {
+          expect(screen.getByText('Original user message')).toBeInTheDocument();
+        });
+        expect((mockApi.chat.updateMessage as jest.Mock).mock.calls.length).toBe(initialUpdateCallCount);
+        expect(screen.queryByLabelText('Edit message content')).not.toBeInTheDocument();
+      });
+
+      it('save button disabled when content is empty', async () => {
+        setupEditableChatState();
+        render(<ChatPage />);
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+        const user = userEvent.setup();
+        await waitFor(() => screen.getByText('Chess Expert'));
+        await user.click(screen.getByText('Chess Expert'));
+        await waitFor(() => screen.getByText('Original user message'));
+        const editButtons = screen.getAllByTitle('Modifica messaggio');
+        await user.click(editButtons[0]);
+        await waitFor(() => screen.getByLabelText('Edit message content'));
+        const textarea = screen.getByLabelText('Edit message content');
+        await user.clear(textarea);
+        const saveButton = screen.getByLabelText('Save edited message');
+        expect(saveButton).toBeDisabled();
+      });
+
+      it('displays "(modificato)" badge when updatedAt is set', async () => {
+        setupEditableChatState();
+        render(<ChatPage />);
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+        const user = userEvent.setup();
+        await waitFor(() => screen.getByText('Chess Expert'));
+        await user.click(screen.getByText('Chess Expert'));
+        await waitFor(() => screen.getByText('This message was edited'));
+        expect(screen.getByText('(modificato)')).toBeInTheDocument();
+      });
+    });
+
+    describe('Delete Functionality', () => {
+      it('shows delete button only for user messages', async () => {
+        setupEditableChatState();
+        render(<ChatPage />);
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+        const user = userEvent.setup();
+        await waitFor(() => screen.getByText('Chess Expert'));
+        await user.click(screen.getByText('Chess Expert'));
+        await waitFor(() => screen.getByText('Original user message'));
+        const deleteButtons = screen.getAllByTitle('Elimina messaggio');
+        expect(deleteButtons.length).toBeGreaterThan(0);
+        const aiMessage = screen.getByText('AI response to original').closest('li');
+        const deleteButtonsInAi = aiMessage ? within(aiMessage as HTMLElement).queryAllByTitle('Elimina messaggio') : [];
+        expect(deleteButtonsInAi.length).toBe(0);
+      });
+
+      it('clicking delete opens confirmation modal', async () => {
+        setupEditableChatState();
+        render(<ChatPage />);
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+        const user = userEvent.setup();
+        await waitFor(() => screen.getByText('Chess Expert'));
+        await user.click(screen.getByText('Chess Expert'));
+        await waitFor(() => screen.getByText('Original user message'));
+        const deleteButtons = screen.getAllByTitle('Elimina messaggio');
+        await user.click(deleteButtons[0]);
+        await waitFor(() => {
+          expect(screen.getByText('Eliminare il messaggio?')).toBeInTheDocument();
+        });
+      });
+
+      it('confirm delete calls API with correct parameters', async () => {
+        setupEditableChatState();
+        (mockApi.chat.deleteMessage as jest.Mock).mockResolvedValueOnce(undefined);
+        mockApi.get.mockResolvedValueOnce({
+          ...mockChatWithEditableMessages,
+          messages: mockChatWithEditableMessages.messages.map(m =>
+            m.id === 'msg-user-1' ? { ...m, message: '[Messaggio eliminato]', isDeleted: true } : m
+          )
+        });
+        render(<ChatPage />);
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+        const user = userEvent.setup();
+        await waitFor(() => screen.getByText('Chess Expert'));
+        await user.click(screen.getByText('Chess Expert'));
+        await waitFor(() => screen.getByText('Original user message'));
+        const deleteButtons = screen.getAllByTitle('Elimina messaggio');
+        await user.click(deleteButtons[0]);
+        await waitFor(() => screen.getByText('Eliminare il messaggio?'));
+        const confirmButton = screen.getByText('Elimina');
+        await user.click(confirmButton);
+        await waitFor(() => {
+          expect(mockApi.chat.deleteMessage).toHaveBeenCalledWith('chat-edit-1', 'msg-user-1');
+        });
+      });
+
+      it('cancel delete closes modal without API call', async () => {
+        setupEditableChatState();
+        render(<ChatPage />);
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+        const user = userEvent.setup();
+        await waitFor(() => screen.getByText('Chess Expert'));
+        await user.click(screen.getByText('Chess Expert'));
+        await waitFor(() => screen.getByText('Original user message'));
+        const initialDeleteCallCount = (mockApi.chat.deleteMessage as jest.Mock).mock.calls.length;
+        const deleteButtons = screen.getAllByTitle('Elimina messaggio');
+        await user.click(deleteButtons[0]);
+        await waitFor(() => screen.getByText('Eliminare il messaggio?'));
+        const cancelButton = screen.getByText('Annulla');
+        await user.click(cancelButton);
+        await waitFor(() => {
+          expect(screen.queryByText('Eliminare il messaggio?')).not.toBeInTheDocument();
+        });
+        expect((mockApi.chat.deleteMessage as jest.Mock).mock.calls.length).toBe(initialDeleteCallCount);
+        expect(screen.getByText('Original user message')).toBeInTheDocument();
+      });
+
+      it('displays "[Messaggio eliminato]" placeholder for deleted messages', async () => {
+        setupEditableChatState();
+        render(<ChatPage />);
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+        const user = userEvent.setup();
+        await waitFor(() => screen.getByText('Chess Expert'));
+        await user.click(screen.getByText('Chess Expert'));
+        await waitFor(() => {
+          expect(screen.getByText('[Messaggio eliminato]')).toBeInTheDocument();
+        });
+      });
+    });
+
+    describe('Invalidation Tests', () => {
+      it('shows invalidation warning for assistant messages with isInvalidated=true', async () => {
+        setupEditableChatState();
+        render(<ChatPage />);
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+        const user = userEvent.setup();
+        await waitFor(() => screen.getByText('Chess Expert'));
+        await user.click(screen.getByText('Chess Expert'));
+        await waitFor(() => screen.getByText('This AI response is outdated'));
+        expect(screen.getByText(/Questa risposta potrebbe essere obsoleta/i)).toBeInTheDocument();
+      });
+
+      it('hides invalidation warning for user messages', async () => {
+        setupEditableChatState();
+        render(<ChatPage />);
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+        const user = userEvent.setup();
+        await waitFor(() => screen.getByText('Chess Expert'));
+        await user.click(screen.getByText('Chess Expert'));
+        await waitFor(() => screen.getByText('Original user message'));
+        const userMessage = screen.getByText('Original user message').closest('li');
+        const warningsInUser = userMessage ? within(userMessage as HTMLElement).queryAllByText(/Questa risposta potrebbe essere obsoleta/i) : [];
+        expect(warningsInUser.length).toBe(0);
+      });
+    });
+
+    describe('Error Handling', () => {
+      it('shows error toast when edit fails with 403 Forbidden', async () => {
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        setupEditableChatState();
+        (mockApi.chat.updateMessage as jest.Mock).mockRejectedValueOnce(new Error('API /api/v1/chats/chat-edit-1/messages/msg-user-1 403'));
+        render(<ChatPage />);
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+        const user = userEvent.setup();
+        await waitFor(() => screen.getByText('Chess Expert'));
+        await user.click(screen.getByText('Chess Expert'));
+        await waitFor(() => screen.getByText('Original user message'));
+        const editButtons = screen.getAllByTitle('Modifica messaggio');
+        await user.click(editButtons[0]);
+        await waitFor(() => screen.getByLabelText('Edit message content'));
+        const textarea = screen.getByLabelText('Edit message content');
+        await user.clear(textarea);
+        await user.type(textarea, 'Updated');
+        const saveButton = screen.getByLabelText('Save edited message');
+        await user.click(saveButton);
+        await waitFor(() => {
+          expect(screen.getByText(/Non hai il permesso/i)).toBeInTheDocument();
+        });
+        consoleErrorSpy.mockRestore();
+      });
+
+      it('shows error toast when delete fails with 404 Not Found', async () => {
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        setupEditableChatState();
+        (mockApi.chat.deleteMessage as jest.Mock).mockRejectedValueOnce(new Error('API /api/v1/chats/chat-edit-1/messages/msg-user-1 404'));
+        render(<ChatPage />);
+        await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+        const user = userEvent.setup();
+        await waitFor(() => screen.getByText('Chess Expert'));
+        await user.click(screen.getByText('Chess Expert'));
+        await waitFor(() => screen.getByText('Original user message'));
+        const deleteButtons = screen.getAllByTitle('Elimina messaggio');
+        await user.click(deleteButtons[0]);
+        await waitFor(() => screen.getByText('Eliminare il messaggio?'));
+        const confirmButton = screen.getByText('Elimina');
+        await user.click(confirmButton);
+        await waitFor(() => {
+          expect(screen.getByText(/Messaggio non trovato/i)).toBeInTheDocument();
+        });
+        consoleErrorSpy.mockRestore();
+      });
     });
   });
 });

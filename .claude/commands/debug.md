@@ -1,273 +1,510 @@
-# Debug Command
+# Debug Command - Automatic Error Analysis & Fix
 
-Automated debugging workflow with comprehensive error analysis, replication, and permanent resolution.
+Analizza errori dello stack (API/Frontend/Infra), propone 2 soluzioni, seleziona la migliore automaticamente, implementa fix preventivi e crea issue/PR su GitHub.
 
-**Works with ANY type of error:** C#/.NET, TypeScript/JavaScript, React/Next.js, databases (PostgreSQL, Redis, Qdrant), Docker, APIs, configuration, infrastructure, etc.
+**Sintassi**: `/debug [messaggio_errore_opzionale]`
 
-## Usage
+---
 
-```
-/debug <error_text_or_description>
-```
+## STEP 1: RACCOLTA ERRORI
 
-## Examples
+Se l'utente non fornisce un messaggio di errore specifico, raccogli automaticamente errori da tutte le fonti:
 
+### A. Seq Logs (ultimi 10 minuti)
 ```bash
-# .NET compilation error
-/debug CS0246: The type or namespace name 'QdrantService' could not be found
-
-# Runtime exception
-/debug System.NullReferenceException: Object reference not set to an instance of an object at RagService.SearchAsync
-
-# Database error
-/debug Npgsql.PostgresException (0x80004005): 42P01: relation "game_rules" does not exist
-
-# TypeScript error
-/debug TS2339: Property 'chatId' does not exist on type 'StreamingResponse'
-
-# Docker/Container error
-/debug docker: Error response from daemon: Conflict. The container name "/meepleai-postgres" is already in use
-
-# API/HTTP error
-/debug Failed to fetch: POST http://localhost:8080/api/v1/agents/qa returned 500 Internal Server Error
-
-# Build error
-/debug pnpm build failed with exit code 1: Type error in pages/chat.tsx
+# Query Seq API per errori recenti
+curl -s "http://localhost:8081/api/events?filter=Level%3D%27Error%27&count=50" | \
+  ConvertFrom-Json | Select-Object -First 20 | \
+  Select-Object Timestamp, RenderedMessage, Exception | Format-Table -AutoSize
 ```
 
-## Workflow
-
-You are tasked with debugging an error using a comprehensive, systematic approach with MCP integrations.
-
-**Error to debug:**
-```
-{{input}}
+### B. Docker Container Logs
+```bash
+# Analizza logs di tutti i container (ultimi 10 min)
+docker compose logs --tail=100 --since=10m 2>&1 | \
+  Select-String -Pattern "error|exception|failed|timeout|refused" -Context 1,1
 ```
 
-## Phase 1: Analysis & Context Gathering
+### C. Frontend Build/Console Errors
+```bash
+# Check TypeScript errors
+cd apps/web && pnpm typecheck 2>&1 | Select-String -Pattern "error TS" -Context 0,1
 
-1. **Extract Error Information:**
-   - Parse error message, stack trace, and error codes
-   - Identify affected files, line numbers, and components
-   - Determine error category (runtime, compilation, network, database, etc.)
-   - Extract library/framework names mentioned in the error
+# Check build errors (se in prod build)
+pnpm build 2>&1 | Select-String -Pattern "error|failed|Error:" -Context 1,1
+```
 
-2. **Get Library Documentation (Context7 MCP):**
-   - **For EVERY library/framework identified in the error**, retrieve up-to-date docs:
-     - Use `mcp__upstash-context-7-mcp__resolve-library-id` to find the library
-     - Use `mcp__upstash-context-7-mcp__get-library-docs` to get documentation
-     - Focus on: error handling, common issues, troubleshooting, best practices
-   - **Backend examples**: ASP.NET Core, Entity Framework Core, Npgsql, StackExchange.Redis, Docnet.Core, iText7, Serilog, xUnit, Moq, Testcontainers
-   - **Frontend examples**: React, Next.js, TypeScript, Jest, Playwright, axios
-   - **Infrastructure examples**: PostgreSQL, Redis, Qdrant, Docker, Prometheus, Jaeger, OpenTelemetry
-   - **Other examples**: Any npm package, NuGet package, or technology mentioned in the error
+### D. API Health Checks
+```bash
+# Verifica health endpoint
+curl -s http://localhost:8080/health | ConvertFrom-Json | \
+  Select-Object status, entries | Format-List
+```
 
-3. **Check IDE Diagnostics (IDE MCP):**
-   - Use `mcp__ide__getDiagnostics` to get current language server diagnostics
-   - Identify related errors, warnings, and type issues
-   - Correlate diagnostics with the reported error
+**Output atteso**: Aggregato di tutti gli errori trovati con timestamp, fonte, messaggio
 
-4. **Search Codebase:**
-   - Use Grep to find:
-     - Error message occurrences
-     - Related error handling code
-     - Similar patterns that might cause the same issue
-     - Test files that might be affected
-   - Use Glob to find:
-     - Affected source files
-     - Related configuration files
-     - Test files for the affected components
+---
 
-5. **Analyze UI Components (Magic MCP - if UI error):**
-   - **Only for UI component errors** (React, Vue, Svelte, TypeScript components):
-     - Use `mcp__magic__magic_analyze` to analyze UI component structure and patterns
-     - Focus on: component design, accessibility issues, UI patterns, styling problems
-   - **Skip this step** for backend errors, database errors, Docker errors, etc.
+## STEP 2: ANALISI MULTI-LAYER CON SEQUENTIAL REASONING
 
-## Phase 2: Error Replication
+Usa `mcp__sequential__sequential_start` per analisi strutturata:
 
-1. **Create Reproduction Scenario:**
-   Based on error context, create minimal reproduction case appropriate to error type:
+### Chain di Reasoning:
+1. **Stack Detection**: Identifica layer coinvolto
+   - Pattern matching: `*.cs` → API, `*.tsx/*.ts` → Frontend, `docker-compose` → Infra
+   - Keyword analysis: `EF Core`, `Npgsql` → Database; `Redis`, `Qdrant` → Cache/Vector
+   - Servizi coinvolti: Estrai nomi da logs (es. `RagService`, `ChatService`)
 
-   - **Backend API errors**: Create xUnit integration test (WebApplicationFactory + Testcontainers)
-   - **Backend service errors**: Create unit test with mocked dependencies
-   - **Database errors**: Create EF Core migration or seed data scenario
-   - **Frontend UI errors**: Create Jest unit test or Playwright E2E test
-   - **Frontend component errors**: Create React component test with mocked API
-   - **TypeScript errors**: Create minimal .ts file demonstrating the type issue
-   - **Build errors**: Document build command and affected files
-   - **Docker errors**: Create docker-compose scenario or Dockerfile snippet
-   - **Configuration errors**: Create test config file demonstrating the issue
-   - **Integration errors**: Create test demonstrating interaction between services
+2. **Root Cause Analysis**:
+   - **API errors**: Analizza stack trace, exception type, metodo fallito
+   - **Frontend errors**: Component name, hook failure, API call failure
+   - **Infra errors**: Service down, connection refused, timeout
+   - **Database errors**: Migration issue, connection pool, query timeout
+   - Usa `mcp__magic__magic_analyze` con `analysis_type: "pattern"` per pattern recognition
 
-2. **Verify Reproduction:**
-   - Run the test/scenario to confirm the error occurs
-   - Capture full error output, stack trace, and logs
-   - For backend: Check Seq logs, Jaeger traces if applicable
-   - For frontend: Check browser console, network tab
-   - Document exact reproduction steps
+3. **Impact Assessment** (score 1-10):
+   - **Critical (9-10)**: Servizio down, data loss, security breach
+   - **High (7-8)**: Feature broken, performance degradation >50%
+   - **Medium (4-6)**: Partial feature failure, workaround disponibile
+   - **Low (1-3)**: UI glitch, minor inconvenience
 
-## Phase 3: Root Cause Analysis
+4. **Dependency Mapping**: Identifica componenti impattati
+   - Se errore in `RagService` → impatta `/agents/qa`, `/setup/generate`
+   - Se errore in `AuthService` → blocca tutte le route autenticate
 
-1. **Identify Root Cause:**
-   Analyze error using multiple information sources:
-   - **Library documentation** from Context7 (error patterns, common pitfalls)
-   - **Codebase patterns** from Grep/Glob (existing implementations)
-   - **IDE diagnostics** (type errors, warnings, language server)
-   - **UI component analysis** (Magic MCP if UI error - see Phase 1 step 5)
-   - **Git history** (`git log`, `git blame` for recent changes)
-   - **Configuration files** (appsettings.json, .env, docker-compose.yml, package.json)
-   - **Logs** (Seq for backend, browser console for frontend)
+**Output Step 2**: JSON strutturato
+```json
+{
+  "errorType": "ConnectionTimeout",
+  "layer": "API",
+  "service": "RagService",
+  "rootCause": "Redis connection pool exhausted",
+  "impactScore": 8,
+  "affectedEndpoints": ["/api/v1/agents/qa", "/api/v1/setup/generate"],
+  "stackTrace": "..."
+}
+```
 
-   Common root causes by error type:
-   - **Configuration**: Missing env vars, wrong connection strings, incorrect JSON
-   - **Logic errors**: Null reference, off-by-one, incorrect conditions
-   - **Type errors**: TypeScript mismatches, C# type conversions
-   - **Database**: Missing migrations, wrong entity relationships, SQL syntax
-   - **API**: Wrong HTTP methods, missing auth headers, CORS issues
-   - **Dependency**: Version conflicts, missing packages, breaking changes
-   - **Race conditions**: Async/await issues, concurrent access
-   - **Resource exhaustion**: Memory leaks, connection pool exhaustion
-   - **Docker**: Port conflicts, volume permissions, network issues
+---
 
-2. **Validate Hypothesis:**
-   - Read relevant code sections with Read tool
-   - Check all related configuration files
-   - Review git history: `git log --oneline`, `git blame <file>`
-   - Verify dependencies: `dotnet list package`, `pnpm list`
-   - Check runtime state: Seq logs, Jaeger traces, database state
-   - Consult Context7 docs for library-specific troubleshooting
+## STEP 3: GENERAZIONE 2 SOLUZIONI ALTERNATIVE
 
-## Phase 4: Solution Implementation
+Usa `mcp__sequential__sequential_step` per generare 2 soluzioni:
 
-1. **Design Solution:**
-   - Based on library best practices from Context7
-   - Following project patterns from CLAUDE.md
-   - Ensuring the fix prevents future occurrences
-   - Consider:
-     - Input validation
-     - Error handling
-     - Logging improvements
-     - Configuration validation
-     - Type safety
-     - Defensive programming
+### Soluzione A: Fix Tattico/Immediato
+- **Obiettivo**: Risolve il problema nel breve termine
+- **Approccio**: Gestione errore, retry logic, fallback, validazione input
+- **Esempio**: Aggiunge try-catch + retry exponential backoff
 
-2. **Implement Fix:**
-   - Use Edit tool to apply changes
-   - Follow coding standards from CLAUDE.md
-   - Add defensive code (null checks, validation, etc.)
-   - Improve error messages for better debugging
-   - Add logging at critical points
+### Soluzione B: Fix Strategico/Strutturale
+- **Obiettivo**: Previene il problema a livello architetturale
+- **Approccio**: Refactoring, design pattern, monitoring, resilience pattern
+- **Esempio**: Implementa Circuit Breaker pattern + health monitoring
 
-3. **Add Preventive Measures:**
-   - **Tests:** Create unit/integration tests that would catch this error
-   - **Validation:** Add input validation if missing
-   - **Type Safety:** Strengthen types if applicable (TypeScript, C#)
-   - **Error Handling:** Add try-catch with proper error messages
-   - **Configuration Validation:** Validate config at startup if needed
-   - **Documentation:** Add inline comments explaining the fix
+### AI Scoring Automatico (0-100):
 
-## Phase 5: Verification
+**Formula**:
+```
+Score = (Impact_Reduction × 0.4) + (1 - Effort_Normalized × 0.3) +
+        (1 - Risk_Normalized × 0.2) + (Maintainability × 0.1)
+```
 
-1. **Run Reproduction Test:**
-   - Execute the test created in Phase 2
-   - Verify the error is resolved
-   - Ensure no new errors introduced
-   - For integration tests: Verify Testcontainers start correctly
+**Criteri**:
+1. **Impact Reduction (40%)**: Quanto riduce la probabilità di recurrence?
+   - Tattico: 60-75%
+   - Strategico: 85-95%
 
-2. **Run Test Suite:**
-   Based on affected area:
-   - **Backend full**: `dotnet test` in apps/api
-   - **Backend filtered**: `dotnet test --filter "FullyQualifiedName~<TestClass>"`
-   - **Frontend full**: `pnpm test` in apps/web
-   - **Frontend filtered**: `pnpm test <specific-test-file>`
-   - **E2E tests**: `pnpm test:e2e` (if UI changes)
-   - **Coverage**: `pwsh tools/measure-coverage.ps1 -Project api|web`
-   - Ensure all existing tests still pass
+2. **Implementation Effort (30%)**: Ore di sviluppo stimate
+   - Low (1-2h): Score 90
+   - Medium (3-6h): Score 70
+   - High (7-16h): Score 40
 
-3. **Check Build:**
-   Based on affected stack:
-   - **Backend**: `dotnet build` in apps/api
-   - **Frontend**: `pnpm typecheck` AND `pnpm build` in apps/web
-   - **Both**: Build both to verify no cross-stack issues
-   - Verify no compilation errors or warnings
+3. **Risk/Side-Effects (20%)**: Probabilità di regressioni
+   - Low (modifiche isolate): Score 90
+   - Medium (refactoring medio): Score 70
+   - High (architectural change): Score 50
 
-4. **Verify Runtime:**
-   - **Backend**: Start API (`dotnet run`), check health endpoints
-   - **Frontend**: Start dev server (`pnpm dev`), verify page loads
-   - **Integration**: Start full stack (docker compose + api + web)
-   - **Logs**: Check Seq for errors, warnings
-   - **Traces**: Check Jaeger for error spans (if applicable)
-   - **Metrics**: Check Prometheus/Grafana for anomalies
+4. **Maintainability (10%)**: Facilità manutenzione futura
+   - Pattern standard: Score 90
+   - Custom logic: Score 60
 
-5. **Verify Diagnostics:**
-   - Use `mcp__ide__getDiagnostics` to check language server
-   - Ensure the error is gone and no new issues introduced
-   - Check both C# and TypeScript diagnostics if applicable
+**Selezione**: Soluzione con score più alto (>= 70 preferibile)
 
-## Phase 6: Documentation
+**Output Step 3**:
+```
+⚖️  Soluzione A (Score: 72): Retry logic + exponential backoff
+    Impact: 70%, Effort: 2h, Risk: Low, Maintainability: High
 
-1. **Create Issue Documentation:**
-   - Create a markdown file in `docs/issue/` with:
-     - Error description and reproduction steps
-     - Root cause analysis
-     - Solution explanation
-     - Preventive measures added
-     - Library references from Context7 (if applicable)
-   - Format: `docs/issue/<issue-id>-<short-description>.md`
+⚖️  Soluzione B (Score: 85): Circuit breaker pattern + health monitoring ✓
+    Impact: 90%, Effort: 4h, Risk: Medium, Maintainability: High
 
-2. **Update Code Comments:**
-   - Add comments explaining the fix
-   - Reference the issue documentation
-   - Explain why the solution prevents future occurrences
+✅ Selezionata automaticamente: Soluzione B
+```
 
-3. **Generate Summary:**
-   - Provide a concise summary to the user:
-     - What was the error
-     - What caused it
-     - How it was fixed
-     - What prevents it from happening again
-     - Files changed
-     - Tests added
+---
 
-## MCP Tools Usage Summary
+## STEP 4: IMPLEMENTAZIONE FIX + PREVENTION MEASURES
 
-- **Context7 (`mcp__upstash-context-7-mcp__*`)**: Get up-to-date library documentation for ANY framework/library
-- **IDE (`mcp__ide__getDiagnostics`)**: Get language server diagnostics (TypeScript, C#, etc.)
-- **Magic (`mcp__magic__*`)**: UI component generation, transformation, and analysis (React, Vue, Svelte)
-  - `magic_generate`: Generate UI components from description
-  - `magic_transform`: Transform UI components (e.g., MUI → Tailwind)
-  - `magic_analyze`: Analyze UI component structure, accessibility, patterns
-  - **Use ONLY for UI component errors**, not for backend/database/Docker errors
-- **Sequential (`mcp__sequential__*`)**: For multi-step debugging workflows (optional)
-- **Memory Bank (`mcp__aakarsh-sasi-memory-bank-mcp__track_progress`)**: Track debugging progress (optional)
+Usa `mcp__sequential__sequential_step` per implementazione:
 
-## Quality Checklist
+### A. Applica Fix Codice
+- **API (.cs)**:
+  - Modifica service/middleware necessario
+  - Aggiunge configuration in `appsettings.json` se richiesto
+  - Update DI in `Program.cs` se nuovi servizi
 
-Before completing, ensure:
-- [ ] Error is fully understood and documented
-- [ ] Library documentation consulted via Context7
-- [ ] Error successfully reproduced
-- [ ] Root cause identified with evidence
-- [ ] Fix implemented following best practices
-- [ ] Tests added to prevent regression
-- [ ] All tests pass
-- [ ] No new diagnostics/warnings
-- [ ] Documentation created in docs/issue/
-- [ ] Code comments explain the fix
-- [ ] User summary provided
+- **Frontend (.tsx/.ts)**:
+  - Modifica componenti/hooks
+  - Aggiorna types in `@/lib/api.ts`
+  - Fix import/export
 
-## Workflow Adaptation by Error Type
+- **Infra (docker-compose.yml, Dockerfile)**:
+  - Aggiorna configurazione container
+  - Aggiunge health checks
+  - Fix environment variables
 
-The command adapts its approach based on the error type:
+### B. Validation Guards
+Aggiungi validazione preventiva:
+```csharp
+// Esempio API
+if (string.IsNullOrWhiteSpace(config.RedisUrl))
+    throw new InvalidOperationException("REDIS_URL configuration is required");
+
+// Esempio Frontend
+if (!gameId || !uuid.validate(gameId)) {
+    throw new Error("Invalid gameId format");
+}
+```
+
+### C. Unit/Integration Tests
+Crea test case che riproducono l'errore:
+
+**Backend (xUnit)**:
+```csharp
+// File: apps/api/tests/Api.Tests/Services/{ServiceName}ResilienceTests.cs
+[Fact]
+public async Task MethodName_WhenConditionThatCausedError_ShouldHandleGracefully()
+{
+    // Arrange: Setup scenario che causa errore
+    // Act: Esegui operazione
+    // Assert: Verifica gestione corretta
+}
+```
+
+**Frontend (Jest)**:
+```typescript
+// File: apps/web/src/__tests__/{component}.resilience.test.tsx
+it('should handle {error_scenario} gracefully', async () => {
+    // Arrange: Mock API failure
+    // Act: Trigger error condition
+    // Assert: Verify error handling
+});
+```
+
+Crea **almeno 3 test**:
+1. Test che riproduce l'errore originale
+2. Test edge case correlato
+3. Test integrazione end-to-end
+
+### D. Documentation Update
+Aggiorna `docs/troubleshooting.md`:
+
+```markdown
+## {Error Type}: {Brief Description}
+
+**Sintomo**: {Come si manifesta l'errore}
+
+**Root Cause**: {Causa identificata}
+
+**Soluzione**: {Fix implementato}
+
+**Prevenzione**:
+- {Validation guard aggiunto}
+- {Test coverage aggiunto}
+- {Monitoring aggiunto}
+
+**Riferimenti**: Issue #{issue_number}, PR #{pr_number}
+
+---
+```
+
+### E. Monitoring/Alerting
+Aggiungi log strutturato + metric:
+
+**Log (Serilog)**:
+```csharp
+_logger.LogWarning(
+    "RagService Redis timeout prevented by circuit breaker. " +
+    "State: {CircuitState}, FailureCount: {FailureCount}",
+    circuitState, failureCount);
+```
+
+**Metric (OpenTelemetry)**:
+```csharp
+// In MeepleAiMetrics.cs
+public static readonly Counter<long> CircuitBreakerStateChanges =
+    Meter.CreateCounter<long>(
+        "meepleai.circuitbreaker.state_changes.total",
+        description: "Circuit breaker state transitions");
+```
+
+**Alert Query (Seq)**:
+```sql
+-- Alert se >5 errori in 5 minuti
+SELECT COUNT(*) FROM stream
+WHERE Level = 'Error' AND ServiceName = 'RagService'
+GROUP BY TIME(5m)
+HAVING COUNT(*) > 5
+```
+
+---
+
+## STEP 5: GIT WORKFLOW AUTOMATICO
+
+Usa `mcp__github-project-manager__github_create_issue` e `github_create_pr`:
+
+### A. Crea GitHub Issue
+```typescript
+{
+  title: "[AUTO-DEBUG] {ErrorType}: {Brief Description}",
+  body: `
+## 🔍 Analisi Automatica
+
+**Error Type**: {errorType}
+**Layer**: {layer}
+**Service**: {service}
+**Impact Score**: {impactScore}/10
+
+## 📊 Root Cause
+{rootCause dettagliato con stack trace}
+
+## ⚖️ Soluzioni Analizzate
+
+### Soluzione A (Score: {scoreA})
+{descrizione soluzione A}
+
+### Soluzione B (Score: {scoreB}) ✓ SELEZIONATA
+{descrizione soluzione B}
+
+## 🛠️ Fix Implementato
+- [ ] Codice modificato: {file list}
+- [ ] Validation guards aggiunti
+- [ ] Test creati ({test_count} tests)
+- [ ] Documentazione aggiornata
+- [ ] Monitoring aggiunto
+
+## 📈 Metriche Prevention
+- **Coverage**: {coverage_before}% → {coverage_after}%
+- **Tests**: +{new_tests_count}
+- **Monitoring**: {metrics_added}
+
+🤖 Generato automaticamente da /debug command
+  `,
+  labels: ["bug", "auto-fix", "{layer}-layer", "priority-{priority}"]
+}
+```
+
+### B. Crea Branch & Commit
+```bash
+# Branch naming: fix/debug-auto-{timestamp}-{error-type-slug}
+git checkout -b "fix/debug-auto-$(Get-Date -Format 'yyyyMMdd-HHmmss')-{error-type-slug}"
+
+# Commit con template strutturato
+git add {modified_files}
+git commit -m "$(cat <<'EOF'
+fix({layer}): auto-debug fix for {ErrorType} in {Service}
+
+## Problem
+{brief description of error}
+
+## Root Cause
+{1-2 sentence root cause}
+
+## Solution (Score: {selected_score})
+{selected solution description}
+
+## Changes
+- {file1}: {change description}
+- {file2}: {change description}
+
+## Prevention Measures
+- ✅ Validation guards added
+- ✅ {test_count} tests created (coverage +{delta}%)
+- ✅ Documentation updated
+- ✅ Monitoring: {metrics_added}
+
+## Testing
+- Unit: {unit_tests_count} passing
+- Integration: {integration_tests_count} passing
+
+Closes #{issue_number}
+
+🤖 Generated with /debug command via Claude Code
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+)"
+
+git push -u origin HEAD
+```
+
+### C. Crea Pull Request
+```typescript
+{
+  title: "[AUTO-FIX] {ErrorType} in {Service} - {Brief Description}",
+  head: "fix/debug-auto-{timestamp}-{error-type-slug}",
+  base: "main",
+  body: `
+## 🐛 Problem
+{error description con stack trace excerpt}
+
+## 🔍 Analysis
+**Root Cause**: {root cause}
+**Impact**: {impactScore}/10 - {affected endpoints/features}
+
+## ✅ Solution
+Implemented **Solution B** (AI Score: {score}/100):
+{solution description}
+
+### Why This Solution?
+- Impact Reduction: {impact}%
+- Implementation Effort: {effort}h
+- Risk: {risk_level}
+- Maintainability: High
+
+## 🛠️ Changes
+${file_changes_summary}
+
+## 🧪 Testing
+- **Unit Tests**: {unit_count} new tests
+- **Integration Tests**: {integration_count} new tests
+- **Coverage**: {before}% → {after}% (+{delta}%)
+
+## 🛡️ Prevention Measures
+- ✅ **Validation**: Input/config guards added
+- ✅ **Tests**: Regression prevention suite
+- ✅ **Docs**: Troubleshooting guide updated
+- ✅ **Monitoring**: New metrics/logs for early detection
+
+## 📊 Metrics Added
+{list of new metrics/logs}
+
+## 🔗 References
+Closes #{issue_number}
+
+---
+🤖 Auto-generated by /debug command
+  `,
+  draft: false
+}
+```
+
+---
+
+## STEP 6: OUTPUT UTENTE (Sintesi Operazioni)
+
+Fornisci report strutturato con icone:
+
+```
+🔍 ANALISI ERRORE COMPLETATA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 FONTI ERRORI ANALIZZATE:
+  ├─ Seq Logs: 3 errors found
+  ├─ Docker Logs: 1 error (redis timeout)
+  ├─ Frontend Build: 0 errors
+  └─ Health Checks: Redis unhealthy
+
+🎯 ROOT CAUSE IDENTIFICATA:
+  Error Type: ConnectionTimeout
+  Layer: API (RagService.cs:142)
+  Service: RagService → Redis
+  Impact: 8/10 (High)
+
+  Causa: Redis connection pool exhausted under high load
+  Endpoints affected: /api/v1/agents/qa, /api/v1/setup/generate
+
+⚖️  SOLUZIONI GENERATE:
+
+  Soluzione A (Score: 72/100)
+  └─ Retry logic + exponential backoff
+     Impact: 70% | Effort: 2h | Risk: Low
+
+  Soluzione B (Score: 85/100) ✓ SELEZIONATA
+  └─ Circuit breaker pattern + health monitoring
+     Impact: 90% | Effort: 4h | Risk: Medium
+
+🛠️  FIX IMPLEMENTATO:
+
+  ✅ Codice modificato:
+     ├─ RagService.cs (circuit breaker integration)
+     ├─ Program.cs (DI configuration)
+     ├─ appsettings.json (circuit breaker settings)
+     └─ MeepleAiMetrics.cs (new metrics)
+
+  ✅ Prevention measures:
+     ├─ Validation: Redis URL config guard
+     ├─ Tests: 8 new tests (RagServiceResilienceTests.cs)
+     ├─ Coverage: 87.3% → 89.1% (+1.8%)
+     ├─ Docs: troubleshooting.md updated
+     └─ Monitoring: circuit_breaker.state metric added
+
+📝 GITHUB INTEGRATION:
+
+  ✅ Issue created: #XXX
+     └─ https://github.com/org/repo/issues/XXX
+
+  ✅ PR created: #YYY
+     └─ Branch: fix/debug-auto-20251018-143022-redis-timeout
+     └─ https://github.com/org/repo/pull/YYY
+     └─ Status: Ready for review
+
+🎉 DEBUG COMPLETATO CON SUCCESSO!
+   Tempo totale: 4m 32s
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+---
+
+## ERROR HANDLING
+
+Se il comando fallisce in qualsiasi step:
+
+1. **Raccolta errori fallita**: Usa solo il messaggio fornito dall'utente
+2. **Analisi fallita**: Chiedi all'utente di fornire più contesto
+3. **Generazione soluzioni fallita**: Proponi fix generico basato su best practices
+4. **Implementazione fallita**: Crea solo issue su GitHub con analisi, senza PR
+5. **GitHub API fallita**: Salva report in `docs/debug-reports/{timestamp}.md`
+
+## BEST PRACTICES
+
+- Usa `mcp__sequential__*` per reasoning chain tracciabile
+- Usa `mcp__magic__magic_analyze` per pattern recognition
+- Leggi SEMPRE i file esistenti prima di modificarli (usa Read tool)
+- Esegui test dopo implementazione per verificare fix
+- Non committare se i test falliscono
+- Mantieni atomic commits (un problema = un fix)
+
+## INTEGRAZIONE CON CONTEXT7
+
+Per ogni library/framework menzionato nell'errore:
+1. Usa `mcp__upstash-context-7-mcp__resolve-library-id` per trovare la library
+2. Usa `mcp__upstash-context-7-mcp__get-library-docs` per ottenere documentazione
+3. Consulta best practices, error handling patterns, troubleshooting
+
+**Esempi**:
+- Backend: ASP.NET Core, Entity Framework Core, Npgsql, StackExchange.Redis, Serilog
+- Frontend: React, Next.js, TypeScript, Jest, Playwright
+- Infra: Docker, PostgreSQL, Redis, Qdrant
+
+## WORKFLOW ADAPTATION PER TIPO ERRORE
 
 ### Backend C# Error
 ```
 /debug System.NullReferenceException in RagService.SearchAsync
 ```
 - Context7: ASP.NET Core, Entity Framework Core
-- Replication: xUnit integration test
-- Fix: Null checks, validation
+- Test: xUnit integration test con Testcontainers
 - Verification: `dotnet test`, check Seq logs
 
 ### Frontend TypeScript Error
@@ -275,17 +512,15 @@ The command adapts its approach based on the error type:
 /debug TS2339: Property 'chatId' does not exist on type 'StreamingResponse'
 ```
 - Context7: TypeScript, React, Next.js
-- Replication: Jest unit test
-- Fix: Update type definition
+- Test: Jest unit test
 - Verification: `pnpm typecheck`, `pnpm test`
 
-### Database Migration Error
+### Database Error
 ```
 /debug Npgsql.PostgresException: 42P01: relation "game_rules" does not exist
 ```
 - Context7: PostgreSQL, Npgsql, Entity Framework Core
-- Replication: EF Core migration scenario
-- Fix: Create/update migration
+- Test: EF Core migration scenario
 - Verification: `dotnet ef database update`, integration tests
 
 ### Docker Error
@@ -293,28 +528,9 @@ The command adapts its approach based on the error type:
 /debug docker: Error response from daemon: port is already allocated
 ```
 - Context7: Docker
-- Replication: docker-compose scenario
-- Fix: Update port mapping, check conflicts
+- Test: docker-compose scenario
 - Verification: `docker compose up`, verify services
 
-### API Integration Error
-```
-/debug CORS policy: No 'Access-Control-Allow-Origin' header
-```
-- Context7: ASP.NET Core, CORS
-- Replication: Integration test with CORS headers
-- Fix: Update CORS configuration in Program.cs
-- Verification: Test from frontend, check network tab
+---
 
-## Notes
-
-- **Universal Coverage**: This command works with ANY error in the monorepo (backend, frontend, database, Docker, CI/CD, etc.)
-- Use TodoWrite to track progress through phases
-- Be thorough in analysis - don't skip to solutions
-- Always add tests to prevent regression
-- **Context7 is key**: Consult up-to-date library docs before implementing fixes
-- Document learnings for future reference in `docs/issue/`
-- If error is critical or recurring, consider creating a GitHub issue via github-project-manager MCP
-- Adapt the workflow based on error type - not all phases apply to all errors
-- For simple errors (typos, missing imports), phases can be abbreviated
-- For complex errors (race conditions, performance), use all MCP tools available
+**Fine comando /debug**

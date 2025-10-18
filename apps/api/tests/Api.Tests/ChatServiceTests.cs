@@ -7,6 +7,7 @@ using Api.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Xunit;
 
 namespace Api.Tests;
@@ -63,7 +64,7 @@ public class ChatServiceTests
         dbContext.Agents.Add(agent);
         await dbContext.SaveChangesAsync();
 
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         // When: User creates a chat
         var chat = await service.CreateChatAsync("user-123", "catan", "catan-qa");
@@ -90,7 +91,7 @@ public class ChatServiceTests
     public async Task CreateChatAsync_WhenGameNotFound_Throws()
     {
         await using var dbContext = CreateInMemoryContext();
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             service.CreateChatAsync("user-123", "nonexistent", "agent-1"));
@@ -110,7 +111,7 @@ public class ChatServiceTests
         dbContext.Games.Add(game);
         await dbContext.SaveChangesAsync();
 
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             service.CreateChatAsync("user-123", "catan", "nonexistent-agent"));
@@ -143,7 +144,7 @@ public class ChatServiceTests
         dbContext.Chats.Add(chat);
         await dbContext.SaveChangesAsync();
 
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         var result = await service.GetChatByIdAsync(chat.Id, "user-123");
 
@@ -181,7 +182,7 @@ public class ChatServiceTests
         dbContext.Chats.Add(chat);
         await dbContext.SaveChangesAsync();
 
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         var result = await service.GetChatByIdAsync(chat.Id, "user-456");
 
@@ -217,7 +218,7 @@ public class ChatServiceTests
         dbContext.Chats.Add(chat);
         await dbContext.SaveChangesAsync();
 
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         var message = await service.AddMessageAsync(
             chat.Id,
@@ -265,7 +266,7 @@ public class ChatServiceTests
         dbContext.Chats.Add(chat);
         await dbContext.SaveChangesAsync();
 
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         var result = await service.DeleteChatAsync(chat.Id, "user-123");
 
@@ -302,7 +303,7 @@ public class ChatServiceTests
         dbContext.Chats.Add(chat);
         await dbContext.SaveChangesAsync();
 
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             service.DeleteChatAsync(chat.Id, "user-456"));
@@ -346,7 +347,7 @@ public class ChatServiceTests
         dbContext.Chats.AddRange(oldChat, recentChat);
         await dbContext.SaveChangesAsync();
 
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         var chats = await service.GetUserChatsAsync("user-123");
 
@@ -369,7 +370,7 @@ public class ChatServiceTests
         dbContext.Games.Add(game);
         await dbContext.SaveChangesAsync();
 
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         var agent = await service.GetOrCreateAgentAsync("catan", "qa");
 
@@ -407,7 +408,7 @@ public class ChatServiceTests
         dbContext.Agents.Add(existingAgent);
         await dbContext.SaveChangesAsync();
 
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         var agent = await service.GetOrCreateAgentAsync("catan", "qa");
 

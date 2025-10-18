@@ -49,8 +49,11 @@ Workflow end-to-end automatizzato per issue con approccio BDD, testing, code rev
 
 ### Phase 5: Local Testing
 **Tools:** `Bash` (dotnet test, pnpm test, playwright)
+**Command:** `/debug` (auto-fix se RED)
 
-- Test suite completa, coverage validation, BLOCCO se RED
+- Test suite completa, coverage validation
+- Auto-fix con `/debug` se RED (max 2 iterazioni)
+- BLOCCO se RED dopo auto-fix attempts
 
 ### Phase 6: Code Review (Self)
 **Agents:** `deep-think-developer`, `typescript-expert-developer`
@@ -65,16 +68,26 @@ Workflow end-to-end automatizzato per issue con approccio BDD, testing, code rev
 
 - Fetch issue details, validare DoD checklist
 
-### Phase 8: PR Creation
+### Phase 8: Update Issue DoD (NEW)
+**Tools:** `gh issue edit`
+**MCP:** `github_*`
+
+- Aggiorna i checkbox DoD nella issue description
+- Marca criteri completati con [x]
+- Documenta technical debt con [x] o [ ] + nota "⚠️"
+- Aggiungi sezione "Implementation Status" con link PR
+
+### Phase 9: PR Creation
 **MCP:** `github_create_pr`
 
 - Push branch, creare PR con review inclusa
 
-### Phase 9: CI Monitoring (--wait only)
-**Agents:** `data-analyst-deep-think`, `deep-think-developer`
-**MCP:** `github_*` (CI status), `sequential_start/step` (plan fix)
+### Phase 10: CI Monitoring (--wait only)
+**Command:** `/debug` (auto-fix se CI fallisce)
+**Agents:** `data-analyst-deep-think` (log analysis only)
+**MCP:** `github_*` (CI status)
 
-- Monitorare CI, analizzare failure, pianificare fix, re-push (max 3 tentativi)
+- Monitorare CI, auto-fix con `/debug` se fallisce, re-push (max 3 tentativi)
 
 ---
 
@@ -139,6 +152,34 @@ pnpm test:e2e                   # E2E
 # BLOCCO se RED ❌
 ```
 
+### 5️⃣.5 AUTO-FIX FALLIMENTI (NEW)
+**Command:** `/debug` (se tests falliscono)
+
+**Se local tests RED:**
+1. Cattura errore completo (stack trace, test name, assertion failure)
+2. Esegui `/debug <error_message>`
+3. `/debug` genera 2 soluzioni, seleziona la migliore, implementa fix + tests
+4. Re-run tests (max 2 iterazioni)
+5. Se ancora RED dopo 2 tentativi → BLOCCO (richiede intervento umano)
+
+**Output atteso:**
+```
+🔧 LOCAL TEST FAILURE DETECTED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ Failed: ChatServiceTests.SendMessage_ShouldPersistChat
+
+🔍 Auto-fixing with /debug...
+⚖️  Solution B (Score: 88): Add null check + validation guard
+✅ Fix applied: ChatService.cs, ChatServiceTests.cs
+✅ Tests: +3 resilience tests
+
+🔁 Re-running tests...
+✅ All tests GREEN
+
+💾 Commit: fix: add null check for chat persistence (auto-debug)
+```
+
 ### 6️⃣ SELF REVIEW
 **Agents:** deep-think-developer, typescript-expert-developer
 **MCP:** memory_recall (project best practices)
@@ -162,7 +203,32 @@ pnpm test:e2e                   # E2E
 ✅ No breaking changes
 ```
 
-### 8️⃣ PR CREATION
+### 8️⃣ UPDATE ISSUE DOD
+**Tools:** gh issue edit
+
+```bash
+# Aggiorna issue body con DoD completati
+gh issue edit <issue-id> --body "$(cat <<'EOF'
+## Acceptance Criteria
+- [x] Export button added ✅
+- [x] Modal component ✅
+- [ ] Unit tests (⚠️ Technical Debt)
+...
+
+## Definition of Done
+- [x] Code implemented ✅
+- [x] Build passes ✅
+- [ ] Tests written (⚠️ Follow-up needed)
+...
+
+## ✅ Implementation Status
+Merged: PR #XXX
+Status: COMPLETED with documented technical debt
+EOF
+)"
+```
+
+### 9️⃣ PR CREATION
 **MCP:** github_create_pr
 
 ```bash
@@ -170,16 +236,51 @@ git push -u origin feature/<issue-id>
 gh pr create --title "<issue-id>: <title>" --body "..."
 ```
 
-### 9️⃣ CI MONITORING (--wait only)
-**Agents:** data-analyst-deep-think, deep-think-developer
+### 🔟 CI MONITORING (--wait only)
+**Command:** `/debug` (se CI fallisce)
+**Agents:** data-analyst-deep-think (analisi logs)
 **MCP:** github_*, sequential_*
 
-**If FAILURE:**
-1. Analyze logs (data-analyst-deep-think)
-2. Plan fix (strategic-advisor + sequential)
-3. Implement fix (deep-think-developer)
-4. Re-push and re-monitor
-5. Max 3 attempts
+**If CI FAILURE:**
+1. Fetch CI logs via `gh run view --log-failed`
+2. **Esegui `/debug <ci_error_message>`** invece di analisi manuale
+3. `/debug` genera 2 soluzioni automaticamente, seleziona la migliore
+4. `/debug` implementa fix + tests + commit + push
+5. Re-monitor CI (max 3 attempts)
+6. Se fallisce dopo 3 tentativi → BLOCCO (richiede intervento umano)
+
+**Output atteso:**
+```
+🔧 CI FAILURE DETECTED (Attempt 1/3)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ Job: ci-api / Build & Test
+   Error: CS0246: The type 'StreamingQaService' could not be found
+
+🔍 Auto-fixing with /debug...
+
+📊 Analysis:
+   Error Type: CompilationError
+   Layer: API
+   Service: Program.cs
+   Impact: 10/10 (Critical - blocks build)
+
+⚖️  Solutions:
+   A (Score: 65): Add missing using statement
+   B (Score: 82): Add DI registration + using ✓ SELECTED
+
+🛠️  Fix Applied:
+   ✅ Program.cs: Added DI registration for IStreamingQaService
+   ✅ Using statement added
+   ✅ Tests: +2 integration tests for DI resolution
+
+💾 Commit: fix(api): add StreamingQaService DI registration (auto-debug CI fix)
+🚀 Pushed to feature/<issue-id>
+
+🔁 Re-monitoring CI...
+⏳ Build in progress...
+✅ CI PASSED (Attempt 2/3)
+```
 
 ---
 
@@ -287,19 +388,23 @@ get-library-docs("/dotnet/aspnetcore", topic="server-sent-events")
 🎉 PR ready for human review and merge
 ```
 
-### Success (with --wait + auto-fix)
+### Success (with --wait + auto-debug)
 ```
-✅ WORKFLOW COMPLETE (with auto-fix): <issue-id>
+✅ WORKFLOW COMPLETE (with auto-debug): <issue-id>
 
-🔧 Auto-Fix Applied:
-- Attempt 1: [issue] → Fixed with [solution]
-- Attempt 2: CI passed
+🔧 Auto-Debug Applied:
+- Local Test Fix: StreamingQaServiceTests RED → /debug → Solution B (Score: 88) → GREEN ✅
+- CI Fix (Attempt 1): Test timeout → /debug → Solution B (Score: 85) → CI PASSED ✅
 
 📊 Summary:
-- Commits: 4 (3 feature + 1 CI fix)
-- Agents: [..., data-analyst-deep-think (CI analysis)]
+- Commits: 5 (3 feature + 2 auto-debug fixes)
+- Agents: [...] + /debug command (2 executions)
+- Tests: +6 resilience tests added by auto-debug
+- Coverage: Backend +2.1%, Frontend +1.5%
 - CI: ✅ Passed on attempt 2/3
-- Duration: Xm Ys (including fix)
+- Duration: Xm Ys (including auto-debug)
+- Auto-Debug Issues Created: #XXX (local test fix), #YYY (CI fix)
+- Auto-Debug PRs: Fixes squashed into feature PR
 ```
 
 ### Failure
@@ -318,6 +423,38 @@ Failed: [details]
 ---
 
 ## Best Practices
+
+### DoD Update (Phase 8)
+✅ **DO:**
+- Mark ALL completed acceptance criteria with [x]
+- Document technical debt with [ ] + "⚠️ Technical Debt" note
+- Add "Implementation Status" section with PR link
+- Include merge status and commit hash
+- List known limitations clearly
+- Suggest follow-up issues for deferred work
+
+❌ **DON'T:**
+- Skip DoD update (users need visibility)
+- Mark incomplete items as complete
+- Hide technical debt (be transparent)
+- Forget to update after merge
+
+**Example DoD Update:**
+```markdown
+### Frontend
+- [x] Export button added ✅
+- [x] Modal component ✅
+- [ ] Unit tests (⚠️ Technical Debt - Follow-up #XXX)
+
+## ✅ Implementation Status
+**Merged:** PR #466 (commit: be00353)
+**Status:** COMPLETED with documented technical debt
+
+### Known Technical Debt
+- [ ] Unit tests for formatters (High Priority)
+- [ ] Integration tests (High Priority)
+- [ ] Performance testing 100+ messages (Medium Priority)
+```
 
 ### MCP Usage
 ✅ **DO:**
@@ -380,12 +517,12 @@ MCP NOT Used:
 Result: PR #467 created, UI components + logic
 ```
 
-### Example 3: Full-Stack Feature
+### Example 3: Full-Stack Feature (with auto-debug)
 ```bash
 /work CHAT-01 --wait  # "Streaming responses (API + UI)"
 
 Agents: Explore, doc-researcher-optimizer, strategic-advisor, system-architect,
-        deep-think-developer, typescript-expert-developer, data-analyst-deep-think
+        deep-think-developer, typescript-expert-developer
 
 MCP Used:
   - Context7: ASP.NET Core SSE + React EventSource docs
@@ -397,8 +534,18 @@ MCP NOT Used:
   - magic for backend C# (deep-think writes)
   - magic for React hooks (typescript-expert writes)
 
-Auto-Fix: Test timeout → Conditional CI timeout
-Result: PR #458 created, CI passed on attempt 2/3
+Error Recovery:
+  1. Local tests: StreamingQaServiceTests.AskStreamAsync_ShouldStreamTokens FAILED
+     → /debug executed → Solution: Add CancellationToken handling
+     → Re-run → GREEN ✅
+
+  2. CI failure (Attempt 1): Test timeout in CI environment
+     → /debug executed → Solution B (Score: 85): Conditional timeout for CI
+     → Push fix → Re-monitor
+     → CI PASSED (Attempt 2/3) ✅
+
+Result: PR #458 created, CI passed with 2 auto-debug fixes applied
+Commits: 5 (3 feature + 2 auto-debug fixes)
 ```
 
 ---
@@ -408,19 +555,36 @@ Result: PR #458 created, CI passed on attempt 2/3
 | Command | Purpose | Scope | Output |
 |---------|---------|-------|--------|
 | `/issue` | BDD workflow | Discovery → Implementation | Code commits (no PR) |
-| `/work` | **Full automation** | `/issue` + Tests + Review + PR + CI | PR created (± CI passed) |
+| `/work` | **Full automation** | `/issue` + Tests + **`/debug`** + Review + PR + CI | PR created (± CI passed) |
+| `/debug` | **Error auto-fix** | Analysis → 2 Solutions → Auto-fix + Tests + GitHub | Issue + PR with fix |
 | `/close-issue` | Close existing | Code Review + CI + Merge | Issue closed |
 
 **Recommended Flow:**
-1. `/work <issue-id> [--wait]` → Implementa e crea PR
+1. `/work <issue-id> [--wait]` → Implementa e crea PR (usa `/debug` se errori)
 2. Human review su PR (opzionale se --wait usato)
 3. `/close-issue <issue-id>` → Merge e chiude
 
+**Error Recovery Flow:**
+- `/work` rileva errore → esegue `/debug` automaticamente → fix + tests → continua workflow
+
 ---
 
-**Version:** 1.1 (corrected MCP usage)
+**Version:** 1.3 (Auto-debug integration)
 **Author:** MeepleAI Development Team
 **Last Updated:** 2025-10-18
+
+**Key Changes from v1.2:**
+- ✅ Added Phase 5.5: Auto-fix local test failures with `/debug`
+- ✅ Updated Phase 10: Auto-fix CI failures with `/debug` (replaces manual analysis)
+- ✅ `/debug` generates 2 solutions, selects best automatically, implements fix + tests
+- ✅ Max 2 iterations for local tests, max 3 for CI
+- ✅ Updated Integration table with `/debug` command
+
+**Key Changes from v1.1:**
+- ✅ Added Phase 8: Update Issue DoD (automatic checkbox marking)
+- ✅ Auto-marks completed acceptance criteria with [x]
+- ✅ Documents technical debt with ⚠️ warnings
+- ✅ Adds Implementation Status section to issue
 
 **Key Changes from v1.0:**
 - ✅ Removed magic_analyze from generic code analysis

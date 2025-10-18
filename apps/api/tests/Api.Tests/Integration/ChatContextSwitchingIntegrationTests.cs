@@ -7,6 +7,7 @@ using Api.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.Integration;
@@ -99,7 +100,7 @@ public class ChatContextSwitchingIntegrationTests
         // Arrange
         await using var dbContext = CreateInMemoryContext();
         var (user, chess, checkers, chessAgent, checkersAgent) = await SeedTestDataAsync(dbContext);
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         // Act: Create chat for Chess
         var chessChat = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
@@ -130,7 +131,7 @@ public class ChatContextSwitchingIntegrationTests
         // Arrange
         await using var dbContext = CreateInMemoryContext();
         var (user, chess, checkers, chessAgent, checkersAgent) = await SeedTestDataAsync(dbContext);
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         var chessChat1 = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
         var chessChat2 = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
@@ -162,7 +163,7 @@ public class ChatContextSwitchingIntegrationTests
         // Arrange
         await using var dbContext = CreateInMemoryContext();
         var (user, chess, checkers, chessAgent, checkersAgent) = await SeedTestDataAsync(dbContext);
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         var chessChat = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
         var checkersChat = await service.CreateChatAsync(user.Id, checkers.Id, checkersAgent.Id);
@@ -206,7 +207,7 @@ public class ChatContextSwitchingIntegrationTests
         // Arrange
         await using var dbContext = CreateInMemoryContext();
         var (user, chess, checkers, chessAgent, checkersAgent) = await SeedTestDataAsync(dbContext);
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         var chessChat = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
         var checkersChat = await service.CreateChatAsync(user.Id, checkers.Id, checkersAgent.Id);
@@ -251,7 +252,7 @@ public class ChatContextSwitchingIntegrationTests
         // Arrange
         await using var dbContext = CreateInMemoryContext();
         var (user, chess, checkers, chessAgent, checkersAgent) = await SeedTestDataAsync(dbContext);
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         // Act: Create 2 chats for Chess with different conversations
         var chessChat1 = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
@@ -287,7 +288,7 @@ public class ChatContextSwitchingIntegrationTests
         // Arrange
         await using var dbContext = CreateInMemoryContext();
         var (user, chess, checkers, chessAgent, checkersAgent) = await SeedTestDataAsync(dbContext);
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         var chessChat = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
         var checkersChat = await service.CreateChatAsync(user.Id, checkers.Id, checkersAgent.Id);
@@ -320,7 +321,7 @@ public class ChatContextSwitchingIntegrationTests
         // Arrange
         await using var dbContext = CreateInMemoryContext();
         var (user, chess, checkers, chessAgent, checkersAgent) = await SeedTestDataAsync(dbContext);
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         // Create 3 Chess chats with different activity times
         var oldChat = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
@@ -361,7 +362,7 @@ public class ChatContextSwitchingIntegrationTests
         // Arrange
         await using var dbContext = CreateInMemoryContext();
         var (user, chess, checkers, chessAgent, checkersAgent) = await SeedTestDataAsync(dbContext);
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         // Only create chat for Chess
         await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
@@ -386,7 +387,7 @@ public class ChatContextSwitchingIntegrationTests
         // Arrange
         await using var dbContext = CreateInMemoryContext();
         var (user, chess, checkers, chessAgent, checkersAgent) = await SeedTestDataAsync(dbContext);
-        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance);
+        var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
         var chessChat = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
         var checkersChat = await service.CreateChatAsync(user.Id, checkers.Id, checkersAgent.Id);

@@ -1,0 +1,150 @@
+# Semgrep SAST - Free Alternative to CodeQL for Private Repositories
+#
+# This workflow provides security scanning using Semgrep, an open-source
+# static analysis tool that's free for both public and private repositories.
+#
+# To enable this workflow:
+# 1. Rename this file from semgrep.yml.example to semgrep.yml
+# 2. Disable CodeQL in security-scan.yml (comment out the 'codeql' job)
+# 3. Commit and push changes
+#
+# Documentation: https://semgrep.dev/docs/
+
+name: Semgrep Security Scan
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+  schedule:
+    # Run weekly on Sundays at midnight UTC
+    - cron: '0 0 * * 0'
+  workflow_dispatch:  # Allow manual trigger
+
+# Cancel in-progress runs for the same workflow and branch
+concurrency:
+  group: semgrep-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  semgrep:
+    name: Semgrep SAST
+    runs-on: ubuntu-latest
+
+    # Required permissions for uploading SARIF results to GitHub Security tab
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+    container:
+      image: semgrep/semgrep
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better analysis
+
+      - name: Run Semgrep
+        id: semgrep
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}  # Optional: for Semgrep Cloud
+        run: |
+          semgrep scan \
+            --config=auto \
+            --config=p/security-audit \
+            --config=p/secrets \
+            --config=p/owasp-top-ten \
+            --config=p/cwe-top-25 \
+            --config=p/csharp \
+            --config=p/typescript \
+            --config=p/react \
+            --sarif \
+            --sarif-output=semgrep.sarif \
+            --json \
+            --json-output=semgrep.json \
+            --verbose
+
+      - name: Upload SARIF file to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+        if: always()
+
+      - name: Upload Semgrep results as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-results
+          path: |
+            semgrep.sarif
+            semgrep.json
+          retention-days: 30
+        if: always()
+
+      - name: Check for high/critical findings
+        if: success()
+        run: |
+          HIGH_COUNT=$(jq '[.results[] | select(.extra.severity == "ERROR" or .extra.severity == "WARNING")] | length' semgrep.json)
+          echo "High/Critical findings: $HIGH_COUNT"
+
+          if [ "$HIGH_COUNT" -gt 0 ]; then
+            echo "::warning::Found $HIGH_COUNT high/critical security findings. Review the Security tab for details."
+          fi
+
+  semgrep-summary:
+    name: Semgrep Results Summary
+    runs-on: ubuntu-latest
+    needs: semgrep
+    if: always()
+
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Download Semgrep results
+        uses: actions/download-artifact@v4
+        with:
+          name: semgrep-results
+
+      - name: Generate PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const results = JSON.parse(fs.readFileSync('semgrep.json', 'utf8'));
+
+            const errors = results.results.filter(r => r.extra.severity === 'ERROR');
+            const warnings = results.results.filter(r => r.extra.severity === 'WARNING');
+            const infos = results.results.filter(r => r.extra.severity === 'INFO');
+
+            const body = `## 🔒 Semgrep Security Scan Results
+
+            | Severity | Count |
+            |----------|-------|
+            | 🔴 Error | ${errors.length} |
+            | 🟡 Warning | ${warnings.length} |
+            | ℹ️ Info | ${infos.length} |
+            | **Total** | **${results.results.length}** |
+
+            ${errors.length > 0 ? '### 🔴 Critical Issues\n\n' + errors.slice(0, 5).map(e =>
+              `- **${e.check_id}**: ${e.extra.message} ([${e.path}:${e.start.line}](${context.payload.pull_request.html_url}/files#diff-${e.path.replace(/\//g, '')}L${e.start.line}))`
+            ).join('\n') : '✅ No critical issues found!'}
+
+            ${errors.length > 5 ? `\n_... and ${errors.length - 5} more. See the Security tab for full details._\n` : ''}
+
+            ---
+
+            📊 [View full report in Security tab](${context.payload.repository.html_url}/security/code-scanning)
+
+            <sub>Powered by [Semgrep](https://semgrep.dev) | Free SAST alternative to CodeQL</sub>
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

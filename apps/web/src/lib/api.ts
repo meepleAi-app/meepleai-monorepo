@@ -68,6 +68,23 @@ export interface CacheStats {
   topQuestions: TopQuestion[];
 }
 
+// CHAT-06: Chat message response type
+export interface ChatMessageResponse {
+  id: string;
+  chatId: string;
+  userId: string | null;
+  level: string;
+  content: string;
+  sequenceNumber: number;
+  createdAt: string;
+  updatedAt: string | null;
+  isDeleted: boolean;
+  deletedAt: string | null;
+  deletedByUserId: string | null;
+  isInvalidated: boolean;
+  metadataJson: string | null;
+}
+
 // CHAT-05: Chat export types
 export type ExportFormat = "pdf" | "txt" | "md";
 
@@ -248,8 +265,9 @@ export const api = {
     }
   },
 
-  // CHAT-05: Chat export API
+  // CHAT-05 + CHAT-06: Chat API (export, message management)
   chat: {
+    // CHAT-05: Export chat functionality
     async exportChat(chatId: string, request: ExportChatRequest): Promise<void> {
       const res = await fetch(`${getApiBase()}/api/v1/chats/${encodeURIComponent(chatId)}/export`, {
         method: 'POST',
@@ -292,6 +310,22 @@ export const api = {
       // Clean up
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+    },
+
+    // CHAT-06: Message management functionality
+    async updateMessage(
+      chatId: string,
+      messageId: string,
+      content: string
+    ): Promise<ChatMessageResponse> {
+      return api.put<ChatMessageResponse>(
+        `/api/v1/chats/${chatId}/messages/${messageId}`,
+        { content }
+      );
+    },
+
+    async deleteMessage(chatId: string, messageId: string): Promise<void> {
+      return api.delete(`/api/v1/chats/${chatId}/messages/${messageId}`);
     }
   }
 };

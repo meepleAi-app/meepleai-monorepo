@@ -344,11 +344,13 @@ cd apps/web && pnpm dev                                                         
 - **Observability**: `docs/observability.md` - Health checks, logging, Seq dashboard, correlation IDs (OPS-01)
 - **OpenTelemetry**: `docs/technic/ops-02-opentelemetry-design.md` - Distributed tracing & metrics architecture (OPS-02)
 - **RAG Evaluation**: `docs/ai-06-rag-evaluation.md` - Offline evaluation system, IR metrics, quality gates (AI-06)
+- **RAG Optimization**: `docs/technic/ai-07-rag-optimization-phase1.md` - Phase 1 optimization design: prompt engineering, semantic chunking, query expansion (AI-07)
 - **n8n Workflows**: `docs/guide/n8n-integration-guide.md` - n8n webhook integrations (N8N-01: Explain, N8N-03: Q&A)
   - Technical designs: `docs/technic/n8n-webhook-explain-design.md`, `docs/technic/n8n-webhook-qa-design.md`
   - Workflow JSONs: `infra/init/n8n/agent-explain-orchestrator.json`, `infra/init/n8n/agent-qa-webhook.json`
 - **Coverage**: `docs/code-coverage.md` - Coverage measurement & tracking
 - **Security Scanning**: `docs/security-scanning.md` - CI security scanning guide
+- **Repository Migration**: `docs/guide/repository-visibility-migration.md` - Complete guide for changing repository visibility (public ↔ private)
 - **Schemas**: `schemas/README.md` - RuleSpec v0 schema reference
 
 ## Troubleshooting

@@ -9,11 +9,13 @@ public class ChatService
 {
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<ChatService> _logger;
+    private readonly AuditService _auditService;
 
-    public ChatService(MeepleAiDbContext db, ILogger<ChatService> logger)
+    public ChatService(MeepleAiDbContext db, ILogger<ChatService> logger, AuditService auditService)
     {
         _db = db;
         _logger = logger;
+        _auditService = auditService;
     }
 
     public async Task<ChatEntity?> GetChatByIdAsync(Guid chatId, string userId, CancellationToken ct = default)
@@ -115,10 +117,17 @@ public class ChatService
             throw new InvalidOperationException($"Chat with ID '{chatId}' not found or access denied");
         }
 
+        // CHAT-06: Calculate next sequence number for cascade invalidation
+        var maxSequence = await _db.ChatLogs
+            .Where(cl => cl.ChatId == chatId)
+            .MaxAsync(cl => (int?)cl.SequenceNumber, ct) ?? 0;
+
         var chatLog = new ChatLogEntity
         {
             Id = Guid.NewGuid(),
             ChatId = chatId,
+            UserId = level == "user" ? userId : null, // CHAT-06: Only user messages have UserId
+            SequenceNumber = maxSequence + 1, // CHAT-06: Auto-increment sequence
             Level = level,
             Message = message,
             MetadataJson = metadata != null ? JsonSerializer.Serialize(metadata) : null,
@@ -217,5 +226,176 @@ public class ChatService
         _logger.LogInformation("Created agent {AgentId} for game {GameId}, kind: {Kind}", agentId, gameId, agentKind);
 
         return agent;
+    }
+
+    /// <summary>
+    /// Updates the content of an existing message.
+    /// </summary>
+    /// <param name="chatId">The chat ID containing the message</param>
+    /// <param name="messageId">The message ID to edit</param>
+    /// <param name="newContent">The new message content</param>
+    /// <param name="userId">The user performing the edit (for authorization)</param>
+    /// <returns>The updated message entity</returns>
+    /// <exception cref="UnauthorizedAccessException">User does not own the message</exception>
+    /// <exception cref="InvalidOperationException">Cannot edit AI-generated messages</exception>
+    /// <exception cref="KeyNotFoundException">Message not found</exception>
+    public async Task<ChatLogEntity> UpdateMessageAsync(Guid chatId, Guid messageId, string newContent, string userId, CancellationToken ct = default)
+    {
+        // Load message with EF tracking enabled
+        var message = await _db.ChatLogs
+            .FirstOrDefaultAsync(m => m.Id == messageId && m.ChatId == chatId, ct);
+
+        if (message == null)
+        {
+            throw new KeyNotFoundException($"Message {messageId} not found in chat {chatId}");
+        }
+
+        // AI-generated messages cannot be edited
+        if (message.UserId == null)
+        {
+            throw new InvalidOperationException("AI-generated messages cannot be edited");
+        }
+
+        // User can only edit their own messages
+        if (message.UserId != userId)
+        {
+            throw new UnauthorizedAccessException("You can only edit your own messages");
+        }
+
+        // Store original content for audit log
+        var originalContent = message.Message;
+
+        // Update message content and timestamp
+        message.Message = newContent;
+        message.UpdatedAt = DateTime.UtcNow;
+
+        // Invalidate subsequent AI responses
+        await InvalidateSubsequentMessagesAsync(chatId, message.SequenceNumber, ct);
+
+        // Save changes atomically
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Updated message {MessageId} in chat {ChatId} by user {UserId}",
+            messageId, chatId, userId);
+
+        // Log to audit service for compliance
+        await _auditService.LogAsync(
+            userId,
+            "message_updated",
+            "chat_message",
+            messageId.ToString(),
+            "Success",
+            JsonSerializer.Serialize(new
+            {
+                chatId,
+                messageId,
+                originalContent,
+                newContent,
+                updatedAt = message.UpdatedAt
+            }),
+            ct: ct);
+
+        return message;
+    }
+
+    /// <summary>
+    /// Soft-deletes a message and invalidates subsequent AI responses.
+    /// </summary>
+    /// <param name="chatId">The chat ID containing the message</param>
+    /// <param name="messageId">The message ID to delete</param>
+    /// <param name="userId">The user performing the deletion (for authorization)</param>
+    /// <param name="isAdmin">Whether the user has admin privileges</param>
+    /// <returns>True if deleted, false if already deleted</returns>
+    /// <exception cref="UnauthorizedAccessException">User does not own the message and is not admin</exception>
+    /// <exception cref="KeyNotFoundException">Message not found</exception>
+    public async Task<bool> DeleteMessageAsync(Guid chatId, Guid messageId, string userId, bool isAdmin = false, CancellationToken ct = default)
+    {
+        // Load message with IgnoreQueryFilters to include already soft-deleted messages
+        var message = await _db.ChatLogs
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(m => m.Id == messageId && m.ChatId == chatId, ct);
+
+        if (message == null)
+        {
+            throw new KeyNotFoundException($"Message {messageId} not found in chat {chatId}");
+        }
+
+        // Idempotent: return false if already deleted
+        if (message.IsDeleted)
+        {
+            return false;
+        }
+
+        // Authorization: user must own the message OR be admin
+        if (!isAdmin && message.UserId != userId)
+        {
+            throw new UnauthorizedAccessException("You can only delete your own messages");
+        }
+
+        // Store content for audit log before deletion
+        var deletedContent = message.Message;
+
+        // Soft delete the message
+        message.IsDeleted = true;
+        message.DeletedAt = DateTime.UtcNow;
+        message.DeletedByUserId = userId;
+
+        // Invalidate subsequent AI responses
+        await InvalidateSubsequentMessagesAsync(chatId, message.SequenceNumber, ct);
+
+        // Save changes atomically
+        await _db.SaveChangesAsync(ct);
+
+        _logger.LogInformation(
+            "Deleted message {MessageId} in chat {ChatId} by user {UserId} (admin: {IsAdmin})",
+            messageId, chatId, userId, isAdmin);
+
+        // Log to audit service for compliance
+        await _auditService.LogAsync(
+            userId,
+            "message_deleted",
+            "chat_message",
+            messageId.ToString(),
+            "Success",
+            JsonSerializer.Serialize(new
+            {
+                chatId,
+                messageId,
+                deletedContent,
+                isAdminDelete = isAdmin,
+                deletedAt = message.DeletedAt
+            }),
+            ct: ct);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Marks all AI-generated messages after a given sequence number as invalidated.
+    /// </summary>
+    /// <param name="chatId">The chat ID</param>
+    /// <param name="fromSequenceNumber">Start invalidating from this sequence number (exclusive)</param>
+    /// <returns>Number of messages invalidated</returns>
+    public async Task<int> InvalidateSubsequentMessagesAsync(Guid chatId, int fromSequenceNumber, CancellationToken ct = default)
+    {
+        // Use ExecuteUpdateAsync for performance (bulk update without loading entities)
+        var invalidatedCount = await _db.ChatLogs
+            .Where(m => m.ChatId == chatId
+                && m.SequenceNumber > fromSequenceNumber
+                && m.Level == "assistant"
+                && !m.IsInvalidated)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(m => m.IsInvalidated, true),
+                ct);
+
+        if (invalidatedCount > 0)
+        {
+            _logger.LogDebug(
+                "Invalidated {Count} AI messages in chat {ChatId} after sequence {SequenceNumber}",
+                invalidatedCount, chatId, fromSequenceNumber);
+        }
+
+        return invalidatedCount;
     }
 }

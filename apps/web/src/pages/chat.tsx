@@ -1,8 +1,10 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "../lib/api";
 import { useChatStreaming } from "../lib/hooks/useChatStreaming";
 import { FollowUpQuestions } from "../components/FollowUpQuestions";
+import { SkeletonLoader, TypingIndicator, MessageAnimator, LoadingButton } from "@/components/loading";
+import { AnimatePresence } from "framer-motion";
 
 // Type definitions
 type AuthUser = {
@@ -171,6 +173,9 @@ export default function ChatPage() {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
 
+  // CHAT-04: Refs for smooth scrolling
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
   // Streaming hook
   const [streamingState, streamingControls] = useChatStreaming({
     onComplete: useCallback(
@@ -240,6 +245,13 @@ export default function ChatPage() {
       setSelectedAgentId(null);
     }
   }, [selectedGameId, chatStatesByGame]);
+
+  // CHAT-04: Auto-scroll to bottom on new messages
+  useEffect(() => {
+    if (messages.length > 0 && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, [messages]);
 
   const loadCurrentUser = async () => {
     try {
@@ -546,6 +558,9 @@ export default function ChatPage() {
     }
   };
 
+  // Get selected agent for display name
+  const selectedAgent = agents.find(a => a.id === selectedAgentId);
+
   // Render login required state
   if (!authUser) {
     return (
@@ -640,27 +655,33 @@ export default function ChatPage() {
             >
               Cambia Gioco:
             </label>
-            <select
-              id="gameSelect"
-              value={selectedGameId ?? ""}
-              onChange={(e) => setSelectedGameId(e.target.value || null)}
-              disabled={isLoadingGames}
-              style={{
-                width: "100%",
-                padding: 8,
-                fontSize: 13,
-                border: "1px solid #dadce0",
-                borderRadius: 4,
-                background: "white"
-              }}
-            >
-              <option value="">Seleziona un gioco...</option>
-              {games.map((game) => (
-                <option key={game.id} value={game.id}>
-                  {game.name}
-                </option>
-              ))}
-            </select>
+            {isLoadingGames ? (
+              <div style={{ width: "100%" }}>
+                <SkeletonLoader variant="agents" count={1} ariaLabel="Caricamento giochi" />
+              </div>
+            ) : (
+              <select
+                id="gameSelect"
+                value={selectedGameId ?? ""}
+                onChange={(e) => setSelectedGameId(e.target.value || null)}
+                disabled={isLoadingGames}
+                style={{
+                  width: "100%",
+                  padding: 8,
+                  fontSize: 13,
+                  border: "1px solid #dadce0",
+                  borderRadius: 4,
+                  background: "white"
+                }}
+              >
+                <option value="">Seleziona un gioco...</option>
+                {games.map((game) => (
+                  <option key={game.id} value={game.id}>
+                    {game.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Agent Selector */}
@@ -671,33 +692,42 @@ export default function ChatPage() {
             >
               Agente:
             </label>
-            <select
-              id="agentSelect"
-              value={selectedAgentId ?? ""}
-              onChange={(e) => setSelectedAgentId(e.target.value || null)}
-              disabled={isLoadingAgents || !selectedGameId}
-              style={{
-                width: "100%",
-                padding: 8,
-                fontSize: 13,
-                border: "1px solid #dadce0",
-                borderRadius: 4,
-                background: "white"
-              }}
-            >
-              <option value="">Seleziona un agente...</option>
-              {agents.map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name}
-                </option>
-              ))}
-            </select>
+            {isLoadingAgents ? (
+              <div style={{ width: "100%" }}>
+                <SkeletonLoader variant="agents" count={1} ariaLabel="Caricamento agenti" />
+              </div>
+            ) : (
+              <select
+                id="agentSelect"
+                value={selectedAgentId ?? ""}
+                onChange={(e) => setSelectedAgentId(e.target.value || null)}
+                disabled={isLoadingAgents || !selectedGameId}
+                style={{
+                  width: "100%",
+                  padding: 8,
+                  fontSize: 13,
+                  border: "1px solid #dadce0",
+                  borderRadius: 4,
+                  background: "white"
+                }}
+              >
+                <option value="">Seleziona un agente...</option>
+                {agents.map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* New Chat Button */}
-          <button
+          <LoadingButton
+            isLoading={isCreatingChat}
+            loadingText="Creazione..."
             onClick={() => void createNewChat()}
-            disabled={!selectedGameId || !selectedAgentId || isCreatingChat}
+            disabled={!selectedGameId || !selectedAgentId}
+            spinnerSize="sm"
             aria-label="Create new chat"
             style={{
               width: "100%",
@@ -711,16 +741,14 @@ export default function ChatPage() {
               cursor: !selectedGameId || !selectedAgentId || isCreatingChat ? "not-allowed" : "pointer"
             }}
           >
-            {isCreatingChat ? "Creazione..." : "+ Nuova Chat"}
-          </button>
+            + Nuova Chat
+          </LoadingButton>
         </div>
 
         {/* Chat List */}
         <nav aria-label="Chat history" style={{ flex: 1, overflowY: "auto", padding: 8 }}>
           {isLoadingChats ? (
-            <div role="status" aria-live="polite" style={{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 13 }}>
-              Caricamento chat...
-            </div>
+            <SkeletonLoader variant="chatHistory" count={5} ariaLabel="Caricamento cronologia chat" />
           ) : chats.length === 0 ? (
             <div style={{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 13 }}>
               Nessuna chat. Creane una nuova!
@@ -870,9 +898,7 @@ export default function ChatPage() {
           }}
         >
           {isLoadingMessages ? (
-            <div role="status" aria-live="polite" style={{ textAlign: "center", padding: 48, color: "#64748b" }}>
-              <p style={{ fontSize: 16 }}>Caricamento messaggi...</p>
-            </div>
+            <SkeletonLoader variant="message" count={3} ariaLabel="Caricamento messaggi" />
           ) : messages.length === 0 ? (
             <div style={{ textAlign: "center", padding: 48, color: "#64748b" }}>
               <p style={{ fontSize: 16, marginBottom: 8 }}>Nessun messaggio ancora.</p>
@@ -884,123 +910,141 @@ export default function ChatPage() {
             </div>
           ) : (
             <ul role="log" aria-live="polite" aria-atomic="false" style={{ listStyle: "none", margin: 0, padding: 0 }}>
-              {messages.map((msg) => (
-                <li
-                  key={msg.id}
-                  aria-label={`${msg.role === "user" ? "Your message" : "AI response"}`}
-                  style={{
-                    marginBottom: 24,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: msg.role === "user" ? "flex-end" : "flex-start"
-                  }}
-                >
-                {/* Message Bubble */}
-                <div
-                  style={{
-                    maxWidth: "75%",
-                    padding: 12,
-                    borderRadius: 8,
-                    background: msg.role === "user" ? "#e3f2fd" : "#f1f3f4",
-                    fontSize: 14,
-                    lineHeight: 1.5
-                  }}
-                >
-                  <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 12, color: "#64748b" }}>
-                    {msg.role === "user" ? "Tu" : "MeepleAI"}
-                  </div>
-                  <div style={{ whiteSpace: "pre-wrap" }}>{msg.content}</div>
-
-                  {/* Sources */}
-                  {msg.snippets && msg.snippets.length > 0 && (
-                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #dadce0" }}>
-                      <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8, color: "#64748b" }}>
-                        Fonti:
-                      </div>
-                      {msg.snippets.map((snippet, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            marginBottom: 8,
-                            padding: 8,
-                            background: "#ffffff",
-                            border: "1px solid #dadce0",
-                            borderRadius: 4,
-                            fontSize: 12
-                          }}
-                        >
-                          <div style={{ fontWeight: 500, marginBottom: 4 }}>
-                            {getSnippetLabel(snippet)}
-                          </div>
-                          <div style={{ color: "#64748b", fontSize: 11 }}>{snippet.text}</div>
+              <AnimatePresence mode="popLayout">
+                {messages.map((msg, index) => (
+                  <MessageAnimator
+                    key={msg.id}
+                    id={msg.id}
+                    direction={msg.role === 'user' ? 'right' : 'left'}
+                    delay={index * 0.05}
+                  >
+                    <li
+                      aria-label={`${msg.role === "user" ? "Your message" : "AI response"}`}
+                      style={{
+                        marginBottom: 24,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: msg.role === "user" ? "flex-end" : "flex-start"
+                      }}
+                    >
+                      {/* Message Bubble */}
+                      <div
+                        style={{
+                          maxWidth: "75%",
+                          padding: 12,
+                          borderRadius: 8,
+                          background: msg.role === "user" ? "#e3f2fd" : "#f1f3f4",
+                          fontSize: 14,
+                          lineHeight: 1.5
+                        }}
+                      >
+                        <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 12, color: "#64748b" }}>
+                          {msg.role === "user" ? "Tu" : "MeepleAI"}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                        <div style={{ whiteSpace: "pre-wrap" }}>{msg.content}</div>
 
-                  {/* CHAT-02: Follow-up Questions */}
-                  {msg.role === "assistant" && msg.followUpQuestions && msg.followUpQuestions.length > 0 && (
-                    <FollowUpQuestions
-                      questions={msg.followUpQuestions}
-                      onQuestionClick={handleFollowUpClick}
-                      disabled={streamingState.isStreaming}
-                    />
-                  )}
-                </div>
+                        {/* Sources */}
+                        {msg.snippets && msg.snippets.length > 0 && (
+                          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #dadce0" }}>
+                            <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8, color: "#64748b" }}>
+                              Fonti:
+                            </div>
+                            {msg.snippets.map((snippet, idx) => (
+                              <div
+                                key={idx}
+                                style={{
+                                  marginBottom: 8,
+                                  padding: 8,
+                                  background: "#ffffff",
+                                  border: "1px solid #dadce0",
+                                  borderRadius: 4,
+                                  fontSize: 12
+                                }}
+                              >
+                                <div style={{ fontWeight: 500, marginBottom: 4 }}>
+                                  {getSnippetLabel(snippet)}
+                                </div>
+                                <div style={{ color: "#64748b", fontSize: 11 }}>{snippet.text}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
-                {/* Feedback buttons (only for assistant messages) */}
-                {msg.role === "assistant" && (
-                  <div role="group" aria-label="Message feedback" style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                    <button
-                      onClick={() => void setFeedback(msg.id, "helpful")}
-                      aria-label="Mark as helpful"
-                      aria-pressed={msg.feedback === "helpful"}
-                      style={{
-                        padding: "4px 8px",
-                        background: msg.feedback === "helpful" ? "#34a853" : "#f1f3f4",
-                        color: msg.feedback === "helpful" ? "white" : "#64748b",
-                        border: "none",
-                        borderRadius: 4,
-                        fontSize: 12,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4
-                      }}
-                      title="Questa risposta è stata utile"
-                    >
-                      👍 Utile
-                    </button>
-                    <button
-                      onClick={() => void setFeedback(msg.id, "not-helpful")}
-                      aria-label="Mark as not helpful"
-                      aria-pressed={msg.feedback === "not-helpful"}
-                      style={{
-                        padding: "4px 8px",
-                        background: msg.feedback === "not-helpful" ? "#ea4335" : "#f1f3f4",
-                        color: msg.feedback === "not-helpful" ? "white" : "#64748b",
-                        border: "none",
-                        borderRadius: 4,
-                        fontSize: 12,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4
-                      }}
-                      title="Questa risposta non è stata utile"
-                    >
-                      👎 Non utile
-                    </button>
-                  </div>
-                )}
+                        {/* CHAT-02: Follow-up Questions */}
+                        {msg.role === "assistant" && msg.followUpQuestions && msg.followUpQuestions.length > 0 && (
+                          <FollowUpQuestions
+                            questions={msg.followUpQuestions}
+                            onQuestionClick={handleFollowUpClick}
+                            disabled={streamingState.isStreaming}
+                          />
+                        )}
+                      </div>
 
-                {/* Timestamp */}
-                <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
-                  {msg.timestamp.toLocaleTimeString()}
-                </div>
-              </li>
-            ))}
+                      {/* Feedback buttons (only for assistant messages) */}
+                      {msg.role === "assistant" && (
+                        <div role="group" aria-label="Message feedback" style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                          <button
+                            onClick={() => void setFeedback(msg.id, "helpful")}
+                            aria-label="Mark as helpful"
+                            aria-pressed={msg.feedback === "helpful"}
+                            style={{
+                              padding: "4px 8px",
+                              background: msg.feedback === "helpful" ? "#34a853" : "#f1f3f4",
+                              color: msg.feedback === "helpful" ? "white" : "#64748b",
+                              border: "none",
+                              borderRadius: 4,
+                              fontSize: 12,
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 4
+                            }}
+                            title="Questa risposta è stata utile"
+                          >
+                            👍 Utile
+                          </button>
+                          <button
+                            onClick={() => void setFeedback(msg.id, "not-helpful")}
+                            aria-label="Mark as not helpful"
+                            aria-pressed={msg.feedback === "not-helpful"}
+                            style={{
+                              padding: "4px 8px",
+                              background: msg.feedback === "not-helpful" ? "#ea4335" : "#f1f3f4",
+                              color: msg.feedback === "not-helpful" ? "white" : "#64748b",
+                              border: "none",
+                              borderRadius: 4,
+                              fontSize: 12,
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 4
+                            }}
+                            title="Questa risposta non è stata utile"
+                          >
+                            👎 Non utile
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Timestamp */}
+                      <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>
+                        {msg.timestamp.toLocaleTimeString()}
+                      </div>
+                    </li>
+                  </MessageAnimator>
+                ))}
+              </AnimatePresence>
             </ul>
+          )}
+
+          {/* CHAT-04: Typing Indicator before streaming response */}
+          {streamingState.isStreaming && streamingState.state && (
+            <div style={{ marginBottom: 12 }}>
+              <TypingIndicator
+                visible={streamingState.isStreaming && !streamingState.currentAnswer}
+                agentName={selectedAgent?.name || "AI"}
+              />
+            </div>
           )}
 
           {/* Streaming Response */}
@@ -1101,6 +1145,9 @@ export default function ChatPage() {
               </div>
             </div>
           )}
+
+          {/* CHAT-04: Scroll target */}
+          <div ref={messagesEndRef} />
         </div>
 
         {/* Input Form */}
@@ -1133,9 +1180,12 @@ export default function ChatPage() {
               borderRadius: 4
             }}
           />
-          <button
+          <LoadingButton
             type="submit"
-            disabled={isSendingMessage || streamingState.isStreaming || !inputValue.trim() || !selectedGameId || !selectedAgentId}
+            isLoading={isSendingMessage || streamingState.isStreaming}
+            loadingText="Invio..."
+            disabled={!inputValue.trim() || !selectedGameId || !selectedAgentId}
+            spinnerSize="sm"
             aria-label="Send message"
             style={{
               padding: "12px 24px",
@@ -1154,8 +1204,8 @@ export default function ChatPage() {
                   : "pointer"
             }}
           >
-            {isSendingMessage || streamingState.isStreaming ? "Invio..." : "Invia"}
-          </button>
+            Invia
+          </LoadingButton>
         </form>
       </div>
     </main>

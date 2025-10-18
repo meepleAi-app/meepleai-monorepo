@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CacheDashboard from '../../pages/admin/cache';
 import { API_BASE_FALLBACK } from '../../lib/api';
@@ -159,11 +159,11 @@ describe('CacheDashboard', () => {
     process.env.NEXT_PUBLIC_API_BASE = apiBase;
     const CacheDashboard = loadCacheDashboard();
 
-    const { rerender, unmount } = render(<CacheDashboard />);
+    render(<CacheDashboard />);
 
     await waitFor(() => expect(screen.getByText('80.0%')).toBeInTheDocument());
 
-    unmount();
+    cleanup();
 
     // Test medium hit rate (yellow)
     fetchMock.mockReset();
@@ -171,11 +171,11 @@ describe('CacheDashboard', () => {
       .mockResolvedValueOnce(createJsonResponse(mockGamesResponse))
       .mockResolvedValueOnce(createJsonResponse(mediumHitRate));
 
-    rerender(<CacheDashboard />);
+    render(<CacheDashboard />);
 
     await waitFor(() => expect(screen.getByText('50.0%')).toBeInTheDocument());
 
-    unmount();
+    cleanup();
 
     // Test low hit rate (red)
     fetchMock.mockReset();
@@ -183,7 +183,7 @@ describe('CacheDashboard', () => {
       .mockResolvedValueOnce(createJsonResponse(mockGamesResponse))
       .mockResolvedValueOnce(createJsonResponse(lowHitRate));
 
-    rerender(<CacheDashboard />);
+    render(<CacheDashboard />);
 
     await waitFor(() => expect(screen.getByText('30.0%')).toBeInTheDocument());
   });
@@ -579,11 +579,11 @@ describe('CacheDashboard', () => {
     process.env.NEXT_PUBLIC_API_BASE = apiBase;
     const CacheDashboard = loadCacheDashboard();
 
-    const { rerender, unmount } = render(<CacheDashboard />);
+    render(<CacheDashboard />);
 
     await waitFor(() => expect(screen.getByText('512.00 KB')).toBeInTheDocument());
 
-    unmount();
+    cleanup();
 
     // Test MB formatting
     fetchMock.mockReset();
@@ -591,7 +591,7 @@ describe('CacheDashboard', () => {
       .mockResolvedValueOnce(createJsonResponse(mockGamesResponse))
       .mockResolvedValueOnce(createJsonResponse(largeCache));
 
-    rerender(<CacheDashboard />);
+    render(<CacheDashboard />);
 
     await waitFor(() => expect(screen.getByText('50.00 MB')).toBeInTheDocument());
   });

@@ -57,6 +57,8 @@ module.exports = {
         'slide-down': 'slideDown 0.6s ease-out',
         'scale-in': 'scaleIn 0.4s ease-out',
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'shake': 'shake 0.4s ease-in-out',
+        'bounce-slow': 'bounce 1s infinite',
       },
       keyframes: {
         fadeIn: {
@@ -74,6 +76,11 @@ module.exports = {
         scaleIn: {
           '0%': { transform: 'scale(0.95)', opacity: '0' },
           '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        shake: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-10px)' },
+          '20%, 40%, 60%, 80%': { transform: 'translateX(10px)' },
         },
       },
     },

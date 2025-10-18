@@ -94,7 +94,7 @@ public class Ai04IntegrationTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: A user asks "How many players can play Monopoly?"
-        var result = await ragService.AskAsync("monopoly", "How many players can play Monopoly?", CancellationToken.None);
+        var result = await ragService.AskAsync("monopoly", "How many players can play Monopoly?");
 
         // Then: System returns a grounded answer with citations
         Assert.NotNull(result);
@@ -147,7 +147,7 @@ public class Ai04IntegrationTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: A user asks about game mechanics
-        var result = await ragService.AskAsync("chess", "Can pawns move backward?", CancellationToken.None);
+        var result = await ragService.AskAsync("chess", "Can pawns move backward?");
 
         // Then: System returns "Not specified" instead of hallucinating
         Assert.Equal("Not specified", result.answer);
@@ -199,7 +199,7 @@ public class Ai04IntegrationTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: User asks a question not covered by the retrieved context
-        var result = await ragService.AskAsync("catan", "What is the maximum score to win?", CancellationToken.None);
+        var result = await ragService.AskAsync("catan", "What is the maximum score to win?");
 
         // Then: LLM returns "Not specified" to avoid hallucination
         Assert.Equal("Not specified", result.answer);
@@ -245,7 +245,7 @@ public class Ai04IntegrationTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: User asks about combat mechanics
-        var result = await ragService.AskAsync("dnd", "How do I make an attack roll?", CancellationToken.None);
+        var result = await ragService.AskAsync("dnd", "How do I make an attack roll?");
 
         // Then: Snippets are provided from all source PDFs
         Assert.Equal(3, result.snippets.Count);
@@ -280,7 +280,7 @@ public class Ai04IntegrationTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: User makes a Q&A request
-        var result = await ragService.AskAsync("risk", "How many armies do I start with?", CancellationToken.None);
+        var result = await ragService.AskAsync("risk", "How many armies do I start with?");
 
         // Then: System returns a user-friendly error message
         Assert.Equal("Unable to process query.", result.answer);
@@ -308,7 +308,7 @@ public class Ai04IntegrationTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: User makes a Q&A request
-        var result = await ragService.AskAsync("clue", "Who can I accuse?", CancellationToken.None);
+        var result = await ragService.AskAsync("clue", "Who can I accuse?");
 
         // Then: System returns "Not specified" to avoid unreliable answers
         Assert.Equal("Not specified", result.answer);
@@ -343,7 +343,7 @@ public class Ai04IntegrationTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: User makes a Q&A request
-        var result = await ragService.AskAsync("scrabble", "How do I score?", CancellationToken.None);
+        var result = await ragService.AskAsync("scrabble", "How do I score?");
 
         // Then: Error message is returned
         Assert.Equal("Unable to generate answer.", result.answer);
@@ -399,7 +399,7 @@ public class Ai04IntegrationTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: Same question is asked
-        var result = await ragService.AskAsync("game1", "test query", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "test query");
 
         // Then: Cached response is returned
         Assert.Equal("Cached answer", result.answer);

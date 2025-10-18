@@ -30,6 +30,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<PromptVersionEntity> PromptVersions => Set<PromptVersionEntity>();
     public DbSet<PromptAuditLogEntity> PromptAuditLogs => Set<PromptAuditLogEntity>();
     public DbSet<PasswordResetTokenEntity> PasswordResetTokens => Set<PasswordResetTokenEntity>();
+    public DbSet<CacheStatEntity> CacheStats => Set<CacheStatEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

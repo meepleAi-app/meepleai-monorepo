@@ -38,6 +38,74 @@ public class PdfUploadEndpointsTests : IntegrationTestBase
     }
 
     /// <summary>
+    /// Generates a minimal valid PDF file for testing.
+    /// This PDF contains just the minimal structure required to pass PDF validation.
+    /// </summary>
+    private static byte[] GenerateMinimalValidPdf()
+    {
+        // Minimal valid PDF structure that can be opened by Docnet.Core
+        var pdf = @"%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/Resources <<
+/Font <<
+/F1 <<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+>>
+>>
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 44
+>>
+stream
+BT
+/F1 12 Tf
+100 700 Td
+(Test PDF) Tj
+ET
+endstream
+endobj
+xref
+0 5
+0000000000 65535 f
+0000000009 00000 n
+0000000058 00000 n
+0000000115 00000 n
+0000000317 00000 n
+trailer
+<<
+/Size 5
+/Root 1 0 R
+>>
+startxref
+409
+%%EOF";
+        return Encoding.UTF8.GetBytes(pdf);
+    }
+
+    /// <summary>
     /// Scenario: Upload PDF valido con successo
     ///   Given l'utente è autenticato come Admin
     ///   And esiste un gioco "chess"
@@ -59,7 +127,7 @@ public class PdfUploadEndpointsTests : IntegrationTestBase
 
         // When: Admin uploads a valid PDF
         var content = new MultipartFormDataContent();
-        var fileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("%PDF-1.4\nfake pdf content"));
+        var fileContent = new ByteArrayContent(GenerateMinimalValidPdf());
         fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/pdf");
         content.Add(fileContent, "file", "chess-rules.pdf");
         content.Add(new StringContent(game.Id), "gameId");
@@ -112,7 +180,7 @@ public class PdfUploadEndpointsTests : IntegrationTestBase
 
         // When: Editor uploads a valid PDF
         var content = new MultipartFormDataContent();
-        var fileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("%PDF-1.4\nfake pdf"));
+        var fileContent = new ByteArrayContent(GenerateMinimalValidPdf());
         fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/pdf");
         content.Add(fileContent, "file", "rules.pdf");
         content.Add(new StringContent(game.Id), "gameId");

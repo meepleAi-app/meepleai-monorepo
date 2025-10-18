@@ -227,8 +227,8 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
         };
         ActivitySource.AddActivityListener(listener);
 
-        // Act - Call health check endpoint
-        var response = await _client.GetAsync("/health/ready");
+        // Act - Call liveness health check endpoint (doesn't check dependencies)
+        var response = await _client.GetAsync("/health/live");
 
         // Assert - Response should be successful
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -236,6 +236,7 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
         // Note: We can't directly verify trace filtering without Jaeger integration,
         // but we ensure the endpoint works correctly
         // The filtering is configured in Program.cs: options.Filter = httpContext => !path.StartsWith("/health")
+        // Using /health/live instead of /health/ready to avoid dependency checks in tests
     }
 
     [Fact]

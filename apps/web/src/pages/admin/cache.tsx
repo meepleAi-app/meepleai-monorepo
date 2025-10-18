@@ -410,20 +410,20 @@ export default function CacheDashboard() {
               />
             </div>
             <div style={{ marginTop: 8, fontSize: 12, color: "#64748b" }}>
-              Miss Rate: {formatPercentage(stats.missRate)}
+              Miss Rate: {formatPercentage(1 - stats.hitRate)}
             </div>
           </div>
 
           {/* Total Requests */}
           <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
             <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8, fontWeight: 600 }}>Total Requests</div>
-            <div style={{ fontSize: 32, fontWeight: 600 }}>{stats.totalRequests.toLocaleString()}</div>
+            <div style={{ fontSize: 32, fontWeight: 600 }}>{(stats.totalHits + stats.totalMisses).toLocaleString()}</div>
             <div style={{ marginTop: 12, fontSize: 13 }}>
               <div style={{ color: "#0f9d58", fontWeight: 600 }}>
-                Cached: {Math.round(stats.totalRequests * stats.hitRate).toLocaleString()}
+                Cached: {stats.totalHits.toLocaleString()}
               </div>
               <div style={{ color: "#d93025", fontWeight: 600 }}>
-                Not Cached: {Math.round(stats.totalRequests * stats.missRate).toLocaleString()}
+                Not Cached: {stats.totalMisses.toLocaleString()}
               </div>
             </div>
           </div>
@@ -431,9 +431,9 @@ export default function CacheDashboard() {
           {/* Cache Size */}
           <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
             <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8, fontWeight: 600 }}>Cache Size</div>
-            <div style={{ fontSize: 32, fontWeight: 600 }}>{formatCacheSize(stats.cacheSize)}</div>
+            <div style={{ fontSize: 32, fontWeight: 600 }}>{formatCacheSize(stats.cacheSizeBytes)}</div>
             <div style={{ marginTop: 12, fontSize: 13, color: "#64748b" }}>
-              {stats.topQuestions.length} cached questions
+              {stats.totalKeys} cached keys
             </div>
           </div>
         </div>
@@ -552,14 +552,14 @@ export default function CacheDashboard() {
               textTransform: "uppercase"
             }}
           >
-            <div>Question</div>
+            <div>Question Hash</div>
             <div>Hit Count</div>
             <div>Last Hit</div>
           </div>
 
           {stats.topQuestions.map((question, index) => (
             <div
-              key={`${question.question}-${index}`}
+              key={`${question.questionHash}-${index}`}
               style={{
                 padding: 16,
                 borderBottom: index < stats.topQuestions.length - 1 ? "1px solid #f0f0f0" : "none",
@@ -571,13 +571,13 @@ export default function CacheDashboard() {
               }}
             >
               <div style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                {question.question}
+                {question.questionHash}
               </div>
               <div style={{ fontWeight: 600, color: "#1a73e8" }}>
                 {question.hitCount}
               </div>
               <div style={{ fontSize: 12, color: "#64748b", fontFamily: "monospace" }}>
-                {formatDate(question.lastHitAt)}
+                {question.lastHitAt ? formatDate(question.lastHitAt) : 'N/A'}
               </div>
             </div>
           ))}

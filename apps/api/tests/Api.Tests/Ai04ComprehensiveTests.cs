@@ -87,7 +87,7 @@ public class Ai04ComprehensiveTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: Asking a question whose answer is not in the context
-        var result = await ragService.AskAsync("game1", "How many players can play this game?", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "How many players can play this game?");
 
         // Then: Returns "Not specified" to avoid hallucination
         Assert.Equal("Not specified", result.answer);
@@ -115,7 +115,7 @@ public class Ai04ComprehensiveTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: Asking a question with no relevant context
-        var result = await ragService.AskAsync("game1", "What is the airspeed velocity of an unladen swallow?", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "What is the airspeed velocity of an unladen swallow?");
 
         // Then: Returns "Not specified" with no snippets
         Assert.Equal("Not specified", result.answer);
@@ -144,7 +144,7 @@ public class Ai04ComprehensiveTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: Search fails
-        var result = await ragService.AskAsync("game1", "How do I win?", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "How do I win?");
 
         // Then: Returns "Not specified" gracefully
         Assert.Equal("Not specified", result.answer);
@@ -181,7 +181,7 @@ public class Ai04ComprehensiveTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: LLM determines answer is not in context
-        var result = await ragService.AskAsync("game1", "Unknown question", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "Unknown question");
 
         // Then: Preserves exact "Not specified" text (not "NOT SPECIFIED" or "not specified")
         Assert.Equal("Not specified", result.answer);
@@ -226,7 +226,7 @@ public class Ai04ComprehensiveTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: Asking a question with clear context
-        var result = await ragService.AskAsync("game1", "How many players?", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "How many players?");
 
         // Then: Returns answer with all snippets
         Assert.NotEqual("Not specified", result.answer);
@@ -277,7 +277,7 @@ public class Ai04ComprehensiveTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: Asking a question that spans multiple sources
-        var result = await ragService.AskAsync("game1", "Player count variations?", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "Player count variations?");
 
         // Then: Returns snippets from all PDF sources
         Assert.Equal(3, result.snippets.Count);
@@ -319,7 +319,7 @@ public class Ai04ComprehensiveTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: Asking a question
-        var result = await ragService.AskAsync("game1", "test", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "test");
 
         // Then: Snippets maintain the order from search results (Qdrant already sorts by score)
         Assert.Equal(3, result.snippets.Count);
@@ -358,7 +358,7 @@ public class Ai04ComprehensiveTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: Retrieving answer
-        var result = await ragService.AskAsync("game1", "test", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "test");
 
         // Then: Source includes "PDF:" prefix
         Assert.Single(result.snippets);
@@ -401,7 +401,7 @@ public class Ai04ComprehensiveTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: Making a Q&A request
-        var result = await ragService.AskAsync("game1", "test", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "test");
 
         // Then: Token usage is accurately reported
         Assert.Equal(523, result.promptTokens);
@@ -441,7 +441,7 @@ public class Ai04ComprehensiveTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: Making a Q&A request
-        var result = await ragService.AskAsync("game1", "test", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "test");
 
         // Then: Confidence score is the maximum from search results
         Assert.NotNull(result.confidence);
@@ -486,7 +486,7 @@ public class Ai04ComprehensiveTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: Making a Q&A request
-        var result = await ragService.AskAsync("game1", "test", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "test");
 
         // Then: Metadata is included in response
         Assert.NotNull(result.metadata);
@@ -521,7 +521,7 @@ public class Ai04ComprehensiveTests
 
         // When: Submitting a very long query (1000+ words)
         var longQuery = string.Join(" ", Enumerable.Repeat("question word", 500));
-        var result = await ragService.AskAsync("game1", longQuery, CancellationToken.None);
+        var result = await ragService.AskAsync("game1", longQuery);
 
         // Then: Handles without error
         Assert.NotNull(result);
@@ -558,7 +558,7 @@ public class Ai04ComprehensiveTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: Query contains special characters
-        var result = await ragService.AskAsync("game1", "What about <special> & \"quoted\" chars?", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "What about <special> & \"quoted\" chars?");
 
         // Then: Handles correctly without escaping issues
         Assert.NotNull(result);
@@ -596,7 +596,7 @@ public class Ai04ComprehensiveTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: LLM returns very long answer
-        var result = await ragService.AskAsync("game1", "test", CancellationToken.None);
+        var result = await ragService.AskAsync("game1", "test");
 
         // Then: Answer is preserved (no artificial truncation at service level)
         Assert.NotNull(result);
@@ -618,7 +618,7 @@ public class Ai04ComprehensiveTests
         cts.Cancel();
 
         // When/Then: Should handle cancellation gracefully
-        var result = await ragService.AskAsync("game1", "test", cts.Token);
+        var result = await ragService.AskAsync("game1", "test", false, cts.Token);
 
         // Note: Current implementation catches all exceptions and returns error message
         // In a real-world scenario, you might want to check for OperationCanceledException
@@ -667,7 +667,7 @@ public class Ai04ComprehensiveTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: Making a Q&A request
-        await ragService.AskAsync("game1", "Test question?", CancellationToken.None);
+        await ragService.AskAsync("game1", "Test question?");
 
         // Then: System prompt contains anti-hallucination instructions
         Assert.NotNull(capturedSystemPrompt);
@@ -719,7 +719,7 @@ public class Ai04ComprehensiveTests
         var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
 
         // When: Generating answer
-        await ragService.AskAsync("game1", "How to play?", CancellationToken.None);
+        await ragService.AskAsync("game1", "How to play?");
 
         // Then: Context includes page numbers for each chunk
         Assert.NotNull(capturedUserPrompt);

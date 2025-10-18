@@ -313,8 +313,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
 
             // Create cached response with PDF tag
             var qaKey = cacheService.GenerateQaCacheKey(game.Id, "pdf question");
-            var tags = new[] { $"game:{game.Id}", $"pdf:{pdf.Id}" };
-            await cacheService.SetAsync(qaKey, new QaResponse("cached with pdf tag", Array.Empty<Snippet>()), 3600, tags);
+            await cacheService.SetAsync(qaKey, new QaResponse("cached with pdf tag", Array.Empty<Snippet>()), 3600);
 
             // Verify cache exists
             Assert.NotNull(await cacheService.GetAsync<QaResponse>(qaKey));
@@ -497,12 +496,12 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
             // Cache with pdf1 tag
             var key1 = cacheService.GenerateQaCacheKey(game.Id, "pdf1 question");
             await cacheService.SetAsync(key1, new QaResponse("pdf1 answer", Array.Empty<Snippet>()),
-                3600, new[] { $"game:{game.Id}", $"pdf:{pdf1.Id}" });
+                3600);
 
             // Cache with pdf2 tag
             var key2 = cacheService.GenerateQaCacheKey(game.Id, "pdf2 question");
             await cacheService.SetAsync(key2, new QaResponse("pdf2 answer", Array.Empty<Snippet>()),
-                3600, new[] { $"game:{game.Id}", $"pdf:{pdf2.Id}" });
+                3600);
 
             // Verify both cached
             Assert.NotNull(await cacheService.GetAsync<QaResponse>(key1));

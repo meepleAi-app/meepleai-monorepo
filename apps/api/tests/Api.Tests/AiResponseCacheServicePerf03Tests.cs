@@ -704,11 +704,10 @@ public class AiResponseCacheServicePerf03Tests
             .ReturnsAsync(true);
 
         var cacheKey = "ai:qa:game1:hash123";
-        var tags = new[] { "game:game1", "pdf:pdf123" };
         var response = new { answer = "Test answer" };
 
         // When: Setting cache with tags
-        await service.SetAsync(cacheKey, response, ttlSeconds: 3600, tags: tags);
+        await service.SetAsync(cacheKey, response, ttlSeconds: 3600);
 
         // Then: Main data and metadata are stored
         Assert.Contains(setOperations, op => op.Key == cacheKey);
@@ -757,7 +756,7 @@ public class AiResponseCacheServicePerf03Tests
         var response = new { answer = "Test answer" };
 
         // When: Setting cache without tags
-        await service.SetAsync(cacheKey, response, ttlSeconds: 3600, tags: null);
+        await service.SetAsync(cacheKey, response, ttlSeconds: 3600);
 
         // Then: Only main data is stored
         Assert.Contains(cacheKey, setOperations);

@@ -1,6 +1,8 @@
+using Api.Infrastructure;
 using Api.Models;
 using Api.Services;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
@@ -20,6 +22,7 @@ public class AiResponseCacheServiceTests
     private readonly Mock<ILogger<AiResponseCacheService>> _mockLogger = new();
     private readonly Mock<IConnectionMultiplexer> _mockRedis = new();
     private readonly Mock<IDatabase> _mockDatabase = new();
+    private readonly Mock<IConfiguration> _mockConfiguration = new();
 
     public AiResponseCacheServiceTests()
     {
@@ -31,7 +34,7 @@ public class AiResponseCacheServiceTests
     public void GenerateQaCacheKey_CreatesConsistentHash()
     {
         // Arrange
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
         var gameId = "catan";
         var query = "How many resources can I hold?";
 
@@ -48,7 +51,7 @@ public class AiResponseCacheServiceTests
     public void GenerateQaCacheKey_IsCaseInsensitive()
     {
         // Arrange
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
         var gameId = "catan";
 
         // Act
@@ -63,7 +66,7 @@ public class AiResponseCacheServiceTests
     public void GenerateQaCacheKey_TrimsWhitespace()
     {
         // Arrange
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
         var gameId = "catan";
 
         // Act
@@ -78,7 +81,7 @@ public class AiResponseCacheServiceTests
     public void GenerateExplainCacheKey_CreatesValidKey()
     {
         // Arrange
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
 
         // Act
         var key = service.GenerateExplainCacheKey("catan", "Trading Phase");
@@ -91,7 +94,7 @@ public class AiResponseCacheServiceTests
     public void GenerateSetupCacheKey_CreatesValidKey()
     {
         // Arrange
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
 
         // Act
         var key = service.GenerateSetupCacheKey("catan");
@@ -107,7 +110,7 @@ public class AiResponseCacheServiceTests
         _mockDatabase.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
             .ReturnsAsync(RedisValue.Null);
 
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
 
         // Act
         var result = await service.GetAsync<QaResponse>("test-key");
@@ -138,7 +141,7 @@ public class AiResponseCacheServiceTests
                 })
             .ReturnsAsync(true);
 
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
         var response = new QaResponse("Test answer", Array.Empty<Snippet>());
 
         // Act
@@ -195,7 +198,7 @@ public class AiResponseCacheServiceTests
                 return Task.FromResult(RedisResult.Create((long)keysToRemove.Count));
             });
 
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
         var qaKey = service.GenerateQaCacheKey("game-1", "How many players?");
         var explainKey = service.GenerateExplainCacheKey("game-1", "setup phase");
         var setupKey = service.GenerateSetupCacheKey("game-1");
@@ -262,7 +265,7 @@ public class AiResponseCacheServiceTests
                 return Task.FromResult(RedisResult.Create((long)keysToRemove.Count));
             });
 
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
         var qaKey = service.GenerateQaCacheKey("game-2", "How many turns?");
         var explainKey = service.GenerateExplainCacheKey("game-2", "trading");
 
@@ -309,7 +312,7 @@ public class AiResponseCacheServiceTests
                 })
             .ReturnsAsync(true);
 
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
 
         // Test dataset: 10 unique queries, repeated 100 times total (90 should be cache hits)
         var queries = new[]
@@ -395,7 +398,7 @@ public class AiResponseCacheServiceTests
                 })
             .ReturnsAsync(true);
 
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
 
         // Popular questions (asked frequently)
         var popularQueries = new[]
@@ -485,7 +488,7 @@ public class AiResponseCacheServiceTests
         _mockDatabase.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
             .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Connection failed"));
 
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
 
         // Act
         var result = await service.GetAsync<QaResponse>("test-key");
@@ -507,7 +510,7 @@ public class AiResponseCacheServiceTests
                 It.IsAny<CommandFlags>()))
             .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Connection failed"));
 
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
         var response = new QaResponse("Test", Array.Empty<Snippet>());
 
         // Act & Assert: No exception thrown (graceful degradation)
@@ -526,7 +529,7 @@ public class AiResponseCacheServiceTests
         _mockDatabase.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
             .ReturnsAsync(RedisValue.Unbox("invalid json {{{"));
 
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
 
         // Act
         var result = await service.GetAsync<QaResponse>("test-key");
@@ -546,7 +549,7 @@ public class AiResponseCacheServiceTests
         _mockDatabase.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
             .ThrowsAsync(new OperationCanceledException());
 
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
 
         // Act: Cache operations catch cancellation and return null gracefully
         var result = await service.GetAsync<QaResponse>("test-key", cts.Token);
@@ -572,7 +575,7 @@ public class AiResponseCacheServiceTests
                 (k, v, ttl, keepTtl, when, flags) => storedTtl = ttl)
             .ReturnsAsync(true);
 
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
         var response = new QaResponse("Test", Array.Empty<Snippet>());
 
         // Act
@@ -590,7 +593,7 @@ public class AiResponseCacheServiceTests
         var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
 
         // Act & Assert: Invalidation respects cancellation token
         await Assert.ThrowsAsync<OperationCanceledException>(async () =>
@@ -606,7 +609,7 @@ public class AiResponseCacheServiceTests
         var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
 
         // Act & Assert: Invalidation respects cancellation token
         await Assert.ThrowsAsync<OperationCanceledException>(async () =>
@@ -626,7 +629,7 @@ public class AiResponseCacheServiceTests
                 It.IsAny<CommandFlags>()))
             .ThrowsAsync(new RedisServerException("Script execution failed"));
 
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
 
         // Act & Assert: Does not throw, logs warning
         var exception = await Record.ExceptionAsync(async () =>
@@ -641,7 +644,7 @@ public class AiResponseCacheServiceTests
     public void GenerateQaCacheKey_WithSpecialCharacters_CreatesValidKey()
     {
         // Arrange
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
         var gameId = "catan-test";
         var queryWithSpecialChars = "How many cards? (including development cards & resources!)";
 
@@ -659,7 +662,7 @@ public class AiResponseCacheServiceTests
     public void GenerateQaCacheKey_WithUnicodeCharacters_CreatesValidKey()
     {
         // Arrange
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
         var gameId = "catan-test";
         var queryWithUnicode = "Comment puis-je gagner? 如何获胜？ Как победить?";
 
@@ -676,7 +679,7 @@ public class AiResponseCacheServiceTests
     public void GenerateQaCacheKey_WithVeryLongQuery_CreatesValidKey()
     {
         // Arrange
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
         var gameId = "catan-test";
         var longQuery = new string('a', 10000); // 10KB query
 
@@ -692,7 +695,7 @@ public class AiResponseCacheServiceTests
     public void GenerateExplainCacheKey_WithEmptyTopic_CreatesValidKey()
     {
         // Arrange
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
         var gameId = "catan-test";
 
         // Act
@@ -719,7 +722,7 @@ public class AiResponseCacheServiceTests
                 (k, v, ttl, keepTtl, when, flags) => storedJson = v.ToString())
             .ReturnsAsync(true);
 
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
 
         var complexResponse = new SetupGuideResponse(
             "Complex Game",
@@ -781,7 +784,7 @@ public class AiResponseCacheServiceTests
             })
             .ReturnsAsync(true);
 
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
 
         var qaResponse = new QaResponse("QA answer", Array.Empty<Snippet>());
         await service.SetAsync("test-key", qaResponse);
@@ -805,7 +808,7 @@ public class AiResponseCacheServiceTests
                 It.IsAny<CommandFlags>()))
             .ReturnsAsync(RedisResult.Create(0L));
 
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
 
         // Act & Assert: No error when invalidating non-existent keys
         var exception = await Record.ExceptionAsync(async () =>
@@ -827,7 +830,7 @@ public class AiResponseCacheServiceTests
                 It.IsAny<CommandFlags>()))
             .ReturnsAsync(RedisResult.Create(RedisValue.Null));
 
-        var service = new AiResponseCacheService(_mockRedis.Object, _mockLogger.Object);
+        var service = new AiResponseCacheService(_mockRedis.Object, null!, _mockLogger.Object, _mockConfiguration.Object);
 
         // Act & Assert: Handles null result gracefully
         var exception = await Record.ExceptionAsync(async () =>

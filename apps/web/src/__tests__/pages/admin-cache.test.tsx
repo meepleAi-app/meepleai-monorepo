@@ -53,24 +53,28 @@ describe('CacheDashboard', () => {
   ];
 
   const mockStatsResponse = {
+    totalHits: 750,
+    totalMisses: 250,
     hitRate: 0.75,
-    missRate: 0.25,
-    totalRequests: 1000,
-    cacheSize: 5242880, // 5 MB
+    totalKeys: 3,
+    cacheSizeBytes: 5242880, // 5 MB
     topQuestions: [
       {
-        question: 'How do I move the knight?',
+        questionHash: 'a1b2c3d4e5f6',
         hitCount: 50,
+        missCount: 10,
         lastHitAt: '2024-01-15T10:30:00.000Z'
       },
       {
-        question: 'What is castling?',
+        questionHash: 'f6e5d4c3b2a1',
         hitCount: 35,
+        missCount: 15,
         lastHitAt: '2024-01-15T11:00:00.000Z'
       },
       {
-        question: 'How does en passant work?',
+        questionHash: '123456789abc',
         hitCount: 20,
+        missCount: 5,
         lastHitAt: '2024-01-15T09:45:00.000Z'
       }
     ]
@@ -128,13 +132,13 @@ describe('CacheDashboard', () => {
 
     expect(screen.getByText('Cache Size')).toBeInTheDocument();
     expect(screen.getByText('5.00 MB')).toBeInTheDocument();
-    expect(screen.getByText('3 cached questions')).toBeInTheDocument();
+    expect(screen.getByText('3 cached keys')).toBeInTheDocument();
 
     // Check top questions table
     expect(screen.getByText('Top Cached Questions')).toBeInTheDocument();
-    expect(screen.getByText('How do I move the knight?')).toBeInTheDocument();
-    expect(screen.getByText('What is castling?')).toBeInTheDocument();
-    expect(screen.getByText('How does en passant work?')).toBeInTheDocument();
+    expect(screen.getByText('a1b2c3d4e5f6')).toBeInTheDocument();
+    expect(screen.getByText('f6e5d4c3b2a1')).toBeInTheDocument();
+    expect(screen.getByText('123456789abc')).toBeInTheDocument();
 
     // Check hit counts
     expect(screen.getByText('50')).toBeInTheDocument();
@@ -143,9 +147,9 @@ describe('CacheDashboard', () => {
   });
 
   it('displays hit rate with appropriate color coding', async () => {
-    const highHitRate = { ...mockStatsResponse, hitRate: 0.8, missRate: 0.2 };
-    const mediumHitRate = { ...mockStatsResponse, hitRate: 0.5, missRate: 0.5 };
-    const lowHitRate = { ...mockStatsResponse, hitRate: 0.3, missRate: 0.7 };
+    const highHitRate = { ...mockStatsResponse, hitRate: 0.8, totalHits: 800, totalMisses: 200 };
+    const mediumHitRate = { ...mockStatsResponse, hitRate: 0.5, totalHits: 500, totalMisses: 500 };
+    const lowHitRate = { ...mockStatsResponse, hitRate: 0.3, totalHits: 300, totalMisses: 700 };
 
     // Test high hit rate (green)
     fetchMock
@@ -187,11 +191,14 @@ describe('CacheDashboard', () => {
   it('filters cache stats by selected game', async () => {
     const gameSpecificStats = {
       ...mockStatsResponse,
-      totalRequests: 500,
+      totalHits: 375,
+      totalMisses: 125,
+      totalKeys: 1,
       topQuestions: [
         {
-          question: 'Chess-specific question',
+          questionHash: 'chess-question-hash',
           hitCount: 25,
+          missCount: 5,
           lastHitAt: '2024-01-15T10:30:00.000Z'
         }
       ]
@@ -224,7 +231,7 @@ describe('CacheDashboard', () => {
 
     // Check that game-specific stats are displayed
     await waitFor(() => expect(screen.getByText('500')).toBeInTheDocument());
-    expect(screen.getByText('Chess-specific question')).toBeInTheDocument();
+    expect(screen.getByText('chess-question-hash')).toBeInTheDocument();
   });
 
   it('handles cache invalidation for a specific game with confirmation', async () => {
@@ -561,8 +568,8 @@ describe('CacheDashboard', () => {
   });
 
   it('formats cache size correctly for different units', async () => {
-    const smallCache = { ...mockStatsResponse, cacheSize: 512 * 1024 }; // 512 KB
-    const largeCache = { ...mockStatsResponse, cacheSize: 50 * 1024 * 1024 }; // 50 MB
+    const smallCache = { ...mockStatsResponse, cacheSizeBytes: 512 * 1024 }; // 512 KB
+    const largeCache = { ...mockStatsResponse, cacheSizeBytes: 50 * 1024 * 1024 }; // 50 MB
 
     // Test KB formatting
     fetchMock

@@ -106,12 +106,12 @@ public class CacheStats
     /// <summary>
     /// Total cache hits across all questions.
     /// </summary>
-    public int TotalHits { get; set; }
+    public long TotalHits { get; set; }
 
     /// <summary>
     /// Total cache misses across all questions.
     /// </summary>
-    public int TotalMisses { get; set; }
+    public long TotalMisses { get; set; }
 
     /// <summary>
     /// Cache hit rate (hits / total requests). Range: 0.0 to 1.0.
@@ -147,12 +147,12 @@ public class TopQuestion
     /// <summary>
     /// Number of times this question was a cache hit.
     /// </summary>
-    public int HitCount { get; set; }
+    public long HitCount { get; set; }
 
     /// <summary>
     /// Number of times this question was a cache miss.
     /// </summary>
-    public int MissCount { get; set; }
+    public long MissCount { get; set; }
 
     /// <summary>
     /// When this cache entry was last accessed.

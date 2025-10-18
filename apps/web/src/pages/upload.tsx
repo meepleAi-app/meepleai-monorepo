@@ -20,12 +20,6 @@ const PdfPreview = dynamic(() => import('../components/PdfPreview').then(mod => 
   loading: () => <div style={{ padding: '20px', textAlign: 'center' }}>Loading PDF preview...</div>
 });
 
-// Dynamic import to prevent SSR issues with react-pdf (requires browser APIs like DOMMatrix)
-const PdfPreview = dynamic(() => import('../components/PdfPreview').then(mod => ({ default: mod.PdfPreview })), {
-  ssr: false,
-  loading: () => <div style={{ padding: '20px', textAlign: 'center' }}>Loading PDF preview...</div>
-});
-
 interface PdfDocument {
   id: string;
   fileName: string;

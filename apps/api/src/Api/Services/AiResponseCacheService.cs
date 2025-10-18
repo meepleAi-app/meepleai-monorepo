@@ -220,8 +220,9 @@ return total";
             // Delete each cache key and its metadata
             foreach (var cacheKey in cacheKeys)
             {
-                await db.KeyDeleteAsync(cacheKey);
-                await db.KeyDeleteAsync($"{cacheKey}:meta");
+                var key = cacheKey.ToString();
+                await db.KeyDeleteAsync(key);
+                await db.KeyDeleteAsync($"{key}:meta");
             }
 
             // Delete the tag index itself
@@ -268,8 +269,8 @@ return total";
                 .Select(s => new TopQuestion
                 {
                     QuestionHash = s.QuestionHash,
-                    HitCount = s.HitCount,
-                    MissCount = s.MissCount,
+                    HitCount = (long)s.HitCount,
+                    MissCount = (long)s.MissCount,
                     LastHitAt = s.LastHitAt
                 })
                 .ToList();
@@ -308,8 +309,8 @@ return total";
 
             return new CacheStats
             {
-                TotalHits = totalHits,
-                TotalMisses = totalMisses,
+                TotalHits = (long)totalHits,
+                TotalMisses = (long)totalMisses,
                 HitRate = hitRate,
                 TotalKeys = totalKeys,
                 CacheSizeBytes = cacheSize,

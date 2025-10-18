@@ -53,16 +53,18 @@ export interface SessionStatusResponse {
 
 // PERF-03: Cache statistics types
 export interface TopQuestion {
-  question: string;
+  questionHash: string;
   hitCount: number;
-  lastHitAt: string;
+  missCount: number;
+  lastHitAt: string | null;
 }
 
 export interface CacheStats {
+  totalHits: number;
+  totalMisses: number;
   hitRate: number;
-  missRate: number;
-  totalRequests: number;
-  cacheSize: number;
+  totalKeys: number;
+  cacheSizeBytes: number;
   topQuestions: TopQuestion[];
 }
 

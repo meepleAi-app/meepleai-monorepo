@@ -2451,8 +2451,6 @@ describe('ChatPage', () => {
     });
 
     it('formats snippet without page number correctly', async () => {
-      setupAuthenticatedState();
-
       const chatWithSnippet = {
         ...mockChatWithHistory,
         messages: [
@@ -2470,6 +2468,7 @@ describe('ChatPage', () => {
         ]
       };
 
+      setupAuthenticatedState();
       mockApi.get.mockResolvedValueOnce(chatWithSnippet);
 
       render(<ChatPage />);
@@ -2487,8 +2486,6 @@ describe('ChatPage', () => {
     });
 
     it('formats snippet with undefined page as null', async () => {
-      setupAuthenticatedState();
-
       const chatWithSnippet = {
         ...mockChatWithHistory,
         messages: [
@@ -2506,6 +2503,7 @@ describe('ChatPage', () => {
         ]
       };
 
+      setupAuthenticatedState();
       mockApi.get.mockResolvedValueOnce(chatWithSnippet);
 
       render(<ChatPage />);

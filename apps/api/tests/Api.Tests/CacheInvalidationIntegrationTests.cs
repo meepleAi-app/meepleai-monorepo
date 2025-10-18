@@ -51,13 +51,12 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         // Create a cached response
         var cacheKey = cacheService.GenerateQaCacheKey(game.Id, "How do I setup?");
         var cachedResponse = new QaResponse("Cached answer", Array.Empty<Snippet>());
-        var tags = new[] { $"game:{game.Id}" };
-        await cacheService.SetAsync(cacheKey, cachedResponse, ttlSeconds: 3600, tags: tags);
+        await cacheService.SetAsync(cacheKey, cachedResponse, ttlSeconds: 3600);
 
         // Verify cache exists
         var cached = await cacheService.GetAsync<QaResponse>(cacheKey);
         Assert.NotNull(cached);
-        Assert.Equal("Cached answer", cached.Data.answer);
+        Assert.Equal("Cached answer", cached.answer);
 
         // When: Upload PDF for the game
         var client = CreateClientWithoutCookies();
@@ -116,9 +115,9 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         var key2 = cacheService.GenerateQaCacheKey(game2.Id, "How do I win?");
 
         await cacheService.SetAsync(key1, new QaResponse("Game1 answer", Array.Empty<Snippet>()),
-            ttlSeconds: 3600, tags: new[] { $"game:{game1.Id}" });
+            ttlSeconds: 3600);
         await cacheService.SetAsync(key2, new QaResponse("Game2 answer", Array.Empty<Snippet>()),
-            ttlSeconds: 3600, tags: new[] { $"game:{game2.Id}" });
+            ttlSeconds: 3600);
 
         // Verify both are cached
         Assert.NotNull(await cacheService.GetAsync<QaResponse>(key1));
@@ -174,13 +173,12 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         var explainKey = cacheService.GenerateExplainCacheKey(game.Id, "setup phase");
         var setupKey = cacheService.GenerateSetupCacheKey(game.Id);
 
-        var tags = new[] { $"game:{game.Id}" };
-        await cacheService.SetAsync(qaKey, new QaResponse("QA answer", Array.Empty<Snippet>()), 3600, tags);
+        await cacheService.SetAsync(qaKey, new QaResponse("QA answer", Array.Empty<Snippet>()), 3600);
         await cacheService.SetAsync(explainKey, new ExplainResponse(
             new ExplainOutline("setup", new System.Collections.Generic.List<string>()),
-            "Explain answer", new System.Collections.Generic.List<Snippet>(), 1), 3600, tags);
+            "Explain answer", new System.Collections.Generic.List<Snippet>(), 1), 3600);
         await cacheService.SetAsync(setupKey, new SetupGuideResponse(
-            game.Name, new System.Collections.Generic.List<SetupGuideStep>(), 10), 3600, tags);
+            game.Name, new System.Collections.Generic.List<SetupGuideStep>(), 10), 3600);
 
         // Verify all cached
         Assert.NotNull(await cacheService.GetAsync<QaResponse>(qaKey));
@@ -243,8 +241,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
 
         // Create cached response
         var cacheKey = cacheService.GenerateQaCacheKey(game.Id, "What are the winning conditions?");
-        var tags = new[] { $"game:{game.Id}", $"rulespec:{ruleSpec.Id}" };
-        await cacheService.SetAsync(cacheKey, new QaResponse("Old answer", Array.Empty<Snippet>()), 3600, tags);
+        await cacheService.SetAsync(cacheKey, new QaResponse("Old answer", Array.Empty<Snippet>()), 3600);
 
         // Verify cache exists
         Assert.NotNull(await cacheService.GetAsync<QaResponse>(cacheKey));

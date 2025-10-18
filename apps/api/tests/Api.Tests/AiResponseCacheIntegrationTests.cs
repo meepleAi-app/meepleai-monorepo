@@ -1,5 +1,6 @@
 using Api.Models;
 using Api.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using StackExchange.Redis;
@@ -26,6 +27,7 @@ public class AiResponseCacheIntegrationTests : IAsyncLifetime
     private IConnectionMultiplexer? _redis;
     private AiResponseCacheService? _cacheService;
     private readonly Mock<ILogger<AiResponseCacheService>> _mockLogger = new();
+    private readonly Mock<IConfiguration> _mockConfiguration = new();
 
     /// <summary>
     /// BDD: Given Redis container is started and connection is established
@@ -39,7 +41,7 @@ public class AiResponseCacheIntegrationTests : IAsyncLifetime
         await _redisContainer.StartAsync();
 
         _redis = await ConnectionMultiplexer.ConnectAsync(_redisContainer.GetConnectionString());
-        _cacheService = new AiResponseCacheService(_redis, _mockLogger.Object);
+        _cacheService = new AiResponseCacheService(_redis, null!, _mockLogger.Object, _mockConfiguration.Object);
     }
 
     /// <summary>

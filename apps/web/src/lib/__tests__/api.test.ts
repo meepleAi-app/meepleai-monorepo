@@ -8,7 +8,8 @@ describe("api", () => {
     fetchMock.mockResolvedValue({
       ok: status >= 200 && status < 300,
       status,
-      json: async () => payload
+      json: async () => payload,
+      headers: new Headers()
     } as Response);
   };
 

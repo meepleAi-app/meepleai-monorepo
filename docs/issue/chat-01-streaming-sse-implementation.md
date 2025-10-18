@@ -88,8 +88,7 @@ data: {"Type":"Complete","Data":{"totalTokens":45,"confidence":0.92},"Timestamp"
 **File Modified**: `apps/api/src/Api/Program.cs` (line 160)
 ```csharp
 builder.Services.AddScoped<IStreamingQaService, StreamingQaService>(); // CHAT-01
-```
-
+```sql
 ## Technical Implementation Details
 
 ### LLM Streaming Pattern
@@ -125,8 +124,7 @@ try {
 using (response) {
     // Stream processing with yield return
 }
-```
-
+```sql
 ### Observability Integration
 
 **Metrics** (OPS-02):

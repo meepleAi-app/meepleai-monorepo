@@ -120,8 +120,7 @@ public record OcrResult
     public float MeanConfidence { get; init; } // 0.0 - 1.0
     public int PageCount { get; init; }
 }
-```
-
+```json
 #### 1.4 Implementare TesseractOcrService
 **File**: `apps/api/src/Api/Services/TesseractOcrService.cs`
 
@@ -160,8 +159,7 @@ public class TesseractOcrService : IOcrService, IDisposable
 
 ```csharp
 builder.Services.AddSingleton<IOcrService, TesseractOcrService>();
-```
-
+```json
 **Test**: `apps/api/tests/Api.Tests/TesseractOcrServiceTests.cs`
 - Test con PDF semplice
 - Test con immagine scansionata
@@ -215,8 +213,7 @@ public class PdfTextExtractionService
         return PdfTextExtractionResult.CreateSuccess(normalizedText, pageCount, normalizedText.Length);
     }
 }
-```
-
+```json
 **Configurazione**:
 - Threshold configurabile via `appsettings.json`:
   ```json
@@ -243,8 +240,7 @@ public record PdfTextExtractionResult
     public bool UsedOcr { get; init; }
     public float? OcrConfidence { get; init; } // 0.0 - 1.0
 }
-```
-
+```json
 **Test**: `apps/api/tests/Api.Tests/PdfTextExtractionServiceOcrTests.cs`
 - Test OCR fallback activation
 - Test threshold configuration
@@ -359,8 +355,7 @@ public async Task PDF02_AcceptanceCriteria_MoreThan90PercentParsed()
     // 2. Validare coverage >90% (keyword match)
     // 3. Assert success
 }
-```
-
+```json
 ---
 
 ### Fase 5: Ottimizzazioni e Tuning (Effort: 0.5)
@@ -412,8 +407,7 @@ public async Task PDF02_AcceptanceCriteria_MoreThan90PercentParsed()
     }
   }
 }
-```
-
+```json
 ---
 
 ## Timeline e Priorità

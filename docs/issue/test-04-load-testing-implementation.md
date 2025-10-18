@@ -132,8 +132,7 @@ export const options = {
     http_req_failed: ['rate<0.01'],    // error rate <1%
   },
 };
-```
-
+```sql
 k6 exits with non-zero status if any threshold fails, failing the CI job.
 
 ### 4. Realistic Test Data

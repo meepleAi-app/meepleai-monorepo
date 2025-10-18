@@ -77,8 +77,7 @@ Accessibility tests are now fully integrated into the CI/CD pipeline to prevent 
 cd apps/web
 pnpm test:a11y        # Run all accessibility tests
 CI=true pnpm test:a11y # Run in CI mode (non-interactive)
-```
-
+```json
 ---
 
 ## Test Files Covered

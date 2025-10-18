@@ -466,8 +466,7 @@ describe('GameList', () => {
     });
   });
 });
-```
-
+```json
 **Pattern**: `it('should [expected behavior] when [condition]')`
 
 ### Coverage Requirements
@@ -552,8 +551,7 @@ Crea una PR seguendo il GitHub Flow in AGENTS.md:
 5. Push e crea PR con gh CLI
 
 Usa Conventional Commits format per il title.
-```
-
+```csharp
 ## 📝 Checklist Pre-Commit
 
 Prima di ogni commit, verifica:

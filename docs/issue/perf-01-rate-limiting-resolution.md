@@ -44,7 +44,7 @@ The rate limiting system consists of three main components:
 
 The implementation uses a distributed token bucket algorithm with Redis:
 
-```
+```json
 Token Bucket Properties:
 - MaxTokens: Burst capacity (maximum tokens)
 - RefillRate: Tokens added per second (sustainable rate)
@@ -103,8 +103,7 @@ public record RateLimitResult(
     int TokensRemaining,    // Tokens left in bucket
     int RetryAfterSeconds   // Seconds to wait (0 if allowed)
 );
-```
-
+```json
 ### 2. Rate Limiting Middleware
 
 **Location**: `apps/api/src/Api/Program.cs` (lines 468-517)
@@ -269,8 +268,7 @@ When: User makes request
 Then: Request succeeds (fail-open behavior)
   And: Headers show full limit available
   And: Cleanup is automatic
-```
-
+```json
 ---
 
 ## Security Features
@@ -315,8 +313,7 @@ User uploads PDF (burst):
 - Request 101: Rate limited (tokens depleted)
 - Wait 10 seconds: 10 tokens refilled
 - Request 102-111: Allowed (refilled tokens)
-```
-
+```json
 ### 4. Security Headers
 
 **X-RateLimit-* Headers**:
@@ -417,8 +414,7 @@ Use restrictive limits for production:
     }
   }
 }
-```
-
+```json
 ### Tuning Guidelines
 
 **Determine MaxTokens (Burst Capacity)**:

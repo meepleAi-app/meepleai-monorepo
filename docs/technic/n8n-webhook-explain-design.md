@@ -38,8 +38,7 @@ public async Task<ExplainResponse> ExplainAsync(
     string gameId,
     string topic,
     CancellationToken cancellationToken = default)
-```
-
+```typescript
 **Processo**:
 1. Genera embeddings per il topic usando EmbeddingService
 2. Cerca nel database vettoriale Qdrant (limit: 5 chunks)
@@ -139,8 +138,7 @@ public class N8nConfigEntity
     public DateTime UpdatedAt { get; set; }
     public string CreatedByUserId { get; set; }
 }
-```
-
+```json
 **Service**: `N8nConfigService`
 **Location**: `apps/api/src/Api/Services/N8nConfigService.cs`
 
@@ -258,8 +256,7 @@ public class N8nConfigEntity
   "timestamp": "2025-10-11T10:30:00Z",
   "version": "1.0"
 }
-```
-
+```json
 ### Authentication Strategy
 
 **Option A: Service Account + Session Cookie** (✅ RECOMMENDED)
@@ -336,8 +333,7 @@ return [{
     valid: true
   }
 }];
-```
-
+```json
 **Node 3: HTTP Request to API**
 - Type: `HTTP Request`
 - Method: `POST`
@@ -435,8 +431,7 @@ return [{
 
 # Extract session cookie from response
 # Store in n8n credentials
-```
-
+```json
 **2.3 Configure n8n Credentials**
 - Navigate to n8n Credentials
 - Create new credential: "MeepleAI Session"

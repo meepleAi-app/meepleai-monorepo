@@ -39,7 +39,7 @@
 ### 1. Confirm Spike (30 seconds)
 
 **Dashboard**:
-```
+```json
 http://localhost:3001/d/meepleai-error-monitoring
 ```
 
@@ -49,7 +49,7 @@ http://localhost:3001/d/meepleai-error-monitoring
 - ✅ Is spike ongoing or resolved?
 
 **Prometheus**:
-```
+```json
 http://localhost:9090/graph
 Query: meepleai:api:error_spike_ratio
 ```
@@ -208,8 +208,7 @@ git push
 docker compose down
 docker compose pull meepleai/api:previous-version
 docker compose up -d
-```
-
+```json
 **Verification**:
 - Error rate drops to baseline within 1-2 minutes
 - Affected endpoint returns 200 OK
@@ -251,8 +250,7 @@ docker compose exec postgres psql -U meeple -d meepleai -c "\dt"
 
 # Verify table exists
 docker compose exec postgres psql -U meeple -d meepleai -c "\d <table_name>"
-```
-
+```json
 **Resolution time**: 5-10 minutes
 
 ### Cause 3: Configuration Change
@@ -289,8 +287,7 @@ docker compose restart api
 docker compose up -d \
   -e REDIS_URL=redis:6379 \
   api
-```
-
+```json
 **Verification**:
 - Check API logs for successful connection: `docker compose logs api`
 - Test affected feature manually
@@ -327,8 +324,7 @@ curl -i https://api.external-service.com/health
 
 # Option C: Contact external provider
 # If their API changed unexpectedly, report bug
-```
-
+```json
 **Resolution time**: 15 minutes to several hours (depends on external provider)
 
 ### Cause 5: Traffic Spike (Legitimate or Attack)
@@ -357,8 +353,7 @@ kubectl scale deployment meepleai-api --replicas=3
 
 # Option C: Temporary: Block suspicious IPs
 # Add to nginx/firewall if DDoS attack
-```
-
+```sql
 **Resolution time**: 10-30 minutes
 
 ### Cause 6: Scheduled Job / Cron
@@ -393,8 +388,7 @@ curl http://localhost:5678/workflows
 # Option C: Adjust job timing
 # Change cron schedule to off-peak hours
 # Reduce frequency if too aggressive
-```
-
+```json
 **Resolution time**: 5-30 minutes
 
 ## Mitigation Steps

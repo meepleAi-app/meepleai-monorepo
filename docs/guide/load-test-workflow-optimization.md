@@ -22,7 +22,7 @@ The optimized workflow reduces execution time by **~10-15 minutes** through stra
 ## Architecture Changes
 
 ### Original Workflow
-```
+```sql
 ┌──────────────────────────────────────┐
 │ Job 1: games-list-load-test.js       │
 │  ├─ Install k6                       │
@@ -294,8 +294,7 @@ jobs:
     strategy:
       matrix:
         test-file: [...]  # Each job downloads pre-built API
-```
-
+```json
 **Impact**:
 - Original: 3x setup time (parallel but wasteful)
 - Optimized: 1x setup time + fast artifact download
@@ -412,7 +411,7 @@ restore-keys: |
   run: |
     rm -rf /tmp/.buildx-cache
     mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-```
+```sql
 - Prevents cache from growing indefinitely
 - Replaces old cache with new one
 - Docker Buildx best practice

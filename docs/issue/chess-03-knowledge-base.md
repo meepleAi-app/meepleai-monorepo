@@ -205,8 +205,7 @@ Cookie: session=<your-session-token>
 {
   "success": true
 }
-```
-
+```json
 ## Testing Precision
 
 To validate the precision >0.8 requirement:

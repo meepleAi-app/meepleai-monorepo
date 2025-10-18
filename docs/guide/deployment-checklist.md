@@ -56,8 +56,7 @@ git checkout main
 git pull
 git merge feature/ISSUE-323-test-naming-docs
 git push
-```
-
+```yaml
 ### Step 5: Verify Coverage Report (1 minute)
 
 1. Wait for GitHub Actions workflow to complete (~3-5 minutes)
@@ -107,8 +106,7 @@ Example:
 The badge will update automatically:
 ```markdown
 [![codecov](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo/branch/main/graph/badge.svg)](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo)
-```
-
+```json
 Shows: `codecov 82.5%` (or current coverage)
 
 ## 🎯 Next Steps After Setup

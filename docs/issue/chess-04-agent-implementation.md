@@ -78,8 +78,7 @@ public record ChessAnalysis(
     string? evaluationSummary,                // Position evaluation
     IReadOnlyList<string> keyConsiderations  // Tactical/strategic considerations
 );
-```
-
+```sql
 ### 2. FEN Position Validation
 
 Implements basic FEN validation:
@@ -351,8 +350,7 @@ pwsh tools/test-chess-agent.ps1
 **Full Test (All 15 questions)**:
 ```bash
 pwsh tools/test-chess-agent-full.ps1
-```
-
+```json
 The full test script (`test-chess-agent-full.ps1`) automatically:
 1. Logs in as admin and indexes chess knowledge
 2. Logs in as regular user

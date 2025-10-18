@@ -81,7 +81,7 @@ Implement comprehensive structured logging and correlation system for MeepleAI w
 
 ### Documentation Created
 
-1. **Technical Design Document**: `docs/tecnic/ops-04-structured-logging-design.md`
+1. **Technical Design Document**: `docs/technic/ops-04-structured-logging-design.md`
    - Complete architecture overview
    - Component details (configuration, enrichers, redaction)
    - Implementation details and flows
@@ -112,7 +112,7 @@ Implement comprehensive structured logging and correlation system for MeepleAI w
 - `apps/api/tests/Api.Tests/Logging/LoggingIntegrationTests.cs` (355 lines)
 
 **Documentation**:
-- `docs/tecnic/ops-04-structured-logging-design.md` (488 lines)
+- `docs/technic/ops-04-structured-logging-design.md` (488 lines)
 - `docs/issue/ops-04-implementation-summary.md` (this file)
 
 **Modified Files**:

@@ -165,8 +165,7 @@ MeepleAiMetrics.RecordApiError(
     httpContext: context,
     exception: exception,
     statusCode: statusCode);
-```
-
+```sql
 ### 5. Grafana Dashboard
 
 **Dashboard** (`infra/dashboards/error-monitoring.json`):
@@ -294,8 +293,7 @@ alerting:
 - severity: info
   → grafana-oncall (5m wait, 4h repeat)
   → Slack #engineering
-```
-
+```json
 ## Testing
 
 ### Manual Testing

@@ -42,8 +42,7 @@ Complete redesign of the MeepleAI landing page from a functional admin-style int
     "autoprefixer": "^10.4.21"
   }
 }
-```
-
+```sql
 ## 🎨 Design System
 
 ### Colors

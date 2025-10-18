@@ -37,8 +37,7 @@ Successfully optimized the CI pipeline from **12-15 minutes** to an estimated **
     key: ${{ runner.os }}-nuget-${{ hashFiles('apps/api/**/*.csproj') }}
     restore-keys: |
       ${{ runner.os }}-nuget-
-```
-
+```json
 **Cache Strategy**:
 - **Primary Key**: OS + hash of all `*.csproj` files
 - **Restore Keys**: OS prefix for partial cache hits
@@ -96,8 +95,7 @@ Successfully optimized the CI pipeline from **12-15 minutes** to an estimated **
 
 - name: Test
   run: dotnet test ... --no-build   # Skip build (already done)
-```
-
+```json
 **Changes**:
 1. **Restore Step** (`.github/workflows/ci.yml:195`, `337`): Explicit `dotnet restore`
 2. **Build Step** (lines `197`, `340`): Added `--no-restore` flag
@@ -122,8 +120,7 @@ options: >-
   --health-interval 5s      # Changed from 10s
   --health-timeout 3s       # Changed from 5s
   --health-retries 5
-```
-
+```json
 **Changes**:
 - **Interval**: 10s → 5s (check twice as often)
 - **Timeout**: 5s → 3s (fail faster on unhealthy state)

@@ -69,7 +69,7 @@ This issue tracks the implementation of an admin-configurable prompt management 
 
 **Selected Approach**: Redis-Cached Service Layer
 
-```
+```json
 Request → PromptTemplateService.GetActivePromptAsync("qa-system-prompt")
           ↓
           Redis Cache (key: "prompt:qa-system-prompt:active")

@@ -101,8 +101,7 @@ const result = await apiEnhanced.post('/api/v1/games', data, {
 // Get full response with metadata (correlation ID, status code)
 const response = await apiEnhanced.getWithMetadata<Game>('/api/v1/games/123');
 console.log(response.correlationId);
-```
-
+```json
 **Features**:
 - Automatic retry with exponential backoff (default: 3 attempts)
 - Intelligent retry decisions (retries 5xx, 408, 429, network errors)
@@ -119,8 +118,7 @@ console.log(response.correlationId);
   maxDelayMs: 10000,
   backoffMultiplier: 2
 }
-```
-
+```json
 **Backoff Schedule**:
 - Attempt 1: Immediate
 - Attempt 2: 1000ms delay
@@ -156,8 +154,7 @@ try {
 
 // Manual flush (automatic batching every 5s)
 logger.flush();
-```
-
+```json
 **Features**:
 - Structured logging with context
 - Automatic batching (default: 10 logs or 5s interval)
@@ -278,8 +275,7 @@ function MyComponent() {
     </div>
   );
 }
-```
-
+```json
 **Features**:
 - 4 types: success, error, warning, info
 - Auto-dismiss with configurable duration (default: 5s)
@@ -378,8 +374,7 @@ export default function App(props: AppProps) {
     </ErrorBoundary>
   );
 }
-```
-
+```sql
 ### Migration from Basic API Client
 
 To migrate existing code to use the enhanced API client:
@@ -604,8 +599,7 @@ cd apps/web
 pnpm test:e2e                 # Headless mode
 pnpm test:e2e:ui              # UI mode
 pnpm test:e2e:report          # View report
-```
-
+```sql
 ### Coverage Targets
 
 - Overall: 90% (enforced by Jest)
@@ -628,8 +622,7 @@ console.log(response.correlationId); // X-Correlation-Id from response
 // Logger automatically uses correlation ID
 logger.setCorrelationId(response.correlationId);
 logger.error('Error occurred'); // Includes correlation ID
-```
-
+```json
 ### Distributed Tracing
 
 Client-side errors are correlated with backend traces:

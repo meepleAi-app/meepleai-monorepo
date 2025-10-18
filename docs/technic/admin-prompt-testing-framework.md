@@ -144,8 +144,7 @@ The Prompt Testing Framework provides automated quality assurance for LLM prompt
     }
   ]
 }
-```
-
+```sql
 ### Field Definitions
 
 | Field | Type | Required | Description |
@@ -216,8 +215,7 @@ public bool IsCorrect(TestCase testCase, string llmResponse)
 
     return false;
 }
-```
-
+```sql
 **Threshold**: 80% (configurable per dataset)
 
 ---
@@ -280,8 +278,7 @@ public float CalculateAverageConfidence(List<EvaluationResult> results)
 
     return confidenceScores.Average();
 }
-```
-
+```sql
 **Threshold**: > 0.70 (configurable per dataset)
 
 **Note**: Confidence comes from RAG search (max similarity score of retrieved chunks)
@@ -647,8 +644,7 @@ Store evaluation results in `prompt_versions.metadata` field (JSON):
     }
   }
 }
-```
-
+```json
 ---
 
 ## UI Design

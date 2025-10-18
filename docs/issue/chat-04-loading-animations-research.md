@@ -46,8 +46,7 @@ Next.js App Router provides a special `loading.js` file convention that creates 
 export default function Loading() {
   return <LoadingSkeleton />
 }
-```
-
+```json
 **How it works**:
 - Automatically wraps page content in `<Suspense>` boundary
 - Renders immediately while route segment loads
@@ -81,8 +80,7 @@ export default function Posts() {
     </section>
   )
 }
-```
-
+```json
 **Benefits**:
 - **Selective Hydration**: Independent loading of components
 - **Streaming SSR**: Server sends HTML progressively
@@ -136,8 +134,7 @@ export default function ClientComponentExample() {
     </div>
   )
 }
-```
-
+```json
 **Use Cases**:
 - Large client components (charts, editors)
 - Third-party widgets
@@ -178,8 +175,7 @@ export default function Page() {
 
   return <div>{data.title}</div>
 }
-```
-
+```json
 **Benefits**:
 - Automatic revalidation
 - Built-in loading/error states
@@ -228,8 +224,7 @@ function MyForm() {
     </form>
   )
 }
-```
-
+```json
 **Source**: [React v19.1.1 - CHANGELOG-canary.md](https://github.com/facebook/react/blob/v19.1.1/CHANGELOG-canary.md)
 
 ---
@@ -286,8 +281,7 @@ export default function RootLayout({ children }) {
     </html>
   )
 }
-```
-
+```sql
 **Source**: [Next.js v14.3.0 - analytics.mdx](https://github.com/vercel/next.js/blob/v14.3.0-canary.87/docs/02-app/01-building-your-application/06-optimizing/08-analytics.mdx)
 
 ---
@@ -319,8 +313,7 @@ export function LoadingCard() {
     </motion.div>
   )
 }
-```
-
+```json
 **Animation Properties**:
 - `initial`: Starting state
 - `animate`: Target state
@@ -372,8 +365,7 @@ export function ExpandableCard() {
     </motion.div>
   )
 }
-```
-
+```json
 **Layout Animation Features**:
 - `layout`: Enables automatic layout animations
 - `layout="position"`: Only animates position changes
@@ -429,8 +421,7 @@ export function SharedLayoutExample() {
     </>
   )
 }
-```
-
+```json
 **Key Concepts**:
 - **layoutId**: Links elements across component tree
 - **AnimatePresence**: Required for exit animations
@@ -522,8 +513,7 @@ export function PerformantLoader() {
 .animated-element.complete {
   will-change: auto;
 }
-```
-
+```json
 ---
 
 ### 4.2 React Memoization for Animations
@@ -557,8 +547,7 @@ export const LoadingSkeleton = memo(function LoadingSkeleton() {
     </div>
   )
 })
-```
-
+```json
 **When to Memoize**:
 - Loading skeletons that don't depend on props
 - Reusable animation components
@@ -627,8 +616,7 @@ export function ScrollReveal({ children }) {
     </motion.div>
   )
 }
-```
-
+```json
 **Optimization Tips**:
 - Use `passive: true` for scroll listeners
 - Debounce by 100-300ms for scroll events
@@ -728,8 +716,7 @@ export function RespectfulAnimation({ children }) {
     </motion.div>
   )
 }
-```
-
+```json
 ---
 
 ### 5.2 ARIA Live Regions
@@ -803,8 +790,7 @@ export function AccessibleLoadingButton() {
   white-space: nowrap;
   border-width: 0;
 }
-```
-
+```json
 ---
 
 ### 5.3 Focus Management
@@ -852,8 +838,7 @@ export function LoadingModal({ isLoading, onClose }) {
     </div>
   )
 }
-```
-
+```json
 ---
 
 ## 6. Testing Strategies
@@ -883,8 +868,7 @@ describe('LoadingSkeleton', () => {
     expect(status).toHaveAttribute('aria-live', 'polite')
   })
 })
-```
-
+```json
 ---
 
 ### 6.2 Playwright E2E Animation Testing
@@ -931,8 +915,7 @@ test('respects prefers-reduced-motion', async ({ page }) => {
   // Position should be final immediately
   expect(box?.y).toBe(newBox?.y)
 })
-```
-
+```json
 ---
 
 ### 6.3 Performance Testing

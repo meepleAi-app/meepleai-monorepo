@@ -261,8 +261,7 @@ Passed: 21 ✅
 Failed: 0
 Skipped: 0
 Duration: ~5 seconds
-```
-
+```json
 **Test Categories**:
 - ✅ Unit Tests (5): Basic rate limiting logic, fail-open behavior, role configuration
 - ✅ Integration Tests (16): End-to-end HTTP middleware, auth integration, header validation
@@ -335,8 +334,7 @@ public class RateLimitConfigurationValidator : IValidateOptions<RateLimitConfigu
         return ValidateOptionsResult.Success;
     }
 }
-```
-
+```sql
 ## Security Considerations
 
 ### ✅ Maintained Security Features

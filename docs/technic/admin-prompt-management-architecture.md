@@ -164,7 +164,7 @@ Request → Service → EF Core → PostgreSQL → PromptVersion (active=true)
 Services retrieve prompts from Redis cache (first) with fallback to PostgreSQL. Cache invalidation on activation. Admin UI for CRUD operations.
 
 #### Architecture Diagram (Text)
-```
+```json
 Request → PromptTemplateService.GetActivePromptAsync("qa-system-prompt")
            ↓
            Redis Cache (key: "prompt:qa-system-prompt:active")
@@ -287,8 +287,7 @@ Startup → BackgroundService (every 60s) → EF Core → PostgreSQL
                                     IMemoryCache (in-process)
                                           ↓
 Request → Service → IMemoryCache.Get("qa-system-prompt")
-```
-
+```json
 #### Technology Choices
 - **Cache**: `IMemoryCache` (ASP.NET Core built-in)
 - **Background Service**: `BackgroundService` polling every 60s
@@ -991,8 +990,7 @@ public class RagService : IRagService
     "PromptDatabase": false  // Set to true after migration
   }
 }
-```
-
+```sql
 ---
 
 ## Risk Assessment
@@ -1060,8 +1058,7 @@ public async Task<string?> GetActivePromptAsync(string templateName, Cancellatio
 4. System displays metrics: accuracy, hallucination rate, confidence, latency
 5. If pass thresholds → enable "Activate" button
 6. If fail → display failing queries, suggest revisions
-```
-
+```sql
 #### TR-4: Database Migration Dependency
 **Risk**: Prompt tables assumed to exist, but some environments may not have migration applied
 **Likelihood**: Low (schema already deployed)

@@ -210,8 +210,7 @@ Store coverage reports as artifacts:
       apps/api/tests/Api.Tests/coverage/
       apps/web/coverage/
     retention-days: 30
-```
-
+```json
 ## Coverage Best Practices
 
 ### What to Measure
@@ -270,8 +269,7 @@ public void ValidateUser_WithInvalidEmail_ReturnsError()
     Assert.False(result.IsValid);
     Assert.Contains("email", result.Errors[0].ToLower());
 }
-```
-
+```sql
 ## Monitoring Coverage Trends
 
 ### Local Monitoring
@@ -291,8 +289,7 @@ cd ../web
 pnpm test:coverage -- --json --outputFile="coverage/coverage-$timestamp.json"
 
 Write-Host "Coverage reports saved with timestamp: $timestamp"
-```
-
+```json
 ### CI Monitoring
 
 Set up coverage tracking:
@@ -312,8 +309,7 @@ Enforce minimum coverage in CI:
   run: |
     dotnet test -p:CollectCoverage=true -p:Threshold=80 -p:ThresholdType=line
   working-directory: apps/api
-```
-
+```csharp
 ## Troubleshooting
 
 ### Issue: Coverage Tests Hang with Testcontainers

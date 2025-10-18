@@ -68,7 +68,7 @@
 - Anonymous (IP-based): 10 req/min
 
 **Response Headers**:
-```
+```json
 X-RateLimit-Limit: 100
 X-RateLimit-Remaining: 95
 Retry-After: 60 (se rate limited)
@@ -622,8 +622,7 @@ type Snippet = {
   ],
   "totalDuration": 29.5
 }
-```
-
+```json
 **Seq Dashboard**:
 - URL: `http://localhost:8081` (dev), configurabile via `SEQ_URL`
 - Log aggregation con `X-Correlation-Id`
@@ -688,8 +687,7 @@ Trigger (webhook)
   → Call /agents/chess
   → Format response
   → Send to Discord/Slack
-```
-
+```json
 ---
 
 #### UI-03: Wizard Import PDF→RuleSpec (Enhancement)
@@ -985,8 +983,7 @@ Trigger (webhook)
     "@/*": ["./src/*"]
   }
 }
-```
-
+```json
 **Testing Setup**:
 - **Unit/Integration**: Jest 29 + React Testing Library
 - **E2E**: Playwright

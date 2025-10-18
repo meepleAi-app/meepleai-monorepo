@@ -96,8 +96,7 @@ curl http://localhost:8080/
 
 ```bash
 docker compose up -d n8n
-```
-
+```sql
 Access n8n UI at: http://localhost:5678
 
 **Login** with credentials from `n8n.env.dev`:
@@ -114,8 +113,7 @@ From repository root:
 
 ```powershell
 pwsh tools/setup-n8n-service-account.ps1
-```
-
+```json
 **What this does**:
 1. Creates service account: `n8n-service@meepleai.dev`
 2. Authenticates and retrieves session token
@@ -181,8 +179,7 @@ Write-Host "✓ Session token updated in n8n.env.dev"
 
 ```bash
 docker compose restart n8n
-```
-
+```sql
 ---
 
 ## Step 4: Import n8n Workflow
@@ -264,8 +261,7 @@ Step 5: Configuration details
 ====================================================
 Registration Complete!
 ====================================================
-```
-
+```json
 ### 5.2 Update n8n API Key (Optional)
 
 The registration script uses a placeholder API key by default. To update:
@@ -400,8 +396,7 @@ curl -X POST http://localhost:5678/webhook/explain \
 ```bash
 cd apps/api
 dotnet test --filter "FullyQualifiedName~N8nWebhookIntegrationTests"
-```
-
+```json
 **Expected**: All tests passing (6/6)
 
 ---
@@ -434,8 +429,7 @@ docker exec -it infra-postgres-1 psql -U meeple -d meepleai
 
 SELECT * FROM n8n_configs;
 SELECT * FROM ai_request_logs WHERE endpoint = 'explain' ORDER BY created_at DESC LIMIT 10;
-```
-
+```sql
 ---
 
 ## Troubleshooting
@@ -513,8 +507,7 @@ n8n:
   #   - "5678:5678"  # Remove or bind to localhost only
   networks:
     - meepleai
-```
-
+```sql
 ---
 
 ## Monitoring

@@ -118,8 +118,7 @@ All 3 fixed tests now pass independently:
 
 # PdfStorageServiceTests - Moq configuration
 ✅ 1 passed, 0 failed
-```
-
+```csharp
 ---
 
 ## Remaining Work (Future Phases)

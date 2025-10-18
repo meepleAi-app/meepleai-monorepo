@@ -83,20 +83,20 @@ Requires authenticated user session (same as other chat features).
 ### Example Interactions
 
 **1. Opening Advice**
-```
+```json
 User: "What's the best opening for white?"
 AI: "The most popular openings are 1.e4 (King's Pawn) and 1.d4 (Queen's Pawn)..."
      [Suggested moves: e2e4, d2d4, Nf3]
 ```
 
 **2. Position Analysis**
-```
+```json
 User: "Analyze this position"
 AI: "White has a strong pawn center. Consider developing your knights..."
 ```
 
 **3. Move Validation**
-```
+```json
 User moves: e2-e4 (valid)
 System: "Mossa eseguita: e4"
 
@@ -131,8 +131,7 @@ System: [No response - move rejected]
 ```bash
 cd apps/web
 npm test -- chess.test.tsx
-```
-
+```json
 ## API Integration
 
 ### Backend Endpoint
@@ -156,8 +155,7 @@ npm test -- chess.test.tsx
   "chess.js": "^1.4.0",
   "react-chessboard": "^4.6.0"
 }
-```
-
+```json
 ### Inline Styling
 - Follows existing project pattern (no external CSS framework)
 - Consistent color scheme with other pages

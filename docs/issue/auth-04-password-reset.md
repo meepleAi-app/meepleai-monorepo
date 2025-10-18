@@ -126,8 +126,7 @@ builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
     "RateLimitPerHour": 3
   }
 }
-```
-
+```sql
 **Environment Variables Required**:
 - `SMTP_HOST`: SMTP server hostname
 - `SMTP_USERNAME`: SMTP authentication username

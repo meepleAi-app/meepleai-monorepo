@@ -184,8 +184,7 @@ public class AuthServiceTests
         // Test implementation
     }
 }
-```
-
+```csharp
 ### Parameterized Tests (Theory)
 
 For data-driven tests using `[Theory]`, name the test to describe the general behavior:

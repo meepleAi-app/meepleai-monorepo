@@ -54,7 +54,7 @@ This document tracks the progress of increasing backend API test coverage from ~
    - **Behavior**: Independent rate limiting per key
 
 #### Test Results
-```
+```json
 Superato! - Non superati: 0. Superati: 20. Ignorati: 0. Totale: 20.
 ```
 
@@ -141,8 +141,7 @@ Superato! - Non superati: 0. Superati: 20. Ignorati: 0. Totale: 20.
     name: coverage-report-api
     path: apps/api/tests/Api.Tests/coverage/
     retention-days: 30
-```
-
+```json
 ### Documentation Updates (1 day)
 
 **Files to Update**:

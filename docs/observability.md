@@ -54,8 +54,7 @@ Returns comprehensive health information for all dependencies with detailed metr
   ],
   "totalDuration": 78.5
 }
-```
-
+```json
 #### `/health/ready` - Readiness Probe
 Checks if the API is ready to serve traffic (all dependencies are healthy).
 
@@ -77,7 +76,7 @@ Health checks are tagged for filtering:
 
 ### Implementation Details
 
-Health checks are configured in `Program.cs:162-177`:
+Health checks are configured in `Program.cs:277-291`:
 
 ```csharp
 builder.Services.AddHealthChecks()
@@ -85,15 +84,14 @@ builder.Services.AddHealthChecks()
     .AddRedis(redisConnectionString, name: "redis", tags: new[] { "cache", "redis" })
     .AddUrlGroup(new Uri($"{qdrantUrl}/healthz"), name: "qdrant", tags: new[] { "vector", "qdrant" })
     .AddCheck<QdrantHealthCheck>("qdrant-collection", tags: new[] { "vector", "qdrant", "collection" });
-```
-
+```json
 Custom `QdrantHealthCheck` (`Infrastructure/QdrantHealthCheck.cs:11-43`) validates the Qdrant collection exists and is accessible.
 
 ## Structured Logging
 
 ### Serilog Configuration
 
-MeepleAI uses Serilog for structured logging with the following configuration (`Program.cs:22-45`):
+MeepleAI uses Serilog for structured logging configured via `Api/Logging/LoggingConfiguration.cs`:
 
 - **Minimum Level**: Information
 - **Overrides**:
@@ -112,12 +110,12 @@ MeepleAI uses Serilog for structured logging with the following configuration (`
 Every HTTP request is automatically assigned a correlation ID for end-to-end tracing:
 
 1. **Request ID**: ASP.NET Core `TraceIdentifier` is used as the correlation ID
-2. **Response Header**: `X-Correlation-Id` header is added to every response (`Program.cs:234-238`)
-3. **Log Enrichment**: Correlation ID is included in every log entry via `RequestId` property
+2. **Response Header**: `X-Correlation-Id` header is added to every response (see middleware in `Program.cs`)
+3. **Log Enrichment**: Correlation ID is included in every log entry via `RequestId` property (via `CorrelationIdEnricher`)
 
 ### Request Logging
 
-Comprehensive request logging is configured with Serilog (`Program.cs:215-231`):
+Comprehensive request logging is configured with Serilog enrichers (see `Api/Logging/LoggingEnrichers.cs`):
 
 **Logged Properties**:
 - `RequestId` - Correlation ID (TraceIdentifier)
@@ -140,8 +138,7 @@ Comprehensive request logging is configured with Serilog (`Program.cs:215-231`):
   "UserId": "user-123",
   "UserEmail": "user@example.com"
 }
-```
-
+```json
 ### Using Correlation IDs for Debugging
 
 When debugging issues:
@@ -153,8 +150,7 @@ When debugging issues:
 **Seq Search Query Example**:
 ```
 RequestId = "0HN6G8QJ9KL0M:00000001"
-```
-
+```json
 ## Seq Log Aggregation
 
 ### Accessing Seq
@@ -175,8 +171,7 @@ seq:
     - "8081:80"    # Web UI port
   volumes:
     - seqdata:/data
-```
-
+```json
 **API Configuration** (`infra/env/api.env.dev:10-11`):
 ```env
 SEQ_URL=http://seq:5341
@@ -212,8 +207,7 @@ Use the time picker in the Seq UI to filter by time range.
 **Complex Queries**:
 ```
 @Level = "Error" and RequestPath like "/agents/%"
-```
-
+```json
 #### Creating Dashboards
 
 Seq supports creating custom dashboards with charts and visualizations:
@@ -274,8 +268,7 @@ logger.LogInformation("PDF uploaded successfully: {PdfId}", result.Document.Id);
 **Bad**:
 ```csharp
 logger.LogInformation($"PDF uploaded successfully: {result.Document.Id}");
-```
-
+```sql
 The structured approach allows Seq to index and search by `PdfId`.
 
 ## Troubleshooting
@@ -332,7 +325,7 @@ The structured approach allows Seq to index and search by `PdfId`.
    ```
    Look for `X-Correlation-Id` header.
 
-2. **Verify Serilog request logging** is enabled in `Program.cs:215-231`
+2. **Verify Serilog request logging** is enabled in `Api/Logging/LoggingConfiguration.cs`
 
 3. **Check log enrichment** in Seq - ensure `RequestId` property is present
 
@@ -407,15 +400,14 @@ logger.LogInformation($"User {user.Email} password {user.Password}");
 
 ## References
 
-- **Health Checks**: `Program.cs:162-177`, `Program.cs:347-378`
+- **Health Checks**: `Program.cs` (search for `AddHealthChecks`), `Infrastructure/QdrantHealthCheck.cs`
 - **Serilog Configuration**: `Api/Logging/LoggingConfiguration.cs`
 - **Sensitive Data Redaction**: `Api/Logging/SensitiveDataDestructuringPolicy.cs`
 - **Log Enrichers**: `Api/Logging/LoggingEnrichers.cs`
-- **Request Logging**: `Program.cs:412-428`
-- **Correlation IDs**: `Program.cs:430-435`
+- **Correlation ID Middleware**: `Program.cs` (search for `X-Correlation-Id`)
 - **Seq Configuration**: `infra/docker-compose.yml:52-63`
 - **Custom Health Check**: `Infrastructure/QdrantHealthCheck.cs`
-- **OPS-04 Technical Design**: `docs/tecnic/ops-04-structured-logging-design.md`
+- **OPS-04 Technical Design**: `docs/technic/ops-04-structured-logging-design.md`
 
 ## Next Steps (Future OPS Issues)
 

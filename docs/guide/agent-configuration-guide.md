@@ -102,8 +102,7 @@ VALUES ('agent-chess-qa', 'chess', 'Chess Q&A', 'qa', NOW());
 ```http
 GET /api/v1/games/{gameId}/agents
 Authorization: Cookie (session required)
-```
-
+```json
 **Implementation**: `D:\Repositories\meepleai-monorepo\apps\api\src\Api\Program.cs:3658-3675`
 
 ```csharp
@@ -118,8 +117,7 @@ v1Api.MapGet("/games/{gameId}/agents", async (string gameId, HttpContext context
         a.CreatedAt
     )));
 });
-```
-
+```sql
 ---
 
 ## Agent Behavior Configuration
@@ -144,8 +142,7 @@ CRITICAL INSTRUCTIONS:
 - Do NOT hallucinate or invent information.
 - Keep your answers brief and to the point (2-3 sentences maximum).
 - Reference page numbers when relevant.
-```
-
+```sql
 **Key Characteristics**:
 - Anti-hallucination focus ("Not specified" fallback)
 - RAG-based (retrieves 5 most relevant chunks from Qdrant)
@@ -180,8 +177,7 @@ CRITICAL INSTRUCTIONS:
   "citations": [...],
   "estimatedReadingTimeMinutes": 2
 }
-```
-
+```sql
 **Key Implementation Details**:
 - No LLM generation (pure RAG retrieval + formatting)
 - Word count / 200 = estimated reading time
@@ -231,8 +227,7 @@ RESPONSE FORMAT:
 - If analyzing a position, provide a brief evaluation
 - List suggested moves in format: "1. Move notation: Explanation"
 - End with "Sources: [1] [2]..." to cite your sources
-```
-
+```sql
 **Key Features**:
 - FEN position validation and analysis
 - Chess-specific knowledge base search
@@ -297,8 +292,7 @@ public class PromptTemplateEntity
     public ICollection<PromptVersionEntity> Versions { get; set; }
     public ICollection<PromptAuditLogEntity> AuditLogs { get; set; }
 }
-```
-
+```sql
 **Status**: Database tables exist, but no service implementation or endpoints exist yet.
 
 **What would be needed to implement**:
@@ -365,8 +359,7 @@ export OPENROUTER_MODEL="anthropic/claude-3.5-sonnet"
 # Or use Ollama instead
 export LLM_PROVIDER="Ollama"
 export OLLAMA_MODEL="llama3.1:8b"
-```
-
+```json
 ### Environment Variables
 
 **Key Variables**:
@@ -500,8 +493,7 @@ Examples:
 - agent-ttt-qa (Tic-Tac-Toe Q&A)
 - agent-chess-explain (Chess Explainer)
 - agent-catan-setup (Catan Setup Guide)
-```
-
+```json
 ### 2. Prompt Engineering Guidelines
 
 When modifying agent prompts:
@@ -564,8 +556,7 @@ Before deploying prompt changes:
 ```sql
 INSERT INTO agents (Id, GameId, Name, Kind, CreatedAt)
 VALUES ('agent-{game}-{kind}', '{game-id}', '{Display Name}', '{kind}', NOW());
-```
-
+```json
 **Change Q&A Prompt**:
 Edit `apps/api/src/Api/Services/RagService.cs:111-119`
 
@@ -583,8 +574,7 @@ dotnet test --filter "FullyQualifiedName~Ai04IntegrationTests"
 cd apps/api/src/Api
 dotnet build
 docker compose up -d --build api
-```
-
+```json
 ---
 
 ## Related Documentation

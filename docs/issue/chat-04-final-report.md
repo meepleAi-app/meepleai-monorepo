@@ -150,8 +150,7 @@ keyframes: {
     '20%, 40%, 60%, 80%': { transform: 'translateX(10px)' },
   },
 }
-```
-
+```sql
 #### 5. E2E Tests
 **File**: `apps/web/e2e/chat-animations.spec.ts`
 **Lines**: 811 lines
@@ -189,8 +188,7 @@ async function navigateToChat(page: Page)
 async function waitForGamesToLoad(page: Page)
 async function sendMessage(page: Page, text: string)
 async function measureFPS(page: Page, durationMs: number): Promise<number>
-```
-
+```json
 **Key Features**:
 - Route interception for consistent 2-second delays
 - FPS measurement via `requestAnimationFrame`
@@ -290,8 +288,7 @@ async function measureFPS(page: Page, durationMs: number): Promise<number>
 ```
 ✅ PASS - Zero errors
 ⚠️  Warnings - 8 pre-existing warnings (not introduced by CHAT-04)
-```
-
+```sql
 **Pre-existing warnings**:
 - `react-hooks/exhaustive-deps` in PdfPreview, Toast, chat.tsx (existing code)
 - `no-console` in logger.ts (intentional)

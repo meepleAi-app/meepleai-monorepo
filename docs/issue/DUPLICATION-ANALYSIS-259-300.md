@@ -240,8 +240,7 @@ This issue consolidates:
 - Partner integrations
 - Third-party developers
 - Admin users (key management UI)
-```
-
+```json
 **Update effort estimate**:
 - Current: 5
 - Recommendation: Keep 5 (more realistic than 3 for this scope)
@@ -323,8 +322,7 @@ Closes #300 as duplicate of #259.
 ### Dependency Update (2025-10-15)
 - **#300 (API-03)** closed as duplicate of **#259 (API-04)**
 - API-01 now unblocks #259 (API-04) which has consolidated scope
-```
-
+```sql
 ### Step 4: Update Project Documentation
 
 **Update CLAUDE.md** (if API key management is referenced):

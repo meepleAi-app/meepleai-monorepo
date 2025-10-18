@@ -74,12 +74,12 @@ Cache keys are generated using SHA256 hashes to ensure:
 - **Fixed Length**: Keys are bounded regardless of query length
 
 **Key Format**:
-```
+```json
 ai:{endpoint}:{gameId}:{contentHash}[:{contextHash}]
 ```
 
 **Examples**:
-```
+```json
 ai:qa:catan:5f4dcc3b5aa765d61d8327deb882cf99
 ai:explain:chess:7c6a180b36896a0a8c02787eeafb0e4c
 ai:setup:monopoly
@@ -250,8 +250,7 @@ public async Task InvalidateByCacheTagAsync(string tag, CancellationToken ct = d
     _logger.LogInformation("Invalidated {Count} cache entries with tag: {Tag}",
         cacheKeys.Length, tag);
 }
-```
-
+```sql
 **Atomic Operations**: Uses Redis transactions to ensure consistency.
 
 ##### GetCacheStatsAsync
@@ -473,8 +472,7 @@ Cookie: .AspNetCore.Session=...
 ```bash
 curl -X DELETE "http://localhost:8080/api/v1/admin/cache/games/catan" \
   -H "Cookie: .AspNetCore.Session=YOUR_SESSION_COOKIE"
-```
-
+```json
 **Invalidation Scope**: Removes all entries matching:
 - `ai:qa:{gameId}:*`
 - `ai:explain:{gameId}:*`
@@ -708,8 +706,7 @@ type Message = {
   backendMessageId?: string;
   cachedAt?: Date | null; // PERF-03: Cache metadata
 };
-```
-
+```sql
 **Data Flow**:
 1. **Streaming Complete Event**: Backend sends `cachedAt` timestamp in `StreamingComplete` event
 2. **Hook Processing**: `useChatStreaming` hook extracts `cachedAt` from metadata
@@ -840,8 +837,7 @@ public async Task CacheHitRate_OnRepeatedQueries_MeetsTarget()
     Assert.Equal(90, cacheHits);
     Assert.Equal(0.90, cacheHitRate);
 }
-```
-
+```json
 **Result**: 90% hit rate (exceeds 60% target).
 
 #### 2. Admin Endpoint Authorization
@@ -1060,8 +1056,7 @@ curl -X GET "http://localhost:8080/api/v1/admin/cache/stats" \
 # - High query variation (users ask in different ways)
 # - Short TTL causing premature eviction
 # - Low traffic (not enough repeats)
-```
-
+```sql
 **Solutions**:
 - **Increase TTL**: Raise `AiResponseCache:TtlHours` from 24 to 168 (7 days)
 - **Query Normalization**: Improve question preprocessing (lowercasing, trimming)
@@ -1241,8 +1236,7 @@ services.AddStackExchangeRedisCache(options =>
         SyncTimeout = 5000
     };
 });
-```
-
+```json
 **Benefit**: Eliminates Redis as single point of failure.
 
 ### 4. Cache Metrics Dashboard

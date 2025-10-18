@@ -391,39 +391,41 @@ export default function CacheDashboard() {
           {/* Cache Hit Rate */}
           <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
             <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8, fontWeight: 600 }}>Cache Hit Rate</div>
-            <div style={{ fontSize: 32, fontWeight: 600, color: getHitRateColor(stats.hitRate), marginBottom: 12 }}>
-              {formatPercentage(stats.hitRate)}
+            <div style={{ fontSize: 32, fontWeight: 600, color: getHitRateColor(stats.hitRate ?? 0), marginBottom: 12 }}>
+              {formatPercentage(stats.hitRate ?? 0)}
             </div>
             <div style={{ background: "#f0f0f0", height: 8, borderRadius: 4, overflow: "hidden" }}>
               <div
                 role="progressbar"
-                aria-valuenow={stats.hitRate * 100}
+                aria-valuenow={(stats.hitRate ?? 0) * 100}
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-label="Cache hit rate"
                 style={{
-                  width: `${stats.hitRate * 100}%`,
+                  width: `${(stats.hitRate ?? 0) * 100}%`,
                   height: "100%",
-                  background: getHitRateColor(stats.hitRate),
+                  background: getHitRateColor(stats.hitRate ?? 0),
                   transition: "width 0.3s ease"
                 }}
               />
             </div>
             <div style={{ marginTop: 8, fontSize: 12, color: "#64748b" }}>
-              Miss Rate: {formatPercentage(1 - stats.hitRate)}
+              Miss Rate: {formatPercentage(1 - (stats.hitRate ?? 0))}
             </div>
           </div>
 
           {/* Total Requests */}
           <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
             <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8, fontWeight: 600 }}>Total Requests</div>
-            <div style={{ fontSize: 32, fontWeight: 600 }}>{(stats.totalHits + stats.totalMisses).toLocaleString()}</div>
+            <div style={{ fontSize: 32, fontWeight: 600 }}>
+              {((stats.totalHits ?? 0) + (stats.totalMisses ?? 0)).toLocaleString()}
+            </div>
             <div style={{ marginTop: 12, fontSize: 13 }}>
               <div style={{ color: "#0f9d58", fontWeight: 600 }}>
-                Cached: {stats.totalHits.toLocaleString()}
+                Cached: {(stats.totalHits ?? 0).toLocaleString()}
               </div>
               <div style={{ color: "#d93025", fontWeight: 600 }}>
-                Not Cached: {stats.totalMisses.toLocaleString()}
+                Not Cached: {(stats.totalMisses ?? 0).toLocaleString()}
               </div>
             </div>
           </div>
@@ -431,9 +433,9 @@ export default function CacheDashboard() {
           {/* Cache Size */}
           <div style={{ padding: 24, border: "1px solid #dadce0", borderRadius: 8, background: "white" }}>
             <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8, fontWeight: 600 }}>Cache Size</div>
-            <div style={{ fontSize: 32, fontWeight: 600 }}>{formatCacheSize(stats.cacheSizeBytes)}</div>
+            <div style={{ fontSize: 32, fontWeight: 600 }}>{formatCacheSize(stats.cacheSizeBytes ?? 0)}</div>
             <div style={{ marginTop: 12, fontSize: 13, color: "#64748b" }}>
-              {stats.totalKeys} cached keys
+              {stats.totalKeys ?? 0} cached keys
             </div>
           </div>
         </div>

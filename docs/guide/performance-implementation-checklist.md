@@ -47,8 +47,7 @@ psql -h localhost -U meepleai -d meepleai
 
 # Check specific index
 \d user_sessions
-```
-
+```json
 **Expected**: 12 new indexes created
 
 ### Step 3: Monitor Index Usage
@@ -65,8 +64,7 @@ FROM pg_stat_user_indexes
 WHERE schemaname = 'public'
 ORDER BY idx_scan DESC
 LIMIT 20;
-```
-
+```json
 **Success Criteria:**
 - ✅ Migration applied without errors
 - ✅ All 12 indexes present in database
@@ -159,8 +157,7 @@ app.MapGet("/api/internal/session-cache-stats", (SessionCacheService cache) =>
         lastSeenUpdateInterval = stats.LastSeenUpdateInterval.TotalMinutes
     });
 });
-```
-
+```json
 **Success Criteria:**
 - ✅ Services registered without errors
 - ✅ All tests pass
@@ -216,8 +213,7 @@ public async Task<IReadOnlyList<GameEntity>> GetGamesAsync(CancellationToken ct 
         .OrderBy(g => g.Name)
         .ToListAsync(ct);
 }
-```
-
+```sql
 **No changes needed** - GameService already uses AsNoTracking ✅
 
 **RagService.cs** - Review and add AsNoTracking where appropriate:
@@ -232,8 +228,7 @@ public async Task<IReadOnlyList<GameEntity>> GetGamesAsync(CancellationToken ct 
 ```bash
 cd apps/api
 dotnet test --filter "Category=Integration"
-```
-
+```json
 **Success Criteria:**
 - ✅ All integration tests pass
 - ✅ No N+1 query issues (check EF Core logs)
@@ -261,8 +256,7 @@ public class ChatServiceIntegrationTests { /* ... */ }
 // E2E tests (slow, uses Testcontainers)
 [Trait("Category", "E2E")]
 public class RagPipelineE2ETests { /* ... */ }
-```
-
+```sql
 ### Step 2: Configure Parallel Execution
 
 Update `apps/api/tests/Api.Tests/Api.Tests.csproj`:
@@ -295,8 +289,7 @@ Edit `.github/workflows/ci.yml`:
   run: |
     cd apps/api
     dotnet test --filter "Category=E2E" --logger "console;verbosity=normal"
-```
-
+```sql
 **Success Criteria:**
 - ✅ Test execution time reduced by 60-70%
 - ✅ CI pipeline completes faster
@@ -471,8 +464,7 @@ dotnet ef migrations list
 
 # If migration already applied, skip
 dotnet ef database update --skip-migration 20251010000000_AddPerformanceIndexes
-```
-
+```json
 ### Issue: Session Cache Not Working
 
 **Symptoms**: No "Session cache hit" logs, high DB load

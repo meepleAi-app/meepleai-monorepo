@@ -53,7 +53,7 @@ ON rule_atoms USING GIN (to_tsvector('english', "Text"));
 ```sql
 CREATE INDEX IX_pdf_documents_GameId_ProcessingStatus
 ON pdf_documents ("GameId", "ProcessingStatus");
-```
+```sql
 - **Purpose**: Optimize filtered listing of PDFs by game and status
 - **Use case**: List all completed PDFs for a specific game (very common in RAG pipeline)
 - **Query pattern**: `WHERE "GameId" = ? AND "ProcessingStatus" = 'completed'`
@@ -63,7 +63,7 @@ ON pdf_documents ("GameId", "ProcessingStatus");
 ```sql
 CREATE INDEX IX_pdf_documents_GameId_UploadedAt_Desc
 ON pdf_documents ("GameId", "UploadedAt" DESC);
-```
+```sql
 - **Purpose**: Optimize temporal queries for most recent PDFs per game
 - **Use case**: Show upload history in admin dashboard, recent documents view
 - **Query pattern**: `WHERE "GameId" = ? ORDER BY "UploadedAt" DESC`
@@ -73,7 +73,7 @@ ON pdf_documents ("GameId", "UploadedAt" DESC);
 ```sql
 CREATE INDEX IX_rule_atoms_RuleSpecId_Text
 ON rule_atoms ("RuleSpecId", "Text");
-```
+```sql
 - **Purpose**: Optimize spec-scoped text searches
 - **Use case**: Search within a specific rule specification version
 - **Query pattern**: `WHERE "RuleSpecId" = ? AND "Text" LIKE '%keyword%'`

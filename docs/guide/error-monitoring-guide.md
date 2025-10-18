@@ -14,17 +14,17 @@ Quick guide for using the MeepleAI error monitoring and alerting system (OPS-05)
 ### View Active Alerts
 
 **Prometheus Alerts**:
-```
+```json
 http://localhost:9090/alerts
 ```
 
 **Alertmanager**:
-```
+```json
 http://localhost:9093
 ```
 
 **Grafana OnCall**:
-```
+```json
 http://localhost:8082
 ```
 
@@ -221,8 +221,7 @@ docker compose restart postgres
 
 # Or restart entire stack
 docker compose down && docker compose up -d
-```
-
+```json
 ### Scenario 3: Slow Performance (No Errors)
 
 **Symptoms**:
@@ -267,8 +266,7 @@ docker compose restart qdrant
 
 # Restart Ollama (if embedding issues)
 docker compose restart ollama
-```
-
+```json
 ## Silencing Alerts
 
 ### During Planned Maintenance
@@ -320,8 +318,7 @@ curl -X POST http://localhost:9090/-/reload
 
 # Or restart Prometheus
 docker compose restart prometheus
-```
-
+```sql
 ### Adding Slack Notifications
 
 1. Create Slack webhook: https://api.slack.com/messaging/webhooks

@@ -320,8 +320,7 @@ Scenario: [Nome]
   Given [contesto]
   When [azione]
   Then [dovrebbe] ma [accade invece]
-```
-
+```json
 ## Ambiente
 - OS: [Windows/Mac/Linux]
 - Browser: [Chrome/Firefox/Safari]
@@ -487,8 +486,7 @@ Scenario: [Gestione errori]
   When [azione non valida]
   Then [messaggio errore]
   And [stato sistema]
-```
-
+```json
 ## Contesto Business
 Perché questa story è importante
 

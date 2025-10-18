@@ -72,7 +72,7 @@ GET /api/v1/games/{gameId}/rulespec/versions/{version}
 **Compare Versions (Diff)**:
 ```
 GET /api/v1/games/{gameId}/rulespec/diff?from=v1&to=v2
-```
+```yaml
 Returns:
 ```json
 {
@@ -96,8 +96,7 @@ Returns:
     }
   ]
 }
-```
-
+```json
 **Authorization**: Editor and Admin roles required for all endpoints
 
 #### 4. Audit Trail

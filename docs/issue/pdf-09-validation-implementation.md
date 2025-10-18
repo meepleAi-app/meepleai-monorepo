@@ -82,8 +82,7 @@ public class PdfProcessingConfiguration
     public string MinPdfVersion { get; set; } = "1.4";
     public List<string> AllowedContentTypes { get; set; } = new() { "application/pdf" };
 }
-```
-
+```json
 ### 3. Server-Side Endpoint Integration
 
 **Location**: `apps/api/src/Api/Program.cs` (line 1810+)
@@ -106,8 +105,7 @@ public class PdfProcessingConfiguration
     "pdfVersion": "PDF version 1.2 is not supported, minimum version is 1.4"
   }
 }
-```
-
+```json
 ### 4. Client-Side Validation
 
 **Location**: `apps/web/src/pages/upload.tsx`
@@ -222,8 +220,7 @@ builder.Services.Configure<PdfProcessingConfiguration>(
 
 // Service registration (line 170)
 builder.Services.AddScoped<IPdfValidationService, PdfValidationService>();
-```
-
+```sql
 ## Error Handling
 
 ### Validation Error Types

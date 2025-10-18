@@ -93,8 +93,7 @@ Scenario: Display skeleton while chat history loads
   Then the skeletons should disappear
   And the real chat list items should fade in with a slight stagger (50ms delay each)
   And a screen reader should announce "Chat history loaded"
-```
-
+```json
 **Acceptance Criteria**:
 - ✅ 5 skeleton items during `isLoadingChats === true`
 - ✅ Skeleton mimics chat item layout (title + date)
@@ -122,8 +121,7 @@ Scenario: Display skeleton while messages load
   And the real messages should slide in from their respective sides (AI: left, User: right)
   And the animation should take 300ms with ease-out timing
   And a screen reader should announce "Messages loaded"
-```
-
+```json
 **Acceptance Criteria**:
 - ✅ 3 skeleton bubbles during `isLoadingMessages === true`
 - ✅ Alternating alignment (AI left, User right)
@@ -160,8 +158,7 @@ Scenario: Display typing indicator when AI is generating
   When the streaming completes
   Then the typing indicator should fade out smoothly (200ms)
   And the full AI response should appear as a message bubble
-```
-
+```json
 **Acceptance Criteria**:
 - ✅ Typing indicator visible when `streamingState.isStreaming === true`
 - ✅ 3 dots with spring animation (Framer Motion physics)
@@ -228,8 +225,7 @@ Scenario: AI message slides in from the left
   And it should slide horizontally from -20px to 0px
   And it should scale from 95% to 100%
   And the animation should use ease-out timing
-```
-
+```json
 **Acceptance Criteria**:
 - ✅ User messages: `initial={{ opacity: 0, x: 20, scale: 0.95 }}`
 - ✅ AI messages: `initial={{ opacity: 0, x: -20, scale: 0.95 }}`
@@ -253,8 +249,7 @@ Scenario: Chat history messages stagger in
   And each subsequent message should animate in with a 50ms delay
   And the stagger effect should create a wave from top to bottom
   And all messages should complete animation within 1 second total
-```
-
+```json
 **Acceptance Criteria**:
 - ✅ Stagger delay: 50ms per message
 - ✅ Framer Motion `staggerChildren: 0.05` on parent container
@@ -326,8 +321,7 @@ Scenario: Send button pulses on hover
   When I move my mouse away
   Then the button should scale back to 100%
   And the transition should take 200ms
-```
-
+```json
 **Acceptance Criteria**:
 - ✅ CSS transition: `transform: scale(1.05)` on hover
 - ✅ Duration: 200ms with ease-out
@@ -400,8 +394,7 @@ Scenario: Send button loading state
   And the button should be enabled
   And the opacity should return to 100%
   And the cursor should change back to "pointer"
-```
-
+```json
 **Acceptance Criteria**:
 - ✅ `<LoadingButton isLoading={isSending}>`
 - ✅ Spinner component visible when loading
@@ -553,8 +546,7 @@ Scenario: Error message shakes on appearance
 
   When I dismiss the error
   Then the error message should fade out over 200ms
-```
-
+```json
 **Acceptance Criteria**:
 - ✅ Shake animation: CSS `@keyframes shake` or Framer Motion
 - ✅ Duration: 400ms

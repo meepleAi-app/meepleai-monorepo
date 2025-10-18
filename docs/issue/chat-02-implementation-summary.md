@@ -44,8 +44,7 @@ Successfully implemented AI-generated follow-up questions feature to increase us
     "CacheVersion": 2
   }
 }
-```
-
+```typescript
 #### 3. Endpoint Integration
 **File**: `apps/api/src/Api/Program.cs`
 
@@ -202,8 +201,7 @@ Successfully implemented AI-generated follow-up questions feature to increase us
 {
   "followUpQuestionsCount": 3
 }
-```
-
+```json
 ## Known Limitations
 
 1. **No Analytics Tracking Yet**: FollowUpQuestionClickEvent defined but not implemented

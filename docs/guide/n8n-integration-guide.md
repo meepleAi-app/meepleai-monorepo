@@ -31,8 +31,7 @@ MeepleAI provides n8n webhooks for AI-powered board game assistance:
 ```bash
 cd infra
 docker compose up -d postgres qdrant redis api n8n
-```
-
+```json
 **2. Import Workflows**
 - Access n8n: http://localhost:5678
 - Import workflows:
@@ -51,8 +50,7 @@ curl -X POST http://localhost:5678/webhook/explain \
 curl -X POST http://localhost:5678/webhook/agent/qa \
   -H "Content-Type: application/json" \
   -d '{"gameId": "tic-tac-toe", "query": "How many players?"}'
-```
-
+```json
 ---
 
 ## N8N-01: Webhook /agent/explain
@@ -140,8 +138,7 @@ curl -X POST http://localhost:5678/webhook/explain \
   -H "Content-Type: application/json" \
   -d '{"topic": "rules"}'
 # Expected: 400 Bad Request
-```
-
+```json
 ---
 
 ## N8N-03: Webhook /agent/qa
@@ -204,8 +201,7 @@ POST http://localhost:5678/webhook/agent/qa
     "statusCode": 400
   }
 }
-```
-
+```json
 ### Workflow Features
 - Automatic correlation ID generation (X-Correlation-Id header)
 - Retry logic: 3 attempts with exponential backoff
@@ -323,8 +319,7 @@ External Client
       │ • Redis (cache)     │
       │ • OpenRouter (LLM)  │
       └─────────────────────┘
-```
-
+```json
 ### Key Components
 
 1. **n8n Workflow**: Orchestration layer
@@ -520,8 +515,7 @@ brew install k6  # macOS
 
 # Run load test (example)
 k6 run tests/load/webhook-qa.js
-```
-
+```sql
 ---
 
 ## 🐛 Troubleshooting
@@ -550,8 +544,7 @@ curl -X POST http://localhost:8080/api/v1/ingest/pdf \
 
 # Index PDF
 curl -X POST http://localhost:8080/api/v1/ingest/pdf/{pdfId}/index
-```
-
+```json
 #### 3. Workflow Not Triggering
 
 **Symptoms**: Webhook returns 404

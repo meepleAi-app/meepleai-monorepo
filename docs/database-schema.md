@@ -395,7 +395,7 @@ User feedback for AI agent interactions (added in migration 20251020123000).
 
 ## Entity Relationships Diagram
 
-```
+```json
 users
   ├── user_sessions (1:N, CASCADE)
   ├── pdf_documents (1:N, RESTRICT)

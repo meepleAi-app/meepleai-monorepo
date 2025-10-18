@@ -61,7 +61,7 @@ Implement a distributed token bucket rate limiter using Redis as the backing sto
 
 ### System Components
 
-```
+```json
 ┌─────────────────────────────────────────────────────────────┐
 │                         API Gateway                          │
 │                   (Load Balancer / Nginx)                    │
@@ -112,7 +112,7 @@ Implement a distributed token bucket rate limiter using Redis as the backing sto
 ### Data Flow
 
 **Successful Request (Under Limit)**:
-```
+```json
 1. Client → API: HTTP Request
 2. API → Auth Middleware: Extract user identity
 3. API → Rate Limit Middleware: Check rate limit
@@ -125,7 +125,7 @@ Implement a distributed token bucket rate limiter using Redis as the backing sto
 ```
 
 **Rate Limited Request (Over Limit)**:
-```
+```json
 1. Client → API: HTTP Request
 2. API → Auth Middleware: Extract user identity
 3. API → Rate Limit Middleware: Check rate limit
@@ -155,7 +155,7 @@ Implement a distributed token bucket rate limiter using Redis as the backing sto
 
 The token bucket algorithm maintains a "bucket" of tokens for each rate limit key:
 
-```
+```json
 Token Bucket State:
 - tokens: Current number of tokens in bucket
 - lastRefill: Timestamp of last refill
@@ -459,8 +459,7 @@ app.Use(async (context, next) =>
 
     await next();
 });
-```
-
+```sql
 **Design Notes**:
 - Middleware runs after authentication (to determine user role)
 - Uses `ActiveSession` from context items (set by auth middleware)
@@ -594,8 +593,7 @@ builder.Services.Configure<RateLimitConfiguration>(
   ╱               ╲                  - Headers, 429 responses
  ╱      Unit       ╲   (5 tests)    - Service in isolation
 ╱───────────────────╲                - Mocked Redis
-```
-
+```sql
 ### Test Coverage
 
 **Total: 21 tests, 808 lines of test code**
@@ -718,8 +716,7 @@ private sealed class TestRateLimitService : RateLimitService
 P50 (median):  < 1ms
 P95:           < 2ms
 P99:           < 5ms
-```
-
+```json
 **Components**:
 - Redis network round-trip: ~0.5ms (LAN)
 - Lua script execution: ~0.1ms
@@ -746,8 +743,7 @@ P99:           < 5ms
 2 values × 8 bytes (data) = 16 bytes
                             ─────
 Total: ~70 bytes per active user
-```
-
+```sql
 **Capacity**:
 - 10k users: ~700 KB
 - 100k users: ~7 MB
@@ -865,8 +861,7 @@ Peak load (100× burst):
 10,000 users × 100 req/sec = 1M req/sec
 Redis capacity: 100k req/sec
 Bottleneck: Redis (need Redis Cluster)
-```
-
+```json
 **Scaling Recommendations**:
 | Users | Requests/sec | Redis Setup | Estimated Cost |
 |-------|--------------|-------------|----------------|
@@ -914,8 +909,7 @@ FROM logs
 WHERE status_code = 429
 GROUP BY path
 ORDER BY rate_limited_count DESC;
-```
-
+```json
 **Solutions**:
 - Increase rate limits for legitimate traffic
 - Identify and block abusive IPs

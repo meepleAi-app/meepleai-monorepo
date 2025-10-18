@@ -58,8 +58,7 @@ public static class MeepleAiActivitySources
     public static ActivitySource Rag => RagSource;
     // ... getters
 }
-```
-
+```json
 **Purpose**: Centralized definition of all Activity Sources used for custom tracing across the application.
 
 ### 2. Fixed OpenTelemetry Configuration
@@ -90,8 +89,7 @@ public static class MeepleAiActivitySources
     .AddSource(MeepleAiActivitySources.PdfProcessingSourceName)
     .AddSource(MeepleAiActivitySources.CacheSourceName)
     .AddOtlpExporter(...))
-```
-
+```sql
 **Changes**:
 1. Added `SetSampler(new AlwaysOnSampler())` to ensure all traces are captured in development
 2. Removed incorrect `MeepleAiMetrics.MeterName` from tracing configuration
@@ -188,8 +186,7 @@ public async Task<SearchResult> SearchAsync(...)
         throw;
     }
 }
-```
-
+```sql
 **Tags Added**:
 - `game.id` - Game identifier
 - `limit` - Search result limit
@@ -266,8 +263,7 @@ curl http://localhost:8080/
 
 # Games endpoint (SHOULD create trace with custom tags)
 curl http://localhost:8080/api/v1/games
-```
-
+```json
 ### 5. Verify Traces in Jaeger
 
 1. Open Jaeger UI: http://localhost:16686

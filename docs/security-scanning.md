@@ -123,8 +123,7 @@ Added to `apps/api/src/Api/Api.csproj`:
   <PrivateAssets>all</PrivateAssets>
   <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 </PackageReference>
-```
-
+```json
 **Detects**:
 - SQL injection vulnerabilities
 - XSS (Cross-Site Scripting) risks

@@ -78,8 +78,7 @@ git checkout -b test/doc-ci-validation
 git commit --allow-empty -m "test: doc validation CI"
 git push
 # Check GitHub Actions
-```
-
+```json
 ### ⚠️ Medium Priority
 
 #### 3. Link Rotto Precedente Corretto
@@ -126,8 +125,7 @@ function Test-LinkExists {
 mv CONTRIBUTING.md CONTRIBUTING.md.bak
 pwsh tools/validate-docs.ps1  # Should fail
 mv CONTRIBUTING.md.bak CONTRIBUTING.md
-```
-
+```sql
 ### ℹ️ Low Priority
 
 #### 5. CONTRIBUTING.md Lunghezza
@@ -165,8 +163,7 @@ mv CONTRIBUTING.md.bak CONTRIBUTING.md
 # 1. Click "New Issue"
 # 2. Verify "Guidelines" link appears
 # 3. Click link and verify CONTRIBUTING.md loads
-```
-
+```json
 #### 7. Cross-Platform Script Compatibility
 **File**: `tools/validate-docs.ps1`
 

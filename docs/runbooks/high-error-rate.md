@@ -24,7 +24,7 @@
 ### 1. Verify Alert (30 seconds)
 
 **Dashboard**:
-```
+```json
 http://localhost:3001/d/meepleai-error-monitoring
 ```
 
@@ -34,7 +34,7 @@ Check **Error Rate** panel:
 - ✅ What type of errors? (see "Status Code Distribution")
 
 **Prometheus**:
-```
+```json
 http://localhost:9090/graph
 Query: meepleai:api:error_rate:5m
 ```
@@ -146,8 +146,7 @@ Filter: @Level = 'Error' and @Timestamp > DateTimeOffset.Now.AddMinutes(-10)
 ```
 RequestPath = '<affected_endpoint>' and @Level = 'Error'
 Example: RequestPath = '/api/v1/games' and @Level = 'Error'
-```
-
+```sql
 **Get correlation IDs** from error logs, example:
 ```
 RequestId: 0HN6G8QJ9KL0M:00000001
@@ -214,8 +213,7 @@ git push
 # Option C: Rollback Docker image (if available)
 docker compose down
 docker compose up -d --force-recreate api
-```
-
+```json
 **Resolution time**: 5-10 minutes
 
 ### Cause 2: Database Connection Pool Exhausted
@@ -237,8 +235,7 @@ docker compose restart postgres
 # Edit appsettings.json or environment variable:
 # ConnectionStrings__Postgres="...;Maximum Pool Size=50"
 # (default is usually 100)
-```
-
+```json
 **Prevention**:
 - Add proper `using` statements for DbContext
 - Ensure connections are disposed after use
@@ -269,8 +266,7 @@ docker compose logs redis --tail 100
 # Nuclear option: restart all services
 docker compose down
 docker compose up -d
-```
-
+```json
 **Resolution time**: 2-5 minutes
 
 ### Cause 4: Database Migration Failed
@@ -294,8 +290,7 @@ dotnet ef database update <PreviousMigrationName>
 
 # Restart API
 docker compose restart api
-```
-
+```json
 **Resolution time**: 5-10 minutes
 
 ### Cause 5: Memory Leak / Resource Exhaustion
@@ -309,8 +304,7 @@ docker compose restart api
 ```bash
 # Restart API to free memory
 docker compose restart api
-```
-
+```json
 **Long-term investigation**:
 - Check for memory leaks in code
 - Review object disposal (IDisposable)
@@ -339,8 +333,7 @@ docker service scale meepleai_api=3
 
 # Option D: Emergency: enable maintenance mode
 # Return 503 Service Unavailable for non-critical endpoints
-```
-
+```json
 **Resolution time**: 10-30 minutes
 
 ## Mitigation Steps
@@ -411,8 +404,7 @@ Escalate to senior engineer or manager if:
 **On-call rotation** (check Grafana OnCall):
 ```
 http://localhost:8082
-```
-
+```json
 **Slack channels**:
 - **#incidents**: For active incident coordination
 - **#engineering**: For technical questions

@@ -52,7 +52,7 @@ tools/             - PowerShell scripts
 
 ## Architecture
 
-**Services** (DI in `Program.cs:100-139`):
+**Services** (DI in `Program.cs`, search for `builder.Services.Add`):
 - **AI/RAG**: EmbeddingService, QdrantService, TextChunkingService (512 chars, 50 overlap), RagService, LlmService (OpenRouter)
 - **PDF**: PdfStorageService, PdfTextExtractionService (Docnet.Core), PdfTableExtractionService (iText7), PdfValidationService (PDF-09)
 - **Domain**: GameService, RuleSpecService, RuleSpecDiffService, SetupGuideService
@@ -61,7 +61,7 @@ tools/             - PowerShell scripts
 **Database** (EF Core 9.0 + PostgreSQL):
 - **Context**: `MeepleAiDbContext` (`Infrastructure/MeepleAiDbContext.cs`)
 - **Entities**: User/Auth, Game/RuleSpec, PDF/Vector docs, Chat logs, AI logs, Agents, N8n config
-- **Migrations**: Auto-applied (`Program.cs:184`)
+- **Migrations**: Auto-applied in `Program.cs` (search for `Database.Migrate`)
 - **Seed Data** (DB-02): Demo users (admin/editor/user@meepleai.dev, pwd: `Demo123!`), games (Tic-Tac-Toe, Chess), rule specs, agents. Migration: `20251009140700_SeedDemoData`. Tests: `SeedDataTests.cs`
 
 **Frontend** (Next.js 14):
@@ -69,7 +69,7 @@ tools/             - PowerShell scripts
 - **API Client**: `lib/api.ts` - `get/post/put/delete`, cookie auth (`credentials: "include"`), 401 handling, base URL from `NEXT_PUBLIC_API_BASE`
 - **Tests**: Jest (90% coverage) + Playwright E2E
 
-**Auth** (`Program.cs:226-248`): Dual authentication system supports both cookie-based sessions and API keys
+**Auth** (configured in `Program.cs`): Dual authentication system supports both cookie-based sessions and API keys
 - **Cookie Auth**: Session cookies → `AuthService.ValidateSessionAsync()` → ClaimsPrincipal (UserId, Email, DisplayName, Role)
 - **API Key Auth**: X-API-Key header → `ApiKeyAuthenticationService.ValidateApiKeyAsync()` → ClaimsPrincipal with scopes
 - API key takes precedence if both are provided
@@ -116,7 +116,7 @@ tools/             - PowerShell scripts
 - **Configuration** (`appsettings.json`): `Authentication:SessionManagement`
   - `InactivityTimeoutDays`: Days before inactive session is revoked (default: 30)
   - `AutoRevocationIntervalHours`: Hours between auto-revocation runs (default: 1)
-- **Endpoints** (Admin only, `Program.cs:1724-1793`):
+- **Endpoints** (Admin only, see `Program.cs` session management endpoints):
   - `GET /admin/sessions` - List sessions (optional filters: userId, limit)
   - `DELETE /admin/sessions/{id}` - Revoke specific session
   - `DELETE /admin/users/{userId}/sessions` - Revoke all sessions for user
@@ -136,7 +136,7 @@ tools/             - PowerShell scripts
   - Event flow: StateUpdate → Citations → Token(s) → Complete
   - Integrates with AI-05 response caching (simulates streaming for cached responses)
   - Tracks tokens, confidence, and snippets for logging
-- **SSE Endpoint** (`Program.cs:1165-1343`):
+- **SSE Endpoint** (see `/api/v1/agents/qa/stream` in `Program.cs`):
   - `POST /api/v1/agents/qa/stream` - Server-Sent Events endpoint for streaming QA
   - SSE headers: `Content-Type: text/event-stream`, `Cache-Control: no-cache`, `Connection: keep-alive`
   - Chat persistence of complete response after streaming
@@ -222,7 +222,7 @@ tools/             - PowerShell scripts
   - PDF magic bytes validation (%PDF-)
   - Real-time validation on file selection
   - Visual feedback (red border, error list, success indicator)
-- **Server-Side Endpoint** (`Program.cs:1810+`):
+- **Server-Side Endpoint** (PDF upload validation in `Program.cs`):
   - Validates before `PdfStorageService.UploadPdfAsync()`
   - Returns 400 Bad Request with structured error details
   - Falls back to upload on validation success
@@ -244,12 +244,12 @@ tools/             - PowerShell scripts
   - `/api/v1/agents/qa` - Q&A agent
   - `/health/ready` - Health check (unversioned)
 
-**CORS** (`Program.cs:141-170`): Policy "web", origins from config, fallback `http://localhost:3000`, credentials enabled
+**CORS** (configured in `Program.cs`): Policy "web", origins from config, fallback `http://localhost:3000`, credentials enabled
 
-**Logging** (Serilog, `Program.cs:22-45`): Console + Seq, enriched (MachineName, EnvironmentName, CorrelationId), X-Correlation-Id header. Levels: Info (default), Warning (AspNetCore, EF)
+**Logging** (Serilog, see `Api/Logging/LoggingConfiguration.cs`): Console + Seq, enriched (MachineName, EnvironmentName, CorrelationId), X-Correlation-Id header. Levels: Info (default), Warning (AspNetCore, EF)
 
 **Observability** (OPS-01):
-- **Health Checks** (`Program.cs:162-177`): `/health` (detailed), `/health/ready` (K8s readiness), `/health/live` (K8s liveness). Monitors Postgres, Redis, Qdrant (HTTP + collection)
+- **Health Checks** (configured in `Program.cs`): `/health` (detailed), `/health/ready` (K8s readiness), `/health/live` (K8s liveness). Monitors Postgres, Redis, Qdrant (HTTP + collection)
 - **Seq Dashboard**: `http://localhost:8081` - Centralized log aggregation, search by correlation ID, user ID, endpoint. Configured via `SEQ_URL` env var
 - **Correlation IDs**: Every request gets `X-Correlation-Id` response header (= `TraceIdentifier`). All logs enriched with `RequestId`, `RequestPath`, `RequestMethod`, `UserAgent`, `RemoteIp`, `UserId`, `UserEmail`
 - **Docs**: `docs/observability.md` - Complete observability guide
@@ -342,7 +342,7 @@ cd apps/web && pnpm dev                                                         
 - **Security**: `docs/SECURITY.md` - Security policies, secret management, key rotation procedures
 - **Database**: `docs/database-schema.md` - Complete DB schema reference
 - **Observability**: `docs/observability.md` - Health checks, logging, Seq dashboard, correlation IDs (OPS-01)
-- **OpenTelemetry**: `docs/ops-02-opentelemetry-design.md` - Distributed tracing & metrics architecture (OPS-02)
+- **OpenTelemetry**: `docs/technic/ops-02-opentelemetry-design.md` - Distributed tracing & metrics architecture (OPS-02)
 - **RAG Evaluation**: `docs/ai-06-rag-evaluation.md` - Offline evaluation system, IR metrics, quality gates (AI-06)
 - **n8n Workflows**: `docs/guide/n8n-integration-guide.md` - n8n webhook integrations (N8N-01: Explain, N8N-03: Q&A)
   - Technical designs: `docs/technic/n8n-webhook-explain-design.md`, `docs/technic/n8n-webhook-qa-design.md`
@@ -360,4 +360,4 @@ cd apps/web && pnpm dev                                                         
 - **Auth issues**: Check `SessionCookieConfiguration`, verify `user_sessions` table, check browser cookie settings
 - **Health check failures**: `curl http://localhost:8080/health` - Check Postgres/Redis/Qdrant status. See `docs/observability.md`
 - **Seq not receiving logs**: Verify `SEQ_URL` in env, check `docker compose logs seq`, test `curl http://localhost:5341/api`
-- i documenti guida mettili in ./docs/guide, i documenti tecnici in ./docs/tecnic, i documenti sulle risoluzioni issue/pr in ./docs/issue, i documenti sull'app in ./docs
+- i documenti guida mettili in ./docs/guide, i documenti tecnici in ./docs/technic, i documenti sulle risoluzioni issue/pr in ./docs/issue, i documenti sull'app in ./docs

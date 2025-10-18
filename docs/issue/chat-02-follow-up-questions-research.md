@@ -264,8 +264,7 @@ app.MapGet("/api/v1/agents/qa", async (QaService qaService, LlmService llmServic
         return Results.Problem("Failed to process question");
     }
 });
-```
-
+```json
 ---
 
 ## LLM: OpenRouter Structured Output Patterns
@@ -426,8 +425,7 @@ var headers = new Dictionary<string, string>
     // Optional: Require models that support response_format
     ["X-Require-Parameters"] = "response_format"
 };
-```
-
+```sql
 ---
 
 ## Frontend: Next.js 14 + React 18 Patterns
@@ -685,8 +683,7 @@ sendGAEvent('event', 'followup_questions_dismissed', {
   questions_shown: questions.length,
   questions_clicked: clickedCount
 })
-```
-
+```json
 ---
 
 ## Caching: Redis Integration
@@ -841,8 +838,7 @@ public async Task OnPdfProcessedAsync(Guid gameId)
 
     _logger.LogInformation("Invalidated QA cache for game: {GameId}", gameId);
 }
-```
-
+```json
 ---
 
 ## Testing: Jest + Playwright Patterns
@@ -1193,8 +1189,7 @@ public async Task AskAsync_LlmFailure_ReturnsResponseWithoutFollowUps()
     Assert.NotNull(result.Answer); // Main response still works
     Assert.Null(result.FollowUpQuestions); // Follow-ups gracefully skipped
 }
-```
-
+```sql
 ---
 
 ## Prompt Engineering Best Practices

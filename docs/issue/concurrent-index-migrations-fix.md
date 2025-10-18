@@ -47,8 +47,7 @@ For large tables (`pdf_documents`, `rule_atoms`, `user_sessions`, etc.), this co
 BEGIN;
 CREATE INDEX CONCURRENTLY "IX_table_column" ON table (column);
 COMMIT;
-```
-
+```json
 EF Core 9.0:
 1. ❌ Removed `IsTransactional` property (no way to disable transactions)
 2. ❌ All migrations now run inside transactions by default
@@ -109,8 +108,7 @@ ON user_sessions ("TokenHash", "ExpiresAt" DESC)
 WHERE "RevokedAt" IS NULL;
 
 -- ... more indexes with CONCURRENTLY
-```
-
+```sql
 ### Key Changes
 
 1. **Removed `CONCURRENTLY` from migrations**:
@@ -198,8 +196,7 @@ dotnet ef database update PreviousMigration --project apps/api/src/Api
 
 # Manually verify indexes are dropped
 docker compose exec postgres psql -U meeple -d meepleai -c "\di"
-```
-
+```sql
 ## Testing Recommendations
 
 ### Before Production Deployment

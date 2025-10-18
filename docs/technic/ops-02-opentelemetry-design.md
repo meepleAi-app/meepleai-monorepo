@@ -82,7 +82,7 @@ This document outlines the design and architecture for implementing distributed 
 
 ### Component Diagram
 
-```
+```json
 ┌─────────────────────────────────────────────────────────────┐
 │                      MeepleAI API (.NET 9)                   │
 │  ┌────────────────────────────────────────────────────────┐ │
@@ -143,8 +143,7 @@ This document outlines the design and architecture for implementing distributed 
 <!-- Exporters -->
 <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.13.1" />
 <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.13.1-beta.1" />
-```
-
+```json
 **Note**:
 - Instrumentation packages (AspNetCore, Http, Runtime) are at v1.12.0 (latest stable)
 - Prometheus exporter is at v1.13.1-beta.1 (no stable version available yet, but safe for use)
@@ -410,8 +409,7 @@ grafana:
     interval: 10s
     timeout: 5s
     retries: 5
-```
-
+```sql
 ## Testing Strategy
 
 ### Unit Tests

@@ -123,7 +123,7 @@ Created comprehensive accessibility test suites for both audited pages:
 ## Audit Results
 
 ### Before Fixes
-```
+```json
 Total Violations: 29 (all serious)
 - html-has-lang: 10 violations
 - document-title: 10 violations
@@ -132,7 +132,7 @@ Total Violations: 29 (all serious)
 ```
 
 ### After Fixes
-```
+```json
 Total Violations: 0
 - Landing Page: 0 violations, 20 passes
 - Chess Page: 0 violations, 21 passes

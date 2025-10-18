@@ -205,8 +205,7 @@ curl -X POST http://localhost:5678/webhook/agent/qa \
 ```bash
 cd infra
 docker compose up -d postgres qdrant redis api n8n
-```
-
+```json
 **2. Import Workflow**
 - Access n8n UI: http://localhost:5678
 - Import: `infra/init/n8n/agent-qa-webhook.json`

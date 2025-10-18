@@ -100,7 +100,7 @@ Clicca sul pulsante **"Aggiungi Nuova Configurazione"** in alto a destra.
 
 #### Passo 2: Compilare i Campi
 
-```
+```json
 ┌─────────────────────────────────────────────┐
 │  Crea Nuova Configurazione n8n              │
 ├─────────────────────────────────────────────┤
@@ -173,7 +173,7 @@ Il test verifica che MeepleAI possa comunicare con n8n.
 3. Vedrai un alert con il risultato:
 
 **Successo**:
-```
+```json
 ✅ Connessione riuscita!
 Latenza: 120ms
 ```
@@ -402,8 +402,7 @@ curl -X POST http://localhost:5678/webhook/explain \
   "timestamp": "2025-10-16T10:45:00Z",
   "version": "1.0"
 }
-```
-
+```json
 #### Test 2: Chiamata dal Bot Telegram
 
 1. Avvia il tuo bot Telegram
@@ -415,8 +414,7 @@ curl -X POST http://localhost:5678/webhook/explain \
 **Su MeepleAI (Seq)**:
 ```
 http://localhost:8081
-```
-
+```yaml
 Cerca:
 - **User**: `n8n-service@meepleai.dev`
 - **Endpoint**: `/api/v1/agents/explain`
@@ -427,8 +425,7 @@ Cerca:
 http://localhost:5678
 → Executions
 → Filtra per workflow "Agent Explain"
-```
-
+```json
 Vedrai:
 - ✅ Esecuzioni riuscite (verde)
 - ❌ Esecuzioni fallite (rosso)
@@ -532,8 +529,7 @@ curl http://localhost:5678/healthz
 {
   "status": "ok"
 }
-```
-
+```json
 ---
 
 ## Troubleshooting
@@ -544,8 +540,7 @@ curl http://localhost:5678/healthz
 ```
 ❌ Errore di connessione
 Messaggio: Connection refused
-```
-
+```json
 **Cause Possibili**:
 
 1. **n8n non è in esecuzione**
@@ -583,8 +578,7 @@ Messaggio: Connection refused
   "error": "Unauthorized",
   "timestamp": "..."
 }
-```
-
+```json
 **Causa**: Il session token di n8n è scaduto o non valido.
 
 **Soluzione**:
@@ -728,8 +722,7 @@ N8N_BASIC_AUTH_PASSWORD=TuaPasswordSicura123!
 **Riavvia n8n**:
 ```bash
 docker compose restart n8n
-```
-
+```json
 #### 2. Ruota Periodicamente le API Key
 
 **Frequenza consigliata**: Ogni 90 giorni
@@ -762,8 +755,7 @@ n8n:
   # NON esporre la porta pubblica in produzione:
   # ports:
   #   - "5678:5678"  ❌ Commentalo!
-```
-
+```json
 Accedi a n8n solo tramite VPN o bastion host.
 
 ### Performance
@@ -801,8 +793,7 @@ time curl -X POST http://localhost:5678/webhook/explain \
 time curl -X POST http://localhost:5678/webhook/explain \
   -d '{"gameId": "tic-tac-toe", "topic": "winning"}'
 # Tempo: ~0.1s ✅
-```
-
+```json
 #### 3. Limita i Timeout
 
 **Nel workflow n8n**:
@@ -867,8 +858,7 @@ Esempi:
 - Prod-BotTelegram-v1
 - Test-IntegrationTests-v1
 - Dev-LocalDevelopment-v1
-```
-
+```json
 #### 2. Documentazione dei Workflow
 
 **In n8n**, ogni workflow dovrebbe avere:

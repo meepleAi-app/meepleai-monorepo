@@ -38,8 +38,7 @@ public async Task<QaResponse> AskAsync(
     string gameId,
     string query,
     CancellationToken cancellationToken = default)
-```
-
+```json
 **Processo**:
 1. Genera embeddings per la query usando EmbeddingService
 2. Cerca nel database vettoriale Qdrant (limit: 5 chunks)
@@ -138,8 +137,7 @@ public class N8nConfigEntity
     public DateTime UpdatedAt { get; set; }
     public string CreatedByUserId { get; set; }
 }
-```
-
+```json
 **Service**: `N8nConfigService`
 **Location**: `apps/api/src/Api/Services/N8nConfigService.cs`
 
@@ -257,8 +255,7 @@ public class N8nConfigEntity
     "statusCode": 400
   }
 }
-```
-
+```sql
 ### Authentication Strategy
 
 **Current Implementation**: No Authentication (Public Webhook)

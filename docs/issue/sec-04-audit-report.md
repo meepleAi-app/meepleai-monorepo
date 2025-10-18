@@ -140,8 +140,7 @@ This document presents a comprehensive security audit of the MeepleAI monorepo a
   run: |
     dotnet list package --vulnerable --include-transitive --format json
     pnpm audit --audit-level=moderate --json
-```
-
+```json
 ### Layer 3: Secrets Detection
 
 **Gap**: No secrets scanning in current pipeline
@@ -175,8 +174,7 @@ This document presents a comprehensive security audit of the MeepleAI monorepo a
     image-ref: 'meepleai-api:latest'
     format: 'sarif'
     output: 'trivy-results.sarif'
-```
-
+```json
 ### Layer 5: Infrastructure as Code (IaC) Security
 
 **Gap**: Docker Compose and GitHub Actions not security-scanned

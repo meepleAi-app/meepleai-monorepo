@@ -17,8 +17,7 @@ cd apps/web && pnpm dev
 
 # Terminal 2: Run audit
 cd apps/web && pnpm audit:a11y
-```
-
+```sql
 ### Initial Findings (Static Analysis)
 
 From code review, the following accessibility concerns were identified:

@@ -36,7 +36,7 @@ Successfully implemented and tested advanced table and flowchart extraction from
 
 #### Atomic Rule Generation
 Each table row is transformed into a structured rule:
-```
+```json
 Format: [Table on page {N}] Header1: Value1; Header2: Value2; ...
 Example: [Table on page 2] Phase: Setup; Task: Place tokens; Count: 16
 ```
@@ -70,7 +70,7 @@ Example: [Table on page 2] Phase: Setup; Task: Place tokens; Count: 16
 - **Status**: SUCCESS
 
 **Sample Extracted Rule**:
-```
+```json
 [Table on page 2] Place the rest of the cards nearby as the draw pile, and place the Animal cubes: within reach of all players.
 ```
 
@@ -136,8 +136,7 @@ public class PdfDiagram
     public int Height { get; set; }
     public byte[]? ImageData { get; set; }
 }
-```
-
+```sql
 ### Algorithm Complexity
 - **Time Complexity**: O(n * m) where n = number of pages, m = characters per page
 - **Space Complexity**: O(k) where k = total extracted content size
@@ -166,8 +165,7 @@ if (result.Success)
         Console.WriteLine($"  - {rule}");
     }
 }
-```
-
+```json
 ## Performance Metrics
 
 ### Harmonies Rulebook

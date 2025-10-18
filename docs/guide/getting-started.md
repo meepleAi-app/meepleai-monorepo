@@ -123,8 +123,7 @@ docker compose up -d postgres qdrant redis n8n
 ```bash
 cd apps/api/src/Api
 dotnet run
-```
-
+```json
 L'API sarà disponibile su `http://localhost:8080`
 
 #### Terminale 3: Web Frontend
@@ -132,8 +131,7 @@ L'API sarà disponibile su `http://localhost:8080`
 ```bash
 cd apps/web
 pnpm dev
-```
-
+```json
 Il frontend sarà disponibile su `http://localhost:3000`
 
 ### Verifica dei Servizi
@@ -152,8 +150,7 @@ curl http://localhost:6333/healthz
 
 # Redis
 docker exec infra-redis-1 redis-cli ping
-```
-
+```json
 ---
 
 ## Test delle Funzionalità
@@ -195,8 +192,7 @@ curl -X POST http://localhost:8080/auth/login \
     "password": "Test123!"
   }' \
   -c cookies.txt
-```
-
+```json
 #### Utenti Demo Pre-caricati
 
 Il database viene inizializzato con 3 utenti demo (vedi migration `SeedDemoData`):
@@ -236,8 +232,7 @@ curl -X POST http://localhost:8080/games \
     "minAge": 10,
     "playingTime": "60-120"
   }'
-```
-
+```json
 ---
 
 ### 3. Upload e Processing PDF
@@ -257,8 +252,7 @@ curl -X POST http://localhost:8080/ingest/pdf \
   -F "gameId=game-id-here" \
   -F "file=@/path/to/rulebook.pdf" \
   -b cookies.txt
-```
-
+```yaml
 Risposta:
 ```json
 {
@@ -284,8 +278,7 @@ curl http://localhost:8080/pdfs/{pdfId}/text \
 # Genera RuleSpec usando AI
 curl -X POST http://localhost:8080/ingest/pdf/{pdfId}/rulespec \
   -b cookies.txt
-```
-
+```json
 Questo processo:
 1. Estrae il testo dal PDF
 2. Usa l'LLM per generare una RuleSpec v0 strutturata
@@ -297,8 +290,7 @@ Questo processo:
 # Indicizza il contenuto per semantic search
 curl -X POST http://localhost:8080/ingest/pdf/{pdfId}/index \
   -b cookies.txt
-```
-
+```json
 Questo processo:
 1. Divide il testo in chunks (512 caratteri, overlap 50)
 2. Genera embeddings con OpenRouter
@@ -325,8 +317,7 @@ curl -X POST http://localhost:8080/agents/qa \
     "question": "Come si vince a Scacchi?",
     "chatId": null
   }'
-```
-
+```yaml
 Risposta:
 ```json
 {
@@ -382,8 +373,7 @@ curl -X POST http://localhost:8080/agents/feedback \
     "isHelpful": true,
     "comment": "Risposta chiara e completa"
   }'
-```
-
+```json
 ---
 
 ### 5. RuleSpec Editor e Versioning
@@ -423,8 +413,7 @@ curl http://localhost:8080/games/{gameId}/rulespec/history \
 # Ottieni versione specifica
 curl http://localhost:8080/games/{gameId}/rulespec/versions/v1.2.0 \
   -b cookies.txt
-```
-
+```json
 #### Confronta Versioni (Diff)
 
 **Via Web UI:**
@@ -437,8 +426,7 @@ curl http://localhost:8080/games/{gameId}/rulespec/versions/v1.2.0 \
 ```bash
 curl "http://localhost:8080/games/{gameId}/rulespec/diff?from=v1.0.0&to=v1.1.0" \
   -b cookies.txt
-```
-
+```json
 ---
 
 ### 6. Admin Dashboard
@@ -472,8 +460,7 @@ curl http://localhost:8080/logs \
 # Filtra per endpoint
 curl "http://localhost:8080/logs?endpoint=/agents/qa" \
   -b cookies.txt
-```
-
+```json
 ---
 
 ### 7. n8n Workflow Automation
@@ -586,8 +573,7 @@ curl http://localhost:6333/healthz
 
 # Se non risponde, riavvia
 docker compose restart qdrant
-```
-
+```json
 #### 4. OpenRouter API Errors
 
 **Problema**: `401 Unauthorized` o `Invalid API key`

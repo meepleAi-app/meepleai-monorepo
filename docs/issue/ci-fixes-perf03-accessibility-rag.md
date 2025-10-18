@@ -58,8 +58,7 @@ PERF-03 changed the cache statistics API response structure:
     }
   ]
 }
-```
-
+```json
 The frontend component was updated (commit 9a269df), but test mocks were not aligned with the new structure.
 
 ### Investigation Process
@@ -184,8 +183,7 @@ it('filters cache stats by selected game', async () => {
 
   // ... test code
 });
-```
-
+```json
 ### Results
 
 - **Before**: 13 failed, 6 passed (68% failure rate)
@@ -216,8 +214,7 @@ it('filters cache stats by selected game', async () => {
   description: 'Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds',
   nodes: 1
 }
-```
-
+```json
 ### Analysis
 
 **Color Values:**
@@ -258,8 +255,7 @@ Used `replace_all` to ensure all instances were updated:
 <Link href="/" style={{ color: '#1a73e8' }}>
   Torna alla Home
 </Link>
-```
-
+```json
 ### Files Changed
 
 Total: **14 color replacements** across **5 files**:
@@ -309,8 +305,7 @@ Relative Luminance (background #ffffff): 1.000
 
 Old Contrast Ratio: (1.000 + 0.05) / (0.168 + 0.05) = 4.82 → 4.42:1 ❌
 New Contrast Ratio: (1.000 + 0.05) / (0.154 + 0.05) = 5.15 → 4.59:1 ✅
-```
-
+```json
 ---
 
 ## Issue 3: RAG Evaluation Database Migration Error
@@ -417,8 +412,7 @@ await using var context = new MeepleAiDbContext(options);
 // Use EnsureCreatedAsync() for test isolation - creates schema from current model
 // without relying on migration history, avoiding snapshot conflicts
 await context.Database.EnsureCreatedAsync(ct);
-```
-
+```sql
 **Why this change:**
 1. **Test Isolation**: `EnsureCreatedAsync()` creates fresh database from current model
 2. **No Migration History**: Avoids migration snapshot conflicts
@@ -444,8 +438,7 @@ await context.Database.EnsureCreatedAsync(ct);
 **Local Test Results:**
 ```bash
 dotnet test --filter "FullyQualifiedName~RagEvaluationIntegrationTests"
-```
-
+```yaml
 Output:
 ```
 RAG evaluation completed: 3/3 successful, MRR=1.0000, P@5=1.0000

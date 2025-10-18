@@ -186,8 +186,7 @@ Log written with redacted data
     }
   }
 }
-```
-
+```json
 ### Environment Variables
 
 - `SEQ_URL`: Seq ingestion endpoint (default: `http://seq:5341`)
@@ -227,8 +226,7 @@ Content-Type: application/json
 **2. Search logs in Seq**:
 ```
 CorrelationId = "0HN6G8QJ9KL0M:00000001"
-```
-
+```sql
 **3. View complete request trace**:
 - All logs from that request
 - User context (if authenticated)
@@ -245,8 +243,7 @@ logger.LogDebug("Detailed debugging info");  // ✓ Logged
 // Production: Logs Information and above
 logger.LogDebug("Detailed debugging info");  // ✗ Filtered
 logger.LogInformation("Important event");     // ✓ Logged
-```
-
+```json
 ## Testing
 
 ### Unit Tests

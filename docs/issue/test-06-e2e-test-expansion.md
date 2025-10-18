@@ -246,8 +246,7 @@ jobs:
         with:
           name: playwright-report-${{ matrix.browser }}
           path: apps/web/playwright-report/
-```
-
+```sql
 #### 10. Update Documentation
 **File:** `docs/guide/e2e-testing-guide.md`
 

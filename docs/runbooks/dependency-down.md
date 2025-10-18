@@ -72,7 +72,7 @@ When any goes down, API functionality is severely impacted.
 ### 1. Identify Which Dependency (30 seconds)
 
 **Dashboard**:
-```
+```json
 http://localhost:3001/d/meepleai-error-monitoring
 Scroll to: Dependency Health section
 ```
@@ -83,7 +83,7 @@ Look for RED status:
 - Qdrant: 🔴
 
 **Or check Alertmanager**:
-```
+```json
 http://localhost:9093
 ```
 
@@ -206,8 +206,7 @@ docker compose ps <service>
 
 # Health check should pass
 curl http://localhost:8080/health/ready
-```
-
+```json
 **Resolution time**: 1-2 minutes
 
 ### Cause 2: Out of Disk Space
@@ -243,8 +242,7 @@ docker compose up -d  # Recreates with empty logs
 # Option C: Increase disk space
 # Expand VM disk (if Docker Desktop)
 # Or add more disk to server
-```
-
+```json
 **Prevention**:
 - Monitor disk usage (add Prometheus alert)
 - Configure log rotation
@@ -292,8 +290,7 @@ docker compose up -d
 
 # Option C: Add more system RAM
 # Increase VM memory (if Docker Desktop)
-```
-
+```sql
 **Prevention**:
 - Monitor memory usage (Grafana dashboard)
 - Set appropriate limits based on workload
@@ -334,8 +331,7 @@ docker compose up -d
 # Option C: Check firewall/iptables
 # Ensure Docker has correct firewall rules
 sudo iptables -L -n | grep DOCKER
-```
-
+```json
 **Resolution time**: 2-5 minutes
 
 ### Cause 5: Data Corruption
@@ -395,8 +391,7 @@ docker compose exec qdrant sh
 # Delete corrupted collection
 curl -X DELETE http://localhost:6333/collections/<collection_name>
 # Re-index documents from API
-```
-
+```json
 **Resolution time**: 5-30 minutes (depending on data size)
 
 ### Cause 6: Port Conflict
@@ -442,8 +437,7 @@ services:
 # Update connection string in API config
 docker compose down
 docker compose up -d
-```
-
+```sql
 **Resolution time**: 2-5 minutes
 
 ## Mitigation Steps

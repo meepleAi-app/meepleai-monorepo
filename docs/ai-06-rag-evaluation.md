@@ -335,8 +335,7 @@ if (!report.PassedQualityGates)
   "difficulty": "medium",
   "category": "special-moves"
 }
-```
-
+```sql
 ## CI Integration Details
 
 ### When It Runs

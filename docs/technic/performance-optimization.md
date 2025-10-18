@@ -111,8 +111,7 @@ builder.Services.AddMemoryCache(options => {
 });
 builder.Services.AddScoped<SessionCacheService>();
 builder.Services.AddScoped<AuthService, AuthServiceOptimized>();
-```
-
+```json
 **Cache Sizing**: 1K users = 500KB, 10K users = 5MB
 
 ### Integration
@@ -137,8 +136,7 @@ app.Use(async (context, next) => {
 ```csharp
 app.MapGet("/api/internal/cache-stats", (SessionCacheService cache) =>
     Results.Json(cache.GetStats()));
-```
-
+```json
 **Target**: >90% cache hit rate, 90-95% reduction in SELECT queries
 
 ---
@@ -289,8 +287,7 @@ builder.Services.AddHealthChecks()
     .AddCheck<QdrantHealthCheck>("qdrant");
 
 app.MapHealthChecks("/health");
-```
-
+```json
 ---
 
 ## 7. Implementation Roadmap

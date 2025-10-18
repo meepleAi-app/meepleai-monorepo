@@ -96,6 +96,12 @@ global.IntersectionObserver = class IntersectionObserver {
   }
 };
 
+// Setup browser API polyfills for test environment (issue #463)
+// See test-utils/browser-polyfills.ts for implementation details
+import('./src/test-utils/browser-polyfills').then(({ setupBrowserPolyfills }) => {
+  setupBrowserPolyfills();
+});
+
 // Mock ReadableStream for SSE streaming tests
 if (typeof global.ReadableStream === 'undefined') {
   global.ReadableStream = class ReadableStream {

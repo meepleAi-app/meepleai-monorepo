@@ -59,8 +59,7 @@ graph LR
     H --> D
     D --> I[Teardown]
     I --> J[Generate Reports]
-```
-
+```json
 ### Dependencies
 
 Each test relies on the following services:
@@ -251,8 +250,7 @@ thresholds: {
     { duration: '30s', target: 0 },    // ramp down
   ],
 }
-```
-
+```json
 **Total Duration**: ~3 minutes
 **Peak VUs**: 100
 **Use Case**: Normal daily traffic
@@ -271,8 +269,7 @@ thresholds: {
     { duration: '1m', target: 0 },     // ramp down
   ],
 }
-```
-
+```json
 **Total Duration**: ~5 minutes
 **Peak VUs**: 500
 **Use Case**: Expected peak traffic (e.g., product launch)
@@ -291,8 +288,7 @@ thresholds: {
     { duration: '1m', target: 0 },     // ramp down
   ],
 }
-```
-
+```json
 **Total Duration**: ~6 minutes
 **Peak VUs**: 1000
 **Use Case**: Stress testing, capacity planning
@@ -317,8 +313,7 @@ k6 provides real-time metrics during test execution:
      http_reqs......................: 810     27/s
      iterations.....................: 810     27/s
      vus............................: 100     min=0       max=100
-```
-
+```json
 ### Key Metrics
 
 #### http_req_duration

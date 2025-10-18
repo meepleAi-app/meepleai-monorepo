@@ -15,6 +15,7 @@ This directory contains technical documentation for the MeepleAI monorepo, organ
 
 ### Getting Started
 - **[Getting Started Guide](./guide/getting-started.md)** - Step-by-step guide for local setup and testing
+- **[Documentation Workflow](./guide/documentation-workflow.md)** - Complete guide for working with documentation (search, write, maintain)
 - **[AI Agents Guide](./guide/agents-guide.md)** - Guide for AI coding assistants (conventions, workflow, prompts)
 - **[Testing Guide](./guide/testing-guide.md)** - BDD-style test naming conventions and best practices
 
@@ -24,22 +25,35 @@ This directory contains technical documentation for the MeepleAI monorepo, organ
 - **[n8n Deployment Guide](./guide/n8n-deployment.md)** - Deploying and configuring n8n workflows
 - **[n8n User Guide (IT)](./guide/n8n-user-guide-it.md)** - Guida utente n8n in italiano
 
+### Performance & Testing
+- **[Load Testing Guide](./guide/load-testing.md)** - Comprehensive guide for k6 load testing
+- **[Load Test Workflow Optimization](./guide/load-test-workflow-optimization.md)** - GitHub Actions workflow optimization for load tests
+- **[Performance Implementation Checklist](./guide/performance-implementation-checklist.md)** - Step-by-step performance optimization guide
+
 ---
 
 ## 🏗️ Technical Documentation
 
 ### Architecture & Design
+- **[Architecture Diagrams](./technic/architecture-diagrams.md)** - System architecture, authentication flow, RAG pipeline, streaming SSE (Mermaid diagrams)
 - **[Database Schema](./database-schema.md)** - Complete database schema reference
 - **[Observability Guide](./observability.md)** - Health checks, logging, Seq dashboard, correlation IDs (OPS-01)
-- **[OpenTelemetry Design](./ops-02-opentelemetry-design.md)** - Distributed tracing & metrics architecture (OPS-02)
 - **[SECURITY.md](./SECURITY.md)** - Security policies, secret management, key rotation procedures
+- **[RAG Evaluation](./ai-06-rag-evaluation.md)** - Offline RAG evaluation system with IR metrics (AI-06)
 
 ### Design Documents (technic/)
+- **[OpenTelemetry Design](./technic/ops-02-opentelemetry-design.md)** - Distributed tracing & metrics architecture (OPS-02)
+- **[OPS-04 Structured Logging Design](./technic/ops-04-structured-logging-design.md)** - Structured logging and correlation (OPS-04)
+- **[OPS-05 Error Monitoring Design](./technic/ops-05-error-monitoring-design.md)** - Error monitoring and alerting (OPS-05)
 - **[Chess UI Design](./technic/chess-05-ui-design.md)** - Chess game UI/UX design specifications
 - **[n8n Webhook Chess Design](./technic/n8n-webhook-chess-design.md)** - Chess agent webhook integration design
 - **[n8n Webhook Explain Design](./technic/n8n-webhook-explain-design.md)** - Explain agent webhook integration design
+- **[n8n Webhook QA Design](./technic/n8n-webhook-qa-design.md)** - QA agent webhook integration design
 - **[PDF Processing Design](./technic/pdf-processing-design.md)** - PDF ingestion and processing architecture
 - **[Performance Optimization](./technic/performance-optimization.md)** - System performance optimization strategies
+- **[Rate Limiting Design](./technic/perf-01-rate-limiting-design.md)** - Rate limiting implementation (PERF-01)
+- **[Admin Prompt Management Architecture](./technic/admin-prompt-management-architecture.md)** - Prompt management system architecture
+- **[Admin Prompt Testing Framework](./technic/admin-prompt-testing-framework.md)** - Prompt testing framework design
 
 ---
 
@@ -56,8 +70,11 @@ This directory contains technical documentation for the MeepleAI monorepo, organ
 - **[PDF-03: Table Extraction](./issue/pdf-03-table-extraction.md)** - PDF table extraction implementation
 - **[RULE-02: Implementation Summary](./issue/rule-02-implementation-summary.md)** - Rule specification implementation
 
-### Performance & UI
+### Performance & Operations
+- **[OPS-06: CI Pipeline Optimization](./issue/ops-06-ci-optimization.md)** - CI/CD pipeline optimization (Issue #390)
 - **[PERF-02: Rate Limit Config](./issue/perf-02-rate-limit-config.md)** - Rate limiting configuration and code review
+
+### UI & Frontend
 - **[UI: Landing Page Redesign](./issue/ui-landing-page-redesign.md)** - Landing page redesign documentation
 
 ---
@@ -103,19 +120,35 @@ This directory contains technical documentation for the MeepleAI monorepo, organ
 
 ---
 
+## Development Tools
+
+MeepleAI fornisce diversi strumenti per sviluppatori in `tools/`:
+
+- **[Search Documentation](../tools/README.md#3-ricerca-documentazione)** - `node tools/search-docs.js "query"` - Ricerca full-text nella documentazione
+- **[Generate API Docs](../tools/README.md#2-generazione-documentazione-api)** - `node tools/generate-api-docs.js` - Genera docs API da OpenAPI spec
+- **[Standardize Markdown](../tools/README.md#1-standardizzazione-markdown)** - `node tools/standardize-markdown.js` - Standardizza formattazione Markdown
+- **[Measure Coverage](../tools/README.md#4-misurazione-coverage)** - `pwsh tools/measure-coverage.ps1` - Misura code coverage
+
+Vedi [tools/README.md](../tools/README.md) per la documentazione completa.
+
+---
+
 ## Quick Links
 
 ### For Developers
 - **Getting Started**: See [Getting Started Guide](./guide/getting-started.md) for local setup
+- **Documentation Workflow**: See [Documentation Workflow Guide](./guide/documentation-workflow.md) for complete docs guide
 - **Architecture**: See [../CLAUDE.md](../CLAUDE.md) for complete development guide
 - **Running Tests**: `dotnet test` (API) or `pnpm test` (Web)
 - **Measuring Coverage**: `pwsh tools/measure-coverage.ps1`
+- **Search Docs**: `node tools/search-docs.js "query"`
 
 ### For Architects
 - **System Overview**: [../CLAUDE.md - Architecture](../CLAUDE.md#architecture)
+- **Architecture Diagrams**: [technic/architecture-diagrams.md](./technic/architecture-diagrams.md)
 - **Database Schema**: [database-schema.md](./database-schema.md)
 - **Observability**: [observability.md](./observability.md)
-- **OpenTelemetry**: [ops-02-opentelemetry-design.md](./ops-02-opentelemetry-design.md)
+- **OpenTelemetry**: [technic/ops-02-opentelemetry-design.md](./technic/ops-02-opentelemetry-design.md)
 
 ### For QA/Testing
 - **Test Strategy**: [guide/testing-guide.md](./guide/testing-guide.md)
@@ -156,4 +189,4 @@ When adding new documentation:
 
 ## Last Updated
 
-This index was last updated: 2025-10-16
+This index was last updated: 2025-10-18

@@ -136,7 +136,7 @@
 
 **Pattern**: Blue-Green Deployment with Feature Flags
 
-```
+```json
 Deployment 1 (Week 3):
 - Code: Refactored services with feature flag
 - Feature Flag: OFF (uses hardcoded prompts)
@@ -183,8 +183,7 @@ Deployment 4 (Week 6):
 ```bash
 # In infra/env/api.env.prod
 Features__PromptDatabase=false
-```
-
+```sql
 ### Service-by-Service Rollout Order
 
 1. **RagService** (Week 4, Day 1)
@@ -355,8 +354,7 @@ curl http://localhost:8080/health | jq '.features.promptDatabase'
 # Should return false
 
 # Monitor for 30 minutes to confirm stability
-```
-
+```sql
 ---
 
 ### Week 4, Day 3: ChessAgentService Migration
@@ -463,8 +461,7 @@ redis-cli PING
 redis-cli INFO memory | grep used_memory_human
 # Check cache keys
 redis-cli KEYS "prompt:*"
-```
-
+```json
 **Resolution**:
 1. If Redis down → Fallback to DB (automatic via code)
 2. If Redis memory full → Increase Redis memory limit
@@ -496,8 +493,7 @@ JOIN users u ON pa.changed_by_user_id = u.id
 WHERE pa.template_id = (SELECT id FROM prompt_templates WHERE name = 'qa-system-prompt')
 ORDER BY pa.changed_at DESC
 LIMIT 5;
-```
-
+```sql
 **Resolution**:
 1. **Option 1: Rollback via Admin UI** (fastest)
    - Open `/admin/prompts/{templateId}`

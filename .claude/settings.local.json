@@ -191,7 +191,15 @@
       "Bash(git -C \"D:\\Repositories\\meepleai-monorepo\" commit -m \"$(cat <<''EOF''\nMerge branch ''feature/chat-01-streaming-responses'' into main\n\n## Streaming SSE Implementation (CHAT-01)\n\nSuccessfully merged streaming responses feature with comprehensive testing and CI fixes.\n\n### Changes Merged\n- ✅ Server-Sent Events (SSE) streaming endpoint with token-by-token responses\n- ✅ Frontend streaming hook with Stop button, state indicators, and real-time UX\n- ✅ 73+ comprehensive tests (backend + frontend + E2E)\n- ✅ AI-05 cache integration with simulated streaming for cached responses\n- ✅ Chat persistence and logging integration\n\n### CI/CD Fixes Applied\n- Fixed Next.js build issue: moved test files from pages/__tests__/ to src/__tests__/pages/\n- Fixed tsconfig.json: excluded scripts directory\n- Fixed SessionWarningModal: changed ariaLabel to aria-label\n- Fixed TimelineFilters: used type-only imports to resolve conflict\n\n### Merge Conflict Resolution\n- Resolved chat.tsx conflict by accepting feature branch streaming UI:\n  * Stop button for cancelling streaming responses\n  * Real-time state indicators (Searching, Generating, etc.)\n  * Progressive token display with cursor\n  * Citations visible during streaming\n  * Legacy loading fallback for non-streaming scenarios\n\n### Testing Summary\n- Backend: 30+ tests (unit + integration) - All passing\n- Frontend: 22 streaming tests (9 pass, 13 require TextEncoder polyfill - non-blocking)\n- Build: Next.js build successful, all routes generated\n- CI: All checks passing\n\nCloses #443\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(Select-String -Pattern \"Failed|Passed|Total\")",
       "Bash(Select-String -Pattern \"(error|warning|Build succeeded|Build FAILED)\" -Context 0,1)",
-      "Bash(git merge-base feature/chat-02-follow-up-questions origin/main)"
+      "Bash(git merge-base feature/chat-02-follow-up-questions origin/main)",
+      "Bash(npm run typecheck)",
+      "Bash(pnpm tsc --noEmit src/pages/chat.tsx)",
+      "Bash(npx playwright test --list e2e/chat-animations.spec.ts)",
+      "Bash(Select-String -Pattern \"(error|warning|success|Found 0 errors)\" -Context 0,1)",
+      "Bash(npx jest src/components/loading/__tests__/MessageAnimator.test.tsx src/components/loading/__tests__/TypingIndicator.test.tsx -u)",
+      "Bash(npx jest src/components/loading)",
+      "Bash(Select-String -Pattern \"(error|failed|FAIL|Error|✖|×)\" -Context 2,1)",
+      "Bash(Select-Object -First 50)"
     ],
     "deny": [],
     "ask": []

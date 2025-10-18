@@ -212,3 +212,54 @@ public record ChessAnalysis(
     string? evaluationSummary,
     IReadOnlyList<string> keyConsiderations
 );
+
+// CHAT-05: Chat Export models
+public record ExportChatRequest(
+    string Format,
+    DateTime? DateFrom = null,
+    DateTime? DateTo = null
+);
+
+public class ExportResult
+{
+    public bool Success { get; init; }
+    public Stream? Stream { get; init; }
+    public string? ContentType { get; init; }
+    public string? Filename { get; init; }
+    public string? Error { get; init; }
+    public string? ErrorDetails { get; init; }
+
+    // Factory methods for common scenarios
+    public static ExportResult NotFound(string message = "Chat not found")
+        => new()
+        {
+            Success = false,
+            Error = "not_found",
+            ErrorDetails = message
+        };
+
+    public static ExportResult UnsupportedFormat(string format)
+        => new()
+        {
+            Success = false,
+            Error = "unsupported_format",
+            ErrorDetails = $"Export format '{format}' is not supported. Supported formats: txt, md, pdf"
+        };
+
+    public static ExportResult GenerationFailed(string message)
+        => new()
+        {
+            Success = false,
+            Error = "generation_failed",
+            ErrorDetails = message
+        };
+
+    public static ExportResult SuccessResult(Stream stream, string contentType, string filename)
+        => new()
+        {
+            Success = true,
+            Stream = stream,
+            ContentType = contentType,
+            Filename = filename
+        };
+}

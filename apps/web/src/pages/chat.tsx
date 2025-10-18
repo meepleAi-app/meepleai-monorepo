@@ -5,6 +5,7 @@ import { useChatStreaming } from "../lib/hooks/useChatStreaming";
 import { FollowUpQuestions } from "../components/FollowUpQuestions";
 import { SkeletonLoader, TypingIndicator, MessageAnimator, LoadingButton } from "@/components/loading";
 import { AnimatePresence } from "framer-motion";
+import { ExportChatModal } from "@/components/ExportChatModal";
 
 // Type definitions
 type AuthUser = {
@@ -164,6 +165,7 @@ export default function ChatPage() {
   const [inputValue, setInputValue] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // Loading states
   const [isLoadingGames, setIsLoadingGames] = useState(false);
@@ -853,19 +855,59 @@ export default function ChatPage() {
               </p>
             </div>
           </div>
-          <Link
-            href="/"
-            style={{
-              padding: "8px 16px",
-              background: "#1a73e8",
-              color: "white",
-              textDecoration: "none",
-              borderRadius: 4,
-              fontSize: 14
-            }}
-          >
-            Home
-          </Link>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* CHAT-05: Export button */}
+            {activeChatId && (
+              <button
+                onClick={() => setShowExportModal(true)}
+                aria-label="Export chat"
+                style={{
+                  padding: "8px 16px",
+                  background: "#34a853",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 4,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6
+                }}
+                title="Esporta questa chat"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Esporta
+              </button>
+            )}
+            <Link
+              href="/"
+              style={{
+                padding: "8px 16px",
+                background: "#1a73e8",
+                color: "white",
+                textDecoration: "none",
+                borderRadius: 4,
+                fontSize: 14
+              }}
+            >
+              Home
+            </Link>
+          </div>
         </div>
 
         {/* Error Message */}
@@ -1208,6 +1250,16 @@ export default function ChatPage() {
           </LoadingButton>
         </form>
       </div>
+
+      {/* CHAT-05: Export Chat Modal */}
+      {activeChatId && selectedGameId && (
+        <ExportChatModal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          chatId={activeChatId}
+          gameName={games.find((g) => g.id === selectedGameId)?.name ?? "Unknown Game"}
+        />
+      )}
     </main>
   );
 }

@@ -177,6 +177,12 @@ builder.Services.AddScoped<PdfStorageService>();
 builder.Services.AddScoped<N8nConfigService>();
 builder.Services.AddScoped<ChatService>();
 
+// CHAT-05: Chat export services
+builder.Services.AddScoped<IChatExportService, ChatExportService>();
+builder.Services.AddScoped<IExportFormatter, TxtExportFormatter>();
+builder.Services.AddScoped<IExportFormatter, MdExportFormatter>();
+builder.Services.AddScoped<IExportFormatter, PdfExportFormatter>();
+
 // AUTH-03: Session management service
 builder.Services.AddScoped<ISessionManagementService, SessionManagementService>();
 builder.Services.AddHostedService<SessionAutoRevocationService>();
@@ -3652,6 +3658,61 @@ v1Api.MapDelete("/chats/{chatId:guid}", async (Guid chatId, HttpContext context,
     {
         logger.LogWarning(ex, "Unauthorized chat deletion attempt");
         return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+});
+
+// CHAT-05: Export chat endpoint
+v1Api.MapPost("/chats/{chatId:guid}/export", async (
+    Guid chatId,
+    ExportChatRequest request,
+    IChatExportService exportService,
+    HttpContext context,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    try
+    {
+        var result = await exportService.ExportChatAsync(
+            chatId,
+            session.User.Id,
+            request.Format,
+            request.DateFrom,
+            request.DateTo,
+            ct);
+
+        if (!result.Success)
+        {
+            return result.Error switch
+            {
+                "not_found" => Results.NotFound(new { error = result.ErrorDetails }),
+                "unsupported_format" => Results.BadRequest(new { error = result.ErrorDetails }),
+                "generation_failed" => Results.Problem(
+                    detail: result.ErrorDetails,
+                    statusCode: StatusCodes.Status500InternalServerError),
+                _ => Results.Problem("Unknown error occurred during export")
+            };
+        }
+
+        logger.LogInformation("User {UserId} exported chat {ChatId} in {Format} format",
+            session.User.Id, chatId, request.Format);
+
+        // Return stream with proper content disposition for download
+        return Results.Stream(
+            result.Stream!,
+            contentType: result.ContentType,
+            fileDownloadName: result.Filename,
+            enableRangeProcessing: false);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Unexpected error during chat export for user {UserId}, chat {ChatId}",
+            session.User.Id, chatId);
+        return Results.Problem("An unexpected error occurred during export");
     }
 });
 

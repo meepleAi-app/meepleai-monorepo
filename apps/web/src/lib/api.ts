@@ -68,6 +68,15 @@ export interface CacheStats {
   topQuestions: TopQuestion[];
 }
 
+// CHAT-05: Chat export types
+export type ExportFormat = "pdf" | "txt" | "md";
+
+export interface ExportChatRequest {
+  format: ExportFormat;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 // Enhanced error class with correlation ID (PDF-06)
 export class ApiError extends Error {
   constructor(
@@ -236,6 +245,53 @@ export const api = {
 
     async cancelProcessing(pdfId: string): Promise<void> {
       return api.delete(`/api/v1/pdfs/${encodeURIComponent(pdfId)}/processing`);
+    }
+  },
+
+  // CHAT-05: Chat export API
+  chat: {
+    async exportChat(chatId: string, request: ExportChatRequest): Promise<void> {
+      const res = await fetch(`${getApiBase()}/api/v1/chats/${encodeURIComponent(chatId)}/export`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request)
+      });
+
+      if (res.status === 401) {
+        const correlationId = res.headers.get('X-Correlation-Id') || undefined;
+        throw new ApiError('Unauthorized', 401, correlationId, res);
+      }
+
+      if (!res.ok) {
+        throw await createApiError(`/api/v1/chats/${chatId}/export`, res);
+      }
+
+      // Extract filename from Content-Disposition header
+      const contentDisposition = res.headers.get('Content-Disposition');
+      let filename = `chat-${chatId}-export.${request.format}`;
+
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, '');
+        }
+      }
+
+      // Convert response to blob
+      const blob = await res.blob();
+
+      // Create download link and trigger download
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+
+      // Clean up
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     }
   }
 };

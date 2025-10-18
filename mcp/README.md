@@ -12,8 +12,8 @@ Questa directory contiene i server MCP (Model Context Protocol) configurati per 
 ### ✅ Operativi (Running)
 4. **[Sequential Thinking](./sequential/)** - Pensiero sequenziale e ragionamento (mcp-sequential) ✓
 5. **[Playwright](./playwright/)** - Automazione browser e testing (mcp-playwright) ✓
-6. **[Magic](./magic/)** - Funzionalità avanzate e utility (mcp-magic) ✓
-7. **[Claude Context](./claude-context/)** - Gestione contesto conversazionale (mcp-claude-context) ✓
+6. **[Magic](./magic/)** - Generazione AI-powered di componenti UI (21st.dev) (mcp-magic) ✓
+7. **[Context7](./claude-context/)** - Documentazione librerie up-to-date (Upstash Context7) (mcp-context7) ✓
 8. **[Knowledge Graph](./knowledge-graph/)** - Grafo di conoscenza e relazioni (mcp-knowledge-graph) ✓
 
 **Nota**: Tutti i server sono attivi e funzionanti. I server con health check mostrano stato "Healthy", gli altri sono in esecuzione stabile.
@@ -180,21 +180,22 @@ Ogni server ha funzionalità specifiche accessibili tramite tools MCP:
 - `browser_screenshot`: Cattura screenshot
 - `browser_extract`: Estrai dati
 
-### Magic
-- `magic_execute`: Esegue comandi avanzati
-- `magic_transform`: Trasforma dati
-- `magic_analyze`: Analizza pattern
+### Magic (21st.dev)
+- `magic_generate`: Genera componenti UI da descrizione
+- `magic_transform`: Trasforma componenti/codice
+- `magic_analyze`: Analizza pattern e struttura
+- `magic_execute`: Esegue operazioni AI-powered
 
-### Claude Context
-- `context_save`: Salva contesto
-- `context_load`: Carica contesto
-- `context_merge`: Unisci contesti
+### Context7 (Upstash)
+- `resolve-library-id`: Risolvi nome libreria a ID Context7
+- `get-library-docs`: Recupera documentazione aggiornata
 
 ### Knowledge Graph
 - `kg_add_entity`: Aggiungi entità
 - `kg_add_relation`: Aggiungi relazione
 - `kg_query`: Query il grafo
-- `kg_visualize`: Visualizza grafo
+- `kg_get_neighbors`: Ottieni entità vicine
+- `kg_stats`: Statistiche del grafo
 
 ### n8n Workflow Manager
 - `n8n_list_workflows`: Lista workflows

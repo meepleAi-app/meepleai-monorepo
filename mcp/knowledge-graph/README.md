@@ -29,8 +29,8 @@ docker run -i --rm \
 
 ## Tools
 
-- `kg_add_entity`: Aggiungi entità
-- `kg_add_relation`: Aggiungi relazione
-- `kg_query`: Query il grafo
-- `kg_visualize`: Visualizza grafo
-- `kg_find_path`: Trova percorso tra entità
+- `kg_add_entity`: Aggiungi entità al grafo
+- `kg_add_relation`: Aggiungi relazione tra entità
+- `kg_query`: Esegui query sul grafo
+- `kg_get_neighbors`: Ottieni entità vicine (connesse) a un'entità specifica
+- `kg_stats`: Statistiche del grafo (numero entità, relazioni, metriche)

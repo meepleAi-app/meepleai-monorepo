@@ -12,8 +12,8 @@ Questo documento fornisce istruzioni dettagliate su come utilizzare i server MCP
 4. **Playwright** - Automazione browser e testing E2E
 5. **Knowledge Graph** - Grafo di conoscenza e analisi dipendenze
 6. **n8n** - Gestione workflow e automazioni
-7. **Magic** - Funzionalità AI avanzate
-8. **Claude Context** - Gestione contesto conversazionale (sempre attivo)
+7. **Magic (21st.dev)** - Generazione AI-powered di componenti UI
+8. **Context7 (Upstash)** - Documentazione librerie up-to-date in tempo reale
 
 ---
 
@@ -163,22 +163,46 @@ claude.code "Workflow deployment automatico quando test Playwright passano"
 
 ---
 
-### Magic
+### Magic (21st.dev)
 **Usa quando:**
-- Analisi dati complesse
-- Generazione report o contenuti
-- Pattern recognition avanzato
-- Task che richiedono AI reasoning superiore
+- Generazione componenti UI da descrizioni testuali
+- Prototipazione rapida di interfacce
+- Creazione design system e component library
+- Trasformazione componenti tra framework/stili
 
-**Parole chiave trigger:** "analizza pattern", "genera report", "AI avanzato", "insights"
+**Parole chiave trigger:** "crea componente", "genera UI", "design", "form", "dashboard", "landing page"
 
 **Esempi:**
 ```bash
-claude.code "Usa Magic per analizzare log e identificare pattern di errori"
+claude.code "Usa Magic per creare un form di login moderno con validazione"
 
-claude.code "Genera report esecutivo da metriche performance degli ultimi 3 mesi"
+claude.code "Genera dashboard con sidebar, header e cards usando Magic"
 
-claude.code "Analizza con AI il codebase e suggerisci ottimizzazioni architetturali"
+claude.code "Crea component library di buttons con tutte le varianti"
+
+claude.code "Trasforma questo componente Material UI in Tailwind CSS con Magic"
+```
+
+---
+
+### Context7 (Upstash)
+**Usa quando:**
+- Necessiti documentazione aggiornata di librerie/framework
+- Vuoi esempi di codice per versioni specifiche
+- Cerchi best practices ufficiali up-to-date
+- Devi risolvere problemi con API nuove/cambiate
+
+**Parole chiave trigger:** "documentazione", "come si usa", "sintassi di", "esempio di", "docs", "API reference"
+
+**Esempi:**
+```bash
+claude.code "Usa Context7 per trovare la sintassi corretta di useEffect in React 18"
+
+claude.code "Mostrami la documentazione di Next.js 14 per App Router"
+
+claude.code "Come funziona autenticazione in Supabase? (Context7)"
+
+claude.code "Differenze tra versione 4 e 5 di React Router (Context7)"
 ```
 
 ---
@@ -398,13 +422,14 @@ alert (n8n + github) su failures"
 |------|-------------|---------------|
 | **Planning** | Sequential | Memory, Knowledge Graph |
 | **Setup** | GitHub | Sequential, Memory |
-| **Implementazione** | GitHub | Sequential, Memory |
+| **Implementazione** | GitHub | Sequential, Memory, Context7 |
+| **UI Development** | Magic, GitHub | Context7, Sequential |
 | **Testing** | Playwright | Sequential, Memory |
-| **Bug Fixing** | GitHub, Knowledge Graph | Memory, Sequential |
+| **Bug Fixing** | GitHub, Knowledge Graph | Memory, Sequential, Context7 |
 | **Refactoring** | Sequential, Knowledge Graph | GitHub, Memory |
-| **Deployment** | n8n, GitHub | Playwright, Magic |
+| **Deployment** | n8n, GitHub | Playwright, Sequential |
 | **Code Review** | GitHub, Knowledge Graph | Memory, Sequential |
-| **Performance** | Magic, Playwright | Sequential, Memory |
+| **Performance** | Playwright, Sequential | Memory, GitHub |
 | **Automation** | n8n | Playwright, GitHub |
 
 ### Task Semplici vs Complessi
@@ -468,8 +493,8 @@ claude.code "Pianifica, analizza dipendenze, crea branch, test E2E per fix typo"
 claude.code "Ricorda pattern (memory), pianifica (sequential), implementa (github)"
 
 # ❌ MCP RIDONDANTI
-claude.code "Usa sequential e magic e claude context per pianificare"
-# (Claude Context è sempre attivo, Magic ridondante per pianificazione)
+claude.code "Usa sequential e magic e context7 per pianificare"
+# (Magic è per UI generation, non pianificazione. Context7 è per docs, non pianificazione)
 ```
 
 ---
@@ -546,8 +571,8 @@ claude.code "Se test OK, crea PR con descrizione completa e salva pattern in mem
 ### Esempio 2: Performance Optimization
 
 ```bash
-claude.code "Usa Magic per analizzare bundle size e identificare bottleneck. 
-Pianifica (sequential) ottimizzazioni. 
+claude.code "Analizza bundle size e identifica bottleneck.
+Pianifica (sequential) ottimizzazioni.
 Ricorda (memory) precedenti optimization wins"
 
 # [Claude analizza e pianifica]
@@ -559,12 +584,12 @@ claude.code "Crea branch perf/optimize-bundle (github) e implementa:
 
 # [Claude implementa]
 
-claude.code "Test Playwright performance: lighthouse score, load time, FCP, LCP. 
+claude.code "Test Playwright performance: lighthouse score, load time, FCP, LCP.
 Confronta prima/dopo"
 
 # [Claude testa]
 
-claude.code "Se metrics migliorati, crea PR con grafici before/after. 
+claude.code "Se metrics migliorati, crea PR con grafici before/after.
 Salva (memory) tecniche che hanno funzionato meglio"
 ```
 
@@ -617,20 +642,20 @@ Setup n8n per deploy coordinato"
 ### Pattern: Legacy Refactoring
 
 ```bash
-claude.code "Usa Magic per analizzare legacy code patterns. 
-Knowledge graph per mappare ogni dipendenza. 
-Sequential per pianificare refactoring incrementale. 
-Memory per trackare progresso e decisioni. 
+claude.code "Analizza legacy code patterns e identifica smell.
+Knowledge graph per mappare ogni dipendenza.
+Sequential per pianificare refactoring incrementale.
+Memory per trackare progresso e decisioni.
 Playwright per test regressione continua"
 ```
 
 ### Pattern: Feature Flag Rollout
 
 ```bash
-claude.code "Implementa feature flag (github). 
-Setup n8n workflow: gradual rollout 10% → 50% → 100%. 
-Playwright monitoring ad ogni step. 
-Magic per analizzare metriche. 
+claude.code "Implementa feature flag (github).
+Setup n8n workflow: gradual rollout 10% → 50% → 100%.
+Playwright monitoring ad ogni step.
+Analizza metriche e performance.
 Auto-rollback su errori"
 ```
 
@@ -686,6 +711,22 @@ Auto-rollback su errori"
 "Setup trigger [evento] → [azione]"
 "Workflow: [sequenza]"
 "Integra [servizio] con [servizio]"
+```
+
+### Comandi Magic
+```bash
+"Crea componente [descrizione UI]"
+"Genera [tipo UI] con [specifiche]"
+"Trasforma [componente] in [stile/framework]"
+"Design system per [componenti]"
+```
+
+### Comandi Context7
+```bash
+"Documentazione [libreria]"
+"Come si usa [feature] in [libreria/versione]"
+"Esempi [API/funzione] in [libreria]"
+"Best practices [topic] in [framework]"
 ```
 
 ---

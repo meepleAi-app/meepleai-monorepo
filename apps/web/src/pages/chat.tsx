@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "../lib/api";
 import { useChatStreaming } from "../lib/hooks/useChatStreaming";
+import { FollowUpQuestions } from "../components/FollowUpQuestions";
 
 // Type definitions
 type AuthUser = {
@@ -63,6 +64,7 @@ type Message = {
   role: "user" | "assistant";
   content: string;
   snippets?: Snippet[];
+  followUpQuestions?: string[]; // CHAT-02: AI-generated follow-up questions
   feedback?: "helpful" | "not-helpful" | null;
   endpoint?: string;
   gameId?: string;
@@ -73,6 +75,7 @@ type Message = {
 type QaResponse = {
   answer: string;
   snippets?: Snippet[];
+  followUpQuestions?: string[]; // CHAT-02: AI-generated follow-up questions
   messageId?: string; // Backend message ID for feedback
 };
 
@@ -171,13 +174,14 @@ export default function ChatPage() {
   // Streaming hook
   const [streamingState, streamingControls] = useChatStreaming({
     onComplete: useCallback(
-      (answer: string, snippets: Snippet[], metadata: { totalTokens: number; confidence: number | null }) => {
+      (answer: string, snippets: Snippet[], metadata: { totalTokens: number; confidence: number | null; followUpQuestions?: string[] }) => {
         // Add completed assistant message to chat
         const assistantMessage: Message = {
           id: `stream-${Date.now()}`,
           role: "assistant",
           content: answer,
           snippets,
+          followUpQuestions: metadata.followUpQuestions, // CHAT-02
           feedback: null,
           endpoint: "qa",
           gameId: selectedGameId ?? undefined,
@@ -529,6 +533,16 @@ export default function ChatPage() {
       setMessages((prev) =>
         prev.map((msg) => (msg.id === messageId ? { ...msg, feedback: previousFeedback } : msg))
       );
+    }
+  };
+
+  // CHAT-02: Handle follow-up question click
+  const handleFollowUpClick = (question: string) => {
+    setInputValue(question);
+    // Focus input field
+    const inputElement = document.querySelector('input[type="text"][placeholder*="domanda"]') as HTMLInputElement;
+    if (inputElement) {
+      inputElement.focus();
     }
   };
 
@@ -922,6 +936,15 @@ export default function ChatPage() {
                         </div>
                       ))}
                     </div>
+                  )}
+
+                  {/* CHAT-02: Follow-up Questions */}
+                  {msg.role === "assistant" && msg.followUpQuestions && msg.followUpQuestions.length > 0 && (
+                    <FollowUpQuestions
+                      questions={msg.followUpQuestions}
+                      onQuestionClick={handleFollowUpClick}
+                      disabled={streamingState.isStreaming}
+                    />
                   )}
                 </div>
 

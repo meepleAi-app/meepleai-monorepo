@@ -22,6 +22,23 @@ public interface ILlmService
         string systemPrompt,
         string userPrompt,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// CHAT-02: Generate a JSON-structured response from the LLM, deserializing to the specified type.
+    /// </summary>
+    /// <typeparam name="T">The target type for deserialization (must be a class)</typeparam>
+    /// <param name="systemPrompt">System-level instructions for the LLM</param>
+    /// <param name="userPrompt">User's input prompt</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>Deserialized object of type T, or null if parsing fails</returns>
+    /// <remarks>
+    /// This method automatically appends JSON schema instructions to the system prompt
+    /// and handles deserialization with graceful error handling.
+    /// </remarks>
+    Task<T?> GenerateJsonAsync<T>(
+        string systemPrompt,
+        string userPrompt,
+        CancellationToken ct = default) where T : class;
 }
 
 /// <summary>

@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 
 // Event types that match the backend
-type StreamingEventType = 'token' | 'stateUpdate' | 'citations' | 'complete' | 'error' | 'heartbeat';
+type StreamingEventType = 'token' | 'stateUpdate' | 'citations' | 'complete' | 'error' | 'heartbeat' | 'followUpQuestions';
 
 type Snippet = {
   text: string;
@@ -33,15 +33,20 @@ type ErrorData = {
   code?: string;
 };
 
+type FollowUpQuestionsData = {
+  questions: string[];
+};
+
 type StreamingEvent = {
   type: StreamingEventType;
-  data: StateUpdateData | CitationsData | TokenData | CompleteData | ErrorData | null;
+  data: StateUpdateData | CitationsData | TokenData | CompleteData | ErrorData | FollowUpQuestionsData | null;
 };
 
 export type StreamingState = {
   state: string | null;
   currentAnswer: string;
   snippets: Snippet[];
+  followUpQuestions: string[]; // CHAT-02
   totalTokens: number;
   confidence: number | null;
   isStreaming: boolean;
@@ -58,6 +63,7 @@ const INITIAL_STATE: StreamingState = {
   state: null,
   currentAnswer: '',
   snippets: [],
+  followUpQuestions: [], // CHAT-02
   totalTokens: 0,
   confidence: null,
   isStreaming: false,
@@ -86,7 +92,7 @@ const INITIAL_STATE: StreamingState = {
  * ```
  */
 export function useChatStreaming(callbacks?: {
-  onComplete?: (answer: string, snippets: Snippet[], metadata: { totalTokens: number; confidence: number | null }) => void;
+  onComplete?: (answer: string, snippets: Snippet[], metadata: { totalTokens: number; confidence: number | null; followUpQuestions?: string[] }) => void;
   onError?: (error: string) => void;
 }): [StreamingState, StreamingControls] {
   const [state, setState] = useState<StreamingState>(INITIAL_STATE);
@@ -210,6 +216,14 @@ export function useChatStreaming(callbacks?: {
                     }));
                     break;
 
+                  case 'followUpQuestions':
+                    const followUpData = eventData as FollowUpQuestionsData;
+                    setState((prev) => ({
+                      ...prev,
+                      followUpQuestions: followUpData?.questions || [],
+                    }));
+                    break;
+
                   case 'complete':
                     const completeData = eventData as CompleteData;
                     setState((prev) => {
@@ -227,6 +241,7 @@ export function useChatStreaming(callbacks?: {
                         callbacks.onComplete(finalState.currentAnswer, finalState.snippets, {
                           totalTokens: finalState.totalTokens,
                           confidence: finalState.confidence,
+                          followUpQuestions: prev.followUpQuestions.length > 0 ? prev.followUpQuestions : undefined,
                         });
                       }
 

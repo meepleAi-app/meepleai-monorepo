@@ -226,6 +226,93 @@ public class OllamaLlmService : ILlmService
             }
         }
     }
+
+    /// <summary>
+    /// CHAT-02: Generate a JSON-structured response from the LLM, deserializing to the specified type.
+    /// </summary>
+    public async Task<T?> GenerateJsonAsync<T>(
+        string systemPrompt,
+        string userPrompt,
+        CancellationToken ct = default) where T : class
+    {
+        // Enhance system prompt with JSON instructions
+        var enhancedSystemPrompt = $"""
+            {systemPrompt}
+
+            CRITICAL: You must return ONLY valid JSON. No markdown code blocks, no explanations, no additional text.
+            Just the raw JSON object that matches the required structure.
+            """;
+
+        LlmCompletionResult? result = null;
+
+        try
+        {
+            result = await GenerateCompletionAsync(enhancedSystemPrompt, userPrompt, ct);
+
+            if (!result.Success || string.IsNullOrWhiteSpace(result.Response))
+            {
+                _logger.LogWarning("LLM completion failed or returned empty response for JSON generation");
+                return null;
+            }
+
+            // Clean common LLM formatting artifacts
+            var jsonText = CleanJsonResponse(result.Response);
+
+            // Parse with Web-friendly JSON options (camelCase, tolerant)
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                AllowTrailingCommas = true,
+                ReadCommentHandling = JsonCommentHandling.Skip
+            };
+
+            var parsed = JsonSerializer.Deserialize<T>(jsonText, options);
+
+            if (parsed == null)
+            {
+                _logger.LogWarning("LLM returned valid JSON but deserialization produced null");
+            }
+
+            return parsed;
+        }
+        catch (JsonException ex)
+        {
+            var truncatedResponse = result?.Response?.Length > 500
+                ? result.Response.Substring(0, 500) + "..."
+                : result?.Response ?? "";
+            _logger.LogWarning(ex,
+                "Failed to parse LLM JSON response. Raw response: {Response}",
+                truncatedResponse);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error in GenerateJsonAsync");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Clean LLM response to extract pure JSON (remove markdown code blocks, etc.)
+    /// </summary>
+    private static string CleanJsonResponse(string response)
+    {
+        var cleaned = response.Trim();
+
+        // Remove markdown code blocks (```json ... ``` or ``` ... ```)
+        if (cleaned.StartsWith("```"))
+        {
+            var firstNewline = cleaned.IndexOf('\n');
+            var lastBackticks = cleaned.LastIndexOf("```");
+
+            if (firstNewline > 0 && lastBackticks > firstNewline)
+            {
+                cleaned = cleaned.Substring(firstNewline + 1, lastBackticks - firstNewline - 1).Trim();
+            }
+        }
+
+        return cleaned;
+    }
 }
 
 // Ollama API request/response models

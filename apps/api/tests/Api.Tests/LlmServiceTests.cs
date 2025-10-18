@@ -101,7 +101,7 @@ public class LlmServiceTests
 
         using var document = JsonDocument.Parse(body!);
         var root = document.RootElement;
-        Assert.Equal("anthropic/claude-3.5-sonnet", root.GetProperty("model").GetString());
+        Assert.Equal("deepseek/deepseek-chat-v3.1", root.GetProperty("model").GetString());
         Assert.Equal(0.3, root.GetProperty("temperature").GetDouble());
     }
 

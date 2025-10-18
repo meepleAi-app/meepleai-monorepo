@@ -7,6 +7,8 @@ using Api.Infrastructure.Entities;
 using Api.Middleware;
 using Api.Models;
 using Api.Services;
+using Api.Services.Chat; // CHAT-02
+using Api.Configuration; // CHAT-02
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -92,6 +94,7 @@ builder.Services.Configure<SessionCookieConfiguration>(builder.Configuration.Get
 builder.Services.Configure<SessionManagementConfiguration>(builder.Configuration.GetSection("Authentication:SessionManagement"));
 builder.Services.Configure<RateLimitConfiguration>(builder.Configuration.GetSection("RateLimit"));
 builder.Services.Configure<PdfProcessingConfiguration>(builder.Configuration.GetSection("PdfProcessing"));
+builder.Services.Configure<FollowUpQuestionsConfiguration>(builder.Configuration.GetSection("FollowUpQuestions")); // CHAT-02
 
 // Only configure Postgres in non-test environments (tests will override with SQLite)
 if (!builder.Environment.IsEnvironment("Testing"))
@@ -160,6 +163,7 @@ builder.Services.AddScoped<RuleSpecCommentService>();
 builder.Services.AddScoped<RagService>();
 builder.Services.AddScoped<IStreamingRagService, StreamingRagService>(); // API-02: Streaming RAG service
 builder.Services.AddScoped<IStreamingQaService, StreamingQaService>(); // CHAT-01: Streaming QA service
+builder.Services.AddScoped<IFollowUpQuestionService, FollowUpQuestionService>(); // CHAT-02: Follow-up question generation
 builder.Services.AddScoped<SetupGuideService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AuditService>();
@@ -981,7 +985,19 @@ v1Api.MapPut("/auth/password-reset/confirm", async (
 });
 
 // API-01: AI agent endpoints (versioned)
-v1Api.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagService rag, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, bool bypassCache = false, CancellationToken ct = default) =>
+v1Api.MapPost("/agents/qa", async (
+    QaRequest req,
+    HttpContext context,
+    RagService rag,
+    ChatService chatService,
+    AiRequestLogService aiLog,
+    IFollowUpQuestionService followUpService, // CHAT-02
+    IOptions<FollowUpQuestionsConfiguration> followUpConfig, // CHAT-02
+    MeepleAiDbContext dbContext, // CHAT-02: for game name lookup
+    ILogger<Program> logger,
+    bool bypassCache = false,
+    bool generateFollowUps = true, // CHAT-02: opt-in parameter
+    CancellationToken ct = default) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -994,8 +1010,11 @@ v1Api.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagServic
     }
 
     var startTime = DateTime.UtcNow;
-    logger.LogInformation("QA request from user {UserId} for game {GameId}: {Query} (bypassCache: {BypassCache})",
-        session.User.Id, req.gameId, req.query, bypassCache);
+    var config = followUpConfig.Value;
+    generateFollowUps = generateFollowUps && config.Enabled; // Apply global feature flag
+
+    logger.LogInformation("QA request from user {UserId} for game {GameId}: {Query} (bypassCache: {BypassCache}, generateFollowUps: {GenerateFollowUps})",
+        session.User.Id, req.gameId, req.query, bypassCache, generateFollowUps);
 
     try
     {
@@ -1007,13 +1026,47 @@ v1Api.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagServic
                 session.User.Id,
                 "user",
                 req.query,
-                new { endpoint = "qa", gameId = req.gameId, bypassCache },
+                new { endpoint = "qa", gameId = req.gameId, bypassCache, generateFollowUps },
                 ct);
         }
 
         // PERF-03: Support cache bypass via query parameter
         var resp = await rag.AskAsync(req.gameId, req.query, bypassCache, ct);
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+        // CHAT-02: Generate follow-up questions if enabled
+        IReadOnlyList<string>? followUpQuestions = null;
+        if (generateFollowUps)
+        {
+            var game = await dbContext.Games
+                .Where(g => g.Id.ToString() == req.gameId)
+                .Select(g => g.Name)
+                .FirstOrDefaultAsync(ct);
+
+            if (game != null)
+            {
+                followUpQuestions = await followUpService.GenerateQuestionsAsync(
+                    originalQuestion: req.query,
+                    generatedAnswer: resp.answer,
+                    ragContext: resp.snippets,
+                    gameName: game,
+                    ct: ct);
+
+                logger.LogInformation("Generated {Count} follow-up questions for game {GameId}",
+                    followUpQuestions.Count, req.gameId);
+            }
+        }
+
+        // Create response with follow-up questions
+        var finalResponse = new QaResponse(
+            resp.answer,
+            resp.snippets,
+            resp.promptTokens,
+            resp.completionTokens,
+            resp.totalTokens,
+            resp.confidence,
+            resp.metadata,
+            followUpQuestions); // CHAT-02
 
         logger.LogInformation("QA response delivered for game {GameId}", req.gameId);
 
@@ -1050,7 +1103,8 @@ v1Api.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagServic
                     confidence = resp.confidence,
                     model,
                     finishReason,
-                    snippetCount = resp.snippets.Count
+                    snippetCount = resp.snippets.Count,
+                    followUpQuestionsCount = followUpQuestions?.Count ?? 0 // CHAT-02
                 },
                 ct);
         }
@@ -1075,7 +1129,7 @@ v1Api.MapPost("/agents/qa", async (QaRequest req, HttpContext context, RagServic
             finishReason: finishReason,
             ct: ct);
 
-        return Results.Json(resp);
+        return Results.Json(finalResponse); // CHAT-02: Return response with follow-up questions
     }
     catch (Exception ex)
     {
@@ -1312,7 +1366,18 @@ v1Api.MapPost("/agents/explain/stream", async (ExplainRequest req, HttpContext c
 });
 
 // CHAT-01: Streaming QA endpoint (SSE)
-v1Api.MapPost("/agents/qa/stream", async (QaRequest req, HttpContext context, IStreamingQaService streamingQa, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/agents/qa/stream", async (
+    QaRequest req,
+    HttpContext context,
+    IStreamingQaService streamingQa,
+    ChatService chatService,
+    AiRequestLogService aiLog,
+    IFollowUpQuestionService followUpService, // CHAT-02
+    IOptions<FollowUpQuestionsConfiguration> followUpConfig, // CHAT-02
+    MeepleAiDbContext dbContext, // CHAT-02
+    ILogger<Program> logger,
+    bool generateFollowUps = true, // CHAT-02: opt-in parameter
+    CancellationToken ct = default) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -1323,6 +1388,10 @@ v1Api.MapPost("/agents/qa/stream", async (QaRequest req, HttpContext context, IS
     {
         return Results.BadRequest(new { error = "gameId is required" });
     }
+
+    // CHAT-02: Apply global feature flag for follow-up questions
+    var config = followUpConfig.Value;
+    generateFollowUps = generateFollowUps && config.Enabled;
 
     var startTime = DateTime.UtcNow;
     logger.LogInformation("Streaming QA request from user {UserId} for game {GameId}: {Query}",
@@ -1351,6 +1420,11 @@ v1Api.MapPost("/agents/qa/stream", async (QaRequest req, HttpContext context, IS
         var totalTokens = 0;
         double? confidence = null;
         var snippets = new List<Snippet>();
+
+        // CHAT-02: Follow-up question generation (fire-and-forget after Complete event)
+        Task<IReadOnlyList<string>>? followUpTask = null;
+        IReadOnlyList<string>? followUpQuestions = null;
+        string? gameName = null;
 
         await foreach (var evt in streamingQa.AskStreamAsync(req.gameId, req.query, req.chatId, ct))
         {
@@ -1386,11 +1460,72 @@ v1Api.MapPost("/agents/qa/stream", async (QaRequest req, HttpContext context, IS
                     totalTokens = completeData.totalTokens;
                     confidence = completeData.confidence;
                 }
+
+                // CHAT-02: Start follow-up generation in parallel (fire-and-forget)
+                if (generateFollowUps && followUpTask == null)
+                {
+                    followUpTask = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            // Fetch game name
+                            gameName = await dbContext.Games
+                                .Where(g => g.Id.ToString() == req.gameId)
+                                .Select(g => g.Name)
+                                .FirstOrDefaultAsync(ct);
+
+                            if (gameName == null)
+                            {
+                                logger.LogWarning("Game {GameId} not found for follow-up generation", req.gameId);
+                                return new List<string>().AsReadOnly();
+                            }
+
+                            var answer = answerBuilder.ToString();
+                            return await followUpService.GenerateQuestionsAsync(
+                                originalQuestion: req.query,
+                                generatedAnswer: answer,
+                                ragContext: snippets,
+                                gameName: gameName,
+                                ct: ct);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogWarning(ex, "Failed to generate follow-up questions for game {GameId}", req.gameId);
+                            return new List<string>().AsReadOnly();
+                        }
+                    });
+                }
             }
         }
 
         var answer = answerBuilder.ToString();
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+
+        // CHAT-02: Wait for follow-up questions and send event
+        if (followUpTask != null)
+        {
+            try
+            {
+                followUpQuestions = await followUpTask;
+                if (followUpQuestions != null && followUpQuestions.Count > 0)
+                {
+                    var followUpEvent = new RagStreamingEvent(
+                        StreamingEventType.FollowUpQuestions,
+                        new StreamingFollowUpQuestions(followUpQuestions),
+                        DateTime.UtcNow);
+                    var followUpJson = System.Text.Json.JsonSerializer.Serialize(followUpEvent);
+                    await context.Response.WriteAsync($"data: {followUpJson}\n\n", ct);
+                    await context.Response.Body.FlushAsync(ct);
+
+                    logger.LogInformation("Sent {Count} follow-up questions for game {GameId}",
+                        followUpQuestions.Count, req.gameId);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to send follow-up questions event for game {GameId}", req.gameId);
+            }
+        }
 
         logger.LogInformation("Streaming QA completed for game {GameId}, query: {Query}", req.gameId, req.query);
 
@@ -1408,7 +1543,8 @@ v1Api.MapPost("/agents/qa/stream", async (QaRequest req, HttpContext context, IS
                     gameId = req.gameId,
                     totalTokens,
                     confidence,
-                    snippetCount = snippets.Count
+                    snippetCount = snippets.Count,
+                    followUpQuestionsCount = followUpQuestions?.Count ?? 0 // CHAT-02
                 },
                 ct);
         }

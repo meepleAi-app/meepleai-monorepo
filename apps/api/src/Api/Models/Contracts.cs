@@ -11,7 +11,8 @@ public record QaResponse(
     int completionTokens = 0,
     int totalTokens = 0,
     double? confidence = null,
-    IReadOnlyDictionary<string, string>? metadata = null);
+    IReadOnlyDictionary<string, string>? metadata = null,
+    IReadOnlyList<string>? followUpQuestions = null);  // CHAT-02: AI-generated follow-up questions
 public record Snippet(string text, string source, int page, int line);
 
 public record IngestPdfResponse(string jobId);
@@ -37,14 +38,15 @@ public record ExplainOutline(
 // API-02: RAG Explain Streaming models (SSE)
 public enum StreamingEventType
 {
-    StateUpdate,    // Progress updates (e.g., "Generating embeddings")
-    Citations,      // Retrieved citations from vector search
-    Outline,        // Generated outline structure
-    ScriptChunk,    // Incremental script content chunks
-    Complete,       // Final event with metadata (tokens, confidence)
-    Error,          // Error event
-    Heartbeat,      // Keep-alive signal
-    Token           // CHAT-01: Individual LLM token for QA/Setup streaming
+    StateUpdate,        // Progress updates (e.g., "Generating embeddings")
+    Citations,          // Retrieved citations from vector search
+    Outline,            // Generated outline structure
+    ScriptChunk,        // Incremental script content chunks
+    Complete,           // Final event with metadata (tokens, confidence)
+    Error,              // Error event
+    Heartbeat,          // Keep-alive signal
+    Token,              // CHAT-01: Individual LLM token for QA/Setup streaming
+    FollowUpQuestions   // CHAT-02: AI-generated follow-up questions
 }
 
 public record RagStreamingEvent(
@@ -68,6 +70,28 @@ public record StreamingComplete(
 public record StreamingError(string errorMessage, string? errorCode = null);
 public record StreamingHeartbeat(string message = "keep-alive");
 public record StreamingToken(string token); // CHAT-01: Individual LLM token
+
+// CHAT-02: Follow-Up Questions models
+public record StreamingFollowUpQuestions(
+    [property: JsonPropertyName("questions")] IReadOnlyList<string> questions
+);
+
+/// <summary>
+/// Internal DTO for LLM JSON parsing of follow-up questions.
+/// </summary>
+internal record FollowUpQuestionsDto(
+    [property: JsonPropertyName("questions")] List<string> Questions
+);
+
+/// <summary>
+/// Analytics event for tracking follow-up question clicks.
+/// </summary>
+public record FollowUpQuestionClickEvent(
+    [property: JsonPropertyName("chatId")] Guid chatId,
+    [property: JsonPropertyName("originalQuestion")] string originalQuestion,
+    [property: JsonPropertyName("followUpQuestion")] string followUpQuestion,
+    [property: JsonPropertyName("questionIndex")] int questionIndex
+);
 
 // AI-03: RAG Setup Guide models
 public record SetupGuideRequest(string gameId, Guid? chatId = null);

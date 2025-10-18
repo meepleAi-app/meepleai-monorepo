@@ -132,6 +132,92 @@ public class PdfTextExtractionService
     }
 
     /// <summary>
+    /// Extracts text from PDF with accurate page tracking (AI-08)
+    /// Returns chunks at page granularity for downstream processing
+    /// </summary>
+    /// <param name="filePath">Path to the PDF file</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>Extraction result with page-aware chunks</returns>
+    public virtual async Task<PagedExtractionResult> ExtractPagedTextAsync(
+        string filePath,
+        CancellationToken ct = default)
+    {
+        // Validation: null or empty path
+        if (string.IsNullOrWhiteSpace(filePath))
+        {
+            return PagedExtractionResult.CreateFailure("File path is required");
+        }
+
+        // Validation: file existence
+        if (!File.Exists(filePath))
+        {
+            return PagedExtractionResult.CreateFailure($"File not found: {filePath}");
+        }
+
+        try
+        {
+            // Use semaphore for thread safety (Docnet.Core is not thread-safe)
+            await DocnetSemaphore.WaitAsync(ct);
+            try
+            {
+                var pageChunks = await Task.Run(() => ExtractPagedRawText(filePath), ct);
+
+                var totalPageCount = pageChunks.Count;
+                var nonEmptyPageCount = pageChunks.Count(pc => !pc.IsEmpty);
+
+                _logger.LogInformation(
+                    "Extracted paged text from PDF: {FilePath}, Pages: {PageCount}, Non-empty pages: {NonEmptyCount}",
+                    filePath, totalPageCount, nonEmptyPageCount);
+
+                return PagedExtractionResult.CreateSuccess(pageChunks, totalPageCount);
+            }
+            finally
+            {
+                DocnetSemaphore.Release();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to extract paged text from PDF: {FilePath}", filePath);
+            return PagedExtractionResult.CreateFailure($"PDF extraction failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Extracts text from PDF page-by-page using Docnet.Core (AI-08)
+    /// </summary>
+    private List<PagedTextChunk> ExtractPagedRawText(string filePath)
+    {
+        var pageChunks = new List<PagedTextChunk>();
+
+        using var library = DocLib.Instance;
+        using var docReader = library.GetDocReader(filePath, new PageDimensions(1080, 1920));
+
+        var pageCount = docReader.GetPageCount();
+
+        for (int i = 0; i < pageCount; i++)
+        {
+            using var pageReader = docReader.GetPageReader(i);
+            var pageText = pageReader.GetText();
+
+            // Normalize text for this page
+            var normalizedText = NormalizeText(pageText ?? string.Empty);
+
+            // Create PagedTextChunk (page numbers are 1-indexed for user display)
+            var pageChunk = new PagedTextChunk(
+                Text: normalizedText,
+                PageNumber: i + 1,  // 1-indexed
+                CharStartIndex: 0,  // Always 0 for full-page extraction
+                CharEndIndex: normalizedText.Length > 0 ? normalizedText.Length - 1 : 0
+            );
+
+            pageChunks.Add(pageChunk);
+        }
+
+        return pageChunks;
+    }
+
+    /// <summary>
     /// Extracts raw text from PDF using Docnet.Core
     /// </summary>
     private (string Text, int PageCount) ExtractRawText(string filePath)
@@ -229,4 +315,39 @@ public record PdfTextExtractionResult
             Success = false,
             ErrorMessage = errorMessage
         };
+}
+
+/// <summary>
+/// Internal model: text extracted from a single page (AI-08)
+/// </summary>
+public record PagedTextChunk(
+    string Text,
+    int PageNumber,         // 1-indexed for user display
+    int CharStartIndex,     // Position within page (always 0 for full-page extraction)
+    int CharEndIndex        // Text.Length - 1
+)
+{
+    /// <summary>
+    /// True if the page contains no meaningful text
+    /// </summary>
+    public bool IsEmpty => string.IsNullOrWhiteSpace(Text);
+}
+
+/// <summary>
+/// Result of page-aware PDF text extraction (AI-08)
+/// </summary>
+public record PagedExtractionResult(
+    bool Success,
+    List<PagedTextChunk> PageChunks,
+    int TotalPageCount,
+    string? Error
+)
+{
+    public static PagedExtractionResult CreateSuccess(
+        List<PagedTextChunk> chunks,
+        int pageCount) =>
+        new(Success: true, PageChunks: chunks, TotalPageCount: pageCount, Error: null);
+
+    public static PagedExtractionResult CreateFailure(string error) =>
+        new(Success: false, PageChunks: new(), TotalPageCount: 0, Error: error);
 }

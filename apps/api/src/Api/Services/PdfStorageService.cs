@@ -293,23 +293,28 @@ public class PdfStorageService
                 return;
             }
 
-            // Step 1: Extract text (20-40%)
+            // Step 1: Extract text with page tracking (AI-08) (20-40%)
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, 0, 0, startTime, null, ct);
-            var extractResult = await _textExtractionService.ExtractTextAsync(filePath);
+            var extractResult = await _textExtractionService.ExtractPagedTextAsync(filePath, ct);
 
             if (!extractResult.Success)
             {
-                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractResult.ErrorMessage, ct);
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractResult.Error, ct);
                 pdfDoc.ProcessingStatus = "failed";
-                pdfDoc.ProcessingError = extractResult.ErrorMessage;
+                pdfDoc.ProcessingError = extractResult.Error;
                 pdfDoc.ProcessedAt = DateTime.UtcNow;
                 await db.SaveChangesAsync(ct);
                 return;
             }
 
-            pdfDoc.ExtractedText = extractResult.ExtractedText;
-            pdfDoc.PageCount = extractResult.PageCount;
-            pdfDoc.CharacterCount = extractResult.CharacterCount;
+            // Combine all page chunks into full text for backward compatibility
+            var fullText = string.Join("\n\n", extractResult.PageChunks
+                .Where(pc => !pc.IsEmpty)
+                .Select(pc => pc.Text));
+
+            pdfDoc.ExtractedText = fullText;
+            pdfDoc.PageCount = extractResult.TotalPageCount;
+            pdfDoc.CharacterCount = fullText.Length;
             await db.SaveChangesAsync(ct);
 
             // Extract structured content (tables, diagrams)
@@ -337,15 +342,33 @@ public class PdfStorageService
                 }
             }
 
-            var totalPages = extractResult.PageCount;
+            var totalPages = extractResult.TotalPageCount;
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, totalPages, totalPages, startTime, null, ct);
 
-            // Step 2: Chunk text (40-60%)
+            // Step 2: Chunk text with page tracking (AI-08) (40-60%)
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Chunking, 0, totalPages, startTime, null, ct);
             var chunkingService = _textChunkingServiceOverride ?? scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
-            var textChunks = chunkingService.PrepareForEmbedding(extractResult.ExtractedText);
 
-            if (textChunks.Count == 0)
+            // Process each page separately to preserve page numbers
+            var allDocumentChunks = new List<DocumentChunkInput>();
+
+            foreach (var pageChunk in extractResult.PageChunks.Where(pc => !pc.IsEmpty))
+            {
+                var pageTextChunks = chunkingService.ChunkText(pageChunk.Text, 512, 50);
+
+                foreach (var textChunk in pageTextChunks)
+                {
+                    allDocumentChunks.Add(new DocumentChunkInput
+                    {
+                        Text = textChunk.Text,
+                        Page = pageChunk.PageNumber,  // Preserve accurate page number (AI-08 fix)
+                        CharStart = textChunk.CharStart,
+                        CharEnd = textChunk.CharEnd
+                    });
+                }
+            }
+
+            if (allDocumentChunks.Count == 0)
             {
                 await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, "No chunks generated from text", ct);
                 pdfDoc.ProcessingStatus = "failed";
@@ -355,13 +378,14 @@ public class PdfStorageService
                 return;
             }
 
-            _logger.LogInformation("Generated {ChunkCount} chunks for PDF {PdfId}", textChunks.Count, pdfId);
+            _logger.LogInformation("Generated {ChunkCount} chunks for PDF {PdfId} across {PageCount} pages",
+                allDocumentChunks.Count, pdfId, extractResult.PageChunks.Count(pc => !pc.IsEmpty));
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Chunking, totalPages, totalPages, startTime, null, ct);
 
             // Step 3: Generate embeddings (60-80%)
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, 0, totalPages, startTime, null, ct);
             var embeddingService = _embeddingServiceOverride ?? scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
-            var texts = textChunks.Select(c => c.Text).ToList();
+            var texts = allDocumentChunks.Select(c => c.Text).ToList();
             var embeddingResult = await embeddingService.GenerateEmbeddingsAsync(texts);
 
             if (!embeddingResult.Success)
@@ -376,20 +400,20 @@ public class PdfStorageService
 
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, totalPages, totalPages, startTime, null, ct);
 
-            // Step 4: Index in Qdrant (80-100%)
+            // Step 4: Index in Qdrant with accurate page numbers (AI-08) (80-100%)
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Indexing, 0, totalPages, startTime, null, ct);
             var qdrantService = _qdrantServiceOverride ?? scope.ServiceProvider.GetRequiredService<IQdrantService>();
 
             var documentChunks = new List<DocumentChunk>();
-            for (int i = 0; i < textChunks.Count; i++)
+            for (int i = 0; i < allDocumentChunks.Count; i++)
             {
                 documentChunks.Add(new DocumentChunk
                 {
-                    Text = textChunks[i].Text,
+                    Text = allDocumentChunks[i].Text,
                     Embedding = embeddingResult.Embeddings[i],
-                    Page = textChunks[i].Page,
-                    CharStart = textChunks[i].CharStart,
-                    CharEnd = textChunks[i].CharEnd
+                    Page = allDocumentChunks[i].Page,  // Accurate page number from AI-08
+                    CharStart = allDocumentChunks[i].CharStart,
+                    CharEnd = allDocumentChunks[i].CharEnd
                 });
             }
 
@@ -416,7 +440,7 @@ public class PdfStorageService
                     PdfDocumentId = pdfId,
                     IndexingStatus = "completed",
                     ChunkCount = indexResult.IndexedCount,
-                    TotalCharacters = extractResult.ExtractedText.Length,
+                    TotalCharacters = fullText.Length,  // Use fullText computed earlier (AI-08)
                     IndexedAt = DateTime.UtcNow
                 };
                 db.VectorDocuments.Add(vectorDoc);
@@ -425,7 +449,7 @@ public class PdfStorageService
             {
                 vectorDoc.IndexingStatus = "completed";
                 vectorDoc.ChunkCount = indexResult.IndexedCount;
-                vectorDoc.TotalCharacters = extractResult.ExtractedText.Length;
+                vectorDoc.TotalCharacters = fullText.Length;  // Use fullText computed earlier (AI-08)
                 vectorDoc.IndexedAt = DateTime.UtcNow;
             }
 

@@ -38,7 +38,7 @@ public class PdfTextExtractionServicePagedTests
     /// And TotalPageCount should be 3
     /// And PageChunks should contain 3 items with page numbers 1, 2, 3
     /// </summary>
-    [Fact(Skip = "RED phase - PagedExtractionResult not implemented yet")]
+    [Fact(Skip = "Requires test PDF generation - implement CreateTestPdf() helper")]
     public async Task ExtractPagedTextAsync_MultiPagePdf_ReturnsAccuratePageNumbers()
     {
         // Arrange
@@ -78,7 +78,7 @@ public class PdfTextExtractionServicePagedTests
     /// And PageChunks[1].IsEmpty should be true
     /// And PageChunks[1].PageNumber should be 2
     /// </summary>
-    [Fact(Skip = "RED phase - PagedExtractionResult not implemented yet")]
+    [Fact(Skip = "Requires test PDF generation - implement CreateTestPdf() helper")]
     public async Task ExtractPagedTextAsync_EmptyPages_HandledGracefully()
     {
         // Arrange
@@ -116,7 +116,7 @@ public class PdfTextExtractionServicePagedTests
     /// And PageChunks should be empty
     /// And TotalPageCount should be 0
     /// </summary>
-    [Fact(Skip = "RED phase - PagedExtractionResult not implemented yet")]
+    [Fact(Skip = "Requires test PDF generation - implement CreateCorruptedPdf() helper")]
     public async Task ExtractPagedTextAsync_CorruptedPdf_ReturnsStructuredError()
     {
         // Arrange
@@ -141,7 +141,7 @@ public class PdfTextExtractionServicePagedTests
     /// And TotalPageCount should be 0
     /// And PageChunks should be empty
     /// </summary>
-    [Fact(Skip = "RED phase - PagedExtractionResult not implemented yet")]
+    [Fact(Skip = "Requires test PDF generation - implement CreateTestPdf() helper")]
     public async Task ExtractPagedTextAsync_EmptyPdf_HandledGracefully()
     {
         // Arrange
@@ -165,7 +165,7 @@ public class PdfTextExtractionServicePagedTests
     /// And PageNumber should be accurate
     /// Note: Actual chunking to 512-char pieces happens in TextChunkingService
     /// </summary>
-    [Fact(Skip = "RED phase - PagedExtractionResult not implemented yet")]
+    [Fact(Skip = "Requires test PDF generation - implement CreateTestPdf() helper")]
     public async Task ExtractPagedTextAsync_LargePage_CapturedCorrectly()
     {
         // Arrange
@@ -190,7 +190,7 @@ public class PdfTextExtractionServicePagedTests
     /// Then 1 PagedTextChunk should be created
     /// And the chunk should have the correct page number
     /// </summary>
-    [Fact(Skip = "RED phase - PagedExtractionResult not implemented yet")]
+    [Fact(Skip = "Requires test PDF generation - implement CreateTestPdf() helper")]
     public async Task ExtractPagedTextAsync_SmallPage_ProcessedCorrectly()
     {
         // Arrange
@@ -214,7 +214,7 @@ public class PdfTextExtractionServicePagedTests
     /// Then Success should be false
     /// And Error should contain "file path is required"
     /// </summary>
-    [Fact(Skip = "RED phase - PagedExtractionResult not implemented yet")]
+    [Fact]
     public async Task ExtractPagedTextAsync_NullFilePath_ReturnsError()
     {
         // Arrange
@@ -236,7 +236,7 @@ public class PdfTextExtractionServicePagedTests
     /// Then Success should be false
     /// And Error should contain "file not found"
     /// </summary>
-    [Fact(Skip = "RED phase - PagedExtractionResult not implemented yet")]
+    [Fact]
     public async Task ExtractPagedTextAsync_NonExistentFile_ReturnsError()
     {
         // Arrange

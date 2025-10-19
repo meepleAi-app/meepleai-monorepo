@@ -618,7 +618,8 @@ public class Ai04ComprehensiveTests
         cts.Cancel();
 
         // When/Then: Should handle cancellation gracefully
-        var result = await ragService.AskAsync("game1", "test", false, cts.Token);
+        // AI-09: Language parameter defaults to null (uses "en")
+        var result = await ragService.AskAsync("game1", "test", language: null, bypassCache: false, cts.Token);
 
         // Note: Current implementation catches all exceptions and returns error message
         // In a real-world scenario, you might want to check for OperationCanceledException

@@ -89,6 +89,31 @@ services:
     networks:
       - meepleai
 
+  # AI-09: Local multilingual embedding service
+  embedding-service:
+    build:
+      context: ../apps/embedding-service
+      dockerfile: ./Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - meepleai
+    # Uncomment if you have NVIDIA GPU support for faster embeddings
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
   seq:
     image: datalust/seq:2025.1
     restart: unless-stopped
@@ -250,6 +275,9 @@ services:
       OLLAMA_URL: http://ollama:11434
       EMBEDDING_PROVIDER: ollama
       EMBEDDING_MODEL: nomic-embed-text
+      # AI-09: Local embedding service configuration
+      LOCAL_EMBEDDING_URL: http://embedding-service:8000
+      EMBEDDING_FALLBACK_ENABLED: "true"
     ports:
       - "8080:8080"
     depends_on:

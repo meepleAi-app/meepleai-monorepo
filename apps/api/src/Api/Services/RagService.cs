@@ -39,14 +39,19 @@ public class RagService
     /// AI-05: Now with caching support for reduced latency
     /// PERF-03: Added bypassCache parameter to force fresh LLM responses
     /// OPS-02: Now with OpenTelemetry metrics tracking and distributed tracing
+    /// AI-09: Added language parameter for multilingual support
     /// </summary>
-    public async Task<QaResponse> AskAsync(string gameId, string query, bool bypassCache = false, CancellationToken cancellationToken = default)
+    public async Task<QaResponse> AskAsync(string gameId, string query, string? language = null, bool bypassCache = false, CancellationToken cancellationToken = default)
     {
+        // AI-09: Default to English if no language specified
+        language ??= "en";
+
         // OPS-02: Create distributed trace span for RAG Q&A operation
         using var activity = MeepleAiActivitySources.Rag.StartActivity("RagService.Ask");
         activity?.SetTag("game.id", gameId);
         activity?.SetTag("query.length", query?.Length ?? 0);
         activity?.SetTag("operation", "qa");
+        activity?.SetTag("language", language); // AI-09: Track language
         activity?.SetTag("cache.bypass", bypassCache);
 
         // OPS-02: Start tracking duration
@@ -59,7 +64,8 @@ public class RagService
         }
 
         // AI-05: Check cache first (unless bypassed)
-        var cacheKey = _cache.GenerateQaCacheKey(gameId, query);
+        // AI-09: Include language in cache key to avoid cross-language cache hits
+        var cacheKey = $"{_cache.GenerateQaCacheKey(gameId, query)}:lang:{language}";
         if (!bypassCache)
         {
             var cachedResponse = await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken);
@@ -77,17 +83,19 @@ public class RagService
         try
         {
             // Step 1: Generate embedding for the query
-            var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query, cancellationToken);
+            // AI-09: Use language-aware embedding service
+            var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query, language, cancellationToken);
             if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
             {
-                _logger.LogError("Failed to generate query embedding: {Error}", embeddingResult.ErrorMessage);
+                _logger.LogError("Failed to generate query embedding for language {Language}: {Error}", language, embeddingResult.ErrorMessage);
                 return new QaResponse("Unable to process query.", Array.Empty<Snippet>());
             }
 
             var queryEmbedding = embeddingResult.Embeddings[0];
 
             // Step 2: Search Qdrant for similar chunks
-            var searchResult = await _qdrantService.SearchAsync(gameId, queryEmbedding, limit: 3, cancellationToken);
+            // AI-09: Filter search by language
+            var searchResult = await _qdrantService.SearchAsync(gameId, queryEmbedding, language, limit: 3, cancellationToken);
 
             if (!searchResult.Success || searchResult.Results.Count == 0)
             {
@@ -200,14 +208,19 @@ ANSWER:";
     /// AI-02: Generate structured explanation with outline, script, and citations
     /// AI-05: Now with caching support for reduced latency
     /// OPS-02: Now with OpenTelemetry metrics tracking and distributed tracing
+    /// AI-09: Added language parameter for multilingual support
     /// </summary>
-    public async Task<ExplainResponse> ExplainAsync(string gameId, string topic, CancellationToken cancellationToken = default)
+    public async Task<ExplainResponse> ExplainAsync(string gameId, string topic, string? language = null, CancellationToken cancellationToken = default)
     {
+        // AI-09: Default to English if no language specified
+        language ??= "en";
+
         // OPS-02: Create distributed trace span for RAG Explain operation
         using var activity = MeepleAiActivitySources.Rag.StartActivity("RagService.Explain");
         activity?.SetTag("game.id", gameId);
         activity?.SetTag("topic.length", topic?.Length ?? 0);
         activity?.SetTag("operation", "explain");
+        activity?.SetTag("language", language); // AI-09: Track language
 
         // OPS-02: Start tracking duration
         var stopwatch = Stopwatch.StartNew();
@@ -219,28 +232,31 @@ ANSWER:";
         }
 
         // AI-05: Check cache first
-        var cacheKey = _cache.GenerateExplainCacheKey(gameId, topic);
+        // AI-09: Include language in cache key
+        var cacheKey = $"{_cache.GenerateExplainCacheKey(gameId, topic)}:lang:{language}";
         var cachedResponse = await _cache.GetAsync<ExplainResponse>(cacheKey, cancellationToken);
         if (cachedResponse != null)
         {
-            LogInformation("Returning cached Explain response for game {GameId}, topic: {Topic}", gameId, topic);
+            LogInformation("Returning cached Explain response for game {GameId}, topic: {Topic}, language: {Language}", gameId, topic, language);
             return cachedResponse;
         }
 
         try
         {
             // Step 1: Generate embedding for the topic
-            var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(topic, cancellationToken);
+            // AI-09: Use language-aware embedding service
+            var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(topic, language, cancellationToken);
             if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
             {
-                _logger.LogError("Failed to generate topic embedding: {Error}", embeddingResult.ErrorMessage);
+                _logger.LogError("Failed to generate topic embedding for language {Language}: {Error}", language, embeddingResult.ErrorMessage);
                 return CreateEmptyExplainResponse("Unable to process topic.");
             }
 
             var topicEmbedding = embeddingResult.Embeddings[0];
 
             // Step 2: Search Qdrant for relevant chunks (get more for comprehensive explanation)
-            var searchResult = await _qdrantService.SearchAsync(gameId, topicEmbedding, limit: 5, cancellationToken);
+            // AI-09: Filter search by language
+            var searchResult = await _qdrantService.SearchAsync(gameId, topicEmbedding, language, limit: 5, cancellationToken);
 
             if (!searchResult.Success || searchResult.Results.Count == 0)
             {

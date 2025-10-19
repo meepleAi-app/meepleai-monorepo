@@ -26,6 +26,7 @@ interface PdfDocument {
   fileSizeBytes: number;
   uploadedAt: string;
   uploadedByUserId: string;
+  language?: string; // AI-09: Language code (ISO 639-1), defaults to "en"
   status?: string | null;
   logUrl?: string | null;
 }
@@ -156,6 +157,7 @@ export default function UploadPage() {
   const [newGameName, setNewGameName] = useState('');
   const [creatingGame, setCreatingGame] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [uploading, setUploading] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -411,6 +413,7 @@ export default function UploadPage() {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('gameId', confirmedGameId);
+      formData.append('language', selectedLanguage);
 
       // Use retry logic with exponential backoff for transient errors
       const response = await retryWithBackoff(
@@ -661,6 +664,22 @@ export default function UploadPage() {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleString();
+  };
+
+  // AI-09: Map language codes to display names
+  const getLanguageDisplay = (lang?: string): { code: string; name: string } => {
+    const languageCode = lang || 'en';
+    const languageMap: Record<string, string> = {
+      'en': 'English',
+      'it': 'Italiano',
+      'de': 'Deutsch',
+      'fr': 'Français',
+      'es': 'Español'
+    };
+    return {
+      code: languageCode.toUpperCase(),
+      name: languageMap[languageCode] || 'Unknown'
+    };
   };
 
   const confirmedGame = confirmedGameId ? games.find(game => game.id === confirmedGameId) ?? null : null;
@@ -991,6 +1010,32 @@ export default function UploadPage() {
                   )}
                 </div>
 
+                <div style={{ marginBottom: '20px' }}>
+                  <label htmlFor="languageSelect" style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
+                    Document Language
+                  </label>
+                  <select
+                    id="languageSelect"
+                    value={selectedLanguage}
+                    onChange={(e) => setSelectedLanguage(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: '16px',
+                      backgroundColor: 'white',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="en">English</option>
+                    <option value="it">Italiano</option>
+                    <option value="de">Deutsch</option>
+                    <option value="fr">Français</option>
+                    <option value="es">Español</option>
+                  </select>
+                </div>
+
                 {/* PDF Preview */}
                 {file && Object.keys(validationErrors).length === 0 && (
                   <div style={{ marginBottom: '20px' }}>
@@ -1076,6 +1121,7 @@ export default function UploadPage() {
                       <thead>
                         <tr style={{ textAlign: 'left', borderBottom: '1px solid #e0e0e0' }}>
                           <th style={{ padding: '8px 12px', fontWeight: 600 }}>File name</th>
+                          <th style={{ padding: '8px 12px', fontWeight: 600 }}>Language</th>
                           <th style={{ padding: '8px 12px', fontWeight: 600 }}>Size</th>
                           <th style={{ padding: '8px 12px', fontWeight: 600 }}>Uploaded</th>
                           <th style={{ padding: '8px 12px', fontWeight: 600 }}>Status</th>
@@ -1083,9 +1129,29 @@ export default function UploadPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {pdfs.map(pdf => (
+                        {pdfs.map(pdf => {
+                          const { code, name } = getLanguageDisplay(pdf.language);
+                          return (
                           <tr key={pdf.id} style={{ borderBottom: '1px solid #f1f3f4' }}>
                             <td style={{ padding: '10px 12px', fontWeight: 500 }}>{pdf.fileName}</td>
+                            <td style={{ padding: '10px 12px' }}>
+                              <span
+                                style={{
+                                  display: 'inline-block',
+                                  padding: '4px 8px',
+                                  borderRadius: '4px',
+                                  backgroundColor: '#e8f0fe',
+                                  color: '#1967d2',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  textAlign: 'center',
+                                  minWidth: '50px'
+                                }}
+                                title={name}
+                              >
+                                {code}
+                              </span>
+                            </td>
                             <td style={{ padding: '10px 12px' }}>{formatFileSize(pdf.fileSizeBytes)}</td>
                             <td style={{ padding: '10px 12px' }}>{formatDate(pdf.uploadedAt)}</td>
                             <td style={{ padding: '10px 12px' }}>{pdf.status ?? 'Pending'}</td>
@@ -1125,7 +1191,8 @@ export default function UploadPage() {
                               </div>
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>

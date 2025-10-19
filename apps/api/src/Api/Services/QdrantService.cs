@@ -106,6 +106,14 @@ public class QdrantService : IQdrantService
                 cancellationToken: ct
             );
 
+            // AI-09: Create payload index for language field
+            await _clientAdapter.CreatePayloadIndexAsync(
+                collectionName: CollectionName,
+                fieldName: "language",
+                schemaType: PayloadSchemaType.Keyword,
+                cancellationToken: ct
+            );
+
             _logger.LogInformation("Collection {CollectionName} created successfully with indexes", CollectionName);
         }
         catch (Exception ex)
@@ -451,6 +459,192 @@ public class QdrantService : IQdrantService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Search failed for category {Category}", category);
+            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
+        }
+    }
+
+    // AI-09: Multi-language support
+
+    /// <summary>
+    /// Index document chunks with embeddings and language metadata
+    /// </summary>
+    public async Task<IndexResult> IndexDocumentChunksAsync(
+        string gameId,
+        string pdfId,
+        List<DocumentChunk> chunks,
+        string language,
+        CancellationToken ct = default)
+    {
+        using var activity = MeepleAiActivitySources.VectorSearch.StartActivity("QdrantService.IndexDocumentChunks");
+        activity?.SetTag("game.id", gameId);
+        activity?.SetTag("pdf.id", pdfId);
+        activity?.SetTag("chunks.count", chunks?.Count ?? 0);
+        activity?.SetTag("language", language);
+        activity?.SetTag("collection", CollectionName);
+
+        if (chunks == null || chunks.Count == 0)
+        {
+            activity?.SetTag("success", false);
+            activity?.SetTag("error", "No chunks to index");
+            return IndexResult.CreateFailure("No chunks to index");
+        }
+
+        var stopwatch = Stopwatch.StartNew();
+
+        try
+        {
+            _logger.LogInformation("Indexing {Count} chunks for PDF {PdfId} with language {Language}",
+                chunks.Count, pdfId, language);
+
+            var points = new List<PointStruct>();
+
+            for (int i = 0; i < chunks.Count; i++)
+            {
+                var chunk = chunks[i];
+                var pointId = Guid.NewGuid().ToString();
+
+                var payload = new Dictionary<string, Value>
+                {
+                    ["game_id"] = gameId,
+                    ["pdf_id"] = pdfId,
+                    ["chunk_index"] = i,
+                    ["text"] = chunk.Text,
+                    ["page"] = chunk.Page,
+                    ["char_start"] = chunk.CharStart,
+                    ["char_end"] = chunk.CharEnd,
+                    ["language"] = language, // AI-09: Language metadata
+                    ["indexed_at"] = DateTime.UtcNow.ToString("o")
+                };
+
+                var point = new PointStruct
+                {
+                    Id = new PointId { Uuid = pointId },
+                    Vectors = chunk.Embedding,
+                    Payload = { payload }
+                };
+
+                points.Add(point);
+            }
+
+            await _clientAdapter.UpsertAsync(
+                collectionName: CollectionName,
+                points: points.AsReadOnly(),
+                cancellationToken: ct
+            );
+
+            _logger.LogInformation("Successfully indexed {Count} chunks for PDF {PdfId} with language {Language}",
+                chunks.Count, pdfId, language);
+
+            activity?.SetTag("success", true);
+            activity?.SetTag("indexed.count", chunks.Count);
+
+            stopwatch.Stop();
+            MeepleAiMetrics.VectorIndexingDuration.Record(stopwatch.Elapsed.TotalMilliseconds,
+                new TagList { { "collection", CollectionName }, { "language", language } });
+
+            return IndexResult.CreateSuccess(chunks.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to index document chunks for PDF {PdfId} with language {Language}",
+                pdfId, language);
+
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Search for similar chunks filtered by game and language
+    /// </summary>
+    public virtual async Task<SearchResult> SearchAsync(
+        string gameId,
+        float[] queryEmbedding,
+        string language,
+        int limit = 5,
+        CancellationToken ct = default)
+    {
+        using var activity = MeepleAiActivitySources.VectorSearch.StartActivity("QdrantService.Search");
+        activity?.SetTag("game.id", gameId);
+        activity?.SetTag("language", language);
+        activity?.SetTag("limit", limit);
+        activity?.SetTag("collection", CollectionName);
+        activity?.SetTag("vector.dimension", queryEmbedding?.Length ?? 0);
+
+        var stopwatch = Stopwatch.StartNew();
+
+        try
+        {
+            _logger.LogInformation("Searching in game {GameId} for language {Language}, limit {Limit}",
+                gameId, language, limit);
+
+            var filter = new Filter
+            {
+                Must =
+                {
+                    new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "game_id",
+                            Match = new Match { Keyword = gameId }
+                        }
+                    },
+                    new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "language",
+                            Match = new Match { Keyword = language }
+                        }
+                    }
+                }
+            };
+
+            var searchResults = await _clientAdapter.SearchAsync(
+                collectionName: CollectionName,
+                vector: queryEmbedding,
+                filter: filter,
+                limit: (ulong)limit,
+                cancellationToken: ct
+            );
+
+            var results = searchResults.Select(r => new SearchResultItem
+            {
+                Score = r.Score,
+                Text = r.Payload["text"].StringValue,
+                PdfId = r.Payload["pdf_id"].StringValue,
+                Page = (int)r.Payload["page"].IntegerValue,
+                ChunkIndex = (int)r.Payload["chunk_index"].IntegerValue
+            }).ToList();
+
+            _logger.LogInformation("Found {Count} results for language {Language}", results.Count, language);
+
+            activity?.SetTag("results.count", results.Count);
+            activity?.SetTag("success", true);
+            if (results.Count > 0)
+            {
+                activity?.SetTag("top.score", results[0].Score);
+            }
+
+            stopwatch.Stop();
+            MeepleAiMetrics.RecordVectorSearch(stopwatch.Elapsed.TotalMilliseconds, results.Count, CollectionName);
+
+            return SearchResult.CreateSuccess(results);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Search failed for game {GameId} and language {Language}", gameId, language);
+
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
             return SearchResult.CreateFailure($"Search failed: {ex.Message}");
         }
     }

@@ -35,6 +35,9 @@ public class PdfDocumentEntity
     // PDF-08: Progress tracking
     public string? ProcessingProgressJson { get; set; }
 
+    // AI-09: Multi-language support
+    public string Language { get; set; } = "en"; // ISO 639-1 code: en, it, de, fr, es
+
     [NotMapped]
     public ProcessingProgress? ProcessingProgress
     {

@@ -467,4 +467,17 @@ public class MockEmbeddingService : IEmbeddingService
 
         return Task.FromResult(EmbeddingResult.CreateSuccess(embeddings));
     }
+
+    // AI-09: Language-aware overloads
+    public Task<EmbeddingResult> GenerateEmbeddingAsync(string text, string language, CancellationToken cancellationToken = default)
+    {
+        // Delegate to base implementation (language is ignored in mock)
+        return GenerateEmbeddingAsync(text, cancellationToken);
+    }
+
+    public Task<EmbeddingResult> GenerateEmbeddingsAsync(List<string> texts, string language, CancellationToken cancellationToken = default)
+    {
+        // Delegate to base implementation (language is ignored in mock)
+        return GenerateEmbeddingsAsync(texts, cancellationToken);
+    }
 }

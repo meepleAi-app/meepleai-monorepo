@@ -183,7 +183,8 @@ public class PdfStorageService
                 FileName = p.FileName,
                 FileSizeBytes = p.FileSizeBytes,
                 UploadedAt = p.UploadedAt,
-                UploadedByUserId = p.UploadedByUserId
+                UploadedByUserId = p.UploadedByUserId,
+                Language = p.Language // AI-09: Include language metadata
             })
             .ToListAsync(ct);
 
@@ -809,4 +810,5 @@ public record PdfDocumentDto
     public long FileSizeBytes { get; init; }
     public DateTime UploadedAt { get; init; }
     public string UploadedByUserId { get; init; } = default!;
+    public string Language { get; init; } = "en"; // AI-09: Language code (ISO 639-1)
 }

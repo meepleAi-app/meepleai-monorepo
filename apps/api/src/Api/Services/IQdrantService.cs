@@ -25,4 +25,25 @@ public interface IQdrantService
         CancellationToken ct = default);
     Task<bool> DeleteDocumentAsync(string pdfId, CancellationToken ct = default);
     Task<bool> DeleteByCategoryAsync(string category, CancellationToken ct = default);
+
+    // AI-09: Multi-language support
+    /// <summary>
+    /// Index document chunks with language metadata
+    /// </summary>
+    Task<IndexResult> IndexDocumentChunksAsync(
+        string gameId,
+        string pdfId,
+        List<DocumentChunk> chunks,
+        string language,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Search for similar chunks filtered by game and language
+    /// </summary>
+    Task<SearchResult> SearchAsync(
+        string gameId,
+        float[] queryEmbedding,
+        string language,
+        int limit = 5,
+        CancellationToken ct = default);
 }

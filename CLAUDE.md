@@ -352,6 +352,7 @@ cd apps/web && pnpm dev                                                         
 - **Security Scanning**: `docs/security-scanning.md` - CI security scanning guide
 - **Repository Migration**: `docs/guide/repository-visibility-migration.md` - Complete guide for changing repository visibility (public ↔ private)
 - **Schemas**: `schemas/README.md` - RuleSpec v0 schema reference
+- **Skills Guide**: `docs/guides/SKILLS_GUIDE.md` - Complete guide to 21 available skills (testing, pdf-design, excel, UI design, visual assets, themed output)
 
 ## Troubleshooting
 

@@ -131,18 +131,71 @@ git commit -m "test: add BDD tests for <issue-id>"
 ### 4️⃣ IMPLEMENTATION (GREEN)
 **Agents:** deep-think-developer, typescript-expert-developer
 **MCP:** magic_generate (SOLO per UI), track_progress
+**Skills:** Auto-triggered based on issue keywords (see table below)
+
+**Skill Auto-Triggers:**
+
+| Issue Keywords | Skill(s) | Purpose |
+|----------------|----------|---------|
+| "PDF", "pdf" | `pdf-design`, `document-skills:pdf` | PDF layout patterns, form filling, generation |
+| "Excel", "XLSX", "spreadsheet", "export" | `document-skills:xlsx`, `spreadsheet-tools` | Excel export with formulas/charts |
+| "redesign", "responsive", "accessibility" | `web-design` | Responsive layout patterns, a11y best practices |
+| "logo", "banner", "image", "visual" | `canvas-design` | Design principles for visual assets |
+| "brand", "theme", "styled" | `theme-factory` | Theming patterns for consistent visual styling |
+| "CLI", "setup", "configuration" | `development` | Project setup patterns, boilerplate code |
 
 **Backend C#:**
 ```bash
-# deep-think-developer scrive codice direttamente (NO magic)
+# 1. Check if issue matches trigger keywords (auto-use appropriate skill)
+# 2. Get patterns from skill if triggered
+# 3. deep-think-developer implements with patterns
+
+# Example: Issue "PDF-12: Add PDF export for setup guides"
+Skill("pdf-design")  # → Get PDF layout patterns (auto-triggered by "PDF")
+# Then implement
+deep-think-developer → Implement PdfExportService with QuestPDF
+
 git commit -m "feat(api): implement <issue-id>"
 ```
 
 **Frontend UI components:**
 ```bash
-# typescript-expert-developer usa magic_generate PER COMPONENTI UI
-# Per hooks/logic: scrive direttamente (NO magic)
+# 1. Check if issue matches trigger keywords (auto-use appropriate skill)
+# 2. Get patterns from skill if triggered
+# 3. typescript-expert-developer implements with patterns
+# 4. magic_generate ONLY for NEW UI components
+
+# Example: Issue "UI-45: Redesign game selection with responsive layout"
+Skill("web-design")  # → Get responsive patterns (auto-triggered by "redesign" + "responsive")
+# Then implement
+typescript-expert-developer → Implement responsive GameSelectionPage
+
 git commit -m "feat(web): implement <issue-id> UI"
+```
+
+**Example Workflows:**
+
+```bash
+# PDF Export Feature
+Issue: PDF-12 "Add PDF export for setup guides with branding"
+→ Skill("pdf-design")      # Auto-triggered by "PDF"
+→ Skill("theme-factory")   # Auto-triggered by "branding"
+→ deep-think-developer implements PdfExportService
+
+# Excel Export Feature
+Issue: EXPORT-03 "Export admin stats to XLSX with charts"
+→ Skill("document-skills:xlsx")  # Auto-triggered by "XLSX"
+→ deep-think-developer implements AdminStatsExportService
+
+# UI Redesign Feature
+Issue: UI-45 "Redesign game selection page with responsive layout"
+→ Skill("web-design")  # Auto-triggered by "redesign" + "responsive"
+→ typescript-expert-developer implements responsive GameSelectionPage
+
+# Visual Assets Feature
+Issue: DESIGN-08 "Create MeepleAI logo variants"
+→ Skill("canvas-design")  # Auto-triggered by "logo"
+→ Create original visual designs (NO copying existing artists' work)
 ```
 
 ### 5️⃣ LOCAL TESTS (GATE)

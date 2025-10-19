@@ -225,42 +225,61 @@ jobs:
           ConnectionStrings__Postgres: Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100
           OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
         run: |
-          # Run only refactored tests with IAsyncLifetime cleanup (ISSUE-319) + OpenTelemetry tests (OPS-02)
+          # TEST-02-P5: Run full test suite with coverage (ISSUE-319 complete)
           dotnet test \
-            --filter "FullyQualifiedName~GameEndpointsTests|FullyQualifiedName~ApiEndpointIntegrationTests|FullyQualifiedName~LogsEndpointTests|FullyQualifiedName~PdfIngestEndpointsTests|FullyQualifiedName~PdfUploadEndpointsTests|FullyQualifiedName~RateLimitingIntegrationTests|FullyQualifiedName~RuleSpecHistoryIntegrationTests|FullyQualifiedName~OpenTelemetryIntegrationTests" \
             --logger "console;verbosity=normal" \
             --no-build \
             -p:CollectCoverage=true \
-            -p:CoverletOutputFormat=lcov \
-            -p:CoverletOutput=./tests/Api.Tests/coverage/
+            -p:CoverletOutputFormat=cobertura \
+            -p:CoverletOutput=./tests/Api.Tests/coverage/ \
+            -p:Exclude="[*]Api.Migrations.*"
 
       - name: Upload API Coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          files: apps/api/tests/Api.Tests/coverage/coverage.info
+          files: apps/api/tests/Api.Tests/coverage/coverage.cobertura.xml
           flags: api
           name: api-coverage
           fail_ci_if_error: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-      # TEST-02: Enforce 90% coverage threshold
+      # TEST-02-P5: Enforce 90% coverage threshold
       - name: Check Coverage Threshold (90%)
         env:
           CI: true
           OPENROUTER_API_KEY: test-key-for-ci
           QDRANT_URL: http://127.0.0.1:6333
+          REDIS_URL: 127.0.0.1:6379
           ConnectionStrings__Postgres: Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100
+          OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
         run: |
-          echo "::notice::TEST-02: Checking 90% coverage threshold enforcement"
-          echo "Note: Currently collecting coverage from filtered test set (ISSUE-319)"
-          echo "Full coverage enforcement will be enabled when all tests are migrated"
+          echo "::notice::TEST-02-P5: Enforcing 90% line coverage threshold"
+          dotnet test \
+            --no-build \
+            -p:CollectCoverage=true \
+            -p:Threshold=90 \
+            -p:ThresholdType=line \
+            -p:Exclude="[*]Api.Migrations.*"
 
-          # TODO: Enable threshold enforcement when all tests use IAsyncLifetime
-          # dotnet test -p:Threshold=90 -p:ThresholdType=line --no-build
+      # TEST-02-P5: Generate HTML coverage report
+      - name: Generate HTML Coverage Report
+        if: always()
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool || true
+          reportgenerator \
+            -reports:apps/api/tests/Api.Tests/coverage/coverage.cobertura.xml \
+            -targetdir:apps/api/tests/Api.Tests/coverage-report \
+            -reporttypes:Html
 
-          echo "::warning::Coverage threshold check is documented but not yet enforced"
-          echo "::warning::Track progress in docs/issue/test-02-coverage-90-percent-progress.md"
+      # TEST-02-P5: Upload coverage artifacts
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-api-${{ github.run_number }}
+          path: apps/api/tests/Api.Tests/coverage-report/
+          retention-days: 30
 
   validate-observability-configs:
     needs: changes

@@ -55,14 +55,17 @@ public class ChatExportServiceTests : IDisposable
         _mockTxtFormatter = new Mock<IExportFormatter>();
         _mockTxtFormatter.Setup(f => f.Format).Returns("txt");
         _mockTxtFormatter.Setup(f => f.ContentType).Returns("text/plain");
+        _mockTxtFormatter.Setup(f => f.FileExtension).Returns("txt");
 
         _mockPdfFormatter = new Mock<IExportFormatter>();
         _mockPdfFormatter.Setup(f => f.Format).Returns("pdf");
         _mockPdfFormatter.Setup(f => f.ContentType).Returns("application/pdf");
+        _mockPdfFormatter.Setup(f => f.FileExtension).Returns("pdf");
 
         _mockMdFormatter = new Mock<IExportFormatter>();
         _mockMdFormatter.Setup(f => f.Format).Returns("md");
         _mockMdFormatter.Setup(f => f.ContentType).Returns("text/markdown");
+        _mockMdFormatter.Setup(f => f.FileExtension).Returns("md");
 
         var formatters = new[]
         {
@@ -505,5 +508,312 @@ public class ChatExportServiceTests : IDisposable
             Times.Once);
 
         Assert.True(result.Success);
+    }
+
+    /// <summary>
+    /// Scenario: User requests export with different format casing
+    ///   Given chat exists with messages
+    ///   When user requests export with uppercase/mixed-case format (e.g., "PDF", "Pdf")
+    ///   Then correct formatter is selected (case-insensitive match)
+    ///   And export succeeds with correct content type
+    /// </summary>
+    [Theory]
+    [InlineData("pdf", "application/pdf")]
+    [InlineData("PDF", "application/pdf")]
+    [InlineData("Pdf", "application/pdf")]
+    [InlineData("txt", "text/plain")]
+    [InlineData("TXT", "text/plain")]
+    [InlineData("md", "text/markdown")]
+    [InlineData("MD", "text/markdown")]
+    public async Task ExportChatAsync_FormatCaseInsensitive_SelectsCorrectFormatter(string format, string expectedContentType)
+    {
+        // Given: Chat exists with messages
+        var chat = await CreateTestChatAsync();
+
+        var log = new ChatLogEntity
+        {
+            Id = Guid.NewGuid(),
+            ChatId = chat.Id,
+            Level = "user",
+            Message = "Test message",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.ChatLogs.Add(log);
+        await _dbContext.SaveChangesAsync();
+
+        var exportStream = new MemoryStream();
+        var mockFormatter = format.ToLower() == "pdf" ? _mockPdfFormatter :
+                            format.ToLower() == "txt" ? _mockTxtFormatter :
+                            _mockMdFormatter;
+
+        mockFormatter
+            .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
+            .ReturnsAsync(exportStream);
+
+        // When: User requests export with case variant
+        var result = await _service.ExportChatAsync(chat.Id, "user-123", format);
+
+        // Then: Correct formatter is selected
+        mockFormatter.Verify(
+            f => f.FormatAsync(It.Is<ChatEntity>(c => c.Id == chat.Id), null, null),
+            Times.Once);
+
+        // And: Export succeeds with correct content type
+        Assert.True(result.Success);
+        Assert.Equal(expectedContentType, result.ContentType);
+    }
+
+    /// <summary>
+    /// Scenario: Export operation is cancelled mid-operation
+    ///   Given export operation is in progress
+    ///   When cancellation token is triggered
+    ///   Then OperationCanceledException is thrown
+    ///   And operation is aborted gracefully
+    /// </summary>
+    [Fact]
+    public async Task ExportChatAsync_CancellationTokenTriggered_ThrowsOperationCanceledException()
+    {
+        // Given: Chat exists
+        var chat = await CreateTestChatAsync();
+
+        // When: Cancellation token is already cancelled
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        // Then: OperationCanceledException is thrown
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            await _service.ExportChatAsync(chat.Id, "user-123", "pdf", ct: cts.Token));
+    }
+
+    /// <summary>
+    /// Scenario: Generate filename with empty/whitespace game name
+    ///   Given game name is empty, null, or whitespace-only
+    ///   When generating export filename
+    ///   Then filename uses "chat" as fallback
+    ///   And format is "chat-chat-{id}.{ext}"
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("\t\t")]
+    [InlineData("\n")]
+    [InlineData("     \t\n")]
+    public async Task ExportChatAsync_EmptyGameName_UsesChatFallback(string emptyGameName)
+    {
+        // Given: Game name is empty/whitespace
+        var chat = await CreateTestChatAsync("user-123", emptyGameName);
+
+        var exportStream = new MemoryStream();
+        _mockTxtFormatter
+            .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
+            .ReturnsAsync(exportStream);
+
+        // When: Generating export filename
+        var result = await _service.ExportChatAsync(chat.Id, "user-123", "txt");
+
+        // Then: Filename uses "chat" as fallback
+        Assert.True(result.Success);
+        Assert.NotNull(result.Filename);
+        Assert.StartsWith("chat-chat-", result.Filename);
+        Assert.EndsWith(".txt", result.Filename);
+    }
+
+    /// <summary>
+    /// Scenario: Generate filename with control characters in game name
+    ///   Given game name contains control characters (ASCII 0-31, 127)
+    ///   When generating filename
+    ///   Then control characters are removed
+    ///   And filename is sanitized and valid
+    /// </summary>
+    [Theory]
+    [InlineData("Game\tName", "GameName")]  // Tab (ASCII 9)
+    [InlineData("Game\x00Name", "GameName")]  // Null (ASCII 0)
+    [InlineData("Game\x07Name", "GameName")]  // Bell (ASCII 7)
+    [InlineData("Game\x1BName", "GameName")]  // Escape (ASCII 27)
+    [InlineData("Game\x7FName", "GameName")]  // DEL (ASCII 127)
+    public async Task ExportChatAsync_ControlCharactersInGameName_RemovesControlChars(string gameName, string expectedSanitized)
+    {
+        // Given: Game name contains control characters
+        var chat = await CreateTestChatAsync("user-123", gameName);
+
+        var exportStream = new MemoryStream();
+        _mockPdfFormatter
+            .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
+            .ReturnsAsync(exportStream);
+
+        // When: Generating filename
+        var result = await _service.ExportChatAsync(chat.Id, "user-123", "pdf");
+
+        // Then: Control characters are removed
+        Assert.True(result.Success);
+        Assert.NotNull(result.Filename);
+        Assert.Contains(expectedSanitized, result.Filename);
+
+        // And: Filename starts with sanitized game name
+        Assert.StartsWith(expectedSanitized, result.Filename.Split("-chat-")[0]);
+    }
+
+    /// <summary>
+    /// Scenario: Generate filename with very long game name
+    ///   Given game name exceeds 50 characters
+    ///   When generating filename
+    ///   Then game name is truncated to 50 chars
+    ///   And filename includes truncated name + chat ID
+    ///   And filename is valid and not excessively long
+    /// </summary>
+    [Fact]
+    public async Task ExportChatAsync_VeryLongGameName_TruncatesTo50Chars()
+    {
+        // Given: Game name exceeds 50 characters
+        var longGameName = "This is an extremely long game name that definitely exceeds the fifty character limit for filenames";
+        var chat = await CreateTestChatAsync("user-123", longGameName);
+
+        var exportStream = new MemoryStream();
+        _mockMdFormatter
+            .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
+            .ReturnsAsync(exportStream);
+
+        // When: Generating filename
+        var result = await _service.ExportChatAsync(chat.Id, "user-123", "md");
+
+        // Then: Game name is truncated
+        Assert.True(result.Success);
+        Assert.NotNull(result.Filename);
+
+        // And: Filename contains truncated portion (max 50 chars of game name)
+        // Format: {gameName(<=50)}-chat-{id(8)}.{ext}
+        var gameNamePart = result.Filename.Split("-chat-")[0];
+        Assert.True(gameNamePart.Length <= 50, $"Game name part '{gameNamePart}' exceeds 50 chars: {gameNamePart.Length}");
+
+        // And: Filename is reasonable length (truncated game name + "-chat-" + 8-char ID + ".md")
+        Assert.True(result.Filename.Length < 80, $"Filename too long: {result.Filename.Length} chars");
+    }
+
+    /// <summary>
+    /// Scenario: Generate filename with newlines in game name
+    ///   Given game name contains \n, \r, or \r\n
+    ///   When generating filename
+    ///   Then newlines are removed
+    ///   And filename is valid without line breaks
+    /// </summary>
+    [Theory]
+    [InlineData("Game\nName", "GameName")]
+    [InlineData("Game\rName", "GameName")]
+    [InlineData("Game\r\nName", "GameName")]
+    [InlineData("Multi\nLine\nGame", "MultiLineGame")]
+    public async Task ExportChatAsync_NewlinesInGameName_RemovesNewlines(string gameName, string expectedSanitized)
+    {
+        // Given: Game name contains newlines
+        var chat = await CreateTestChatAsync("user-123", gameName);
+
+        var exportStream = new MemoryStream();
+        _mockTxtFormatter
+            .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
+            .ReturnsAsync(exportStream);
+
+        // When: Generating filename
+        var result = await _service.ExportChatAsync(chat.Id, "user-123", "txt");
+
+        // Then: Newlines are removed
+        Assert.True(result.Success);
+        Assert.NotNull(result.Filename);
+        Assert.Contains(expectedSanitized, result.Filename);
+        Assert.DoesNotContain("\n", result.Filename);
+        Assert.DoesNotContain("\r", result.Filename);
+    }
+
+    /// <summary>
+    /// Scenario: Multiple users export same chat concurrently
+    ///   Given chat exists with multiple messages
+    ///   When 5 concurrent export requests are made
+    ///   Then all exports succeed independently
+    ///   And no race conditions occur
+    ///   And each export returns valid stream
+    /// </summary>
+    [Fact]
+    public async Task ExportChatAsync_ConcurrentRequests_AllSucceedIndependently()
+    {
+        // Given: Chat exists with messages
+        var chat = await CreateTestChatAsync();
+
+        var log = new ChatLogEntity
+        {
+            Id = Guid.NewGuid(),
+            ChatId = chat.Id,
+            Level = "user",
+            Message = "Concurrent test message",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext.ChatLogs.Add(log);
+        await _dbContext.SaveChangesAsync();
+
+        // Setup formatter to return unique streams
+        _mockPdfFormatter
+            .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
+            .ReturnsAsync(() => new MemoryStream());
+
+        // When: 5 concurrent export requests are made
+        var tasks = Enumerable.Range(0, 5).Select(_ =>
+            _service.ExportChatAsync(chat.Id, "user-123", "pdf")
+        ).ToArray();
+
+        var results = await Task.WhenAll(tasks);
+
+        // Then: All exports succeed
+        Assert.All(results, result => Assert.True(result.Success));
+
+        // And: Each has a valid stream
+        Assert.All(results, result => Assert.NotNull(result.Stream));
+
+        // And: Formatter was called 5 times (once per request)
+        _mockPdfFormatter.Verify(
+            f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null),
+            Times.Exactly(5));
+    }
+
+    /// <summary>
+    /// Scenario: Export chat with 100+ messages
+    ///   Given chat has 150 messages
+    ///   When user exports chat
+    ///   Then export completes successfully
+    ///   And all 150 messages are loaded
+    ///   And formatter receives complete chat entity
+    /// </summary>
+    [Fact]
+    public async Task ExportChatAsync_LargeChatWith150Messages_CompletesSuccessfully()
+    {
+        // Given: Chat has 150 messages
+        var chat = await CreateTestChatAsync();
+
+        var logs = Enumerable.Range(1, 150).Select(i => new ChatLogEntity
+        {
+            Id = Guid.NewGuid(),
+            ChatId = chat.Id,
+            Level = i % 2 == 0 ? "assistant" : "user",
+            Message = $"Message number {i} with some content to simulate realistic chat data.",
+            CreatedAt = DateTime.UtcNow.AddMinutes(i)
+        }).ToList();
+
+        _dbContext.ChatLogs.AddRange(logs);
+        await _dbContext.SaveChangesAsync();
+
+        var exportStream = new MemoryStream();
+        _mockPdfFormatter
+            .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
+            .ReturnsAsync(exportStream);
+
+        // When: User exports chat
+        var result = await _service.ExportChatAsync(chat.Id, "user-123", "pdf");
+
+        // Then: Export completes successfully
+        Assert.True(result.Success);
+
+        // And: All 150 messages are loaded and passed to formatter
+        _mockPdfFormatter.Verify(
+            f => f.FormatAsync(
+                It.Is<ChatEntity>(c => c.Logs.Count == 150),
+                null,
+                null),
+            Times.Once);
     }
 }

@@ -49,11 +49,8 @@ Workflow end-to-end automatizzato per issue con approccio BDD, testing, code rev
 
 ### Phase 5: Local Testing
 **Tools:** `Bash` (dotnet test, pnpm test, playwright)
-**Command:** `/debug` (auto-fix se RED)
 
-- Test suite completa, coverage validation
-- Auto-fix con `/debug` se RED (max 2 iterazioni)
-- BLOCCO se RED dopo auto-fix attempts
+- Test suite completa, coverage validation, BLOCCO se RED
 
 ### Phase 6: Code Review (Self)
 **Agents:** `deep-think-developer`, `typescript-expert-developer`
@@ -83,11 +80,10 @@ Workflow end-to-end automatizzato per issue con approccio BDD, testing, code rev
 - Push branch, creare PR con review inclusa
 
 ### Phase 10: CI Monitoring (--wait only)
-**Command:** `/debug` (auto-fix se CI fallisce)
-**Agents:** `data-analyst-deep-think` (log analysis only)
-**MCP:** `github_*` (CI status)
+**Agents:** `data-analyst-deep-think`, `deep-think-developer`
+**MCP:** `github_*` (CI status), `sequential_start/step` (plan fix)
 
-- Monitorare CI, auto-fix con `/debug` se fallisce, re-push (max 3 tentativi)
+- Monitorare CI, analizzare failure, pianificare fix, re-push (max 3 tentativi)
 
 ---
 
@@ -121,8 +117,13 @@ Scenario: [Happy path]
 
 ### 3️⃣ TEST-FIRST (RED)
 **Agents:** deep-think-developer, typescript-expert-developer
+**Skills:** testing (for test patterns)
 
 ```bash
+# BEFORE writing tests, get patterns from skill
+Skill("testing")  # → Get unit test structure and best practices
+
+# Then write context-specific tests
 git commit -m "test: add BDD tests for <issue-id>"
 # Tests must FAIL (RED phase)
 ```
@@ -145,39 +146,17 @@ git commit -m "feat(web): implement <issue-id> UI"
 ```
 
 ### 5️⃣ LOCAL TESTS (GATE)
+**Skills:** webapp-testing (for E2E tests, frontend only)
+
 ```bash
 dotnet test --verbosity normal  # Backend
-pnpm test                        # Frontend
-pnpm test:e2e                   # E2E
+pnpm test                        # Frontend unit tests
+
+# If frontend feature AND DoD requires E2E
+Skill("webapp-testing")  # → Get Playwright E2E patterns
+pnpm test:e2e           # Run E2E tests
+
 # BLOCCO se RED ❌
-```
-
-### 5️⃣.5 AUTO-FIX FALLIMENTI (NEW)
-**Command:** `/debug` (se tests falliscono)
-
-**Se local tests RED:**
-1. Cattura errore completo (stack trace, test name, assertion failure)
-2. Esegui `/debug <error_message>`
-3. `/debug` genera 2 soluzioni, seleziona la migliore, implementa fix + tests
-4. Re-run tests (max 2 iterazioni)
-5. Se ancora RED dopo 2 tentativi → BLOCCO (richiede intervento umano)
-
-**Output atteso:**
-```
-🔧 LOCAL TEST FAILURE DETECTED
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-❌ Failed: ChatServiceTests.SendMessage_ShouldPersistChat
-
-🔍 Auto-fixing with /debug...
-⚖️  Solution B (Score: 88): Add null check + validation guard
-✅ Fix applied: ChatService.cs, ChatServiceTests.cs
-✅ Tests: +3 resilience tests
-
-🔁 Re-running tests...
-✅ All tests GREEN
-
-💾 Commit: fix: add null check for chat persistence (auto-debug)
 ```
 
 ### 6️⃣ SELF REVIEW
@@ -205,8 +184,12 @@ pnpm test:e2e                   # E2E
 
 ### 8️⃣ UPDATE ISSUE DOD
 **Tools:** gh issue edit
+**Skills:** development (for docs structure, if DoD requires docs update)
 
 ```bash
+# If DoD requires documentation update
+Skill("development")  # → Get documentation best practices
+
 # Aggiorna issue body con DoD completati
 gh issue edit <issue-id> --body "$(cat <<'EOF'
 ## Acceptance Criteria
@@ -237,50 +220,15 @@ gh pr create --title "<issue-id>: <title>" --body "..."
 ```
 
 ### 🔟 CI MONITORING (--wait only)
-**Command:** `/debug` (se CI fallisce)
-**Agents:** data-analyst-deep-think (analisi logs)
+**Agents:** data-analyst-deep-think, deep-think-developer
 **MCP:** github_*, sequential_*
 
-**If CI FAILURE:**
-1. Fetch CI logs via `gh run view --log-failed`
-2. **Esegui `/debug <ci_error_message>`** invece di analisi manuale
-3. `/debug` genera 2 soluzioni automaticamente, seleziona la migliore
-4. `/debug` implementa fix + tests + commit + push
-5. Re-monitor CI (max 3 attempts)
-6. Se fallisce dopo 3 tentativi → BLOCCO (richiede intervento umano)
-
-**Output atteso:**
-```
-🔧 CI FAILURE DETECTED (Attempt 1/3)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-❌ Job: ci-api / Build & Test
-   Error: CS0246: The type 'StreamingQaService' could not be found
-
-🔍 Auto-fixing with /debug...
-
-📊 Analysis:
-   Error Type: CompilationError
-   Layer: API
-   Service: Program.cs
-   Impact: 10/10 (Critical - blocks build)
-
-⚖️  Solutions:
-   A (Score: 65): Add missing using statement
-   B (Score: 82): Add DI registration + using ✓ SELECTED
-
-🛠️  Fix Applied:
-   ✅ Program.cs: Added DI registration for IStreamingQaService
-   ✅ Using statement added
-   ✅ Tests: +2 integration tests for DI resolution
-
-💾 Commit: fix(api): add StreamingQaService DI registration (auto-debug CI fix)
-🚀 Pushed to feature/<issue-id>
-
-🔁 Re-monitoring CI...
-⏳ Build in progress...
-✅ CI PASSED (Attempt 2/3)
-```
+**If FAILURE:**
+1. Analyze logs (data-analyst-deep-think)
+2. Plan fix (strategic-advisor + sequential)
+3. Implement fix (deep-think-developer)
+4. Re-push and re-monitor
+5. Max 3 attempts
 
 ---
 
@@ -356,6 +304,107 @@ get-library-docs("/dotnet/aspnetcore", topic="server-sent-events")
 
 ---
 
+## Skill Selection Logic (Automatic)
+
+Skills complement Agents and MCP tools by providing battle-tested patterns, boilerplate code, and best practices. Use skills automatically based on task context.
+
+### Testing Phase (Phase 3 & 5)
+
+**Trigger**: Durante test generation o test execution
+**Skill**: `testing`
+
+**Backend C# (xUnit):**
+```bash
+# Get xUnit + Testcontainers patterns
+Skill("testing")
+# → Returns: pytest patterns (adapt to xUnit)
+# → Use: Arrange-Act-Assert structure, test naming conventions
+```
+
+**Frontend TypeScript (Jest/Vitest):**
+```bash
+# Get Jest/Vitest patterns
+Skill("testing")
+# → Returns: Unit test structure, mocking patterns
+# → Use: describe/it blocks, expect matchers, component testing
+```
+
+**E2E Testing (Frontend only):**
+```bash
+# Get Playwright E2E patterns
+Skill("webapp-testing")
+# → Returns: Page object model, selectors, assertions
+# → Use: User workflows, accessibility testing, visual regression
+```
+
+**When to Use**:
+- ✅ Need test structure/patterns (ALWAYS use skill first)
+- ✅ Need mocking/stubbing examples
+- ✅ Need E2E test scaffolding (frontend)
+- ❌ Business logic assertions (Agent handles context-specific asserts)
+
+### Code Generation (Phase 4)
+
+**Trigger**: Durante implementation per boilerplate code
+**Skill**: `development`
+
+**Use Cases**:
+```bash
+# CLI application structure
+Skill("development")  # Section: Creating a CLI application
+
+# Project setup (dependencies, virtual env)
+Skill("development")  # Section: Setting up a project
+
+# Git workflow patterns
+Skill("development")  # Section: Version control
+```
+
+**When to Use**:
+- ✅ Boilerplate code (CLI, API client, utilities)
+- ✅ Project scaffolding (dependencies, configuration)
+- ✅ Generic patterns (error handling, logging)
+- ❌ Business logic specifica (Agent scrive codice specifico del dominio)
+- ❌ Complex architecture decisions (Agent + strategic-advisor)
+
+### Documentation Update (Phase 8)
+
+**Trigger**: DoD richiede docs update
+**Skill**: `development`
+
+```bash
+# Get documentation best practices
+Skill("development")  # Section: Documentation
+# → Returns: README structure, docstring conventions, comment style
+# → Use: Populate template with feature-specific content
+```
+
+**When to Use**:
+- ✅ README updates (structure, formatting)
+- ✅ API documentation (docstring conventions)
+- ✅ Troubleshooting guides (template structure)
+- ❌ Technical writing content (Agent writes domain-specific docs)
+
+### Skill Priority Rules
+
+**Decision Flow**:
+```
+1. Is task about TEST patterns/structure? → Skill("testing" or "webapp-testing")
+2. Is task about BOILERPLATE code? → Skill("development")
+3. Is task about DOCUMENTATION structure? → Skill("development")
+4. Otherwise → Use Agent (deep-think-developer, typescript-expert-developer)
+```
+
+**Skill vs Agent**:
+- **Skill**: Generic patterns, best practices, boilerplate (framework-agnostic)
+- **Agent**: Domain logic, business rules, context-specific code (project-aware)
+
+**Skill vs MCP**:
+- **Skill**: Code patterns, project setup, testing structure
+- **MCP**: External services (Context7 docs, Magic UI gen, Sequential reasoning, GitHub ops)
+
+---
+
 ## Final Summary Format
 
 ### Success (without --wait)
@@ -388,23 +437,19 @@ get-library-docs("/dotnet/aspnetcore", topic="server-sent-events")
 🎉 PR ready for human review and merge
 ```
 
-### Success (with --wait + auto-debug)
+### Success (with --wait + auto-fix)
 ```
-✅ WORKFLOW COMPLETE (with auto-debug): <issue-id>
+✅ WORKFLOW COMPLETE (with auto-fix): <issue-id>
 
-🔧 Auto-Debug Applied:
-- Local Test Fix: StreamingQaServiceTests RED → /debug → Solution B (Score: 88) → GREEN ✅
-- CI Fix (Attempt 1): Test timeout → /debug → Solution B (Score: 85) → CI PASSED ✅
+🔧 Auto-Fix Applied:
+- Attempt 1: [issue] → Fixed with [solution]
+- Attempt 2: CI passed
 
 📊 Summary:
-- Commits: 5 (3 feature + 2 auto-debug fixes)
-- Agents: [...] + /debug command (2 executions)
-- Tests: +6 resilience tests added by auto-debug
-- Coverage: Backend +2.1%, Frontend +1.5%
+- Commits: 4 (3 feature + 1 CI fix)
+- Agents: [..., data-analyst-deep-think (CI analysis)]
 - CI: ✅ Passed on attempt 2/3
-- Duration: Xm Ys (including auto-debug)
-- Auto-Debug Issues Created: #XXX (local test fix), #YYY (CI fix)
-- Auto-Debug PRs: Fixes squashed into feature PR
+- Duration: Xm Ys (including fix)
 ```
 
 ### Failure
@@ -517,12 +562,12 @@ MCP NOT Used:
 Result: PR #467 created, UI components + logic
 ```
 
-### Example 3: Full-Stack Feature (with auto-debug)
+### Example 3: Full-Stack Feature
 ```bash
 /work CHAT-01 --wait  # "Streaming responses (API + UI)"
 
 Agents: Explore, doc-researcher-optimizer, strategic-advisor, system-architect,
-        deep-think-developer, typescript-expert-developer
+        deep-think-developer, typescript-expert-developer, data-analyst-deep-think
 
 MCP Used:
   - Context7: ASP.NET Core SSE + React EventSource docs
@@ -534,19 +579,49 @@ MCP NOT Used:
   - magic for backend C# (deep-think writes)
   - magic for React hooks (typescript-expert writes)
 
-Error Recovery:
-  1. Local tests: StreamingQaServiceTests.AskStreamAsync_ShouldStreamTokens FAILED
-     → /debug executed → Solution: Add CancellationToken handling
-     → Re-run → GREEN ✅
-
-  2. CI failure (Attempt 1): Test timeout in CI environment
-     → /debug executed → Solution B (Score: 85): Conditional timeout for CI
-     → Push fix → Re-monitor
-     → CI PASSED (Attempt 2/3) ✅
-
-Result: PR #458 created, CI passed with 2 auto-debug fixes applied
-Commits: 5 (3 feature + 2 auto-debug fixes)
+Auto-Fix: Test timeout → Conditional CI timeout
+Result: PR #458 created, CI passed on attempt 2/3
 ```
+
+### Example 4: Frontend Feature with E2E Testing and Skill Usage
+```bash
+/work UI-166 --wait  # "Create influencer management UI"
+
+Agents: Explore, doc-researcher-optimizer, typescript-expert-developer
+
+Skills Used:
+  - testing: Get unit test structure patterns (Phase 3)
+    → Provided: Jest describe/it blocks, expect matchers, component testing patterns
+    → Applied: 15 unit tests for influencer CRUD operations
+
+  - webapp-testing: Get Playwright E2E patterns (Phase 5)
+    → Provided: Page object model, user workflow patterns, accessibility testing
+    → Applied: 3 E2E tests (create, edit, delete influencer flows)
+
+  - development: Documentation best practices (Phase 8)
+    → Provided: README structure, API docs conventions
+    → Applied: Updated docs/guides/influencers.md with new UI features
+
+MCP Used:
+  - Context7: Next.js 14 docs, TanStack Query patterns
+  - magic_generate: Form components (InfluencerForm, PersonaEditor)
+  - github_*: PR creation, CI monitoring
+
+Workflow:
+  Phase 3: Skill("testing") → Write 15 unit tests (RED)
+  Phase 4: magic_generate → UI components + typescript-expert → hooks/logic
+  Phase 5: Skill("webapp-testing") → Write 3 E2E tests → All green ✅
+  Phase 8: Skill("development") → Update docs structure
+
+Result:
+  - PR #XXX created
+  - 15 unit tests + 3 E2E tests (100% coverage on UI)
+  - Documentation updated (influencers.md)
+  - CI passed on first attempt
+  - DoD: 6/6 complete (including E2E requirement)
+```
+
+**Key Takeaway**: Skills provided **generic patterns** (test structure, E2E flows, docs format), while Agents/MCP handled **domain-specific** implementation (influencer business logic, specific UI components).
 
 ---
 
@@ -555,30 +630,27 @@ Commits: 5 (3 feature + 2 auto-debug fixes)
 | Command | Purpose | Scope | Output |
 |---------|---------|-------|--------|
 | `/issue` | BDD workflow | Discovery → Implementation | Code commits (no PR) |
-| `/work` | **Full automation** | `/issue` + Tests + **`/debug`** + Review + PR + CI | PR created (± CI passed) |
-| `/debug` | **Error auto-fix** | Analysis → 2 Solutions → Auto-fix + Tests + GitHub | Issue + PR with fix |
+| `/work` | **Full automation** | `/issue` + Tests + Review + PR + CI | PR created (± CI passed) |
 | `/close-issue` | Close existing | Code Review + CI + Merge | Issue closed |
 
 **Recommended Flow:**
-1. `/work <issue-id> [--wait]` → Implementa e crea PR (usa `/debug` se errori)
+1. `/work <issue-id> [--wait]` → Implementa e crea PR
 2. Human review su PR (opzionale se --wait usato)
 3. `/close-issue <issue-id>` → Merge e chiude
 
-**Error Recovery Flow:**
-- `/work` rileva errore → esegue `/debug` automaticamente → fix + tests → continua workflow
-
 ---
 
-**Version:** 1.3 (Auto-debug integration)
+**Version:** 1.3 (Skill Integration)
 **Author:** MeepleAI Development Team
-**Last Updated:** 2025-10-18
+**Last Updated:** 2025-10-19
 
 **Key Changes from v1.2:**
-- ✅ Added Phase 5.5: Auto-fix local test failures with `/debug`
-- ✅ Updated Phase 10: Auto-fix CI failures with `/debug` (replaces manual analysis)
-- ✅ `/debug` generates 2 solutions, selects best automatically, implements fix + tests
-- ✅ Max 2 iterations for local tests, max 3 for CI
-- ✅ Updated Integration table with `/debug` command
+- ✅ Added comprehensive "Skill Selection Logic" section
+- ✅ Integrated `testing` skill in Phase 3 for test patterns
+- ✅ Integrated `webapp-testing` skill in Phase 5 for E2E tests
+- ✅ Integrated `development` skill in Phase 8 for documentation
+- ✅ Added Example 4 demonstrating full skill usage workflow
+- ✅ Clear decision flow: Skill (patterns) → Agent (implementation)
 
 **Key Changes from v1.1:**
 - ✅ Added Phase 8: Update Issue DoD (automatic checkbox marking)

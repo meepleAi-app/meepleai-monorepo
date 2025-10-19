@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -28,6 +29,17 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
 
     public PdfUploadValidationIntegrationTests(WebApplicationFactoryFixture factory) : base(factory)
     {
+    }
+
+    /// <summary>
+    /// Helper method to load real PDF fixture from Fixtures directory.
+    /// This prevents flaky tests caused by fake PDFs that crash Docnet.Core during background processing.
+    /// See issue #490 for details.
+    /// </summary>
+    private static async Task<byte[]> LoadRealPdfFixtureAsync()
+    {
+        var fixturePath = Path.Combine("Fixtures", "sample_table.pdf");
+        return await File.ReadAllBytesAsync(fixturePath);
     }
 
     /// <summary>
@@ -285,9 +297,10 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         // And: A game exists
         var game = await CreateTestGameAsync($"Validation-Test-6-{TestRunId}");
 
-        // When: Admin uploads a valid PDF
+        // When: Admin uploads a valid PDF (real PDF fixture to prevent flaky tests - issue #490)
         var content = new MultipartFormDataContent();
-        var fileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("%PDF-1.4\n%valid pdf content here"));
+        var pdfBytes = await LoadRealPdfFixtureAsync();
+        var fileContent = new ByteArrayContent(pdfBytes);
         fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/pdf");
         content.Add(fileContent, "file", "valid-rules.pdf");
         content.Add(new StringContent(game.Id), "gameId");
@@ -379,9 +392,10 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         // And: A game exists
         var game = await CreateTestGameAsync($"Validation-Test-Editor-{TestRunId}");
 
-        // When: Editor uploads valid PDF
+        // When: Editor uploads valid PDF (real PDF fixture to prevent flaky tests - issue #490)
         var content = new MultipartFormDataContent();
-        var fileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("%PDF-1.4\ncontent"));
+        var pdfBytes = await LoadRealPdfFixtureAsync();
+        var fileContent = new ByteArrayContent(pdfBytes);
         fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/pdf");
         content.Add(fileContent, "file", "editor-rules.pdf");
         content.Add(new StringContent(game.Id), "gameId");

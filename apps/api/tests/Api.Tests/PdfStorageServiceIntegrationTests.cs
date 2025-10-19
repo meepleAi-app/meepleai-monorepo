@@ -241,6 +241,17 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
         {
             return GenerateEmbeddingsAsync(new List<string> { text }, ct);
         }
+
+        // AI-09: Language-aware overloads
+        public Task<EmbeddingResult> GenerateEmbeddingsAsync(List<string> texts, string language, CancellationToken ct = default)
+        {
+            return GenerateEmbeddingsAsync(texts, ct);
+        }
+
+        public Task<EmbeddingResult> GenerateEmbeddingAsync(string text, string language, CancellationToken ct = default)
+        {
+            return GenerateEmbeddingAsync(text, ct);
+        }
     }
 
     private sealed class TestQdrantService : IQdrantService
@@ -283,6 +294,17 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
         }
 
         public Task<SearchResult> SearchAsync(string gameId, float[] queryEmbedding, int limit = 5, CancellationToken ct = default)
+        {
+            throw new NotSupportedException();
+        }
+
+        // AI-09: Language-aware overloads
+        public Task<IndexResult> IndexDocumentChunksAsync(string gameId, string pdfId, List<DocumentChunk> chunks, string language, CancellationToken ct = default)
+        {
+            return IndexDocumentChunksAsync(gameId, pdfId, chunks, ct);
+        }
+
+        public Task<SearchResult> SearchAsync(string gameId, float[] queryEmbedding, string language, int limit = 5, CancellationToken ct = default)
         {
             throw new NotSupportedException();
         }

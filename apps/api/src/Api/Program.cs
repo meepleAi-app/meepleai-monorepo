@@ -149,6 +149,9 @@ builder.Services.AddScoped<ILlmService, OllamaLlmService>();
 builder.Services.AddScoped<ITextChunkingService, TextChunkingService>();
 builder.Services.AddScoped<PdfIndexingService>();
 
+// AI-09: Language detection for multi-language support
+builder.Services.AddSingleton<ILanguageDetectionService, LanguageDetectionService>();
+
 // AI-05: AI response caching
 // PERF-03: Changed from Singleton to Scoped due to MeepleAiDbContext dependency
 builder.Services.AddScoped<IAiResponseCacheService, AiResponseCacheService>();
@@ -1037,7 +1040,8 @@ v1Api.MapPost("/agents/qa", async (
         }
 
         // PERF-03: Support cache bypass via query parameter
-        var resp = await rag.AskAsync(req.gameId, req.query, bypassCache, ct);
+        // AI-09: Language parameter defaults to null (uses "en")
+        var resp = await rag.AskAsync(req.gameId, req.query, language: null, bypassCache, ct);
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
         // CHAT-02: Generate follow-up questions if enabled
@@ -1215,7 +1219,8 @@ v1Api.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context,
                 ct);
         }
 
-        var resp = await rag.ExplainAsync(req.gameId, req.topic, ct);
+        // AI-09: Language parameter defaults to null (uses "en")
+        var resp = await rag.ExplainAsync(req.gameId, req.topic, language: null, ct);
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
         logger.LogInformation("Explain response delivered for game {GameId}, estimated {Minutes} min read",

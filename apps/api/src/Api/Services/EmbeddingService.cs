@@ -10,15 +10,36 @@ namespace Api.Services;
 public class EmbeddingService : IEmbeddingService
 {
     private readonly HttpClient _httpClient;
+    private readonly HttpClient _localEmbeddingClient; // AI-09: Local embedding service
     private readonly ILogger<EmbeddingService> _logger;
     private readonly string? _apiKey;
     private readonly string _embeddingModel;
     private readonly string _provider;
+    private readonly string? _localEmbeddingUrl; // AI-09: Local embedding service URL
+    private readonly bool _embeddingFallbackEnabled; // AI-09: Enable fallback chain
     private const int EmbeddingDimensions = 768; // nomic-embed-text default
 
     public EmbeddingService(IHttpClientFactory httpClientFactory, IConfiguration config, ILogger<EmbeddingService> logger)
     {
         _logger = logger;
+
+        // AI-09: Local embedding service configuration
+        _localEmbeddingUrl = config["LOCAL_EMBEDDING_URL"];
+        _embeddingFallbackEnabled = bool.TryParse(config["EMBEDDING_FALLBACK_ENABLED"], out var fallback) && fallback;
+
+        // Create HTTP client for local embedding service
+        if (!string.IsNullOrWhiteSpace(_localEmbeddingUrl))
+        {
+            _localEmbeddingClient = httpClientFactory.CreateClient("LocalEmbedding");
+            _localEmbeddingClient.BaseAddress = new Uri(_localEmbeddingUrl);
+            _localEmbeddingClient.Timeout = TimeSpan.FromSeconds(30);
+            _logger.LogInformation("Local embedding service configured at {Url}", _localEmbeddingUrl);
+        }
+        else
+        {
+            _localEmbeddingClient = httpClientFactory.CreateClient();
+            _logger.LogInformation("Local embedding service not configured");
+        }
 
         // Check for embedding provider configuration (default: ollama)
         _provider = config["EMBEDDING_PROVIDER"]?.ToLowerInvariant() ?? "ollama";
@@ -173,6 +194,159 @@ public class EmbeddingService : IEmbeddingService
         var result = await GenerateEmbeddingsAsync(new List<string> { text }, ct);
         return result;
     }
+
+    // AI-09: Multi-language embedding support with fallback chain
+
+    /// <summary>
+    /// Generate embeddings for texts with language-specific model selection and fallback chain
+    /// Fallback order: Local → Ollama → OpenRouter
+    /// </summary>
+    public async Task<EmbeddingResult> GenerateEmbeddingsAsync(
+        List<string> texts,
+        string language,
+        CancellationToken ct = default)
+    {
+        if (texts == null || texts.Count == 0)
+        {
+            return EmbeddingResult.CreateFailure("No texts provided");
+        }
+
+        // Validate language code
+        if (!IsValidLanguage(language))
+        {
+            _logger.LogWarning("Unsupported language code: {Language}, falling back to 'en'", language);
+            language = "en";
+        }
+
+        try
+        {
+            // 1. Try local embedding service first (if configured and enabled)
+            if (_embeddingFallbackEnabled && !string.IsNullOrWhiteSpace(_localEmbeddingUrl))
+            {
+                var localResult = await TryLocalEmbeddingAsync(texts, language, ct);
+                if (localResult.Success)
+                {
+                    _logger.LogInformation("Successfully generated embeddings using local service for language {Language}", language);
+                    return localResult;
+                }
+
+                _logger.LogWarning("Local embedding service failed, falling back to {Provider}", _provider);
+            }
+
+            // 2. Fall back to configured provider (Ollama or OpenRouter)
+            if (_provider == "ollama")
+            {
+                return await GenerateOllamaEmbeddingsAsync(texts, ct);
+            }
+            else // openai/openrouter
+            {
+                return await GenerateOpenRouterEmbeddingAsync(texts, language, ct);
+            }
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Embedding generation timed out for language {Language}", language);
+            return EmbeddingResult.CreateFailure("Request timed out");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate embeddings for language {Language}", language);
+            return EmbeddingResult.CreateFailure($"Error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Generate embedding for a single text with language-specific model
+    /// </summary>
+    public async Task<EmbeddingResult> GenerateEmbeddingAsync(
+        string text,
+        string language,
+        CancellationToken ct = default)
+    {
+        return await GenerateEmbeddingsAsync(new List<string> { text }, language, ct);
+    }
+
+    /// <summary>
+    /// Try to generate embeddings using local Python service
+    /// </summary>
+    private async Task<EmbeddingResult> TryLocalEmbeddingAsync(
+        List<string> texts,
+        string language,
+        CancellationToken ct)
+    {
+        try
+        {
+            _logger.LogInformation("Attempting local embedding service for {Count} texts in language {Language}", texts.Count, language);
+
+            var request = new LocalEmbeddingRequest
+            {
+                Texts = texts,
+                Language = language
+            };
+
+            var json = JsonSerializer.Serialize(request);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _localEmbeddingClient.PostAsync("/embeddings", content, ct);
+            var responseBody = await response.Content.ReadAsStringAsync(ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Local embedding service returned error: {Status} - {Body}", response.StatusCode, responseBody);
+                return EmbeddingResult.CreateFailure($"Local service error: {(int)response.StatusCode}");
+            }
+
+            var embeddingResponse = JsonSerializer.Deserialize<LocalEmbeddingResponse>(responseBody);
+
+            if (embeddingResponse?.Embeddings == null || embeddingResponse.Embeddings.Count == 0)
+            {
+                return EmbeddingResult.CreateFailure("No embeddings returned from local service");
+            }
+
+            _logger.LogInformation("Successfully generated {Count} embeddings via local service (dimension: {Dim})",
+                embeddingResponse.Count, embeddingResponse.Dimension);
+
+            return EmbeddingResult.CreateSuccess(embeddingResponse.Embeddings);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogWarning(ex, "Local embedding service unavailable");
+            return EmbeddingResult.CreateFailure("Local service unavailable");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling local embedding service");
+            return EmbeddingResult.CreateFailure($"Local service error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Generate embeddings via OpenRouter with language-specific model selection
+    /// </summary>
+    private async Task<EmbeddingResult> GenerateOpenRouterEmbeddingAsync(
+        List<string> texts,
+        string language,
+        CancellationToken ct)
+    {
+        // For now, use the same model for all languages
+        // Future: AI-09.2 will add language-specific model selection via config
+        _logger.LogInformation("Generating embeddings for {Count} texts in language {Language} using OpenRouter model {Model}",
+            texts.Count, language, _embeddingModel);
+
+        return await GenerateOpenAIEmbeddingsAsync(texts, ct);
+    }
+
+    /// <summary>
+    /// Validate language code
+    /// </summary>
+    private static bool IsValidLanguage(string? languageCode)
+    {
+        if (string.IsNullOrWhiteSpace(languageCode))
+            return false;
+
+        var supportedLanguages = new[] { "en", "it", "de", "fr", "es" };
+        return supportedLanguages.Contains(languageCode.ToLowerInvariant());
+    }
 }
 
 /// <summary>
@@ -230,4 +404,29 @@ internal record Usage
 
     [JsonPropertyName("total_tokens")]
     public int TotalTokens { get; init; }
+}
+
+// AI-09: Local embedding service request/response models
+internal record LocalEmbeddingRequest
+{
+    [JsonPropertyName("texts")]
+    public List<string> Texts { get; init; } = new();
+
+    [JsonPropertyName("language")]
+    public string Language { get; init; } = "en";
+}
+
+internal record LocalEmbeddingResponse
+{
+    [JsonPropertyName("embeddings")]
+    public List<float[]> Embeddings { get; init; } = new();
+
+    [JsonPropertyName("model")]
+    public string Model { get; init; } = string.Empty;
+
+    [JsonPropertyName("dimension")]
+    public int Dimension { get; init; }
+
+    [JsonPropertyName("count")]
+    public int Count { get; init; }
 }

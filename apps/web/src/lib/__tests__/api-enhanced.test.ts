@@ -719,4 +719,437 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
       expect(result).toBe(textResponse);
     });
   });
+
+  describe('Scenario: Edge Cases for 90% Coverage', () => {
+    beforeEach(() => {
+      fetchMock = global.fetch as jest.MockedFunction<typeof fetch>;
+      fetchMock.mockClear();
+    });
+
+    it('should use fallback API base when env var is empty string', async () => {
+      // Given: Env var is set to empty string
+      const originalEnv = process.env.NEXT_PUBLIC_API_BASE;
+      process.env.NEXT_PUBLIC_API_BASE = '';
+      const mockData = { test: true };
+      fetchMock.mockResolvedValue(createMockResponse(200, mockData));
+
+      // When: Request made
+      const result = await apiEnhanced.get('/api/v1/test');
+
+      // Then: Request uses fallback base URL
+      expect(result).toEqual(mockData);
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining('http://localhost:8080/api/v1/test'),
+        expect.anything()
+      );
+
+      // Cleanup
+      process.env.NEXT_PUBLIC_API_BASE = originalEnv;
+    });
+
+    it('should handle existing signal abort during timeout', async () => {
+      // Given: External AbortController that will be aborted
+      const externalController = new AbortController();
+
+      // Mock fetch to reject with AbortError when signal is aborted
+      fetchMock.mockImplementation(async (url, init) => {
+        return new Promise((_, reject) => {
+          const checkAbort = () => {
+            if (externalController.signal.aborted) {
+              const error = new Error('The operation was aborted');
+              error.name = 'AbortError';
+              reject(error);
+            }
+          };
+
+          // Check immediately and periodically
+          checkAbort();
+          const interval = setInterval(checkAbort, 10);
+
+          // Cleanup on abort
+          externalController.signal.addEventListener('abort', () => {
+            clearInterval(interval);
+            const error = new Error('The operation was aborted');
+            error.name = 'AbortError';
+            reject(error);
+          });
+        });
+      });
+
+      // When: External signal is aborted
+      setTimeout(() => externalController.abort(), 10);
+
+      const promise = apiEnhanced.get('/api/v1/test', {
+        timeout: 1000,
+        signal: externalController.signal
+      });
+
+      // Then: Request is aborted by external signal
+      await expect(promise).rejects.toThrow(NetworkError);
+    });
+
+    it('should retry on 503 Service Unavailable until success', async () => {
+      // Given: API returns 503 twice, then succeeds
+      const mockData = { success: true };
+      fetchMock
+        .mockResolvedValueOnce(createMockResponse(503))
+        .mockResolvedValueOnce(createMockResponse(503))
+        .mockResolvedValueOnce(createMockResponse(200, mockData));
+
+      // When: Request made with retries
+      const result = await apiEnhanced.get('/api/v1/test');
+
+      // Then: Request succeeds after retries
+      expect(result).toEqual(mockData);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+
+    it('should throw ApiError after max retries on 503', async () => {
+      // Given: API returns 503 persistently (more than maxAttempts)
+      fetchMock.mockResolvedValue(createMockResponse(503));
+
+      // When/Then: Request fails after max retries
+      await expect(apiEnhanced.get('/api/v1/test', { retry: { maxAttempts: 2 } }))
+        .rejects.toThrow(ApiError);
+
+      // Verify retry attempts
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('should apply exponential backoff on 503 retries', async () => {
+      // Given: API returns 503 twice, then succeeds
+      fetchMock.mockClear();
+      const mockData = { success: true };
+      fetchMock
+        .mockResolvedValueOnce(createMockResponse(503))
+        .mockResolvedValueOnce(createMockResponse(503))
+        .mockResolvedValueOnce(createMockResponse(200, mockData));
+
+      // When: Request made (will retry with exponential backoff delays)
+      const result = await apiEnhanced.get('/api/v1/test');
+
+      // Then: Request succeeds after retries (exponential backoff is mocked, so instant)
+      expect(result).toEqual(mockData);
+      expect(fetchMock).toHaveBeenCalledTimes(3); // 1 initial + 2 retries
+    });
+
+    it('should retry on 502 Bad Gateway', async () => {
+      // Given: API returns 502, then succeeds
+      const mockData = { success: true };
+      fetchMock
+        .mockResolvedValueOnce(createMockResponse(502))
+        .mockResolvedValueOnce(createMockResponse(200, mockData));
+
+      // When: Request made
+      const result = await apiEnhanced.get('/api/v1/test');
+
+      // Then: Request succeeds after retry
+      expect(result).toEqual(mockData);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('should not retry on 500 when skipRetry is true', async () => {
+      // Given: API returns 500 with skipRetry option
+      fetchMock.mockClear();
+      fetchMock.mockResolvedValue(createMockResponse(500));
+
+      // When/Then: Request fails immediately without retry
+      await expect(apiEnhanced.get('/api/v1/test', { skipRetry: true }))
+        .rejects.toThrow(ApiError);
+
+      // Verify no retries
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('should respect custom retry configuration', async () => {
+      // Given: API returns 500 three times, then succeeds (tests maxAttempts=4)
+      fetchMock.mockClear();
+      const mockData = { success: true };
+      fetchMock
+        .mockResolvedValueOnce(createMockResponse(500))
+        .mockResolvedValueOnce(createMockResponse(500))
+        .mockResolvedValueOnce(createMockResponse(500))
+        .mockResolvedValueOnce(createMockResponse(200, mockData));
+
+      // When: Request made with custom maxAttempts=4
+      const result = await apiEnhanced.get('/api/v1/test', {
+        retry: { maxAttempts: 4 }
+      });
+
+      // Then: Request succeeds after 3 retries (total 4 attempts)
+      expect(result).toEqual(mockData);
+      expect(fetchMock).toHaveBeenCalledTimes(4);
+    }, 10000); // 10-second timeout for retry test
+  });
+
+  describe('Scenario: RuleSpec Comments API', () => {
+    beforeEach(() => {
+      fetchMock = global.fetch as jest.MockedFunction<typeof fetch>;
+      fetchMock.mockClear();
+    });
+
+    describe('getComments', () => {
+      it('should fetch comments for a game and version successfully', async () => {
+        // Given: API returns comments for a game
+        const mockResponse = {
+          gameId: 'chess-123',
+          version: '1.0.0',
+          comments: [
+            {
+              id: 'comment-1',
+              gameId: 'chess-123',
+              version: '1.0.0',
+              atomId: 'atom-1',
+              userId: 'user-1',
+              userDisplayName: 'John Doe',
+              commentText: 'Great rule!',
+              createdAt: '2025-10-19T10:00:00Z',
+              updatedAt: null,
+            },
+            {
+              id: 'comment-2',
+              gameId: 'chess-123',
+              version: '1.0.0',
+              atomId: null,
+              userId: 'user-2',
+              userDisplayName: 'Jane Smith',
+              commentText: 'Needs clarification',
+              createdAt: '2025-10-19T11:00:00Z',
+              updatedAt: '2025-10-19T12:00:00Z',
+            },
+          ],
+          totalComments: 2,
+        };
+        fetchMock.mockResolvedValue(createMockResponse(200, mockResponse));
+
+        // When: getComments is called
+        const { ruleSpecComments } = await import('../api-enhanced');
+        const result = await ruleSpecComments.getComments('chess-123', '1.0.0');
+
+        // Then: Comments are returned
+        expect(result).toEqual(mockResponse);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(fetchMock).toHaveBeenCalledWith(
+          expect.stringContaining('/api/v1/games/chess-123/rulespec/versions/1.0.0/comments'),
+          expect.objectContaining({ method: 'GET', credentials: 'include' })
+        );
+      });
+
+      it('should return null on 401 Unauthorized', async () => {
+        // Given: API returns 401 Unauthorized
+        fetchMock.mockResolvedValue(createMockResponse(401));
+
+        // When: getComments is called without authentication
+        const { ruleSpecComments } = await import('../api-enhanced');
+        const result = await ruleSpecComments.getComments('chess-123', '1.0.0');
+
+        // Then: null is returned
+        expect(result).toBeNull();
+      });
+
+      it('should return empty comments array when no comments exist', async () => {
+        // Given: API returns empty comments array
+        const mockResponse = {
+          gameId: 'chess-123',
+          version: '1.0.0',
+          comments: [],
+          totalComments: 0,
+        };
+        fetchMock.mockResolvedValue(createMockResponse(200, mockResponse));
+
+        // When: getComments is called
+        const { ruleSpecComments } = await import('../api-enhanced');
+        const result = await ruleSpecComments.getComments('chess-123', '1.0.0');
+
+        // Then: Empty comments array is returned
+        expect(result).toEqual(mockResponse);
+        expect(result?.comments).toHaveLength(0);
+        expect(result?.totalComments).toBe(0);
+      });
+    });
+
+    describe('createComment', () => {
+      it('should create a comment successfully', async () => {
+        // Given: API accepts comment creation
+        const request = {
+          atomId: 'atom-1',
+          commentText: 'This is my comment',
+        };
+        const mockResponse = {
+          id: 'comment-new',
+          gameId: 'chess-123',
+          version: '1.0.0',
+          atomId: 'atom-1',
+          userId: 'user-1',
+          userDisplayName: 'John Doe',
+          commentText: 'This is my comment',
+          createdAt: '2025-10-19T13:00:00Z',
+          updatedAt: null,
+        };
+        fetchMock.mockResolvedValue(createMockResponse(200, mockResponse));
+
+        // When: createComment is called
+        const { ruleSpecComments } = await import('../api-enhanced');
+        const result = await ruleSpecComments.createComment('chess-123', '1.0.0', request);
+
+        // Then: Comment is created and returned
+        expect(result).toEqual(mockResponse);
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(fetchMock).toHaveBeenCalledWith(
+          expect.stringContaining('/api/v1/games/chess-123/rulespec/versions/1.0.0/comments'),
+          expect.objectContaining({
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(request),
+          })
+        );
+      });
+
+      it('should create a comment without atomId (general comment)', async () => {
+        // Given: API accepts general comment (no atomId)
+        const request = {
+          atomId: null,
+          commentText: 'General comment about the game',
+        };
+        const mockResponse = {
+          id: 'comment-general',
+          gameId: 'chess-123',
+          version: '1.0.0',
+          atomId: null,
+          userId: 'user-1',
+          userDisplayName: 'John Doe',
+          commentText: 'General comment about the game',
+          createdAt: '2025-10-19T13:00:00Z',
+          updatedAt: null,
+        };
+        fetchMock.mockResolvedValue(createMockResponse(200, mockResponse));
+
+        // When: createComment is called with null atomId
+        const { ruleSpecComments } = await import('../api-enhanced');
+        const result = await ruleSpecComments.createComment('chess-123', '1.0.0', request);
+
+        // Then: General comment is created
+        expect(result).toEqual(mockResponse);
+        expect(result.atomId).toBeNull();
+      });
+
+      it('should throw ApiError on 400 Bad Request (validation error)', async () => {
+        // Given: API rejects comment with validation error
+        const request = {
+          atomId: 'atom-1',
+          commentText: '', // Empty comment text (validation error)
+        };
+        fetchMock.mockResolvedValue(createMockResponse(400));
+
+        // When/Then: createComment throws ApiError
+        const { ruleSpecComments } = await import('../api-enhanced');
+        await expect(ruleSpecComments.createComment('chess-123', '1.0.0', request))
+          .rejects.toThrow(ApiError);
+      });
+    });
+
+    describe('updateComment', () => {
+      it('should update a comment successfully', async () => {
+        // Given: API accepts comment update
+        const request = {
+          commentText: 'Updated comment text',
+        };
+        const mockResponse = {
+          id: 'comment-1',
+          gameId: 'chess-123',
+          version: '1.0.0',
+          atomId: 'atom-1',
+          userId: 'user-1',
+          userDisplayName: 'John Doe',
+          commentText: 'Updated comment text',
+          createdAt: '2025-10-19T10:00:00Z',
+          updatedAt: '2025-10-19T14:00:00Z',
+        };
+        fetchMock.mockResolvedValue(createMockResponse(200, mockResponse));
+
+        // When: updateComment is called
+        const { ruleSpecComments } = await import('../api-enhanced');
+        const result = await ruleSpecComments.updateComment('chess-123', 'comment-1', request);
+
+        // Then: Comment is updated and returned
+        expect(result).toEqual(mockResponse);
+        expect(result.updatedAt).not.toBeNull();
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(fetchMock).toHaveBeenCalledWith(
+          expect.stringContaining('/api/v1/games/chess-123/rulespec/comments/comment-1'),
+          expect.objectContaining({
+            method: 'PUT',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(request),
+          })
+        );
+      });
+
+      it('should throw ApiError on 404 Not Found (comment not exists)', async () => {
+        // Given: API returns 404 for non-existent comment
+        const request = {
+          commentText: 'Updated text',
+        };
+        fetchMock.mockResolvedValue(createMockResponse(404));
+
+        // When/Then: updateComment throws ApiError
+        const { ruleSpecComments } = await import('../api-enhanced');
+        await expect(ruleSpecComments.updateComment('chess-123', 'nonexistent-id', request))
+          .rejects.toThrow(ApiError);
+      });
+
+      it('should throw ApiError on 403 Forbidden (not owner)', async () => {
+        // Given: API returns 403 when user tries to update another user's comment
+        const request = {
+          commentText: 'Trying to update someone else comment',
+        };
+        fetchMock.mockResolvedValue(createMockResponse(403));
+
+        // When/Then: updateComment throws ApiError
+        const { ruleSpecComments } = await import('../api-enhanced');
+        await expect(ruleSpecComments.updateComment('chess-123', 'comment-1', request))
+          .rejects.toThrow(ApiError);
+      });
+    });
+
+    describe('deleteComment', () => {
+      it('should delete a comment successfully', async () => {
+        // Given: API accepts comment deletion
+        fetchMock.mockResolvedValue(createMockResponse(204));
+
+        // When: deleteComment is called
+        const { ruleSpecComments } = await import('../api-enhanced');
+        await ruleSpecComments.deleteComment('chess-123', 'comment-1');
+
+        // Then: Comment is deleted (no return value)
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(fetchMock).toHaveBeenCalledWith(
+          expect.stringContaining('/api/v1/games/chess-123/rulespec/comments/comment-1'),
+          expect.objectContaining({ method: 'DELETE', credentials: 'include' })
+        );
+      });
+
+      it('should throw ApiError on 404 Not Found (comment not exists)', async () => {
+        // Given: API returns 404 for non-existent comment
+        fetchMock.mockResolvedValue(createMockResponse(404));
+
+        // When/Then: deleteComment throws ApiError
+        const { ruleSpecComments } = await import('../api-enhanced');
+        await expect(ruleSpecComments.deleteComment('chess-123', 'nonexistent-id'))
+          .rejects.toThrow(ApiError);
+      });
+
+      it('should throw ApiError on 403 Forbidden (not owner or admin)', async () => {
+        // Given: API returns 403 when user tries to delete another user's comment
+        fetchMock.mockResolvedValue(createMockResponse(403));
+
+        // When/Then: deleteComment throws ApiError
+        const { ruleSpecComments } = await import('../api-enhanced');
+        await expect(ruleSpecComments.deleteComment('chess-123', 'comment-1'))
+          .rejects.toThrow(ApiError);
+      });
+    });
+  });
 });

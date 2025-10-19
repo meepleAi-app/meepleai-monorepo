@@ -177,7 +177,16 @@ if (!gameId || !uuid.validate(gameId)) {
 ```
 
 ### C. Unit/Integration Tests
-Crea test case che riproducono l'errore:
+Crea test case che riproducono l'errore.
+
+**SKILL INTEGRATION**: Prima di scrivere test, usa `testing` skill per pattern.
+
+```bash
+# Get test patterns from skill
+Skill("testing")
+# → Returns: pytest/xUnit patterns, mocking examples, test structure
+# → Adapt to context: Use returned patterns for C# xUnit or TypeScript Jest
+```
 
 **Backend (xUnit)**:
 ```csharp
@@ -201,12 +210,30 @@ it('should handle {error_scenario} gracefully', async () => {
 });
 ```
 
+**E2E (Frontend errors only)**:
+```bash
+# If error is frontend UI-related
+Skill("webapp-testing")
+# → Returns: Playwright patterns, page object model, user workflows
+# → Use: Create E2E test that reproduces user-facing error
+```
+
 Crea **almeno 3 test**:
 1. Test che riproduce l'errore originale
 2. Test edge case correlato
 3. Test integrazione end-to-end
 
 ### D. Documentation Update
+
+**SKILL INTEGRATION**: Usa `development` skill per docs structure.
+
+```bash
+# Get documentation best practices
+Skill("development")
+# → Returns: README structure, docstring conventions, documentation patterns
+# → Use: Apply structure to troubleshooting entry
+```
+
 Aggiorna `docs/troubleshooting.md`:
 
 ```markdown
@@ -503,33 +530,74 @@ Per ogni library/framework menzionato nell'errore:
 ```
 /debug System.NullReferenceException in RagService.SearchAsync
 ```
-- Context7: ASP.NET Core, Entity Framework Core
-- Test: xUnit integration test con Testcontainers
-- Verification: `dotnet test`, check Seq logs
+
+**Workflow**:
+1. Analysis: Sequential reasoning → Root cause: Missing null check
+2. Testing (Step 4C):
+   - **Skill("testing")** → Get xUnit patterns (Arrange-Act-Assert)
+   - Write: `RagServiceResilienceTests.cs` with 5 tests
+3. Documentation (Step 4D):
+   - **Skill("development")** → Get docs structure
+   - Update: `docs/troubleshooting.md` with NullRef entry
+4. Verification: `dotnet test`, check Seq logs
+
+**Skills Used**: testing, development
+**MCP Used**: Context7 (ASP.NET Core), Sequential, GitHub
 
 ### Frontend TypeScript Error
 ```
 /debug TS2339: Property 'chatId' does not exist on type 'StreamingResponse'
 ```
-- Context7: TypeScript, React, Next.js
-- Test: Jest unit test
-- Verification: `pnpm typecheck`, `pnpm test`
+
+**Workflow**:
+1. Analysis: Type definition missing in API response type
+2. Testing (Step 4C):
+   - **Skill("testing")** → Get Jest patterns (describe/it, expect)
+   - Write: `StreamingResponse.test.ts` with 8 tests
+3. E2E (if UI affected):
+   - **Skill("webapp-testing")** → Get Playwright patterns
+   - Write: `streaming.e2e.ts` with user workflow test
+4. Documentation (Step 4D):
+   - **Skill("development")** → Get docs conventions
+   - Update: API type documentation
+5. Verification: `pnpm typecheck`, `pnpm test`, `pnpm test:e2e`
+
+**Skills Used**: testing, webapp-testing (optional), development
+**MCP Used**: Context7 (TypeScript, React), Magic (NO - type fix only)
 
 ### Database Error
 ```
 /debug Npgsql.PostgresException: 42P01: relation "game_rules" does not exist
 ```
-- Context7: PostgreSQL, Npgsql, Entity Framework Core
-- Test: EF Core migration scenario
-- Verification: `dotnet ef database update`, integration tests
+
+**Workflow**:
+1. Analysis: Migration not applied, missing table
+2. Testing (Step 4C):
+   - **Skill("testing")** → Get integration test patterns
+   - Write: Migration scenario test with Testcontainers
+3. Documentation (Step 4D):
+   - **Skill("development")** → Get troubleshooting structure
+   - Update: `docs/troubleshooting.md` with DB migration guide
+4. Verification: `dotnet ef database update`, integration tests
+
+**Skills Used**: testing, development
+**MCP Used**: Context7 (PostgreSQL, EF Core), Sequential
 
 ### Docker Error
 ```
 /debug docker: Error response from daemon: port is already allocated
 ```
-- Context7: Docker
-- Test: docker-compose scenario
-- Verification: `docker compose up`, verify services
+
+**Workflow**:
+1. Analysis: Port conflict, service already running
+2. Fix: Update `docker-compose.yml` with dynamic port allocation
+3. Documentation (Step 4D):
+   - **Skill("development")** → Get infrastructure docs patterns
+   - Update: `docs/troubleshooting.md` with port conflict resolution
+4. Verification: `docker compose up`, verify services
+
+**Skills Used**: development (docs only, no tests for infra config)
+**MCP Used**: Context7 (Docker), Sequential
 
 ---
 

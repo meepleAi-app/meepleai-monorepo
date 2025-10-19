@@ -1,3 +1,4 @@
 {
-  "mcp.configPath": "${workspaceFolder}/mcp/claude_mcp_config.json"
+  "mcp.configPath": "${workspaceFolder}/mcp/claude_mcp_config.json",
+  "CodeGPT.apiKey": "Docker"
 }

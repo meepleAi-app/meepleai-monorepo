@@ -216,7 +216,7 @@ startxref
 
         // When: User attempts to upload PDF
         var content = new MultipartFormDataContent();
-        var fileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("%PDF-1.4"));
+        var fileContent = new ByteArrayContent(GenerateMinimalValidPdf());
         fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/pdf");
         content.Add(fileContent, "file", "rules.pdf");
         content.Add(new StringContent(game.Id), "gameId");
@@ -244,7 +244,7 @@ startxref
 
         // When: User attempts to upload PDF
         var content = new MultipartFormDataContent();
-        var fileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("%PDF-1.4"));
+        var fileContent = new ByteArrayContent(GenerateMinimalValidPdf());
         fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/pdf");
         content.Add(fileContent, "file", "rules.pdf");
         content.Add(new StringContent(game.Id), "gameId");
@@ -278,7 +278,7 @@ startxref
 
         // When: Admin uploads PDF without gameId
         var content = new MultipartFormDataContent();
-        var fileContent = new ByteArrayContent(Encoding.UTF8.GetBytes("%PDF-1.4"));
+        var fileContent = new ByteArrayContent(GenerateMinimalValidPdf());
         fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse("application/pdf");
         content.Add(fileContent, "file", "rules.pdf");
         // gameId intentionally omitted

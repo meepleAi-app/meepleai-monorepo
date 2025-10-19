@@ -486,6 +486,238 @@ data: [DONE]
     }
 
     /// <summary>
+    /// TEST-02-P4: Tests that GenerateCompletionAsync works correctly when systemPrompt is null.
+    /// Verifies the request payload only contains the user message without a system message.
+    /// </summary>
+    [Fact]
+    public async Task GenerateCompletionAsync_WithNullSystemPrompt_UsesOnlyUserPrompt()
+    {
+        // Arrange
+        var handler = new TestHttpMessageHandler((_, _) =>
+        {
+            var payload = new
+            {
+                id = "resp_null_sys",
+                model = "test-model",
+                choices = new[]
+                {
+                    new
+                    {
+                        message = new { content = "Response without system prompt" },
+                        finish_reason = "stop"
+                    }
+                },
+                usage = new { prompt_tokens = 5, completion_tokens = 3, total_tokens = 8 }
+            };
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(payload))
+            });
+        });
+
+        var service = CreateService(handler);
+
+        // Act
+        var result = await service.GenerateCompletionAsync(null, "user prompt");
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal("Response without system prompt", result.Response);
+
+        var requestBody = handler.RequestBodies.Single();
+        using var document = JsonDocument.Parse(requestBody!);
+        var root = document.RootElement;
+        var messages = root.GetProperty("messages");
+
+        // Should only have user message, no system message
+        Assert.Equal(1, messages.GetArrayLength());
+        Assert.Equal("user", messages[0].GetProperty("role").GetString());
+        Assert.Equal("user prompt", messages[0].GetProperty("content").GetString());
+    }
+
+    /// <summary>
+    /// TEST-02-P4: Tests that GenerateCompletionStreamAsync skips malformed SSE chunks and yields valid tokens.
+    /// Simulates a stream with invalid JSON interspersed with valid chunks.
+    /// </summary>
+    [Fact]
+    public async Task GenerateCompletionStreamAsync_WithMalformedSSE_SkipsInvalidChunks()
+    {
+        // Arrange
+        var sseResponse = @"data: {""choices"":[{""delta"":{""content"":""Token1""}}]}
+
+data: {invalid json without quotes
+
+data: {""choices"":[{""delta"":{""content"":""Token2""}}]}
+
+data: malformed
+
+data: {""choices"":[{""delta"":{""content"":""Token3""}}]}
+
+data: [DONE]
+
+";
+
+        var handler = new TestHttpMessageHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(sseResponse, Encoding.UTF8, "text/event-stream")
+            }));
+
+        var service = CreateService(handler);
+
+        // Act
+        var tokens = await ConvertAsyncEnumerableToList(
+            service.GenerateCompletionStreamAsync("system", "user prompt"));
+
+        // Assert
+        // Should only yield valid tokens, skipping malformed chunks
+        Assert.Equal(3, tokens.Count);
+        Assert.Equal("Token1", tokens[0]);
+        Assert.Equal("Token2", tokens[1]);
+        Assert.Equal("Token3", tokens[2]);
+
+        // Verify warning was logged for malformed chunks (2 times)
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("Failed to parse streaming chunk")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeast(2));
+    }
+
+    /// <summary>
+    /// TEST-02-P4: Tests that GenerateCompletionStreamAsync yields nothing when API returns HTTP error during streaming.
+    /// Verifies graceful handling of 500 Internal Server Error.
+    /// </summary>
+    [Fact]
+    public async Task GenerateCompletionStreamAsync_WithHTTPError_YieldsNothingAndLogs()
+    {
+        // Arrange
+        var handler = new TestHttpMessageHandler((_, _) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.InternalServerError)
+            {
+                Content = new StringContent("{\"error\":\"Internal server error\"}")
+            }));
+
+        var service = CreateService(handler);
+
+        // Act
+        var tokens = await ConvertAsyncEnumerableToList(
+            service.GenerateCompletionStreamAsync("system", "user prompt"));
+
+        // Assert
+        Assert.Empty(tokens);
+
+        // Verify error was logged
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("OpenRouter streaming API error")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// TEST-02-P4: Tests that GenerateJsonAsync returns null when LLM returns success but empty content.
+    /// Verifies graceful handling of edge case where API succeeds but produces no response text.
+    /// </summary>
+    [Fact]
+    public async Task GenerateJsonAsync_WithNullLlmResponse_ReturnsNull()
+    {
+        // Arrange
+        var handler = new TestHttpMessageHandler((_, _) =>
+        {
+            var payload = new
+            {
+                id = "resp_empty",
+                model = "test-model",
+                choices = new[]
+                {
+                    new
+                    {
+                        message = new { content = "" }, // Empty content
+                        finish_reason = "stop"
+                    }
+                },
+                usage = new { prompt_tokens = 10, completion_tokens = 0, total_tokens = 10 }
+            };
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(payload))
+            });
+        });
+
+        var service = CreateService(handler);
+
+        // Act
+        var result = await service.GenerateJsonAsync<TestJsonModel>("system", "user prompt");
+
+        // Assert
+        Assert.Null(result);
+
+        // Verify warning was logged
+        _loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("LLM completion failed or returned empty response")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// TEST-02-P4: Tests that GenerateJsonAsync handles missing properties gracefully with default values.
+    /// C#'s JSON deserializer (with PropertyNameCaseInsensitive) is tolerant and sets missing properties to defaults.
+    /// </summary>
+    [Fact]
+    public async Task GenerateJsonAsync_WithMissingProperties_ReturnsObjectWithDefaults()
+    {
+        // Arrange
+        var incompleteJson = "{\"wrongField\":\"value\",\"unexpectedType\":true}";
+
+        var handler = new TestHttpMessageHandler((_, _) =>
+        {
+            var payload = new
+            {
+                id = "resp_partial",
+                model = "test-model",
+                choices = new[]
+                {
+                    new
+                    {
+                        message = new { content = incompleteJson },
+                        finish_reason = "stop"
+                    }
+                },
+                usage = new { prompt_tokens = 10, completion_tokens = 5, total_tokens = 15 }
+            };
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(payload))
+            });
+        });
+
+        var service = CreateService(handler);
+
+        // Act
+        var result = await service.GenerateJsonAsync<TestJsonModel>("system", "user prompt");
+
+        // Assert
+        Assert.NotNull(result); // Deserializer creates object with default values
+        Assert.Equal(string.Empty, result.Name);
+        Assert.Equal(0, result.Players);
+        Assert.Equal(string.Empty, result.Complexity);
+    }
+
+    /// <summary>
     /// Helper method to convert IAsyncEnumerable to List for easier testing of streaming responses.
     /// </summary>
     private static async Task<List<T>> ConvertAsyncEnumerableToList<T>(IAsyncEnumerable<T> asyncEnumerable)

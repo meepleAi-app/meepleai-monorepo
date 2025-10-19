@@ -1141,5 +1141,86 @@ public class RagServiceTests
         Assert.Equal("This is the answer.", result.answer); // Whitespace trimmed
     }
 
+    /// <summary>
+    /// TEST-02-P4: Tests that AskAsync bypasses cache when bypassCache=true.
+    /// Verifies fresh LLM generation even when cached response exists.
+    /// </summary>
+    [Fact]
+    public async Task AskAsync_WithCacheBypassed_SkipsCacheAndGeneratesFresh()
+    {
+        // Arrange
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
+
+        var searchResults = new List<SearchResultItem>
+        {
+            new() { Text = "Fresh rule text.", PdfId = "pdf-1", Page = 1, Score = 0.95f }
+        };
+
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
+
+        var mockLlm = new Mock<ILlmService>();
+        mockLlm
+            .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(
+                "Fresh LLM answer.",
+                new LlmUsage(10, 5, 15)));
+
+        var mockCache = CreateCacheMock();
+        const string gameId = "game1";
+        const string query = "test query";
+
+        // Setup cache to simulate that it would have returned a cached response
+        // but we bypass it with bypassCache=true
+        mockCache
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QaResponse("Cached answer", new List<Snippet>()));
+
+        _mockLogger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+
+        var ragService = new RagService(
+            dbContext,
+            mockEmbedding.Object,
+            mockQdrant.Object,
+            mockLlm.Object,
+            mockCache.Object,
+            _mockLogger.Object);
+
+        // Act
+        var result = await ragService.AskAsync(gameId, query, bypassCache: true);
+
+        // Assert
+        Assert.Equal("Fresh LLM answer.", result.answer); // Should be fresh, not cached
+        Assert.Single(result.snippets);
+        Assert.Equal("Fresh rule text.", result.snippets[0].text);
+
+        // Verify cache GET was never called (bypassed)
+        mockCache.Verify(
+            x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        // Verify fresh generation happened
+        mockEmbedding.Verify(x => x.GenerateEmbeddingAsync(query, It.IsAny<CancellationToken>()), Times.Once);
+        mockQdrant.Verify(x => x.SearchAsync(gameId, embedding, 3, It.IsAny<CancellationToken>()), Times.Once);
+        mockLlm.Verify(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+
+        // Verify cache bypass was logged
+        _mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("Cache bypassed for game game1")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
     #endregion
 }

@@ -35,6 +35,9 @@ public class ChatExportService : IChatExportService
     {
         try
         {
+            // Check for cancellation before starting
+            ct.ThrowIfCancellationRequested();
+
             // Step 1: Retrieve chat and validate ownership
             var chat = await _db.Chats
                 .Include(c => c.Game)
@@ -69,6 +72,11 @@ public class ChatExportService : IChatExportService
                 chatId, userId, format);
 
             return ExportResult.SuccessResult(stream, formatter.ContentType, filename);
+        }
+        catch (OperationCanceledException)
+        {
+            // Let cancellation exceptions bubble up (don't catch)
+            throw;
         }
         catch (Exception ex)
         {

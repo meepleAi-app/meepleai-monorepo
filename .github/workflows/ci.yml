@@ -281,6 +281,24 @@ jobs:
           path: apps/api/tests/Api.Tests/coverage-report/
           retention-days: 30
 
+      # TEST-02-P5: Generate HTML coverage report
+      - name: Generate HTML Coverage Report
+        if: always()
+        run: |
+          dotnet tool install -g dotnet-reportgenerator-globaltool || true
+          reportgenerator \
+            -reports:tests/Api.Tests/coverage/coverage.cobertura.xml \
+            -targetdir:tests/Api.Tests/coverage-report \
+            -reporttypes:Html
+
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage-report-${{ github.run_number }}
+          path: apps/api/tests/Api.Tests/coverage-report/
+          retention-days: 7
+
   validate-observability-configs:
     needs: changes
     name: Validate Prometheus & Alertmanager Configs

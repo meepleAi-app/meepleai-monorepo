@@ -4,9 +4,9 @@ import userEvent from '@testing-library/user-event';
 import { TimelineFilters } from '../TimelineFilters';
 import {
   TimelineFilters as TimelineFiltersType,
-  TimelineEventType,
-  TimelineEventStatus,
-  DEFAULT_FILTERS
+  DEFAULT_FILTERS,
+  type TimelineEventType,
+  type TimelineEventStatus
 } from '@/lib/timeline-types';
 
 describe('TimelineFilters Component', () => {

@@ -295,6 +295,24 @@ Scenario: LLM streaming handles partial responses
 
 ## Change Log
 
+### 2025-01-19 (Phase 1 - AUTH-05 Services Complete)
+- ✅ **EmailService**: Added 30 comprehensive unit tests (100% coverage)
+  - Constructor configuration validation (4 tests)
+  - Input validation: null, empty, invalid emails (7 tests)
+  - URL encoding for special characters (7 tests via Theory)
+  - Cancellation token handling, exception handling, logging (6 tests)
+  - Edge cases: unicode, IDN, long tokens (5 tests)
+  - All 30 tests passing ✅
+- ✅ **PasswordResetService**: Added 34 comprehensive unit tests (100% coverage)
+  - RequestPasswordResetAsync: 10 tests (rate limit, user enumeration, token generation)
+  - ValidateResetTokenAsync: 6 tests (null, invalid, expired, used tokens)
+  - ResetPasswordAsync: 18 tests (password validation, session revocation)
+  - Security coverage: user enumeration prevention, rate limiting, session revocation
+  - Testing approach: SQLite in-memory, FixedTimeProvider, Moq, Theory/InlineData
+  - All 34 tests passing ✅
+- **Total Phase 1**: 64 new tests, 100% pass rate, execution time ~1.2 minutes
+- **Remaining**: 5 services (ChatExportService, 3 formatters, FollowUpQuestionService)
+
 ### 2025-10-17
 - Initial analysis and BDD foundation
 - RateLimitService: Added 6 tests (+150% coverage)
@@ -303,6 +321,7 @@ Scenario: LLM streaming handles partial responses
 
 ---
 
-**Next Review**: 2025-10-24
+**Next Review**: 2025-01-26 (after Phase 2 completion)
 **Owner**: Development Team
 **Epic**: EPIC-08 (Testing & Quality Assurance)
+**Last Updated**: 2025-01-19

@@ -58,6 +58,11 @@
 | **E2E Testing** | Frontend UI | `webapp-testing` | MCP: Playwright direct | Need page object model, user workflows, accessibility | Simple selector-based tests (no complex workflows) |
 | **Code Generation** | Boilerplate | `development` | Agent: `deep-think-developer`, `typescript-expert-developer` | CLI apps, project setup, utilities | Domain business logic, complex algorithms |
 | **Documentation** | Structure | `development` | Agent: `doc-researcher-optimizer` | README format, docstring conventions | Framework-specific docs (use Context7 MCP) |
+| **PDF Processing** | Backend/Docs | `pdf-design`, `document-skills:pdf` | Agent: `deep-think-developer` | Need PDF layout patterns, form filling, generation | Domain-specific PDF logic, complex transformations |
+| **Excel/Spreadsheet** | Backend/Docs | `document-skills:xlsx`, `spreadsheet-tools` | Agent: `deep-think-developer` | Need Excel export patterns, formulas, charts | Domain-specific data aggregation, complex calculations |
+| **UI Design** | Frontend (UI) | `web-design` | Agent: `typescript-expert-developer`, MCP: `magic_generate` | Need responsive patterns, accessibility best practices | Domain-specific UI logic, component interactions |
+| **Visual Assets** | Design | `canvas-design` | N/A | Need design principles, color theory, layout | Never (no domain logic for visual design) |
+| **Themed Output** | Design | `theme-factory` | Agent: `typescript-expert-developer` | Need theming patterns, color palettes, typography | Domain-specific theme application logic |
 | **Architecture** | Design decisions | N/A | Agent: `system-architect`, `strategic-advisor` | Never (no skill for architecture) | Always use Agent for architecture |
 | **Code Review** | Quality analysis | N/A | Agent: `deep-think-developer`, `typescript-expert-developer` | Never (no skill for review) | Always use Agent for code review |
 | **UI Components** | React/Next.js | N/A | MCP: `magic_generate` | Never (no skill for UI gen) | Always use Magic MCP for new UI components |
@@ -227,6 +232,7 @@ Skill("development")
 | Phase | Skill Usage | Purpose |
 |-------|-------------|---------|
 | **Phase 3** (Test-First) | `testing` | Get test structure before writing BDD tests |
+| **Phase 4** (Implementation) | `pdf-design`, `document-skills:*`, `web-design`, `canvas-design`, `theme-factory`, `development` | Auto-triggered based on issue keywords (PDF, Excel, redesign, logo, brand, CLI) |
 | **Phase 5** (Local Tests) | `webapp-testing` | Get E2E patterns if frontend + DoD requires E2E |
 | **Phase 8** (Update Issue DoD) | `development` | Get docs structure if DoD requires docs update |
 
@@ -357,6 +363,11 @@ MCP: Context7("jest")  # Get Jest 29 specific features/API changes
 | E2E patterns | `webapp-testing` skill | `Skill("webapp-testing")` |
 | Boilerplate code | `development` skill | `Skill("development")` |
 | Docs structure | `development` skill | `Skill("development")` |
+| PDF patterns | `pdf-design` or `document-skills:pdf` skill | `Skill("pdf-design")` |
+| Excel patterns | `document-skills:xlsx` or `spreadsheet-tools` skill | `Skill("document-skills:xlsx")` |
+| UI design | `web-design` skill | `Skill("web-design")` |
+| Visual assets | `canvas-design` skill | `Skill("canvas-design")` |
+| Themed output | `theme-factory` skill | `Skill("theme-factory")` |
 | Domain logic | Agent | `deep-think-developer`, `typescript-expert-developer` |
 | Framework docs | Context7 MCP | `mcp__upstash-context-7__get-library-docs` |
 | UI components | Magic MCP | `mcp__magic__magic_generate` |

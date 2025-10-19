@@ -102,7 +102,7 @@ export function TimelineEventList({
           fontWeight: 500
         }}
       >
-        {sortedEvents.length} {sortedEvents.length === 1 ? "evento" : "eventi"} trovati
+        {sortedEvents.length} {sortedEvents.length === 1 ? "evento trovato" : "eventi trovati"}
         {filteredEvents.length !== events.length && ` (${events.length} totali)`}
       </div>
 

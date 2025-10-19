@@ -109,17 +109,23 @@ async function fetchWithRetry<T>(
 
       // Check if response is OK
       if (!response.ok) {
+        // Determine if error is retryable
+        const isRetryableStatus =
+          response.status === 408 ||
+          response.status === 429 ||
+          response.status >= 500;
+
         const error = new ApiError(
           `API request failed: ${response.statusText}`,
           response.status,
           endpoint,
           method,
           correlationId,
-          true // Mark as retryable by default
+          isRetryableStatus
         );
 
         // Don't retry 4xx errors (except 408, 429)
-        if (response.status >= 400 && response.status < 500 && response.status !== 408 && response.status !== 429) {
+        if (!isRetryableStatus && response.status >= 400 && response.status < 500) {
           throw error;
         }
 

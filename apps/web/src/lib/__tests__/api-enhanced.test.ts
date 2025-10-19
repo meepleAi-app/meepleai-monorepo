@@ -19,6 +19,15 @@ jest.mock('../logger', () => ({
   },
 }));
 
+// Mock sleep function to avoid real delays and fake timer issues
+jest.mock('../errors', () => {
+  const actual = jest.requireActual('../errors');
+  return {
+    ...actual,
+    sleep: jest.fn().mockResolvedValue(undefined),
+  };
+});
+
 describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
   let fetchMock: jest.MockedFunction<typeof fetch>;
 
@@ -167,14 +176,6 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
   });
 
   describe('Scenario: Retry on Transient Failure', () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
     it('should retry on 500 Internal Server Error and succeed', async () => {
       // Given: API fails with 500 on first attempt, succeeds on retry
       const mockData = { success: true };
@@ -183,11 +184,7 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
         .mockResolvedValueOnce(createMockResponse(200, mockData));
 
       // When: Request made with retry enabled
-      const promise = apiEnhanced.get('/api/v1/test');
-
-      // Then: Request retries after backoff
-      await jest.runAllTimersAsync();
-      const result = await promise;
+      const result = await apiEnhanced.get('/api/v1/test');
 
       expect(result).toEqual(mockData);
       expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -201,11 +198,7 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
         .mockResolvedValueOnce(createMockResponse(200, mockData));
 
       // When: Request made
-      const promise = apiEnhanced.get('/api/v1/test');
-
-      // Then: Request retries and succeeds
-      await jest.runAllTimersAsync();
-      const result = await promise;
+      const result = await apiEnhanced.get('/api/v1/test');
 
       expect(result).toEqual(mockData);
       expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -219,11 +212,7 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
         .mockResolvedValueOnce(createMockResponse(200, mockData));
 
       // When: Request made
-      const promise = apiEnhanced.get('/api/v1/test');
-
-      // Then: Request retries and succeeds
-      await jest.runAllTimersAsync();
-      const result = await promise;
+      const result = await apiEnhanced.get('/api/v1/test');
 
       expect(result).toEqual(mockData);
       expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -232,26 +221,23 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
     it('should use exponential backoff delays (1000ms, 2000ms, 4000ms)', async () => {
       // Given: API fails multiple times before succeeding
       const mockData = { success: true };
+      const { sleep } = jest.requireMock('../errors');
+
       fetchMock
         .mockResolvedValueOnce(createMockResponse(500))
         .mockResolvedValueOnce(createMockResponse(500))
         .mockResolvedValueOnce(createMockResponse(200, mockData));
 
       // When: Request made
-      const promise = apiEnhanced.get('/api/v1/test');
+      const result = await apiEnhanced.get('/api/v1/test');
 
       // Then: Exponential backoff applied
-      // First retry: 1000ms delay (attempt 1, initialDelayMs * 2^(1-1) = 1000)
-      await jest.advanceTimersByTimeAsync(1000);
-      expect(fetchMock).toHaveBeenCalledTimes(2);
-
-      // Second retry: 2000ms delay (attempt 2, initialDelayMs * 2^(2-1) = 2000)
-      await jest.advanceTimersByTimeAsync(2000);
-      expect(fetchMock).toHaveBeenCalledTimes(3);
-
-      await jest.runAllTimersAsync();
-      const result = await promise;
+      // sleep() called twice with correct delays
+      expect(sleep).toHaveBeenCalledTimes(2);
+      expect(sleep).toHaveBeenNthCalledWith(1, 1000); // First retry: 1000ms
+      expect(sleep).toHaveBeenNthCalledWith(2, 2000); // Second retry: 2000ms
       expect(result).toEqual(mockData);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
     });
 
     it('should succeed after 2nd retry attempt', async () => {
@@ -263,16 +249,14 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
         .mockResolvedValueOnce(createMockResponse(200, mockData));
 
       // When: Request made
-      const promise = apiEnhanced.get('/api/v1/test');
-      await jest.runAllTimersAsync();
-      const result = await promise;
+      const result = await apiEnhanced.get('/api/v1/test');
 
       // Then: Request succeeds after 2 retries (3 total attempts)
       expect(result).toEqual(mockData);
       expect(fetchMock).toHaveBeenCalledTimes(3);
     });
 
-    it.skip('should fail after max retries reached (3 attempts)', async () => {
+    it('should fail after max retries reached (3 attempts)', async () => {
       // Given: API fails all retry attempts
       fetchMock.mockResolvedValue(createMockResponse(500, { error: 'Persistent error' }));
 
@@ -293,9 +277,7 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
         .mockResolvedValueOnce(createMockResponse(200, mockData));
 
       // When: Request made
-      const promise = apiEnhanced.get('/api/v1/test');
-      await jest.runAllTimersAsync();
-      const result = await promise;
+      const result = await apiEnhanced.get('/api/v1/test');
 
       // Then: Request retries and succeeds
       expect(result).toEqual(mockData);
@@ -304,7 +286,7 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
   });
 
   describe('Scenario: Non-Retryable Errors', () => {
-    it.skip('should NOT retry on 400 Bad Request', async () => {
+    it('should NOT retry on 400 Bad Request', async () => {
       // Given: API returns 400 error
       fetchMock.mockResolvedValue(createMockResponse(400, { error: 'Bad request' }));
 
@@ -314,7 +296,7 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1); // No retry
     });
 
-    it.skip('should NOT retry on 401 Unauthorized', async () => {
+    it('should NOT retry on 401 Unauthorized', async () => {
       // Given: API returns 401 error
       fetchMock.mockResolvedValue(createMockResponse(401, { error: 'Unauthorized' }));
 
@@ -326,7 +308,7 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1); // No retry
     });
 
-    it.skip('should NOT retry on 403 Forbidden', async () => {
+    it('should NOT retry on 403 Forbidden', async () => {
       // Given: API returns 403 error
       fetchMock.mockResolvedValue(createMockResponse(403, { error: 'Forbidden' }));
 
@@ -336,7 +318,7 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1); // No retry
     });
 
-    it.skip('should NOT retry on 404 Not Found', async () => {
+    it('should NOT retry on 404 Not Found', async () => {
       // Given: API returns 404 error
       fetchMock.mockResolvedValue(createMockResponse(404, { error: 'Not found' }));
 
@@ -346,7 +328,7 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1); // No retry
     });
 
-    it.skip('should NOT retry on 422 Unprocessable Entity', async () => {
+    it('should NOT retry on 422 Unprocessable Entity', async () => {
       // Given: API returns 422 error
       fetchMock.mockResolvedValue(createMockResponse(422, { error: 'Validation failed' }));
 
@@ -358,15 +340,7 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
   });
 
   describe('Scenario: Request Timeout Handling', () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
-    it.skip('should abort request after timeout expires', async () => {
+    it('should abort request after timeout expires', async () => {
       // Given: Slow API endpoint and timeout configured
       let abortSignalReceived: AbortSignal | undefined;
       fetchMock.mockImplementation((_url, init) => {
@@ -379,15 +353,12 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
         });
       });
 
-      const options: ApiRequestOptions = { timeout: 100 }; // Shorter timeout for faster test
+      const options: ApiRequestOptions = { timeout: 10 }; // Very short timeout for fast test
 
       // When: Request made with timeout
       const promise = apiEnhanced.get('/api/v1/test', options);
 
-      // Advance timers to trigger timeout
-      jest.advanceTimersByTime(150);
-
-      // Then: Request rejected with NetworkError
+      // Then: Request rejected with NetworkError after timeout
       await expect(promise).rejects.toThrow(NetworkError);
       expect(abortSignalReceived?.aborted).toBe(true);
     });
@@ -403,16 +374,14 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
       const options: ApiRequestOptions = { timeout: 5000 };
 
       // When: Request made
-      const promise = apiEnhanced.get('/api/v1/test', options);
-      await jest.runAllTimersAsync();
-      await promise;
+      await apiEnhanced.get('/api/v1/test', options);
 
       // Then: AbortController signal passed to fetch
       expect(abortSignalReceived).toBeDefined();
       expect(abortSignalReceived).toBeInstanceOf(AbortSignal);
     });
 
-    it.skip('should include timeout error message in thrown error', async () => {
+    it('should include timeout error message in thrown error', async () => {
       // Given: Request will timeout
       fetchMock.mockImplementation((_url, init) => {
         // Simulate hanging request that throws when aborted
@@ -423,13 +392,10 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
         });
       });
 
-      const options: ApiRequestOptions = { timeout: 100 }; // Shorter timeout
+      const options: ApiRequestOptions = { timeout: 10 }; // Very short timeout for fast test
 
       // When: Request made with timeout
       const promise = apiEnhanced.get('/api/v1/test', options);
-
-      // Advance timers to trigger timeout
-      jest.advanceTimersByTime(150);
 
       // Then: Error includes timeout message
       await expect(promise).rejects.toThrow(NetworkError);
@@ -523,14 +489,6 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
   });
 
   describe('Scenario: Network Errors', () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
     it('should retry on network error (TypeError)', async () => {
       // Given: Network error on first attempt, success on retry
       const mockData = { success: true };
@@ -539,35 +497,31 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
         .mockResolvedValueOnce(createMockResponse(200, mockData));
 
       // When: Request made
-      const promise = apiEnhanced.get('/api/v1/test');
-      await jest.runAllTimersAsync();
-      const result = await promise;
+      const result = await apiEnhanced.get('/api/v1/test');
 
       // Then: Request retries and succeeds
       expect(result).toEqual(mockData);
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
 
-    it.skip('should fail after max retries on persistent network error', async () => {
+    it('should fail after max retries on persistent network error', async () => {
       // Given: Network error on all attempts
       fetchMock.mockRejectedValue(new TypeError('Network request failed'));
 
       // When: Request made
       const promise = apiEnhanced.get('/api/v1/test');
-      await jest.runAllTimersAsync();
 
       // Then: NetworkError thrown after max retries
       await expect(promise).rejects.toThrow(NetworkError);
       expect(fetchMock).toHaveBeenCalledTimes(3); // maxAttempts
     });
 
-    it.skip('should wrap TypeError in NetworkError', async () => {
+    it('should wrap TypeError in NetworkError', async () => {
       // Given: Network connection failure
       fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
 
       // When: Request made
       const promise = apiEnhanced.get('/api/v1/test');
-      await jest.runAllTimersAsync();
 
       // Then: Error wrapped in NetworkError
       try {
@@ -596,15 +550,7 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
   });
 
   describe('Scenario: Custom Retry Configuration', () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
-    it.skip('should respect custom maxAttempts', async () => {
+    it('should respect custom maxAttempts', async () => {
       // Given: Custom retry config with maxAttempts = 5
       fetchMock.mockResolvedValue(createMockResponse(500));
 
@@ -614,7 +560,6 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
 
       // When: Request made with custom config
       const promise = apiEnhanced.get('/api/v1/test', options);
-      await jest.runAllTimersAsync();
 
       // Then: Retries up to custom maxAttempts
       await expect(promise).rejects.toThrow(ApiError);
@@ -624,6 +569,8 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
     it('should respect custom initialDelayMs', async () => {
       // Given: Custom retry config with initialDelayMs = 500
       const mockData = { success: true };
+      const { sleep } = jest.requireMock('../errors');
+
       fetchMock
         .mockResolvedValueOnce(createMockResponse(500))
         .mockResolvedValueOnce(createMockResponse(200, mockData));
@@ -633,13 +580,10 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
       };
 
       // When: Request made with custom delay
-      const promise = apiEnhanced.get('/api/v1/test', options);
+      const result = await apiEnhanced.get('/api/v1/test', options);
 
       // Then: Uses custom initial delay
-      await jest.advanceTimersByTimeAsync(500);
-      await jest.runAllTimersAsync();
-      const result = await promise;
-
+      expect(sleep).toHaveBeenCalledWith(500); // Custom delay instead of default 1000ms
       expect(result).toEqual(mockData);
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
@@ -667,7 +611,7 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
       await expect(apiEnhanced.post('/api/v1/test', {})).rejects.toThrow(ApiError);
     });
 
-    it.skip('should NOT retry on 401 Unauthorized', async () => {
+    it('should NOT retry on 401 Unauthorized', async () => {
       // Given: API returns 401
       fetchMock.mockResolvedValue(createMockResponse(401));
 

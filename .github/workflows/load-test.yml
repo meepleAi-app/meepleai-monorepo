@@ -293,7 +293,7 @@ jobs:
 
       # Optimization 11: Download pre-built API image
       - name: Download API image
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: api-image
           path: /tmp
@@ -441,7 +441,7 @@ jobs:
 
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: load-test-results
 

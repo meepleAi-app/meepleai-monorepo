@@ -10,13 +10,6 @@ namespace Api.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<string>(
-                name: "Language",
-                table: "pdf_documents",
-                type: "text",
-                nullable: false,
-                defaultValue: "");
-
             migrationBuilder.AddColumn<double>(
                 name: "CitationQuality",
                 table: "ai_request_logs",
@@ -71,10 +64,6 @@ namespace Api.Migrations
             migrationBuilder.DropIndex(
                 name: "ix_ai_request_logs_is_low_quality",
                 table: "ai_request_logs");
-
-            migrationBuilder.DropColumn(
-                name: "Language",
-                table: "pdf_documents");
 
             migrationBuilder.DropColumn(
                 name: "CitationQuality",

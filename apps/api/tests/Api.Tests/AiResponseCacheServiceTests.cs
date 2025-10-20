@@ -734,8 +734,8 @@ public class AiResponseCacheServiceTests
                     "Complex instruction with nested data",
                     new List<Snippet>
                     {
-                        new Snippet("Reference text 1", "PDF:doc1", 5, 10),
-                        new Snippet("Reference text 2", "PDF:doc2", 12, 25)
+                        new Snippet("Reference text 1", "PDF:doc1", 5, 10, 0.85f),
+                        new Snippet("Reference text 2", "PDF:doc2", 12, 25, 0.85f)
                     },
                     false
                 )

@@ -225,8 +225,8 @@ public class FollowUpQuestionServiceTests
         // Arrange
         var ragContext = new List<Snippet>
         {
-            new Snippet("Rule text about winning", "rulebook.pdf", 5, 1),
-            new Snippet("Rule text about setup", "rulebook.pdf", 10, 1)
+            new Snippet("Rule text about winning", "rulebook.pdf", 5, 1, 0.85f),
+            new Snippet("Rule text about setup", "rulebook.pdf", 10, 1, 0.85f)
         };
 
         _mockLlmService

@@ -101,7 +101,8 @@ public class SetupGuideService
                     r.Text,
                     $"PDF:{r.PdfId}",
                     r.Page,
-                    0 // line number not tracked in chunks
+                    0, // line number not tracked in chunks
+                    r.Score // AI-11: Include actual search score for quality tracking
                 )).ToList();
 
                 // Use LLM to synthesize structured setup steps from the context

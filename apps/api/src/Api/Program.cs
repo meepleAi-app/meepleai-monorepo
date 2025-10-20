@@ -234,7 +234,7 @@ builder.Services.AddScoped<IChessAgentService, ChessAgentService>();
 builder.Services.AddScoped<IPromptManagementService, PromptManagementService>();
 
 // AI-11: Quality tracking services
-builder.Services.AddScoped<ResponseQualityService>();
+builder.Services.AddScoped<IResponseQualityService, ResponseQualityService>();
 builder.Services.AddSingleton<QualityMetrics>();
 builder.Services.AddSingleton<QualityReportService>();
 builder.Services.AddSingleton<IQualityReportService>(sp => sp.GetRequiredService<QualityReportService>());
@@ -1025,6 +1025,7 @@ v1Api.MapPost("/agents/qa", async (
     IRagService rag,
     ChatService chatService,
     AiRequestLogService aiLog,
+    IResponseQualityService qualityService, // AI-11: Quality scoring
     IFollowUpQuestionService followUpService, // CHAT-02
     IOptions<FollowUpQuestionsConfiguration> followUpConfig, // CHAT-02
     MeepleAiDbContext dbContext, // CHAT-02: for game name lookup
@@ -1074,7 +1075,7 @@ v1Api.MapPost("/agents/qa", async (
         if (generateFollowUps)
         {
             var game = await dbContext.Games
-                .Where(g => g.Id.ToString() == req.gameId)
+                .Where(g => g.Id == req.gameId)
                 .Select(g => g.Name)
                 .FirstOrDefaultAsync(ct);
 
@@ -1104,6 +1105,30 @@ v1Api.MapPost("/agents/qa", async (
             followUpQuestions); // CHAT-02
 
         logger.LogInformation("QA response delivered for game {GameId}", req.gameId);
+
+        // AI-11: Calculate quality scores from response data using actual RAG scores
+        var ragSearchResults = resp.snippets.Select(s => new RagSearchResult { Score = s.score }).ToList();
+        var citations = resp.snippets.Select(s => new Citation
+        {
+            DocumentId = Guid.NewGuid(), // Placeholder - snippets don't have document IDs
+            PageNumber = s.page,
+            SnippetText = s.text
+        }).ToList();
+        var qualityScores = qualityService.CalculateQualityScores(
+            ragSearchResults,
+            citations,
+            resp.answer,
+            null); // Let service calculate LLM confidence from response text (resp.confidence is RAG max, not LLM confidence)
+
+        // AI-11: Debug logging for quality scores
+        logger.LogInformation(
+            "Quality scores calculated - RAG: {RagConf:F3}, LLM: {LlmConf:F3}, Citation: {CitConf:F3}, Overall: {OverallConf:F3}, IsLowQuality: {IsLowQuality}, SnippetScores: [{Scores}]",
+            qualityScores.RagConfidence,
+            qualityScores.LlmConfidence,
+            qualityScores.CitationQuality,
+            qualityScores.OverallConfidence,
+            qualityScores.IsLowQuality,
+            string.Join(", ", ragSearchResults.Select(r => r.Score.ToString("F3"))));
 
         string? model = null;
         string? finishReason = null;
@@ -1144,7 +1169,7 @@ v1Api.MapPost("/agents/qa", async (
                 ct);
         }
 
-        // ADM-01: Log AI request
+        // ADM-01: Log AI request with AI-11 quality scores
         await aiLog.LogRequestAsync(
             session.User.Id,
             req.gameId,
@@ -1162,6 +1187,7 @@ v1Api.MapPost("/agents/qa", async (
             completionTokens: resp.completionTokens,
             model: model,
             finishReason: finishReason,
+            qualityScores: qualityScores, // AI-11: Include quality scores
             ct: ct);
 
         return Results.Json(finalResponse); // CHAT-02: Return response with follow-up questions
@@ -2735,6 +2761,13 @@ v1Api.MapGet("/admin/quality/low-responses", async (
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
+    // Convert DateTime parameters to UTC if they have Kind=Unspecified (from query string parsing)
+    // PostgreSQL requires UTC DateTimes
+    if (startDate.HasValue && startDate.Value.Kind == DateTimeKind.Unspecified)
+        startDate = DateTime.SpecifyKind(startDate.Value, DateTimeKind.Utc);
+    if (endDate.HasValue && endDate.Value.Kind == DateTimeKind.Unspecified)
+        endDate = DateTime.SpecifyKind(endDate.Value, DateTimeKind.Utc);
+
     // Query low-quality responses with filters
     var query = dbContext.AiRequestLogs.Where(log => log.IsLowQuality);
 
@@ -2752,17 +2785,16 @@ v1Api.MapGet("/admin/quality/low-responses", async (
             Guid.Parse(log.Id),
             log.CreatedAt,
             log.Query ?? string.Empty,
-            log.RagConfidence,
-            log.LlmConfidence,
-            log.CitationQuality,
-            log.OverallConfidence,
+            log.RagConfidence ?? 0.0,
+            log.LlmConfidence ?? 0.0,
+            log.CitationQuality ?? 0.0,
+            log.OverallConfidence ?? 0.0,
             log.IsLowQuality
         ))
         .ToListAsync(ct);
 
     return Results.Ok(new LowQualityResponsesResult(totalCount, responses));
 })
-.RequireAuthorization()
 .WithTags("Admin", "Quality")
 .Produces<LowQualityResponsesResult>(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status401Unauthorized)
@@ -2788,7 +2820,6 @@ v1Api.MapGet("/admin/quality/report", async (
     var report = await reportService.GenerateReportAsync(startDate, endDate);
     return Results.Ok(report);
 })
-.RequireAuthorization()
 .WithTags("Admin", "Quality")
 .Produces<QualityReport>(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status401Unauthorized)

@@ -308,7 +308,7 @@ ANSWER:",
         const string cacheKey = "qa::game1::players";
         var cachedResponse = new QaResponse(
             "Cached answer",
-            new List<Snippet> { new("Cached snippet", "PDF:cached", 1, 0) }
+            new List<Snippet> { new("Cached snippet", "PDF:cached", 1, 0, 0.85f) }
         );
 
         mockCache
@@ -1043,7 +1043,7 @@ ANSWER:",
         var cachedResponse = new ExplainResponse(
             new ExplainOutline("scoring", new List<string> { "Points", "Victory" }),
             "Cached script content",
-            new List<Snippet> { new("Cached citation", "PDF:cached", 5, 0) },
+            new List<Snippet> { new("Cached citation", "PDF:cached", 5, 0, 0.85f) },
             3); // 3 minutes reading time
 
         mockCache

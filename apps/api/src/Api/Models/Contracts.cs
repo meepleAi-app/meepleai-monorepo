@@ -14,7 +14,7 @@ public record QaResponse(
     double? confidence = null,
     IReadOnlyDictionary<string, string>? metadata = null,
     IReadOnlyList<string>? followUpQuestions = null);  // CHAT-02: AI-generated follow-up questions
-public record Snippet(string text, string source, int page, int line);
+public record Snippet(string text, string source, int page, int line, float score);
 
 public record IngestPdfResponse(string jobId);
 public record SeedRequest(string gameId);
@@ -305,10 +305,10 @@ public record LowQualityResponsesResult(
 public record LowQualityResponseDto(
     Guid Id,
     DateTime CreatedAt,
-    string UserQuery,
-    double? RagConfidence,
-    double? LlmConfidence,
-    double? CitationQuality,
-    double? OverallConfidence,
+    string Query,
+    double RagConfidence,
+    double LlmConfidence,
+    double CitationQuality,
+    double OverallConfidence,
     bool IsLowQuality
 );

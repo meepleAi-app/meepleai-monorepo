@@ -193,7 +193,7 @@ ANSWER:",
 
         var cachedResponse = new QaResponse(
             "This game supports 2-4 players.",
-            new List<Snippet> { new("Cached snippet", "PDF:cached", 1, 0) },
+            new List<Snippet> { new("Cached snippet", "PDF:cached", 1, 0, 0.85f) },
             promptTokens: 10,
             completionTokens: 8,
             totalTokens: 18,

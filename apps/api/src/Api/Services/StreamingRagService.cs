@@ -95,7 +95,8 @@ public class StreamingRagService : IStreamingRagService
             r.Text,
             $"PDF:{r.PdfId}",
             r.Page,
-            0
+            0,
+            r.Score // AI-11: Include actual search score for quality tracking
         )).ToList();
 
         yield return CreateEvent(StreamingEventType.Citations,

@@ -416,7 +416,7 @@ CRITICAL INSTRUCTIONS:
 
         var cachedResponse = new QaResponse(
             "Cached answer",
-            new List<Snippet> { new("Cached text", "PDF:cached", 1, 0) },
+            new List<Snippet> { new("Cached text", "PDF:cached", 1, 0, 0.85f) },
             100, 10, 110, 0.95);
 
         var mockCache = new Mock<IAiResponseCacheService>();

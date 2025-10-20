@@ -160,7 +160,7 @@ public class AiResponseCacheIntegrationTests : IAsyncLifetime
             "You can hold up to 7 resource cards.",
             new List<Snippet>
             {
-                new Snippet("Resource limit is 7 cards.", "PDF:catan-rules", 5, 1)
+                new Snippet("Resource limit is 7 cards.", "PDF:catan-rules", 5, 1, 0.85f)
             }.ToArray()
         );
 

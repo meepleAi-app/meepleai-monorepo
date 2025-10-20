@@ -100,8 +100,8 @@ public class ContractModelTests
         // Arrange
         var snippets = new List<Snippet>
         {
-            new("Text 1", "PDF:123", 5, 10),
-            new("Text 2", "PDF:456", 7, 15)
+            new("Text 1", "PDF:123", 5, 10, 0.85f),
+            new("Text 2", "PDF:456", 7, 15, 0.85f)
         };
         var metadata = new Dictionary<string, string>
         {
@@ -155,7 +155,7 @@ public class ContractModelTests
     public void Snippet_Constructor_SetsAllProperties()
     {
         // Act
-        var snippet = new Snippet("Rule text here", "PDF:game-rules-v2.pdf", 15, 42);
+        var snippet = new Snippet("Rule text here", "PDF:game-rules-v2.pdf", 15, 42, 0.85f);
 
         // Assert
         Assert.Equal("Rule text here", snippet.text);
@@ -168,9 +168,9 @@ public class ContractModelTests
     public void Snippet_Equality_ComparesAllFields()
     {
         // Arrange
-        var snippet1 = new Snippet("Text", "Source", 1, 2);
-        var snippet2 = new Snippet("Text", "Source", 1, 2);
-        var snippet3 = new Snippet("Different", "Source", 1, 2);
+        var snippet1 = new Snippet("Text", "Source", 1, 2, 0.85f);
+        var snippet2 = new Snippet("Text", "Source", 1, 2, 0.85f);
+        var snippet3 = new Snippet("Different", "Source", 1, 2, 0.85f);
 
         // Assert
         Assert.Equal(snippet1, snippet2);
@@ -203,7 +203,7 @@ public class ContractModelTests
     {
         // Arrange
         var outline = new ExplainOutline("Combat", new List<string> { "Attack", "Defense", "Resolution" });
-        var citations = new List<Snippet> { new("Rule A", "PDF:1", 5, 0) };
+        var citations = new List<Snippet> { new("Rule A", "PDF:1", 5, 0, 0.85f) };
 
         // Act
         var response = new ExplainResponse(
@@ -286,7 +286,7 @@ public class ContractModelTests
     public void SetupGuideStep_Constructor_SetsAllProperties()
     {
         // Arrange
-        var references = new List<Snippet> { new("Reference", "PDF:123", 5, 0) };
+        var references = new List<Snippet> { new("Reference", "PDF:123", 5, 0, 0.85f) };
 
         // Act
         var step = new SetupGuideStep(
@@ -401,7 +401,7 @@ public class ContractModelTests
             fenPosition: "rnbqkb1r/pppp1ppp/5n2/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 4 3",
             evaluationSummary: "White has slight advantage",
             keyConsiderations: new List<string> { "Control center", "Develop pieces" });
-        var sources = new List<Snippet> { new("Chess rules", "PDF:chess", 10, 0) };
+        var sources = new List<Snippet> { new("Chess rules", "PDF:chess", 10, 0, 0.85f) };
         var suggestedMoves = new List<string> { "Nc3", "Bb5", "d4" };
         var metadata = new Dictionary<string, string> { { "model", "gpt-4" } };
 

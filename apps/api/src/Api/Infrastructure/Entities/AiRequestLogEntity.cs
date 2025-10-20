@@ -6,7 +6,7 @@ public class AiRequestLogEntity
     public string? UserId { get; set; }
     public string? ApiKeyId { get; set; }
     public string? GameId { get; set; }
-    public string Endpoint { get; set; } = default!; // "qa", "explain", "setup"
+    public string Endpoint { get; set; } = string.Empty; // "qa", "explain", "setup"
     public string? Query { get; set; }
     public string? ResponseSnippet { get; set; }
     public int LatencyMs { get; set; }
@@ -14,7 +14,7 @@ public class AiRequestLogEntity
     public int PromptTokens { get; set; }
     public int CompletionTokens { get; set; }
     public double? Confidence { get; set; }
-    public string Status { get; set; } = default!; // "Success", "Error"
+    public string Status { get; set; } = string.Empty; // "Success", "Error"
     public string? ErrorMessage { get; set; }
     public string? IpAddress { get; set; }
     public string? UserAgent { get; set; }

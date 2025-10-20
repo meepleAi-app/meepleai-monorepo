@@ -111,7 +111,8 @@ public class RagService : IRagService
                 r.Text,
                 $"PDF:{r.PdfId}",
                 r.Page,
-                0 // line number not tracked in chunks
+                0, // line number not tracked in chunks
+                r.Score // AI-11: Include actual search score for quality tracking
             )).ToList();
 
             // Step 4: Build context from retrieved chunks
@@ -271,7 +272,8 @@ public class RagService : IRagService
                 r.Text,
                 $"PDF:{r.PdfId}",
                 r.Page,
-                0 // line number not tracked in chunks
+                0, // line number not tracked in chunks
+                r.Score // AI-11: Include actual search score for quality tracking
             )).ToList();
 
             // Step 6: Calculate estimated reading time (average reading speed: 200 words/minute)

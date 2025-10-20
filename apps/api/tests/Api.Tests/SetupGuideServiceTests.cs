@@ -192,7 +192,7 @@ Each player takes a player board and starting components.";
             instruction: "Sort all components by type",
             references: new List<Snippet>
             {
-                new Snippet("Reference text", "PDF:123", 5, 0)
+                new Snippet("Reference text", "PDF:123", 5, 0, 0.85f)
             },
             isOptional: false
         );

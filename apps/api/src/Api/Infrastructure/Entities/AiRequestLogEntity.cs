@@ -21,4 +21,11 @@ public class AiRequestLogEntity
     public string? Model { get; set; }
     public string? FinishReason { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // AI-11: Quality Scoring fields
+    public double? RagConfidence { get; set; }
+    public double? LlmConfidence { get; set; }
+    public double? CitationQuality { get; set; }
+    public double? OverallConfidence { get; set; }
+    public bool IsLowQuality { get; set; }
 }

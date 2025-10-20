@@ -190,7 +190,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<AiRequestLogService>();
 builder.Services.AddScoped<AgentFeedbackService>();
-builder.Services.AddScoped<RateLimitService>();
+builder.Services.AddScoped<IRateLimitService, RateLimitService>();
 builder.Services.AddScoped<PdfTextExtractionService>();
 builder.Services.AddScoped<PdfTableExtractionService>();
 builder.Services.AddScoped<IPdfValidationService, PdfValidationService>(); // PDF-09: PDF validation service
@@ -232,6 +232,13 @@ builder.Services.AddScoped<IChessAgentService, ChessAgentService>();
 
 // AI-07: Prompt versioning and management service
 builder.Services.AddScoped<IPromptManagementService, PromptManagementService>();
+
+// AI-11: Quality tracking services
+builder.Services.AddScoped<ResponseQualityService>();
+builder.Services.AddSingleton<QualityMetrics>();
+builder.Services.AddSingleton<QualityReportService>();
+builder.Services.AddSingleton<IQualityReportService>(sp => sp.GetRequiredService<QualityReportService>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<QualityReportService>());
 
 // API-01: OpenAPI/Swagger configuration
 builder.Services.AddEndpointsApiExplorer();
@@ -502,7 +509,7 @@ app.Use(async (context, next) =>
 // Rate limiting middleware
 app.Use(async (context, next) =>
 {
-    var rateLimiter = context.RequestServices.GetRequiredService<RateLimitService>();
+    var rateLimiter = context.RequestServices.GetRequiredService<IRateLimitService>();
     var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
 
     // Get rate limit key (prioritize authenticated user, fallback to IP)
@@ -2707,6 +2714,85 @@ v1Api.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService log
         feedbackByEndpoint = feedbackStats.EndpointOutcomeCounts
     });
 });
+
+// AI-11: Quality tracking endpoints
+v1Api.MapGet("/admin/quality/low-responses", async (
+    HttpContext context,
+    MeepleAiDbContext dbContext,
+    int limit = 100,
+    int offset = 0,
+    DateTime? startDate = null,
+    DateTime? endDate = null,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    // Query low-quality responses with filters
+    var query = dbContext.AiRequestLogs.Where(log => log.IsLowQuality);
+
+    if (startDate.HasValue)
+        query = query.Where(log => log.CreatedAt >= startDate.Value);
+    if (endDate.HasValue)
+        query = query.Where(log => log.CreatedAt <= endDate.Value);
+
+    var totalCount = await query.CountAsync(ct);
+    var responses = await query
+        .OrderByDescending(log => log.CreatedAt)
+        .Skip(offset)
+        .Take(limit)
+        .Select(log => new LowQualityResponseDto(
+            Guid.Parse(log.Id),
+            log.CreatedAt,
+            log.Query ?? string.Empty,
+            log.RagConfidence,
+            log.LlmConfidence,
+            log.CitationQuality,
+            log.OverallConfidence,
+            log.IsLowQuality
+        ))
+        .ToListAsync(ct);
+
+    return Results.Ok(new LowQualityResponsesResult(totalCount, responses));
+})
+.RequireAuthorization()
+.WithTags("Admin", "Quality")
+.Produces<LowQualityResponsesResult>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden);
+
+v1Api.MapGet("/admin/quality/report", async (
+    HttpContext context,
+    IQualityReportService reportService,
+    int days = 7) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var endDate = DateTime.UtcNow;
+    var startDate = endDate.AddDays(-days);
+    var report = await reportService.GenerateReportAsync(startDate, endDate);
+    return Results.Ok(report);
+})
+.RequireAuthorization()
+.WithTags("Admin", "Quality")
+.Produces<QualityReport>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden);
 
 // ADM-02: n8n workflow configuration endpoints
 v1Api.MapGet("/admin/n8n", async (HttpContext context, N8nConfigService n8nService, CancellationToken ct) =>

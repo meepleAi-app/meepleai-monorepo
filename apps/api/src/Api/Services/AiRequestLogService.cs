@@ -32,6 +32,7 @@ public class AiRequestLogService
         string? model = null,
         string? finishReason = null,
         string? apiKeyId = null,
+        Models.QualityScores? qualityScores = null,
         CancellationToken ct = default)
     {
         try
@@ -55,7 +56,13 @@ public class AiRequestLogService
                 UserAgent = userAgent,
                 Model = model,
                 FinishReason = finishReason,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                // AI-11: Store quality scores if provided
+                RagConfidence = qualityScores?.RagConfidence,
+                LlmConfidence = qualityScores?.LlmConfidence,
+                CitationQuality = qualityScores?.CitationQuality,
+                OverallConfidence = qualityScores?.OverallConfidence,
+                IsLowQuality = qualityScores?.IsLowQuality ?? false
             };
 
             _db.AiRequestLogs.Add(log);

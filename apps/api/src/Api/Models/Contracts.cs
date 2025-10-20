@@ -287,3 +287,28 @@ public class ExportResult
             Filename = filename
         };
 }
+
+// AI-11: Quality Scoring models
+/// <summary>
+/// Result model for low-quality responses endpoint.
+/// Contains paginated list of low-quality AI responses with their quality metrics.
+/// </summary>
+public record LowQualityResponsesResult(
+    int TotalCount,
+    IReadOnlyList<LowQualityResponseDto> Responses
+);
+
+/// <summary>
+/// DTO for a low-quality AI response.
+/// Includes all quality dimensions and metadata.
+/// </summary>
+public record LowQualityResponseDto(
+    Guid Id,
+    DateTime CreatedAt,
+    string UserQuery,
+    double? RagConfidence,
+    double? LlmConfidence,
+    double? CitationQuality,
+    double? OverallConfidence,
+    bool IsLowQuality
+);

@@ -78,7 +78,8 @@ public class ChessAgentService : IChessAgentService
                 r.Text,
                 $"ChessKnowledge:{r.ChunkIndex}",
                 r.Page,
-                0
+                0,
+                r.Score // AI-11: Include actual search score for quality tracking
             )).ToList();
 
             var context = string.Join("\n\n---\n\n", searchResult.Results.Select((r, i) =>

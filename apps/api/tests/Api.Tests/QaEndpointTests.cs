@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.Models;
 using Api.Services;
 using System.Collections.Generic;
 using Microsoft.Data.Sqlite;
@@ -10,6 +11,39 @@ using Xunit;
 
 public class QaEndpointTests
 {
+    private static Mock<IPromptTemplateService> CreatePromptTemplateMock()
+    {
+        var mock = new Mock<IPromptTemplateService>();
+
+        var defaultTemplate = new PromptTemplate
+        {
+            SystemPrompt = @"You are a board game rules assistant. You answer questions based ONLY on the provided rulebook excerpts.
+
+CRITICAL INSTRUCTIONS:
+- If the answer is NOT in the provided context, respond EXACTLY with: ""Not specified in the rules.""
+- Do NOT hallucinate or make up information
+- Do NOT use knowledge outside the provided context
+- ONLY answer what is explicitly stated in the rulebook excerpts",
+            UserPromptTemplate = "CONTEXT FROM RULEBOOK:\n{context}\n\nQUESTION: {query}\n\nANSWER:",
+            FewShotExamples = new List<FewShotExample>()
+        };
+
+        mock.Setup(x => x.GetTemplateAsync(It.IsAny<Guid?>(), It.IsAny<QuestionType>()))
+            .ReturnsAsync(defaultTemplate);
+
+        mock.Setup(x => x.RenderSystemPrompt(It.IsAny<PromptTemplate>()))
+            .Returns((PromptTemplate t) => t.SystemPrompt);
+
+        mock.Setup(x => x.RenderUserPrompt(It.IsAny<PromptTemplate>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns((PromptTemplate t, string context, string query) =>
+                t.UserPromptTemplate.Replace("{context}", context).Replace("{query}", query));
+
+        mock.Setup(x => x.ClassifyQuestion(It.IsAny<string>()))
+            .Returns(QuestionType.General);
+
+        return mock;
+    }
+
     [Fact]
     public async Task RoundTrip_CreatesAndQueriesDemoSpec()
     {
@@ -41,19 +75,13 @@ public class QaEndpointTests
         var configMock = new Mock<Microsoft.Extensions.Configuration.IConfiguration>();
         configMock.Setup(c => c["OPENROUTER_API_KEY"]).Returns("test-key");
 
-        var httpClientFactoryMock = new Mock<IHttpClientFactory>();
-        httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(new HttpClient());
-
-        var embeddingServiceMock = new Mock<EmbeddingService>(
-            httpClientFactoryMock.Object,
-            configMock.Object,
-            Mock.Of<ILogger<EmbeddingService>>());
+        var embeddingServiceMock = new Mock<IEmbeddingService>();
 
         // Configure mock to return successful embedding result
         var mockEmbedding = Enumerable.Repeat(0.1f, 1536).ToArray();
         var embeddingResult = EmbeddingResult.CreateSuccess(new List<float[]> { mockEmbedding });
         embeddingServiceMock
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(embeddingResult);
 
         var qdrantServiceMock = new Mock<IQdrantService>();
@@ -65,7 +93,7 @@ public class QaEndpointTests
         };
         var searchResult = SearchResult.CreateSuccess(searchResults);
         qdrantServiceMock
-            .Setup(q => q.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(q => q.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(searchResult);
 
         var ragLoggerMock = Mock.Of<ILogger<RagService>>();
@@ -80,7 +108,7 @@ public class QaEndpointTests
             .Setup(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(llmResult);
 
-        var ragService = new RagService(dbContext, embeddingServiceMock.Object, qdrantServiceMock.Object, llmServiceMock.Object, cacheServiceMock.Object, ragLoggerMock);
+        var ragService = new RagService(dbContext, embeddingServiceMock.Object, qdrantServiceMock.Object, llmServiceMock.Object, cacheServiceMock.Object, CreatePromptTemplateMock().Object, ragLoggerMock);
 
         var gameId = "demo-chess";
 

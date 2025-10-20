@@ -16,11 +16,57 @@ namespace Api.Tests;
 
 /// <summary>
 /// CHAT-01: Comprehensive unit tests for StreamingQaService.
+/// AI-07.1: Updated to support prompt template service
 /// Tests streaming QA functionality with Server-Sent Events (SSE).
 /// </summary>
 public class StreamingQaServiceTests
 {
     private readonly Mock<ILogger<StreamingQaService>> _mockLogger = new();
+
+    /// <summary>
+    /// Creates a mock IPromptTemplateService with default fallback behavior
+    /// </summary>
+    private static Mock<IPromptTemplateService> CreatePromptTemplateMock()
+    {
+        var mock = new Mock<IPromptTemplateService>();
+
+        // Default template with fallback prompts
+        var defaultTemplate = new PromptTemplate
+        {
+            SystemPrompt = @"You are a board game rules assistant. Your job is to answer questions about board game rules based ONLY on the provided context from the rulebook.
+
+CRITICAL INSTRUCTIONS:
+- If the answer to the question is clearly found in the provided context, answer it concisely and accurately.
+- If the answer is NOT in the provided context or you're uncertain, respond with EXACTLY: ""Not specified""
+- Do NOT make assumptions or use external knowledge about the game.
+- Do NOT hallucinate or invent information.
+- Keep your answers brief and to the point (2-3 sentences maximum).
+- Reference page numbers when relevant.",
+            UserPromptTemplate = @"CONTEXT FROM RULEBOOK:
+{context}
+
+QUESTION:
+{query}
+
+ANSWER:",
+            FewShotExamples = new List<FewShotExample>()
+        };
+
+        mock.Setup(m => m.ClassifyQuestion(It.IsAny<string>()))
+            .Returns(QuestionType.General);
+
+        mock.Setup(m => m.GetTemplateAsync(It.IsAny<Guid?>(), It.IsAny<QuestionType>()))
+            .ReturnsAsync(defaultTemplate);
+
+        mock.Setup(m => m.RenderSystemPrompt(It.IsAny<PromptTemplate>()))
+            .Returns<PromptTemplate>(t => t.SystemPrompt);
+
+        mock.Setup(m => m.RenderUserPrompt(It.IsAny<PromptTemplate>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns<PromptTemplate, string, string>((t, c, q) =>
+                t.UserPromptTemplate.Replace("{context}", c).Replace("{query}", q));
+
+        return mock;
+    }
 
     private static MeepleAiDbContext CreateInMemoryContext()
     {
@@ -67,6 +113,7 @@ public class StreamingQaServiceTests
             mockQdrant.Object,
             mockLlm.Object,
             mockCache.Object,
+            CreatePromptTemplateMock().Object,
             _mockLogger.Object);
 
         // Act
@@ -108,6 +155,7 @@ public class StreamingQaServiceTests
             mockQdrant.Object,
             mockLlm.Object,
             mockCache.Object,
+            CreatePromptTemplateMock().Object,
             _mockLogger.Object);
 
         // Act
@@ -166,6 +214,7 @@ public class StreamingQaServiceTests
             mockQdrant.Object,
             mockLlm.Object,
             mockCache.Object,
+            CreatePromptTemplateMock().Object,
             _mockLogger.Object);
 
         // Act
@@ -282,6 +331,7 @@ public class StreamingQaServiceTests
             mockQdrant.Object,
             mockLlm.Object,
             mockCache.Object,
+            CreatePromptTemplateMock().Object,
             _mockLogger.Object);
 
         // Act
@@ -370,6 +420,7 @@ public class StreamingQaServiceTests
             mockQdrant.Object,
             mockLlm.Object,
             mockCache.Object,
+            CreatePromptTemplateMock().Object,
             _mockLogger.Object);
 
         // Act
@@ -423,6 +474,7 @@ public class StreamingQaServiceTests
             mockQdrant.Object,
             mockLlm.Object,
             mockCache.Object,
+            CreatePromptTemplateMock().Object,
             _mockLogger.Object);
 
         // Act
@@ -482,6 +534,7 @@ public class StreamingQaServiceTests
             mockQdrant.Object,
             mockLlm.Object,
             mockCache.Object,
+            CreatePromptTemplateMock().Object,
             _mockLogger.Object);
 
         // Act
@@ -542,6 +595,7 @@ public class StreamingQaServiceTests
             mockQdrant.Object,
             mockLlm.Object,
             mockCache.Object,
+            CreatePromptTemplateMock().Object,
             _mockLogger.Object);
 
         // Act
@@ -621,6 +675,7 @@ public class StreamingQaServiceTests
             mockQdrant.Object,
             mockLlm.Object,
             mockCache.Object,
+            CreatePromptTemplateMock().Object,
             _mockLogger.Object);
 
         // Act
@@ -698,6 +753,7 @@ public class StreamingQaServiceTests
             mockQdrant.Object,
             mockLlm.Object,
             mockCache.Object,
+            CreatePromptTemplateMock().Object,
             _mockLogger.Object);
 
         // Act
@@ -776,6 +832,7 @@ public class StreamingQaServiceTests
             mockQdrant.Object,
             mockLlm.Object,
             mockCache.Object,
+            CreatePromptTemplateMock().Object,
             _mockLogger.Object);
 
         using var cts = new CancellationTokenSource();
@@ -862,6 +919,7 @@ public class StreamingQaServiceTests
             mockQdrant.Object,
             mockLlm.Object,
             mockCache.Object,
+            CreatePromptTemplateMock().Object,
             _mockLogger.Object);
 
         // Act

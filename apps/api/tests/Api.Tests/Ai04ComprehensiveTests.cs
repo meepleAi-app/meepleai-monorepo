@@ -19,6 +19,39 @@ using Xunit;
 public class Ai04ComprehensiveTests
 {
     private readonly Mock<ILogger<RagService>> _mockLogger = new();
+    private static Mock<IPromptTemplateService> CreatePromptTemplateMock()
+    {
+        var mock = new Mock<IPromptTemplateService>();
+
+        var defaultTemplate = new PromptTemplate
+        {
+            SystemPrompt = @"You are a board game rules assistant. You answer questions based ONLY on the provided rulebook excerpts.
+
+CRITICAL INSTRUCTIONS:
+- If the answer is NOT in the provided context, respond EXACTLY with: ""Not specified in the rules.""
+- Do NOT hallucinate or make up information
+- Do NOT use knowledge outside the provided context
+- ONLY answer what is explicitly stated in the rulebook excerpts",
+            UserPromptTemplate = "CONTEXT FROM RULEBOOK:\n{context}\n\nQUESTION: {query}\n\nANSWER:",
+            FewShotExamples = new List<FewShotExample>()
+        };
+
+        mock.Setup(x => x.GetTemplateAsync(It.IsAny<Guid?>(), It.IsAny<QuestionType>()))
+            .ReturnsAsync(defaultTemplate);
+
+        mock.Setup(x => x.RenderSystemPrompt(It.IsAny<PromptTemplate>()))
+            .Returns((PromptTemplate t) => t.SystemPrompt);
+
+        mock.Setup(x => x.RenderUserPrompt(It.IsAny<PromptTemplate>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns((PromptTemplate t, string context, string query) =>
+                t.UserPromptTemplate.Replace("{context}", context).Replace("{query}", query));
+
+        mock.Setup(x => x.ClassifyQuestion(It.IsAny<string>()))
+            .Returns(QuestionType.General);
+
+        return mock;
+    }
+
 
     private static MeepleAiDbContext CreateInMemoryContext()
     {
@@ -60,7 +93,7 @@ public class Ai04ComprehensiveTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         mockEmbedding
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
 
         // Context talks about setup, not player count
@@ -72,7 +105,7 @@ public class Ai04ComprehensiveTests
 
         var mockQdrant = new Mock<IQdrantService>();
         mockQdrant
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         var mockLlm = new Mock<ILlmService>();
@@ -84,7 +117,7 @@ public class Ai04ComprehensiveTests
                 new LlmUsage(150, 2, 152)));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: Asking a question whose answer is not in the context
         var result = await ragService.AskAsync("game1", "How many players can play this game?");
@@ -102,17 +135,17 @@ public class Ai04ComprehensiveTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         mockEmbedding
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
 
         var mockQdrant = new Mock<IQdrantService>();
         mockQdrant
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>())); // Empty results
 
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: Asking a question with no relevant context
         var result = await ragService.AskAsync("game1", "What is the airspeed velocity of an unladen swallow?");
@@ -131,17 +164,17 @@ public class Ai04ComprehensiveTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         mockEmbedding
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
 
         var mockQdrant = new Mock<IQdrantService>();
         mockQdrant
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateFailure("Qdrant service unavailable"));
 
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: Search fails
         var result = await ragService.AskAsync("game1", "How do I win?");
@@ -159,7 +192,7 @@ public class Ai04ComprehensiveTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         mockEmbedding
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
 
         var searchResults = new List<SearchResultItem>
@@ -169,7 +202,7 @@ public class Ai04ComprehensiveTests
 
         var mockQdrant = new Mock<IQdrantService>();
         mockQdrant
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         var mockLlm = new Mock<ILlmService>();
@@ -178,7 +211,7 @@ public class Ai04ComprehensiveTests
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Not specified", new LlmUsage(100, 2, 102)));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: LLM determines answer is not in context
         var result = await ragService.AskAsync("game1", "Unknown question");
@@ -199,7 +232,7 @@ public class Ai04ComprehensiveTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         mockEmbedding
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
 
         var searchResults = new List<SearchResultItem>
@@ -211,7 +244,7 @@ public class Ai04ComprehensiveTests
 
         var mockQdrant = new Mock<IQdrantService>();
         mockQdrant
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         var mockLlm = new Mock<ILlmService>();
@@ -223,7 +256,7 @@ public class Ai04ComprehensiveTests
                 new Dictionary<string, string> { { "model", "anthropic/claude-3.5-sonnet" }, { "finish_reason", "stop" } }));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: Asking a question with clear context
         var result = await ragService.AskAsync("game1", "How many players?");
@@ -251,7 +284,7 @@ public class Ai04ComprehensiveTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         mockEmbedding
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
 
         var searchResults = new List<SearchResultItem>
@@ -263,7 +296,7 @@ public class Ai04ComprehensiveTests
 
         var mockQdrant = new Mock<IQdrantService>();
         mockQdrant
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         var mockLlm = new Mock<ILlmService>();
@@ -274,7 +307,7 @@ public class Ai04ComprehensiveTests
                 new LlmUsage(300, 20, 320)));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: Asking a question that spans multiple sources
         var result = await ragService.AskAsync("game1", "Player count variations?");
@@ -294,7 +327,7 @@ public class Ai04ComprehensiveTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         mockEmbedding
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
 
         // Intentionally unordered by score
@@ -307,7 +340,7 @@ public class Ai04ComprehensiveTests
 
         var mockQdrant = new Mock<IQdrantService>();
         mockQdrant
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         var mockLlm = new Mock<ILlmService>();
@@ -316,7 +349,7 @@ public class Ai04ComprehensiveTests
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Answer.", new LlmUsage(100, 10, 110)));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: Asking a question
         var result = await ragService.AskAsync("game1", "test");
@@ -336,7 +369,7 @@ public class Ai04ComprehensiveTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         mockEmbedding
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
 
         var searchResults = new List<SearchResultItem>
@@ -346,7 +379,7 @@ public class Ai04ComprehensiveTests
 
         var mockQdrant = new Mock<IQdrantService>();
         mockQdrant
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         var mockLlm = new Mock<ILlmService>();
@@ -355,7 +388,7 @@ public class Ai04ComprehensiveTests
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Answer.", new LlmUsage(50, 5, 55)));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: Retrieving answer
         var result = await ragService.AskAsync("game1", "test");
@@ -377,7 +410,7 @@ public class Ai04ComprehensiveTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         mockEmbedding
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
 
         var searchResults = new List<SearchResultItem>
@@ -387,7 +420,7 @@ public class Ai04ComprehensiveTests
 
         var mockQdrant = new Mock<IQdrantService>();
         mockQdrant
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         var mockLlm = new Mock<ILlmService>();
@@ -398,7 +431,7 @@ public class Ai04ComprehensiveTests
                 new LlmUsage(PromptTokens: 523, CompletionTokens: 87, TotalTokens: 610)));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: Making a Q&A request
         var result = await ragService.AskAsync("game1", "test");
@@ -417,7 +450,7 @@ public class Ai04ComprehensiveTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         mockEmbedding
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
 
         var searchResults = new List<SearchResultItem>
@@ -429,7 +462,7 @@ public class Ai04ComprehensiveTests
 
         var mockQdrant = new Mock<IQdrantService>();
         mockQdrant
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         var mockLlm = new Mock<ILlmService>();
@@ -438,7 +471,7 @@ public class Ai04ComprehensiveTests
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Answer.", new LlmUsage(100, 10, 110)));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: Making a Q&A request
         var result = await ragService.AskAsync("game1", "test");
@@ -456,7 +489,7 @@ public class Ai04ComprehensiveTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         mockEmbedding
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
 
         var searchResults = new List<SearchResultItem>
@@ -466,7 +499,7 @@ public class Ai04ComprehensiveTests
 
         var mockQdrant = new Mock<IQdrantService>();
         mockQdrant
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         var mockLlm = new Mock<ILlmService>();
@@ -483,7 +516,7 @@ public class Ai04ComprehensiveTests
                 }));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: Making a Q&A request
         var result = await ragService.AskAsync("game1", "test");
@@ -507,17 +540,17 @@ public class Ai04ComprehensiveTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         mockEmbedding
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
 
         var mockQdrant = new Mock<IQdrantService>();
         mockQdrant
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>()));
 
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: Submitting a very long query (1000+ words)
         var longQuery = string.Join(" ", Enumerable.Repeat("question word", 500));
@@ -536,7 +569,7 @@ public class Ai04ComprehensiveTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         mockEmbedding
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
 
         var searchResults = new List<SearchResultItem>
@@ -546,7 +579,7 @@ public class Ai04ComprehensiveTests
 
         var mockQdrant = new Mock<IQdrantService>();
         mockQdrant
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         var mockLlm = new Mock<ILlmService>();
@@ -555,7 +588,7 @@ public class Ai04ComprehensiveTests
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Answer with special chars: & < > \" '", new LlmUsage(100, 15, 115)));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: Query contains special characters
         var result = await ragService.AskAsync("game1", "What about <special> & \"quoted\" chars?");
@@ -573,7 +606,7 @@ public class Ai04ComprehensiveTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         mockEmbedding
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
 
         var searchResults = new List<SearchResultItem>
@@ -583,7 +616,7 @@ public class Ai04ComprehensiveTests
 
         var mockQdrant = new Mock<IQdrantService>();
         mockQdrant
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         var longAnswer = string.Join(" ", Enumerable.Repeat("This is a very detailed answer.", 200)); // ~1200 words
@@ -593,7 +626,7 @@ public class Ai04ComprehensiveTests
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(longAnswer, new LlmUsage(500, 1200, 1700)));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: LLM returns very long answer
         var result = await ragService.AskAsync("game1", "test");
@@ -612,7 +645,7 @@ public class Ai04ComprehensiveTests
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         var cts = new CancellationTokenSource();
         cts.Cancel();
@@ -638,7 +671,7 @@ public class Ai04ComprehensiveTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         mockEmbedding
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
 
         var searchResults = new List<SearchResultItem>
@@ -648,7 +681,7 @@ public class Ai04ComprehensiveTests
 
         var mockQdrant = new Mock<IQdrantService>();
         mockQdrant
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         string? capturedSystemPrompt = null;
@@ -665,7 +698,7 @@ public class Ai04ComprehensiveTests
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Answer.", new LlmUsage(100, 10, 110)));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: Making a Q&A request
         await ragService.AskAsync("game1", "Test question?");
@@ -694,7 +727,7 @@ public class Ai04ComprehensiveTests
         var mockEmbedding = new Mock<IEmbeddingService>();
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         mockEmbedding
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
 
         var searchResults = new List<SearchResultItem>
@@ -706,7 +739,7 @@ public class Ai04ComprehensiveTests
 
         var mockQdrant = new Mock<IQdrantService>();
         mockQdrant
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
         string? capturedUserPrompt = null;
@@ -717,7 +750,7 @@ public class Ai04ComprehensiveTests
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Answer.", new LlmUsage(100, 10, 110)));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: Generating answer
         await ragService.AskAsync("game1", "How to play?");

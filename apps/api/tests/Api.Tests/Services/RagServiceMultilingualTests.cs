@@ -20,6 +20,7 @@ public class RagServiceMultilingualTests : IDisposable
     private readonly Mock<IEmbeddingService> _embeddingMock;
     private readonly Mock<ILlmService> _llmMock;
     private readonly Mock<IAiResponseCacheService> _cacheMock;
+    private readonly Mock<IPromptTemplateService> _promptTemplateMock;
     private readonly MeepleAiDbContext _dbContext;
     private readonly RagService _service;
 
@@ -29,6 +30,7 @@ public class RagServiceMultilingualTests : IDisposable
         _embeddingMock = new Mock<IEmbeddingService>();
         _llmMock = new Mock<ILlmService>();
         _cacheMock = new Mock<IAiResponseCacheService>();
+        _promptTemplateMock = CreatePromptTemplateMock();
 
         _dbContext = CreateInMemoryContext();
         SeedTestData();
@@ -39,8 +41,36 @@ public class RagServiceMultilingualTests : IDisposable
             _qdrantMock.Object,
             _llmMock.Object,
             _cacheMock.Object,
+            _promptTemplateMock.Object,
             NullLogger<RagService>.Instance
         );
+    }
+
+    private static Mock<IPromptTemplateService> CreatePromptTemplateMock()
+    {
+        var mock = new Mock<IPromptTemplateService>();
+
+        var defaultTemplate = new PromptTemplate
+        {
+            SystemPrompt = "You are a board game rules assistant.",
+            UserPromptTemplate = "CONTEXT: {context}\n\nQUESTION: {query}\n\nANSWER:",
+            FewShotExamples = new List<FewShotExample>()
+        };
+
+        mock.Setup(x => x.GetTemplateAsync(It.IsAny<Guid?>(), It.IsAny<QuestionType>()))
+            .ReturnsAsync(defaultTemplate);
+
+        mock.Setup(x => x.RenderSystemPrompt(It.IsAny<PromptTemplate>()))
+            .Returns((PromptTemplate t) => t.SystemPrompt);
+
+        mock.Setup(x => x.RenderUserPrompt(It.IsAny<PromptTemplate>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns((PromptTemplate t, string context, string query) =>
+                t.UserPromptTemplate.Replace("{context}", context).Replace("{query}", query));
+
+        mock.Setup(x => x.ClassifyQuestion(It.IsAny<string>()))
+            .Returns(QuestionType.General);
+
+        return mock;
     }
 
     public void Dispose()

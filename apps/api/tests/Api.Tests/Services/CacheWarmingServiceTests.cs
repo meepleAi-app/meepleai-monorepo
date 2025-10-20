@@ -103,6 +103,7 @@ public class CacheWarmingServiceTests : IDisposable
         _mockRagService.Setup(rag => rag.AskAsync(
             gameId.ToString(),
             It.IsAny<string>(),
+            It.IsAny<string?>(),
             false,
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(new QaResponse(
@@ -134,6 +135,7 @@ public class CacheWarmingServiceTests : IDisposable
             rag => rag.AskAsync(
                 gameId.ToString(),
                 It.IsAny<string>(),
+                It.IsAny<string?>(),
                 false,
                 It.IsAny<CancellationToken>()),
             Times.Exactly(50)
@@ -209,6 +211,7 @@ public class CacheWarmingServiceTests : IDisposable
         _mockRagService.Setup(rag => rag.AskAsync(
             gameId.ToString(),
             It.IsAny<string>(),
+            It.IsAny<string?>(),
             false,
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(() =>
@@ -240,6 +243,7 @@ public class CacheWarmingServiceTests : IDisposable
             rag => rag.AskAsync(
                 gameId.ToString(),
                 It.IsAny<string>(),
+                It.IsAny<string?>(),
                 false,
                 It.IsAny<CancellationToken>()),
             Times.Exactly(50) // All queries attempted
@@ -308,6 +312,7 @@ public class CacheWarmingServiceTests : IDisposable
             rag => rag.AskAsync(
                 gameId.ToString(),
                 cachedQuery,
+                It.IsAny<string?>(),
                 false,
                 It.IsAny<CancellationToken>()),
             Times.Never // Skipped
@@ -317,6 +322,7 @@ public class CacheWarmingServiceTests : IDisposable
             rag => rag.AskAsync(
                 gameId.ToString(),
                 "Other query",
+                It.IsAny<string?>(),
                 false,
                 It.IsAny<CancellationToken>()),
             Times.Once // Not cached, warmed
@@ -385,6 +391,7 @@ public class CacheWarmingServiceTests : IDisposable
             rag => rag.AskAsync(
                 chessGameId.ToString(),
                 "Chess query 1",
+                It.IsAny<string?>(),
                 false,
                 It.IsAny<CancellationToken>()),
             Times.Once
@@ -394,6 +401,7 @@ public class CacheWarmingServiceTests : IDisposable
             rag => rag.AskAsync(
                 tttGameId.ToString(),
                 "TTT query 1",
+                It.IsAny<string?>(),
                 false,
                 It.IsAny<CancellationToken>()),
             Times.Once

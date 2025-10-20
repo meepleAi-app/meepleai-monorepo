@@ -9,6 +9,7 @@ namespace Api.Services;
 
 /// <summary>
 /// CHAT-01: Streaming QA service for progressive answers via SSE with token-by-token delivery
+/// AI-07.1: Now with advanced prompt engineering and few-shot learning
 /// Emits events: StateUpdate -> Citations -> Token(s) -> Complete
 /// </summary>
 public class StreamingQaService : IStreamingQaService
@@ -18,6 +19,7 @@ public class StreamingQaService : IStreamingQaService
     private readonly IQdrantService _qdrantService;
     private readonly ILlmService _llmService;
     private readonly IAiResponseCacheService _cache;
+    private readonly IPromptTemplateService _promptTemplateService;
     private readonly ILogger<StreamingQaService> _logger;
 
     public StreamingQaService(
@@ -26,6 +28,7 @@ public class StreamingQaService : IStreamingQaService
         IQdrantService qdrantService,
         ILlmService llmService,
         IAiResponseCacheService cache,
+        IPromptTemplateService promptTemplateService,
         ILogger<StreamingQaService> logger)
     {
         _dbContext = dbContext;
@@ -33,6 +36,7 @@ public class StreamingQaService : IStreamingQaService
         _qdrantService = qdrantService;
         _llmService = llmService;
         _cache = cache;
+        _promptTemplateService = promptTemplateService;
         _logger = logger;
     }
 
@@ -159,23 +163,17 @@ public class StreamingQaService : IStreamingQaService
         var context = string.Join("\n\n---\n\n", searchResult.Results.Select(r =>
             $"[Page {r.Page}]\n{r.Text}"));
 
-        var systemPrompt = @"You are a board game rules assistant. Your job is to answer questions about board game rules based ONLY on the provided context from the rulebook.
+        // AI-07.1: Use PromptTemplateService for advanced prompt engineering
+        var questionType = _promptTemplateService.ClassifyQuestion(query);
+        Guid? gameGuid = Guid.TryParse(gameId, out var guid) ? guid : null;
+        var template = await _promptTemplateService.GetTemplateAsync(gameGuid, questionType);
 
-CRITICAL INSTRUCTIONS:
-- If the answer to the question is clearly found in the provided context, answer it concisely and accurately.
-- If the answer is NOT in the provided context or you're uncertain, respond with EXACTLY: ""Not specified""
-- Do NOT make assumptions or use external knowledge about the game.
-- Do NOT hallucinate or invent information.
-- Keep your answers brief and to the point (2-3 sentences maximum).
-- Reference page numbers when relevant.";
+        var systemPrompt = _promptTemplateService.RenderSystemPrompt(template);
+        var userPrompt = _promptTemplateService.RenderUserPrompt(template, context, query);
 
-        var userPrompt = $@"CONTEXT FROM RULEBOOK:
-{context}
-
-QUESTION:
-{query}
-
-ANSWER:";
+        _logger.LogDebug(
+            "Using prompt template for game {GameId}, question type {QuestionType}",
+            gameId, questionType);
 
         // Stream tokens from LLM
         var answerBuilder = new StringBuilder();

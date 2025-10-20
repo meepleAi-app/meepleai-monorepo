@@ -95,6 +95,7 @@ builder.Services.Configure<SessionManagementConfiguration>(builder.Configuration
 builder.Services.Configure<RateLimitConfiguration>(builder.Configuration.GetSection("RateLimit"));
 builder.Services.Configure<PdfProcessingConfiguration>(builder.Configuration.GetSection("PdfProcessing"));
 builder.Services.Configure<FollowUpQuestionsConfiguration>(builder.Configuration.GetSection("FollowUpQuestions")); // CHAT-02
+builder.Services.Configure<RagPromptsConfiguration>(builder.Configuration.GetSection("RagPrompts")); // AI-07.1: RAG prompt templates
 
 // Only configure Postgres in non-test environments (tests will override with SQLite)
 if (!builder.Environment.IsEnvironment("Testing"))
@@ -184,6 +185,7 @@ builder.Services.AddScoped<IStreamingRagService, StreamingRagService>(); // API-
 builder.Services.AddScoped<IStreamingQaService, StreamingQaService>(); // CHAT-01: Streaming QA service
 builder.Services.AddScoped<IFollowUpQuestionService, FollowUpQuestionService>(); // CHAT-02: Follow-up question generation
 builder.Services.AddScoped<SetupGuideService>();
+builder.Services.AddScoped<IPromptTemplateService, PromptTemplateService>(); // AI-07.1: Prompt template service with few-shot learning
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<AiRequestLogService>();

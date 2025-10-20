@@ -77,7 +77,9 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                         d.ServiceType == typeof(DbContextOptions) ||
                         d.ServiceType == typeof(MeepleAiDbContext) ||
                         d.ServiceType == typeof(Api.Services.IQdrantService) ||
-                        d.ServiceType == typeof(Api.Services.IEmbeddingService)
+                        d.ServiceType == typeof(Api.Services.IEmbeddingService) ||
+                        d.ServiceType == typeof(Api.Services.IAiResponseCacheService) ||
+                        d.ServiceType == typeof(Api.Services.IPromptTemplateService) // AI-11: Mock PromptTemplateService dependency
                     ).ToList();
 
                     foreach (var descriptor in descriptors)
@@ -93,42 +95,24 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                     });
 
                     // Mock Qdrant service (returns realistic search results for quality scoring)
+                    // Returns low-quality results if gameId starts with 0-4, high-quality if starts with 5-9/a-f
                     var mockQdrantService = new Moq.Mock<Api.Services.IQdrantService>();
-                    mockQdrantService
-                        .Setup(x => x.SearchAsync(
-                            Moq.It.IsAny<string>(),
-                            Moq.It.IsAny<float[]>(),
-                            Moq.It.IsAny<int>(),
-                            Moq.It.IsAny<System.Threading.CancellationToken>()))
-                        .ReturnsAsync(Api.Services.SearchResult.CreateSuccess(new List<Api.Services.SearchResultItem>
-                        {
-                            new Api.Services.SearchResultItem
-                            {
-                                Score = 0.92f,
-                                Text = "This is a relevant rulebook passage about winning conditions. To win the game, a player must achieve the objective.",
-                                PdfId = Guid.NewGuid().ToString(),
-                                Page = 5,
-                                ChunkIndex = 1
-                            },
-                            new Api.Services.SearchResultItem
-                            {
-                                Score = 0.88f,
-                                Text = "Another relevant passage explaining game mechanics and victory conditions in detail.",
-                                PdfId = Guid.NewGuid().ToString(),
-                                Page = 6,
-                                ChunkIndex = 2
-                            },
-                            new Api.Services.SearchResultItem
-                            {
-                                Score = 0.85f,
-                                Text = "Additional context about the rules and how to determine the winner of the match.",
-                                PdfId = Guid.NewGuid().ToString(),
-                                Page = 7,
-                                ChunkIndex = 3
-                            }
-                        }));
 
-                    // Also mock the language-specific overload
+                    // Mock non-language overload
+                    mockQdrantService
+                        .Setup(x => x.SearchAsync(
+                            Moq.It.IsAny<string>(),
+                            Moq.It.IsAny<float[]>(),
+                            Moq.It.IsAny<int>(),
+                            Moq.It.IsAny<System.Threading.CancellationToken>()))
+                        .ReturnsAsync((string gameId, float[] embedding, int limit, System.Threading.CancellationToken ct) =>
+                        {
+                            // Use gameId to determine quality (50% chance low, 50% high based on first character)
+                            bool isLowQuality = gameId.Length > 0 && "0123456789".Contains(gameId[0]) && gameId[0] < '5';
+                            return CreateMockSearchResult(isLowQuality);
+                        });
+
+                    // Mock language-specific overload
                     mockQdrantService
                         .Setup(x => x.SearchAsync(
                             Moq.It.IsAny<string>(),
@@ -136,37 +120,85 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                             Moq.It.IsAny<string>(),
                             Moq.It.IsAny<int>(),
                             Moq.It.IsAny<System.Threading.CancellationToken>()))
-                        .ReturnsAsync(Api.Services.SearchResult.CreateSuccess(new List<Api.Services.SearchResultItem>
+                        .ReturnsAsync((string gameId, float[] embedding, string language, int limit, System.Threading.CancellationToken ct) =>
                         {
-                            new Api.Services.SearchResultItem
+                            // Use gameId to determine quality (50% chance low, 50% high based on first character)
+                            // GameIds starting with 0-4 are low-quality, 5-9/a-f are high-quality
+                            var firstChar = char.ToLowerInvariant(gameId[0]);
+                            bool isLowQuality = gameId.Length > 0 && "0123456789abcdef".Contains(firstChar) && firstChar < '5';
+                            return CreateMockSearchResult(isLowQuality);
+                        });
+
+                    // Helper method to create mock search results based on quality level
+                    Api.Services.SearchResult CreateMockSearchResult(bool isLowQuality)
+                    {
+                        if (isLowQuality)
+                        {
+                            return Api.Services.SearchResult.CreateSuccess(new List<Api.Services.SearchResultItem>
                             {
-                                Score = 0.92f,
-                                Text = "This is a relevant rulebook passage about winning conditions. To win the game, a player must achieve the objective.",
-                                PdfId = Guid.NewGuid().ToString(),
-                                Page = 5,
-                                ChunkIndex = 1
-                            },
-                            new Api.Services.SearchResultItem
+                                new Api.Services.SearchResultItem
+                                {
+                                    Score = 0.35f,
+                                    Text = "Vague text from rulebook.",
+                                    PdfId = Guid.NewGuid().ToString(),
+                                    Page = 1,
+                                    ChunkIndex = 1
+                                },
+                                new Api.Services.SearchResultItem
+                                {
+                                    Score = 0.40f,
+                                    Text = "Another unclear passage.",
+                                    PdfId = Guid.NewGuid().ToString(),
+                                    Page = 2,
+                                    ChunkIndex = 2
+                                },
+                                new Api.Services.SearchResultItem
+                                {
+                                    Score = 0.45f,
+                                    Text = "Somewhat related content.",
+                                    PdfId = Guid.NewGuid().ToString(),
+                                    Page = 3,
+                                    ChunkIndex = 3
+                                }
+                            });
+                        }
+                        else
+                        {
+                            return Api.Services.SearchResult.CreateSuccess(new List<Api.Services.SearchResultItem>
                             {
-                                Score = 0.88f,
-                                Text = "Another relevant passage explaining game mechanics and victory conditions in detail.",
-                                PdfId = Guid.NewGuid().ToString(),
-                                Page = 6,
-                                ChunkIndex = 2
-                            },
-                            new Api.Services.SearchResultItem
-                            {
-                                Score = 0.85f,
-                                Text = "Additional context about the rules and how to determine the winner of the match.",
-                                PdfId = Guid.NewGuid().ToString(),
-                                Page = 7,
-                                ChunkIndex = 3
-                            }
-                        }));
+                                new Api.Services.SearchResultItem
+                                {
+                                    Score = 0.92f,
+                                    Text = "This is a relevant rulebook passage about winning conditions. To win the game, a player must achieve the objective.",
+                                    PdfId = Guid.NewGuid().ToString(),
+                                    Page = 5,
+                                    ChunkIndex = 1
+                                },
+                                new Api.Services.SearchResultItem
+                                {
+                                    Score = 0.88f,
+                                    Text = "Another relevant passage explaining game mechanics and victory conditions in detail.",
+                                    PdfId = Guid.NewGuid().ToString(),
+                                    Page = 6,
+                                    ChunkIndex = 2
+                                },
+                                new Api.Services.SearchResultItem
+                                {
+                                    Score = 0.85f,
+                                    Text = "Additional context about the rules and how to determine the winner of the match.",
+                                    PdfId = Guid.NewGuid().ToString(),
+                                    Page = 7,
+                                    ChunkIndex = 3
+                                }
+                            });
+                        }
+                    }
+
                     services.AddSingleton(mockQdrantService.Object);
 
                     // Mock Embedding service (tests don't need real embeddings)
                     var mockEmbeddingService = new Moq.Mock<Api.Services.IEmbeddingService>();
+                    // Mock both 2-parameter and 3-parameter (with language) overloads
                     mockEmbeddingService
                         .Setup(x => x.GenerateEmbeddingAsync(
                             Moq.It.IsAny<string>(),
@@ -176,29 +208,110 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                             Success = true,
                             Embeddings = new List<float[]> { new float[768] }
                         });
+                    mockEmbeddingService
+                        .Setup(x => x.GenerateEmbeddingAsync(
+                            Moq.It.IsAny<string>(),
+                            Moq.It.IsAny<string>(), // language parameter
+                            Moq.It.IsAny<System.Threading.CancellationToken>()))
+                        .ReturnsAsync(new Api.Services.EmbeddingResult
+                        {
+                            Success = true,
+                            Embeddings = new List<float[]> { new float[768] }
+                        });
                     services.AddSingleton(mockEmbeddingService.Object);
 
-                    // Mock LLM service (returns high-quality responses for testing)
+                    // Mock LLM service (returns short response ONLY for specific low-quality test gameId)
+                    // Returns long responses by default to avoid breaking other tests
                     var mockLlmService = new Moq.Mock<Api.Services.ILlmService>();
                     mockLlmService
                         .Setup(x => x.GenerateCompletionAsync(
                             Moq.It.IsAny<string>(),
                             Moq.It.IsAny<string>(),
                             Moq.It.IsAny<System.Threading.CancellationToken>()))
-                        .ReturnsAsync(Api.Services.LlmCompletionResult.CreateSuccess(
-                            response: "To win the game, you must fulfill the victory conditions specified in the rulebook. " +
-                                     "This typically involves achieving a specific objective, such as reaching a target score, " +
-                                     "eliminating all opponents, or completing a designated goal. The exact winning conditions " +
-                                     "depend on the specific game you are playing. Refer to the game's rulebook for detailed " +
-                                     "information about how to achieve victory in your particular game.",
-                            usage: new Api.Services.LlmUsage(PromptTokens: 150, CompletionTokens: 75, TotalTokens: 225),
-                            metadata: new Dictionary<string, string>
+                        .ReturnsAsync((string systemPrompt, string userPrompt, System.Threading.CancellationToken ct) =>
+                        {
+                            // Detect low-quality RAG context by checking for low-quality snippet text markers
+                            // Low-quality RAG snippets (returned for gameIds starting with 0-4) contain these phrases
+                            bool isLowQualityContext = userPrompt.Contains("Vague text from rulebook") ||
+                                                       userPrompt.Contains("Another unclear passage") ||
+                                                       userPrompt.Contains("Somewhat related content");
+
+                            if (isLowQualityContext)
                             {
-                                ["model"] = "mock-model",
-                                ["finish_reason"] = "stop"
+                                // Very short response (3 words < 50 word threshold) with hedging phrases
+                                // Triggers VeryShortPenalty (0.30) + hedging penalties (0.10)
+                                // Expected LLM confidence: 0.85 - 0.30 - 0.10 = 0.45
+                                // With RAG=0.40, Citation=1.00: Overall = (0.40 × 0.40) + (0.45 × 0.40) + (1.00 × 0.20) = 0.54 < 0.60 ✓
+                                return Api.Services.LlmCompletionResult.CreateSuccess(
+                                    response: "Not sure. Unclear.",  // 3 words → VeryShortPenalty + hedging
+                                    usage: new Api.Services.LlmUsage(PromptTokens: 50, CompletionTokens: 20, TotalTokens: 70),
+                                    metadata: new Dictionary<string, string>
+                                    {
+                                        ["model"] = "mock-model",
+                                        ["finish_reason"] = "stop"
+                                    }
+                                );
                             }
-                        ));
+                            else
+                            {
+                                // Long, high-quality response (>100 words) has no penalties
+                                // Expected LLM confidence: 0.85
+                                // With high-quality RAG (0.88), Citation=1.00: Overall = (0.88 × 0.40) + (0.85 × 0.40) + (1.00 × 0.20) = 0.89 > 0.60 ✓
+                                return Api.Services.LlmCompletionResult.CreateSuccess(
+                                    response: "To win the game, you must fulfill the victory conditions specified in the rulebook. " +
+                                             "The victory conditions are clearly defined and establish the criteria for determining the winner. " +
+                                             "These conditions involve achieving specific objectives that demonstrate mastery of the game mechanics. " +
+                                             "Common victory conditions include reaching a target score through strategic gameplay, " +
+                                             "eliminating all opponents through tactical decisions, completing designated goals within the time limit, " +
+                                             "or fulfilling special requirements unique to each game. The rulebook provides comprehensive details " +
+                                             "about these conditions, ensuring all players understand the path to victory before starting.",
+                                    usage: new Api.Services.LlmUsage(PromptTokens: 150, CompletionTokens: 120, TotalTokens: 270),
+                                    metadata: new Dictionary<string, string>
+                                    {
+                                        ["model"] = "mock-model",
+                                        ["finish_reason"] = "stop"
+                                    }
+                                );
+                            }
+                        });
                     services.AddSingleton(mockLlmService.Object);
+
+                    // Mock cache service (always returns null to force cache misses and use mocked LLM)
+                    var mockCacheService = new Moq.Mock<Api.Services.IAiResponseCacheService>();
+                    // Setup GetAsync to return null for any type T (cache miss)
+                    mockCacheService
+                        .Setup(x => x.GetAsync<Api.Models.QaResponse>(
+                            Moq.It.IsAny<string>(),
+                            Moq.It.IsAny<System.Threading.CancellationToken>()))
+                        .ReturnsAsync((Api.Models.QaResponse?)null);
+                    services.AddSingleton(mockCacheService.Object);
+
+                    // AI-11: Mock PromptTemplateService (required by RagService after AI-07.1)
+                    var mockPromptService = new Moq.Mock<Api.Services.IPromptTemplateService>();
+                    mockPromptService
+                        .Setup(x => x.ClassifyQuestion(Moq.It.IsAny<string>()))
+                        .Returns(Api.Models.QuestionType.General); // Default classification
+                    mockPromptService
+                        .Setup(x => x.GetTemplateAsync(
+                            Moq.It.IsAny<Guid?>(),
+                            Moq.It.IsAny<Api.Models.QuestionType>()))
+                        .ReturnsAsync(new Api.Models.PromptTemplate
+                        {
+                            SystemPrompt = "You are a helpful assistant.",
+                            UserPromptTemplate = "Context: {context}\n\nQuestion: {question}",
+                            FewShotExamples = new List<Api.Models.FewShotExample>()
+                        });
+                    mockPromptService
+                        .Setup(x => x.RenderSystemPrompt(Moq.It.IsAny<Api.Models.PromptTemplate>()))
+                        .Returns("You are a helpful assistant.");
+                    mockPromptService
+                        .Setup(x => x.RenderUserPrompt(
+                            Moq.It.IsAny<Api.Models.PromptTemplate>(),
+                            Moq.It.IsAny<string>(),
+                            Moq.It.IsAny<string>()))
+                        .Returns((Api.Models.PromptTemplate _, string context, string question) =>
+                            $"Context: {context}\n\nQuestion: {question}");
+                    services.AddSingleton(mockPromptService.Object);
                 });
             });
 
@@ -233,37 +346,26 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         var email = $"{emailPrefix}-{uniqueId}@quality-test.local";
         var password = "TestPassword123!";
 
-        // Create test user in database
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            var user = new UserEntity
-            {
-                Id = Guid.NewGuid().ToString(),
-                Email = email,
-                PasswordHash = HashPassword(password),
-                DisplayName = $"Quality Test User {uniqueId}",
-                Role = role,
-                CreatedAt = DateTime.UtcNow
-            };
-            dbContext.Users.Add(user);
-            await dbContext.SaveChangesAsync();
-        }
-
-        // Authenticate via login endpoint to get session cookie
-        var loginClient = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        // Register creates user and returns session cookie automatically
+        var registerClient = _factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             HandleCookies = false
         });
 
-        var loginPayload = new { email, password };
-        var loginResponse = await loginClient.PostAsJsonAsync("/api/v1/auth/login", loginPayload);
-        loginResponse.EnsureSuccessStatusCode();
-
-        // Extract session cookie
-        if (!loginResponse.Headers.TryGetValues("Set-Cookie", out var cookieValues))
+        var registerPayload = new
         {
-            throw new InvalidOperationException("Login did not return session cookie");
+            email,
+            password,
+            displayName = $"Quality Test User {uniqueId}"
+        };
+
+        var registerResponse = await registerClient.PostAsJsonAsync("/api/v1/auth/register", registerPayload);
+        registerResponse.EnsureSuccessStatusCode();
+
+        // Extract session cookie from register response
+        if (!registerResponse.Headers.TryGetValues("Set-Cookie", out var cookieValues))
+        {
+            throw new InvalidOperationException("Register did not return session cookie");
         }
 
         var sessionCookie = cookieValues
@@ -272,7 +374,22 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
 
         if (sessionCookie == null)
         {
-            throw new InvalidOperationException("Session cookie not found in login response");
+            throw new InvalidOperationException("Session cookie not found in register response");
+        }
+
+        // Promote user to desired role if not User
+        if (role != UserRole.User)
+        {
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+                var user = await dbContext.Users.SingleOrDefaultAsync(u => u.Email == email);
+                if (user != null)
+                {
+                    user.Role = role;
+                    await dbContext.SaveChangesAsync();
+                }
+            }
         }
 
         // Create authenticated client with session cookie
@@ -315,9 +432,10 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         var client = await CreateAuthenticatedClientAsync("qa-user-low", UserRole.User);
 
         // Arrange
+        // Use specific GUID that starts with '0' to trigger low-quality mock response
         var request = new
         {
-            gameId = Guid.NewGuid(),
+            gameId = new Guid("00000000-0000-0000-0000-000000000001"),
             query = "What is this rule?"
         };
 
@@ -330,19 +448,34 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         // Query database for logged request
         using var scope = Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var logs = dbContext.AiRequestLogs
-            .Where(log => log.IsLowQuality)
-            .ToList();
 
-        Assert.NotEmpty(logs);
-        var log = logs.First();
-        Assert.True(log.IsLowQuality);
-        Assert.True(log.OverallConfidence < 0.60);
+        // AI-11: Get most recent log (should be from this test request)
+        var log = await dbContext.AiRequestLogs
+            .OrderByDescending(l => l.CreatedAt)
+            .FirstOrDefaultAsync();
+
+        // Verify log was created
+        Assert.NotNull(log);
+
+        // Verify quality scores were calculated and stored
+        Assert.NotNull(log.RagConfidence);
+        Assert.NotNull(log.LlmConfidence);
+        Assert.NotNull(log.CitationQuality);
+        Assert.NotNull(log.OverallConfidence);
+
+        // Verify low-quality detection
+        Assert.True(log.IsLowQuality, $"Expected IsLowQuality = true, but got false. Overall confidence: {log.OverallConfidence:F3}");
+        Assert.True(log.OverallConfidence < 0.60, $"Expected OverallConfidence < 0.60, but got {log.OverallConfidence:F3}");
+
+        // Verify individual score components are in expected ranges
+        Assert.InRange(log.RagConfidence.Value, 0.35, 0.45); // Average of low-quality RAG scores (0.35, 0.40, 0.45)
+        Assert.InRange(log.LlmConfidence.Value, 0.45, 0.55); // Base 0.85 - VeryShortPenalty 0.30 - hedging ~0.05
+        Assert.Equal(1.0, log.CitationQuality.Value, 2); // 3 citations / 1 paragraph = 1.0
     }
 
     /// <summary>
     /// Scenario: High-quality response not flagged
-    /// Given a Q&A request that produces high-quality response (RAG 0.85, overall 0.87)
+    /// Given a Q&A request that produces high-quality response (RAG 0.88, overall 0.89)
     /// When the response is processed
     /// Then ai_request_logs should contain record with is_low_quality = false
     /// </summary>
@@ -353,9 +486,10 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         var client = await CreateAuthenticatedClientAsync("qa-user-high", UserRole.User);
 
         // Arrange
+        // Use specific GUID that starts with '5' or higher to trigger high-quality mock response
         var request = new
         {
-            gameId = Guid.NewGuid(),
+            gameId = new Guid("50000000-0000-0000-0000-000000000001"),
             query = "How do I win?"
         };
 
@@ -617,10 +751,12 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         using (var scope = Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            // Create 50 records distributed over 6.5 days (well within 7-day window)
+            // This ensures all records are captured even with timing differences
             var logs = Enumerable.Range(1, 50).Select(i => new AiRequestLogEntity
             {
                 Id = Guid.NewGuid().ToString(),
-                CreatedAt = DateTime.UtcNow.AddDays(-i / 7.0),
+                CreatedAt = DateTime.UtcNow.AddDays(-i / 7.7), // Use 7.7 instead of 7.0 to stay within 7-day window
                 Endpoint = "qa",
                 Status = "Success",
                 Query = $"Query {i}",
@@ -756,44 +892,3 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         Assert.True(logCount >= 10, "All concurrent requests should be logged");
     }
 }
-
-#region Models (these will fail compilation - expected in RED phase)
-
-/// <summary>
-/// Result model for low-quality responses endpoint.
-/// </summary>
-public class LowQualityResponsesResult
-{
-    public int TotalCount { get; set; }
-    public List<LowQualityResponseDto> Responses { get; set; } = new();
-}
-
-/// <summary>
-/// DTO for low-quality response.
-/// </summary>
-public class LowQualityResponseDto
-{
-    public Guid Id { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public string Query { get; set; } = string.Empty;
-    public double RagConfidence { get; set; }
-    public double LlmConfidence { get; set; }
-    public double CitationQuality { get; set; }
-    public double OverallConfidence { get; set; }
-    public bool IsLowQuality { get; set; }
-}
-
-/// <summary>
-/// Quality report model for admin dashboard.
-/// </summary>
-public class QualityReport
-{
-    public int TotalResponses { get; set; }
-    public int LowQualityCount { get; set; }
-    public double? AverageRagConfidence { get; set; }
-    public double? AverageLlmConfidence { get; set; }
-    public double? AverageCitationQuality { get; set; }
-    public double? AverageOverallConfidence { get; set; }
-}
-
-#endregion

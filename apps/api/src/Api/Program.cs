@@ -156,6 +156,22 @@ builder.Services.AddSingleton<ILanguageDetectionService, LanguageDetectionServic
 // PERF-03: Changed from Singleton to Scoped due to MeepleAiDbContext dependency
 builder.Services.AddScoped<IAiResponseCacheService, AiResponseCacheService>();
 
+// AI-10: Cache optimization services
+builder.Services.Configure<CacheOptimizationConfiguration>(
+    builder.Configuration.GetSection("CacheOptimization"));
+builder.Services.AddSingleton<ICacheMetricsRecorder, CacheMetricsRecorder>();
+builder.Services.AddSingleton<IDynamicTtlStrategy, DynamicTtlStrategy>();
+builder.Services.AddSingleton<IRedisFrequencyTracker, RedisFrequencyTracker>();
+
+// AI-10: Conditional cache warming service (disabled by default)
+var cacheWarmingEnabled = builder.Configuration
+    .GetSection("CacheOptimization:WarmingEnabled")
+    .Get<bool>();
+if (cacheWarmingEnabled)
+{
+    builder.Services.AddHostedService<CacheWarmingService>();
+}
+
 // PERF-02: Session caching (Phase 2 optimization)
 builder.Services.AddSingleton<ISessionCacheService, SessionCacheService>();
 
@@ -163,7 +179,7 @@ builder.Services.AddScoped<GameService>();
 builder.Services.AddScoped<RuleSpecService>();
 builder.Services.AddScoped<RuleSpecDiffService>();
 builder.Services.AddScoped<RuleSpecCommentService>();
-builder.Services.AddScoped<RagService>();
+builder.Services.AddScoped<IRagService, RagService>(); // AI-04: RAG service for Q&A and explanations
 builder.Services.AddScoped<IStreamingRagService, StreamingRagService>(); // API-02: Streaming RAG service
 builder.Services.AddScoped<IStreamingQaService, StreamingQaService>(); // CHAT-01: Streaming QA service
 builder.Services.AddScoped<IFollowUpQuestionService, FollowUpQuestionService>(); // CHAT-02: Follow-up question generation
@@ -997,7 +1013,7 @@ v1Api.MapPut("/auth/password-reset/confirm", async (
 v1Api.MapPost("/agents/qa", async (
     QaRequest req,
     HttpContext context,
-    RagService rag,
+    IRagService rag,
     ChatService chatService,
     AiRequestLogService aiLog,
     IFollowUpQuestionService followUpService, // CHAT-02
@@ -1189,7 +1205,7 @@ v1Api.MapPost("/agents/qa", async (
 .Produces(StatusCodes.Status401Unauthorized)
 .Produces(StatusCodes.Status500InternalServerError);
 
-v1Api.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, RagService rag, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, IRagService rag, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {

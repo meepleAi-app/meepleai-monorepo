@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Api.Services;
 
-public class RagService
+public class RagService : IRagService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly IEmbeddingService _embeddingService;

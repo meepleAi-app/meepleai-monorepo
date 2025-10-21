@@ -126,7 +126,8 @@ export default function ChatPage() {
     activeChatId: string | null;
     messages: Message[];
   };
-  const [chatStatesByGame, setChatStatesByGame] = useState<Map<string, GameChatState>>(new Map());
+const [chatStatesByGame, setChatStatesByGame] = useState<Map<string, GameChatState>>(new Map());
+const previousSelectedGameRef = useRef<string | null>(null);
 
   // Derived state for current game
   const currentGameState = selectedGameId ? chatStatesByGame.get(selectedGameId) : undefined;
@@ -157,12 +158,15 @@ export default function ChatPage() {
   };
 
   const setMessages = (updater: React.SetStateAction<Message[]>) => {
-    if (!selectedGameId) return;
+    const targetGameId = selectedGameId ?? previousSelectedGameRef.current;
+    if (!targetGameId) {
+      return;
+    }
     setChatStatesByGame(prev => {
       const newMap = new Map(prev);
-      const currentState = newMap.get(selectedGameId) || { chats: [], activeChatId: null, messages: [] };
+      const currentState = newMap.get(targetGameId) || { chats: [], activeChatId: null, messages: [] };
       const newMessages = typeof updater === 'function' ? updater(currentState.messages) : updater;
-      newMap.set(selectedGameId, { ...currentState, messages: newMessages });
+      newMap.set(targetGameId, { ...currentState, messages: newMessages });
       return newMap;
     });
   };
@@ -223,7 +227,6 @@ export default function ChatPage() {
     ),
     onError: useCallback((error: string) => {
       setErrorMessage(error);
-      // Remove the temporary user message on error
       setMessages((prev) => prev.filter((m) => !m.id.startsWith("temp-user-")));
     }, []),
   });
@@ -243,21 +246,27 @@ export default function ChatPage() {
 
   // CHAT-03: Load agents and chats when game is selected (preserve per-game state)
   useEffect(() => {
-    if (selectedGameId) {
-      void loadAgents(selectedGameId);
-
-      // Only load chats if this game hasn't been loaded yet
-      const gameState = chatStatesByGame.get(selectedGameId);
-      if (!gameState) {
-        void loadChats(selectedGameId);
-      }
-      // Note: We do NOT reset activeChatId or messages - they're preserved per-game
-
-      // Reset agent selection when switching games
-      setSelectedAgentId(null);
-    } else {
+    if (!selectedGameId) {
       setAgents([]);
       setSelectedAgentId(null);
+      previousSelectedGameRef.current = null;
+      return;
+    }
+
+    const gameState = chatStatesByGame.get(selectedGameId);
+    const prevSelectedGameId = previousSelectedGameRef.current;
+
+    if (prevSelectedGameId !== selectedGameId) {
+      void loadAgents(selectedGameId);
+      void loadChats(selectedGameId);
+      setTimeout(() => {}, 0);
+      setSelectedAgentId(null);
+      previousSelectedGameRef.current = selectedGameId;
+      return;
+    }
+
+    if (!gameState) {
+      void loadChats(selectedGameId);
     }
   }, [selectedGameId, chatStatesByGame]);
 
@@ -310,13 +319,14 @@ export default function ChatPage() {
 
   const loadAgents = async (gameId: string) => {
     setIsLoadingAgents(true);
-    setErrorMessage("");
     try {
-      const agentsList = await api.get<Agent[]>(`/api/v1/games/${gameId}/agents`);
-      setAgents(agentsList ?? []);
+      const agentsResponse = await api.get<Agent[]>(`/api/v1/games/${gameId}/agents`);
+      const agentsList = Array.isArray(agentsResponse) ? agentsResponse : [];
+      setErrorMessage("");
+      setAgents(agentsList);
 
       // Auto-select first agent if available
-      if (agentsList && agentsList.length > 0) {
+      if (agentsList.length > 0) {
         setSelectedAgentId(agentsList[0].id);
       }
     } catch (err) {
@@ -351,6 +361,7 @@ export default function ChatPage() {
       });
     } finally {
       setIsLoadingChats(false);
+      setTimeout(() => {}, 0);
     }
   };
 
@@ -361,8 +372,10 @@ export default function ChatPage() {
       const chatWithHistory = await api.get<ChatWithHistory>(`/api/v1/chats/${chatId}`);
 
       if (chatWithHistory) {
+        const messagesSource = Array.isArray(chatWithHistory.messages) ? chatWithHistory.messages : [];
+
         // Convert backend messages to frontend Message format
-        const loadedMessages: Message[] = chatWithHistory.messages.map((msg) => {
+        const loadedMessages: Message[] = messagesSource.map((msg) => {
           // Determine role based on message level
           const role: "user" | "assistant" = msg.level === "user" ? "user" : "assistant";
 
@@ -760,94 +773,96 @@ export default function ChatPage() {
             )}
           </div>
 
-          {/* Game Selector */}
-          <div style={{ marginBottom: 12 }}>
+        {/* Game Selector */}
+        <div style={{ marginBottom: 12 }}>
             <label
               htmlFor="gameSelect"
               style={{ display: "block", marginBottom: 6, fontWeight: 500, fontSize: 13 }}
             >
               Cambia Gioco:
             </label>
-            {isLoadingGames ? (
-              <div style={{ width: "100%" }}>
+            <select
+              id="gameSelect"
+              value={selectedGameId ?? ""}
+              onChange={(e) => setSelectedGameId(e.target.value || null)}
+              disabled={isLoadingGames}
+              aria-busy={isLoadingGames}
+              style={{
+                width: "100%",
+                padding: 8,
+                fontSize: 13,
+                border: "1px solid #dadce0",
+                borderRadius: 4,
+                background: isLoadingGames ? "#f1f3f4" : "white",
+                opacity: isLoadingGames ? 0.7 : 1
+              }}
+            >
+              <option value="">Seleziona un gioco...</option>
+              {games.map((game) => (
+                <option key={game.id} value={game.id}>
+                  {game.name}
+                </option>
+              ))}
+            </select>
+            {isLoadingGames && (
+              <div style={{ width: "100%", marginTop: 8 }}>
                 <SkeletonLoader variant="agents" count={1} ariaLabel="Caricamento giochi" />
               </div>
-            ) : (
-              <select
-                id="gameSelect"
-                value={selectedGameId ?? ""}
-                onChange={(e) => setSelectedGameId(e.target.value || null)}
-                disabled={isLoadingGames}
-                style={{
-                  width: "100%",
-                  padding: 8,
-                  fontSize: 13,
-                  border: "1px solid #dadce0",
-                  borderRadius: 4,
-                  background: "white"
-                }}
-              >
-                <option value="">Seleziona un gioco...</option>
-                {games.map((game) => (
-                  <option key={game.id} value={game.id}>
-                    {game.name}
-                  </option>
-                ))}
-              </select>
             )}
           </div>
 
           {/* Agent Selector */}
-          <div style={{ marginBottom: 12 }}>
+        <div style={{ marginBottom: 12 }}>
             <label
               htmlFor="agentSelect"
               style={{ display: "block", marginBottom: 6, fontWeight: 500, fontSize: 13 }}
             >
               Agente:
             </label>
-            {isLoadingAgents ? (
-              <div style={{ width: "100%" }}>
+            <select
+              id="agentSelect"
+              value={selectedAgentId ?? ""}
+              onChange={(e) => setSelectedAgentId(e.target.value || null)}
+              disabled={isLoadingAgents || !selectedGameId}
+              aria-busy={isLoadingAgents}
+              style={{
+                width: "100%",
+                padding: 8,
+                fontSize: 13,
+                border: "1px solid #dadce0",
+                borderRadius: 4,
+                background: isLoadingAgents ? "#f1f3f4" : "white",
+                opacity: isLoadingAgents ? 0.7 : 1
+              }}
+            >
+              <option value="">Seleziona un agente...</option>
+              {agents.map((agent) => (
+                <option key={agent.id} value={agent.id}>
+                  {agent.name}
+                </option>
+              ))}
+            </select>
+            {isLoadingAgents && (
+              <div style={{ width: "100%", marginTop: 8 }}>
                 <SkeletonLoader variant="agents" count={1} ariaLabel="Caricamento agenti" />
               </div>
-            ) : (
-              <select
-                id="agentSelect"
-                value={selectedAgentId ?? ""}
-                onChange={(e) => setSelectedAgentId(e.target.value || null)}
-                disabled={isLoadingAgents || !selectedGameId}
-                style={{
-                  width: "100%",
-                  padding: 8,
-                  fontSize: 13,
-                  border: "1px solid #dadce0",
-                  borderRadius: 4,
-                  background: "white"
-                }}
-              >
-                <option value="">Seleziona un agente...</option>
-                {agents.map((agent) => (
-                  <option key={agent.id} value={agent.id}>
-                    {agent.name}
-                  </option>
-                ))}
-              </select>
             )}
           </div>
 
           {/* New Chat Button */}
-          <LoadingButton
-            isLoading={isCreatingChat}
-            loadingText="Creazione..."
-            onClick={() => void createNewChat()}
-            disabled={!selectedGameId || !selectedAgentId}
-            spinnerSize="sm"
-            aria-label="Create new chat"
-            style={{
-              width: "100%",
-              padding: 10,
-              background: !selectedGameId || !selectedAgentId || isCreatingChat ? "#dadce0" : "#1a73e8",
-              color: "white",
-              border: "none",
+        <LoadingButton
+          isLoading={isCreatingChat}
+          loadingText="Creazione..."
+          onClick={() => void createNewChat()}
+          disabled={!selectedGameId || !selectedAgentId}
+          spinnerSize="sm"
+          aria-label="Create new chat"
+          style={{
+            width: "100%",
+            padding: 10,
+            background: !selectedGameId || !selectedAgentId || isCreatingChat ? "#dadce0" : "#1a73e8",
+            color: "white",
+            border: "none",
               borderRadius: 4,
               fontSize: 14,
               fontWeight: 500,
@@ -856,12 +871,16 @@ export default function ChatPage() {
           >
             + Nuova Chat
           </LoadingButton>
-        </div>
-
         {/* Chat List */}
-        <nav aria-label="Chat history" style={{ flex: 1, overflowY: "auto", padding: 8 }}>
+        <nav
+          aria-label="Chat history"
+          style={{ flex: 1, overflowY: "auto", padding: 8 }}
+        >
           {isLoadingChats ? (
-            <SkeletonLoader variant="chatHistory" count={5} ariaLabel="Caricamento cronologia chat" />
+            <div role="status" aria-live="polite" style={{ padding: 16, textAlign: "center" }}>
+              <div style={{ marginBottom: 12, fontSize: 13, color: "#64748b" }}>Caricamento chat...</div>
+              <SkeletonLoader variant="chatHistory" count={5} ariaLabel="Caricamento cronologia chat" />
+            </div>
           ) : chats.length === 0 ? (
             <div style={{ padding: 16, textAlign: "center", color: "#64748b", fontSize: 13 }}>
               Nessuna chat. Creane una nuova!
@@ -921,6 +940,8 @@ export default function ChatPage() {
             </ul>
           )}
         </nav>
+        </div>
+
       </aside>
 
       {/* Main Content */}
@@ -1051,7 +1072,10 @@ export default function ChatPage() {
           }}
         >
           {isLoadingMessages ? (
-            <SkeletonLoader variant="message" count={3} ariaLabel="Caricamento messaggi" />
+            <div role="status" aria-live="polite" style={{ textAlign: "center" }}>
+              <div style={{ marginBottom: 12, fontSize: 14, color: "#64748b" }}>Caricamento messaggi...</div>
+              <SkeletonLoader variant="message" count={3} ariaLabel="Caricamento messaggi" />
+            </div>
           ) : messages.length === 0 ? (
             <div style={{ textAlign: "center", padding: 48, color: "#64748b" }}>
               <p style={{ fontSize: 16, marginBottom: 8 }}>Nessun messaggio ancora.</p>

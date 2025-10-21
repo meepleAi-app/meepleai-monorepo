@@ -95,7 +95,10 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
       - name: Test with Coverage
-        run: CI=true pnpm test:coverage
+        env:
+          NODE_ENV: test
+          CI: true
+        run: pnpm test:coverage
 
       - name: Upload Web Coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -109,7 +112,10 @@ jobs:
 
       # UI-05: Accessibility Testing
       - name: Run Accessibility Unit Tests (jest-axe)
-        run: CI=true pnpm test:a11y
+        env:
+          NODE_ENV: test
+          CI: true
+        run: pnpm test:a11y
 
   ci-web-a11y:
     needs: changes

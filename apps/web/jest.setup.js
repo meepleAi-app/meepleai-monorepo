@@ -1,3 +1,6 @@
+// Force NODE_ENV to 'test' to ensure React development build is used in CI
+process.env.NODE_ENV = 'test';
+
 import '@testing-library/jest-dom'
 import { toHaveNoViolations } from 'jest-axe'
 

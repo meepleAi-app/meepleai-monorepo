@@ -304,7 +304,7 @@ export default function ResetPasswordPage() {
   }
 
   // User is already authenticated, redirecting...
-  if (authUser) {
+  if (authUser && !resetSuccess) {
     return null;
   }
 

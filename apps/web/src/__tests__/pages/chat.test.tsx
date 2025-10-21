@@ -77,6 +77,11 @@ const mockAgents = [
   { id: 'agent-2', gameId: 'game-1', name: 'Chess Helper', kind: 'qa', createdAt: '2025-01-02T00:00:00Z' }
 ];
 
+const mockEditableAgents = [
+  { id: 'agent-1', gameId: 'game-1', name: 'Editable Agent', kind: 'qa', createdAt: '2025-01-01T00:00:00Z' },
+  { id: 'agent-2', gameId: 'game-1', name: 'Supporting Agent', kind: 'qa', createdAt: '2025-01-02T00:00:00Z' }
+];
+
 const mockChats = [
   {
     id: 'chat-1',
@@ -2698,7 +2703,7 @@ describe('ChatPage', () => {
     const setupEditableChatState = () => {
       mockApi.get.mockResolvedValueOnce(mockAuthResponse);
       mockApi.get.mockResolvedValueOnce(mockGames);
-      mockApi.get.mockResolvedValueOnce(mockAgents);
+      mockApi.get.mockResolvedValueOnce(mockEditableAgents);
       mockApi.get.mockResolvedValueOnce([mockChatWithEditableMessages]);
       mockApi.get.mockResolvedValueOnce(mockChatWithEditableMessages);
     };

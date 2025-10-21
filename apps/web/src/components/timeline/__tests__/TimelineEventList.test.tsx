@@ -9,6 +9,7 @@ import userEvent from '@testing-library/user-event';
 import { TimelineEventList } from '../TimelineEventList';
 import { createMockEvents, createMockEvent } from '@/lib/__tests__/test-utils';
 import {
+  TimelineEvent,
   TimelineFilters,
   TimelineEventType,
   TimelineEventStatus,
@@ -21,6 +22,12 @@ describe('Feature: Timeline Event Filtering and Display', () => {
     selectedEventId: null,
     onSelectEvent: mockOnSelectEvent
   };
+
+  const makeEventTypes = (...types: TimelineEventType[]): Set<TimelineEventType> =>
+    new Set<TimelineEventType>(types);
+
+  const makeStatuses = (...statuses: TimelineEventStatus[]): Set<TimelineEventStatus> =>
+    new Set<TimelineEventStatus>(statuses);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -35,8 +42,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       // Given: Timeline with mixed event types
       const events = createMockEvents(20);
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error'])
+        eventTypes: makeEventTypes('message'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error')
       };
 
       // When: Component rendered with type filter
@@ -52,8 +59,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       // Given: Timeline with various event types
       const events = createMockEvents(30);
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'error']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error'])
+        eventTypes: makeEventTypes('message', 'rag_search', 'error'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error')
       };
 
       // When: Component rendered with multiple type filters
@@ -71,8 +78,15 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       // Given: Timeline with all event types
       const events = createMockEvents(24); // Divisible by 6 event types
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error'])
+        eventTypes: makeEventTypes(
+          'message',
+          'rag_search',
+          'rag_retrieval',
+          'rag_generation',
+          'rag_complete',
+          'error'
+        ),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error')
       };
 
       // When: Component rendered with all types selected
@@ -87,8 +101,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       // Given: Component with initial filter
       const events = createMockEvents(18);
       const initialFilters: TimelineFilters = {
-        eventTypes: new Set(['message']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error'])
+        eventTypes: makeEventTypes('message'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error')
       };
 
       const { rerender } = render(
@@ -100,8 +114,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
 
       // When: Filter changes to different type
       const newFilters: TimelineFilters = {
-        eventTypes: new Set(['rag_search']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error'])
+        eventTypes: makeEventTypes('rag_search'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error')
       };
 
       rerender(<TimelineEventList events={events} filters={newFilters} {...defaultProps} />);
@@ -121,8 +135,15 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       // Given: Timeline with mixed statuses
       const events = createMockEvents(20);
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['success'])
+        eventTypes: makeEventTypes(
+          'message',
+          'rag_search',
+          'rag_retrieval',
+          'rag_generation',
+          'rag_complete',
+          'error'
+        ),
+        statuses: makeStatuses('success')
       };
 
       // When: Component rendered with success status filter
@@ -138,8 +159,15 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       // Given: Timeline with various statuses
       const events = createMockEvents(16); // Divisible by 4 statuses
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['error'])
+        eventTypes: makeEventTypes(
+          'message',
+          'rag_search',
+          'rag_retrieval',
+          'rag_generation',
+          'rag_complete',
+          'error'
+        ),
+        statuses: makeStatuses('error')
       };
 
       // When: Component rendered with error status filter
@@ -155,8 +183,15 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       // Given: Timeline with all statuses
       const events = createMockEvents(20);
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['pending', 'in_progress'])
+        eventTypes: makeEventTypes(
+          'message',
+          'rag_search',
+          'rag_retrieval',
+          'rag_generation',
+          'rag_complete',
+          'error'
+        ),
+        statuses: makeStatuses('pending', 'in_progress')
       };
 
       // When: Component rendered with multiple status filters
@@ -172,8 +207,15 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       // Given: Component with status filter
       const events = createMockEvents(20);
       const initialFilters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['success'])
+        eventTypes: makeEventTypes(
+          'message',
+          'rag_search',
+          'rag_retrieval',
+          'rag_generation',
+          'rag_complete',
+          'error'
+        ),
+        statuses: makeStatuses('success')
       };
 
       const { rerender } = render(
@@ -185,8 +227,15 @@ describe('Feature: Timeline Event Filtering and Display', () => {
 
       // When: Filter cleared to show all statuses
       const newFilters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error'])
+        eventTypes: makeEventTypes(
+          'message',
+          'rag_search',
+          'rag_retrieval',
+          'rag_generation',
+          'rag_complete',
+          'error'
+        ),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error')
       };
 
       rerender(<TimelineEventList events={events} filters={newFilters} {...defaultProps} />);
@@ -215,8 +264,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       ];
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error']),
+        eventTypes: makeEventTypes('message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error'),
         startDate: twoDaysAgo,
         endDate: oneDayAgo
       };
@@ -239,8 +288,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       ];
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error']),
+        eventTypes: makeEventTypes('message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error'),
         startDate
       };
 
@@ -263,8 +312,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       ];
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error']),
+        eventTypes: makeEventTypes('message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error'),
         startDate
       };
 
@@ -287,8 +336,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       ];
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error']),
+        eventTypes: makeEventTypes('message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error'),
         endDate
       };
 
@@ -305,8 +354,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       const events = createMockEvents(10); // All recent events
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error']),
+        eventTypes: makeEventTypes('message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error'),
         startDate: new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000), // 1 year ago
         endDate: new Date(now.getTime() - 364 * 24 * 60 * 60 * 1000) // Almost 1 year ago (narrow range)
       };
@@ -333,8 +382,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       ];
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error']),
+        eventTypes: makeEventTypes('message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error'),
         searchText: 'chess'
       };
 
@@ -369,8 +418,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       ];
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error']),
+        eventTypes: makeEventTypes('message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error'),
         searchText: 'diagonally'
       };
 
@@ -390,8 +439,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       ];
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error']),
+        eventTypes: makeEventTypes('message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error'),
         searchText: 'chess'
       };
 
@@ -407,8 +456,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       const events = createMockEvents(15);
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error']),
+        eventTypes: makeEventTypes('message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error'),
         searchText: ''
       };
 
@@ -427,8 +476,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       ];
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error']),
+        eventTypes: makeEventTypes('message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error'),
         searchText: 'poker'
       };
 
@@ -455,8 +504,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       ];
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message']),
-        statuses: new Set(['success'])
+        eventTypes: makeEventTypes('message'),
+        statuses: makeStatuses('success')
       };
 
       // When: Component rendered with combined filters
@@ -480,8 +529,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       ];
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message']),
-        statuses: new Set(['success']),
+        eventTypes: makeEventTypes('message'),
+        statuses: makeStatuses('success'),
         startDate: new Date(now.getTime() - 25 * 60 * 60 * 1000) // Just over 1 day ago
       };
 
@@ -527,8 +576,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       ];
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message']),
-        statuses: new Set(['success']),
+        eventTypes: makeEventTypes('message'),
+        statuses: makeStatuses('success'),
         searchText: 'chess'
       };
 
@@ -544,8 +593,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       const events = createMockEvents(10);
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message']),
-        statuses: new Set(['success']),
+        eventTypes: makeEventTypes('message'),
+        statuses: makeStatuses('success'),
         searchText: 'nonexistent text xyz123'
       };
 
@@ -590,8 +639,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       ];
 
       const initialFilters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error'])
+        eventTypes: makeEventTypes('message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error')
       };
 
       const { rerender } = render(
@@ -602,8 +651,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
 
       // When: Filter changes to show only messages
       const newFilters: TimelineFilters = {
-        eventTypes: new Set(['message']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error'])
+        eventTypes: makeEventTypes('message'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error')
       };
 
       rerender(<TimelineEventList events={events} filters={newFilters} {...defaultProps} />);
@@ -677,8 +726,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       const events = createMockEvents(10); // All have various types
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(), // No types selected
-        statuses: new Set(['pending', 'in_progress', 'success', 'error'])
+        eventTypes: makeEventTypes(), // No types selected
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error')
       };
 
       // When: Component rendered with filters excluding all
@@ -693,8 +742,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       const events = createMockEvents(5);
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message']),
-        statuses: new Set(['success']),
+        eventTypes: makeEventTypes('message'),
+        statuses: makeStatuses('success'),
         searchText: 'impossible search text xyz123abc'
       };
 
@@ -736,8 +785,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       const events = createMockEvents(10);
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error'])
+        eventTypes: makeEventTypes('message'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error')
       };
 
       // When: Component rendered with filter
@@ -769,8 +818,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       ];
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error'])
+        eventTypes: makeEventTypes('message'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error')
       };
 
       // When: Component rendered
@@ -813,8 +862,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       ];
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error']),
+        eventTypes: makeEventTypes('message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error'),
         searchText: '$5.99'
       };
 
@@ -839,8 +888,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       ];
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error']),
+        eventTypes: makeEventTypes('message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error'),
         searchText: 'keyword'
       };
 
@@ -869,8 +918,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       ];
 
       const filters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error']),
-        statuses: new Set(['pending', 'in_progress', 'success', 'error']),
+        eventTypes: makeEventTypes('message', 'rag_search', 'rag_retrieval', 'rag_generation', 'rag_complete', 'error'),
+        statuses: makeStatuses('pending', 'in_progress', 'success', 'error'),
         searchText: 'chess'
       };
 
@@ -935,8 +984,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
       // Given: Component with initial filters
       const events = createMockEvents(12);
       const initialFilters: TimelineFilters = {
-        eventTypes: new Set(['message']),
-        statuses: new Set(['success'])
+        eventTypes: makeEventTypes('message'),
+        statuses: makeStatuses('success')
       };
 
       const { rerender } = render(
@@ -951,8 +1000,8 @@ describe('Feature: Timeline Event Filtering and Display', () => {
 
       // When: Filters updated
       const updatedFilters: TimelineFilters = {
-        eventTypes: new Set(['message', 'rag_search']),
-        statuses: new Set(['success', 'error'])
+        eventTypes: makeEventTypes('message', 'rag_search'),
+        statuses: makeStatuses('success', 'error')
       };
 
       rerender(<TimelineEventList events={events} filters={updatedFilters} {...defaultProps} />);

@@ -38,13 +38,15 @@ async function validatePdfFile(file: File): Promise<string | null> {
   }
 
   // Magic bytes check
-  try {
-    const header = await readFileHeader(file, 5);
-    if (header !== PDF_MAGIC_BYTES) {
-      return `Invalid PDF format: ${file.name}`;
+  if (file.size >= PDF_MAGIC_BYTES.length) {
+    try {
+      const header = await readFileHeader(file, PDF_MAGIC_BYTES.length);
+      if (header !== PDF_MAGIC_BYTES) {
+        return `Invalid PDF format: ${file.name}`;
+      }
+    } catch (error) {
+      return `Unable to read file: ${file.name}`;
     }
-  } catch (error) {
-    return `Unable to read file: ${file.name}`;
   }
 
   return null;
@@ -260,7 +262,7 @@ export function MultiFileUpload({ gameId, gameName, onUploadComplete }: MultiFil
         onClick={handleBrowseClick}
         role="button"
         tabIndex={0}
-        aria-label="Click to browse files or drag and drop PDF files here"
+        aria-label="Click to browse files or drag and drop PDFs here"
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();

@@ -206,7 +206,8 @@
       "Bash(Select-String -Pattern \"(error|failed|FAIL|Error|✖|×)\" -Context 2,1)",
       "Bash(Select-Object -First 50)",
       "Bash(Select-String -Pattern \"(Passed|Failed|Total tests|Test Run|error|warning)\" -Context 0,1)",
-      "Bash(Select-Object -Last 50)"
+      "Bash(Select-Object -Last 50)",
+      "Bash(Select-String -Pattern \"(Passed|Failed|Total tests|Test Run|Skipped|error|warning)\" -Context 0,1)"
     ],
     "deny": [],
     "ask": []

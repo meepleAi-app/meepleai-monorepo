@@ -1,3 +1,7 @@
+// Ensure NODE_ENV is set to 'test' before module resolution
+// This prevents React from using production builds during testing
+process.env.NODE_ENV = 'test';
+
 const nextJest = require('next/jest')
 
 const createJestConfig = nextJest({

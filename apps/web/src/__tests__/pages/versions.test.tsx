@@ -2,18 +2,20 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { NextRouter } from 'next/router';
 import VersionHistory from '../../pages/versions';
-import { api } from '../../pages/../lib/api';
+import { api } from '../../lib/api';
 import { useRouter } from 'next/router';
 
 type AuthResponse = {
   user: {
     id: string;
     email: string;
+    displayName?: string | null;
     role: string;
   };
   expiresAt: string;
 };
 
+// Mock the API client
 jest.mock('../../lib/api', () => ({
   api: {
     get: jest.fn(),
@@ -28,8 +30,39 @@ jest.mock('../../lib/api', () => ({
   }
 }));
 
+// Mock Next.js router
 jest.mock('next/router', () => ({
   useRouter: jest.fn()
+}));
+
+// Mock components
+jest.mock('../../components/DiffViewer', () => ({
+  DiffViewer: ({ diff, showOnlyChanges }: any) => {
+    if (!diff) return null;
+    return (
+      <div data-testid="diff-viewer">
+        <div data-testid="diff-from-version">{diff.fromVersion}</div>
+        <div data-testid="diff-to-version">{diff.toVersion}</div>
+        <div data-testid="diff-show-only-changes">{String(showOnlyChanges)}</div>
+        {diff.summary && (
+          <div data-testid="diff-summary">
+            {diff.summary.added} added, {diff.summary.modified} modified, {diff.summary.deleted} deleted
+          </div>
+        )}
+      </div>
+    );
+  },
+}));
+
+jest.mock('../../components/CommentThread', () => ({
+  CommentThread: ({ gameId, version, currentUserId, currentUserRole }: any) => (
+    <div data-testid="comment-thread">
+      <div data-testid="comment-game-id">{gameId}</div>
+      <div data-testid="comment-version">{version}</div>
+      <div data-testid="comment-user-id">{currentUserId}</div>
+      <div data-testid="comment-user-role">{currentUserRole}</div>
+    </div>
+  ),
 }));
 
 const mockApi = api as jest.Mocked<typeof api>;
@@ -69,13 +102,90 @@ const createRouter = (overrides: Partial<NextRouter> = {}): NextRouter =>
     ...overrides
   } as unknown as NextRouter);
 
+// Test data fixtures
 const authResponse: AuthResponse = {
   user: {
     id: 'admin-1',
     email: 'admin@example.com',
+    displayName: 'Admin User',
     role: 'Admin'
   },
-  expiresAt: new Date().toISOString()
+  expiresAt: new Date(Date.now() + 3600000).toISOString()
+};
+
+const editorAuthResponse: AuthResponse = {
+  user: {
+    id: 'editor-1',
+    email: 'editor@example.com',
+    displayName: 'Editor User',
+    role: 'Editor'
+  },
+  expiresAt: new Date(Date.now() + 3600000).toISOString()
+};
+
+const userAuthResponse: AuthResponse = {
+  user: {
+    id: 'user-1',
+    email: 'user@example.com',
+    displayName: 'Regular User',
+    role: 'User'
+  },
+  expiresAt: new Date(Date.now() + 3600000).toISOString()
+};
+
+const mockVersionHistory = {
+  gameId: 'demo-chess',
+  totalVersions: 3,
+  versions: [
+    { version: '3.0.0', createdAt: '2024-03-01T12:00:00Z', ruleCount: 15, createdBy: 'user-1' },
+    { version: '2.0.0', createdAt: '2024-02-01T12:00:00Z', ruleCount: 12, createdBy: 'user-2' },
+    { version: '1.0.0', createdAt: '2024-01-01T12:00:00Z', ruleCount: 10, createdBy: 'user-1' }
+  ]
+};
+
+const mockDiffData = {
+  gameId: 'demo-chess',
+  fromVersion: '2.0.0',
+  toVersion: '3.0.0',
+  fromCreatedAt: '2024-02-01T12:00:00Z',
+  toCreatedAt: '2024-03-01T12:00:00Z',
+  summary: {
+    totalChanges: 5,
+    added: 3,
+    modified: 1,
+    deleted: 1,
+    unchanged: 10
+  },
+  changes: [
+    {
+      type: 'Added',
+      newAtom: 'rule-1',
+      newValue: { id: 'rule-1', text: 'New rule', section: 'Setup', page: '1', line: '1' }
+    },
+    {
+      type: 'Modified',
+      oldAtom: 'rule-2',
+      newAtom: 'rule-2',
+      oldValue: { id: 'rule-2', text: 'Old text', section: 'Gameplay', page: '2', line: '5' },
+      newValue: { id: 'rule-2', text: 'New text', section: 'Gameplay', page: '2', line: '5' },
+      fieldChanges: [{ fieldName: 'text', oldValue: 'Old text', newValue: 'New text' }]
+    },
+    {
+      type: 'Deleted',
+      oldAtom: 'rule-3',
+      oldValue: { id: 'rule-3', text: 'Deleted rule', section: 'Scoring', page: '3', line: '10' }
+    }
+  ]
+};
+
+const mockRuleSpec = {
+  gameId: 'demo-chess',
+  version: '2.0.0',
+  createdAt: '2024-02-01T12:00:00Z',
+  rules: [
+    { id: 'rule-1', text: 'Rule 1', section: 'Setup', page: '1', line: '1' },
+    { id: 'rule-2', text: 'Rule 2', section: 'Gameplay', page: '2', line: '5' }
+  ]
 };
 
 let confirmSpy: jest.SpiedFunction<typeof window.confirm>;
@@ -100,389 +210,847 @@ beforeEach(() => {
   mockUseRouter.mockImplementation(() => createRouter());
 });
 
-describe('VersionHistory page', () => {
-  it('prompts for login when the current user is not authenticated', async () => {
-    mockApi.get.mockResolvedValueOnce(null);
+// =============================================================================
+// TEST SUITE: VersionHistory Page (36+ comprehensive tests)
+// =============================================================================
 
-    render(<VersionHistory />);
+describe('VersionHistory Page', () => {
+  // ===========================================================================
+  // 1. AUTHENTICATION & ROUTE SETUP (4 tests)
+  // ===========================================================================
 
-    await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
-    expect(
-      await screen.findByText(/Devi effettuare l'accesso per visualizzare lo storico/i)
-    ).toBeInTheDocument();
+  describe('Authentication & Route Setup', () => {
+    it('loads user on mount', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me');
+      });
+    });
+
+    it('parses gameId from router.query', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games/demo-chess/rulespec/history');
+      });
+
+      expect(screen.getByText(/Game:/)).toBeInTheDocument();
+      expect(screen.getByText('demo-chess')).toBeInTheDocument();
+    });
+
+    it('shows error when gameId missing', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+
+      setGameId(undefined);
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Specifica un gameId nella query string/i)).toBeInTheDocument();
+      });
+    });
+
+    it('handles auth failure', async () => {
+      mockApi.get.mockResolvedValueOnce(null);
+
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Devi effettuare l'accesso/i)).toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/Torna alla home/i)).toBeInTheDocument();
+    });
   });
 
-  it('asks for a gameId when authenticated but none is provided', async () => {
-    mockApi.get.mockResolvedValueOnce(authResponse);
+  // ===========================================================================
+  // 2. VERSION HISTORY LOADING (8 tests)
+  // ===========================================================================
 
-    render(<VersionHistory />);
+  describe('Version History Loading', () => {
+    it('fetches history via /api/v1/games/{gameId}/rulespec/history', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-    await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
-    expect(
-      await screen.findByText(/Specifica un gameId nella query string/i)
-    ).toBeInTheDocument();
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games/demo-chess/rulespec/history');
+      });
+    });
+
+    it('displays versions list with metadata', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByText('3.0.0')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText('2.0.0')).toBeInTheDocument();
+      expect(screen.getByText('1.0.0')).toBeInTheDocument();
+      expect(screen.getByText('15 regole')).toBeInTheDocument();
+      expect(screen.getByText('12 regole')).toBeInTheDocument();
+      expect(screen.getByText('10 regole')).toBeInTheDocument();
+    });
+
+    it('shows loading state during fetch', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockImplementation(() => new Promise(() => {})); // Never resolves
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Caricamento storico\.\.\./i)).toBeInTheDocument();
+      });
+    });
+
+    it('handles empty history (no versions)', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce({
+        gameId: 'demo-chess',
+        versions: [],
+        totalVersions: 0
+      });
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Versioni \(0\)/i)).toBeInTheDocument();
+      });
+    });
+
+    it('handles API error (404)', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockRejectedValueOnce({ message: 'Game not found' });
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Game not found/i)).toBeInTheDocument();
+      });
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('handles API error (500)', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockRejectedValueOnce({ message: 'Internal server error' });
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Internal server error/i)).toBeInTheDocument();
+      });
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('displays version count "Total: X versions"', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Versioni \(3\)/i)).toBeInTheDocument();
+      });
+    });
+
+    it('formats dates with toLocaleString()', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        const expectedDate = new Date('2024-03-01T12:00:00Z').toLocaleString();
+        expect(screen.getByText(expectedDate)).toBeInTheDocument();
+      });
+    });
   });
 
-  it('auto-selects the most recent versions, loads the diff and supports toggling only changes', async () => {
-    const user = userEvent.setup();
-    setGameId('demo-chess');
+  // ===========================================================================
+  // 3. VERSION SELECTION (8 tests)
+  // ===========================================================================
 
-    const historyResponse = {
-      gameId: 'demo-chess',
-      totalVersions: 3,
-      versions: [
-        { version: '2.0.0', createdAt: '2024-03-10T12:00:00Z', ruleCount: 12 },
-        { version: '1.5.0', createdAt: '2024-02-15T12:00:00Z', ruleCount: 11 },
-        { version: '1.0.0', createdAt: '2024-01-01T12:00:00Z', ruleCount: 10 }
-      ]
-    };
+  describe('Version Selection', () => {
+    it('auto-selects latest two versions on load', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-    const diffResponse = {
-      gameId: 'demo-chess',
-      fromVersion: '1.5.0',
-      toVersion: '2.0.0',
-      fromCreatedAt: '2024-02-15T12:00:00Z',
-      toCreatedAt: '2024-03-10T12:00:00Z',
-      summary: {
-        totalChanges: 7,
-        added: 2,
-        modified: 1,
-        deleted: 1,
-        unchanged: 3
-      },
-      changes: [
-        {
-          type: 'Added',
-          newAtom: 'Regola Bonus',
-          newValue: { id: 'rule-3', text: 'Nuova regola' }
-        },
-        {
-          type: 'Modified',
-          oldAtom: 'Regola iniziale',
-          fieldChanges: [
-            { fieldName: 'text', oldValue: 'Vecchio testo', newValue: 'Nuovo testo' }
-          ]
-        },
-        {
-          type: 'Deleted',
-          oldAtom: 'Regola rimossa',
-          oldValue: { id: 'rule-2', text: 'Regola da rimuovere' }
-        },
-        {
-          type: 'Unchanged',
-          oldAtom: 'Regola invariata',
-          oldValue: { id: 'rule-4', text: 'Nessuna modifica' }
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        const fromSelect = screen.getByLabelText(/^Da versione:/i) as HTMLSelectElement;
+        const toSelect = screen.getByLabelText(/^A versione:/i) as HTMLSelectElement;
+
+        expect(fromSelect.value).toBe('2.0.0');
+        expect(toSelect.value).toBe('3.0.0');
+      });
+    });
+
+    it('changes version1 via dropdown', async () => {
+      const user = userEvent.setup();
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce(mockDiffData); // Initial auto-load
+      mockApi.get.mockResolvedValueOnce(mockDiffData); // After manual selection
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/^Da versione:/i)).toBeInTheDocument();
+      });
+
+      const fromSelect = screen.getByLabelText(/^Da versione:/i);
+      await user.selectOptions(fromSelect, '1.0.0');
+
+      await waitFor(() => {
+        expect((fromSelect as HTMLSelectElement).value).toBe('1.0.0');
+      });
+    });
+
+    it('changes version2 via dropdown', async () => {
+      const user = userEvent.setup();
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce(mockDiffData); // Initial auto-load
+      mockApi.get.mockResolvedValueOnce(mockDiffData); // After manual selection
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/^A versione:/i)).toBeInTheDocument();
+      });
+
+      const toSelect = screen.getByLabelText(/^A versione:/i);
+      await user.selectOptions(toSelect, '2.0.0');
+
+      await waitFor(() => {
+        expect((toSelect as HTMLSelectElement).value).toBe('2.0.0');
+      });
+    });
+
+    it('fetches diff when both versions selected', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce(mockDiffData);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(mockApi.get).toHaveBeenCalledWith(
+          '/api/v1/games/demo-chess/rulespec/diff?from=2.0.0&to=3.0.0'
+        );
+      });
+    });
+
+    it('displays selected version info (version number, date)', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce(mockDiffData);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        const fromSelect = screen.getByLabelText(/^Da versione:/i);
+        const options = Array.from((fromSelect as HTMLSelectElement).options);
+
+        const versionOption = options.find(opt => opt.value === '2.0.0');
+        expect(versionOption?.textContent).toContain('2.0.0');
+        expect(versionOption?.textContent).toContain(new Date('2024-02-01T12:00:00Z').toLocaleString());
+      });
+    });
+
+    it('shows "Loading diff..." during version fetches', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockImplementation((url) => {
+        if (url.includes('/diff?')) {
+          return new Promise(() => {}); // Never resolves
         }
-      ]
-    };
+        return Promise.resolve(mockVersionHistory);
+      });
 
-    mockApi.get.mockImplementation(async (path: string) => {
-      if (path === '/api/v1/auth/me') {
-        return authResponse;
-      }
-      if (path === '/api/v1/games/demo-chess/rulespec/history') {
-        return historyResponse;
-      }
-      if (path.startsWith('/api/v1/games/demo-chess/rulespec/diff')) {
-        return diffResponse;
-      }
-      return null;
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Caricamento diff\.\.\./i)).toBeInTheDocument();
+      });
     });
 
-    render(<VersionHistory />);
+    it('keeps diff displayed when version deselected (until new selection)', async () => {
+      const user = userEvent.setup();
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-    await screen.findByText(/Riepilogo Modifiche/i);
+      setGameId('demo-chess');
+      render(<VersionHistory />);
 
-    await waitFor(() =>
-      expect(mockApi.get).toHaveBeenCalledWith(
-        '/api/v1/games/demo-chess/rulespec/diff?from=1.5.0&to=2.0.0'
-      )
-    );
+      await waitFor(() => {
+        expect(screen.getByTestId('diff-viewer')).toBeInTheDocument();
+      });
 
-    const fromSelect = screen.getByLabelText(/^Da versione:/i) as HTMLSelectElement;
-    const toSelect = screen.getByLabelText(/^A versione:/i) as HTMLSelectElement;
+      const fromSelect = screen.getByLabelText(/^Da versione:/i);
+      await user.selectOptions(fromSelect, '');
 
-    await waitFor(() => {
-      expect(fromSelect.value).toBe('1.5.0');
-      expect(toSelect.value).toBe('2.0.0');
+      // Diff should still be visible (not cleared automatically)
+      await waitFor(() => {
+        expect(screen.getByTestId('diff-viewer')).toBeInTheDocument();
+      });
     });
 
-    expect(screen.getByText('2.0.0')).toBeInTheDocument();
-    expect(screen.getByText('1.5.0')).toBeInTheDocument();
-    expect(screen.getByText('1.0.0')).toBeInTheDocument();
+    it('shows message when no versions selected', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce({
+        gameId: 'demo-chess',
+        versions: [mockVersionHistory.versions[0]], // Only one version
+        totalVersions: 1
+      });
 
-    const summary = screen.getByText(/Riepilogo Modifiche/i).parentElement;
-    expect(summary).not.toBeNull();
-    const summaryWithin = within(summary as HTMLElement);
-    expect(summaryWithin.getByText('+2')).toBeInTheDocument();
-    expect(summaryWithin.getByText('~1')).toBeInTheDocument();
-    expect(summaryWithin.getByText('-1')).toBeInTheDocument();
-    expect(summaryWithin.getByText('3')).toBeInTheDocument();
+      setGameId('demo-chess');
+      render(<VersionHistory />);
 
-    expect(screen.getByText(/Modifiche \(3\)/i)).toBeInTheDocument();
-
-    const showOnlyChangesToggle = screen.getByLabelText(/Mostra solo modifiche/i);
-    expect(showOnlyChangesToggle).toBeChecked();
-
-    await user.click(showOnlyChangesToggle);
-
-    expect(showOnlyChangesToggle).not.toBeChecked();
-    expect(screen.getByText(/Modifiche \(4\)/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/Seleziona due versioni per visualizzare le differenze/i)).toBeInTheDocument();
+      });
+    });
   });
 
-  it('does not restore when the confirmation dialog is rejected', async () => {
-    const user = userEvent.setup();
-    setGameId('demo-chess');
-    confirmSpy.mockReturnValue(false);
+  // ===========================================================================
+  // 4. DIFF VIEWER INTEGRATION (6 tests)
+  // ===========================================================================
 
-    const historyResponse = {
-      gameId: 'demo-chess',
-      totalVersions: 2,
-      versions: [
-        { version: '2.0.0', createdAt: '2024-03-10T12:00:00Z', ruleCount: 12 },
-        { version: '1.5.0', createdAt: '2024-02-15T12:00:00Z', ruleCount: 11 }
-      ]
-    };
+  describe('Diff Viewer Integration', () => {
+    it('renders DiffViewer component when both versions loaded', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-    const diffResponse = {
-      gameId: 'demo-chess',
-      fromVersion: '1.5.0',
-      toVersion: '2.0.0',
-      fromCreatedAt: '2024-02-15T12:00:00Z',
-      toCreatedAt: '2024-03-10T12:00:00Z',
-      summary: {
-        totalChanges: 0,
-        added: 0,
-        modified: 0,
-        deleted: 0,
-        unchanged: 0
-      },
-      changes: []
-    };
+      setGameId('demo-chess');
+      render(<VersionHistory />);
 
-    mockApi.get.mockImplementation(async (path: string) => {
-      if (path === '/api/v1/auth/me') {
-        return authResponse;
-      }
-      if (path === '/api/v1/games/demo-chess/rulespec/history') {
-        return historyResponse;
-      }
-      if (path.startsWith('/api/v1/games/demo-chess/rulespec/diff')) {
-        return diffResponse;
-      }
-      return null;
+      await waitFor(() => {
+        expect(screen.getByTestId('diff-viewer')).toBeInTheDocument();
+      });
     });
 
-    render(<VersionHistory />);
+    it('passes diff data to DiffViewer', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-    const restoreButtons = await screen.findAllByRole('button', { name: /Ripristina/i });
-    await user.click(restoreButtons[1]);
+      setGameId('demo-chess');
+      render(<VersionHistory />);
 
-    expect(confirmSpy).toHaveBeenCalledWith(
-      'Sei sicuro di voler ripristinare la versione 1.5.0? Questo creerà una nuova versione.'
-    );
-    expect(mockApi.get).not.toHaveBeenCalledWith('/api/v1/games/demo-chess/rulespec/versions/1.5.0');
-    expect(mockApi.put).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(screen.getByTestId('diff-from-version')).toHaveTextContent('2.0.0');
+        expect(screen.getByTestId('diff-to-version')).toHaveTextContent('3.0.0');
+      });
+    });
+
+    it('displays change summary: "X added, Y modified, Z deleted"', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce(mockDiffData);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('diff-summary')).toHaveTextContent('3 added, 1 modified, 1 deleted');
+      });
+    });
+
+    it('keeps DiffViewer visible when one version deselected (until new selection)', async () => {
+      const user = userEvent.setup();
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce(mockDiffData);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('diff-viewer')).toBeInTheDocument();
+      });
+
+      const toSelect = screen.getByLabelText(/^A versione:/i);
+      await user.selectOptions(toSelect, '');
+
+      // Diff should still be visible (not cleared automatically)
+      await waitFor(() => {
+        expect(screen.getByTestId('diff-viewer')).toBeInTheDocument();
+      });
+    });
+
+    it('passes showOnlyChanges prop to DiffViewer', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce(mockDiffData);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('diff-show-only-changes')).toHaveTextContent('true');
+      });
+    });
+
+    it('toggles showOnlyChanges when checkbox clicked', async () => {
+      const user = userEvent.setup();
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce(mockDiffData);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('diff-show-only-changes')).toHaveTextContent('true');
+      });
+
+      const checkbox = screen.getByLabelText(/Mostra solo modifiche/i);
+      await user.click(checkbox);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('diff-show-only-changes')).toHaveTextContent('false');
+      });
+    });
   });
 
-  it('restores a version when confirmed and surfaces success feedback', async () => {
-    const user = userEvent.setup();
-    setGameId('demo-chess');
-    confirmSpy.mockReturnValue(true);
+  // ===========================================================================
+  // 5. COMMENT THREAD (6 tests)
+  // ===========================================================================
 
-    const historyResponse = {
-      gameId: 'demo-chess',
-      totalVersions: 2,
-      versions: [
-        { version: '2.0.0', createdAt: '2024-03-10T12:00:00Z', ruleCount: 12 },
-        { version: '1.5.0', createdAt: '2024-02-15T12:00:00Z', ruleCount: 11 }
-      ]
-    };
+  describe('Comment Thread', () => {
+    it('renders CommentThread component', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-    const diffResponse = {
-      gameId: 'demo-chess',
-      fromVersion: '1.5.0',
-      toVersion: '2.0.0',
-      fromCreatedAt: '2024-02-15T12:00:00Z',
-      toCreatedAt: '2024-03-10T12:00:00Z',
-      summary: {
-        totalChanges: 0,
-        added: 0,
-        modified: 0,
-        deleted: 0,
-        unchanged: 0
-      },
-      changes: []
-    };
+      setGameId('demo-chess');
+      render(<VersionHistory />);
 
-    const versionToRestore = {
-      gameId: 'demo-chess',
-      version: '1.5.0',
-      createdAt: '2024-02-15T12:00:00Z',
-      rules: [{ id: 'rule-1', text: 'Testo originale' }]
-    };
-
-    const restoredVersion = {
-      ...versionToRestore,
-      version: '3.0.0'
-    };
-
-    let historyCallCount = 0;
-    mockApi.get.mockImplementation(async (path: string) => {
-      if (path === '/api/v1/auth/me') {
-        return authResponse;
-      }
-      if (path === '/api/v1/games/demo-chess/rulespec/history') {
-        historyCallCount += 1;
-        return historyResponse;
-      }
-      if (path.startsWith('/api/v1/games/demo-chess/rulespec/diff')) {
-        return diffResponse;
-      }
-      if (path === '/api/v1/games/demo-chess/rulespec/versions/1.5.0') {
-        return versionToRestore;
-      }
-      return null;
+      await waitFor(() => {
+        expect(screen.getByTestId('comment-thread')).toBeInTheDocument();
+      });
     });
 
-    mockApi.put.mockResolvedValueOnce(restoredVersion);
+    it('passes gameId to CommentThread', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-    render(<VersionHistory />);
+      setGameId('demo-chess');
+      render(<VersionHistory />);
 
-    const restoreButtons = await screen.findAllByRole('button', { name: /Ripristina/i });
-    await user.click(restoreButtons[1]);
+      await waitFor(() => {
+        expect(screen.getByTestId('comment-game-id')).toHaveTextContent('demo-chess');
+      });
+    });
 
-    expect(confirmSpy).toHaveBeenCalledWith(
-      'Sei sicuro di voler ripristinare la versione 1.5.0? Questo creerà una nuova versione.'
-    );
+    it('passes version identifier to CommentThread', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-    await waitFor(() =>
-      expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games/demo-chess/rulespec/versions/1.5.0')
-    );
-    expect(mockApi.put).toHaveBeenCalledWith('/api/v1/games/demo-chess/rulespec', versionToRestore);
-    await screen.findByText(/Versione 1\.5\.0 ripristinata con successo come versione 3\.0\.0/i);
-    expect(historyCallCount).toBeGreaterThanOrEqual(2);
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('comment-version')).toHaveTextContent('3.0.0');
+      });
+    });
+
+    it('passes currentUserId to CommentThread', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce(mockDiffData);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('comment-user-id')).toHaveTextContent('admin-1');
+      });
+    });
+
+    it('passes currentUserRole to CommentThread', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce(mockDiffData);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('comment-user-role')).toHaveTextContent('Admin');
+      });
+    });
+
+    it('hides CommentThread when no version selected', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce({
+        gameId: 'demo-chess',
+        versions: [],
+        totalVersions: 0
+      });
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('comment-thread')).not.toBeInTheDocument();
+      });
+    });
   });
 
-  it('shows an error message when restoring a version fails', async () => {
-    const user = userEvent.setup();
-    setGameId('demo-chess');
-    confirmSpy.mockReturnValue(true);
+  // ===========================================================================
+  // 6. UI ELEMENTS & NAVIGATION (4 tests)
+  // ===========================================================================
 
-    const historyResponse = {
-      gameId: 'demo-chess',
-      totalVersions: 2,
-      versions: [
-        { version: '2.0.0', createdAt: '2024-03-10T12:00:00Z', ruleCount: 12 },
-        { version: '1.5.0', createdAt: '2024-02-15T12:00:00Z', ruleCount: 11 }
-      ]
-    };
+  describe('UI Elements & Navigation', () => {
+    it('displays "Storico Versioni RuleSpec" title', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-    const diffResponse = {
-      gameId: 'demo-chess',
-      fromVersion: '1.5.0',
-      toVersion: '2.0.0',
-      fromCreatedAt: '2024-02-15T12:00:00Z',
-      toCreatedAt: '2024-03-10T12:00:00Z',
-      summary: {
-        totalChanges: 0,
-        added: 0,
-        modified: 0,
-        deleted: 0,
-        unchanged: 0
-      },
-      changes: []
-    };
+      setGameId('demo-chess');
+      render(<VersionHistory />);
 
-    const versionToRestore = {
-      gameId: 'demo-chess',
-      version: '1.5.0',
-      createdAt: '2024-02-15T12:00:00Z',
-      rules: [{ id: 'rule-1', text: 'Testo originale' }]
-    };
-
-    mockApi.get.mockImplementation(async (path: string) => {
-      if (path === '/api/v1/auth/me') {
-        return authResponse;
-      }
-      if (path === '/api/v1/games/demo-chess/rulespec/history') {
-        return historyResponse;
-      }
-      if (path.startsWith('/api/v1/games/demo-chess/rulespec/diff')) {
-        return diffResponse;
-      }
-      if (path === '/api/v1/games/demo-chess/rulespec/versions/1.5.0') {
-        return versionToRestore;
-      }
-      return null;
+      await waitFor(() => {
+        expect(screen.getByText('Storico Versioni RuleSpec')).toBeInTheDocument();
+      });
     });
 
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    mockApi.put.mockRejectedValueOnce(new Error('Ripristino fallito'));
+    it('shows "Editor" link with gameId', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-    render(<VersionHistory />);
+      setGameId('demo-chess');
+      render(<VersionHistory />);
 
-    const restoreButtons = await screen.findAllByRole('button', { name: /Ripristina/i });
-    await user.click(restoreButtons[1]);
+      await waitFor(() => {
+        const editorLink = screen.getByText('Editor').closest('a');
+        expect(editorLink).toHaveAttribute('href', '/editor?gameId=demo-chess');
+      });
+    });
 
-    await waitFor(() => expect(mockApi.put).toHaveBeenCalled());
-    await screen.findByText(/Ripristino fallito/i);
+    it('shows "Home" link', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-    consoleErrorSpy.mockRestore();
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        const homeLink = screen.getByText('Home').closest('a');
+        expect(homeLink).toHaveAttribute('href', '/');
+      });
+    });
+
+    it('displays game identifier', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Game:/i)).toBeInTheDocument();
+        expect(screen.getByText('demo-chess')).toBeInTheDocument();
+      });
+    });
   });
 
-  it('handles loadCurrentUser error gracefully', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    mockApi.get.mockRejectedValueOnce(new Error('Auth failed'));
+  // ===========================================================================
+  // 7. VERSION RESTORATION (6 tests)
+  // ===========================================================================
 
-    setGameId('test-game');
+  describe('Version Restoration', () => {
+    it('shows restore button for editors', async () => {
+      mockApi.get.mockResolvedValueOnce(editorAuthResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-    render(<VersionHistory />);
+      setGameId('demo-chess');
+      render(<VersionHistory />);
 
-    await waitFor(() => {
-      expect(screen.getByText(/Devi effettuare l'accesso/i)).toBeInTheDocument();
+      await waitFor(() => {
+        const restoreButtons = screen.getAllByText(/Ripristina/i);
+        expect(restoreButtons.length).toBeGreaterThan(0);
+      });
     });
 
-    consoleErrorSpy.mockRestore();
+    it('shows restore button for admins', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        const restoreButtons = screen.getAllByText(/Ripristina/i);
+        expect(restoreButtons.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('hides restore button for regular users', async () => {
+      mockApi.get.mockResolvedValueOnce(userAuthResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.queryByText(/Ripristina/i)).not.toBeInTheDocument();
+      });
+    });
+
+    it('disables restore button for current version', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        const restoreButtons = screen.getAllByRole('button', { name: /Ripristina/i });
+        // First version (current) should be disabled
+        expect(restoreButtons[0]).toBeDisabled();
+        // Older versions should be enabled
+        expect(restoreButtons[1]).not.toBeDisabled();
+      });
+    });
+
+    it('restores version on confirmation', async () => {
+      const user = userEvent.setup();
+      confirmSpy.mockReturnValue(true);
+
+      mockApi.get.mockImplementation((url: string) => {
+        if (url === '/api/v1/auth/me') {
+          return Promise.resolve(authResponse);
+        }
+        if (url === '/api/v1/games/demo-chess/rulespec/history') {
+          return Promise.resolve(mockVersionHistory);
+        }
+        if (url === '/api/v1/games/demo-chess/rulespec/versions/2.0.0') {
+          return Promise.resolve(mockRuleSpec);
+        }
+        return Promise.resolve(null);
+      });
+      mockApi.put.mockResolvedValueOnce({ ...mockRuleSpec, version: '4.0.0' });
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/Ripristina/i).length).toBeGreaterThan(0);
+      });
+
+      const restoreButtons = screen.getAllByRole('button', { name: /Ripristina/i });
+      await user.click(restoreButtons[1]); // Click second button (first enabled)
+
+      expect(confirmSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Sei sicuro di voler ripristinare la versione')
+      );
+
+      await waitFor(() => {
+        expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games/demo-chess/rulespec/versions/2.0.0');
+      }, { timeout: 3000 });
+
+      await waitFor(() => {
+        expect(mockApi.put).toHaveBeenCalledWith('/api/v1/games/demo-chess/rulespec', mockRuleSpec);
+      }, { timeout: 3000 });
+    });
+
+    it('cancels restore on user rejection', async () => {
+      const user = userEvent.setup();
+      confirmSpy.mockReturnValue(false);
+
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/Ripristina/i).length).toBeGreaterThan(0);
+      });
+
+      const restoreButtons = screen.getAllByRole('button', { name: /Ripristina/i });
+      await user.click(restoreButtons[1]);
+
+      await waitFor(() => {
+        expect(confirmSpy).toHaveBeenCalled();
+      });
+
+      // Should not call API
+      expect(mockApi.get).not.toHaveBeenCalledWith(expect.stringContaining('/versions/'));
+      expect(mockApi.put).not.toHaveBeenCalled();
+    });
   });
 
-  it('handles history load error without message property', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    mockApi.get.mockResolvedValueOnce({ user: { id: '1', email: 'test@example.com', role: 'User' } });
-    mockApi.get.mockRejectedValueOnce({});
+  // ===========================================================================
+  // 8. ERROR HANDLING (4 tests)
+  // ===========================================================================
 
-    setGameId('test-game');
+  describe('Error Handling', () => {
+    it('shows error when diff fetch fails', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockRejectedValueOnce({ message: 'Diff calculation failed' });
 
-    render(<VersionHistory />);
+      setGameId('demo-chess');
+      render(<VersionHistory />);
 
-    await waitFor(() => {
-      expect(screen.getByText(/Impossibile caricare lo storico versioni/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/Diff calculation failed/i)).toBeInTheDocument();
+      });
+
+      consoleErrorSpy.mockRestore();
     });
 
-    consoleErrorSpy.mockRestore();
+    it('shows error when restore fails', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const user = userEvent.setup();
+      confirmSpy.mockReturnValue(true);
+
+      mockApi.get.mockImplementation((url: string) => {
+        if (url === '/api/v1/auth/me') {
+          return Promise.resolve(authResponse);
+        }
+        if (url === '/api/v1/games/demo-chess/rulespec/history') {
+          return Promise.resolve(mockVersionHistory);
+        }
+        if (url === '/api/v1/games/demo-chess/rulespec/versions/2.0.0') {
+          return Promise.reject({ message: 'Version not found' });
+        }
+        return Promise.resolve(null);
+      });
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/Ripristina/i).length).toBeGreaterThan(0);
+      });
+
+      const restoreButtons = screen.getAllByRole('button', { name: /Ripristina/i });
+      await user.click(restoreButtons[1]);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Version not found/i)).toBeInTheDocument();
+      }, { timeout: 3000 });
+
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('shows success message after restore', async () => {
+      const user = userEvent.setup();
+      confirmSpy.mockReturnValue(true);
+
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce(mockRuleSpec);
+      mockApi.put.mockResolvedValueOnce({ ...mockRuleSpec, version: '4.0.0' });
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getAllByText(/Ripristina/i).length).toBeGreaterThan(0);
+      });
+
+      const restoreButtons = screen.getAllByRole('button', { name: /Ripristina/i });
+      await user.click(restoreButtons[1]);
+
+      await waitFor(() => {
+        expect(screen.getByText(/ripristinata con successo come versione 4\.0\.0/i)).toBeInTheDocument();
+      });
+    });
+
+    it('handles history load error without message property', async () => {
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockRejectedValueOnce({});
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Impossibile caricare lo storico versioni/i)).toBeInTheDocument();
+      });
+
+      consoleErrorSpy.mockRestore();
+    });
   });
 
-  it('handles diff load error without message property', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  // ===========================================================================
+  // 9. EDGE CASES (2 tests)
+  // ===========================================================================
 
-    mockApi.get.mockResolvedValueOnce({ user: { id: '1', email: 'test@example.com', role: 'User' } });
-    mockApi.get.mockResolvedValueOnce({
-      gameId: 'test-game',
-      versions: [
-        { version: 'v2', createdAt: '2024-01-02T00:00:00Z', rulesCount: 10 },
-        { version: 'v1', createdAt: '2024-01-01T00:00:00Z', rulesCount: 8 }
-      ]
+  describe('Edge Cases', () => {
+    it('handles single version in history (no auto-selection)', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce({
+        gameId: 'demo-chess',
+        versions: [mockVersionHistory.versions[0]],
+        totalVersions: 1
+      });
+
+      setGameId('demo-chess');
+      render(<VersionHistory />);
+
+      await waitFor(() => {
+        const fromSelect = screen.getByLabelText(/^Da versione:/i) as HTMLSelectElement;
+        const toSelect = screen.getByLabelText(/^A versione:/i) as HTMLSelectElement;
+
+        expect(fromSelect.value).toBe('');
+        expect(toSelect.value).toBe('');
+      });
     });
-    mockApi.get.mockRejectedValueOnce({});
 
-    setGameId('test-game');
+    it('marks current version with (corrente) label', async () => {
+      mockApi.get.mockResolvedValueOnce(authResponse);
+      mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-    render(<VersionHistory />);
+      setGameId('demo-chess');
+      render(<VersionHistory />);
 
-    await waitFor(() => {
-      expect(screen.getByText(/Impossibile caricare il diff/i)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('(corrente)')).toBeInTheDocument();
+      });
     });
-
-    consoleErrorSpy.mockRestore();
   });
 });

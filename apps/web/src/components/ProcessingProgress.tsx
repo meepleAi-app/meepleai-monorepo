@@ -56,6 +56,23 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
   const pollStartTimeRef = useRef<number>(Date.now());
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
+  const latestProgressRef = useRef<ProcessingProgressType | null>(null);
+  const hasNotifiedCompletionRef = useRef(false);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    hasNotifiedCompletionRef.current = false;
+    latestProgressRef.current = null;
+    setProgress(null);
+    setLoading(true);
+    setNetworkError(null);
+  }, [pdfId]);
 
   // Fetch progress from API
   const fetchProgress = useCallback(async () => {
@@ -68,16 +85,23 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
 
       if (!data) {
         setNetworkError('Failed to fetch processing progress');
+        setLoading(false);
         return;
       }
 
+      latestProgressRef.current = data;
       setProgress(data);
       setNetworkError(null);
       setLoading(false);
 
       // Check for completion
       if (isProcessingComplete(data.currentStep)) {
-        if (data.currentStep === ProcessingStep.Completed && onComplete) {
+        if (
+          data.currentStep === ProcessingStep.Completed &&
+          onComplete &&
+          !hasNotifiedCompletionRef.current
+        ) {
+          hasNotifiedCompletionRef.current = true;
           onComplete();
         } else if (data.currentStep === ProcessingStep.Failed && onError && data.errorMessage) {
           onError(data.errorMessage);
@@ -96,43 +120,53 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
 
   // Setup polling
   useEffect(() => {
-    isMountedRef.current = true;
     pollStartTimeRef.current = Date.now();
+
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
 
     // Initial fetch
     void fetchProgress();
 
     // Setup interval for polling
     intervalRef.current = setInterval(() => {
+      if (!isMountedRef.current) {
+        return;
+      }
+
       // Check max poll duration
       const elapsed = Date.now() - pollStartTimeRef.current;
       if (elapsed > MAX_POLL_DURATION_MS) {
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
+          intervalRef.current = null;
         }
         setNetworkError('Processing timeout exceeded (10 minutes). Please refresh to check status.');
         return;
       }
 
-      // Only poll if not in terminal state
-      if (progress && !isProcessingComplete(progress.currentStep)) {
-        void fetchProgress();
-      } else if (progress && isProcessingComplete(progress.currentStep)) {
-        // Stop polling if completed or failed
+      const currentProgress = latestProgressRef.current;
+      if (currentProgress && isProcessingComplete(currentProgress.currentStep)) {
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
+          intervalRef.current = null;
         }
+        return;
       }
+
+      void fetchProgress();
     }, POLL_INTERVAL_MS);
 
     // Cleanup on unmount
     return () => {
-      isMountedRef.current = false;
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
-  }, [fetchProgress, progress]);
+  }, [fetchProgress]);
 
   // Handle cancel
   const handleCancelClick = useCallback(() => {
@@ -394,7 +428,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
       {progress && (
         <div>
           <p style={statusTextStyle}>
-            <strong>Status:</strong> {getStepLabel(progress.currentStep)}
+            <strong>Processing status:</strong> {getStepLabel(progress.currentStep)}
           </p>
 
           {/* Time Remaining */}

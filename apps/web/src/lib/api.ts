@@ -111,8 +111,11 @@ export class ApiError extends Error {
  * Creates an enhanced error with correlation ID from response
  */
 async function createApiError(path: string, response: Response): Promise<ApiError> {
-  const correlationId = response.headers.get('X-Correlation-Id') || undefined;
-  let errorMessage = `API ${path} ${response.status}`;
+  const correlationId = typeof response.headers?.get === 'function'
+    ? response.headers.get('X-Correlation-Id') || undefined
+    : undefined;
+  const status = typeof response.status === 'number' ? response.status : 500;
+  let errorMessage = `API ${path} ${status}`;
 
   // Try to extract error message from response body
   try {
@@ -124,7 +127,7 @@ async function createApiError(path: string, response: Response): Promise<ApiErro
     // If JSON parsing fails, use default message
   }
 
-  return new ApiError(errorMessage, response.status, correlationId, response);
+  return new ApiError(errorMessage, status, correlationId, response);
 }
 
 export const api = {

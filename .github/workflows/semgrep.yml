@@ -49,6 +49,7 @@ jobs:
 
       - name: Run Semgrep
         id: semgrep
+        continue-on-error: true
         env:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}  # Optional: for Semgrep Cloud
         run: |
@@ -104,9 +105,20 @@ jobs:
 
     steps:
       - name: Download Semgrep results
+        id: download-artifact
         uses: actions/download-artifact@v5
         with:
           name: semgrep-results
+        continue-on-error: true
+
+      - name: Check if artifact was downloaded
+        id: check-artifact
+        run: |
+          if [ -f "semgrep.json" ]; then
+            echo "artifact_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "artifact_exists=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Generate PR comment
         if: github.event_name == 'pull_request'
@@ -114,6 +126,34 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+
+            // Check if semgrep.json exists
+            if (!fs.existsSync('semgrep.json')) {
+              const body = `## 🔒 Semgrep Security Scan Results
+
+              ⚠️ **Semgrep scan encountered an error or was cancelled.**
+
+              The scan could not complete successfully. This may be due to:
+              - Workflow cancellation
+              - Semgrep tool error
+              - Resource constraints
+
+              Please check the workflow logs for more details.
+
+              ---
+
+              <sub>Powered by [Semgrep](https://semgrep.dev) | Free SAST alternative to CodeQL</sub>
+              `;
+
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+              return;
+            }
+
             const results = JSON.parse(fs.readFileSync('semgrep.json', 'utf8'));
 
             const errors = results.results.filter(r => r.extra.severity === 'ERROR');

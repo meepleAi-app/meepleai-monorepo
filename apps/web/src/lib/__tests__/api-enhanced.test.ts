@@ -262,7 +262,6 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
 
       // When: Request made
       const promise = apiEnhanced.get('/api/v1/test');
-      await jest.runAllTimersAsync();
 
       // Then: Error thrown after max retries
       await expect(promise).rejects.toThrow(ApiError);
@@ -344,7 +343,7 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
       // Given: Slow API endpoint and timeout configured
       let abortSignalReceived: AbortSignal | undefined;
       fetchMock.mockImplementation((_url, init) => {
-        abortSignalReceived = init?.signal;
+        abortSignalReceived = init?.signal ?? undefined;
         // Simulate hanging request that throws when aborted
         return new Promise((_, reject) => {
           init?.signal?.addEventListener('abort', () => {
@@ -367,7 +366,7 @@ describe('Feature: Enhanced API Client with Retry and Error Handling', () => {
       // Given: Timeout configured
       let abortSignalReceived: AbortSignal | undefined;
       fetchMock.mockImplementation(async (_url, init) => {
-        abortSignalReceived = init?.signal;
+        abortSignalReceived = init?.signal ?? undefined;
         return createMockResponse(200, { success: true });
       });
 

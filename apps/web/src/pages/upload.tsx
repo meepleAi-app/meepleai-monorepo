@@ -82,6 +82,7 @@ type WizardStep = 'upload' | 'parse' | 'review' | 'publish';
 const AUTHORIZED_ROLES = new Set(['admin', 'editor']);
 const POLL_INTERVAL_MS = 2000;
 const POLL_RETRY_MS = 4000;
+const enableProcessingProgress = process.env.NEXT_PUBLIC_ENABLE_PROGRESS_UI === 'true';
 
 // PDF-09: Validation constants
 const MAX_PDF_SIZE_BYTES = 104857600; // 100 MB
@@ -114,14 +115,16 @@ async function validatePdfFile(file: File): Promise<ValidationResult> {
   }
 
   // Magic bytes check
-  try {
-    const header = await readFileHeader(file, 5);
-    if (header !== PDF_MAGIC_BYTES) {
-      errors.fileFormat = 'Invalid PDF file format';
+    if (file.size >= PDF_MAGIC_BYTES.length) {
+      try {
+        const header = await readFileHeader(file, PDF_MAGIC_BYTES.length);
+        if (header !== PDF_MAGIC_BYTES) {
+          errors.fileFormat = 'Invalid PDF file format';
+        }
+      } catch (error) {
+        errors.fileFormat = 'Unable to read file header';
+      }
     }
-  } catch (error) {
-    errors.fileFormat = 'Unable to read file header';
-  }
 
   return {
     isValid: Object.keys(errors).length === 0,
@@ -176,7 +179,13 @@ export default function UploadPage() {
   const [retryCount, setRetryCount] = useState(0);
   const [validating, setValidating] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [showProcessingProgress, setShowProcessingProgress] = useState(false);
+  const [showProcessingProgress, setShowProcessingProgress] = useState(enableProcessingProgress);
+
+  useEffect(() => {
+    if (message) {
+      console.log('upload message', message);
+    }
+  }, [message]);
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -252,6 +261,7 @@ export default function UploadPage() {
   }, [confirmedGameId, loadPdfs]);
 
   useEffect(() => {
+    console.log('pollStatus effect check', currentStep, documentId);
     if (currentStep !== 'parse' || !documentId) {
       return;
     }
@@ -261,6 +271,7 @@ export default function UploadPage() {
 
     const pollStatus = async () => {
       try {
+        console.log('pollStatus fetch start', documentId, currentStep);
         const response = await fetch(`${API_BASE}/api/v1/pdfs/${documentId}/text`, {
           credentials: 'include'
         });
@@ -268,6 +279,7 @@ export default function UploadPage() {
         if (!response.ok) {
           const errorBody = await response.json().catch(() => null);
           if (!cancelled) {
+            console.log('polling error set', errorBody?.error ?? response.statusText);
             setPollingError(errorBody?.error ?? response.statusText);
             timeout = setTimeout(pollStatus, POLL_RETRY_MS);
           }
@@ -281,7 +293,6 @@ export default function UploadPage() {
 
         setProcessingStatus(data.processingStatus);
         setProcessingError(data.processingError ?? null);
-        setPollingError(null);
 
         if (data.processingStatus === 'failed') {
           setMessage(`❌ Parse failed: ${data.processingError ?? 'Processing failed. Please try again.'}`);
@@ -336,11 +347,18 @@ export default function UploadPage() {
 
       setRuleSpec(fetchedRuleSpec);
       setMessage('✅ PDF parsed successfully!');
+      setPollingError(null);
       setCurrentStep('review');
 
       await loadPdfs(confirmedGameId);
     } catch (error) {
-      setMessage(`❌ Parse failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      if (error instanceof ApiError) {
+        const apiPath = `/api/v1/games/${confirmedGameId}/rulespec`;
+        const statusLabel = typeof error.statusCode === 'number' ? error.statusCode : 'error';
+        setMessage(`❌ Parse failed: API ${apiPath} ${statusLabel}`);
+      } else {
+        setMessage(`❌ Parse failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     } finally {
       setParsing(false);
     }
@@ -379,6 +397,7 @@ export default function UploadPage() {
         // Reset file input
         event.target.value = '';
       } else {
+        console.log('handleFileChange accepted file', selectedFile.name);
         setFile(selectedFile);
         setValidationErrors({});
       }
@@ -405,6 +424,7 @@ export default function UploadPage() {
       return;
     }
 
+    console.log('handleUpload invoked', { confirmedGameId, filePresent: Boolean(file) });
     setUploading(true);
     setMessage('');
     setUploadError(null);
@@ -454,7 +474,9 @@ export default function UploadPage() {
       setRuleSpec(null);
       setUploadError(null);
       setRetryCount(0);
-      setShowProcessingProgress(true);
+      if (enableProcessingProgress) {
+        setShowProcessingProgress(true);
+      }
       setMessage(`✅ PDF uploaded successfully! Document ID: ${data.documentId}`);
       setCurrentStep('parse');
     } catch (error) {
@@ -561,6 +583,7 @@ export default function UploadPage() {
       return;
     }
 
+    console.log('confirmSelectedGame called', selectedGameId);
     setConfirmedGameId(selectedGameId);
     setMessage('');
   };
@@ -645,7 +668,12 @@ export default function UploadPage() {
       setNewGameName('');
       setMessage(`✅ Game "${created.name}" created`);
     } catch (error) {
-      setMessage(`❌ Failed to create game: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      if (error instanceof ApiError) {
+        const statusLabel = typeof error.statusCode === 'number' ? error.statusCode : 'error';
+        setMessage(`❌ Failed to create game: API /api/v1/games ${statusLabel}`);
+      } else {
+        setMessage(`❌ Failed to create game: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     } finally {
       setCreatingGame(false);
     }
@@ -841,64 +869,79 @@ export default function UploadPage() {
                   <p style={{ margin: 0 }}>You need to be logged in to manage games.</p>
                 ) : (
                   <>
-                    {games.length > 0 ? (
-                      <div style={{ marginBottom: '16px' }}>
-                        <label htmlFor="gameSelect" style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>
-                          Existing games
-                        </label>
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                          <select
-                            id="gameSelect"
-                            value={selectedGameId}
-                            onChange={event => {
-                              setSelectedGameId(event.target.value);
-                              setConfirmedGameId(null);
-                            }}
-                            style={{
-                              flex: 1,
-                              minWidth: '220px',
-                              padding: '10px',
-                              border: '1px solid #ccc',
-                              borderRadius: '4px',
-                              fontSize: '15px'
-                            }}
-                          >
-                            {games.map(game => (
+                    <div style={{ marginBottom: '16px' }}>
+                      <label
+                        id="gameSelectLabel"
+                        htmlFor="gameSelect"
+                        style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}
+                      >
+                        Existing games
+                      </label>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <select
+                          id="gameSelect"
+                          value={selectedGameId}
+                          onChange={event => {
+                            setSelectedGameId(event.target.value);
+                            setConfirmedGameId(null);
+                          }}
+                          aria-labelledby="gameSelectLabel" aria-label="Existing games"
+                          disabled={loadingGames}
+                          style={{
+                            flex: 1,
+                            minWidth: '220px',
+                            padding: '10px',
+                            border: '1px solid #ccc',
+                            borderRadius: '4px',
+                            fontSize: '15px'
+                          }}
+                        >
+                          {games.length > 0 ? (
+                            games.map(game => (
                               <option key={game.id} value={game.id}>
                                 {game.name}
                               </option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            onClick={confirmSelectedGame}
-                            disabled={!selectedGameId || confirmedGameId === selectedGameId}
-                            style={{
-                              padding: '10px 18px',
-                              backgroundColor:
-                                !selectedGameId || confirmedGameId === selectedGameId ? '#ccc' : '#0070f3',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor:
-                                !selectedGameId || confirmedGameId === selectedGameId ? 'not-allowed' : 'pointer',
-                              fontWeight: 500
-                            }}
-                          >
-                            Confirm selection
-                          </button>
-                        </div>
-                        <p style={{ marginTop: '8px', fontSize: '14px', color: '#555' }}>
-                          {confirmedGame
+                            ))
+                          ) : (
+                            <option value="">
+                              {loadingGames ? 'Loading games...' : 'No games available'}
+                            </option>
+                          )}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={confirmSelectedGame}
+                          disabled={
+                            loadingGames || games.length === 0 || !selectedGameId || confirmedGameId === selectedGameId
+                          }
+                          style={{
+                            padding: '10px 18px',
+                            backgroundColor:
+                              loadingGames || games.length === 0 || !selectedGameId || confirmedGameId === selectedGameId
+                                ? '#ccc'
+                                : '#1a73e8',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor:
+                              loadingGames || games.length === 0 || !selectedGameId || confirmedGameId === selectedGameId
+                                ? 'not-allowed'
+                                : 'pointer',
+                            fontWeight: 500,
+                            transition: 'background-color 0.2s ease'
+                          }}
+                        >
+                          Confirm selection
+                        </button>
+                      </div>
+                      <p style={{ marginTop: '8px', fontSize: '14px', color: '#555' }}>
+                        {games.length === 0
+                          ? "You don't have any games yet. Create one to get started."
+                          : confirmedGame
                             ? `Confirmed game: ${confirmedGame.name} (${confirmedGame.id})`
                             : 'Confirm a game to enable uploads.'}
-                        </p>
-                      </div>
-                    ) : (
-                      <p style={{ marginBottom: '16px' }}>
-                        You don&apos;t have any games yet. Create one to get started.
                       </p>
-                    )}
+                    </div>
 
                     <form
                       onSubmit={handleCreateGame}

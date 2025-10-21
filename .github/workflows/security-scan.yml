@@ -48,7 +48,7 @@ jobs:
         if: matrix.language == 'csharp'
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '9.0.x'
 
       - name: Install PDF dependencies (C# only)
         if: matrix.language == 'csharp'
@@ -82,7 +82,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '9.0.x'
 
       - name: Install PDF dependencies
         run: sudo apt-get update && sudo apt-get install -y libgdiplus
@@ -191,7 +191,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '9.0.x'
 
       - name: Install Security Code Scan Analyzer
         run: |

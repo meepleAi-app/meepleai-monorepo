@@ -1,3 +1,7 @@
+// Ensure NODE_ENV is set to 'test' before module resolution
+// This prevents React from using production builds during testing
+process.env.NODE_ENV = 'test';
+
 const nextJest = require('next/jest')
 
 const createJestConfig = nextJest({
@@ -23,10 +27,10 @@ const customJestConfig = {
   ],
   coverageThreshold: {
     global: {
-      branches: 60,
-      functions: 60,
-      lines: 60,
-      statements: 60,
+      branches: 90,
+      functions: 90,
+      lines: 90,
+      statements: 90,
     },
   },
   testMatch: [
@@ -40,6 +44,7 @@ const customJestConfig = {
     '/__tests__/fixtures/',
     '/__tests__/utils/mock-api-router\\.ts$',
     '/__tests__/utils/mock-api-presets\\.ts$',
+    '/test-utils\\.tsx$', // Utility file, not a test file
   ],
 }
 

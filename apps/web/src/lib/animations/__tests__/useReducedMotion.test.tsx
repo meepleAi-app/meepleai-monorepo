@@ -12,6 +12,7 @@ describe('useReducedMotion', () => {
   let removeEventListenerSpy: jest.Mock;
   let addListenerSpy: jest.Mock;
   let removeListenerSpy: jest.Mock;
+  let matchMediaSpy: jest.SpyInstance;
 
   beforeEach(() => {
     // Reset spies
@@ -30,15 +31,12 @@ describe('useReducedMotion', () => {
       removeListener: removeListenerSpy,
     }));
 
-    Object.defineProperty(window, 'matchMedia', {
-      writable: true,
-      configurable: true,
-      value: matchMediaMock,
-    });
+    matchMediaSpy = jest.spyOn(window, 'matchMedia').mockImplementation(matchMediaMock as unknown as typeof window.matchMedia);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
+    matchMediaSpy.mockRestore();
   });
 
   it('should return false when user does not prefer reduced motion', () => {

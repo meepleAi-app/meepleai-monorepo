@@ -1,4 +1,9 @@
 {
+  "env": {
+    "USE_BUILTIN_RIPGREP": "1",
+    "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "1",
+    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "0"
+  },
   "permissions": {
     "allow": [
       "Bash(dotnet build)",
@@ -199,7 +204,9 @@
       "Bash(npx jest src/components/loading/__tests__/MessageAnimator.test.tsx src/components/loading/__tests__/TypingIndicator.test.tsx -u)",
       "Bash(npx jest src/components/loading)",
       "Bash(Select-String -Pattern \"(error|failed|FAIL|Error|✖|×)\" -Context 2,1)",
-      "Bash(Select-Object -First 50)"
+      "Bash(Select-Object -First 50)",
+      "Bash(Select-String -Pattern \"(Passed|Failed|Total tests|Test Run|error|warning)\" -Context 0,1)",
+      "Bash(Select-Object -Last 50)"
     ],
     "deny": [],
     "ask": []
@@ -215,5 +222,10 @@
     "playwright",
     "sequential",
     "aakarsh-sasi-memory-bank-mcp"
-  ]
+  ],
+  "statusLine": {
+    "type": "command",
+    "command": "python3 .claude/scripts/context-monitor.py"
+  },
+  "outputStyle": "Explanatory"
 }

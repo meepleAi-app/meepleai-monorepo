@@ -44,6 +44,7 @@ const customJestConfig = {
     '/__tests__/fixtures/',
     '/__tests__/utils/mock-api-router\\.ts$',
     '/__tests__/utils/mock-api-presets\\.ts$',
+    '/test-utils\\.tsx$', // Utility file, not a test file
   ],
 }
 

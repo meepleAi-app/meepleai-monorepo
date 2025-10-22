@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text.Json;
 using Api.Middleware;
+using Api.Tests.Support;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -10,6 +13,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Moq;
 using Xunit;
 
 namespace Api.Tests;
@@ -386,6 +390,36 @@ public class ApiExceptionHandlerMiddlewareTests
             async () => await client.GetAsync(path));
 
         Assert.Equal("Test error", exception.Message);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_LogsSanitizedPathForExceptions()
+    {
+        // Arrange
+        var logger = new TestLogger<ApiExceptionHandlerMiddleware>();
+        var environment = new Mock<IHostEnvironment>();
+        environment.Setup(e => e.IsDevelopment()).Returns(false);
+
+        RequestDelegate throwingNext = _ => throw new InvalidOperationException("Boom");
+        var middleware = new ApiExceptionHandlerMiddleware(throwingNext, logger, environment.Object);
+
+        var context = new DefaultHttpContext
+        {
+            RequestServices = new ServiceCollection().AddLogging().BuildServiceProvider(),
+            TraceIdentifier = "trace-123"
+        };
+        context.Response.Body = new MemoryStream();
+        context.Request.Path = "/api/unsafe\r\npath";
+        context.Request.Method = "GET";
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        var entry = Assert.Single(logger.Entries.Where(e => e.LogLevel == LogLevel.Error));
+        var sanitizedPath = entry.GetStateValue("Path");
+
+        Assert.Equal("/api/unsafepath", sanitizedPath);
     }
 
     /// <summary>

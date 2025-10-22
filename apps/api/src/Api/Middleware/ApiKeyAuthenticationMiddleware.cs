@@ -72,7 +72,7 @@ public class ApiKeyAuthenticationMiddleware
                         "API key authentication successful. UserId: {UserId}, ApiKeyId: {ApiKeyId}, Path: {Path}",
                         result.UserId,
                         result.ApiKeyId,
-                        context.Request.Path);
+                        LogValueSanitizer.SanitizePath(context.Request.Path));
 
                     await _next(context);
                     return;
@@ -83,7 +83,7 @@ public class ApiKeyAuthenticationMiddleware
                     _logger.LogWarning(
                         "API key authentication failed: {Reason}. Path: {Path}, IP: {IP}",
                         result.InvalidReason,
-                        context.Request.Path.ToString().Replace("\r", "").Replace("\n", ""),
+                        LogValueSanitizer.SanitizePath(context.Request.Path),
                         context.Connection.RemoteIpAddress);
 
                     context.Response.StatusCode = StatusCodes.Status401Unauthorized;

@@ -106,7 +106,11 @@ public class RequestContextEnricher : ILogEventEnricher
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext != null)
         {
-            logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("RequestPath", httpContext.Request.Path.Value ?? string.Empty));
+            var sanitizedPath = httpContext.Request.Path.Value?
+                .Replace("\r", string.Empty)
+                .Replace("\n", string.Empty) ?? string.Empty;
+
+            logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("RequestPath", sanitizedPath));
             logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("RequestMethod", httpContext.Request.Method));
             logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("RemoteIp", httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"));
             logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("UserAgent", httpContext.Request.Headers.UserAgent.ToString()));

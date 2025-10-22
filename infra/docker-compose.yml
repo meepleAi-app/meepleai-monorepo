@@ -134,15 +134,11 @@ services:
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
       SPAN_STORAGE_TYPE: "badger"
-      BADGER_EPHEMERAL: "false"
-      BADGER_DIRECTORY_VALUE: "/badger/data"
-      BADGER_DIRECTORY_KEY: "/badger/key"
+      BADGER_EPHEMERAL: "true"  # Use in-memory storage for development (no persistence needed)
     ports:
       - "16686:16686"  # Jaeger UI
       - "4318:4318"    # OTLP HTTP receiver
       - "4317:4317"    # OTLP gRPC receiver (optional)
-    volumes:
-      - jaegerdata:/badger
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:16686"]
       interval: 10s
@@ -325,7 +321,7 @@ volumes:
   seqdata:
   ollamadata:
   # OPS-02: OpenTelemetry volumes
-  jaegerdata:
+  # jaegerdata removed - using ephemeral storage for development
   prometheusdata:
   grafanadata:
   # OPS-05: Error Monitoring & Alerting volumes

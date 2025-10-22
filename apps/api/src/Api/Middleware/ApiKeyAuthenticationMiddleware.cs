@@ -83,7 +83,7 @@ public class ApiKeyAuthenticationMiddleware
                     _logger.LogWarning(
                         "API key authentication failed: {Reason}. Path: {Path}, IP: {IP}",
                         result.InvalidReason,
-                        context.Request.Path,
+                        context.Request.Path.ToString().Replace("\r", "").Replace("\n", ""),
                         context.Connection.RemoteIpAddress);
 
                     context.Response.StatusCode = StatusCodes.Status401Unauthorized;

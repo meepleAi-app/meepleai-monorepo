@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -180,6 +182,37 @@ public class ApiExceptionHandlerMiddlewareTests
         Assert.NotNull(errorResponse);
         Assert.Equal("internal_server_error", errorResponse.Error);
         Assert.Equal("An unexpected error occurred", errorResponse.Message);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_LogsSanitizedPath_WhenPathContainsControlCharacters()
+    {
+        // Arrange
+        const string maliciousPath = "/api/attack\r\nSet-Cookie:evil";
+        var logger = new TestLogger<ApiExceptionHandlerMiddleware>();
+        var middleware = new ApiExceptionHandlerMiddleware(
+            _ => throw new InvalidOperationException("Boom"),
+            logger,
+            new TestHostEnvironment());
+
+        var context = new DefaultHttpContext
+        {
+            TraceIdentifier = Guid.NewGuid().ToString()
+        };
+        context.Request.Path = maliciousPath;
+        context.Request.Method = HttpMethods.Get;
+
+        // Act
+        await middleware.InvokeAsync(context);
+
+        // Assert
+        var logEntry = Assert.Single(logger.Records);
+        Assert.DoesNotContain('\r', logEntry.Message);
+        Assert.DoesNotContain('\n', logEntry.Message);
+
+        var sanitizedPath = maliciousPath.Replace("\r", string.Empty).Replace("\n", string.Empty);
+        Assert.Contains(sanitizedPath, logEntry.Message);
+        Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);
     }
 
     [Fact]
@@ -462,5 +495,42 @@ public class ApiExceptionHandlerMiddlewareTests
 
         [System.Text.Json.Serialization.JsonPropertyName("stackTrace")]
         public string? StackTrace { get; set; }
+    }
+
+    private sealed class TestHostEnvironment : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = Environments.Production;
+
+        public string ApplicationName { get; set; } = nameof(ApiExceptionHandlerMiddlewareTests);
+
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+    }
+
+    private sealed class TestLogger<T> : ILogger<T>
+    {
+        private readonly List<LogEntry> _entries = new();
+
+        public IReadOnlyList<LogEntry> Records => _entries;
+
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            var message = formatter(state, exception);
+            _entries.Add(new LogEntry(logLevel, eventId, message, exception));
+        }
+
+        internal sealed record LogEntry(LogLevel Level, EventId EventId, string Message, Exception? Exception);
+    }
+
+    private sealed class NullScope : IDisposable
+    {
+        public static NullScope Instance { get; } = new();
+
+        public void Dispose()
+        {
+        }
     }
 }

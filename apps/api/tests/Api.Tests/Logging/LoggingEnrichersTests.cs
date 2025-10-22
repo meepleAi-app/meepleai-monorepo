@@ -211,6 +211,31 @@ public class LoggingEnrichersTests
         Assert.Equal("Mozilla/5.0 (Test)", scalarAgent.Value);
     }
 
+    [Theory]
+    [InlineData("/api/v1/games\r\n/details", "/api/v1/games/details")]
+    [InlineData("/api/v1/games\r\r", "/api/v1/games")]
+    [InlineData("/api/v1/games\n", "/api/v1/games")]
+    public void RequestContextEnricher_WithControlCharactersInPath_SanitizesRequestPath(string requestPath, string expected)
+    {
+        // Arrange
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Path = requestPath;
+        httpContext.Request.Method = "GET";
+
+        var httpContextAccessor = new HttpContextAccessor { HttpContext = httpContext };
+        var enricher = new RequestContextEnricher(httpContextAccessor);
+
+        var logEvent = CreateLogEvent();
+
+        // Act
+        enricher.Enrich(logEvent, new TestPropertyFactory());
+
+        // Assert
+        Assert.True(logEvent.Properties.TryGetValue("RequestPath", out var requestPathProperty));
+        var scalarPath = Assert.IsType<ScalarValue>(requestPathProperty);
+        Assert.Equal(expected, scalarPath.Value);
+    }
+
     [Fact]
     public void RequestContextEnricher_WithoutHttpContext_DoesNotAddProperties()
     {

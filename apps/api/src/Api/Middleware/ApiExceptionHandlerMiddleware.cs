@@ -47,7 +47,7 @@ public class ApiExceptionHandlerMiddleware
         // Log the exception with full details
         _logger.LogError(ex,
             "Unhandled exception in API endpoint. Path: {Path}, Method: {Method}, TraceId: {TraceId}",
-            context.Request.Path,
+            LogValueSanitizer.SanitizePath(context.Request.Path),
             context.Request.Method,
             context.TraceIdentifier);
 

@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__serena__get_current_config",
+      "mcp__serena__activate_project",
+      "mcp__serena__check_onboarding_performed",
+      "mcp__serena__onboarding",
+      "mcp__serena__write_memory",
+      "mcp__sequential-thinking__sequentialthinking",
+      "mcp__serena__list_dir",
+      "mcp__ide__getDiagnostics",
+      "Bash(dotnet test:*)",
+      "Bash(pnpm test:*)",
+      "Bash(find:*)",
+      "Bash(git checkout:*)",
+      "mcp__morphllm-fast-apply__edit_file",
+      "Bash(timeout 60 pnpm test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

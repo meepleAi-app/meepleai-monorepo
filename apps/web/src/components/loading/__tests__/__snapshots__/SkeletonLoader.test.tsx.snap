@@ -252,6 +252,40 @@ exports[`SkeletonLoader Snapshot tests should match snapshot for chatHistory var
 </div>
 `;
 
+exports[`SkeletonLoader Snapshot tests should match snapshot for gameSelection variant 1`] = `
+<div
+  class="space-y-4"
+>
+  <div
+    aria-label="Loading..."
+    aria-live="polite"
+    class="
+            h-16 rounded-md
+            animate-pulse
+            bg-slate-200 dark:bg-slate-700
+            
+          "
+    role="status"
+  >
+    <span
+      class="sr-only"
+    >
+      Loading...
+    </span>
+    <div
+      class="h-full flex items-center p-3 space-x-3"
+    >
+      <div
+        class="flex-1 h-10 bg-slate-300 dark:bg-slate-600 rounded"
+      />
+      <div
+        class="w-24 h-10 bg-slate-300 dark:bg-slate-600 rounded"
+      />
+    </div>
+  </div>
+</div>
+`;
+
 exports[`SkeletonLoader Snapshot tests should match snapshot for games variant 1`] = `
 <div
   class="space-y-4"
@@ -393,6 +427,140 @@ exports[`SkeletonLoader Snapshot tests should match snapshot for message variant
         />
         <div
           class="h-3 bg-slate-300 dark:bg-slate-600 rounded w-4/5"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`SkeletonLoader Snapshot tests should match snapshot for processingProgress variant 1`] = `
+<div
+  class="space-y-4"
+>
+  <div
+    aria-label="Loading..."
+    aria-live="polite"
+    class="
+            h-40 rounded-lg
+            animate-pulse
+            bg-slate-200 dark:bg-slate-700
+            
+          "
+    role="status"
+  >
+    <span
+      class="sr-only"
+    >
+      Loading...
+    </span>
+    <div
+      class="h-full flex flex-col p-4 space-y-3"
+    >
+      <div
+        class="h-5 bg-slate-300 dark:bg-slate-600 rounded w-1/2"
+      />
+      <div
+        class="h-3 bg-slate-300 dark:bg-slate-600 rounded w-full"
+      />
+      <div
+        class="h-3 bg-slate-300 dark:bg-slate-600 rounded w-1/4"
+      />
+      <div
+        class="flex space-x-2 mt-2"
+      >
+        <div
+          class="w-8 h-8 bg-slate-300 dark:bg-slate-600 rounded-full"
+        />
+        <div
+          class="w-8 h-8 bg-slate-300 dark:bg-slate-600 rounded-full"
+        />
+        <div
+          class="w-8 h-8 bg-slate-300 dark:bg-slate-600 rounded-full"
+        />
+        <div
+          class="w-8 h-8 bg-slate-300 dark:bg-slate-600 rounded-full"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`SkeletonLoader Snapshot tests should match snapshot for uploadQueue variant 1`] = `
+<div
+  class="space-y-4"
+>
+  <div
+    aria-label="Loading..."
+    aria-live="polite"
+    class="
+            h-24 rounded-lg
+            animate-pulse
+            bg-slate-200 dark:bg-slate-700
+            
+          "
+    role="status"
+  >
+    <span
+      class="sr-only"
+    >
+      Loading...
+    </span>
+    <div
+      class="h-full flex items-center p-4 space-x-4"
+    >
+      <div
+        class="w-12 h-12 bg-slate-300 dark:bg-slate-600 rounded flex-shrink-0"
+      />
+      <div
+        class="flex-1 space-y-2"
+      >
+        <div
+          class="h-4 bg-slate-300 dark:bg-slate-600 rounded w-3/4"
+        />
+        <div
+          class="h-3 bg-slate-300 dark:bg-slate-600 rounded w-1/2"
+        />
+        <div
+          class="h-2 bg-slate-300 dark:bg-slate-600 rounded w-full"
+        />
+      </div>
+    </div>
+  </div>
+  <div
+    aria-label="Loading..."
+    aria-live="polite"
+    class="
+            h-24 rounded-lg
+            animate-pulse
+            bg-slate-200 dark:bg-slate-700
+            
+          "
+    role="status"
+  >
+    <span
+      class="sr-only"
+    >
+      Loading...
+    </span>
+    <div
+      class="h-full flex items-center p-4 space-x-4"
+    >
+      <div
+        class="w-12 h-12 bg-slate-300 dark:bg-slate-600 rounded flex-shrink-0"
+      />
+      <div
+        class="flex-1 space-y-2"
+      >
+        <div
+          class="h-4 bg-slate-300 dark:bg-slate-600 rounded w-3/4"
+        />
+        <div
+          class="h-3 bg-slate-300 dark:bg-slate-600 rounded w-1/2"
+        />
+        <div
+          class="h-2 bg-slate-300 dark:bg-slate-600 rounded w-full"
         />
       </div>
     </div>

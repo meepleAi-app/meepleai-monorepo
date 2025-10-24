@@ -46,6 +46,7 @@ const customJestConfig = {
     '/__tests__/utils/mock-api-router\\.ts$',
     '/__tests__/utils/mock-api-presets\\.ts$',
     '/test-utils\\.tsx$', // Utility file, not a test file
+    '/chat-test-utils\\.ts$', // Chat test utility file, not a test file
   ],
 }
 

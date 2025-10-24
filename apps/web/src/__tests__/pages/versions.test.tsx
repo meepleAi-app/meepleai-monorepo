@@ -394,8 +394,9 @@ describe('VersionHistory Page', () => {
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
+      // Wait for version history to load and dropdowns to appear
       await waitFor(() => {
-        expect(screen.getByLabelText(/^Da versione:/i)).toBeInTheDocument();
+        expect(screen.getByText('3.0.0')).toBeInTheDocument();
       });
 
       const fromSelect = screen.getByLabelText(/^Da versione:/i);
@@ -416,8 +417,9 @@ describe('VersionHistory Page', () => {
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
+      // Wait for version history to load and dropdowns to appear
       await waitFor(() => {
-        expect(screen.getByLabelText(/^A versione:/i)).toBeInTheDocument();
+        expect(screen.getByText('3.0.0')).toBeInTheDocument();
       });
 
       const toSelect = screen.getByLabelText(/^A versione:/i);

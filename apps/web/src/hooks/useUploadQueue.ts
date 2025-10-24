@@ -14,6 +14,7 @@ export interface UploadQueueItem {
   id: string;
   file: File;
   gameId: string;
+  language: string; // Document language for OCR/parsing
   status: UploadStatus;
   progress: number;
   error?: string;
@@ -35,9 +36,15 @@ export interface UploadQueueStats {
 export interface UseUploadQueueOptions {
   concurrencyLimit?: number;
   maxRetries?: number;
+  autoUpload?: boolean; // Auto-start uploads when files added (default: true for production, false for testing)
   onUploadComplete?: (item: UploadQueueItem) => void;
   onUploadError?: (item: UploadQueueItem, error: string) => void;
   onAllComplete?: (stats: UploadQueueStats) => void;
+  // Test observability hooks - fire synchronously before async operations
+  onUploadStart?: (item: UploadQueueItem) => void; // Called immediately before upload begins
+  onUploadSuccess?: (item: UploadQueueItem) => void; // Called immediately after successful upload
+  onQueueAdd?: (items: UploadQueueItem[]) => void; // Called immediately after files added to queue
+  onRetry?: (item: UploadQueueItem, attempt: number, error: Error) => void; // Called on each retry attempt
 }
 
 interface UploadOperation {
@@ -56,9 +63,14 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
   const {
     concurrencyLimit = 3,
     maxRetries = 3,
+    autoUpload = true, // Default to true for production behavior
     onUploadComplete,
     onUploadError,
-    onAllComplete
+    onAllComplete,
+    onUploadStart,
+    onUploadSuccess,
+    onQueueAdd,
+    onRetry
   } = options;
 
   const [queue, setQueue] = useState<UploadQueueItem[]>([]);
@@ -69,11 +81,12 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
   /**
    * Adds files to the upload queue
    */
-  const addFiles = useCallback((files: File[], gameId: string) => {
+  const addFiles = useCallback((files: File[], gameId: string, language: string) => {
     const newItems: UploadQueueItem[] = files.map(file => ({
       id: `${Date.now()}-${Math.random().toString(36).substring(7)}`,
       file,
       gameId,
+      language,
       status: 'pending',
       progress: 0,
       retryCount: 0
@@ -81,7 +94,10 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
 
     setQueue(prev => [...prev, ...newItems]);
     allCompleteNotifiedRef.current = false;
-  }, []);
+
+    // Test observability: notify immediately after queue update (synchronous)
+    onQueueAdd?.(newItems);
+  }, [onQueueAdd]);
 
   /**
    * Removes a file from the queue (only if not uploading)
@@ -193,6 +209,9 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
       const operation: UploadOperation = { id: item.id, abortController };
       activeUploadsRef.current.set(item.id, operation);
 
+      // Test observability: notify immediately before upload starts (synchronous)
+      onUploadStart?.(item);
+
       try {
         // Update status to uploading
         setQueue(prev =>
@@ -206,6 +225,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
         const formData = new FormData();
         formData.append('file', item.file);
         formData.append('gameId', item.gameId);
+        formData.append('language', item.language);
 
         // Use retry logic with exponential backoff
         const response = await retryWithBackoff(
@@ -238,6 +258,13 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
               return isRetryableError(error);
             },
             onRetry: (error, attempt) => {
+              // Test observability: notify immediately on retry (synchronous)
+              if (onRetry) {
+                const currentItem = queue.find(i => i.id === item.id) || item;
+                const errorObj = error instanceof Error ? error : new Error(String(error));
+                onRetry(currentItem, attempt, errorObj);
+              }
+
               setQueue(prev =>
                 prev.map(i =>
                   i.id === item.id
@@ -278,6 +305,10 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
         );
 
         const completedItem = { ...item, status: 'success' as UploadStatus, progress: 100, pdfId: data.documentId };
+
+        // Test observability: notify immediately after successful upload (synchronous)
+        onUploadSuccess?.(completedItem);
+
         onUploadComplete?.(completedItem);
 
       } catch (error: unknown) {
@@ -289,6 +320,11 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
 
         const errorMessage = error instanceof Error ? error.message : 'Upload failed';
         const correlationId = error instanceof ApiError ? error.correlationId : undefined;
+
+        const failedItem = { ...item, status: 'failed' as UploadStatus, error: errorMessage, correlationId };
+
+        // Test observability: notify immediately about error (synchronous, before state update)
+        onUploadError?.(failedItem, errorMessage);
 
         setQueue(prev =>
           prev.map(i =>
@@ -304,14 +340,11 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
           )
         );
 
-        const failedItem = { ...item, status: 'failed' as UploadStatus, error: errorMessage, correlationId };
-        onUploadError?.(failedItem, errorMessage);
-
       } finally {
         activeUploadsRef.current.delete(item.id);
       }
     },
-    [maxRetries, onUploadComplete, onUploadError]
+    [maxRetries, onUploadComplete, onUploadError, onUploadStart, onUploadSuccess, onRetry, queue]
   );
 
   /**
@@ -326,16 +359,20 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
 
     try {
       while (true) {
+        // Use activeUploadsRef instead of queue state for accurate count
+        // queue state updates asynchronously, but ref is synchronous!
+        const activeCount = activeUploadsRef.current.size;
         const stats = getStats();
-        const activeCount = stats.uploading;
 
         // Check if we can start more uploads
         if (activeCount >= concurrencyLimit) {
           break;
         }
 
-        // Find next pending item
-        const nextItem = queue.find(item => item.status === 'pending');
+        // Find next pending item that's not already being uploaded
+        const nextItem = queue.find(item =>
+          item.status === 'pending' && !activeUploadsRef.current.has(item.id)
+        );
         if (!nextItem) {
           break;
         }
@@ -352,11 +389,13 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
   }, [queue, concurrencyLimit, uploadFile, getStats]);
 
   /**
-   * Effect to process queue when it changes
+   * Effect to process queue when it changes (only if autoUpload is enabled)
    */
   useEffect(() => {
-    void processQueue();
-  }, [processQueue]);
+    if (autoUpload) {
+      void processQueue();
+    }
+  }, [processQueue, autoUpload]);
 
   /**
    * Effect to notify when all uploads complete
@@ -384,6 +423,7 @@ export function useUploadQueue(options: UseUploadQueueOptions = {}) {
     retryUpload,
     clearCompleted,
     clearAll,
-    getStats
+    getStats,
+    startUpload: processQueue // Expose manual upload trigger for testing
   };
 }

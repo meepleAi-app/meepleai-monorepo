@@ -355,10 +355,11 @@ export default function AdminDashboard() {
       {/* Date Range Filters */}
       <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
         <div style={{ flex: 1 }}>
-          <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#64748b", fontWeight: 600 }}>
+          <label htmlFor="start-date-input" style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#64748b", fontWeight: 600 }}>
             Start Date
           </label>
           <input
+            id="start-date-input"
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
@@ -372,10 +373,11 @@ export default function AdminDashboard() {
           />
         </div>
         <div style={{ flex: 1 }}>
-          <label style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#64748b", fontWeight: 600 }}>
+          <label htmlFor="end-date-input" style={{ display: "block", fontSize: 12, marginBottom: 4, color: "#64748b", fontWeight: 600 }}>
             End Date
           </label>
           <input
+            id="end-date-input"
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}

@@ -11,7 +11,15 @@ import { UploadSummary } from './UploadSummary';
 interface MultiFileUploadProps {
   gameId: string;
   gameName: string;
+  language: string; // Document language for OCR/parsing
+  autoUpload?: boolean; // Auto-start uploads when files added (default: true)
   onUploadComplete?: () => void;
+  // Test observability hooks
+  onUploadStart?: (item: any) => void;
+  onUploadSuccess?: (item: any) => void;
+  onUploadError?: (item: any, error: string) => void;
+  onQueueAdd?: (items: any[]) => void;
+  onRetry?: (item: any, attempt: number, error: Error) => void;
 }
 
 const MAX_PDF_SIZE_BYTES = 104857600; // 100 MB
@@ -70,7 +78,18 @@ async function readFileHeader(file: File, bytesToRead: number): Promise<string> 
   });
 }
 
-export function MultiFileUpload({ gameId, gameName, onUploadComplete }: MultiFileUploadProps) {
+export function MultiFileUpload({
+  gameId,
+  gameName,
+  language,
+  autoUpload = true,
+  onUploadComplete,
+  onUploadStart,
+  onUploadSuccess,
+  onUploadError,
+  onQueueAdd,
+  onRetry
+}: MultiFileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [showSummary, setShowSummary] = useState(false);
@@ -84,10 +103,17 @@ export function MultiFileUpload({ gameId, gameName, onUploadComplete }: MultiFil
     retryUpload,
     clearCompleted,
     clearAll,
-    getStats
+    getStats,
+    startUpload
   } = useUploadQueue({
     concurrencyLimit: 3,
     maxRetries: 3,
+    autoUpload,
+    onUploadStart,
+    onUploadSuccess,
+    onUploadError,
+    onQueueAdd,
+    onRetry,
     onUploadComplete: () => {
       onUploadComplete?.();
     },
@@ -132,10 +158,10 @@ export function MultiFileUpload({ gameId, gameName, onUploadComplete }: MultiFil
     }
 
     if (validFiles.length > 0) {
-      addFiles(validFiles, gameId);
+      addFiles(validFiles, gameId, language);
       setShowSummary(false);
     }
-  }, [gameId, addFiles]);
+  }, [gameId, language, addFiles]);
 
   /**
    * Handle file input change
@@ -200,13 +226,14 @@ export function MultiFileUpload({ gameId, gameName, onUploadComplete }: MultiFil
   }, []);
 
   return (
-    <div style={{ marginTop: '24px' }}>
+    <div data-testid="multi-file-upload" data-game-id={gameId} data-game-name={gameName} style={{ marginTop: '24px' }}>
       <h3 style={{ marginBottom: '16px', fontSize: '18px', fontWeight: 600 }}>
         Multi-File Upload
       </h3>
 
       {/* Game Info */}
       <div
+        data-testid="game-info-badge"
         style={{
           padding: '12px 16px',
           backgroundColor: '#e8f5e9',
@@ -322,6 +349,36 @@ export function MultiFileUpload({ gameId, gameName, onUploadComplete }: MultiFil
           aria-label="File input for PDF upload"
         />
       </div>
+
+      {/* Manual Upload Button (shown when autoUpload disabled and files pending) */}
+      {!autoUpload && stats.pending > 0 && (
+        <div style={{ marginBottom: '16px', textAlign: 'center' }}>
+          <button
+            type="button"
+            onClick={() => void startUpload()}
+            data-testid="start-upload-button"
+            style={{
+              padding: '12px 32px',
+              fontSize: '16px',
+              fontWeight: 600,
+              color: 'white',
+              backgroundColor: '#34a853',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#2d8e47';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#34a853';
+            }}
+          >
+            Start Upload ({stats.pending} file{stats.pending > 1 ? 's' : ''})
+          </button>
+        </div>
+      )}
 
       {/* Upload Summary (shown after all complete) */}
       {showSummary && (

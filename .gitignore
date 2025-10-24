@@ -451,3 +451,4 @@ test-output.txt
 # Temporary web directory in wrong location
 apps/api/web/
 nul
+.serena/

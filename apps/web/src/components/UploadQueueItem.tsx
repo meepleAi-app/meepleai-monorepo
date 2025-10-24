@@ -50,7 +50,7 @@ function formatFileSize(bytes: number): string {
 }
 
 export function UploadQueueItem({ item, onCancel, onRetry, onRemove }: UploadQueueItemProps) {
-  const { id, file, status, progress, error, retryCount } = item;
+  const { id, file, status, progress, error, retryCount, correlationId } = item;
 
   const statusLabel = STATUS_LABELS[status];
   const statusColor = STATUS_COLORS[status];
@@ -153,6 +153,7 @@ export function UploadQueueItem({ item, onCancel, onRetry, onRemove }: UploadQue
       {status === 'failed' && error && (
         <div
           role="alert"
+          data-testid={`upload-error-${id}`}
           style={{
             fontSize: '13px',
             color: '#d93025',
@@ -163,7 +164,12 @@ export function UploadQueueItem({ item, onCancel, onRetry, onRemove }: UploadQue
             marginBottom: '8px'
           }}
         >
-          Error: {error}
+          <div>Error: {error}</div>
+          {correlationId && (
+            <div style={{ marginTop: '4px', fontSize: '12px' }}>
+              Error ID: {correlationId}
+            </div>
+          )}
         </div>
       )}
 

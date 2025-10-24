@@ -150,7 +150,23 @@ async function readFileHeader(file: File, bytesToRead: number): Promise<string> 
   });
 }
 
-export default function UploadPage() {
+interface UploadPageProps {
+  autoUpload?: boolean;
+  onUploadStart?: (item: any) => void;
+  onUploadSuccess?: (item: any) => void;
+  onUploadError?: (item: any, error: string) => void;
+  onQueueAdd?: (items: any[]) => void;
+  onRetry?: (item: any, attempt: number, error: Error) => void;
+}
+
+export default function UploadPage({
+  autoUpload = true,
+  onUploadStart,
+  onUploadSuccess,
+  onUploadError,
+  onQueueAdd,
+  onRetry
+}: UploadPageProps = {}) {
   const [currentStep, setCurrentStep] = useState<WizardStep>('upload');
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [games, setGames] = useState<GameSummary[]>([]);
@@ -1117,6 +1133,13 @@ export default function UploadPage() {
                   <MultiFileUpload
                     gameId={confirmedGameId}
                     gameName={confirmedGame.name}
+                    language={selectedLanguage}
+                    autoUpload={autoUpload}
+                    onUploadStart={onUploadStart}
+                    onUploadSuccess={onUploadSuccess}
+                    onUploadError={onUploadError}
+                    onQueueAdd={onQueueAdd}
+                    onRetry={onRetry}
                     onUploadComplete={() => {
                       if (confirmedGameId) {
                         void loadPdfs(confirmedGameId);

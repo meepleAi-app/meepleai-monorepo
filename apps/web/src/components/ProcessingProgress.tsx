@@ -399,7 +399,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
   }
 
   return (
-    <div style={containerStyle}>
+    <div data-testid="processing-progress" style={containerStyle}>
       <h3 style={headerStyle}>PDF Processing Progress</h3>
 
       {/* Progress Bar */}

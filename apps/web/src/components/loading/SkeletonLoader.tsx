@@ -18,6 +18,15 @@
  *
  * // Chat history sidebar
  * <SkeletonLoader variant="chatHistory" count={10} />
+ *
+ * // Upload queue items
+ * <SkeletonLoader variant="uploadQueue" count={3} />
+ *
+ * // Processing progress indicator
+ * <SkeletonLoader variant="processingProgress" />
+ *
+ * // Game selection dropdown
+ * <SkeletonLoader variant="gameSelection" />
  * ```
  */
 
@@ -27,7 +36,7 @@ export interface SkeletonLoaderProps {
   /**
    * Visual variant matching the content type
    */
-  variant: 'games' | 'agents' | 'message' | 'chatHistory';
+  variant: 'games' | 'agents' | 'message' | 'chatHistory' | 'uploadQueue' | 'processingProgress' | 'gameSelection';
 
   /**
    * Number of skeleton placeholders to render
@@ -61,6 +70,9 @@ const VARIANT_STYLES = {
   agents: 'h-20 rounded-md', // List item: icon + name + description
   message: 'h-16 rounded-xl', // Chat message: avatar + text
   chatHistory: 'h-12 rounded-md', // Compact list: title + timestamp
+  uploadQueue: 'h-24 rounded-lg', // Upload queue item: file info + progress
+  processingProgress: 'h-40 rounded-lg', // Processing steps: progress bar + steps
+  gameSelection: 'h-16 rounded-md', // Game selection: dropdown + buttons
 } as const;
 
 /**
@@ -143,6 +155,49 @@ export function SkeletonLoader({
                 <div className="h-3 bg-slate-300 dark:bg-slate-600 rounded w-3/4" />
                 <div className="h-2 bg-slate-300 dark:bg-slate-600 rounded w-1/3" />
               </div>
+            </div>
+          )}
+
+          {variant === 'uploadQueue' && (
+            <div className="h-full flex items-center p-4 space-x-4">
+              {/* File icon placeholder */}
+              <div className="w-12 h-12 bg-slate-300 dark:bg-slate-600 rounded flex-shrink-0" />
+              {/* File info and progress */}
+              <div className="flex-1 space-y-2">
+                {/* File name */}
+                <div className="h-4 bg-slate-300 dark:bg-slate-600 rounded w-3/4" />
+                {/* File size and status */}
+                <div className="h-3 bg-slate-300 dark:bg-slate-600 rounded w-1/2" />
+                {/* Progress bar */}
+                <div className="h-2 bg-slate-300 dark:bg-slate-600 rounded w-full" />
+              </div>
+            </div>
+          )}
+
+          {variant === 'processingProgress' && (
+            <div className="h-full flex flex-col p-4 space-y-3">
+              {/* Header */}
+              <div className="h-5 bg-slate-300 dark:bg-slate-600 rounded w-1/2" />
+              {/* Progress bar */}
+              <div className="h-3 bg-slate-300 dark:bg-slate-600 rounded w-full" />
+              {/* Progress percentage */}
+              <div className="h-3 bg-slate-300 dark:bg-slate-600 rounded w-1/4" />
+              {/* Step indicators */}
+              <div className="flex space-x-2 mt-2">
+                <div className="w-8 h-8 bg-slate-300 dark:bg-slate-600 rounded-full" />
+                <div className="w-8 h-8 bg-slate-300 dark:bg-slate-600 rounded-full" />
+                <div className="w-8 h-8 bg-slate-300 dark:bg-slate-600 rounded-full" />
+                <div className="w-8 h-8 bg-slate-300 dark:bg-slate-600 rounded-full" />
+              </div>
+            </div>
+          )}
+
+          {variant === 'gameSelection' && (
+            <div className="h-full flex items-center p-3 space-x-3">
+              {/* Dropdown placeholder */}
+              <div className="flex-1 h-10 bg-slate-300 dark:bg-slate-600 rounded" />
+              {/* Button placeholder */}
+              <div className="w-24 h-10 bg-slate-300 dark:bg-slate-600 rounded" />
             </div>
           )}
         </div>

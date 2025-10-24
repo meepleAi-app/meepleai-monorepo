@@ -13,6 +13,7 @@ import { retryWithBackoff, isRetryableError } from '../lib/retryUtils';
 import { ErrorDisplay } from '../components/ErrorDisplay';
 import { ProcessingProgress } from '../components/ProcessingProgress';
 import { MultiFileUpload } from '../components/MultiFileUpload';
+import { SkeletonLoader } from '../components/loading';
 
 // Dynamic import to prevent SSR issues with react-pdf (requires browser APIs like DOMMatrix)
 const PdfPreview = dynamic(() => import('../components/PdfPreview').then(mod => ({ default: mod.PdfPreview })), {
@@ -880,7 +881,7 @@ export default function UploadPage({
               >
                 <h3 style={{ marginTop: 0, marginBottom: '12px' }}>Game selection</h3>
                 {loadingGames ? (
-                  <p style={{ margin: 0 }}>Loading games…</p>
+                  <SkeletonLoader variant="gameSelection" ariaLabel="Loading games" />
                 ) : !authUser ? (
                   <p style={{ margin: 0 }}>You need to be logged in to manage games.</p>
                 ) : (

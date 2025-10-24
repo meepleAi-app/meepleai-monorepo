@@ -222,6 +222,88 @@ if (typeof global.Response === 'undefined') {
   };
 }
 
+// Mock FileReader for PDF validation tests
+// jsdom's FileReader doesn't properly support readAsArrayBuffer, so we mock it
+if (typeof global.FileReader === 'undefined' || !global.FileReader.prototype.readAsArrayBuffer) {
+  global.FileReader = class FileReader {
+    constructor() {
+      this.result = null;
+      this.error = null;
+      this.onload = null;
+      this.onerror = null;
+      this.onabort = null;
+      this.onloadstart = null;
+      this.onloadend = null;
+      this.onprogress = null;
+      this.readyState = 0; // EMPTY
+    }
+
+    readAsArrayBuffer(blob) {
+      this.readyState = 1; // LOADING
+      if (this.onloadstart) this.onloadstart({ target: this });
+
+      // Simulate async reading
+      setTimeout(() => {
+        try {
+          // For test files, extract the content
+          if (blob && blob.size > 0) {
+            // Create ArrayBuffer from blob text content
+            const text = blob.text ? blob.text() : Promise.resolve('%PDF-1.4');
+            text.then(content => {
+              const encoder = new TextEncoder();
+              this.result = encoder.encode(content).buffer;
+              this.readyState = 2; // DONE
+              if (this.onload) this.onload({ target: this });
+              if (this.onloadend) this.onloadend({ target: this });
+            });
+          } else {
+            this.result = new ArrayBuffer(0);
+            this.readyState = 2; // DONE
+            if (this.onload) this.onload({ target: this });
+            if (this.onloadend) this.onloadend({ target: this });
+          }
+        } catch (err) {
+          this.error = err;
+          this.readyState = 2; // DONE
+          if (this.onerror) this.onerror({ target: this });
+          if (this.onloadend) this.onloadend({ target: this });
+        }
+      }, 0);
+    }
+
+    readAsDataURL(blob) {
+      // Simple mock for readAsDataURL
+      this.readyState = 1;
+      setTimeout(() => {
+        this.result = 'data:application/pdf;base64,JVBERi0=';
+        this.readyState = 2;
+        if (this.onload) this.onload({ target: this });
+        if (this.onloadend) this.onloadend({ target: this });
+      }, 0);
+    }
+
+    readAsText(blob) {
+      this.readyState = 1;
+      setTimeout(() => {
+        this.result = '%PDF-1.4';
+        this.readyState = 2;
+        if (this.onload) this.onload({ target: this });
+        if (this.onloadend) this.onloadend({ target: this });
+      }, 0);
+    }
+
+    abort() {
+      this.readyState = 2;
+      if (this.onabort) this.onabort({ target: this });
+    }
+  };
+
+  // Add static constants
+  FileReader.EMPTY = 0;
+  FileReader.LOADING = 1;
+  FileReader.DONE = 2;
+}
+
 beforeEach(() => {
   const state = typeof expect !== 'undefined' ? expect.getState?.() : undefined;
   if (state?.testPath?.includes('src/pages/__tests__/admin.test.tsx')) {

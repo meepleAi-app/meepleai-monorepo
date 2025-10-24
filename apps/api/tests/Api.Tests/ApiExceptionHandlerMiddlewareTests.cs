@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -416,7 +417,7 @@ public class ApiExceptionHandlerMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert
-        var entry = Assert.Single(logger.Entries.Where(e => e.LogLevel == LogLevel.Error));
+        var entry = Assert.Single(logger.Records.Where(e => e.Level == LogLevel.Error));
         var sanitizedPath = entry.GetStateValue("Path");
 
         Assert.Equal("/api/unsafepath", sanitizedPath);
@@ -504,6 +505,8 @@ public class ApiExceptionHandlerMiddlewareTests
         public string ApplicationName { get; set; } = nameof(ApiExceptionHandlerMiddlewareTests);
 
         public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 
     private sealed class TestLogger<T> : ILogger<T>
@@ -519,10 +522,14 @@ public class ApiExceptionHandlerMiddlewareTests
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
             var message = formatter(state, exception);
-            _entries.Add(new LogEntry(logLevel, eventId, message, exception));
+            var stateDict = state as IEnumerable<KeyValuePair<string, object?>>;
+            _entries.Add(new LogEntry(logLevel, eventId, message, exception, stateDict?.ToDictionary(x => x.Key, x => x.Value)));
         }
 
-        internal sealed record LogEntry(LogLevel Level, EventId EventId, string Message, Exception? Exception);
+        internal sealed record LogEntry(LogLevel Level, EventId EventId, string Message, Exception? Exception, IReadOnlyDictionary<string, object?>? State = null)
+        {
+            public object? GetStateValue(string key) => State?.TryGetValue(key, out var value) == true ? value : null;
+        };
     }
 
     private sealed class NullScope : IDisposable

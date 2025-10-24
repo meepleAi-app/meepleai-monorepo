@@ -99,6 +99,7 @@ jobs:
           NODE_ENV: test
           CI: true
         run: pnpm test:coverage
+        # Note: Jest globalTeardown automatically runs cleanup script (Windows only)
 
       - name: Upload Web Coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -232,6 +233,7 @@ jobs:
           OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
         run: |
           # TEST-02-P5: Run full test suite with coverage (ISSUE-319 complete)
+          # Note: xUnit AssemblyFixture automatically runs cleanup script (Windows only)
           dotnet test \
             --logger "console;verbosity=normal" \
             --no-build \

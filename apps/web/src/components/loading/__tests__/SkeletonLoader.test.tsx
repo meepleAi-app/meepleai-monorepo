@@ -70,6 +70,27 @@ describe('SkeletonLoader', () => {
       expect(skeleton).toHaveClass('h-12'); // Compact list item
       expect(skeleton).toHaveClass('rounded-md');
     });
+
+    it('should apply uploadQueue variant styles (upload queue item)', () => {
+      const { container } = render(<SkeletonLoader variant="uploadQueue" />);
+      const skeleton = container.querySelector('[role="status"]');
+      expect(skeleton).toHaveClass('h-24'); // Upload item height
+      expect(skeleton).toHaveClass('rounded-lg');
+    });
+
+    it('should apply processingProgress variant styles (processing steps)', () => {
+      const { container } = render(<SkeletonLoader variant="processingProgress" />);
+      const skeleton = container.querySelector('[role="status"]');
+      expect(skeleton).toHaveClass('h-40'); // Progress indicator height
+      expect(skeleton).toHaveClass('rounded-lg');
+    });
+
+    it('should apply gameSelection variant styles (dropdown with buttons)', () => {
+      const { container } = render(<SkeletonLoader variant="gameSelection" />);
+      const skeleton = container.querySelector('[role="status"]');
+      expect(skeleton).toHaveClass('h-16'); // Game selection height
+      expect(skeleton).toHaveClass('rounded-md');
+    });
   });
 
   describe('Animation', () => {
@@ -173,6 +194,21 @@ describe('SkeletonLoader', () => {
 
     it('should match snapshot for chatHistory variant', () => {
       const { container } = render(<SkeletonLoader variant="chatHistory" count={4} />);
+      expect(container.firstChild).toMatchSnapshot();
+    });
+
+    it('should match snapshot for uploadQueue variant', () => {
+      const { container } = render(<SkeletonLoader variant="uploadQueue" count={2} />);
+      expect(container.firstChild).toMatchSnapshot();
+    });
+
+    it('should match snapshot for processingProgress variant', () => {
+      const { container } = render(<SkeletonLoader variant="processingProgress" />);
+      expect(container.firstChild).toMatchSnapshot();
+    });
+
+    it('should match snapshot for gameSelection variant', () => {
+      const { container } = render(<SkeletonLoader variant="gameSelection" />);
       expect(container.firstChild).toMatchSnapshot();
     });
   });

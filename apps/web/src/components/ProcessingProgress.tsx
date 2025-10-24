@@ -14,6 +14,7 @@ import {
   getStepLabel,
   getStepOrder
 } from '../types/pdf';
+import { SkeletonLoader } from './loading';
 
 interface ProcessingProgressProps {
   pdfId: string;
@@ -392,8 +393,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
   if (loading && !progress) {
     return (
       <div style={containerStyle}>
-        <h3 style={headerStyle}>Processing PDF...</h3>
-        <p style={{ color: '#666', margin: 0 }}>Loading progress information...</p>
+        <SkeletonLoader variant="processingProgress" ariaLabel="Loading processing progress" />
       </div>
     );
   }

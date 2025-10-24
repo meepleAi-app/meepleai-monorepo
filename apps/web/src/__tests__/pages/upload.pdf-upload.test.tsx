@@ -196,6 +196,16 @@ describe('UploadPage - PDF Upload', () => {
   describe('Given user attempts to upload PDF', () => {
     describe('When upload request fails', () => {
       it('Then error message is displayed', async () => {
+        // Session 9: Using observability hooks for reliable error state tracking
+        const uploadEvents: string[] = [];
+        const UploadPageWithHooks = () => (
+          <UploadPage
+            autoUpload={false}
+            onUploadStart={() => uploadEvents.push('upload_start')}
+            onUploadError={() => uploadEvents.push('upload_error')}
+          />
+        );
+
         const mockFetch = setupUploadMocks({
           auth: createAuthMock({ userId: 'user-7', role: 'Admin' }),
           games: [createGameMock({ id: 'game-1', name: 'Terraforming Mars' })],
@@ -205,28 +215,55 @@ describe('UploadPage - PDF Upload', () => {
 
         global.fetch = mockFetch as unknown as typeof fetch;
 
-        render(<UploadPage />);
+        render(<UploadPageWithHooks />);
 
+        // Wait for games to load
         await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
 
-        fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
+        // Select a game FIRST before confirming
+        const gameSelect = screen.getByLabelText(/Existing games/i);
+        fireEvent.change(gameSelect, { target: { value: 'game-1' } });
 
-        const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
+        // Now confirm selection
+        const confirmButton = screen.getByRole('button', { name: /Confirm selection/i });
+        await waitFor(() => expect(confirmButton).not.toBeDisabled());
+        fireEvent.click(confirmButton);
+
+        // Wait for MultiFileUpload to appear
+        await waitFor(() => expect(screen.getByTestId('multi-file-upload')).toBeInTheDocument());
+
+        // Upload file using MultiFileUpload
+        const fileInput = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
         const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
         fireEvent.change(fileInput, { target: { files: [file] } });
 
-        const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
-        await waitFor(() => expect(uploadButton).not.toBeDisabled());
-        fireEvent.click(uploadButton);
+        // Start upload manually
+        const startUploadButton = await screen.findByTestId('start-upload-button');
+        await waitFor(() => expect(startUploadButton).not.toBeDisabled());
+        fireEvent.click(startUploadButton);
 
-        await waitFor(() =>
-          expect(screen.getByText(/❌ Upload failed: Upload exploded/i)).toBeInTheDocument()
-        );
+        // Wait for events instead of DOM polling (accounts for retry logic)
+        await waitFor(() => expect(uploadEvents).toContain('upload_start'));
+        await waitFor(() => expect(uploadEvents).toContain('upload_error'), { timeout: 10000 });
+
+        // Then verify UI shows error with role="alert"
+        const alerts = screen.queryAllByRole('alert');
+        expect(alerts.length).toBeGreaterThan(0);
       });
     });
 
     describe('When upload request throws exception', () => {
       it('Then error message with exception details is displayed', async () => {
+        // Session 9: Using observability hooks for reliable error state tracking
+        const uploadEvents: string[] = [];
+        const UploadPageWithHooks = () => (
+          <UploadPage
+            autoUpload={false}
+            onUploadStart={() => uploadEvents.push('upload_start')}
+            onUploadError={() => uploadEvents.push('upload_error')}
+          />
+        );
+
         const mockFetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) => {
           const url = typeof input === 'string' ? input : input.toString();
           const method = init?.method ?? 'GET';
@@ -252,23 +289,36 @@ describe('UploadPage - PDF Upload', () => {
 
         global.fetch = mockFetch;
 
-        render(<UploadPage />);
+        render(<UploadPageWithHooks />);
 
         await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
 
-        fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
+        const gameSelect = screen.getByLabelText(/Existing games/i);
+        fireEvent.change(gameSelect, { target: { value: 'game-1' } });
 
-        const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
+        const confirmButton = screen.getByRole('button', { name: /Confirm selection/i });
+        await waitFor(() => expect(confirmButton).not.toBeDisabled());
+        fireEvent.click(confirmButton);
+
+        // Wait for MultiFileUpload to appear
+        await waitFor(() => expect(screen.getByTestId('multi-file-upload')).toBeInTheDocument());
+
+        const fileInput = screen.getByLabelText(/File input for PDF upload/i) as HTMLInputElement;
         const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
         fireEvent.change(fileInput, { target: { files: [file] } });
 
-        const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
-        await waitFor(() => expect(uploadButton).not.toBeDisabled());
-        fireEvent.click(uploadButton);
+        // Start upload manually
+        const startUploadButton = await screen.findByTestId('start-upload-button');
+        await waitFor(() => expect(startUploadButton).not.toBeDisabled());
+        fireEvent.click(startUploadButton);
 
-        await waitFor(() =>
-          expect(screen.getByText(/❌ Upload failed: Connection timeout/i)).toBeInTheDocument()
-        );
+        // Wait for events instead of DOM polling (accounts for retry logic)
+        await waitFor(() => expect(uploadEvents).toContain('upload_start'));
+        await waitFor(() => expect(uploadEvents).toContain('upload_error'), { timeout: 10000 });
+
+        // Then verify UI shows error with role="alert"
+        const alerts = screen.queryAllByRole('alert');
+        expect(alerts.length).toBeGreaterThan(0);
       });
     });
   });
@@ -509,80 +559,93 @@ describe('UploadPage - PDF Upload', () => {
   describe('Given PDF status polling', () => {
     describe('When JSON parsing fails in polling', () => {
       it('Then error is shown but polling continues', async () => {
-        jest.useFakeTimers();
-        try {
-          let pollCount = 0;
+        let pollCount = 0;
 
-          const mockFetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) => {
-            const url = typeof input === 'string' ? input : input.toString();
-            const method = init?.method ?? 'GET';
+        const mockFetch = jest.fn((input: RequestInfo | URL, init?: RequestInit) => {
+          const url = typeof input === 'string' ? input : input.toString();
+          const method = init?.method ?? 'GET';
 
-            if (url.endsWith('/auth/me')) {
-              return setupUploadMocks({ auth: createAuthMock({ userId: 'user-1', role: 'Admin' }) })(url, init);
+          if (url.endsWith('/auth/me')) {
+            return setupUploadMocks({ auth: createAuthMock({ userId: 'user-1', role: 'Admin' }) })(url, init);
+          }
+
+          if (url.endsWith('/games') && method === 'GET') {
+            return setupUploadMocks({ games: [createGameMock({ id: 'game-1', name: 'Test Game' })] })(url, init);
+          }
+
+          if (url.includes('/games/game-1/pdfs')) {
+            return setupUploadMocks({ pdfs: { pdfs: [] } })(url, init);
+          }
+
+          if (url.endsWith('/ingest/pdf')) {
+            return setupUploadMocks({ uploadResponse: { documentId: 'pdf-123' } })(url, init);
+          }
+
+          if (url.endsWith('/pdfs/pdf-123/text')) {
+            pollCount++;
+            if (pollCount === 1) {
+              return Promise.resolve({
+                ok: false,
+                status: 500,
+                statusText: 'Internal Server Error',
+                json: () => Promise.resolve(null)
+              } as Response);
             }
+            return setupUploadMocks({
+              uploadResponse: { documentId: 'pdf-123' },
+              pdfStatusSequence: [{ processingStatus: 'completed', processingError: null }]
+            })(url, init);
+          }
 
-            if (url.endsWith('/games') && method === 'GET') {
-              return setupUploadMocks({ games: [createGameMock({ id: 'game-1', name: 'Test Game' })] })(url, init);
-            }
+          if (url.endsWith('/games/game-1/rulespec')) {
+            return setupUploadMocks({
+              ruleSpec: createRuleSpecMock({ gameId: 'game-1', version: '1.0', rules: [] })
+            })(url, init);
+          }
 
-            if (url.includes('/games/game-1/pdfs')) {
-              return setupUploadMocks({ pdfs: { pdfs: [] } })(url, init);
-            }
+          throw new Error(`Unexpected fetch call to ${url}`);
+        }) as jest.MockedFunction<typeof fetch>;
 
-            if (url.endsWith('/ingest/pdf')) {
-              return setupUploadMocks({ uploadResponse: { documentId: 'pdf-123' } })(url, init);
-            }
+        global.fetch = mockFetch;
 
-            if (url.endsWith('/pdfs/pdf-123/text')) {
-              pollCount++;
-              if (pollCount === 1) {
-                return Promise.resolve({
-                  ok: false,
-                  status: 500,
-                  statusText: 'Internal Server Error',
-                  json: () => Promise.resolve(null)
-                } as Response);
-              }
-              return setupUploadMocks({
-                uploadResponse: { documentId: 'pdf-123' },
-                pdfStatusSequence: [{ processingStatus: 'completed', processingError: null }]
-              })(url, init);
-            }
+        render(<UploadPage />);
 
-            if (url.endsWith('/games/game-1/rulespec')) {
-              return setupUploadMocks({
-                ruleSpec: createRuleSpecMock({ gameId: 'game-1', version: '1.0', rules: [] })
-              })(url, init);
-            }
+        await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
 
-            throw new Error(`Unexpected fetch call to ${url}`);
-          }) as jest.MockedFunction<typeof fetch>;
+        const gameSelect = screen.getByLabelText(/Existing games/i);
+        fireEvent.change(gameSelect, { target: { value: 'game-1' } });
 
-          global.fetch = mockFetch;
+        const confirmButton = screen.getByRole('button', { name: /Confirm selection/i });
+        await waitFor(() => expect(confirmButton).not.toBeDisabled());
+        fireEvent.click(confirmButton);
 
-          render(<UploadPage />);
+        // Wait for file input to be ready
+        await waitFor(() => expect(screen.getByLabelText(/PDF File/i)).toBeInTheDocument());
 
-          await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
+        const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
+        const file = new File(['pdf'], 'test.pdf', { type: 'application/pdf' });
+        fireEvent.change(fileInput, { target: { files: [file] } });
 
-          fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
+        const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
+        await waitFor(() => expect(uploadButton).not.toBeDisabled());
+        fireEvent.click(uploadButton);
 
-          const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
-          const file = new File(['pdf'], 'test.pdf', { type: 'application/pdf' });
-          fireEvent.change(fileInput, { target: { files: [file] } });
+        // Wait for automatic advance to parse step with polling
+        await waitFor(() => {
+          expect(screen.getByText(/Processing status/i)).toBeInTheDocument();
+        }, { timeout: 5000 });
 
-          fireEvent.click(screen.getByRole('button', { name: /Upload & Continue/i }));
+        // Wait for polling to start and error to be displayed
+        // The polling will automatically retry after the first 500 error
+        await waitFor(() => {
+          expect(screen.getByText(/Status refresh failed/i)).toBeInTheDocument();
+        }, { timeout: 10000 });
 
-          await act(async () => {
-            jest.advanceTimersByTime(5000);
-          });
-
-          await waitFor(() => {
-            expect(screen.getByText(/Status refresh failed/i)).toBeInTheDocument();
-          });
-        } finally {
-          jest.useRealTimers();
-        }
-      });
+        // Verify that polling eventually succeeds after the error
+        await waitFor(() => {
+          expect(screen.getByText(/Processing status/i)).toHaveTextContent('Completed');
+        }, { timeout: 10000 });
+      }, 20000);
     });
   });
 

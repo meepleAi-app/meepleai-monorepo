@@ -5,14 +5,16 @@
  * across upload test files (game-selection, pdf-upload, review-edit, edge-cases)
  *
  * REFACTORED: Now uses MockApiRouter for cleaner, more maintainable mocks
+ * REFACTORED: Auth and Game mocks now use common-fixtures for consistency
  */
 
 import { MockApiRouter, createJsonResponse, createErrorResponse } from '../utils/mock-api-router';
+import { createMockAuthResponse, createMockGame, type MockUser } from './common-fixtures';
 
 export interface AuthMockOptions {
   userId?: string;
   email?: string;
-  role?: 'Admin' | 'Editor' | 'Viewer';
+  role?: 'Admin' | 'Editor' | 'Viewer' | 'User';
   displayName?: string;
   expiresAt?: string;
 }
@@ -60,38 +62,39 @@ export interface UploadMocksConfig {
   ruleSpec?: ReturnType<typeof createRuleSpecMock> | null;
   createGameResponse?: ReturnType<typeof createGameMock>;
   createGameError?: { status: number; error: string };
-  uploadError?: { status: number; error: string };
+  uploadError?: { status: number; error: string; correlationId?: string };
   ruleSpecError?: { status: number; error: unknown };
   publishRuleSpecResponse?: ReturnType<typeof createRuleSpecMock>;
   publishRuleSpecError?: { status: number; error: string };
   retryParseResponse?: { success: boolean };
   retryParseError?: { status: number; error: string };
+  onUploadCapture?: (formData: FormData) => void; // Callback to capture upload FormData
+  pollingDelayMs?: number; // NEW: Delay in ms for polling responses to simulate network latency
 }
 
 /**
  * Creates a mock auth response
+ * @deprecated - Now wraps common-fixtures createMockAuthResponse for consistency
  */
 export function createAuthMock(options: AuthMockOptions = {}) {
-  return {
-    user: {
-      id: options.userId ?? 'user-1',
-      email: options.email ?? 'user@example.com',
-      role: options.role ?? 'Admin',
-      displayName: options.displayName ?? 'Test User'
-    },
-    expiresAt: options.expiresAt ?? new Date().toISOString()
-  };
+  return createMockAuthResponse({
+    id: options.userId ?? 'user-1',
+    email: options.email ?? 'user@example.com',
+    role: (options.role ?? 'Admin') as MockUser['role'],
+    displayName: options.displayName ?? 'Test User'
+  });
 }
 
 /**
  * Creates a mock game object
+ * @deprecated - Now wraps common-fixtures createMockGame for consistency
  */
 export function createGameMock(options: GameMockOptions = {}) {
-  return {
+  return createMockGame({
     id: options.id ?? 'game-1',
     name: options.name ?? 'Test Game',
     createdAt: options.createdAt ?? new Date().toISOString()
-  };
+  });
 }
 
 /**
@@ -175,7 +178,9 @@ export function setupUploadMocks(config: UploadMocksConfig = {}) {
     publishRuleSpecResponse,
     publishRuleSpecError,
     retryParseResponse,
-    retryParseError
+    retryParseError,
+    onUploadCapture, // Callback to capture FormData
+    pollingDelayMs = 0 // NEW: Default 0ms (instant), tests can override for realistic timing
   } = config;
 
   const router = new MockApiRouter();
@@ -205,16 +210,36 @@ export function setupUploadMocks(config: UploadMocksConfig = {}) {
 
   // Upload PDF
   if (uploadError) {
-    router.post('/api/v1/ingest/pdf', () =>
-      createErrorResponse(uploadError.status, { error: uploadError.error })
-    );
+    router.post('/api/v1/ingest/pdf', ({ init }) => {
+      // Capture FormData if callback provided
+      if (onUploadCapture && init?.body instanceof FormData) {
+        onUploadCapture(init.body);
+      }
+      return createErrorResponse(
+        uploadError.status,
+        { error: uploadError.error },
+        undefined,
+        uploadError.correlationId
+      );
+    });
   } else {
-    router.post('/api/v1/ingest/pdf', () => createJsonResponse(uploadResponse, 201));
+    router.post('/api/v1/ingest/pdf', ({ init }) => {
+      // Capture FormData if callback provided
+      if (onUploadCapture && init?.body instanceof FormData) {
+        onUploadCapture(init.body);
+      }
+      return createJsonResponse(uploadResponse, 201);
+    });
   }
 
   // PDF status polling (stateful with closure)
   let statusIndex = 0;
-  router.get('/api/v1/pdfs/:documentId/text', ({ params }) => {
+  router.get('/api/v1/pdfs/:documentId/text', async ({ params }) => {
+    // Simulate network latency if configured
+    if (pollingDelayMs > 0) {
+      await new Promise(resolve => setTimeout(resolve, pollingDelayMs));
+    }
+
     if (pdfStatusSequence.length > 0) {
       const nextStatus = pdfStatusSequence[statusIndex] ?? pdfStatusSequence[pdfStatusSequence.length - 1];
       if (statusIndex < pdfStatusSequence.length - 1) {

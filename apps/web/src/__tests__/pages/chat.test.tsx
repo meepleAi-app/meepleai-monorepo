@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import ChatPage from '../../pages/chat';
 import { api } from '../../pages/../lib/api';
 import { useChatStreaming } from '../../lib/hooks/useChatStreaming';
+import { createMockAuthResponse, createMockGame, createMockAgent, createMockChat } from '../fixtures/common-fixtures';
 
 // Mock the useChatStreaming hook
 const mockStartStreaming = jest.fn();
@@ -57,33 +58,30 @@ const mockApi = api as jest.Mocked<typeof api>;
 const originalConfirm = window.confirm;
 
 // Test data fixtures
-const mockAuthResponse = {
-  user: {
-    id: 'user-1',
-    email: 'user@example.com',
-    displayName: 'Test User',
-    role: 'User'
-  },
-  expiresAt: new Date(Date.now() + 3600000).toISOString()
-};
+const mockAuthResponse = createMockAuthResponse({
+  id: 'user-1',
+  email: 'user@example.com',
+  displayName: 'Test User',
+  role: 'User'
+});
 
 const mockGames = [
-  { id: 'game-1', name: 'Chess' },
-  { id: 'game-2', name: 'Catan' }
+  createMockGame({ id: 'game-1', name: 'Chess' }),
+  createMockGame({ id: 'game-2', name: 'Catan' })
 ];
 
 const mockAgents = [
-  { id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2025-01-01T00:00:00Z' },
-  { id: 'agent-2', gameId: 'game-1', name: 'Chess Helper', kind: 'qa', createdAt: '2025-01-02T00:00:00Z' }
+  createMockAgent({ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2025-01-01T00:00:00Z' }),
+  createMockAgent({ id: 'agent-2', gameId: 'game-1', name: 'Chess Helper', kind: 'qa', createdAt: '2025-01-02T00:00:00Z' })
 ];
 
 const mockEditableAgents = [
-  { id: 'agent-1', gameId: 'game-1', name: 'Editable Agent', kind: 'qa', createdAt: '2025-01-01T00:00:00Z' },
-  { id: 'agent-2', gameId: 'game-1', name: 'Supporting Agent', kind: 'qa', createdAt: '2025-01-02T00:00:00Z' }
+  createMockAgent({ id: 'agent-1', gameId: 'game-1', name: 'Editable Agent', kind: 'qa', createdAt: '2025-01-01T00:00:00Z' }),
+  createMockAgent({ id: 'agent-2', gameId: 'game-1', name: 'Supporting Agent', kind: 'qa', createdAt: '2025-01-02T00:00:00Z' })
 ];
 
 const mockChats = [
-  {
+  createMockChat({
     id: 'chat-1',
     gameId: 'game-1',
     gameName: 'Chess',
@@ -91,8 +89,8 @@ const mockChats = [
     agentName: 'Chess Expert',
     startedAt: '2025-01-10T10:00:00Z',
     lastMessageAt: '2025-01-10T10:05:00Z'
-  },
-  {
+  }),
+  createMockChat({
     id: 'chat-2',
     gameId: 'game-1',
     gameName: 'Chess',
@@ -100,7 +98,7 @@ const mockChats = [
     agentName: 'Chess Helper',
     startedAt: '2025-01-09T14:00:00Z',
     lastMessageAt: null
-  }
+  })
 ];
 
 const mockChatWithHistory = {

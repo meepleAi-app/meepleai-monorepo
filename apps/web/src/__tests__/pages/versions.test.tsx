@@ -4,16 +4,8 @@ import type { NextRouter } from 'next/router';
 import VersionHistory from '../../pages/versions';
 import { api } from '../../lib/api';
 import { useRouter } from 'next/router';
-
-type AuthResponse = {
-  user: {
-    id: string;
-    email: string;
-    displayName?: string | null;
-    role: string;
-  };
-  expiresAt: string;
-};
+import { createMockAuthResponse, type MockAuthResponse } from '../fixtures/common-fixtures';
+import { waitForApiCall } from '../fixtures/test-helpers';
 
 // Mock the API client
 jest.mock('../../lib/api', () => ({
@@ -68,18 +60,13 @@ jest.mock('../../components/CommentThread', () => ({
 const mockApi = api as jest.Mocked<typeof api>;
 const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
 
-let routerGameId: string | undefined;
-
-const setGameId = (value?: string) => {
-  routerGameId = value;
-};
-
-const createRouter = (overrides: Partial<NextRouter> = {}): NextRouter =>
+// Factory function to create router with gameId (no global state)
+const createRouter = (gameId?: string, overrides: Partial<NextRouter> = {}): NextRouter =>
   ({
     route: '/versions',
     pathname: '/versions',
-    query: routerGameId ? { gameId: routerGameId } : {},
-    asPath: routerGameId ? `/versions?gameId=${routerGameId}` : '/versions',
+    query: gameId ? { gameId } : {},
+    asPath: gameId ? `/versions?gameId=${gameId}` : '/versions',
     basePath: '',
     push: jest.fn(),
     replace: jest.fn(),
@@ -103,35 +90,26 @@ const createRouter = (overrides: Partial<NextRouter> = {}): NextRouter =>
   } as unknown as NextRouter);
 
 // Test data fixtures
-const authResponse: AuthResponse = {
-  user: {
-    id: 'admin-1',
-    email: 'admin@example.com',
-    displayName: 'Admin User',
-    role: 'Admin'
-  },
-  expiresAt: new Date(Date.now() + 3600000).toISOString()
-};
+const authResponse = createMockAuthResponse({
+  id: 'admin-1',
+  email: 'admin@example.com',
+  displayName: 'Admin User',
+  role: 'Admin'
+});
 
-const editorAuthResponse: AuthResponse = {
-  user: {
-    id: 'editor-1',
-    email: 'editor@example.com',
-    displayName: 'Editor User',
-    role: 'Editor'
-  },
-  expiresAt: new Date(Date.now() + 3600000).toISOString()
-};
+const editorAuthResponse = createMockAuthResponse({
+  id: 'editor-1',
+  email: 'editor@example.com',
+  displayName: 'Editor User',
+  role: 'Editor'
+});
 
-const userAuthResponse: AuthResponse = {
-  user: {
-    id: 'user-1',
-    email: 'user@example.com',
-    displayName: 'Regular User',
-    role: 'User'
-  },
-  expiresAt: new Date(Date.now() + 3600000).toISOString()
-};
+const userAuthResponse = createMockAuthResponse({
+  id: 'user-1',
+  email: 'user@example.com',
+  displayName: 'Regular User',
+  role: 'User'
+});
 
 const mockVersionHistory = {
   gameId: 'demo-chess',
@@ -203,10 +181,10 @@ afterAll(() => {
 });
 
 beforeEach(() => {
-  setGameId(undefined);
   jest.clearAllMocks();
   confirmSpy.mockReturnValue(false);
   alertSpy.mockImplementation(() => {});
+  // Default router with no gameId
   mockUseRouter.mockImplementation(() => createRouter());
 });
 
@@ -224,24 +202,20 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
-      await waitFor(() => {
-        expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me');
-      });
+      await waitForApiCall(mockApi.get, '/api/v1/auth/me');
     });
 
     it('parses gameId from router.query', async () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
-      await waitFor(() => {
-        expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games/demo-chess/rulespec/history');
-      });
+      await waitForApiCall(mockApi.get, '/api/v1/games/demo-chess/rulespec/history');
 
       expect(screen.getByText(/Game:/)).toBeInTheDocument();
       expect(screen.getByText('demo-chess')).toBeInTheDocument();
@@ -250,7 +224,7 @@ describe('VersionHistory Page', () => {
     it('shows error when gameId missing', async () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
 
-      setGameId(undefined);
+      mockUseRouter.mockReturnValue(createRouter());
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -280,19 +254,17 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
-      await waitFor(() => {
-        expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games/demo-chess/rulespec/history');
-      });
+      await waitForApiCall(mockApi.get, '/api/v1/games/demo-chess/rulespec/history');
     });
 
     it('displays versions list with metadata', async () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -310,7 +282,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockImplementation(() => new Promise(() => {})); // Never resolves
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -326,7 +298,7 @@ describe('VersionHistory Page', () => {
         totalVersions: 0
       });
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -339,7 +311,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockRejectedValueOnce({ message: 'Game not found' });
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -354,7 +326,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockRejectedValueOnce({ message: 'Internal server error' });
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -368,7 +340,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -380,7 +352,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -400,7 +372,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -419,7 +391,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData); // Initial auto-load
       mockApi.get.mockResolvedValueOnce(mockDiffData); // After manual selection
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -441,7 +413,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockDiffData); // Initial auto-load
       mockApi.get.mockResolvedValueOnce(mockDiffData); // After manual selection
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -461,14 +433,10 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
-      await waitFor(() => {
-        expect(mockApi.get).toHaveBeenCalledWith(
-          '/api/v1/games/demo-chess/rulespec/diff?from=2.0.0&to=3.0.0'
-        );
-      });
+      await waitForApiCall(mockApi.get, '/api/v1/games/demo-chess/rulespec/diff?from=2.0.0&to=3.0.0');
     });
 
     it('displays selected version info (version number, date)', async () => {
@@ -476,7 +444,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -499,7 +467,7 @@ describe('VersionHistory Page', () => {
         return Promise.resolve(mockVersionHistory);
       });
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -513,7 +481,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -537,7 +505,7 @@ describe('VersionHistory Page', () => {
         totalVersions: 1
       });
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -556,7 +524,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -569,7 +537,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -583,7 +551,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -597,7 +565,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -618,7 +586,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -632,7 +600,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -658,7 +626,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -671,7 +639,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -684,7 +652,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -697,7 +665,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -710,7 +678,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -726,7 +694,7 @@ describe('VersionHistory Page', () => {
         totalVersions: 0
       });
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -744,7 +712,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -756,7 +724,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -769,7 +737,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -782,7 +750,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -801,7 +769,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(editorAuthResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -814,7 +782,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -827,7 +795,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(userAuthResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -839,7 +807,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -869,7 +837,7 @@ describe('VersionHistory Page', () => {
       });
       mockApi.put.mockResolvedValueOnce({ ...mockRuleSpec, version: '4.0.0' });
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -883,9 +851,7 @@ describe('VersionHistory Page', () => {
         expect.stringContaining('Sei sicuro di voler ripristinare la versione')
       );
 
-      await waitFor(() => {
-        expect(mockApi.get).toHaveBeenCalledWith('/api/v1/games/demo-chess/rulespec/versions/2.0.0');
-      }, { timeout: 3000 });
+      await waitForApiCall(mockApi.get, '/api/v1/games/demo-chess/rulespec/versions/2.0.0', 3000);
 
       await waitFor(() => {
         expect(mockApi.put).toHaveBeenCalledWith('/api/v1/games/demo-chess/rulespec', mockRuleSpec);
@@ -899,7 +865,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -930,7 +896,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
       mockApi.get.mockRejectedValueOnce({ message: 'Diff calculation failed' });
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -958,7 +924,7 @@ describe('VersionHistory Page', () => {
         return Promise.resolve(null);
       });
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -985,7 +951,7 @@ describe('VersionHistory Page', () => {
       mockApi.put.mockResolvedValueOnce({ ...mockRuleSpec, version: '4.0.0' });
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -1005,7 +971,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockRejectedValueOnce({});
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -1029,7 +995,7 @@ describe('VersionHistory Page', () => {
         totalVersions: 1
       });
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {
@@ -1045,7 +1011,7 @@ describe('VersionHistory Page', () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
 
-      setGameId('demo-chess');
+      mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
 
       await waitFor(() => {

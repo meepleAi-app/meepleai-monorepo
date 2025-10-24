@@ -225,8 +225,19 @@ export const createJsonResponse = (data: unknown, status = 200): Promise<Respons
     ok: status >= 200 && status < 300,
     status,
     statusText: status >= 200 && status < 300 ? 'OK' : 'Error',
+    headers: {
+      get: (name: string) => {
+        if (name === 'X-Correlation-Id') return `test-correlation-${Date.now()}`;
+        return null;
+      },
+      has: (name: string) => name === 'X-Correlation-Id',
+      forEach: () => {},
+      entries: () => [][Symbol.iterator](),
+      keys: () => [][Symbol.iterator](),
+      values: () => [][Symbol.iterator]()
+    },
     json: () => Promise.resolve(data)
-  } as Response);
+  } as unknown as Response);
 
 /**
  * Helper to create an error response (compatible with existing test utilities)
@@ -234,7 +245,8 @@ export const createJsonResponse = (data: unknown, status = 200): Promise<Respons
 export const createErrorResponse = (
   status: number,
   body: unknown = { error: 'Error' },
-  statusText?: string
+  statusText?: string,
+  correlationId?: string
 ): Promise<Response> =>
   Promise.resolve({
     ok: false,
@@ -242,5 +254,16 @@ export const createErrorResponse = (
     statusText:
       statusText ??
       (status === 401 ? 'Unauthorized' : status === 500 ? 'Internal Server Error' : 'Error'),
+    headers: {
+      get: (name: string) => {
+        if (name === 'X-Correlation-Id') return correlationId ?? `test-correlation-${Date.now()}`;
+        return null;
+      },
+      has: (name: string) => name === 'X-Correlation-Id',
+      forEach: () => {},
+      entries: () => [][Symbol.iterator](),
+      keys: () => [][Symbol.iterator](),
+      values: () => [][Symbol.iterator]()
+    },
     json: () => Promise.resolve(body)
-  } as Response);
+  } as unknown as Response);

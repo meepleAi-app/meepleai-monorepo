@@ -2,6 +2,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SetupPage from '../../pages/setup';
 import { api } from '../../lib/api';
+import { createMockAuthResponse, createMockGame } from '../fixtures/common-fixtures';
+import { waitForApiCall, waitForText } from '../fixtures/test-helpers';
 
 // Mock the API client
 jest.mock('../../lib/api', () => ({
@@ -17,19 +19,16 @@ const mockApi = api as jest.Mocked<typeof api>;
 const originalConfirm = window.confirm;
 
 // Test data fixtures
-const mockAuthResponse = {
-  user: {
-    id: 'user-1',
-    email: 'user@example.com',
-    displayName: 'Test User',
-    role: 'User'
-  },
-  expiresAt: new Date(Date.now() + 3600000).toISOString()
-};
+const mockAuthResponse = createMockAuthResponse({
+  id: 'user-1',
+  email: 'user@example.com',
+  displayName: 'Test User',
+  role: 'User'
+});
 
 const mockGames = [
-  { id: 'game-1', name: 'Chess' },
-  { id: 'game-2', name: 'Tic-Tac-Toe' }
+  createMockGame({ id: 'game-1', name: 'Chess' }),
+  createMockGame({ id: 'game-2', name: 'Tic-Tac-Toe' })
 ];
 
 const mockSetupGuideResponse = {
@@ -96,7 +95,7 @@ describe('SetupPage', () => {
 
       render(<SetupPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+      await waitForApiCall(mockApi.get, '/api/v1/auth/me');
 
       expect(screen.getByRole('heading', { name: 'Login Required' })).toBeInTheDocument();
       expect(screen.getByText('You must be logged in to use the setup guide.')).toBeInTheDocument();
@@ -108,7 +107,7 @@ describe('SetupPage', () => {
 
       render(<SetupPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+      await waitForApiCall(mockApi.get, '/api/v1/auth/me');
 
       expect(screen.getByRole('heading', { name: 'Game Setup Guide' })).toBeInTheDocument();
       expect(screen.queryByText('Login Required')).not.toBeInTheDocument();
@@ -120,7 +119,7 @@ describe('SetupPage', () => {
 
       render(<SetupPage />);
 
-      await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+      await waitForApiCall(mockApi.get, '/api/v1/auth/me');
 
       expect(screen.getByRole('heading', { name: 'Login Required' })).toBeInTheDocument();
 

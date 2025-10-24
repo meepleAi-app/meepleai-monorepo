@@ -14,6 +14,7 @@ import userEvent from '@testing-library/user-event';
 import { useRouter } from 'next/router';
 import type { NextRouter } from 'next/router';
 import LoginPage from '../../pages/login';
+import { createMockRouter } from '../fixtures/common-fixtures';
 
 // Mock Next.js router
 jest.mock('next/router', () => ({
@@ -22,29 +23,6 @@ jest.mock('next/router', () => ({
 
 const useRouterMock = useRouter as jest.MockedFunction<typeof useRouter>;
 
-const createMockRouter = (query: Record<string, string | string[]> = {}): jest.Mocked<NextRouter> => ({
-  push: jest.fn(),
-  replace: jest.fn(),
-  reload: jest.fn(),
-  back: jest.fn(),
-  prefetch: jest.fn().mockResolvedValue(undefined),
-  beforePopState: jest.fn(),
-  events: {
-    on: jest.fn(),
-    off: jest.fn(),
-    emit: jest.fn(),
-  },
-  isFallback: false,
-  isReady: true,
-  isPreview: false,
-  isLocaleDomain: false,
-  basePath: '',
-  pathname: '/login',
-  route: '/login',
-  query,
-  asPath: query.reason ? `/login?reason=${query.reason}` : '/login',
-} as unknown as jest.Mocked<NextRouter>);
-
 describe('Login Page', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -52,14 +30,14 @@ describe('Login Page', () => {
 
   describe('Basic Rendering', () => {
     it('renders without crashing', () => {
-      useRouterMock.mockReturnValue(createMockRouter());
+      useRouterMock.mockReturnValue(createMockRouter({ pathname: '/login', route: '/login' }));
       render(<LoginPage />);
 
       expect(screen.getByText('MeepleAI')).toBeInTheDocument();
     });
 
     it('renders the page title correctly', () => {
-      useRouterMock.mockReturnValue(createMockRouter());
+      useRouterMock.mockReturnValue(createMockRouter({ pathname: '/login', route: '/login' }));
       const { container } = render(<LoginPage />);
 
       // Check for Head component content (Next.js doesn't set document.title in tests)
@@ -69,7 +47,7 @@ describe('Login Page', () => {
     });
 
     it('displays the MeepleAI branding', () => {
-      useRouterMock.mockReturnValue(createMockRouter());
+      useRouterMock.mockReturnValue(createMockRouter({ pathname: '/login', route: '/login' }));
       render(<LoginPage />);
 
       expect(screen.getByText('MeepleAI')).toBeInTheDocument();
@@ -77,14 +55,14 @@ describe('Login Page', () => {
     });
 
     it('displays login placeholder text', () => {
-      useRouterMock.mockReturnValue(createMockRouter());
+      useRouterMock.mockReturnValue(createMockRouter({ pathname: '/login', route: '/login' }));
       render(<LoginPage />);
 
       expect(screen.getByText('Login functionality will be implemented here.')).toBeInTheDocument();
     });
 
     it('displays security notice in footer', () => {
-      useRouterMock.mockReturnValue(createMockRouter());
+      useRouterMock.mockReturnValue(createMockRouter({ pathname: '/login', route: '/login' }));
       render(<LoginPage />);
 
       expect(screen.getByText('Sessions expire after 30 days of inactivity for your security.')).toBeInTheDocument();
@@ -93,7 +71,12 @@ describe('Login Page', () => {
 
   describe('Session Expiration Alert', () => {
     it('displays session expired alert when reason=session_expired query param is present', () => {
-      useRouterMock.mockReturnValue(createMockRouter({ reason: 'session_expired' }));
+      useRouterMock.mockReturnValue(createMockRouter({
+        pathname: '/login',
+        route: '/login',
+        query: { reason: 'session_expired' },
+        asPath: '/login?reason=session_expired'
+      }));
       render(<LoginPage />);
 
       expect(screen.getByRole('alert')).toBeInTheDocument();
@@ -110,7 +93,12 @@ describe('Login Page', () => {
     });
 
     it('does not display session expired alert when reason param is different', () => {
-      useRouterMock.mockReturnValue(createMockRouter({ reason: 'other_reason' }));
+      useRouterMock.mockReturnValue(createMockRouter({
+        pathname: '/login',
+        route: '/login',
+        query: { reason: 'other_reason' },
+        asPath: '/login?reason=other_reason'
+      }));
       render(<LoginPage />);
 
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -118,7 +106,12 @@ describe('Login Page', () => {
     });
 
     it('session expired alert contains proper warning icon', () => {
-      useRouterMock.mockReturnValue(createMockRouter({ reason: 'session_expired' }));
+      useRouterMock.mockReturnValue(createMockRouter({
+        pathname: '/login',
+        route: '/login',
+        query: { reason: 'session_expired' },
+        asPath: '/login?reason=session_expired'
+      }));
       render(<LoginPage />);
 
       const alert = screen.getByRole('alert');
@@ -129,7 +122,12 @@ describe('Login Page', () => {
     });
 
     it('session expired alert contains complete message text', () => {
-      useRouterMock.mockReturnValue(createMockRouter({ reason: 'session_expired' }));
+      useRouterMock.mockReturnValue(createMockRouter({
+        pathname: '/login',
+        route: '/login',
+        query: { reason: 'session_expired' },
+        asPath: '/login?reason=session_expired'
+      }));
       render(<LoginPage />);
 
       expect(screen.getByText('Your session has expired due to inactivity. Please log in again to continue.')).toBeInTheDocument();
@@ -164,7 +162,12 @@ describe('Login Page', () => {
 
   describe('Accessibility', () => {
     it('session expired alert has proper ARIA role', () => {
-      useRouterMock.mockReturnValue(createMockRouter({ reason: 'session_expired' }));
+      useRouterMock.mockReturnValue(createMockRouter({
+        pathname: '/login',
+        route: '/login',
+        query: { reason: 'session_expired' },
+        asPath: '/login?reason=session_expired'
+      }));
       render(<LoginPage />);
 
       const alert = screen.getByRole('alert');
@@ -172,7 +175,12 @@ describe('Login Page', () => {
     });
 
     it('warning icon is properly hidden from screen readers', () => {
-      useRouterMock.mockReturnValue(createMockRouter({ reason: 'session_expired' }));
+      useRouterMock.mockReturnValue(createMockRouter({
+        pathname: '/login',
+        route: '/login',
+        query: { reason: 'session_expired' },
+        asPath: '/login?reason=session_expired'
+      }));
       render(<LoginPage />);
 
       const alert = screen.getByRole('alert');
@@ -248,7 +256,10 @@ describe('Login Page', () => {
     });
 
     it('handles empty query object', () => {
-      useRouterMock.mockReturnValue(createMockRouter({}));
+      useRouterMock.mockReturnValue(createMockRouter({
+        pathname: '/login',
+        route: '/login'
+      }));
 
       render(<LoginPage />);
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -256,8 +267,13 @@ describe('Login Page', () => {
 
     it('handles multiple query parameters', () => {
       useRouterMock.mockReturnValue(createMockRouter({
-        reason: 'session_expired',
-        redirect: '/chat'
+        pathname: '/login',
+        route: '/login',
+        query: {
+          reason: 'session_expired',
+          redirect: '/chat'
+        },
+        asPath: '/login?reason=session_expired&redirect=/chat'
       }));
 
       render(<LoginPage />);
@@ -266,7 +282,12 @@ describe('Login Page', () => {
 
     it('reason param as array (edge case)', () => {
       useRouterMock.mockReturnValue(createMockRouter({
-        reason: ['session_expired', 'other']
+        pathname: '/login',
+        route: '/login',
+        query: {
+          reason: ['session_expired', 'other']
+        },
+        asPath: '/login?reason=session_expired&reason=other'
       }));
 
       render(<LoginPage />);

@@ -4,6 +4,8 @@ import { useRouter } from 'next/router';
 import type { NextRouter } from 'next/router';
 import Home from '../../pages/index';
 import { api } from '../../pages/../lib/api';
+import { createMockRouter } from '../fixtures/common-fixtures';
+import { waitForApiCall } from '../fixtures/test-helpers';
 
 jest.mock('next/router', () => ({
   useRouter: jest.fn()
@@ -35,29 +37,6 @@ jest.mock('react-intersection-observer', () => ({
 
 const mockedApi = api as jest.Mocked<typeof api>;
 const useRouterMock = useRouter as jest.MockedFunction<typeof useRouter>;
-
-const createMockRouter = (): jest.Mocked<NextRouter> => ({
-  push: jest.fn(),
-  replace: jest.fn(),
-  reload: jest.fn(),
-  back: jest.fn(),
-  prefetch: jest.fn().mockResolvedValue(undefined),
-  beforePopState: jest.fn(),
-  events: {
-    on: jest.fn(),
-    off: jest.fn(),
-    emit: jest.fn()
-  },
-  isFallback: false,
-  isReady: true,
-  isPreview: false,
-  isLocaleDomain: false,
-  basePath: '',
-  pathname: '/',
-  route: '/',
-  query: {},
-  asPath: '/'
-} as unknown as jest.Mocked<NextRouter>);
 
 let routerMock = createMockRouter();
 
@@ -94,9 +73,7 @@ describe('Home page (Landing Page)', () => {
     it('shows "Get Started Free" button when user is not authenticated', async () => {
       render(<Home />);
 
-      await waitFor(() => {
-        expect(mockedApi.get).toHaveBeenCalledWith('/api/v1/auth/me');
-      });
+      await waitForApiCall(mockedApi.get, '/api/v1/auth/me');
 
       const getStartedButtons = screen.getAllByText('Get Started Free');
       expect(getStartedButtons.length).toBeGreaterThan(0);
@@ -842,9 +819,7 @@ describe('Home page (Landing Page)', () => {
 
       render(<Home />);
 
-      await waitFor(() => {
-        expect(mockedApi.get).toHaveBeenCalledWith('/api/v1/auth/me');
-      });
+      await waitForApiCall(mockedApi.get, '/api/v1/auth/me');
 
       // Should show Get Started button (not authenticated)
       await waitFor(() => {

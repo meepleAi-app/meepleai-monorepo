@@ -159,6 +159,13 @@ describe('UploadPage - Continuation Tests', () => {
             })
           } as Response);
         }
+        if (url.includes('/games/game-1/rulespec')) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve(createRuleSpecMock({ gameId: 'game-1' }))
+          } as Response);
+        }
         return Promise.reject(new Error('Unexpected URL'));
       });
       global.fetch = mockFetch as unknown as typeof fetch;
@@ -374,7 +381,7 @@ describe('UploadPage - Continuation Tests', () => {
             json: () => Promise.resolve(createAuthMock({ role: 'Admin' }))
           } as Response);
         }
-        if (url.includes('/games') && !url.includes('/pdfs')) {
+        if (url.includes('/games') && !url.includes('/pdfs') && !url.includes('/rulespec')) {
           return Promise.resolve({
             ok: true,
             status: 200,
@@ -386,6 +393,13 @@ describe('UploadPage - Continuation Tests', () => {
             ok: true,
             status: 200,
             json: () => Promise.resolve({ pdfs: [] })
+          } as Response);
+        }
+        if (url.includes('/games/game-1/rulespec')) {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve(createRuleSpecMock())
           } as Response);
         }
         if (url.includes('/ingest/pdf')) {

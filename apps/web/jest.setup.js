@@ -312,3 +312,13 @@ beforeEach(() => {
     }
   }
 });
+
+// Global cleanup after each test to prevent mock pollution between test files
+// This is critical for test isolation, especially for fetch mocks that cause timeouts
+afterEach(() => {
+  // Clear all timers to prevent polling/timeout issues between tests
+  jest.clearAllTimers();
+  // Note: We don't call jest.clearAllMocks() globally as it can interfere with
+  // test-specific mocks that are still needed during teardown.
+  // Individual test files should clear their own mocks in their afterEach hooks.
+});

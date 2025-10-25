@@ -5,12 +5,20 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Api.Services;
 
 public class RagService : IRagService
 {
+    // CONFIG-04: Hardcoded defaults (lowest priority fallback)
+    private const int DefaultTopK = 5;
+    private const double DefaultMinScore = 0.7;
+    private const int DefaultRrfK = 60;
+    private const bool DefaultEnableQueryExpansion = true;
+    private const int DefaultMaxQueryVariations = 4;
+
     private readonly MeepleAiDbContext _dbContext;
     private readonly IEmbeddingService _embeddingService;
     private readonly IQdrantService _qdrantService;
@@ -18,6 +26,8 @@ public class RagService : IRagService
     private readonly IAiResponseCacheService _cache;
     private readonly IPromptTemplateService _promptTemplateService;
     private readonly ILogger<RagService> _logger;
+    private readonly IConfigurationService? _configurationService; // CONFIG-04: For DB configuration
+    private readonly IConfiguration? _configuration; // CONFIG-04: For appsettings.json fallback
 
     public RagService(
         MeepleAiDbContext dbContext,
@@ -26,7 +36,9 @@ public class RagService : IRagService
         ILlmService llmService,
         IAiResponseCacheService cache,
         IPromptTemplateService promptTemplateService,
-        ILogger<RagService> logger)
+        ILogger<RagService> logger,
+        IConfigurationService? configurationService = null, // CONFIG-04: Optional DI
+        IConfiguration? configuration = null) // CONFIG-04: Optional DI
     {
         _dbContext = dbContext;
         _embeddingService = embeddingService;
@@ -35,6 +47,8 @@ public class RagService : IRagService
         _cache = cache;
         _promptTemplateService = promptTemplateService;
         _logger = logger;
+        _configurationService = configurationService; // CONFIG-04
+        _configuration = configuration; // CONFIG-04
     }
 
     /// <summary>
@@ -86,6 +100,10 @@ public class RagService : IRagService
 
         try
         {
+            // CONFIG-04: Load dynamic RAG configuration
+            var topK = await GetRagConfigAsync("TopK", DefaultTopK);
+            activity?.SetTag("rag.config.topK", topK);
+
             // Step 1: PERF-08 - Generate query variations for improved recall
             var queryVariations = await GenerateQueryVariationsAsync(query, language, cancellationToken);
             activity?.SetTag("query.variations.count", queryVariations.Count);
@@ -112,13 +130,15 @@ public class RagService : IRagService
             }
 
             // Step 3: PERF-08 - Search Qdrant with all query variations (parallel execution)
+            // CONFIG-04: Use dynamic topK from configuration
             var searchTasks = embeddings
-                .Select(embedding => _qdrantService.SearchAsync(gameId, embedding, language, limit: 5, cancellationToken))
+                .Select(embedding => _qdrantService.SearchAsync(gameId, embedding, language, limit: topK, cancellationToken))
                 .ToList();
             var searchResults = await Task.WhenAll(searchTasks);
 
             // Step 4: PERF-08 - Fuse and deduplicate results using Reciprocal Rank Fusion (RRF)
-            var fusedResults = FuseSearchResults(searchResults.Where(r => r.Success).ToList());
+            // CONFIG-04: FuseSearchResults is now async for dynamic RrfK
+            var fusedResults = await FuseSearchResults(searchResults.Where(r => r.Success).ToList());
 
             if (fusedResults.Count == 0)
             {
@@ -265,6 +285,9 @@ public class RagService : IRagService
 
         try
         {
+            // CONFIG-04: Load dynamic RAG configuration
+            var topK = await GetRagConfigAsync("TopK", DefaultTopK);
+
             // Step 1: Generate embedding for the topic
             // AI-09: Use language-aware embedding service
             var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(topic, language, cancellationToken);
@@ -278,7 +301,8 @@ public class RagService : IRagService
 
             // Step 2: Search Qdrant for relevant chunks (get more for comprehensive explanation)
             // AI-09: Filter search by language
-            var searchResult = await _qdrantService.SearchAsync(gameId, topicEmbedding, language, limit: 5, cancellationToken);
+            // CONFIG-04: Use dynamic topK from configuration
+            var searchResult = await _qdrantService.SearchAsync(gameId, topicEmbedding, language, limit: topK, cancellationToken);
 
             if (!searchResult.Success || searchResult.Results.Count == 0)
             {
@@ -429,9 +453,13 @@ public class RagService : IRagService
     /// <summary>
     /// PERF-08: Generate query variations for improved recall
     /// Uses rule-based expansion with synonyms and reformulations
+    /// CONFIG-04: Now respects dynamic MaxQueryVariations configuration
     /// </summary>
     private async Task<List<string>> GenerateQueryVariationsAsync(string query, string language, CancellationToken cancellationToken)
     {
+        // CONFIG-04: Load dynamic max variations configuration
+        var maxVariations = await GetRagConfigAsync("MaxQueryVariations", DefaultMaxQueryVariations);
+
         var variations = new List<string> { query }; // Always include original query
 
         // Rule-based query expansion patterns for board games domain
@@ -496,10 +524,11 @@ public class RagService : IRagService
             }
         }
 
-        // Limit total variations to avoid excessive API calls (original + 3 expansions)
-        var finalVariations = variations.Distinct(StringComparer.OrdinalIgnoreCase).Take(4).ToList();
+        // CONFIG-04: Limit total variations using dynamic configuration
+        var finalVariations = variations.Distinct(StringComparer.OrdinalIgnoreCase).Take(maxVariations).ToList();
 
-        _logger.LogDebug("Query expansion: '{Original}' → {Count} variations", query, finalVariations.Count);
+        _logger.LogDebug("Query expansion: '{Original}' → {Count} variations (max: {Max})",
+            query, finalVariations.Count, maxVariations);
 
         return await Task.FromResult(finalVariations);
     }
@@ -507,10 +536,12 @@ public class RagService : IRagService
     /// <summary>
     /// PERF-08: Fuse search results using Reciprocal Rank Fusion (RRF)
     /// Combines results from multiple queries with deduplication
+    /// CONFIG-04: Now uses dynamic RrfK configuration
     /// </summary>
-    private List<SearchResultItem> FuseSearchResults(List<SearchResult> searchResults)
+    private async Task<List<SearchResultItem>> FuseSearchResults(List<SearchResult> searchResults)
     {
-        const int k = 60; // RRF constant (common value from literature)
+        // CONFIG-04: Load dynamic RRF constant from configuration
+        var k = await GetRagConfigAsync("RrfK", DefaultRrfK);
 
         // Dictionary to store RRF scores for each unique document
         var rrfScores = new Dictionary<string, (SearchResultItem item, double score)>();
@@ -562,5 +593,76 @@ public class RagService : IRagService
             fusedResults.Count);
 
         return fusedResults;
+    }
+
+    // CONFIG-04: RAG configuration helper methods (3-tier fallback: DB → appsettings → defaults)
+
+    /// <summary>
+    /// Get RAG configuration with 3-tier fallback (DB → appsettings.json → hardcoded)
+    /// </summary>
+    private async Task<T> GetRagConfigAsync<T>(string configKey, T defaultValue) where T : struct
+    {
+        // 1. Try database via ConfigurationService
+        if (_configurationService != null)
+        {
+            var dbValue = await _configurationService.GetValueAsync<T?>($"RAG.{configKey}");
+            if (dbValue.HasValue)
+            {
+                var validated = ValidateRagConfig(dbValue.Value, configKey);
+                _logger.LogDebug("RAG config {Key}: {Value} (from database)", configKey, validated);
+                return validated;
+            }
+        }
+
+        // 2. Try appsettings.json
+        if (_configuration != null)
+        {
+            var configPath = $"RAG:{configKey}";
+            var appSettingsValue = _configuration.GetValue<T?>(configPath);
+            if (appSettingsValue.HasValue)
+            {
+                var validated = ValidateRagConfig(appSettingsValue.Value, configKey);
+                _logger.LogDebug("RAG config {Key}: {Value} (from appsettings)", configKey, validated);
+                return validated;
+            }
+        }
+
+        // 3. Fall back to hardcoded default
+        _logger.LogDebug("RAG config {Key}: {Value} (using hardcoded default)", configKey, defaultValue);
+        return defaultValue;
+    }
+
+    /// <summary>
+    /// Validate RAG configuration value is within acceptable range
+    /// </summary>
+    private T ValidateRagConfig<T>(T value, string configKey) where T : struct
+    {
+        var numericValue = Convert.ToDouble(value);
+        bool isValid = configKey switch
+        {
+            "TopK" => numericValue >= 1 && numericValue <= 50,
+            "MinScore" => numericValue >= 0.0 && numericValue <= 1.0,
+            "RrfK" => numericValue >= 1 && numericValue <= 100,
+            "MaxQueryVariations" => numericValue >= 1 && numericValue <= 10,
+            _ => true
+        };
+
+        if (!isValid)
+        {
+            _logger.LogWarning(
+                "RAG config {Key}={Value} out of range, clamping",
+                configKey, value);
+
+            return configKey switch
+            {
+                "TopK" => (T)(object)Math.Clamp((int)numericValue, 1, 50),
+                "MinScore" => (T)(object)Math.Clamp(numericValue, 0.0, 1.0),
+                "RrfK" => (T)(object)Math.Clamp((int)numericValue, 1, 100),
+                "MaxQueryVariations" => (T)(object)Math.Clamp((int)numericValue, 1, 10),
+                _ => value
+            };
+        }
+
+        return value;
     }
 }

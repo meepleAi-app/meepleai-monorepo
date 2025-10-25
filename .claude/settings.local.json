@@ -55,7 +55,16 @@
       "Bash(dotnet add package:*)",
       "Bash(dotnet remove:*)",
       "Bash(taskkill:*)",
-      "Bash(powershell \"Stop-Process -Id 82028 -Force -ErrorAction SilentlyContinue; echo ''Process terminated''\")"
+      "Bash(powershell \"Stop-Process -Id 82028 -Force -ErrorAction SilentlyContinue; echo ''Process terminated''\")",
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(dotnet ef migrations:*)",
+      "Bash(gh pr create:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(dotnet format:*)",
+      "Bash(timeout 60 dotnet test:*)",
+      "Bash(timeout 30 dotnet test:*)",
+      "Bash(timeout 90 dotnet test:*)",
+      "Bash(timeout 20 dotnet test:*)"
     ],
     "deny": [],
     "ask": []

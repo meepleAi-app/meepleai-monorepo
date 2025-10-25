@@ -312,3 +312,49 @@ public record LowQualityResponseDto(
     double OverallConfidence,
     bool IsLowQuality
 );
+
+// ADMIN-01: User Management models
+/// <summary>
+/// DTO for user information.
+/// Used in admin user management interfaces.
+/// </summary>
+public record UserDto(
+    string Id,
+    string Email,
+    string DisplayName,
+    string Role,
+    DateTime CreatedAt,
+    DateTime? LastSeenAt
+);
+
+/// <summary>
+/// Request model for creating a new user.
+/// Includes email, password, display name, and role.
+/// </summary>
+public record CreateUserRequest(
+    [Required, EmailAddress] string Email,
+    [Required, MinLength(8)] string Password,
+    [Required] string DisplayName,
+    string Role = "User"
+);
+
+/// <summary>
+/// Request model for updating an existing user.
+/// All fields are optional - only provided fields will be updated.
+/// </summary>
+public record UpdateUserRequest(
+    [EmailAddress] string? Email = null,
+    string? DisplayName = null,
+    string? Role = null
+);
+
+/// <summary>
+/// Paginated result container for any list of items.
+/// Generic type T represents the item type (e.g., UserDto).
+/// </summary>
+public record PagedResult<T>(
+    IReadOnlyList<T> Items,
+    int Total,
+    int Page,
+    int PageSize
+);

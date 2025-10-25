@@ -257,10 +257,11 @@ DELETE FROM system_configurations WHERE "Category" = 'RAG';
 - No performance regression (micro-overhead only)
 - Migration Up/Down tested
 - Build succeeds with no errors
+- 13 unit tests passing (appsettings + defaults scenarios)
+- Test file: `RagServiceConfigSimpleTests.cs` (341 lines)
 
-⏳ **Pending** (Future Work):
-- 20+ unit tests for config fallback chain
-- 10+ integration tests with Testcontainers
+⏳ **Future Work**:
+- Database configuration tests with Testcontainers (complex FK dependencies)
 - Performance benchmark comparison (before/after)
 - Documentation in agent-configuration-guide.md
 
@@ -293,6 +294,11 @@ DELETE FROM system_configurations WHERE "Category" = 'RAG';
 
 **Migration**:
 - `apps/api/src/Api/Migrations/20251025151934_SeedRagConfigurations.cs` - Database seed
+
+**Tests**:
+- `apps/api/tests/Api.Tests/Services/RagServiceConfigSimpleTests.cs` - 13 unit tests (appsettings + defaults)
+  - Test scenarios: TopK values, clamping, MaxQueryVariations, backward compatibility
+  - All tests passing: 13/13 ✅
 
 **Documentation**:
 - `docs/issue/config-04-implementation-summary.md` - This file

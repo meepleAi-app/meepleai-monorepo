@@ -85,7 +85,9 @@ public class AiRequestLogService
         DateTime? endDate = null,
         CancellationToken ct = default)
     {
-        var query = _db.AiRequestLogs.AsQueryable();
+        var query = _db.AiRequestLogs
+            .AsNoTracking() // PERF-05: Read-only analytics query
+            .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(endpoint))
         {
@@ -136,7 +138,9 @@ public class AiRequestLogService
         string? gameId = null,
         CancellationToken ct = default)
     {
-        var query = _db.AiRequestLogs.AsQueryable();
+        var query = _db.AiRequestLogs
+            .AsNoTracking() // PERF-05: Read-only analytics query
+            .AsQueryable();
 
         if (startDate.HasValue)
         {

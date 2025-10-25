@@ -56,7 +56,7 @@ tools/             - PowerShell scripts
 - **AI/RAG**: EmbeddingService, QdrantService, TextChunkingService (sentence-aware chunking, 256-768 chars adaptive), RagService (query expansion with RRF fusion), LlmService (OpenRouter)
 - **PDF**: PdfStorageService, PdfTextExtractionService (Docnet.Core), PdfTableExtractionService (iText7), PdfValidationService (PDF-09)
 - **Domain**: GameService, RuleSpecService, RuleSpecDiffService, SetupGuideService
-- **Infra**: AuthService (session cookies), SessionManagementService, SessionAutoRevocationService, AuditService, AiRequestLogService, RateLimitService, N8nConfigService, BackgroundTaskService
+- **Infra**: AuthService (session cookies), SessionManagementService, SessionAutoRevocationService, AuditService, AiRequestLogService, RateLimitService, N8nConfigService, BackgroundTaskService, WorkflowErrorLoggingService (N8N-05)
 - **Caching** (PERF-05): HybridCacheService (L1 in-memory + L2 Redis, cache stampede protection), AiResponseCacheService (adapter wrapping HybridCache)
 - **Query Optimization** (PERF-06): AsNoTracking on read-only queries (30% faster reads), AsNoTrackingWithIdentityResolution for relationship queries
 - **Text Chunking** (PERF-07): Sentence-aware chunking with abbreviation detection, paragraph boundaries, adaptive sizing (20% better RAG accuracy)
@@ -230,6 +230,44 @@ tools/             - PowerShell scripts
   - `analytics.test.tsx` - Frontend tests (9/15 passing: rendering, filters, export, auto-refresh)
   - `admin-analytics.spec.ts` - E2E tests with Playwright (dashboard load, charts, filters, export, navigation)
 
+**Workflow Error Logging** (N8N-05):
+- **WorkflowErrorLoggingService** (`Services/WorkflowErrorLoggingService.cs`, `Services/IWorkflowErrorLoggingService.cs`): n8n error tracking service
+  - `LogErrorAsync(request)` - Log workflow error from n8n webhook (with sensitive data redaction)
+  - `GetErrorsAsync(queryParams)` - Retrieve errors with filtering (workflow ID, date range) and pagination
+  - `GetErrorByIdAsync(id)` - Get specific error details
+  - Uses HybridCache (PERF-05) with 5-minute TTL for performance
+  - AsNoTracking() for all read queries (PERF-06)
+  - Automatic sensitive data sanitization (API keys, tokens, passwords)
+- **Endpoints** (see `Program.cs` N8N-05 endpoints around line 3751):
+  - `POST /api/v1/logs/workflow-error` - Webhook from n8n (no auth required for simplicity)
+  - `GET /api/v1/admin/workflows/errors` - List errors with filters (admin only)
+  - `GET /api/v1/admin/workflows/errors/{id}` - Get error details (admin only)
+- **Database** (Migration: `20251025203850_AddWorkflowErrorLogsTable`):
+  - `workflow_error_logs` table with indexes on workflow_id, created_at, execution_id
+  - Columns: id, workflow_id, execution_id, error_message (max 5000), node_name, retry_count, stack_trace (max 10000), created_at
+- **Models** (`Models/Contracts.cs`):
+  - `LogWorkflowErrorRequest(workflowId, executionId, errorMessage, nodeName?, retryCount, stackTrace?)` - Webhook request
+  - `WorkflowErrorDto(id, workflowId, executionId, errorMessage, nodeName, retryCount, stackTrace, createdAt)` - Error details
+  - `WorkflowErrorsQueryParams(workflowId?, fromDate?, toDate?, page, limit)` - Query filtering
+- **Frontend** (Spec ready at `docs/issue/n8n-05-frontend-spec.md`): Admin dashboard for monitoring workflow errors
+  - Page: `/admin/workflow-errors` (implementation pending)
+  - Features: Error list table, workflow ID filter, date range filter, pagination, error detail modal
+- **n8n Integration** (`docs/guide/n8n-error-handling.md`): Complete error handling guide
+  - Error Trigger nodes for automatic error capture
+  - Retry logic with exponential backoff (already configured: 3 attempts)
+  - Error logging to MeepleAI API webhook
+  - Optional Slack alerts for persistent failures
+  - Graceful fallback responses
+- **Security**:
+  - Webhook endpoint: No auth (rate limited for abuse prevention)
+  - Admin endpoints: Admin role required
+  - Sensitive data redaction: Regex-based removal of API keys, tokens, passwords
+  - Max length validation: 5000 chars error message, 10000 chars stack trace
+- **Tests**: 33 tests (20 unit + 13 integration, all passing)
+  - `WorkflowErrorLoggingServiceTests.cs` - Service logic, caching, sanitization, pagination
+  - `WorkflowErrorEndpointsTests.cs` - API endpoints, auth, filtering, BDD-style
+- **Docs**: `docs/guide/n8n-error-handling.md` - Implementation guide, troubleshooting, best practices
+
 **Streaming Responses** (CHAT-01):
 - **ILlmService** (`Services/ILlmService.cs`, `Services/LlmService.cs`): Token-by-token streaming support
   - `GenerateCompletionStreamAsync()` - Returns `IAsyncEnumerable<string>` for streaming tokens
@@ -367,6 +405,8 @@ tools/             - PowerShell scripts
   - `/api/v1/auth/login` - Authentication
   - `/api/v1/games` - Games list
   - `/api/v1/agents/qa` - Q&A agent
+  - `/api/v1/logs/workflow-error` - N8N-05: Workflow error webhook (no auth)
+  - `/api/v1/admin/workflows/errors` - N8N-05: Admin workflow errors list
   - `/health/ready` - Health check (unversioned)
 
 **CORS** (configured in `Program.cs`): Policy "web", origins from config, fallback `http://localhost:3000`, credentials enabled
@@ -486,6 +526,7 @@ cd apps/web && pnpm dev                                                         
 - **n8n Workflows**: `docs/guide/n8n-integration-guide.md` - n8n webhook integrations (N8N-01: Explain, N8N-03: Q&A)
   - Technical designs: `docs/technic/n8n-webhook-explain-design.md`, `docs/technic/n8n-webhook-qa-design.md`
   - Workflow JSONs: `infra/init/n8n/agent-explain-orchestrator.json`, `infra/init/n8n/agent-qa-webhook.json`
+  - **Error Handling** (N8N-05): `docs/guide/n8n-error-handling.md` - Comprehensive error handling, retry logic, Slack alerts, centralized logging
 - **Coverage**: `docs/code-coverage.md` - Coverage measurement & tracking
 - **Security Scanning**: `docs/security-scanning.md` - CI security scanning guide
 - **Repository Migration**: `docs/guide/repository-visibility-migration.md` - Complete guide for changing repository visibility (public ↔ private)

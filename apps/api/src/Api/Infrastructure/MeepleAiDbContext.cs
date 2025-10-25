@@ -32,6 +32,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<PasswordResetTokenEntity> PasswordResetTokens => Set<PasswordResetTokenEntity>();
     public DbSet<CacheStatEntity> CacheStats => Set<CacheStatEntity>();
     public DbSet<SystemConfigurationEntity> SystemConfigurations => Set<SystemConfigurationEntity>();
+    public DbSet<WorkflowErrorLogEntity> WorkflowErrorLogs => Set<WorkflowErrorLogEntity>(); // N8N-05
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -580,6 +581,25 @@ public class MeepleAiDbContext : DbContext
             entity.HasIndex(e => e.IsActive);
             entity.HasIndex(e => e.Environment);
             entity.HasIndex(e => e.UpdatedAt);
+        });
+
+        // N8N-05: Workflow Error Logs
+        modelBuilder.Entity<WorkflowErrorLogEntity>(entity =>
+        {
+            entity.ToTable("workflow_error_logs");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.WorkflowId).HasColumnName("workflow_id").HasMaxLength(255).IsRequired();
+            entity.Property(e => e.ExecutionId).HasColumnName("execution_id").HasMaxLength(255).IsRequired();
+            entity.Property(e => e.ErrorMessage).HasColumnName("error_message").HasMaxLength(5000).IsRequired();
+            entity.Property(e => e.NodeName).HasColumnName("node_name").HasMaxLength(255);
+            entity.Property(e => e.RetryCount).HasColumnName("retry_count").HasDefaultValue(0);
+            entity.Property(e => e.StackTrace).HasColumnName("stack_trace").HasMaxLength(10000);
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+
+            entity.HasIndex(e => e.WorkflowId);
+            entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => e.ExecutionId);
         });
     }
 }

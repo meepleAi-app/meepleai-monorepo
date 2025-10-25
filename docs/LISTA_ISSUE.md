@@ -167,7 +167,7 @@ Our approach follows these principles:
 
 | # | Issue | Priority | Effort | Rationale |
 |---|-------|----------|--------|-----------|
-| 21 | #425 OPS-07: Alerting system | 🔴 High | L | **CRITICAL OPS**: Proactive incident detection. Builds on OPS-02 metrics. |
+| 21 | #425 OPS-07: Alerting system | 📋 SPEC MERGED | L | **CRITICAL OPS**: AlertingService spec, Prometheus AlertManager integration, multi-channel (Email/Slack/PagerDuty), 50+ tests planned. Effort: 80h (2 weeks). PR #539 merged. devops-architect LEADS. |
 | 22 | OPS-08: CI larger runners analysis | ✅ COMPLETED | S | **RESEARCH PHASE**: Documented self-hosted runner options and decision framework. Implementation deferred pending OPS-06 validation. |
 | 23 | #427 N8N-05: Error handling & retry | ✅ COMPLETED | M | Backend complete with error logging service, admin API endpoints, 23 comprehensive tests, n8n integration guide. Frontend spec ready. PR #535. Completed: 2025-10-25 |
 | 24 | #417 N8N-04: Workflow templates | 📋 SPEC MERGED | L | Specification deployed: implementation roadmap (366 lines), DTOs in codebase, example template. PR #536 merged. Full implementation: 29-40h (3.5-5 days). Issue OPEN for implementation tracking. |

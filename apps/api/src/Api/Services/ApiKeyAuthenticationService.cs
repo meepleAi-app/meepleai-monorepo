@@ -52,6 +52,7 @@ public class ApiKeyAuthenticationService
         // Query active keys with user information
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var candidateKeys = await _db.ApiKeys
+            .AsNoTracking() // PERF-05: Read-only query for authentication validation
             .Include(k => k.User)
             .Where(k =>
                 k.IsActive &&
@@ -271,7 +272,7 @@ public class ApiKeyAuthenticationService
     private static string ExtractDisplayPrefix(string apiKey)
     {
         if (string.IsNullOrWhiteSpace(apiKey))
-            return "mpl_????";
+            return "mpl_???";
 
         // Format is: mpl_{env}_{secret}
         var parts = apiKey.Split('_', StringSplitOptions.RemoveEmptyEntries);

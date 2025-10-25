@@ -1,5 +1,6 @@
 using Api.Infrastructure;
 using System;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
@@ -10,6 +11,7 @@ using Api.Services;
 using Api.Services.Chat; // CHAT-02
 using Api.Configuration; // CHAT-02
 using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.ResponseCompression; // PERF-11: Response compression
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -33,6 +35,38 @@ var builder = WebApplication.CreateBuilder(args);
 Log.Logger = LoggingConfiguration.ConfigureSerilog(builder).CreateLogger();
 
 builder.Host.UseSerilog();
+
+// PERF-11: Configure Response Compression (Brotli + Gzip)
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true; // Enable compression for HTTPS (secure)
+    options.Providers.Add<BrotliCompressionProvider>(); // Brotli (better compression)
+    options.Providers.Add<GzipCompressionProvider>(); // Gzip (fallback, widely supported)
+
+    // Compress these MIME types
+    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[]
+    {
+        "application/json",
+        "application/json; charset=utf-8",
+        "text/plain",
+        "text/json",
+        "application/xml",
+        "text/xml",
+        "image/svg+xml"
+    });
+});
+
+// Configure Brotli compression level (optimal balance)
+builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.Fastest; // Fastest: lower CPU, good compression (1-5x faster than Optimal)
+});
+
+// Configure Gzip compression level (optimal balance)
+builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.Fastest; // Fastest: lower CPU, good compression
+});
 
 var forwardedHeadersSection = builder.Configuration.GetSection("ForwardedHeaders");
 var forwardedHeadersEnabled = forwardedHeadersSection.GetValue<bool?>("Enabled") ?? true;
@@ -96,6 +130,7 @@ builder.Services.Configure<RateLimitConfiguration>(builder.Configuration.GetSect
 builder.Services.Configure<PdfProcessingConfiguration>(builder.Configuration.GetSection("PdfProcessing"));
 builder.Services.Configure<FollowUpQuestionsConfiguration>(builder.Configuration.GetSection("FollowUpQuestions")); // CHAT-02
 builder.Services.Configure<RagPromptsConfiguration>(builder.Configuration.GetSection("RagPrompts")); // AI-07.1: RAG prompt templates
+builder.Services.Configure<HybridCacheConfiguration>(builder.Configuration.GetSection("HybridCache")); // PERF-05: HybridCache configuration
 
 // Only configure Postgres in non-test environments (tests will override with SQLite)
 if (!builder.Environment.IsEnvironment("Testing"))
@@ -104,36 +139,146 @@ if (!builder.Environment.IsEnvironment("Testing"))
         ?? builder.Configuration["ConnectionStrings__Postgres"]
         ?? throw new InvalidOperationException("Missing Postgres connection string");
 
+    // PERF-09: Optimize Postgres connection pooling for better throughput
     builder.Services.AddDbContext<MeepleAiDbContext>(options =>
-        options.UseNpgsql(connectionString));
+    {
+        options.UseNpgsql(connectionString, npgsqlOptions =>
+        {
+            // Connection resilience
+            npgsqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 3,
+                maxRetryDelay: TimeSpan.FromSeconds(5),
+                errorCodesToAdd: null);
+
+            // Command timeout (30 seconds for complex queries)
+            npgsqlOptions.CommandTimeout(30);
+
+            // Batch size for bulk operations
+            npgsqlOptions.MaxBatchSize(100);
+        });
+
+        // Performance optimizations
+        options.EnableSensitiveDataLogging(builder.Environment.IsDevelopment());
+        options.EnableDetailedErrors(builder.Environment.IsDevelopment());
+
+        // Query behavior
+        options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking); // PERF-06: Default to no-tracking
+    });
 }
 
-// Configure Redis
+// PERF-09: Configure Redis with optimized connection pooling
 var redisUrl = builder.Configuration["REDIS_URL"] ?? "localhost:6379";
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 {
     var configuration = ConfigurationOptions.Parse(redisUrl);
+
+    // Connection resilience
     configuration.AbortOnConnectFail = false; // Fail gracefully if Redis unavailable
+    configuration.ConnectRetry = 3;
+    configuration.ConnectTimeout = 5000; // 5 seconds
+    configuration.SyncTimeout = 5000; // 5 seconds
+
+    // Performance optimizations
+    configuration.KeepAlive = 60; // Keep-alive every 60 seconds
+    configuration.AllowAdmin = false; // Disable admin commands for security
+
+    // Connection pooling (StackExchange.Redis manages pool internally)
+    configuration.DefaultDatabase = 0;
+
+    var logger = sp.GetRequiredService<ILogger<Program>>();
+    logger.LogInformation("Connecting to Redis at {RedisUrl} with optimized settings", redisUrl);
+
     return ConnectionMultiplexer.Connect(configuration);
 });
 
-// Configure HttpClient for EmbeddingService and LlmService
-builder.Services.AddHttpClient();
+// PERF-05: Configure HybridCache with conditional L1 (in-memory) + L2 (Redis) support
+var hybridCacheConfig = builder.Configuration.GetSection("HybridCache").Get<HybridCacheConfiguration>()
+    ?? new HybridCacheConfiguration();
+
+#pragma warning disable EXTEXP0018 // HybridCache preview APIs
+builder.Services.AddHybridCache(options =>
+{
+    options.MaximumPayloadBytes = hybridCacheConfig.MaximumPayloadBytes;
+    options.DefaultEntryOptions = new Microsoft.Extensions.Caching.Hybrid.HybridCacheEntryOptions
+    {
+        Expiration = hybridCacheConfig.DefaultExpiration,
+        LocalCacheExpiration = hybridCacheConfig.DefaultExpiration
+    };
+});
+#pragma warning restore EXTEXP0018
+
+// Add L2 distributed cache (Redis) if enabled
+if (hybridCacheConfig.EnableL2Cache)
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = redisUrl;
+        options.InstanceName = "meepleai:hybridcache:";
+    });
+}
+
+// Register HybridCache service wrapper
+builder.Services.AddScoped<IHybridCacheService, HybridCacheService>();
+
+// PERF-09: Configure HttpClient with connection pooling optimizations
+builder.Services.AddHttpClient(); // Default client with pooling
+
+// Ollama client with optimized settings
 builder.Services.AddHttpClient("Ollama", client =>
 {
     var ollamaUrl = builder.Configuration["OLLAMA_URL"] ?? "http://localhost:11434";
     client.BaseAddress = new Uri(ollamaUrl);
     client.Timeout = TimeSpan.FromSeconds(60);
+})
+.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+{
+    PooledConnectionLifetime = TimeSpan.FromMinutes(2), // Recycle connections every 2 min
+    PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1), // Close idle connections after 1 min
+    MaxConnectionsPerServer = 20, // Allow up to 20 concurrent connections
+    EnableMultipleHttp2Connections = true // Enable HTTP/2 multiplexing
 });
+
+// OpenAI client with optimized settings
 builder.Services.AddHttpClient("OpenAI", client =>
 {
     client.BaseAddress = new Uri("https://api.openai.com/v1/");
     client.Timeout = TimeSpan.FromSeconds(30);
+})
+.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+{
+    PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+    PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+    MaxConnectionsPerServer = 10,
+    EnableMultipleHttp2Connections = true
 });
+
+// OpenRouter client with optimized settings
 builder.Services.AddHttpClient("OpenRouter", client =>
 {
     client.BaseAddress = new Uri("https://openrouter.ai/api/v1/");
     client.Timeout = TimeSpan.FromSeconds(30);
+})
+.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+{
+    PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+    PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+    MaxConnectionsPerServer = 10,
+    EnableMultipleHttp2Connections = true
+});
+
+// Qdrant client with optimized settings
+builder.Services.AddHttpClient("Qdrant", client =>
+{
+    var qdrantUrl = builder.Configuration["QdrantUrl"] ?? "http://localhost:6333";
+    client.BaseAddress = new Uri(qdrantUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+})
+.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+{
+    PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+    PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
+    MaxConnectionsPerServer = 30, // Higher for vector DB operations
+    EnableMultipleHttp2Connections = true
 });
 
 // Time provider for testability
@@ -423,6 +568,9 @@ using (var scope = app.Services.CreateScope())
         await qdrant.EnsureCollectionExistsAsync();
     }
 }
+
+// PERF-11: Enable Response Compression (must be early in pipeline)
+app.UseResponseCompression();
 
 if (forwardedHeadersEnabled)
 {

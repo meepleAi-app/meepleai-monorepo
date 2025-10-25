@@ -40,6 +40,7 @@ public class ChatExportService : IChatExportService
 
             // Step 1: Retrieve chat and validate ownership
             var chat = await _db.Chats
+                .AsNoTrackingWithIdentityResolution() // PERF-05: Read-only query with entity identity preservation for relationships
                 .Include(c => c.Game)
                 .Include(c => c.Logs)
                 .AsSplitQuery()

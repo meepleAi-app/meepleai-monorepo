@@ -391,6 +391,9 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<QualityReportServi
 // CONFIG-01: Dynamic configuration service
 builder.Services.AddScoped<IConfigurationService, ConfigurationService>();
 
+// CONFIG-05: Feature flags service
+builder.Services.AddScoped<IFeatureFlagService, FeatureFlagService>();
+
 // API-01: OpenAPI/Swagger configuration
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -1591,6 +1594,7 @@ v1Api.MapPost("/agents/qa/stream", async (
     IFollowUpQuestionService followUpService, // CHAT-02
     IOptions<FollowUpQuestionsConfiguration> followUpConfig, // CHAT-02
     MeepleAiDbContext dbContext, // CHAT-02
+    IFeatureFlagService featureFlags, // CONFIG-05
     ILogger<Program> logger,
     bool generateFollowUps = true, // CHAT-02: opt-in parameter
     CancellationToken ct = default) =>
@@ -1598,6 +1602,14 @@ v1Api.MapPost("/agents/qa/stream", async (
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
         return Results.Unauthorized();
+    }
+
+    // CONFIG-05: Check if streaming responses feature is enabled
+    if (!await featureFlags.IsEnabledAsync("Features.StreamingResponses"))
+    {
+        return Results.Json(
+            new { error = "feature_disabled", message = "Streaming responses are currently disabled", featureName = "Features.StreamingResponses" },
+            statusCode: 403);
     }
 
     if (string.IsNullOrWhiteSpace(req.gameId))
@@ -1845,11 +1857,19 @@ v1Api.MapPost("/agents/qa/stream", async (
 });
 
 // AI-03: RAG Setup Guide endpoint
-v1Api.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, SetupGuideService setupGuide, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, SetupGuideService setupGuide, ChatService chatService, AiRequestLogService aiLog, IFeatureFlagService featureFlags, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
         return Results.Unauthorized();
+    }
+
+    // CONFIG-05: Check if setup guide generation feature is enabled
+    if (!await featureFlags.IsEnabledAsync("Features.SetupGuideGeneration"))
+    {
+        return Results.Json(
+            new { error = "feature_disabled", message = "Setup guide generation is currently unavailable", featureName = "Features.SetupGuideGeneration" },
+            statusCode: 403);
     }
 
     if (string.IsNullOrWhiteSpace(req.gameId))
@@ -2168,11 +2188,19 @@ v1Api.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context
     }
 });
 
-v1Api.MapPost("/ingest/pdf", async (HttpContext context, IPdfValidationService pdfValidation, PdfStorageService pdfStorage, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/ingest/pdf", async (HttpContext context, IPdfValidationService pdfValidation, PdfStorageService pdfStorage, IFeatureFlagService featureFlags, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
         return Results.Unauthorized();
+    }
+
+    // CONFIG-05: Check if PDF upload feature is enabled
+    if (!await featureFlags.IsEnabledAsync("Features.PdfUpload"))
+    {
+        return Results.Json(
+            new { error = "feature_disabled", message = "PDF uploads are currently disabled", featureName = "Features.PdfUpload" },
+            statusCode: 403);
     }
 
     if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
@@ -2980,7 +3008,7 @@ v1Api.MapGet("/admin/quality/report", async (
 .Produces(StatusCodes.Status403Forbidden);
 
 // ADM-02: n8n workflow configuration endpoints
-v1Api.MapGet("/admin/n8n", async (HttpContext context, N8nConfigService n8nService, CancellationToken ct) =>
+v1Api.MapGet("/admin/n8n", async (HttpContext context, N8nConfigService n8nService, IFeatureFlagService featureFlags, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -2990,6 +3018,14 @@ v1Api.MapGet("/admin/n8n", async (HttpContext context, N8nConfigService n8nServi
     if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    // CONFIG-05: Check if n8n integration feature is enabled
+    if (!await featureFlags.IsEnabledAsync("Features.N8nIntegration"))
+    {
+        return Results.Json(
+            new { error = "feature_disabled", message = "n8n integration is currently disabled", featureName = "Features.N8nIntegration" },
+            statusCode: 403);
     }
 
     var configs = await n8nService.GetConfigsAsync(ct);
@@ -3699,6 +3735,88 @@ v1Api.MapPost("/admin/configurations/import", async (
 .WithTags("Admin", "Configuration")
 .Produces<object>()
 .ProducesValidationProblem();
+
+// CONFIG-05: Feature flags management endpoints (Admin only)
+v1Api.MapGet("/admin/features", async (
+    HttpContext context,
+    IFeatureFlagService featureFlags,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var flags = await featureFlags.GetAllFeatureFlagsAsync();
+    return Results.Json(new { features = flags });
+})
+.WithName("GetAllFeatureFlags")
+.WithTags("Admin", "FeatureFlags")
+.WithDescription("List all feature flags with their current states (Admin only)")
+.Produces<object>(200)
+.Produces(401)
+.Produces(403);
+
+v1Api.MapPut("/admin/features/{featureName}", async (
+    string featureName,
+    FeatureFlagUpdateRequest request,
+    HttpContext context,
+    IFeatureFlagService featureFlags,
+    ILogger<Program> logger,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        // Parse role from request if provided
+        UserRole? role = null;
+        if (!string.IsNullOrWhiteSpace(request.Role) && Enum.TryParse<UserRole>(request.Role, out var parsedRole))
+        {
+            role = parsedRole;
+        }
+
+        if (request.Enabled)
+        {
+            await featureFlags.EnableFeatureAsync(featureName, role, session.User.Id);
+            logger.LogInformation("Admin {UserId} enabled feature {FeatureName}{RoleInfo}",
+                session.User.Id, featureName, role.HasValue ? $" for {role.Value}" : "");
+        }
+        else
+        {
+            await featureFlags.DisableFeatureAsync(featureName, role, session.User.Id);
+            logger.LogInformation("Admin {UserId} disabled feature {FeatureName}{RoleInfo}",
+                session.User.Id, featureName, role.HasValue ? $" for {role.Value}" : "");
+        }
+
+        return Results.Json(new { featureName, enabled = request.Enabled, role = request.Role });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to update feature flag {FeatureName}", featureName);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.WithName("UpdateFeatureFlag")
+.WithTags("Admin", "FeatureFlags")
+.WithDescription("Enable or disable a feature flag globally or for a specific role (Admin only)")
+.Produces<object>(200)
+.Produces(400)
+.Produces(401)
+.Produces(403);
 
 v1Api.MapGet("/admin/configurations/{id}/history", async (
     string id,
@@ -4578,12 +4696,21 @@ v1Api.MapPut("/chats/{chatId:guid}/messages/{messageId:guid}",
         UpdateMessageRequest request,
         HttpContext context,
         ChatService chatService,
+        IFeatureFlagService featureFlags,
         ILogger<Program> logger,
         CancellationToken ct) =>
     {
         if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
         {
             return Results.Unauthorized();
+        }
+
+        // CONFIG-05: Check if message edit/delete feature is enabled
+        if (!await featureFlags.IsEnabledAsync("Features.MessageEditDelete"))
+        {
+            return Results.Json(
+                new { error = "feature_disabled", message = "Message modification is currently disabled", featureName = "Features.MessageEditDelete" },
+                statusCode: 403);
         }
 
         try
@@ -4628,12 +4755,21 @@ v1Api.MapDelete("/chats/{chatId:guid}/messages/{messageId:guid}",
         Guid messageId,
         HttpContext context,
         ChatService chatService,
+        IFeatureFlagService featureFlags,
         ILogger<Program> logger,
         CancellationToken ct) =>
     {
         if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
         {
             return Results.Unauthorized();
+        }
+
+        // CONFIG-05: Check if message edit/delete feature is enabled
+        if (!await featureFlags.IsEnabledAsync("Features.MessageEditDelete"))
+        {
+            return Results.Json(
+                new { error = "feature_disabled", message = "Message modification is currently disabled", featureName = "Features.MessageEditDelete" },
+                statusCode: 403);
         }
 
         var isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
@@ -4678,6 +4814,7 @@ v1Api.MapPost("/chats/{chatId:guid}/export", async (
     Guid chatId,
     ExportChatRequest request,
     IChatExportService exportService,
+    IFeatureFlagService featureFlags,
     HttpContext context,
     ILogger<Program> logger,
     CancellationToken ct) =>
@@ -4685,6 +4822,14 @@ v1Api.MapPost("/chats/{chatId:guid}/export", async (
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
         return Results.Unauthorized();
+    }
+
+    // CONFIG-05: Check if chat export feature is enabled
+    if (!await featureFlags.IsEnabledAsync("Features.ChatExport"))
+    {
+        return Results.Json(
+            new { error = "feature_disabled", message = "Chat export is currently unavailable", featureName = "Features.ChatExport" },
+            statusCode: 403);
     }
 
     try

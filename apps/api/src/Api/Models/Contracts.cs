@@ -427,3 +427,14 @@ public record ConfigurationExportDto(
 public record ConfigurationImportRequest(
     [Required] IReadOnlyList<CreateConfigurationRequest> Configurations,
     bool OverwriteExisting = false);
+
+// CONFIG-05: Feature Flags models
+public record FeatureFlagDto(
+    string FeatureName,
+    bool IsEnabled,
+    string? RoleRestriction,
+    string? Description);
+
+public record FeatureFlagUpdateRequest(
+    [Required] bool Enabled,
+    string? Role = null);

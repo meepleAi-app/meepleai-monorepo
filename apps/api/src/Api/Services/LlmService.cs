@@ -7,30 +7,49 @@ using System.Text.Json.Serialization;
 namespace Api.Services;
 
 /// <summary>
-/// Service for LLM chat completions via OpenRouter API
+/// Service for LLM chat completions via OpenRouter API.
+/// CONFIG-03: Supports dynamic configuration via database with fallback to hardcoded defaults.
 /// </summary>
 public class LlmService : ILlmService
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<LlmService> _logger;
     private readonly string _apiKey;
-    private const string ChatModel = "deepseek/deepseek-chat-v3.1";
+    private readonly IConfigurationService? _configService;
+    private readonly IConfiguration? _fallbackConfig;
 
-    public LlmService(IHttpClientFactory httpClientFactory, IConfiguration config, ILogger<LlmService> logger)
+    // Hardcoded defaults (CONFIG-03: Fallback when database not available)
+    private const string DefaultChatModel = "deepseek/deepseek-chat-v3.1";
+    private const double DefaultTemperature = 0.3;
+    private const int DefaultMaxTokens = 500;
+    private const int DefaultTimeoutSeconds = 60;
+
+    public LlmService(
+        IHttpClientFactory httpClientFactory,
+        IConfiguration config,
+        ILogger<LlmService> logger,
+        IConfigurationService? configService = null,
+        IConfiguration? fallbackConfig = null)
     {
         _httpClient = httpClientFactory.CreateClient("OpenRouter");
         _logger = logger;
         _apiKey = config["OPENROUTER_API_KEY"] ?? throw new InvalidOperationException("OPENROUTER_API_KEY not configured");
+        _configService = configService;
+        _fallbackConfig = fallbackConfig;
 
         // Configure HttpClient
         _httpClient.BaseAddress = new Uri("https://openrouter.ai/api/v1/");
         _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
         _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://meepleai.app");
-        _httpClient.Timeout = TimeSpan.FromSeconds(60);
+
+        // CONFIG-03: Use configurable timeout (will be set during first request if needed)
+        // Default timeout here, can be overridden per request
+        _httpClient.Timeout = TimeSpan.FromSeconds(DefaultTimeoutSeconds);
     }
 
     /// <summary>
     /// Generate a chat completion response
+    /// CONFIG-03: Uses dynamic configuration for model, temperature, and max_tokens.
     /// </summary>
     public async Task<LlmCompletionResult> GenerateCompletionAsync(
         string systemPrompt,
@@ -44,6 +63,11 @@ public class LlmService : ILlmService
 
         try
         {
+            // CONFIG-03: Get configuration values with fallback chain
+            var model = await GetAiConfigStringAsync("AI.Model", DefaultChatModel);
+            var temperature = await GetAiConfigAsync("AI.Temperature", DefaultTemperature);
+            var maxTokens = await GetAiConfigAsync("AI.MaxTokens", DefaultMaxTokens);
+
             var messages = new List<object>();
 
             if (!string.IsNullOrWhiteSpace(systemPrompt))
@@ -55,16 +79,17 @@ public class LlmService : ILlmService
 
             var request = new
             {
-                model = ChatModel,
+                model = model,
                 messages = messages,
-                temperature = 0.3, // Lower temperature for more deterministic, factual responses
-                max_tokens = 500
+                temperature = temperature,
+                max_tokens = maxTokens
             };
 
             var json = JsonSerializer.Serialize(request);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            _logger.LogInformation("Generating chat completion using {Model}", ChatModel);
+            _logger.LogInformation("Generating chat completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
+                model, temperature, maxTokens);
 
             var response = await _httpClient.PostAsync("chat/completions", content, ct);
             var responseBody = await response.Content.ReadAsStringAsync(ct);
@@ -126,6 +151,7 @@ public class LlmService : ILlmService
 
     /// <summary>
     /// CHAT-01: Generate a streaming chat completion response with token-by-token delivery via SSE
+    /// CONFIG-03: Uses dynamic configuration for model, temperature, and max_tokens.
     /// </summary>
     public async IAsyncEnumerable<string> GenerateCompletionStreamAsync(
         string systemPrompt,
@@ -138,6 +164,11 @@ public class LlmService : ILlmService
             yield break;
         }
 
+        // CONFIG-03: Get configuration values with fallback chain
+        var model = await GetAiConfigStringAsync("AI.Model", DefaultChatModel);
+        var temperature = await GetAiConfigAsync("AI.Temperature", DefaultTemperature);
+        var maxTokens = await GetAiConfigAsync("AI.MaxTokens", DefaultMaxTokens);
+
         var messages = new List<object>();
 
         if (!string.IsNullOrWhiteSpace(systemPrompt))
@@ -149,17 +180,18 @@ public class LlmService : ILlmService
 
         var request = new
         {
-            model = ChatModel,
+            model = model,
             messages = messages,
-            temperature = 0.3,
-            max_tokens = 500,
+            temperature = temperature,
+            max_tokens = maxTokens,
             stream = true // Enable streaming
         };
 
         var json = JsonSerializer.Serialize(request);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        _logger.LogInformation("Starting streaming chat completion using {Model}", ChatModel);
+        _logger.LogInformation("Starting streaming chat completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
+            model, temperature, maxTokens);
 
         var httpRequest = new HttpRequestMessage(HttpMethod.Post, "chat/completions")
         {
@@ -295,6 +327,142 @@ public class LlmService : ILlmService
             _logger.LogError(ex, "Unexpected error in GenerateJsonAsync");
             return null;
         }
+    }
+
+    /// <summary>
+    /// CONFIG-03: Get AI configuration value with fallback chain.
+    /// Fallback chain: DB → appsettings.json → hardcoded defaults.
+    /// </summary>
+    private async Task<T> GetAiConfigAsync<T>(string configKey, T defaultValue) where T : struct
+    {
+        // 1. Try database configuration (highest priority)
+        if (_configService != null)
+        {
+            var dbValue = await _configService.GetValueAsync<T?>(configKey);
+            if (dbValue.HasValue)
+            {
+                var validated = ValidateAiConfig(dbValue.Value, configKey);
+                _logger.LogDebug("AI config {Key}: {Value} (from database)", configKey, validated);
+                return validated;
+            }
+        }
+
+        // 2. Try appsettings.json (backward compatibility)
+        if (_fallbackConfig != null)
+        {
+            var configPath = configKey.Replace(".", ":");
+            var appsettingsValue = _fallbackConfig.GetValue<T?>(configPath);
+            if (appsettingsValue.HasValue)
+            {
+                var validated = ValidateAiConfig(appsettingsValue.Value, configKey);
+                _logger.LogDebug("AI config {Key}: {Value} (from appsettings)", configKey, validated);
+                return validated;
+            }
+        }
+
+        // 3. Hardcoded defaults (lowest priority)
+        _logger.LogDebug("AI config {Key}: {Value} (using hardcoded default)", configKey, defaultValue);
+        return defaultValue;
+    }
+
+    /// <summary>
+    /// CONFIG-03: Get AI configuration value (string) with fallback chain.
+    /// </summary>
+    private async Task<string> GetAiConfigStringAsync(string configKey, string defaultValue)
+    {
+        // 1. Try database configuration
+        if (_configService != null)
+        {
+            var dbValue = await _configService.GetValueAsync<string>(configKey);
+            if (!string.IsNullOrWhiteSpace(dbValue))
+            {
+                _logger.LogDebug("AI config {Key}: {Value} (from database)", configKey, dbValue);
+                return dbValue;
+            }
+        }
+
+        // 2. Try appsettings.json
+        if (_fallbackConfig != null)
+        {
+            var configPath = configKey.Replace(".", ":");
+            var appsettingsValue = _fallbackConfig.GetValue<string>(configPath);
+            if (!string.IsNullOrWhiteSpace(appsettingsValue))
+            {
+                _logger.LogDebug("AI config {Key}: {Value} (from appsettings)", configKey, appsettingsValue);
+                return appsettingsValue;
+            }
+        }
+
+        // 3. Hardcoded default
+        _logger.LogDebug("AI config {Key}: {Value} (using hardcoded default)", configKey, defaultValue);
+        return defaultValue;
+    }
+
+    /// <summary>
+    /// CONFIG-03: Validate AI configuration values to ensure they are within acceptable bounds.
+    /// </summary>
+    private T ValidateAiConfig<T>(T value, string configKey) where T : struct
+    {
+        // Validate temperature (must be between 0.0 and 2.0 for most LLM APIs)
+        if (configKey == "AI.Temperature" && value is double temperature)
+        {
+            if (temperature < 0.0 || temperature > 2.0)
+            {
+                _logger.LogWarning(
+                    "AI temperature {Value} out of range [0.0, 2.0], using default {Default}",
+                    temperature,
+                    DefaultTemperature);
+                return (T)(object)DefaultTemperature;
+            }
+        }
+
+        // Validate max_tokens (must be positive, cap at reasonable upper bound)
+        if (configKey == "AI.MaxTokens" && value is int maxTokens)
+        {
+            if (maxTokens <= 0)
+            {
+                _logger.LogWarning(
+                    "AI max_tokens {Value} must be positive, using default {Default}",
+                    maxTokens,
+                    DefaultMaxTokens);
+                return (T)(object)DefaultMaxTokens;
+            }
+
+            const int maxTokensUpperBound = 32000; // Reasonable upper bound for most models
+            if (maxTokens > maxTokensUpperBound)
+            {
+                _logger.LogWarning(
+                    "AI max_tokens {Value} exceeds maximum {MaxBound}, capping",
+                    maxTokens,
+                    maxTokensUpperBound);
+                return (T)(object)maxTokensUpperBound;
+            }
+        }
+
+        // Validate timeout (must be positive, cap at reasonable upper bound)
+        if (configKey == "AI.TimeoutSeconds" && value is int timeoutSeconds)
+        {
+            if (timeoutSeconds <= 0)
+            {
+                _logger.LogWarning(
+                    "AI timeout {Value} must be positive, using default {Default}",
+                    timeoutSeconds,
+                    DefaultTimeoutSeconds);
+                return (T)(object)DefaultTimeoutSeconds;
+            }
+
+            const int maxTimeoutSeconds = 300; // 5 minutes max
+            if (timeoutSeconds > maxTimeoutSeconds)
+            {
+                _logger.LogWarning(
+                    "AI timeout {Value} exceeds maximum {MaxBound}, capping",
+                    timeoutSeconds,
+                    maxTimeoutSeconds);
+                return (T)(object)maxTimeoutSeconds;
+            }
+        }
+
+        return value;
     }
 
     /// <summary>

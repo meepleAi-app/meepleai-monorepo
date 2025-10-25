@@ -71,9 +71,30 @@ tools/             - PowerShell scripts
 - **Seed Data** (DB-02): Demo users (admin/editor/user@meepleai.dev, pwd: `Demo123!`), games (Tic-Tac-Toe, Chess), rule specs, agents. Migration: `20251009140700_SeedDemoData`. Tests: `SeedDataTests.cs`
 
 **Frontend** (Next.js 14):
-- **Pages**: index, chat, upload (complex), editor, versions, admin, admin/users (ADMIN-01), admin/cache, n8n, logs, setup (AI-03)
+- **Pages**: index, chat, upload (complex), editor (EDIT-03: rich text), versions, admin, admin/users (ADMIN-01), admin/cache, n8n, logs, setup (AI-03)
 - **API Client**: `lib/api.ts` - `get/post/put/delete`, cookie auth (`credentials: "include"`), 401 handling, base URL from `NEXT_PUBLIC_API_BASE`
 - **Tests**: Jest (90% coverage) + Playwright E2E
+
+**Rich Text Editor** (EDIT-03):
+- **RichTextEditor** (`components/editor/RichTextEditor.tsx`): TipTap-based WYSIWYG editor
+  - Text formatting (bold, italic, strikethrough, code)
+  - Headings (H1-H6), lists (bullet, ordered), code blocks
+  - Character/word count display
+  - Auto-save integration with debouncing
+  - Keyboard shortcuts (Ctrl+Z undo, Ctrl+Shift+Z redo)
+- **EditorToolbar** (`components/editor/EditorToolbar.tsx`): Comprehensive formatting toolbar
+  - 15+ formatting options with visual grouping
+  - Active state highlighting, tooltips with shortcuts
+  - Undo/Redo integration
+- **ViewModeToggle** (`components/editor/ViewModeToggle.tsx`): Rich text ↔ JSON mode switching
+- **useDebounce** (`hooks/useDebounce.ts`): 2-second debounce for auto-save
+- **Enhanced Editor Page** (`pages/editor.tsx`): Integrated rich text + JSON editing
+  - Default rich text mode with seamless JSON fallback
+  - Auto-save (2s debounce), unsaved changes tracking
+  - Bidirectional HTML ↔ JSON conversion
+- **Dependencies**: @tiptap/react@3.8.0, @tiptap/starter-kit@3.8.0, @tiptap/extension-placeholder@3.8.0, @tiptap/extension-character-count@3.8.0
+- **Tests**: Unit tests (ViewModeToggle 11/11 passing, EditorToolbar comprehensive), E2E tests (`e2e/editor-rich-text.spec.ts`)
+- **Docs**: `docs/issue/edit-03-rich-text-editor-implementation.md` - Complete implementation guide
 
 **Auth** (configured in `Program.cs`): Dual authentication system supports both cookie-based sessions and API keys
 - **Cookie Auth**: Session cookies → `AuthService.ValidateSessionAsync()` → ClaimsPrincipal (UserId, Email, DisplayName, Role)

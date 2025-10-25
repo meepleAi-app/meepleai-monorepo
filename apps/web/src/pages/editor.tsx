@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { api } from "../lib/api";
+import { RichTextEditor, ViewModeToggle } from "../components/editor";
+import { useDebounce } from "../hooks/useDebounce";
 
 type RuleAtom = {
   id: string;
@@ -35,6 +37,8 @@ type HistoryEntry = {
   timestamp: number;
 };
 
+type ViewMode = "rich" | "json";
+
 export default function RuleSpecEditor() {
   const router = useRouter();
   const { gameId } = router.query;
@@ -42,12 +46,18 @@ export default function RuleSpecEditor() {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [ruleSpec, setRuleSpec] = useState<RuleSpec | null>(null);
   const [jsonContent, setJsonContent] = useState<string>("");
+  const [richContent, setRichContent] = useState<string>("");
+  const [viewMode, setViewMode] = useState<ViewMode>("rich");
   const [isValid, setIsValid] = useState<boolean>(true);
   const [validationError, setValidationError] = useState<string>("");
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+
+  // Debounced content for auto-save (2 second delay)
+  const debouncedContent = useDebounce(viewMode === "rich" ? richContent : jsonContent, 2000);
 
   // Undo/Redo state
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -144,6 +154,84 @@ export default function RuleSpecEditor() {
     }
   }, [authUser, gameId, loadRuleSpec]);
 
+  // Auto-save effect
+  useEffect(() => {
+    if (hasUnsavedChanges && isValid && debouncedContent) {
+      void handleAutoSave();
+    }
+  }, [debouncedContent]);
+
+  const handleAutoSave = async () => {
+    if (!isValid || !gameId || typeof gameId !== "string") {
+      return;
+    }
+
+    try {
+      const contentToSave = viewMode === "rich" ? convertRichToJson(richContent) : jsonContent;
+      const parsed: RuleSpec = JSON.parse(contentToSave);
+      
+      setIsSaving(true);
+      setErrorMessage("");
+      
+      const updated = await api.put<RuleSpec>(`/api/v1/games/${gameId}/rulespec`, parsed);
+      setRuleSpec(updated);
+      setHasUnsavedChanges(false);
+      setStatusMessage(`Auto-salvato (versione ${updated.version}) alle ${new Date().toLocaleTimeString()}`);
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setStatusMessage(""), 3000);
+    } catch (err: any) {
+      console.error("Auto-save error:", err);
+      // Don't show error for auto-save failures to avoid interrupting user
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const convertRichToJson = (html: string): string => {
+    // For now, store rich content in a special field
+    // In a real implementation, you'd parse HTML to extract structured data
+    if (!ruleSpec) return jsonContent;
+    
+    const updated = {
+      ...ruleSpec,
+      // Store rich content in a metadata field for now
+      richText: html
+    };
+    return JSON.stringify(updated, null, 2);
+  };
+
+  const handleViewModeChange = (newMode: ViewMode) => {
+    if (newMode === "json" && viewMode === "rich") {
+      // Convert rich text to JSON before switching
+      const converted = convertRichToJson(richContent);
+      setJsonContent(converted);
+    } else if (newMode === "rich" && viewMode === "json") {
+      // Parse JSON to extract rich content
+      try {
+        const parsed = JSON.parse(jsonContent);
+        setRichContent(parsed.richText || "<p>Nessun contenuto formattato disponibile</p>");
+      } catch {
+        // If parsing fails, keep current rich content
+      }
+    }
+    setViewMode(newMode);
+  };
+
+  const handleRichContentChange = (html: string) => {
+    setRichContent(html);
+    setHasUnsavedChanges(true);
+    // Validate that we can convert to JSON
+    try {
+      convertRichToJson(html);
+      setIsValid(true);
+      setValidationError("");
+    } catch (err: any) {
+      setIsValid(false);
+      setValidationError(err?.message || "Impossibile convertire in JSON");
+    }
+  };
+
   const addToHistory = (content: string) => {
     // Remove any history entries after the current index
     const newHistory = history.slice(0, historyIndex + 1);
@@ -175,6 +263,7 @@ export default function RuleSpecEditor() {
 
   const handleJsonChange = (newContent: string) => {
     setJsonContent(newContent);
+    setHasUnsavedChanges(true);
     validateJson(newContent);
   };
 
@@ -197,13 +286,15 @@ export default function RuleSpecEditor() {
     }
 
     try {
-      const parsed: RuleSpec = JSON.parse(jsonContent);
+      const contentToSave = viewMode === "rich" ? convertRichToJson(richContent) : jsonContent;
+      const parsed: RuleSpec = JSON.parse(contentToSave);
       setIsSaving(true);
       setErrorMessage("");
       setStatusMessage("");
 
       const updated = await api.put<RuleSpec>(`/api/v1/games/${gameId}/rulespec`, parsed);
       setRuleSpec(updated);
+      setHasUnsavedChanges(false);
       setStatusMessage(`RuleSpec salvato con successo (versione ${updated.version})`);
     } catch (err: any) {
       console.error(err);
@@ -259,9 +350,15 @@ export default function RuleSpecEditor() {
           <h1 style={{ margin: 0 }}>Editor RuleSpec</h1>
           <p style={{ margin: "8px 0 0 0", color: "#666" }}>
             Game: <strong>{gameId}</strong>
+            {hasUnsavedChanges && (
+              <span style={{ marginLeft: 12, color: "#ff9800", fontSize: 14 }}>
+                • Modifiche non salvate
+              </span>
+            )}
           </p>
         </div>
-        <div style={{ display: "flex", gap: 12 }}>
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <ViewModeToggle mode={viewMode} onModeChange={handleViewModeChange} />
           <Link
             href={`/versions?gameId=${gameId}`}
             style={{
@@ -291,9 +388,11 @@ export default function RuleSpecEditor() {
         </div>
       </div>
 
+      {/* Status Messages */}
       {statusMessage && (
-        <div style={{ padding: 12, background: "#e7f5e7", border: "1px solid #4caf50", borderRadius: 4, marginBottom: 16 }}>
-          {statusMessage}
+        <div style={{ padding: 12, background: "#e7f5e7", border: "1px solid #4caf50", borderRadius: 4, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+          <span>✓</span>
+          <span>{statusMessage}</span>
         </div>
       )}
 
@@ -307,61 +406,69 @@ export default function RuleSpecEditor() {
         <p>Caricamento...</p>
       ) : (
         <div style={{ display: "flex", gap: 24 }}>
+          {/* Editor Panel */}
           <div style={{ flex: "1 1 50%", display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <h2 style={{ margin: 0 }}>Editor JSON</h2>
+              <h2 style={{ margin: 0 }}>
+                {viewMode === "rich" ? "Editor Visuale" : "Editor JSON"}
+              </h2>
               <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  onClick={handleUndo}
-                  disabled={!canUndo}
-                  style={{
-                    padding: "6px 12px",
-                    background: canUndo ? "#0070f3" : "#ccc",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 4,
-                    cursor: canUndo ? "pointer" : "not-allowed",
-                    fontSize: 14
-                  }}
-                  title="Annulla (Ctrl+Z)"
-                >
-                  ← Annulla
-                </button>
-                <button
-                  onClick={handleRedo}
-                  disabled={!canRedo}
-                  style={{
-                    padding: "6px 12px",
-                    background: canRedo ? "#0070f3" : "#ccc",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 4,
-                    cursor: canRedo ? "pointer" : "not-allowed",
-                    fontSize: 14
-                  }}
-                  title="Ripeti (Ctrl+Y)"
-                >
-                  Ripeti →
-                </button>
+                {viewMode === "json" && (
+                  <>
+                    <button
+                      onClick={handleUndo}
+                      disabled={!canUndo}
+                      style={{
+                        padding: "6px 12px",
+                        background: canUndo ? "#0070f3" : "#ccc",
+                        color: "white",
+                        border: "none",
+                        borderRadius: 4,
+                        cursor: canUndo ? "pointer" : "not-allowed",
+                        fontSize: 14
+                      }}
+                      title="Annulla (Ctrl+Z)"
+                    >
+                      ← Annulla
+                    </button>
+                    <button
+                      onClick={handleRedo}
+                      disabled={!canRedo}
+                      style={{
+                        padding: "6px 12px",
+                        background: canRedo ? "#0070f3" : "#ccc",
+                        color: "white",
+                        border: "none",
+                        borderRadius: 4,
+                        cursor: canRedo ? "pointer" : "not-allowed",
+                        fontSize: 14
+                      }}
+                      title="Ripeti (Ctrl+Y)"
+                    >
+                      Ripeti →
+                    </button>
+                  </>
+                )}
                 <button
                   onClick={handleSave}
-                  disabled={!isValid || isSaving}
+                  disabled={!isValid || isSaving || !hasUnsavedChanges}
                   style={{
                     padding: "6px 16px",
-                    background: isValid && !isSaving ? "#4caf50" : "#ccc",
+                    background: isValid && !isSaving && hasUnsavedChanges ? "#4caf50" : "#ccc",
                     color: "white",
                     border: "none",
                     borderRadius: 4,
-                    cursor: isValid && !isSaving ? "pointer" : "not-allowed",
+                    cursor: isValid && !isSaving && hasUnsavedChanges ? "pointer" : "not-allowed",
                     fontSize: 14,
                     fontWeight: "bold"
                   }}
                 >
-                  {isSaving ? "Salvataggio..." : "Salva"}
+                  {isSaving ? "Salvataggio..." : hasUnsavedChanges ? "Salva Ora" : "Salvato"}
                 </button>
               </div>
             </div>
 
+            {/* Validation Status */}
             <div
               style={{
                 padding: 8,
@@ -372,27 +479,38 @@ export default function RuleSpecEditor() {
                 fontSize: 14
               }}
             >
-              {isValid ? "✓ JSON valido" : `✗ ${validationError}`}
+              {isValid ? "✓ Contenuto valido" : `✗ ${validationError}`}
             </div>
 
-            <textarea
-              value={jsonContent}
-              onChange={(e) => handleJsonChange(e.target.value)}
-              onBlur={handleJsonBlur}
-              style={{
-                flex: 1,
-                minHeight: 600,
-                fontFamily: "monospace",
-                fontSize: 14,
-                padding: 12,
-                border: `2px solid ${isValid ? "#ccc" : "#d93025"}`,
-                borderRadius: 4,
-                resize: "vertical"
-              }}
-              spellCheck={false}
-            />
+            {/* Editor */}
+            {viewMode === "rich" ? (
+              <RichTextEditor
+                content={richContent}
+                onChange={handleRichContentChange}
+                isValid={isValid}
+                autoFocus={true}
+              />
+            ) : (
+              <textarea
+                value={jsonContent}
+                onChange={(e) => handleJsonChange(e.target.value)}
+                onBlur={handleJsonBlur}
+                style={{
+                  flex: 1,
+                  minHeight: 600,
+                  fontFamily: "monospace",
+                  fontSize: 14,
+                  padding: 12,
+                  border: `2px solid ${isValid ? "#ccc" : "#d93025"}`,
+                  borderRadius: 4,
+                  resize: "vertical"
+                }}
+                spellCheck={false}
+              />
+            )}
           </div>
 
+          {/* Preview Panel */}
           <div style={{ flex: "1 1 50%", display: "flex", flexDirection: "column" }}>
             <h2 style={{ marginTop: 0 }}>Preview</h2>
             <div
@@ -406,8 +524,12 @@ export default function RuleSpecEditor() {
                 minHeight: 600
               }}
             >
-              {isValid && jsonContent ? (
-                <RuleSpecPreview ruleSpec={JSON.parse(jsonContent)} />
+              {isValid && (viewMode === "rich" ? richContent : jsonContent) ? (
+                viewMode === "rich" ? (
+                  <div dangerouslySetInnerHTML={{ __html: richContent }} />
+                ) : (
+                  <RuleSpecPreview ruleSpec={JSON.parse(jsonContent)} />
+                )
               ) : (
                 <p style={{ color: "#999" }}>Correggi gli errori per visualizzare l&apos;anteprima</p>
               )}

@@ -269,11 +269,13 @@ tools/             - PowerShell scripts
   - Vector Search: `meepleai.vector.search.total`, `meepleai.vector.search.duration`, `meepleai.vector.results.count`, `meepleai.vector.indexing.duration`
   - PDF: `meepleai.pdf.upload.total`, `meepleai.pdf.processing.duration`, `meepleai.pdf.pages.processed`, `meepleai.pdf.extraction.errors`
   - Cache: `meepleai.cache.hits.total`, `meepleai.cache.misses.total`, `meepleai.cache.evictions.total`
-- **Dashboards**: `infra/dashboards/` - API Performance, AI/RAG Operations, Infrastructure (auto-provisioned)
+  - Quality (AI-11.2): `meepleai.quality.score` (histogram by dimension: rag_confidence, llm_confidence, citation_quality, overall_confidence), `meepleai.quality.low_quality_responses.total` (counter)
+- **Dashboards**: `infra/dashboards/` - API Performance, AI/RAG Operations, Infrastructure, AI Quality Monitoring (auto-provisioned)
+- **Prometheus Alerts** (`infra/prometheus-rules.yml`): Error monitoring (OPS-05), AI quality alerts (AI-11.2: LowOverallConfidence, HighLowQualityRate, LowRagConfidence, LowLlmConfidence, QualityMetricsUnavailable)
 - **Configuration**: `OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318` in `infra/env/api.env.dev`
 - **Packages**: OpenTelemetry 1.13.1 (core), Instrumentation 1.12.0 (AspNetCore, Http, Runtime), Prometheus Exporter 1.13.1-beta.1
 - **Tests**: `OpenTelemetryIntegrationTests.cs` - Metrics endpoint, HTTP/runtime metrics, Prometheus format
-- **Docs**: `docs/ops-02-opentelemetry-design.md` - Architecture & implementation guide
+- **Docs**: `docs/ops-02-opentelemetry-design.md` - Architecture & implementation guide, `docs/observability.md` - AI Quality Monitoring section, `docs/runbooks/ai-quality-low.md` - Quality alert troubleshooting
 
 ## Testing
 

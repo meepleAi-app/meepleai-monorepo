@@ -15,17 +15,23 @@ public class RateLimitService : IRateLimitService
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<RateLimitService> _logger;
     private readonly RateLimitConfiguration _config;
+    private readonly IConfigurationService? _configService;
+    private readonly IConfiguration? _fallbackConfig;
 
     public RateLimitService(
         IConnectionMultiplexer redis,
         ILogger<RateLimitService> logger,
         IOptions<RateLimitConfiguration> config,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        IConfigurationService? configService = null,
+        IConfiguration? fallbackConfig = null)
     {
         _redis = redis;
         _logger = logger;
         _config = config.Value;
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _configService = configService;
+        _fallbackConfig = fallbackConfig;
     }
 
     /// <summary>
@@ -128,11 +134,151 @@ public class RateLimitService : IRateLimitService
     }
 
     /// <summary>
-    /// Get rate limit configuration based on role or defaults.
+    /// Get rate limit configuration based on role with database configuration support.
+    /// Fallback chain: DB (role-specific) → DB (global) → appsettings.json → hardcoded defaults.
     /// </summary>
     public RateLimitConfig GetConfigForRole(string? role)
     {
-        var roleConfig = role?.ToLowerInvariant() switch
+        // For backward compatibility and when ConfigurationService is not available
+        if (_configService is null)
+        {
+            return GetConfigFromHardcodedDefaults(role);
+        }
+
+        var normalizedRole = role?.ToLowerInvariant() ?? "anonymous";
+
+        // Get both maxTokens and refillRate from database with fallback
+        var maxTokens = GetRateLimitValueAsync<int>("MaxTokens", normalizedRole).Result;
+        var refillRate = GetRateLimitValueAsync<double>("RefillRate", normalizedRole).Result;
+
+        _logger.LogDebug("Rate limit config for {Role}: MaxTokens={MaxTokens}, RefillRate={RefillRate}",
+            normalizedRole, maxTokens, refillRate);
+
+        return new RateLimitConfig(maxTokens, refillRate);
+    }
+
+    /// <summary>
+    /// Get a specific rate limit value with fallback chain.
+    /// </summary>
+    private async Task<T> GetRateLimitValueAsync<T>(string limitType, string role) where T : struct
+    {
+        // 1. Try DB config with role-specific key (e.g., RateLimit.MaxTokens.admin)
+        var roleKey = $"RateLimit.{limitType}.{role}";
+        var value = await _configService!.GetValueAsync<T?>(roleKey);
+        if (value.HasValue)
+        {
+            var validated = ValidateRateLimit(value.Value, limitType, role);
+            _logger.LogInformation("Rate limit {LimitType} for {Role}: {Value} (from DB role-specific)",
+                limitType, role, validated);
+            return validated;
+        }
+
+        // 2. Try DB config with global key (e.g., RateLimit.MaxTokens)
+        var globalKey = $"RateLimit.{limitType}";
+        value = await _configService.GetValueAsync<T?>(globalKey);
+        if (value.HasValue)
+        {
+            var validated = ValidateRateLimit(value.Value, limitType, role);
+            _logger.LogInformation("Rate limit {LimitType} for {Role}: {Value} (from DB global)",
+                limitType, role, validated);
+            return validated;
+        }
+
+        // 3. Try appsettings.json (backward compatibility)
+        if (_fallbackConfig is not null)
+        {
+            var appsettingsValue = _fallbackConfig.GetValue<T?>($"RateLimiting:{limitType}:{role}");
+            if (appsettingsValue.HasValue)
+            {
+                var validated = ValidateRateLimit(appsettingsValue.Value, limitType, role);
+                _logger.LogInformation("Rate limit {LimitType} for {Role}: {Value} (from appsettings)",
+                    limitType, role, validated);
+                return validated;
+            }
+        }
+
+        // 4. Hardcoded defaults
+        var defaultValue = GetHardcodedDefault<T>(limitType, role);
+        _logger.LogWarning("Rate limit {LimitType} for {Role}: {Value} (using hardcoded default)",
+            limitType, role, defaultValue);
+        return defaultValue;
+    }
+
+    /// <summary>
+    /// Validate rate limit values to ensure they are within acceptable bounds.
+    /// </summary>
+    private T ValidateRateLimit<T>(T value, string limitType, string role) where T : struct
+    {
+        // For integer types (MaxTokens)
+        if (value is int intValue)
+        {
+            if (intValue <= 0)
+            {
+                _logger.LogError("Rate limit {LimitType} for {Role} must be positive, got {Value}. Using hardcoded default.",
+                    limitType, role, intValue);
+                return GetHardcodedDefault<T>(limitType, role);
+            }
+
+            // Reasonable upper bound to prevent misconfiguration
+            const int maxTokensUpperBound = 100000;
+            if (limitType == "MaxTokens" && intValue > maxTokensUpperBound)
+            {
+                _logger.LogWarning("Rate limit {LimitType} value {Value} exceeds maximum {MaxLimit}, capping",
+                    limitType, intValue, maxTokensUpperBound);
+                return (T)(object)maxTokensUpperBound;
+            }
+        }
+
+        // For double types (RefillRate)
+        if (value is double doubleValue)
+        {
+            if (doubleValue <= 0)
+            {
+                _logger.LogError("Rate limit {LimitType} for {Role} must be positive, got {Value}. Using hardcoded default.",
+                    limitType, role, doubleValue);
+                return GetHardcodedDefault<T>(limitType, role);
+            }
+
+            // Reasonable upper bound
+            const double refillRateUpperBound = 1000.0;
+            if (limitType == "RefillRate" && doubleValue > refillRateUpperBound)
+            {
+                _logger.LogWarning("Rate limit {LimitType} value {Value} exceeds maximum {MaxLimit}, capping",
+                    limitType, doubleValue, refillRateUpperBound);
+                return (T)(object)refillRateUpperBound;
+            }
+        }
+
+        return value;
+    }
+
+    /// <summary>
+    /// Get hardcoded default values for rate limits.
+    /// </summary>
+    private T GetHardcodedDefault<T>(string limitType, string role) where T : struct
+    {
+        return (limitType, role) switch
+        {
+            ("MaxTokens", "admin") => (T)(object)1000,
+            ("MaxTokens", "editor") => (T)(object)500,
+            ("MaxTokens", "user") => (T)(object)100,
+            ("MaxTokens", "anonymous") => (T)(object)60,
+            ("RefillRate", "admin") => (T)(object)10.0,
+            ("RefillRate", "editor") => (T)(object)5.0,
+            ("RefillRate", "user") => (T)(object)1.0,
+            ("RefillRate", "anonymous") => (T)(object)1.0,
+            _ => throw new ArgumentException($"Unknown limit type {limitType} or role {role}")
+        };
+    }
+
+    /// <summary>
+    /// Get configuration from hardcoded defaults (fallback when ConfigurationService not available).
+    /// </summary>
+    private RateLimitConfig GetConfigFromHardcodedDefaults(string? role)
+    {
+        var normalizedRole = role?.ToLowerInvariant() ?? "anonymous";
+
+        var roleConfig = normalizedRole switch
         {
             "admin" => _config.Admin,
             "editor" => _config.Editor,
@@ -140,6 +286,7 @@ public class RateLimitService : IRateLimitService
             _ => _config.Anonymous
         };
 
+        _logger.LogDebug("Using hardcoded rate limit config for {Role} (ConfigurationService not available)", normalizedRole);
         return new RateLimitConfig(roleConfig.MaxTokens, roleConfig.RefillRate);
     }
 

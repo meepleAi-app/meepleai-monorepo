@@ -416,3 +416,81 @@ logger.LogInformation($"User {user.Email} password {user.Password}");
 - ~~**OPS-04**: Enhanced logging with structured error context~~ (Completed - #294)
 - **OPS-05**: Error monitoring and alerting with PagerDuty/Slack integration
 - **OPS-06**: Log sampling and distributed tracing improvements
+
+## AI Quality Monitoring (AI-11.2)
+
+### Overview
+
+MeepleAI tracks AI response quality across multiple dimensions with comprehensive metrics, dashboards, and alerts to ensure high-quality user experience.
+
+### Quality Dimensions
+
+Every AI response is scored across four dimensions (0.0-1.0 scale):
+
+1. **RAG Confidence**: Relevance of retrieved rulebook context from vector search
+2. **LLM Confidence**: Language model's confidence in its generated response
+3. **Citation Quality**: Accuracy and completeness of rulebook citations
+4. **Overall Confidence**: Weighted average of all dimensions
+
+**Quality Tiers**:
+- **High**: ≥0.80 overall confidence (target: 80%+ of responses)
+- **Medium**: 0.60-0.80 overall confidence
+- **Low**: <0.60 overall confidence (flagged for investigation)
+
+### Grafana Dashboard
+
+Access the **AI Quality Monitoring** dashboard at http://localhost:3001/d/quality-metrics
+
+**Dashboard Panels**:
+
+1. **Overall Confidence Trend**: Time series showing overall confidence with quality tier thresholds
+2. **Quality Tier Distribution**: Pie chart showing percentage of responses by tier
+3. **Low-Quality Response Rate**: Gauge showing percentage of low-quality responses
+4. **Dimensional Confidence Breakdown**: Bar gauge showing average confidence per dimension
+5. **Confidence Percentiles**: Time series showing p50, p95, p99 confidence scores
+6. **Response Volume by Agent Type & Quality Tier**: Stacked area chart
+7. **Low-Quality Responses by Agent Type**: Bar chart
+
+### Prometheus Alerts
+
+Quality alerts are configured in `infra/prometheus-rules.yml` with recording rules and alerting rules.
+
+**Critical Alerts** (Immediate action required):
+
+| Alert Name | Threshold | Duration | Description |
+|------------|-----------|----------|-------------|
+| LowOverallConfidence | <0.60 | 1 hour | AI responses consistently low quality |
+| HighLowQualityRate | >30% | 1 hour | >1 in 3 responses failing quality checks |
+| LowRagConfidence | <0.50 | 30 min | RAG retrieval not finding relevant context |
+| LowLlmConfidence | <0.50 | 30 min | LLM producing low-confidence responses |
+| QualityMetricsUnavailable | No metrics | 15 min | Quality scoring pipeline broken |
+
+**Warning Alerts** (Monitor & investigate):
+
+| Alert Name | Threshold | Duration | Description |
+|------------|-----------|----------|-------------|
+| DegradedOverallConfidence | <0.70 | 30 min | Response quality degraded but not critical |
+| ElevatedLowQualityRate | >15% | 30 min | Higher than normal rate of quality failures |
+
+### Quality Metrics
+
+Quality metrics are exposed via the `/metrics` endpoint using OpenTelemetry:
+
+**Histogram**: `meepleai_quality_score`
+- **Buckets**: 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0
+- **Dimensions**: rag_confidence, llm_confidence, citation_quality, overall_confidence
+- **Labels**: agent_type (qa, explain, setup), operation, quality_tier (high, medium, low)
+
+**Counter**: `meepleai_quality_low_quality_responses_total`
+- **Labels**: agent_type, operation
+- **Increments**: When overall_confidence < 0.60
+
+### Troubleshooting Quality Issues
+
+When quality alerts fire, follow the [AI Quality Low Runbook](./runbooks/ai-quality-low.md) for detailed troubleshooting steps and escalation procedures.
+
+**Implementation Details**:
+- QualityMetrics class: `apps/api/src/Api/Observability/QualityMetrics.cs`
+- Dashboard: `infra/dashboards/ai-quality-monitoring.json`
+- Alert Rules: `infra/prometheus-rules.yml`
+- Runbook: `docs/runbooks/ai-quality-low.md`

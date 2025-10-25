@@ -296,7 +296,7 @@ export const waitForRole = async (
  * await waitForApiCall(mockApi.get, '/api/v1/games');
  */
 export const waitForApiCall = async (
-  mockFn: jest.Mock,
+  mockFn: any,
   endpoint?: string,
   timeout = 3000
 ): Promise<void> => {

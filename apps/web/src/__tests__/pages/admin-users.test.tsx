@@ -411,9 +411,10 @@ describe('UserManagement', () => {
 
     test('creates user with valid data', async () => {
       const user = userEvent.setup();
+      const newUser = { ...pagedResponse.items[0], id: 'new-user' };
       fetchMock
         .mockResolvedValueOnce(createJsonResponse(pagedResponse)) // Initial load
-        .mockResolvedValueOnce(createJsonResponse({ id: 'new-user', ...pagedResponse.items[0] })) // Create response
+        .mockResolvedValueOnce(createJsonResponse(newUser)) // Create response
         .mockResolvedValueOnce(createJsonResponse(pagedResponse)); // Reload after create
 
       render(<UserManagement />);

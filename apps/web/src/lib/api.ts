@@ -79,6 +79,42 @@ export interface SessionStatusResponse {
   remainingMinutes: number;
 }
 
+// AI-13: BoardGameGeek API types
+export interface BggSearchResult {
+  bggId: number;
+  name: string;
+  yearPublished: number | null;
+  thumbnailUrl: string | null;
+  type: string; // "boardgame", "boardgameexpansion", etc.
+}
+
+export interface BggSearchResponse {
+  results: BggSearchResult[];
+}
+
+export interface BggGameDetails {
+  bggId: number;
+  name: string;
+  description: string | null;
+  yearPublished: number | null;
+  minPlayers: number | null;
+  maxPlayers: number | null;
+  playingTime: number | null;
+  minPlayTime: number | null;
+  maxPlayTime: number | null;
+  minAge: number | null;
+  averageRating: number | null;
+  bayesAverageRating: number | null;
+  usersRated: number | null;
+  averageWeight: number | null; // Complexity: 1-5
+  thumbnailUrl: string | null;
+  imageUrl: string | null;
+  categories: string[];
+  mechanics: string[];
+  designers: string[];
+  publishers: string[];
+}
+
 // PERF-03: Cache statistics types
 export interface TopQuestion {
   questionHash: string;
@@ -382,6 +418,29 @@ export const api = {
 
     async deleteMessage(chatId: string, messageId: string): Promise<void> {
       return api.delete(`/api/v1/chats/${chatId}/messages/${messageId}`);
+    }
+  },
+
+  // AI-13: BoardGameGeek API integration
+  bgg: {
+    async search(query: string, exact: boolean = false): Promise<BggSearchResponse> {
+      const params = new URLSearchParams({ q: query });
+      if (exact) {
+        params.append("exact", "true");
+      }
+      const response = await api.get<BggSearchResponse>(`/api/v1/bgg/search?${params}`);
+      if (!response) {
+        throw new Error("Failed to search BoardGameGeek");
+      }
+      return response;
+    },
+
+    async getGameDetails(bggId: number): Promise<BggGameDetails> {
+      const response = await api.get<BggGameDetails>(`/api/v1/bgg/games/${bggId}`);
+      if (!response) {
+        throw new Error(`Game with BGG ID ${bggId} not found`);
+      }
+      return response;
     }
   }
 };

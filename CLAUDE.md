@@ -527,6 +527,7 @@ cd apps/web && pnpm dev                                                         
   - Technical designs: `docs/technic/n8n-webhook-explain-design.md`, `docs/technic/n8n-webhook-qa-design.md`
   - Workflow JSONs: `infra/init/n8n/agent-explain-orchestrator.json`, `infra/init/n8n/agent-qa-webhook.json`
   - **Error Handling** (N8N-05): `docs/guide/n8n-error-handling.md` - Comprehensive error handling, retry logic, Slack alerts, centralized logging
+  - **Workflow Templates** (N8N-04): Spec at `docs/issue/n8n-04-implementation-spec.md`, example template in `infra/n8n/templates/integration-slack-notifications.json`, DTOs ready (WorkflowTemplateDto, TemplateParameterDto, ImportTemplateRequest)
 - **Coverage**: `docs/code-coverage.md` - Coverage measurement & tracking
 - **Security Scanning**: `docs/security-scanning.md` - CI security scanning guide
 - **Repository Migration**: `docs/guide/repository-visibility-migration.md` - Complete guide for changing repository visibility (public ↔ private)

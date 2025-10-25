@@ -48,7 +48,14 @@
       "Bash(git commit:*)",
       "Bash(pnpm build:*)",
       "SlashCommand(/sc:research)",
-      "Bash(dotnet restore:*)"
+      "Bash(dotnet restore:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(dotnet list:*)",
+      "Bash(dotnet add package:*)",
+      "Bash(dotnet remove:*)",
+      "Bash(taskkill:*)",
+      "Bash(powershell \"Stop-Process -Id 82028 -Force -ErrorAction SilentlyContinue; echo ''Process terminated''\")"
     ],
     "deny": [],
     "ask": []

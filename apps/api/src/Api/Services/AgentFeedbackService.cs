@@ -94,7 +94,9 @@ public class AgentFeedbackService
         DateTime? endDate = null,
         CancellationToken ct = default)
     {
-        var query = _db.AgentFeedbacks.AsQueryable();
+        var query = _db.AgentFeedbacks
+            .AsNoTracking() // PERF-05: Read-only analytics query
+            .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(endpoint))
         {

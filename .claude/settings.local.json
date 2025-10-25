@@ -45,7 +45,10 @@
       "Bash(timeout 150 pnpm test:*)",
       "Bash(npm run test:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(pnpm build:*)",
+      "SlashCommand(/sc:research)",
+      "Bash(dotnet restore:*)"
     ],
     "deny": [],
     "ask": []

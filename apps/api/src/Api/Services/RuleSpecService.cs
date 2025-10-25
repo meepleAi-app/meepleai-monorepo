@@ -61,6 +61,7 @@ public class RuleSpecService
     public async Task<RuleSpec> GetOrCreateDemoAsync(string gameId, CancellationToken cancellationToken = default)
     {
         var specEntity = await _dbContext.RuleSpecs
+            .AsNoTracking() // PERF-05: Read-only query
             .Include(r => r.Atoms)
             .Where(r => r.GameId == gameId)
             .OrderByDescending(r => r.CreatedAt)

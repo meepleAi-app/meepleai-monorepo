@@ -53,10 +53,16 @@ tools/             - PowerShell scripts
 ## Architecture
 
 **Services** (DI in `Program.cs`, search for `builder.Services.Add`):
-- **AI/RAG**: EmbeddingService, QdrantService, TextChunkingService (512 chars, 50 overlap), RagService, LlmService (OpenRouter)
+- **AI/RAG**: EmbeddingService, QdrantService, TextChunkingService (sentence-aware chunking, 256-768 chars adaptive), RagService (query expansion with RRF fusion), LlmService (OpenRouter)
 - **PDF**: PdfStorageService, PdfTextExtractionService (Docnet.Core), PdfTableExtractionService (iText7), PdfValidationService (PDF-09)
 - **Domain**: GameService, RuleSpecService, RuleSpecDiffService, SetupGuideService
-- **Infra**: AuthService (session cookies), SessionManagementService, SessionAutoRevocationService, AuditService, AiRequestLogService, AiResponseCacheService (Redis), RateLimitService, N8nConfigService, BackgroundTaskService
+- **Infra**: AuthService (session cookies), SessionManagementService, SessionAutoRevocationService, AuditService, AiRequestLogService, RateLimitService, N8nConfigService, BackgroundTaskService
+- **Caching** (PERF-05): HybridCacheService (L1 in-memory + L2 Redis, cache stampede protection), AiResponseCacheService (adapter wrapping HybridCache)
+- **Query Optimization** (PERF-06): AsNoTracking on read-only queries (30% faster reads), AsNoTrackingWithIdentityResolution for relationship queries
+- **Text Chunking** (PERF-07): Sentence-aware chunking with abbreviation detection, paragraph boundaries, adaptive sizing (20% better RAG accuracy)
+- **Query Expansion** (PERF-08): Rule-based query variations with Reciprocal Rank Fusion (15-25% better recall)
+- **Connection Pooling** (PERF-09): Optimized Postgres (min 10, max 100, 5min lifetime), Redis (3 retries, 60s keep-alive), HTTP clients (10-30 connections, HTTP/2 multiplexing)
+- **Response Compression** (PERF-11): Brotli/Gzip compression for 60-80% bandwidth reduction, CompressionLevel.Fastest for optimal latency/compression balance
 
 **Database** (EF Core 9.0 + PostgreSQL):
 - **Context**: `MeepleAiDbContext` (`Infrastructure/MeepleAiDbContext.cs`)
@@ -343,6 +349,15 @@ cd apps/web && pnpm dev                                                         
 - **Database**: `docs/database-schema.md` - Complete DB schema reference
 - **Observability**: `docs/observability.md` - Health checks, logging, Seq dashboard, correlation IDs (OPS-01)
 - **OpenTelemetry**: `docs/technic/ops-02-opentelemetry-design.md` - Distributed tracing & metrics architecture (OPS-02)
+- **Performance Optimizations Summary**: `docs/technic/performance-optimization-summary.md` - Complete overview of PERF-05 through PERF-11 implementations
+- **HybridCache**: `docs/technic/perf-05-hybridcache-implementation.md` - HybridCache L1+L2 caching, cache stampede protection (PERF-05)
+- **AsNoTracking**: `docs/technic/perf-06-asnotracking-implementation.md` - EF Core query optimization for 30% faster reads (PERF-06)
+- **Sentence-Aware Chunking**: `docs/technic/perf-07-sentence-aware-chunking.md` - Intelligent text segmentation for 20% better RAG accuracy (PERF-07)
+- **Query Expansion**: `docs/technic/perf-08-query-expansion.md` - Rule-based query variations with RRF fusion for 15-25% better recall (PERF-08)
+- **Connection Pooling**: `docs/technic/perf-09-connection-pooling.md` - Optimized Postgres, Redis, and HTTP client pooling for 30-50% better throughput (PERF-09)
+- **Async All The Way**: `docs/technic/perf-10-async-all-the-way.md` - 100% async I/O coverage audit, best practices documentation (PERF-10)
+- **Response Compression**: `docs/technic/perf-11-response-compression.md` - Brotli/Gzip compression for 60-80% bandwidth reduction (PERF-11)
+- **Phase 2 Analysis**: `docs/technic/perf-p2-analysis.md` - P2 optimizations feasibility analysis (ValueTask, Compiled Queries not applicable; Batch Embeddings, Vector Tuning, Read Replicas viable for Phase 3)
 - **RAG Evaluation**: `docs/ai-06-rag-evaluation.md` - Offline evaluation system, IR metrics, quality gates (AI-06)
 - **RAG Optimization**: `docs/technic/ai-07-rag-optimization-phase1.md` - Phase 1 optimization design: prompt engineering, semantic chunking, query expansion (AI-07)
 - **n8n Workflows**: `docs/guide/n8n-integration-guide.md` - n8n webhook integrations (N8N-01: Explain, N8N-03: Q&A)

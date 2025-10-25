@@ -172,6 +172,7 @@ public class AuthService
 
         // Cache miss or no cache - query database
         var dbSession = await _db.UserSessions
+            .AsNoTracking() // PERF-05: Read-only query
             .Include(s => s.User)
             .FirstOrDefaultAsync(s => s.TokenHash == hash, ct);
 

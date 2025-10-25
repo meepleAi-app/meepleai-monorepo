@@ -11,6 +11,7 @@ using Api.Services;
 using Api.Services.Chat; // CHAT-02
 using Api.Configuration; // CHAT-02
 using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.Mvc; // EDIT-05: For [FromServices] attribute
 using Microsoft.AspNetCore.ResponseCompression; // PERF-11: Response compression
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -324,7 +325,7 @@ builder.Services.AddSingleton<ISessionCacheService, SessionCacheService>();
 builder.Services.AddScoped<GameService>();
 builder.Services.AddScoped<RuleSpecService>();
 builder.Services.AddScoped<RuleSpecDiffService>();
-builder.Services.AddScoped<RuleSpecCommentService>();
+builder.Services.AddScoped<RuleCommentService>(); // EDIT-05: Comment service with threading and mentions (concrete registration for Minimal API compatibility)
 builder.Services.AddScoped<IRagService, RagService>(); // AI-04: RAG service for Q&A and explanations
 builder.Services.AddScoped<IStreamingRagService, StreamingRagService>(); // API-02: Streaming RAG service
 builder.Services.AddScoped<IStreamingQaService, StreamingQaService>(); // CHAT-01: Streaming QA service
@@ -2847,6 +2848,318 @@ v1Api.MapDelete("/games/{gameId}/rulespec/comments/{commentId:guid}", async (str
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 });
+
+// EDIT-05: Enhanced Comments System endpoints
+// 1. Create top-level comment
+v1Api.MapPost("/rulespecs/{gameId}/{version}/comments", async (
+    string gameId,
+    string version,
+    CreateCommentRequest request,
+    HttpContext context,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+    var userId = session.User.Id;
+
+    // Manually resolve service from DI container
+    var commentService = context.RequestServices.GetRequiredService<IRuleCommentService>();
+
+    try
+    {
+        logger.LogInformation("User {UserId} creating comment on RuleSpec {GameId} version {Version}", userId, gameId, version);
+        var comment = await commentService.CreateCommentAsync(
+            gameId,
+            version,
+            request.LineNumber,
+            request.CommentText,
+            userId);
+        logger.LogInformation("Comment {CommentId} created successfully", comment.Id);
+        return Results.Created($"/api/v1/comments/{comment.Id}", comment);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to create comment on RuleSpec {GameId} version {Version}", gameId, version);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.RequireAuthorization()
+.WithName("CreateRuleSpecComment")
+.WithTags("Comments")
+.WithDescription("Create a top-level comment on a rule specification version")
+.Produces<RuleCommentDto>(StatusCodes.Status201Created)
+.Produces(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status401Unauthorized);
+
+// 2. Create reply to comment
+v1Api.MapPost("/comments/{commentId}/replies", async (
+    Guid commentId,
+    CreateReplyRequest request,
+    HttpContext context,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+    var userId = session.User.Id;
+
+    // Manually resolve service from DI container
+    var commentService = context.RequestServices.GetRequiredService<IRuleCommentService>();
+
+    try
+    {
+        logger.LogInformation("User {UserId} replying to comment {CommentId}", userId, commentId);
+        var reply = await commentService.ReplyToCommentAsync(
+            commentId,
+            request.CommentText,
+            userId);
+        logger.LogInformation("Reply {ReplyId} created successfully", reply.Id);
+        return Results.Created($"/api/v1/comments/{reply.Id}", reply);
+    }
+    catch (KeyNotFoundException ex)
+    {
+        logger.LogWarning("Comment {CommentId} not found for reply", commentId);
+        return Results.NotFound(new { error = ex.Message });
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Failed to create reply to comment {CommentId}: {Error}", commentId, ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Unexpected error creating reply to comment {CommentId}", commentId);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.RequireAuthorization()
+.WithName("CreateCommentReply")
+.WithTags("Comments")
+.WithDescription("Create a threaded reply to an existing comment")
+.Produces<RuleCommentDto>(StatusCodes.Status201Created)
+.Produces(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status404NotFound);
+
+// 3. Get all comments for RuleSpec
+v1Api.MapGet("/rulespecs/{gameId}/{version}/comments", async (
+    string gameId,
+    string version,
+    bool includeResolved,
+    HttpContext context,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+    var userId = session.User.Id;
+
+    // Manually resolve service from DI container
+    var commentService = context.RequestServices.GetRequiredService<IRuleCommentService>();
+
+    logger.LogInformation("User {UserId} fetching comments for RuleSpec {GameId} version {Version} (includeResolved: {IncludeResolved})",
+        userId, gameId, version, includeResolved);
+
+    var comments = await commentService.GetCommentsForRuleSpecAsync(gameId, version, includeResolved);
+    return Results.Ok(comments);
+})
+.RequireAuthorization()
+.WithName("GetRuleSpecComments")
+.WithTags("Comments")
+.WithDescription("Get all comments for a specific rule specification version (hierarchical structure)")
+.Produces<IReadOnlyList<RuleCommentDto>>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status401Unauthorized);
+
+// 4. Get comments for specific line
+v1Api.MapGet("/rulespecs/{gameId}/{version}/lines/{lineNumber}/comments", async (
+    string gameId,
+    string version,
+    int lineNumber,
+    HttpContext context,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+    var userId = session.User.Id;
+
+    // Manually resolve service from DI container
+    var commentService = context.RequestServices.GetRequiredService<IRuleCommentService>();
+
+    logger.LogInformation("User {UserId} fetching comments for RuleSpec {GameId} version {Version} line {LineNumber}",
+        userId, gameId, version, lineNumber);
+
+    var comments = await commentService.GetCommentsForLineAsync(gameId, version, lineNumber);
+    return Results.Ok(comments);
+})
+.RequireAuthorization()
+.WithName("GetLineComments")
+.WithTags("Comments")
+.WithDescription("Get all comments for a specific line in a rule specification")
+.Produces<IReadOnlyList<RuleCommentDto>>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status401Unauthorized);
+
+// 5. Resolve comment
+v1Api.MapPost("/comments/{commentId}/resolve", async (
+    Guid commentId,
+    bool resolveReplies,
+    HttpContext context,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    // SECURITY: Only Admin and Editor roles can resolve comments
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        logger.LogWarning("User {UserId} with role {Role} attempted to resolve comment without permission",
+            session.User.Id, session.User.Role);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var userId = session.User.Id;
+
+    // Manually resolve service from DI container
+    var commentService = context.RequestServices.GetRequiredService<IRuleCommentService>();
+
+    try
+    {
+        logger.LogInformation("User {UserId} resolving comment {CommentId} (resolveReplies: {ResolveReplies})",
+            userId, commentId, resolveReplies);
+
+        var comment = await commentService.ResolveCommentAsync(commentId, userId, resolveReplies);
+        logger.LogInformation("Comment {CommentId} resolved successfully", commentId);
+        return Results.Ok(comment);
+    }
+    catch (KeyNotFoundException ex)
+    {
+        logger.LogWarning("Comment {CommentId} not found for resolution", commentId);
+        return Results.NotFound(new { error = ex.Message });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to resolve comment {CommentId}", commentId);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.RequireAuthorization()
+.WithName("ResolveComment")
+.WithTags("Comments")
+.WithDescription("Mark a comment as resolved, optionally resolving all child replies (Admin/Editor only)")
+.Produces<RuleCommentDto>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden)
+.Produces(StatusCodes.Status404NotFound);
+
+// 6. Unresolve comment
+v1Api.MapPost("/comments/{commentId}/unresolve", async (
+    Guid commentId,
+    bool unresolveParent,
+    HttpContext context,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    // SECURITY: Only Admin and Editor roles can unresolve comments
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        logger.LogWarning("User {UserId} with role {Role} attempted to unresolve comment without permission",
+            session.User.Id, session.User.Role);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var userId = session.User.Id;
+
+    // Manually resolve service from DI container
+    var commentService = context.RequestServices.GetRequiredService<IRuleCommentService>();
+
+    try
+    {
+        logger.LogInformation("User {UserId} unresolving comment {CommentId} (unresolveParent: {UnresolveParent})",
+            userId, commentId, unresolveParent);
+
+        var comment = await commentService.UnresolveCommentAsync(commentId, unresolveParent);
+        logger.LogInformation("Comment {CommentId} unresolved successfully", commentId);
+        return Results.Ok(comment);
+    }
+    catch (KeyNotFoundException ex)
+    {
+        logger.LogWarning("Comment {CommentId} not found for unresolve", commentId);
+        return Results.NotFound(new { error = ex.Message });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to unresolve comment {CommentId}", commentId);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.RequireAuthorization()
+.WithName("UnresolveComment")
+.WithTags("Comments")
+.WithDescription("Reopen a resolved comment, optionally unresolving parent if this is a reply (Admin/Editor only)")
+.Produces<RuleCommentDto>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden)
+.Produces(StatusCodes.Status404NotFound);
+
+// 7. User search for mentions (autocomplete)
+v1Api.MapGet("/users/search", async (
+    string query,
+    MeepleAiDbContext db,
+    HttpContext context,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+    var userId = session.User.Id;
+
+    if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+    {
+        return Results.Ok(Array.Empty<UserSearchResultDto>());
+    }
+
+    logger.LogInformation("User {UserId} searching for users with query: {Query}", userId, query);
+
+    var users = await db.Users
+        .Where(u => u.DisplayName.Contains(query) || u.Email.Contains(query))
+        .OrderBy(u => u.DisplayName)
+        .Take(10)
+        .AsNoTracking()
+        .Select(u => new UserSearchResultDto(u.Id, u.DisplayName, u.Email))
+        .ToListAsync(ct);
+
+    logger.LogInformation("Found {Count} users matching query: {Query}", users.Count, query);
+    return Results.Ok(users);
+})
+.RequireAuthorization()
+.WithName("SearchUsers")
+.WithTags("Users")
+.WithDescription("Search users by display name or email for @mention autocomplete (max 10 results)")
+.Produces<IEnumerable<UserSearchResultDto>>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status401Unauthorized);
 
 v1Api.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, RuleSpecService rules, CancellationToken ct) =>
 {

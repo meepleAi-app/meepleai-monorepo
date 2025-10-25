@@ -8,6 +8,13 @@ export const getApiBase = (): string => {
   return API_BASE_FALLBACK;
 };
 
+// TypeScript types for user search (EDIT-05)
+export interface UserSearchResult {
+  id: string;
+  displayName: string;
+  email: string;
+}
+
 // TypeScript types for session management (AUTH-05)
 export interface SessionStatusResponse {
   expiresAt: string;
@@ -15,15 +22,30 @@ export interface SessionStatusResponse {
   remainingMinutes: number;
 }
 
-// TypeScript types for RuleSpec comments
+// TypeScript types for RuleSpec comments (EDIT-05: Enhanced with threading, resolution, mentions)
 export interface RuleSpecComment {
   id: string;
   gameId: string;
   version: string;
   atomId: string | null;
+  // EDIT-05: Inline annotations
+  lineNumber: number | null;
+  lineContext: string | null;
+  // EDIT-05: Threading
+  parentCommentId: string | null;
+  replies: RuleSpecComment[];
+  // Original fields
   userId: string;
   userDisplayName: string;
   commentText: string;
+  // EDIT-05: Resolution tracking
+  isResolved: boolean;
+  resolvedByUserId: string | null;
+  resolvedByDisplayName: string | null;
+  resolvedAt: string | null;
+  // EDIT-05: User mentions
+  mentionedUserIds: string[];
+  // Timestamps
   createdAt: string;
   updatedAt: string | null;
 }
@@ -37,6 +59,12 @@ export interface RuleSpecCommentsResponse {
 
 export interface CreateRuleSpecCommentRequest {
   atomId: string | null;
+  lineNumber?: number | null; // EDIT-05: Optional line number for inline comments
+  commentText: string;
+}
+
+// EDIT-05: Request for creating threaded replies
+export interface CreateReplyRequest {
   commentText: string;
 }
 
@@ -204,9 +232,14 @@ export const api = {
 
   // RuleSpec Comment API
   ruleSpecComments: {
-    async getComments(gameId: string, version: string): Promise<RuleSpecCommentsResponse | null> {
+    async getComments(
+      gameId: string,
+      version: string,
+      includeResolved: boolean = true
+    ): Promise<RuleSpecCommentsResponse | null> {
+      const resolvedParam = includeResolved ? 'true' : 'false';
       return api.get<RuleSpecCommentsResponse>(
-        `/api/v1/games/${gameId}/rulespec/versions/${version}/comments`
+        `/api/v1/games/${gameId}/rulespec/versions/${version}/comments?includeResolved=${resolvedParam}`
       );
     },
 
@@ -234,6 +267,26 @@ export const api = {
 
     async deleteComment(gameId: string, commentId: string): Promise<void> {
       return api.delete(`/api/v1/games/${gameId}/rulespec/comments/${commentId}`);
+    },
+
+    // EDIT-05: Threaded reply support
+    async createReply(
+      parentCommentId: string,
+      request: CreateReplyRequest
+    ): Promise<RuleSpecComment> {
+      return api.post<RuleSpecComment>(
+        `/api/v1/rulespec/comments/${parentCommentId}/replies`,
+        request
+      );
+    },
+
+    // EDIT-05: Resolution management
+    async resolveComment(commentId: string): Promise<void> {
+      return api.post(`/api/v1/rulespec/comments/${commentId}/resolve`);
+    },
+
+    async unresolveComment(commentId: string): Promise<void> {
+      return api.post(`/api/v1/rulespec/comments/${commentId}/unresolve`);
     }
   },
 

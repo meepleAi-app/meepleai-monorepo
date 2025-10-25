@@ -378,6 +378,7 @@ public class MeepleAiDbContext : DbContext
             entity.HasIndex(e => e.Name).IsUnique();
         });
 
+        // EDIT-05: Enhanced Comments System
         modelBuilder.Entity<RuleSpecCommentEntity>(entity =>
         {
             entity.ToTable("rulespec_comments");
@@ -389,6 +390,27 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.CommentText).IsRequired().HasMaxLength(2000);
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.UpdatedAt);
+
+            // EDIT-05: Inline Annotations
+            entity.Property(e => e.LineNumber);
+            entity.Property(e => e.LineContext).HasMaxLength(500);
+
+            // EDIT-05: Comment Threading
+            entity.Property(e => e.ParentCommentId);
+
+            // EDIT-05: Resolution Tracking
+            entity.Property(e => e.IsResolved).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.ResolvedByUserId).HasMaxLength(64);
+            entity.Property(e => e.ResolvedAt);
+
+            // EDIT-05: User Mentions (stored as JSON array)
+            entity.Property(e => e.MentionedUserIds)
+                .HasConversion(
+                    v => string.Join(',', v),
+                    v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
+                .HasMaxLength(1000);
+
+            // Relationships
             entity.HasOne(e => e.Game)
                 .WithMany()
                 .HasForeignKey(e => e.GameId)
@@ -397,8 +419,32 @@ public class MeepleAiDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // EDIT-05: Threading Relationship (self-referencing)
+            entity.HasOne(e => e.ParentComment)
+                .WithMany(p => p.Replies)
+                .HasForeignKey(e => e.ParentCommentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // EDIT-05: Resolution Relationship
+            entity.HasOne(e => e.ResolvedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.ResolvedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Indexes
             entity.HasIndex(e => new { e.GameId, e.Version });
             entity.HasIndex(e => e.AtomId);
+
+            // EDIT-05: Performance indexes for new features
+            entity.HasIndex(e => new { e.GameId, e.Version, e.LineNumber })
+                .HasDatabaseName("idx_rulespec_comments_game_version_line");
+            entity.HasIndex(e => e.ParentCommentId)
+                .HasDatabaseName("idx_rulespec_comments_parent_id");
+            entity.HasIndex(e => e.IsResolved)
+                .HasDatabaseName("idx_rulespec_comments_is_resolved");
+            entity.HasIndex(e => e.UserId)
+                .HasDatabaseName("idx_rulespec_comments_user_id");
         });
 
         modelBuilder.Entity<PromptTemplateEntity>(entity =>

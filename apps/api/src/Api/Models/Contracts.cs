@@ -438,3 +438,41 @@ public record FeatureFlagDto(
 public record FeatureFlagUpdateRequest(
     [Required] bool Enabled,
     string? Role = null);
+
+// EDIT-05: Rule Specification Comments models
+public record RuleCommentDto(
+    Guid Id,
+    string GameId,
+    string Version,
+    int? LineNumber,
+    string? LineContext,
+    Guid? ParentCommentId,
+    string CommentText,
+    string UserId,
+    string UserDisplayName,
+    bool IsResolved,
+    string? ResolvedByUserId,
+    string? ResolvedByDisplayName,
+    DateTime? ResolvedAt,
+    List<string> MentionedUserIds,
+    List<RuleCommentDto> Replies,
+    DateTime CreatedAt,
+    DateTime? UpdatedAt
+);
+
+public record CreateCommentRequest(
+    [Required] string GameId,
+    [Required] string Version,
+    int? LineNumber,
+    [Required] string CommentText
+);
+
+public record CreateReplyRequest(
+    [Required] string CommentText
+);
+
+public record UserSearchResultDto(
+    string Id,
+    string DisplayName,
+    string Email
+);

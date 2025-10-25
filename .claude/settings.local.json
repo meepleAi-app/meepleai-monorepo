@@ -64,7 +64,8 @@
       "Bash(timeout 60 dotnet test:*)",
       "Bash(timeout 30 dotnet test:*)",
       "Bash(timeout 90 dotnet test:*)",
-      "Bash(timeout 20 dotnet test:*)"
+      "Bash(timeout 20 dotnet test:*)",
+      "Bash(gh issue view:*)"
     ],
     "deny": [],
     "ask": []

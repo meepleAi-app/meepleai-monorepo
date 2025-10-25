@@ -357,6 +357,9 @@ builder.Services.AddHostedService<SessionAutoRevocationService>();
 // ADMIN-01: User management service
 builder.Services.AddScoped<UserManagementService>();
 
+// ADMIN-02: Analytics dashboard service
+builder.Services.AddScoped<IAdminStatsService, AdminStatsService>();
+
 // AUTH-04: Password reset services
 builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -3529,6 +3532,83 @@ v1Api.MapDelete("/admin/users/{userId}/sessions", async (string userId, HttpCont
     logger.LogInformation("Revoked {Count} sessions for user {UserId}", count, userId);
     return Results.Json(new { ok = true, revokedCount = count });
 });
+
+// ADMIN-02: Analytics dashboard endpoints
+v1Api.MapGet("/admin/analytics", async (
+    HttpContext context,
+    IAdminStatsService statsService,
+    DateTime? fromDate = null,
+    DateTime? toDate = null,
+    int days = 30,
+    string? gameId = null,
+    string? roleFilter = null,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var queryParams = new AnalyticsQueryParams(fromDate, toDate, days, gameId, roleFilter);
+    var stats = await statsService.GetDashboardStatsAsync(queryParams, ct);
+    return Results.Ok(stats);
+})
+.WithName("GetAnalytics")
+.WithTags("Admin")
+.WithDescription("Get analytics dashboard statistics with metrics and time-series trends")
+.Produces<DashboardStatsDto>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden);
+
+v1Api.MapPost("/admin/analytics/export", async (
+    HttpContext context,
+    IAdminStatsService statsService,
+    ExportDataRequest request,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        var data = await statsService.ExportDashboardDataAsync(request, ct);
+        var contentType = request.Format.ToLowerInvariant() switch
+        {
+            "csv" => "text/csv",
+            "json" => "application/json",
+            _ => "text/plain"
+        };
+        var filename = $"analytics-{DateTime.UtcNow:yyyy-MM-dd-HHmmss}.{request.Format.ToLowerInvariant()}";
+
+        return Results.File(
+            System.Text.Encoding.UTF8.GetBytes(data),
+            contentType,
+            filename);
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.WithName("ExportAnalytics")
+.WithTags("Admin")
+.WithDescription("Export analytics dashboard data in CSV or JSON format")
+.Produces(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden);
 
 // ADMIN-01: User management endpoints
 v1Api.MapGet("/admin/users", async (

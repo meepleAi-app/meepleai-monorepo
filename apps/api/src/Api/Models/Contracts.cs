@@ -476,3 +476,46 @@ public record UserSearchResultDto(
     string DisplayName,
     string Email
 );
+
+// ADMIN-02: Analytics Dashboard models
+public record DashboardStatsDto(
+    DashboardMetrics Metrics,
+    IReadOnlyList<TimeSeriesDataPoint> UserTrend,
+    IReadOnlyList<TimeSeriesDataPoint> SessionTrend,
+    IReadOnlyList<TimeSeriesDataPoint> ApiRequestTrend,
+    IReadOnlyList<TimeSeriesDataPoint> PdfUploadTrend,
+    IReadOnlyList<TimeSeriesDataPoint> ChatMessageTrend,
+    DateTime GeneratedAt
+);
+
+public record DashboardMetrics(
+    int TotalUsers,
+    int ActiveSessions,
+    int ApiRequestsToday,
+    int TotalPdfDocuments,
+    int TotalChatMessages,
+    double AverageConfidenceScore,
+    int TotalRagRequests,
+    long TotalTokensUsed
+);
+
+public record TimeSeriesDataPoint(
+    DateTime Date,
+    long Count,
+    double? AverageValue = null
+);
+
+public record AnalyticsQueryParams(
+    DateTime? FromDate = null,
+    DateTime? ToDate = null,
+    int Days = 30,
+    string? GameId = null,
+    string? RoleFilter = null
+);
+
+public record ExportDataRequest(
+    [Required] string Format, // "csv" or "json"
+    DateTime? FromDate = null,
+    DateTime? ToDate = null,
+    string? GameId = null
+);

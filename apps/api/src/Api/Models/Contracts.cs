@@ -358,3 +358,72 @@ public record PagedResult<T>(
     int Page,
     int PageSize
 );
+
+// CONFIG-01: Dynamic Configuration System models
+public record SystemConfigurationDto(
+    string Id,
+    string Key,
+    string Value,
+    string ValueType,
+    string? Description,
+    string Category,
+    bool IsActive,
+    bool RequiresRestart,
+    string Environment,
+    int Version,
+    string? PreviousValue,
+    DateTime CreatedAt,
+    DateTime UpdatedAt,
+    string CreatedByUserId,
+    string? UpdatedByUserId,
+    DateTime? LastToggledAt);
+
+public record CreateConfigurationRequest(
+    [Required] [StringLength(500, MinimumLength = 1)] string Key,
+    [Required] string Value,
+    [Required] string ValueType = "string",
+    string? Description = null,
+    string Category = "General",
+    bool IsActive = true,
+    bool RequiresRestart = false,
+    string Environment = "All");
+
+public record UpdateConfigurationRequest(
+    string? Value = null,
+    string? ValueType = null,
+    string? Description = null,
+    string? Category = null,
+    bool? IsActive = null,
+    bool? RequiresRestart = null,
+    string? Environment = null);
+
+public record ConfigurationHistoryDto(
+    string Id,
+    string ConfigurationId,
+    string Key,
+    string OldValue,
+    string NewValue,
+    int Version,
+    DateTime ChangedAt,
+    string ChangedByUserId,
+    string ChangeReason);
+
+public record BulkConfigurationUpdateRequest(
+    [Required] IReadOnlyList<ConfigurationUpdate> Updates);
+
+public record ConfigurationUpdate(
+    [Required] string Id,
+    [Required] string Value);
+
+public record ConfigurationValidationResult(
+    bool IsValid,
+    IReadOnlyList<string> Errors);
+
+public record ConfigurationExportDto(
+    IReadOnlyList<SystemConfigurationDto> Configurations,
+    DateTime ExportedAt,
+    string Environment);
+
+public record ConfigurationImportRequest(
+    [Required] IReadOnlyList<CreateConfigurationRequest> Configurations,
+    bool OverwriteExisting = false);

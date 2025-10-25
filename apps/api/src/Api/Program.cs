@@ -388,6 +388,9 @@ builder.Services.AddSingleton<QualityReportService>();
 builder.Services.AddSingleton<IQualityReportService>(sp => sp.GetRequiredService<QualityReportService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<QualityReportService>());
 
+// CONFIG-01: Dynamic configuration service
+builder.Services.AddScoped<IConfigurationService, ConfigurationService>();
+
 // API-01: OpenAPI/Swagger configuration
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -3344,6 +3347,483 @@ v1Api.MapDelete("/admin/api-keys/{keyId}", async (string keyId, HttpContext cont
     logger.LogInformation("API key {KeyId} permanently deleted by admin {AdminId}", keyId, session.User.Id);
     return Results.NoContent();
 });
+
+// CONFIG-01: Configuration management endpoints (Admin only)
+v1Api.MapGet("/admin/configurations", async (
+    HttpContext context,
+    IConfigurationService configService,
+    string? category = null,
+    string? environment = null,
+    bool activeOnly = true,
+    int page = 1,
+    int pageSize = 50,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var result = await configService.GetConfigurationsAsync(category, environment, activeOnly, page, pageSize);
+    return Results.Json(result);
+})
+.WithName("GetConfigurations")
+.WithTags("Admin", "Configuration")
+.Produces<PagedResult<SystemConfigurationDto>>();
+
+v1Api.MapGet("/admin/configurations/{id}", async (
+    string id,
+    HttpContext context,
+    IConfigurationService configService,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var config = await configService.GetConfigurationByIdAsync(id);
+    return config != null ? Results.Json(config) : Results.NotFound();
+})
+.WithName("GetConfigurationById")
+.WithTags("Admin", "Configuration")
+.Produces<SystemConfigurationDto>()
+.Produces(404);
+
+v1Api.MapGet("/admin/configurations/key/{key}", async (
+    string key,
+    HttpContext context,
+    IConfigurationService configService,
+    string? environment = null,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var config = await configService.GetConfigurationByKeyAsync(key, environment);
+    return config != null ? Results.Json(config) : Results.NotFound();
+})
+.WithName("GetConfigurationByKey")
+.WithTags("Admin", "Configuration")
+.Produces<SystemConfigurationDto>()
+.Produces(404);
+
+v1Api.MapPost("/admin/configurations", async (
+    CreateConfigurationRequest request,
+    HttpContext context,
+    IConfigurationService configService,
+    ILogger<Program> logger,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation("Admin {AdminId} creating configuration {Key}", session.User.Id, request.Key);
+        var config = await configService.CreateConfigurationAsync(request, session.User.Id);
+        logger.LogInformation("Configuration {Key} created with ID {Id}", request.Key, config.Id);
+        return Results.Created($"/api/v1/admin/configurations/{config.Id}", config);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Failed to create configuration {Key}: {Error}", request.Key, ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.WithName("CreateConfiguration")
+.WithTags("Admin", "Configuration")
+.Produces<SystemConfigurationDto>(201)
+.ProducesValidationProblem();
+
+v1Api.MapPut("/admin/configurations/{id}", async (
+    string id,
+    UpdateConfigurationRequest request,
+    HttpContext context,
+    IConfigurationService configService,
+    ILogger<Program> logger,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation("Admin {AdminId} updating configuration {Id}", session.User.Id, id);
+        var config = await configService.UpdateConfigurationAsync(id, request, session.User.Id);
+
+        if (config == null)
+        {
+            logger.LogWarning("Configuration {Id} not found for update", id);
+            return Results.NotFound(new { error = "Configuration not found" });
+        }
+
+        logger.LogInformation("Configuration {Id} updated to version {Version}", id, config.Version);
+        return Results.Json(config);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Failed to update configuration {Id}: {Error}", id, ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.WithName("UpdateConfiguration")
+.WithTags("Admin", "Configuration")
+.Produces<SystemConfigurationDto>()
+.Produces(404)
+.ProducesValidationProblem();
+
+v1Api.MapDelete("/admin/configurations/{id}", async (
+    string id,
+    HttpContext context,
+    IConfigurationService configService,
+    ILogger<Program> logger,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    logger.LogInformation("Admin {AdminId} deleting configuration {Id}", session.User.Id, id);
+    var success = await configService.DeleteConfigurationAsync(id);
+
+    if (!success)
+    {
+        logger.LogWarning("Configuration {Id} not found for deletion", id);
+        return Results.NotFound(new { error = "Configuration not found" });
+    }
+
+    logger.LogInformation("Configuration {Id} deleted successfully", id);
+    return Results.NoContent();
+})
+.WithName("DeleteConfiguration")
+.WithTags("Admin", "Configuration")
+.Produces(204)
+.Produces(404);
+
+v1Api.MapPatch("/admin/configurations/{id}/toggle", async (
+    string id,
+    bool isActive,
+    HttpContext context,
+    IConfigurationService configService,
+    ILogger<Program> logger,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    logger.LogInformation("Admin {AdminId} toggling configuration {Id} to {Status}",
+        session.User.Id, id, isActive ? "active" : "inactive");
+
+    var config = await configService.ToggleConfigurationAsync(id, isActive, session.User.Id);
+
+    if (config == null)
+    {
+        logger.LogWarning("Configuration {Id} not found for toggle", id);
+        return Results.NotFound(new { error = "Configuration not found" });
+    }
+
+    logger.LogInformation("Configuration {Id} toggled to {Status}", id, config.IsActive ? "active" : "inactive");
+    return Results.Json(config);
+})
+.WithName("ToggleConfiguration")
+.WithTags("Admin", "Configuration")
+.Produces<SystemConfigurationDto>()
+.Produces(404);
+
+v1Api.MapPost("/admin/configurations/bulk-update", async (
+    BulkConfigurationUpdateRequest request,
+    HttpContext context,
+    IConfigurationService configService,
+    ILogger<Program> logger,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation("Admin {AdminId} performing bulk update on {Count} configurations",
+            session.User.Id, request.Updates.Count);
+
+        var configs = await configService.BulkUpdateConfigurationsAsync(request, session.User.Id);
+
+        logger.LogInformation("Bulk update completed successfully for {Count} configurations", configs.Count);
+        return Results.Json(configs);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Bulk update failed: {Error}", ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.WithName("BulkUpdateConfigurations")
+.WithTags("Admin", "Configuration")
+.Produces<IReadOnlyList<SystemConfigurationDto>>()
+.ProducesValidationProblem();
+
+v1Api.MapPost("/admin/configurations/validate", async (
+    string key,
+    string value,
+    string valueType,
+    HttpContext context,
+    IConfigurationService configService,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value1) || value1 is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var result = await configService.ValidateConfigurationAsync(key, value, valueType);
+    return Results.Json(result);
+})
+.WithName("ValidateConfiguration")
+.WithTags("Admin", "Configuration")
+.Produces<ConfigurationValidationResult>();
+
+v1Api.MapGet("/admin/configurations/export", async (
+    string environment,
+    HttpContext context,
+    IConfigurationService configService,
+    bool activeOnly = true,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var export = await configService.ExportConfigurationsAsync(environment, activeOnly);
+    return Results.Json(export);
+})
+.WithName("ExportConfigurations")
+.WithTags("Admin", "Configuration")
+.Produces<ConfigurationExportDto>();
+
+v1Api.MapPost("/admin/configurations/import", async (
+    ConfigurationImportRequest request,
+    HttpContext context,
+    IConfigurationService configService,
+    ILogger<Program> logger,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation("Admin {AdminId} importing {Count} configurations",
+            session.User.Id, request.Configurations.Count);
+
+        var importedCount = await configService.ImportConfigurationsAsync(request, session.User.Id);
+
+        logger.LogInformation("Successfully imported {Count} configurations", importedCount);
+        return Results.Json(new { importedCount });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to import configurations");
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.WithName("ImportConfigurations")
+.WithTags("Admin", "Configuration")
+.Produces<object>()
+.ProducesValidationProblem();
+
+v1Api.MapGet("/admin/configurations/{id}/history", async (
+    string id,
+    HttpContext context,
+    IConfigurationService configService,
+    int limit = 20,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var history = await configService.GetConfigurationHistoryAsync(id, limit);
+    return Results.Json(history);
+})
+.WithName("GetConfigurationHistory")
+.WithTags("Admin", "Configuration")
+.Produces<IReadOnlyList<ConfigurationHistoryDto>>();
+
+v1Api.MapPost("/admin/configurations/{id}/rollback/{version:int}", async (
+    string id,
+    int version,
+    HttpContext context,
+    IConfigurationService configService,
+    ILogger<Program> logger,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation("Admin {AdminId} rolling back configuration {Id} to version {Version}",
+            session.User.Id, id, version);
+
+        var config = await configService.RollbackConfigurationAsync(id, version, session.User.Id);
+
+        if (config == null)
+        {
+            logger.LogWarning("Configuration {Id} not found for rollback", id);
+            return Results.NotFound(new { error = "Configuration not found" });
+        }
+
+        logger.LogInformation("Configuration {Id} rolled back successfully", id);
+        return Results.Json(config);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Rollback failed for configuration {Id}: {Error}", id, ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.WithName("RollbackConfiguration")
+.WithTags("Admin", "Configuration")
+.Produces<SystemConfigurationDto>()
+.Produces(404);
+
+v1Api.MapGet("/admin/configurations/categories", async (
+    HttpContext context,
+    IConfigurationService configService,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var categories = await configService.GetCategoriesAsync();
+    return Results.Json(categories);
+})
+.WithName("GetCategories")
+.WithTags("Admin", "Configuration")
+.Produces<IReadOnlyList<string>>();
+
+v1Api.MapPost("/admin/configurations/cache/invalidate", async (
+    HttpContext context,
+    IConfigurationService configService,
+    ILogger<Program> logger,
+    string? key = null,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    if (key != null)
+    {
+        logger.LogInformation("Admin {AdminId} invalidating cache for configuration key {Key}", session.User.Id, key);
+        await configService.InvalidateCacheAsync(key);
+    }
+    else
+    {
+        logger.LogInformation("Admin {AdminId} invalidating all configuration cache", session.User.Id);
+        await configService.InvalidateCacheAsync();
+    }
+
+    return Results.Json(new { ok = true, message = key != null ? $"Cache invalidated for key: {key}" : "All configuration cache invalidated" });
+})
+.WithName("InvalidateConfigurationCache")
+.WithTags("Admin", "Configuration")
+.Produces<object>();
 
 v1Api.MapGet("/users/me/sessions", async (HttpContext context, ISessionManagementService sessionManagement, CancellationToken ct = default) =>
 {

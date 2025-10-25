@@ -585,3 +585,31 @@ public record WorkflowErrorsQueryParams(
     int Page = 1,
     int Limit = 20
 );
+
+// N8N-04: Workflow Templates models
+public record WorkflowTemplateDto(
+    string Id,
+    string Name,
+    string Version,
+    string Description,
+    string Category,
+    string Icon,
+    string? Screenshot,
+    List<string> Tags,
+    List<TemplateParameterDto> Parameters
+);
+
+public record TemplateParameterDto(
+    string Name,
+    string Type,
+    string Label,
+    string Description,
+    bool Required,
+    string? Default,
+    List<string>? Options,
+    bool Sensitive
+);
+
+public record ImportTemplateRequest(
+    [Required] Dictionary<string, string> Parameters
+);

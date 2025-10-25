@@ -115,7 +115,7 @@ Our approach follows these principles:
 | # | Issue | Priority | Effort | Rationale |
 |---|-------|----------|--------|-----------|
 | 3 | #476 CONFIG-01: Database schema & service | 🔴 High | L | **FOUNDATION**: Blocks 6 CONFIG issues. Core infrastructure. |
-| 4 | #472 CONFIG-02: Dynamic rate limiting | 🟡 Medium | M | Builds on CONFIG-01. High security value. |
+| 4 | #472 CONFIG-02: Dynamic rate limiting | 🟢 In Progress (PR #527) | M | Builds on CONFIG-01. Core 75% complete. Tests deferred. |
 | 5 | #474 CONFIG-03: Dynamic AI/LLM config | 🟡 Medium | M | Builds on CONFIG-01. Enables rapid AI parameter tuning. |
 | 6 | #475 CONFIG-04: Dynamic RAG config | 🟡 Medium | M | Builds on CONFIG-01. Complements AI-07 optimizations. |
 

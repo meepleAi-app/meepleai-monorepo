@@ -1,8 +1,8 @@
 # MeepleAI Issue Resolution Roadmap
 
-**Document Version:** 1.0
-**Last Updated:** 2025-10-19
-**Total Open Issues:** 34
+**Document Version:** 1.1
+**Last Updated:** 2025-10-25
+**Total Issues:** 35 (33 open, 2 completed: EDIT-04, EDIT-05)
 
 ---
 
@@ -168,20 +168,21 @@ Our approach follows these principles:
 | # | Issue | Priority | Effort | Rationale |
 |---|-------|----------|--------|-----------|
 | 21 | #425 OPS-07: Alerting system | 🔴 High | L | **CRITICAL OPS**: Proactive incident detection. Builds on OPS-02 metrics. |
-| 22 | #427 N8N-05: Error handling & retry | 🟡 Medium | M | Workflow reliability. Independent of alerting work. |
-| 23 | #417 N8N-04: Workflow templates | 🟡 Medium | M | Complements N8N-05. Can be parallel. |
+| 22 | OPS-08: CI larger runners analysis | ✅ COMPLETED | S | **RESEARCH PHASE**: Documented self-hosted runner options and decision framework. Implementation deferred pending OPS-06 validation. |
+| 23 | #427 N8N-05: Error handling & retry | 🟡 Medium | M | Workflow reliability. Independent of alerting work. |
+| 24 | #417 N8N-04: Workflow templates | 🟡 Medium | M | Complements N8N-05. Can be parallel. |
 
-**Parallel**: #425 (alerting) is critical path. #427 and #417 can run in parallel with each other.
+**Parallel**: #425 (alerting) is critical path. #427 and #417 can run in parallel with each other. OPS-08 is documentation-only (no implementation yet).
 
 ### Phase 7: Editor Enhancements (Weeks 16-20)
 
 | # | Issue | Priority | Effort | Rationale |
 |---|-------|----------|--------|-----------|
-| 24 | #411 EDIT-03: Rich text editor | 🟡 Medium | L | **UX IMPROVEMENT**: Better editing experience. Foundation for other EDIT features. |
-| 25 | #412 EDIT-04: Visual diff viewer | ✅ COMPLETED | M | Side-by-side diff with syntax highlighting, search, navigation. PR #530. |
-| 26 | #413 EDIT-05: Enhanced comments | ✅ COMPLETED | M | Threading, mentions, resolution, inline annotations. PR #531. |
-| 27 | #414 EDIT-06: Timeline visualization | 🟡 Medium | M | Visual enhancement for version history. |
-| 28 | #428 EDIT-07: Bulk operations | 🟡 Medium | L | Advanced admin feature. Benefits from EDIT-03 foundation. |
+| 25 | #411 EDIT-03: Rich text editor | 🟡 Medium | L | **UX IMPROVEMENT**: Better editing experience. Foundation for other EDIT features. |
+| 26 | #412 EDIT-04: Visual diff viewer | ✅ COMPLETED | M | Side-by-side diff with syntax highlighting, search, navigation. PR #530. |
+| 27 | #413 EDIT-05: Enhanced comments | ✅ COMPLETED | M | Threading, mentions, resolution, inline annotations. PR #531. |
+| 28 | #414 EDIT-06: Timeline visualization | 🟡 Medium | M | Visual enhancement for version history. |
+| 29 | #428 EDIT-07: Bulk operations | 🟡 Medium | L | Advanced admin feature. Benefits from EDIT-03 foundation. |
 
 **Sequential**: #411 first (foundation), then #412-414 can be parallel, then #428.
 
@@ -189,8 +190,8 @@ Our approach follows these principles:
 
 | # | Issue | Priority | Effort | Rationale |
 |---|-------|----------|--------|-----------|
-| 29 | #418 AUTH-07: 2FA with TOTP | 🔴 High | L | **SECURITY**: High-value security enhancement. Independent feature. |
-| 30 | #415 AUTH-06: OAuth providers | 🟡 Medium | L | User convenience. Can run parallel with 2FA. |
+| 30 | #418 AUTH-07: 2FA with TOTP | 🔴 High | L | **SECURITY**: High-value security enhancement. Independent feature. |
+| 31 | #415 AUTH-06: OAuth providers | 🟡 Medium | L | User convenience. Can run parallel with 2FA. |
 
 **Parallel**: Independent authentication enhancements. Can run simultaneously.
 
@@ -198,10 +199,10 @@ Our approach follows these principles:
 
 | # | Issue | Priority | Effort | Rationale |
 |---|-------|----------|--------|-----------|
-| 31 | #422 AI-14: Hybrid search | 🟡 Medium | L | **PHASE 2 RAG**: Builds on AI-07. Requires research. |
-| 32 | #406 AI-12: Personalized ranking | 🟡 Medium | L | User-specific improvements. Requires user behavior data. |
-| 33 | #420 AI-13: BGG API integration | 🟡 Medium | M | Metadata enrichment. Independent feature. |
-| 34 | #424 AI-15: Fine-tuning experiments | 🟢 Low | XL | **RESEARCH**: Experimental work. Long-term investment. |
+| 32 | #422 AI-14: Hybrid search | 🟡 Medium | L | **PHASE 2 RAG**: Builds on AI-07. Requires research. |
+| 33 | #406 AI-12: Personalized ranking | 🟡 Medium | L | User-specific improvements. Requires user behavior data. |
+| 34 | #420 AI-13: BGG API integration | 🟡 Medium | M | Metadata enrichment. Independent feature. |
+| 35 | #424 AI-15: Fine-tuning experiments | 🟢 Low | XL | **RESEARCH**: Experimental work. Long-term investment. |
 
 **Parallel**: #420 (BGG) can run independently. #422 and #406 are related (both search enhancements). #424 is ongoing research.
 

@@ -350,6 +350,8 @@ tools/             - PowerShell scripts
 **Main Pipeline** (`.github/workflows/ci.yml`):
 - **ci-web**: Lint → Typecheck → Test (Node 20, pnpm 9)
 - **ci-api**: Build → Test (.NET 9, postgres, qdrant, libgdiplus, `CI=true`)
+- **Current Performance**: ~10-12 minutes (post-OPS-06 optimizations)
+- **CI Strategy**: See `docs/technic/ops-08-self-hosted-runners-analysis.md` for performance enhancement options
 
 **Security** (`.github/workflows/security-scan.yml`, see `docs/security-scanning.md`):
 1. **CodeQL SAST**: C#, JS/TS, security-extended queries

@@ -1,8 +1,8 @@
 # MeepleAI Issue Resolution Roadmap
 
-**Document Version:** 1.1
+**Document Version:** 1.2
 **Last Updated:** 2025-10-25
-**Total Issues:** 35 (32 open, 3 completed: EDIT-04, EDIT-05, ADMIN-02)
+**Total Issues:** 35 (31 open, 4 completed: EDIT-04, EDIT-05, ADMIN-02, AI-13)
 
 ---
 
@@ -201,7 +201,7 @@ Our approach follows these principles:
 |---|-------|----------|--------|-----------|
 | 32 | #422 AI-14: Hybrid search | 🟡 Medium | L | **PHASE 2 RAG**: Builds on AI-07. Requires research. |
 | 33 | #406 AI-12: Personalized ranking | 🟡 Medium | L | User-specific improvements. Requires user behavior data. |
-| 34 | #420 AI-13: BGG API integration | 🟡 Medium | M | Metadata enrichment. Independent feature. |
+| 34 | #420 AI-13: BGG API integration | ✅ COMPLETED | M | Backend complete with caching, rate limiting, retry logic. Frontend BggSearchModal component ready. PR #534. Completed: 2025-10-25 |
 | 35 | #424 AI-15: Fine-tuning experiments | 🟢 Low | XL | **RESEARCH**: Experimental work. Long-term investment. |
 
 **Parallel**: #420 (BGG) can run independently. #422 and #406 are related (both search enhancements). #424 is ongoing research.

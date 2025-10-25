@@ -22,6 +22,8 @@ using Serilog;
 using Serilog.Events;
 using StackExchange.Redis;
 using AspNetIpNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
+using Polly; // AI-13: Retry policies for BGG API
+using Polly.Extensions.Http; // AI-13: HTTP-specific retry policies
 // OPS-02: OpenTelemetry imports
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -282,6 +284,39 @@ builder.Services.AddHttpClient("Qdrant", client =>
     EnableMultipleHttp2Connections = true
 });
 
+// AI-13: BoardGameGeek API client with retry logic and connection pooling
+builder.Services.Configure<BggConfiguration>(builder.Configuration.GetSection("Bgg"));
+builder.Services.AddHttpClient("BggApi", (serviceProvider, client) =>
+{
+    var config = serviceProvider.GetRequiredService<IOptions<BggConfiguration>>().Value;
+    client.BaseAddress = new Uri(config.BaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(config.TimeoutSeconds);
+    client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI/1.0 (https://meepleai.dev)");
+})
+.ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+{
+    PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+    PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+    MaxConnectionsPerServer = 5, // BGG rate limit: max 2 req/s
+    EnableMultipleHttp2Connections = false // BGG doesn't support HTTP/2
+})
+.AddPolicyHandler((serviceProvider, request) =>
+{
+    var config = serviceProvider.GetRequiredService<IOptions<BggConfiguration>>().Value;
+    return HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .Or<TaskCanceledException>()
+        .WaitAndRetryAsync(
+            config.RetryCount,
+            retryAttempt => TimeSpan.FromSeconds(Math.Pow(config.RetryDelaySeconds, retryAttempt)),
+            onRetry: (outcome, timespan, retryCount, context) =>
+            {
+                var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
+                logger.LogWarning("BGG API retry {RetryCount}/{MaxRetries}. Waiting {Delay}ms before next attempt",
+                    retryCount, config.RetryCount, timespan.TotalMilliseconds);
+            });
+});
+
 // Time provider for testability
 builder.Services.AddSingleton(TimeProvider.System);
 
@@ -397,6 +432,9 @@ builder.Services.AddScoped<IConfigurationService, ConfigurationService>();
 
 // CONFIG-05: Feature flags service
 builder.Services.AddScoped<IFeatureFlagService, FeatureFlagService>();
+
+// AI-13: BoardGameGeek API integration
+builder.Services.AddScoped<IBggApiService, BggApiService>();
 
 // API-01: OpenAPI/Swagger configuration
 builder.Services.AddEndpointsApiExplorer();
@@ -2319,6 +2357,103 @@ v1Api.MapPost("/games", async (CreateGameRequest? request, HttpContext context, 
     {
         logger.LogWarning(ex, "Conflict creating game");
         return Results.Conflict(new { error = ex.Message });
+    }
+});
+
+// AI-13: BoardGameGeek API endpoints
+v1Api.MapGet("/bgg/search", async (
+    HttpContext context,
+    [FromQuery] string? q,
+    [FromQuery] bool exact,
+    IBggApiService bggService,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    // Authentication required
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    // Validate query parameter
+    if (string.IsNullOrWhiteSpace(q))
+    {
+        return Results.BadRequest(new { error = "Query parameter 'q' is required" });
+    }
+
+    try
+    {
+        var results = await bggService.SearchGamesAsync(q, exact, ct);
+        logger.LogInformation("BGG search returned {Count} results for query: {Query}", results.Count, q);
+        return Results.Json(new { results });
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogError(ex, "BGG API unavailable for search query: {Query}", q);
+        return Results.Json(new
+        {
+            error = "BoardGameGeek API is currently unavailable. Please try again later.",
+            details = ex.Message
+        }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Unexpected error during BGG search: {Query}", q);
+        return Results.Json(new
+        {
+            error = "An unexpected error occurred while searching BoardGameGeek."
+        }, statusCode: StatusCodes.Status500InternalServerError);
+    }
+});
+
+v1Api.MapGet("/bgg/games/{bggId:int}", async (
+    int bggId,
+    HttpContext context,
+    IBggApiService bggService,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    // Authentication required
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    // Validate BGG ID
+    if (bggId <= 0)
+    {
+        return Results.BadRequest(new { error = "Invalid BGG ID. Must be a positive integer." });
+    }
+
+    try
+    {
+        var details = await bggService.GetGameDetailsAsync(bggId, ct);
+
+        if (details == null)
+        {
+            logger.LogWarning("BGG game not found: {BggId}", bggId);
+            return Results.NotFound(new { error = $"Game with BGG ID {bggId} not found" });
+        }
+
+        logger.LogInformation("BGG game details retrieved: {BggId}, {Name}", bggId, details.Name);
+        return Results.Json(details);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogError(ex, "BGG API unavailable for game ID: {BggId}", bggId);
+        return Results.Json(new
+        {
+            error = "BoardGameGeek API is currently unavailable. Please try again later.",
+            details = ex.Message
+        }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Unexpected error retrieving BGG game details: {BggId}", bggId);
+        return Results.Json(new
+        {
+            error = "An unexpected error occurred while retrieving game details."
+        }, statusCode: StatusCodes.Status500InternalServerError);
     }
 });
 

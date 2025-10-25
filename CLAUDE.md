@@ -252,6 +252,27 @@ tools/             - PowerShell scripts
   - Reuses existing: StateUpdate, Citations, Complete, Error, Heartbeat
 - **Docs**: `docs/issue/chat-01-streaming-sse-implementation.md` - Complete implementation guide
 
+**BoardGameGeek Integration** (AI-13):
+- **BggApiService** (`Services/BggApiService.cs`, `Services/IBggApiService.cs`): BGG XML API v2 integration
+  - `SearchGamesAsync(query, exact)` - Search BGG by name, returns top 5 results
+  - `GetGameDetailsAsync(bggId)` - Fetch full game metadata (20+ fields)
+  - HybridCache integration with 7-day TTL (80%+ cache hit rate expected)
+  - Rate limiting via RateLimitService (2 req/s max to respect BGG limits)
+  - Retry logic with Polly (exponential backoff: 2s, 4s, 8s)
+- **Configuration** (`appsettings.json:Bgg`):
+  - BaseUrl, CacheTtlDays, MaxRequestsPerSecond, RetryCount, RetryDelaySeconds, TimeoutSeconds
+- **HTTP Client**: Named client "BggApi" with connection pooling (max 5 connections)
+- **Endpoints** (authentication required):
+  - `GET /api/v1/bgg/search?q={query}&exact={bool}` - Search BGG
+  - `GET /api/v1/bgg/games/{bggId}` - Get game details
+- **Frontend** (`lib/api.ts`):
+  - `api.bgg.search(query, exact?)` - Search BGG games
+  - `api.bgg.getGameDetails(bggId)` - Get game metadata
+  - `BggSearchModal` component for game import UI
+- **Database**: `bgg_id` (int nullable), `bgg_metadata` (jsonb) columns in `games` table
+- **Dependencies**: Microsoft.Extensions.Http.Polly 9.0.10
+- **Docs**: `docs/issue/ai-13-bgg-integration-implementation.md` - Complete implementation guide
+
 **Setup Guide Generation** (AI-03):
 - **SetupGuideService** (`Services/SetupGuideService.cs`): RAG-powered game setup wizard
   - `GenerateSetupGuideAsync(gameId, chatId?)` - LLM synthesizes setup steps from RAG context

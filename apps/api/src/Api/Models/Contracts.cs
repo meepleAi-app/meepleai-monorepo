@@ -519,3 +519,40 @@ public record ExportDataRequest(
     DateTime? ToDate = null,
     string? GameId = null
 );
+
+// AI-13: BoardGameGeek API integration models
+public record BggSearchResultDto(
+    int BggId,
+    string Name,
+    int? YearPublished,
+    string? ThumbnailUrl,
+    string Type // "boardgame", "boardgameexpansion", etc.
+);
+
+public record BggGameDetailsDto(
+    int BggId,
+    string Name,
+    string? Description,
+    int? YearPublished,
+    int? MinPlayers,
+    int? MaxPlayers,
+    int? PlayingTime,
+    int? MinPlayTime,
+    int? MaxPlayTime,
+    int? MinAge,
+    double? AverageRating,
+    double? BayesAverageRating,
+    int? UsersRated,
+    double? AverageWeight, // Complexity: 1-5
+    string? ThumbnailUrl,
+    string? ImageUrl,
+    List<string> Categories,
+    List<string> Mechanics,
+    List<string> Designers,
+    List<string> Publishers
+);
+
+public record BggSearchRequest(
+    [Required][MinLength(1)] string Query,
+    bool Exact = false
+);

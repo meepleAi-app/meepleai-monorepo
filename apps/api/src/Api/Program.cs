@@ -353,6 +353,9 @@ builder.Services.AddScoped<IExportFormatter, PdfExportFormatter>();
 builder.Services.AddScoped<ISessionManagementService, SessionManagementService>();
 builder.Services.AddHostedService<SessionAutoRevocationService>();
 
+// ADMIN-01: User management service
+builder.Services.AddScoped<UserManagementService>();
+
 // AUTH-04: Password reset services
 builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -3174,6 +3177,144 @@ v1Api.MapDelete("/admin/users/{userId}/sessions", async (string userId, HttpCont
     logger.LogInformation("Revoked {Count} sessions for user {UserId}", count, userId);
     return Results.Json(new { ok = true, revokedCount = count });
 });
+
+// ADMIN-01: User management endpoints
+v1Api.MapGet("/admin/users", async (
+    HttpContext context,
+    UserManagementService userManagement,
+    string? search = null,
+    string? role = null,
+    string? sortBy = null,
+    string? sortOrder = "desc",
+    int page = 1,
+    int limit = 20,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var result = await userManagement.GetUsersAsync(search, role, sortBy, sortOrder, page, limit, ct);
+    return Results.Json(result);
+})
+.WithName("GetUsers")
+.WithTags("Admin");
+
+v1Api.MapPost("/admin/users", async (
+    CreateUserRequest request,
+    HttpContext context,
+    UserManagementService userManagement,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation("Admin {AdminId} creating new user with email {Email}", session.User.Id, request.Email);
+        var user = await userManagement.CreateUserAsync(request, ct);
+        logger.LogInformation("User {UserId} created successfully", user.Id);
+        return Results.Created($"/api/v1/admin/users/{user.Id}", user);
+    }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("already exists"))
+    {
+        logger.LogWarning("Failed to create user: {Error}", ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.WithName("CreateUser")
+.WithTags("Admin");
+
+v1Api.MapPut("/admin/users/{id}", async (
+    string id,
+    UpdateUserRequest request,
+    HttpContext context,
+    UserManagementService userManagement,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation("Admin {AdminId} updating user {UserId}", session.User.Id, id);
+        var user = await userManagement.UpdateUserAsync(id, request, ct);
+        logger.LogInformation("User {UserId} updated successfully", id);
+        return Results.Ok(user);
+    }
+    catch (KeyNotFoundException ex)
+    {
+        logger.LogWarning("User {UserId} not found: {Error}", id, ex.Message);
+        return Results.NotFound(new { error = ex.Message });
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Failed to update user {UserId}: {Error}", id, ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.WithName("UpdateUser")
+.WithTags("Admin");
+
+v1Api.MapDelete("/admin/users/{id}", async (
+    string id,
+    HttpContext context,
+    UserManagementService userManagement,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation("Admin {AdminId} deleting user {UserId}", session.User.Id, id);
+        await userManagement.DeleteUserAsync(id, session.User.Id, ct);
+        logger.LogInformation("User {UserId} deleted successfully", id);
+        return Results.NoContent();
+    }
+    catch (KeyNotFoundException ex)
+    {
+        logger.LogWarning("User {UserId} not found: {Error}", id, ex.Message);
+        return Results.NotFound(new { error = ex.Message });
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Failed to delete user {UserId}: {Error}", id, ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+})
+.WithName("DeleteUser")
+.WithTags("Admin");
 
 // API-04: Admin API Key Management endpoint
 v1Api.MapDelete("/admin/api-keys/{keyId}", async (string keyId, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>

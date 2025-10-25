@@ -71,7 +71,7 @@ tools/             - PowerShell scripts
 - **Seed Data** (DB-02): Demo users (admin/editor/user@meepleai.dev, pwd: `Demo123!`), games (Tic-Tac-Toe, Chess), rule specs, agents. Migration: `20251009140700_SeedDemoData`. Tests: `SeedDataTests.cs`
 
 **Frontend** (Next.js 14):
-- **Pages**: index, chat, upload (complex), editor, versions, admin, n8n, logs, setup (AI-03)
+- **Pages**: index, chat, upload (complex), editor, versions, admin, admin/users (ADMIN-01), admin/cache, n8n, logs, setup (AI-03)
 - **API Client**: `lib/api.ts` - `get/post/put/delete`, cookie auth (`credentials: "include"`), 401 handling, base URL from `NEXT_PUBLIC_API_BASE`
 - **Tests**: Jest (90% coverage) + Playwright E2E
 
@@ -131,6 +131,45 @@ tools/             - PowerShell scripts
   - `SessionManagementServiceTests.cs` - Unit tests with SQLite in-memory
   - `SessionManagementEndpointsTests.cs` - Integration tests with auth
   - `SessionAutoRevocationServiceTests.cs` - Background service tests
+
+**User Management** (ADMIN-01):
+- **UserManagementService** (`Services/UserManagementService.cs`): Admin user CRUD operations
+  - `GetUsersAsync(search, role, sortBy, sortOrder, page, limit)` - Paginated user list with filters
+  - `CreateUserAsync(CreateUserRequest)` - Create user with role assignment via AuthService
+  - `UpdateUserAsync(userId, UpdateUserRequest)` - Update email, displayName, role
+  - `DeleteUserAsync(userId, requestingUserId)` - Delete user with safety checks
+- **Endpoints** (Admin only, see `Program.cs` user management endpoints around line 3033):
+  - `GET /api/v1/admin/users` - List users (search, role filter, sorting, pagination)
+  - `POST /api/v1/admin/users` - Create new user
+  - `PUT /api/v1/admin/users/{id}` - Update existing user
+  - `DELETE /api/v1/admin/users/{id}` - Delete user
+- **Models** (`Models/Contracts.cs`):
+  - `UserDto(id, email, displayName, role, createdAt, lastSeenAt)` - User information with session tracking
+  - `CreateUserRequest(email, password, displayName, role)` - User creation with validation
+  - `UpdateUserRequest(email?, displayName?, role?)` - Partial user updates
+  - `PagedResult<T>(items, total, page, pageSize)` - Generic pagination container
+- **Frontend** (`pages/admin/users.tsx`): Complete user management UI
+  - User list table with sortable columns (email, displayName, role, createdAt)
+  - Search by email/name, filter by role, pagination (20/page)
+  - Create user modal with form validation
+  - Edit user modal with pre-filled data
+  - Delete confirmation dialog
+  - Bulk selection and delete with checkboxes
+  - Toast notifications for success/error feedback
+  - Role badge color coding (Admin=red, Editor=yellow, User=green)
+  - Last seen tracking from active sessions
+- **Security Features**:
+  - Admin-only authorization on all endpoints
+  - Email uniqueness validation
+  - Self-deletion prevention
+  - Last admin deletion prevention
+  - UserRole enum type safety
+  - Password strength validation (8+ chars)
+- **Tests**: 75 tests (29 unit + 13 integration + 33 frontend)
+  - `UserManagementServiceTests.cs` - Unit tests with SQLite (CRUD, filters, sorting, safety checks)
+  - `UserManagementEndpointsTests.cs` - Integration tests with Testcontainers (auth, validation)
+  - `admin-users.test.tsx` - Frontend tests (22 passing: list, search, filter, pagination, selection)
+  - `admin-users.spec.ts` - E2E tests with Playwright (complete lifecycle, bulk ops, sorting)
 
 **Streaming Responses** (CHAT-01):
 - **ILlmService** (`Services/ILlmService.cs`, `Services/LlmService.cs`): Token-by-token streaming support

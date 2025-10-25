@@ -1,0 +1,139 @@
+{
+  "id": "integration-slack-notifications",
+  "name": "Slack Notifications",
+  "version": "1.0.0",
+  "description": "Send Slack notifications when specific events occur (new user registration, PDF upload, errors)",
+  "category": "integration",
+  "icon": "💬",
+  "screenshot": null,
+  "documentation": "docs/n8n-templates/integration-slack-notifications.md",
+  "tags": ["slack", "notifications", "webhooks", "alerts"],
+  "parameters": [
+    {
+      "name": "slackWebhookUrl",
+      "type": "string",
+      "label": "Slack Webhook URL",
+      "description": "Your Slack incoming webhook URL from https://api.slack.com/messaging/webhooks",
+      "required": true,
+      "default": null,
+      "options": null,
+      "sensitive": true
+    },
+    {
+      "name": "eventType",
+      "type": "select",
+      "label": "Event Type",
+      "description": "Which event should trigger the notification",
+      "required": true,
+      "default": "user_registered",
+      "options": ["user_registered", "pdf_uploaded", "error_occurred", "chat_message"],
+      "sensitive": false
+    },
+    {
+      "name": "channel",
+      "type": "string",
+      "label": "Slack Channel",
+      "description": "Channel name (e.g., #notifications)",
+      "required": false,
+      "default": "#notifications",
+      "options": null,
+      "sensitive": false
+    }
+  ],
+  "workflow": {
+    "name": "Slack Notifications - {{eventType}}",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "slack-notify",
+          "responseMode": "lastNode",
+          "options": {}
+        },
+        "id": "webhook-trigger",
+        "name": "Webhook Trigger",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [250, 300]
+      },
+      {
+        "parameters": {
+          "jsCode": "const event = $('Webhook Trigger').first().json.body;\nconst eventType = '{{eventType}}';\n\nlet message = '';\n\nswitch(eventType) {\n  case 'user_registered':\n    message = `:tada: New user registered: ${event.email}`;\n    break;\n  case 'pdf_uploaded':\n    message = `:page_facing_up: PDF uploaded: ${event.fileName} (${event.pageCount} pages)`;\n    break;\n  case 'error_occurred':\n    message = `:rotating_light: Error: ${event.errorMessage}`;\n    break;\n  case 'chat_message':\n    message = `:speech_balloon: New chat: ${event.query}`;\n    break;\n}\n\nreturn {\n  channel: '{{channel}}',\n  text: message,\n  timestamp: new Date().toISOString()\n};"
+        },
+        "id": "format-message",
+        "name": "Format Message",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [450, 300]
+      },
+      {
+        "parameters": {
+          "url": "{{slackWebhookUrl}}",
+          "authentication": "none",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={\"text\": \"{{ $json.text }}\", \"channel\": \"{{ $json.channel }}\"}",
+          "options": {
+            "timeout": 10000,
+            "retry": {
+              "maxTries": 3,
+              "retryOnHttpStatusCodes": "429,500,502,503,504"
+            }
+          }
+        },
+        "id": "send-to-slack",
+        "name": "Send to Slack",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [650, 300]
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={\"success\": true, \"message\": \"Notification sent to Slack\"}",
+          "options": {}
+        },
+        "id": "respond",
+        "name": "Respond",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [850, 300]
+      }
+    ],
+    "connections": {
+      "webhook-trigger": {
+        "main": [
+          [
+            {
+              "node": "format-message",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "format-message": {
+        "main": [
+          [
+            {
+              "node": "send-to-slack",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "send-to-slack": {
+        "main": [
+          [
+            {
+              "node": "respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    }
+  }
+}

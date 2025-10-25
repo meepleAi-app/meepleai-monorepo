@@ -31,6 +31,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<PromptAuditLogEntity> PromptAuditLogs => Set<PromptAuditLogEntity>();
     public DbSet<PasswordResetTokenEntity> PasswordResetTokens => Set<PasswordResetTokenEntity>();
     public DbSet<CacheStatEntity> CacheStats => Set<CacheStatEntity>();
+    public DbSet<SystemConfigurationEntity> SystemConfigurations => Set<SystemConfigurationEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -492,6 +493,47 @@ public class MeepleAiDbContext : DbContext
             entity.HasIndex(e => e.TokenHash).IsUnique();
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.ExpiresAt);
+        });
+
+        // CONFIG-01: System configurations
+        modelBuilder.Entity<SystemConfigurationEntity>(entity =>
+        {
+            entity.ToTable("system_configurations");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
+            entity.Property(e => e.Key).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Value).IsRequired();
+            entity.Property(e => e.ValueType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.Category).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.IsActive).IsRequired();
+            entity.Property(e => e.RequiresRestart).IsRequired();
+            entity.Property(e => e.Environment).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Version).IsRequired();
+            entity.Property(e => e.PreviousValue);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.UpdatedAt).IsRequired();
+            entity.Property(e => e.CreatedByUserId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.UpdatedByUserId).HasMaxLength(64);
+            entity.Property(e => e.LastToggledAt);
+
+            // Relationships
+            entity.HasOne(e => e.CreatedBy)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.UpdatedBy)
+                .WithMany()
+                .HasForeignKey(e => e.UpdatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Indexes for performance
+            entity.HasIndex(e => new { e.Key, e.Environment }).IsUnique();
+            entity.HasIndex(e => e.Category);
+            entity.HasIndex(e => e.IsActive);
+            entity.HasIndex(e => e.Environment);
+            entity.HasIndex(e => e.UpdatedAt);
         });
     }
 }

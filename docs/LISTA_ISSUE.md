@@ -191,7 +191,7 @@ Our approach follows these principles:
 | # | Issue | Priority | Effort | Rationale |
 |---|-------|----------|--------|-----------|
 | 30 | #418 AUTH-07: 2FA with TOTP | 🔴 High | L | **SECURITY**: High-value security enhancement. Independent feature. |
-| 31 | #415 AUTH-06: OAuth providers | 🟡 Medium | L | User convenience. Can run parallel with 2FA. |
+| 31 | #415 AUTH-06: OAuth providers | 📋 SPEC MERGED | L | Security-first spec: OAuthService + EncryptionService, CSRF protection, token encryption, 62+ tests planned. Effort: 80h (2 weeks). PR #537 merged. security-engineer LEADS. |
 
 **Parallel**: Independent authentication enhancements. Can run simultaneously.
 

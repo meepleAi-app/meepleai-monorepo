@@ -71,13 +71,13 @@ const mockGames = [
 ];
 
 const mockAgents = [
-  createMockAgent({ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2025-01-01T00:00:00Z' }),
-  createMockAgent({ id: 'agent-2', gameId: 'game-1', name: 'Chess Helper', kind: 'qa', createdAt: '2025-01-02T00:00:00Z' })
+  createMockAgent({ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', type: 'qa' }),
+  createMockAgent({ id: 'agent-2', gameId: 'game-1', name: 'Chess Helper', type: 'qa' })
 ];
 
 const mockEditableAgents = [
-  createMockAgent({ id: 'agent-1', gameId: 'game-1', name: 'Editable Agent', kind: 'qa', createdAt: '2025-01-01T00:00:00Z' }),
-  createMockAgent({ id: 'agent-2', gameId: 'game-1', name: 'Supporting Agent', kind: 'qa', createdAt: '2025-01-02T00:00:00Z' })
+  createMockAgent({ id: 'agent-1', gameId: 'game-1', name: 'Editable Agent', type: 'qa' }),
+  createMockAgent({ id: 'agent-2', gameId: 'game-1', name: 'Supporting Agent', type: 'qa' })
 ];
 
 const mockChats = [
@@ -421,7 +421,7 @@ describe('ChatPage', () => {
 
       // Clear previous calls
       mockApi.get.mockClear();
-      mockApi.get.mockResolvedValueOnce([{ id: 'agent-3', gameId: 'game-2', name: 'Catan Expert', kind: 'qa', createdAt: '2025-01-01T00:00:00Z' }]);
+      mockApi.get.mockResolvedValueOnce([{ id: 'agent-3', gameId: 'game-2', name: 'Catan Expert', type: 'qa', isActive: true }]);
       mockApi.get.mockResolvedValueOnce([]);
 
       await user.selectOptions(gameSelect, 'game-2');
@@ -443,7 +443,7 @@ describe('ChatPage', () => {
       const gameSelect = screen.getByLabelText(/Gioco:/i);
 
       mockApi.get.mockClear();
-      const catanAgents = [{ id: 'agent-3', gameId: 'game-2', name: 'Catan Expert', kind: 'qa', createdAt: '2025-01-01T00:00:00Z' }];
+      const catanAgents = [{ id: 'agent-3', gameId: 'game-2', name: 'Catan Expert', type: 'qa', isActive: true }];
       mockApi.get.mockResolvedValueOnce(catanAgents);
       mockApi.get.mockResolvedValueOnce([]);
 
@@ -760,7 +760,7 @@ describe('ChatPage', () => {
         expect(agentSelect.value).toBe('agent-1');
 
         // Change game selection (which triggers agents load and clears active chat)
-        mockApi.get.mockResolvedValueOnce([{ id: 'agent-3', gameId: 'game-2', name: 'Catan Expert', kind: 'qa', createdAt: '2025-01-01T00:00:00Z' }]);
+        mockApi.get.mockResolvedValueOnce([{ id: 'agent-3', gameId: 'game-2', name: 'Catan Expert', type: 'qa', isActive: true }]);
         mockApi.get.mockResolvedValueOnce([]);
         await user.selectOptions(gameSelect, 'game-2');
 

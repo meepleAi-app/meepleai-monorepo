@@ -29,11 +29,9 @@ describe("EditorToolbar", () => {
 
     mockEditor = {
       isActive: jest.fn((name: string, attrs?: any) => false),
-      can: jest.fn(() => ({
-        chain: jest.fn(() => createChain(true))
-      })),
+      can: jest.fn(() => createChain(true)),
       chain: jest.fn(() => createChain(true))
-    };
+    } as any;
   });
 
   it("renders all formatting buttons", () => {

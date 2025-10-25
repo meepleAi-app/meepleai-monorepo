@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import { api } from "../lib/api";
 import { CommentThread } from "../components/CommentThread";
-import { DiffViewer } from "../components/DiffViewer";
+import { DiffViewerEnhanced } from "../components/DiffViewerEnhanced";
 
 type AuthUser = {
   id: string;
@@ -403,7 +403,7 @@ export default function VersionHistory() {
               <p>Caricamento diff...</p>
             ) : diff ? (
               <>
-                <DiffViewer diff={diff} showOnlyChanges={showOnlyChanges} />
+                <DiffViewerEnhanced diff={diff} showOnlyChanges={showOnlyChanges} defaultViewMode="side-by-side" />
 
                 {/* Comments section for the selected "to" version */}
                 {selectedToVersion && authUser && (

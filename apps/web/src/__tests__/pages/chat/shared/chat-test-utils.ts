@@ -37,13 +37,13 @@ export const createChatTestData = () => ({
   ],
 
   mockAgents: [
-    createMockAgent({ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', kind: 'qa', createdAt: '2025-01-01T00:00:00Z' }),
-    createMockAgent({ id: 'agent-2', gameId: 'game-1', name: 'Chess Helper', kind: 'qa', createdAt: '2025-01-02T00:00:00Z' })
+    createMockAgent({ id: 'agent-1', gameId: 'game-1', name: 'Chess Expert', type: 'qa' }),
+    createMockAgent({ id: 'agent-2', gameId: 'game-1', name: 'Chess Helper', type: 'qa' })
   ],
 
   mockEditableAgents: [
-    createMockAgent({ id: 'agent-1', gameId: 'game-1', name: 'Editable Agent', kind: 'qa', createdAt: '2025-01-01T00:00:00Z' }),
-    createMockAgent({ id: 'agent-2', gameId: 'game-1', name: 'Supporting Agent', kind: 'qa', createdAt: '2025-01-02T00:00:00Z' })
+    createMockAgent({ id: 'agent-1', gameId: 'game-1', name: 'Editable Agent', type: 'qa' }),
+    createMockAgent({ id: 'agent-2', gameId: 'game-1', name: 'Supporting Agent', type: 'qa' })
   ],
 
   mockChats: [

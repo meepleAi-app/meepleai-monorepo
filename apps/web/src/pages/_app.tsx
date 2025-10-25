@@ -8,6 +8,8 @@ import { SessionWarningModal } from '../components/SessionWarningModal';
 import { AccessibleSkipLink } from '@/components/accessible';
 import { api } from '@/lib/api';
 import '../styles/globals.css';
+import '../styles/diff-viewer.css';
+import 'prismjs/themes/prism-tomorrow.css';
 
 // Enable axe-core accessibility checks in development (UI-05)
 if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {

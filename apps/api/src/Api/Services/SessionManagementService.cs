@@ -67,6 +67,7 @@ public class SessionManagementService : ISessionManagementService
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         var sessions = await _db.UserSessions
+            .AsNoTracking() // PERF-05: Read-only query for listing sessions
             .Include(s => s.User)
             .Where(s => s.UserId == userId && s.RevokedAt == null && s.ExpiresAt > now)
             .OrderByDescending(s => s.LastSeenAt ?? s.CreatedAt)
@@ -94,6 +95,7 @@ public class SessionManagementService : ISessionManagementService
         }
 
         var query = _db.UserSessions
+            .AsNoTracking() // PERF-05: Read-only query for admin listing
             .Include(s => s.User)
             .AsQueryable();
 

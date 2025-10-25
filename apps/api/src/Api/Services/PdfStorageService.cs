@@ -175,6 +175,7 @@ public class PdfStorageService
     public async Task<List<PdfDocumentDto>> GetPdfsByGameAsync(string gameId, CancellationToken ct = default)
     {
         var pdfs = await _db.PdfDocuments
+            .AsNoTracking() // PERF-05: Read-only query for listing PDFs
             .Where(p => p.GameId == gameId)
             .OrderByDescending(p => p.UploadedAt)
             .Select(p => new PdfDocumentDto

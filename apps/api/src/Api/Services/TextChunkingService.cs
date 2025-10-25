@@ -9,6 +9,10 @@ public class TextChunkingService : ITextChunkingService
     private const int DefaultChunkSize = 512; // characters
     private const int DefaultOverlap = 50; // characters overlap between chunks
 
+    // PERF-07: Adaptive chunking parameters
+    private const int MinChunkSize = 256; // Minimum chunk size (preserve sentence integrity)
+    private const int MaxChunkSize = 768; // Maximum chunk size (allow larger semantic units)
+
     public TextChunkingService(ILogger<TextChunkingService> logger)
     {
         _logger = logger;
@@ -37,23 +41,42 @@ public class TextChunkingService : ITextChunkingService
             var remainingLength = textLength - currentPosition;
             var actualChunkSize = Math.Min(chunkSize, remainingLength);
 
-            // Try to break at sentence or word boundary if possible
+            // PERF-07: Adaptive chunking - try to find natural break points
             var chunkEnd = currentPosition + actualChunkSize;
             if (chunkEnd < textLength && actualChunkSize == chunkSize)
             {
-                // Look for sentence boundary (. ! ?)
-                var sentenceEnd = FindSentenceBoundary(text, currentPosition, chunkEnd);
-                if (sentenceEnd > currentPosition)
+                // Priority 1: Look for paragraph break (double newline) - strongest semantic boundary
+                var paragraphEnd = FindParagraphBoundary(text, currentPosition, Math.Min(currentPosition + MaxChunkSize, textLength));
+                if (paragraphEnd > currentPosition && paragraphEnd >= currentPosition + MinChunkSize)
                 {
-                    chunkEnd = sentenceEnd;
+                    chunkEnd = paragraphEnd;
                 }
+                // Priority 2: Look for sentence boundary within chunk
                 else
                 {
-                    // Fall back to word boundary
-                    var wordEnd = FindWordBoundary(text, currentPosition, chunkEnd);
-                    if (wordEnd > currentPosition)
+                    var sentenceEnd = FindSentenceBoundary(text, currentPosition, chunkEnd);
+                    if (sentenceEnd > currentPosition)
                     {
-                        chunkEnd = wordEnd;
+                        chunkEnd = sentenceEnd;
+                    }
+                    // Priority 3: Extend chunk if we can fit complete sentence within MaxChunkSize
+                    else if (chunkEnd < textLength)
+                    {
+                        var extendedEnd = Math.Min(currentPosition + MaxChunkSize, textLength);
+                        sentenceEnd = FindSentenceBoundary(text, chunkEnd, extendedEnd);
+                        if (sentenceEnd > chunkEnd)
+                        {
+                            chunkEnd = sentenceEnd; // Extend to complete the sentence
+                        }
+                        else
+                        {
+                            // Priority 4: Fall back to word boundary
+                            var wordEnd = FindWordBoundary(text, currentPosition, chunkEnd);
+                            if (wordEnd > currentPosition)
+                            {
+                                chunkEnd = wordEnd;
+                            }
+                        }
                     }
                 }
             }
@@ -87,10 +110,54 @@ public class TextChunkingService : ITextChunkingService
     }
 
     /// <summary>
+    /// PERF-07: Find paragraph boundary (double newline or section markers)
+    /// Paragraphs are the strongest semantic boundaries for chunking
+    /// </summary>
+    private int FindParagraphBoundary(string text, int start, int end)
+    {
+        // Look for double newline (paragraph break)
+        for (int i = start; i < end - 1; i++)
+        {
+            if (text[i] == '\n' && i + 1 < end && text[i + 1] == '\n')
+            {
+                // Skip the double newline and any additional whitespace
+                int boundaryEnd = i + 2;
+                while (boundaryEnd < end && char.IsWhiteSpace(text[boundaryEnd]))
+                {
+                    boundaryEnd++;
+                }
+                return boundaryEnd;
+            }
+            // Also check for \r\n\r\n (Windows line endings)
+            if (text[i] == '\r' && i + 3 < end &&
+                text[i + 1] == '\n' && text[i + 2] == '\r' && text[i + 3] == '\n')
+            {
+                int boundaryEnd = i + 4;
+                while (boundaryEnd < end && char.IsWhiteSpace(text[boundaryEnd]))
+                {
+                    boundaryEnd++;
+                }
+                return boundaryEnd;
+            }
+        }
+
+        return -1; // No paragraph boundary found
+    }
+
+    /// <summary>
     /// Find the nearest sentence boundary (. ! ? followed by space/newline)
+    /// PERF-07: Enhanced sentence detection with abbreviation and decimal handling
     /// </summary>
     private int FindSentenceBoundary(string text, int start, int end)
     {
+        // Common abbreviations that don't end sentences
+        var commonAbbreviations = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "mr", "mrs", "ms", "dr", "prof", "sr", "jr",
+            "inc", "ltd", "corp", "co", "etc", "vs", "e.g", "i.e",
+            "pg", "pp", "vol", "fig", "no", "approx"
+        };
+
         // Look backward from end for sentence terminators
         for (int i = end - 1; i > start; i--)
         {
@@ -98,14 +165,71 @@ public class TextChunkingService : ITextChunkingService
             if ((c == '.' || c == '!' || c == '?') && i + 1 < text.Length)
             {
                 var next = text[i + 1];
-                if (char.IsWhiteSpace(next))
+
+                // Check if this is likely a sentence boundary
+                if (char.IsWhiteSpace(next) || next == '\n' || next == '\r')
                 {
-                    return i + 1; // Include the punctuation
+                    // PERF-07: Check for false positives (abbreviations, decimals, etc.)
+                    if (c == '.')
+                    {
+                        // Check for decimal number (e.g., "3.5")
+                        if (i > start && char.IsDigit(text[i - 1]) && i + 1 < text.Length && char.IsDigit(next))
+                        {
+                            continue; // Skip decimal points
+                        }
+
+                        // Check for abbreviations (e.g., "Mr.", "Inc.")
+                        var wordStart = FindWordStart(text, start, i);
+                        if (wordStart >= 0 && wordStart < i)
+                        {
+                            var word = text.Substring(wordStart, i - wordStart).ToLowerInvariant();
+                            if (commonAbbreviations.Contains(word))
+                            {
+                                continue; // Skip abbreviations
+                            }
+                        }
+
+                        // Check for ellipsis (...)
+                        if (i >= 2 && text[i - 1] == '.' && text[i - 2] == '.')
+                        {
+                            return i + 1; // End after ellipsis
+                        }
+                    }
+
+                    // Check for newline after punctuation (paragraph break = strong sentence boundary)
+                    if (i + 1 < text.Length && (text[i + 1] == '\n' || text[i + 1] == '\r'))
+                    {
+                        return i + 1; // Strong boundary at paragraph break
+                    }
+
+                    // Check for capital letter after punctuation (indicates new sentence)
+                    if (i + 2 < text.Length && char.IsUpper(text[i + 2]))
+                    {
+                        return i + 1; // Likely sentence boundary
+                    }
+
+                    // Default: accept as sentence boundary
+                    return i + 1;
                 }
             }
         }
 
         return -1;
+    }
+
+    /// <summary>
+    /// PERF-07: Find the start of the current word (for abbreviation detection)
+    /// </summary>
+    private int FindWordStart(string text, int searchStart, int position)
+    {
+        for (int i = position - 1; i >= searchStart; i--)
+        {
+            if (!char.IsLetter(text[i]))
+            {
+                return i + 1;
+            }
+        }
+        return searchStart;
     }
 
     /// <summary>

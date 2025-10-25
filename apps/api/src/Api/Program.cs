@@ -389,6 +389,9 @@ builder.Services.AddScoped<IExportFormatter, PdfExportFormatter>();
 builder.Services.AddScoped<ISessionManagementService, SessionManagementService>();
 builder.Services.AddHostedService<SessionAutoRevocationService>();
 
+// N8N-05: Workflow error logging service
+builder.Services.AddScoped<IWorkflowErrorLoggingService, WorkflowErrorLoggingService>();
+
 // ADMIN-01: User management service
 builder.Services.AddScoped<UserManagementService>();
 
@@ -3742,6 +3745,89 @@ v1Api.MapPost("/admin/analytics/export", async (
 .WithDescription("Export analytics dashboard data in CSV or JSON format")
 .Produces(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden);
+
+// N8N-05: Workflow error logging endpoints
+
+// Webhook endpoint for n8n (no authentication required for simplicity)
+v1Api.MapPost("/logs/workflow-error", async (
+    IWorkflowErrorLoggingService errorLoggingService,
+    LogWorkflowErrorRequest request,
+    CancellationToken ct = default) =>
+{
+    await errorLoggingService.LogErrorAsync(request, ct);
+    return Results.Ok(new { message = "Error logged successfully" });
+})
+.WithName("LogWorkflowError")
+.WithTags("N8N")
+.WithDescription("Webhook endpoint for n8n to log workflow errors (no auth required)")
+.Produces(StatusCodes.Status200OK)
+.Produces<ValidationProblemDetails>(StatusCodes.Status400BadRequest);
+
+// Admin endpoint to list workflow errors
+v1Api.MapGet("/admin/workflows/errors", async (
+    HttpContext context,
+    IWorkflowErrorLoggingService errorLoggingService,
+    string? workflowId = null,
+    DateTime? fromDate = null,
+    DateTime? toDate = null,
+    int page = 1,
+    int limit = 20,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var queryParams = new WorkflowErrorsQueryParams(workflowId, fromDate, toDate, page, limit);
+    var errors = await errorLoggingService.GetErrorsAsync(queryParams, ct);
+    return Results.Ok(errors);
+})
+.WithName("GetWorkflowErrors")
+.WithTags("Admin")
+.WithDescription("Get workflow errors with filtering and pagination (admin only)")
+.Produces<PagedResult<WorkflowErrorDto>>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden);
+
+// Admin endpoint to get specific workflow error
+v1Api.MapGet("/admin/workflows/errors/{id:guid}", async (
+    HttpContext context,
+    IWorkflowErrorLoggingService errorLoggingService,
+    Guid id,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var error = await errorLoggingService.GetErrorByIdAsync(id, ct);
+
+    if (error == null)
+    {
+        return Results.NotFound(new { error = "Workflow error not found" });
+    }
+
+    return Results.Ok(error);
+})
+.WithName("GetWorkflowErrorById")
+.WithTags("Admin")
+.WithDescription("Get a specific workflow error by ID (admin only)")
+.Produces<WorkflowErrorDto>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status404NotFound)
 .Produces(StatusCodes.Status401Unauthorized)
 .Produces(StatusCodes.Status403Forbidden);
 

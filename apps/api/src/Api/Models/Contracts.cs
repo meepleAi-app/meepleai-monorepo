@@ -556,3 +556,32 @@ public record BggSearchRequest(
     [Required][MinLength(1)] string Query,
     bool Exact = false
 );
+
+// N8N-05: Workflow Error Logging models
+public record LogWorkflowErrorRequest(
+    [Required][MaxLength(255)] string WorkflowId,
+    [Required][MaxLength(255)] string ExecutionId,
+    [Required][MaxLength(5000)] string ErrorMessage,
+    [MaxLength(255)] string? NodeName = null,
+    int RetryCount = 0,
+    [MaxLength(10000)] string? StackTrace = null
+);
+
+public record WorkflowErrorDto(
+    Guid Id,
+    string WorkflowId,
+    string ExecutionId,
+    string ErrorMessage,
+    string? NodeName,
+    int RetryCount,
+    string? StackTrace,
+    DateTime CreatedAt
+);
+
+public record WorkflowErrorsQueryParams(
+    string? WorkflowId = null,
+    DateTime? FromDate = null,
+    DateTime? ToDate = null,
+    int Page = 1,
+    int Limit = 20
+);

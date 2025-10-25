@@ -1,8 +1,8 @@
 # MeepleAI Issue Resolution Roadmap
 
-**Document Version:** 1.2
+**Document Version:** 1.3
 **Last Updated:** 2025-10-25
-**Total Issues:** 35 (31 open, 4 completed: EDIT-04, EDIT-05, ADMIN-02, AI-13)
+**Total Issues:** 35 (30 open, 5 completed: EDIT-04, EDIT-05, ADMIN-02, AI-13, N8N-05)
 
 ---
 
@@ -169,7 +169,7 @@ Our approach follows these principles:
 |---|-------|----------|--------|-----------|
 | 21 | #425 OPS-07: Alerting system | 🔴 High | L | **CRITICAL OPS**: Proactive incident detection. Builds on OPS-02 metrics. |
 | 22 | OPS-08: CI larger runners analysis | ✅ COMPLETED | S | **RESEARCH PHASE**: Documented self-hosted runner options and decision framework. Implementation deferred pending OPS-06 validation. |
-| 23 | #427 N8N-05: Error handling & retry | 🟡 Medium | M | Workflow reliability. Independent of alerting work. |
+| 23 | #427 N8N-05: Error handling & retry | ✅ COMPLETED | M | Backend complete with error logging service, admin API endpoints, 23 comprehensive tests, n8n integration guide. Frontend spec ready. PR #535. Completed: 2025-10-25 |
 | 24 | #417 N8N-04: Workflow templates | 🟡 Medium | M | Complements N8N-05. Can be parallel. |
 
 **Parallel**: #425 (alerting) is critical path. #427 and #417 can run in parallel with each other. OPS-08 is documentation-only (no implementation yet).

@@ -28,8 +28,8 @@ namespace Api.Migrations
                     ""IsActive"",
                     ""CreatedAt"",
                     ""UpdatedAt"",
-                    ""CreatedBy"",
-                    ""UpdatedBy""
+                    ""CreatedByUserId"",
+                    ""UpdatedByUserId""
                 ) VALUES
                 -- Production environment configurations
                 (
@@ -43,8 +43,8 @@ namespace Api.Migrations
                     true,
                     NOW(),
                     NOW(),
-                    'system',
-                    'system'
+                    'demo-admin-001',
+                    'demo-admin-001'
                 ),
                 (
                     'config-ai-temperature-prod',
@@ -57,8 +57,8 @@ namespace Api.Migrations
                     true,
                     NOW(),
                     NOW(),
-                    'system',
-                    'system'
+                    'demo-admin-001',
+                    'demo-admin-001'
                 ),
                 (
                     'config-ai-maxtokens-prod',
@@ -71,8 +71,8 @@ namespace Api.Migrations
                     true,
                     NOW(),
                     NOW(),
-                    'system',
-                    'system'
+                    'demo-admin-001',
+                    'demo-admin-001'
                 ),
                 (
                     'config-ai-timeout-prod',
@@ -85,8 +85,8 @@ namespace Api.Migrations
                     true,
                     NOW(),
                     NOW(),
-                    'system',
-                    'system'
+                    'demo-admin-001',
+                    'demo-admin-001'
                 ),
                 -- Development environment configurations
                 (
@@ -100,8 +100,8 @@ namespace Api.Migrations
                     true,
                     NOW(),
                     NOW(),
-                    'system',
-                    'system'
+                    'demo-admin-001',
+                    'demo-admin-001'
                 ),
                 (
                     'config-ai-temperature-dev',
@@ -114,8 +114,8 @@ namespace Api.Migrations
                     true,
                     NOW(),
                     NOW(),
-                    'system',
-                    'system'
+                    'demo-admin-001',
+                    'demo-admin-001'
                 ),
                 (
                     'config-ai-maxtokens-dev',
@@ -128,8 +128,8 @@ namespace Api.Migrations
                     true,
                     NOW(),
                     NOW(),
-                    'system',
-                    'system'
+                    'demo-admin-001',
+                    'demo-admin-001'
                 ),
                 (
                     'config-ai-timeout-dev',
@@ -142,8 +142,8 @@ namespace Api.Migrations
                     true,
                     NOW(),
                     NOW(),
-                    'system',
-                    'system'
+                    'demo-admin-001',
+                    'demo-admin-001'
                 );
             ");
         }

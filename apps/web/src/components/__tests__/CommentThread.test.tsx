@@ -9,7 +9,10 @@ jest.mock('../../lib/api', () => ({
       getComments: jest.fn(),
       createComment: jest.fn(),
       updateComment: jest.fn(),
-      deleteComment: jest.fn()
+      deleteComment: jest.fn(),
+      createReply: jest.fn(),
+      resolveComment: jest.fn(),
+      unresolveComment: jest.fn()
     }
   }
 }));
@@ -19,6 +22,9 @@ const mockedApi = api.ruleSpecComments as {
   createComment: jest.MockedFunction<typeof api.ruleSpecComments.createComment>;
   updateComment: jest.MockedFunction<typeof api.ruleSpecComments.updateComment>;
   deleteComment: jest.MockedFunction<typeof api.ruleSpecComments.deleteComment>;
+  createReply: jest.MockedFunction<typeof api.ruleSpecComments.createReply>;
+  resolveComment: jest.MockedFunction<typeof api.ruleSpecComments.resolveComment>;
+  unresolveComment: jest.MockedFunction<typeof api.ruleSpecComments.unresolveComment>;
 };
 
 describe('CommentThread', () => {
@@ -28,9 +34,18 @@ describe('CommentThread', () => {
       gameId: 'chess',
       version: 'v1',
       atomId: 'atom-1',
+      lineNumber: null,
+      lineContext: null,
+      parentCommentId: null,
+      replies: [],
       userId: 'user-1',
       userDisplayName: 'User One',
       commentText: 'This is a test comment',
+      isResolved: false,
+      resolvedByUserId: null,
+      resolvedByDisplayName: null,
+      resolvedAt: null,
+      mentionedUserIds: [],
       createdAt: '2025-10-15T12:00:00Z',
       updatedAt: null
     },
@@ -39,9 +54,18 @@ describe('CommentThread', () => {
       gameId: 'chess',
       version: 'v1',
       atomId: null,
+      lineNumber: null,
+      lineContext: null,
+      parentCommentId: null,
+      replies: [],
       userId: 'user-2',
       userDisplayName: 'User Two',
       commentText: 'Another comment',
+      isResolved: false,
+      resolvedByUserId: null,
+      resolvedByDisplayName: null,
+      resolvedAt: null,
+      mentionedUserIds: [],
       createdAt: '2025-10-15T13:00:00Z',
       updatedAt: null
     }
@@ -116,9 +140,18 @@ describe('CommentThread', () => {
       gameId: 'chess',
       version: 'v1',
       atomId: null,
+      lineNumber: null,
+      lineContext: null,
+      parentCommentId: null,
+      replies: [],
       userId: 'user-1',
       userDisplayName: 'Editor User',
       commentText: 'New comment',
+      isResolved: false,
+      resolvedByUserId: null,
+      resolvedByDisplayName: null,
+      resolvedAt: null,
+      mentionedUserIds: [],
       createdAt: '2025-10-15T14:00:00Z',
       updatedAt: null
     });

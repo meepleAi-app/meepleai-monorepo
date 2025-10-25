@@ -275,6 +275,10 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
 
             services.AddSingleton(mockEmbeddingService.Object);
 
+            // EDIT-05: Re-register RuleCommentService for integration tests
+            // Must use interface registration to match GetRequiredService<IRuleCommentService>() calls in endpoints
+            services.AddScoped<IRuleCommentService, RuleCommentService>();
+
             services.AddSingleton<IHttpClientFactory>(_ => new SmartHttpClientFactory());
         });
 

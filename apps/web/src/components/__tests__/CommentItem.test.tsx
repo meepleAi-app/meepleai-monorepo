@@ -9,15 +9,27 @@ describe('CommentItem', () => {
     gameId: 'chess',
     version: 'v1',
     atomId: 'atom-1',
+    lineNumber: null,
+    lineContext: null,
+    parentCommentId: null,
+    replies: [],
     userId: 'user-1',
     userDisplayName: 'John Doe',
     commentText: 'This is a test comment',
+    isResolved: false,
+    resolvedByUserId: null,
+    resolvedByDisplayName: null,
+    resolvedAt: null,
+    mentionedUserIds: [],
     createdAt: '2025-10-15T12:00:00Z',
     updatedAt: null
   };
 
   const mockOnEdit = jest.fn();
   const mockOnDelete = jest.fn();
+  const mockOnReply = jest.fn();
+  const mockOnResolve = jest.fn();
+  const mockOnUnresolve = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -32,6 +44,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -46,6 +61,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -60,6 +78,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -76,6 +97,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -90,6 +114,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -110,6 +137,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -124,6 +154,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -140,6 +173,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -154,6 +190,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -168,6 +207,9 @@ describe('CommentItem', () => {
           currentUserRole="Admin"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -185,6 +227,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -199,6 +244,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -213,6 +261,9 @@ describe('CommentItem', () => {
           currentUserRole="Admin"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -227,6 +278,9 @@ describe('CommentItem', () => {
           currentUserRole="Editor"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -245,6 +299,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -266,6 +323,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -290,6 +350,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -319,6 +382,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -347,6 +413,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -374,6 +443,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -397,6 +469,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -421,6 +496,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -448,6 +526,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -476,6 +557,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -503,6 +587,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -534,6 +621,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -569,6 +659,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -607,6 +700,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -628,6 +724,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -650,6 +749,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -675,6 +777,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -699,6 +804,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -726,6 +834,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -757,6 +868,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -787,6 +901,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -806,6 +923,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -825,6 +945,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -844,6 +967,9 @@ describe('CommentItem', () => {
           currentUserRole="User"
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 
@@ -858,6 +984,9 @@ describe('CommentItem', () => {
           currentUserRole=""
           onEdit={mockOnEdit}
           onDelete={mockOnDelete}
+          onReply={mockOnReply}
+          onResolve={mockOnResolve}
+          onUnresolve={mockOnUnresolve}
         />
       );
 

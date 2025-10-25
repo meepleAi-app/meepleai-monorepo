@@ -4,11 +4,18 @@ interface CommentFormProps {
   onSubmit: (commentText: string, atomId: string | null) => Promise<void>;
   atomId?: string | null;
   placeholder?: string;
+  disabled?: boolean;
 }
 
-export function CommentForm({ onSubmit, atomId = null, placeholder = "Scrivi un commento..." }: CommentFormProps) {
+export function CommentForm({
+  onSubmit,
+  atomId = null,
+  placeholder = "Scrivi un commento...",
+  disabled = false
+}: CommentFormProps) {
   const [commentText, setCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isDisabled = disabled || isSubmitting;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +42,7 @@ export function CommentForm({ onSubmit, atomId = null, placeholder = "Scrivi un 
         value={commentText}
         onChange={(e) => setCommentText(e.target.value)}
         placeholder={placeholder}
-        disabled={isSubmitting}
+        disabled={isDisabled}
         style={{
           width: "100%",
           minHeight: 80,
@@ -50,14 +57,14 @@ export function CommentForm({ onSubmit, atomId = null, placeholder = "Scrivi un 
       />
       <button
         type="submit"
-        disabled={isSubmitting || !commentText.trim()}
+        disabled={isDisabled || !commentText.trim()}
         style={{
           padding: "8px 16px",
-          background: isSubmitting || !commentText.trim() ? "#ccc" : "#0070f3",
+          background: isDisabled || !commentText.trim() ? "#ccc" : "#0070f3",
           color: "white",
           border: "none",
           borderRadius: 4,
-          cursor: isSubmitting || !commentText.trim() ? "not-allowed" : "pointer",
+          cursor: isDisabled || !commentText.trim() ? "not-allowed" : "pointer",
           fontSize: 14
         }}
       >

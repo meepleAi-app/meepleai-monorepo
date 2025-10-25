@@ -179,7 +179,7 @@ Our approach follows these principles:
 |---|-------|----------|--------|-----------|
 | 24 | #411 EDIT-03: Rich text editor | 🟡 Medium | L | **UX IMPROVEMENT**: Better editing experience. Foundation for other EDIT features. |
 | 25 | #412 EDIT-04: Visual diff viewer | ✅ COMPLETED | M | Side-by-side diff with syntax highlighting, search, navigation. PR #530. |
-| 26 | #413 EDIT-05: Enhanced comments | 🟡 Medium | M | Collaboration features. Requires EDIT-03. |
+| 26 | #413 EDIT-05: Enhanced comments | ✅ COMPLETED | M | Threading, mentions, resolution, inline annotations. PR #531. |
 | 27 | #414 EDIT-06: Timeline visualization | 🟡 Medium | M | Visual enhancement for version history. |
 | 28 | #428 EDIT-07: Bulk operations | 🟡 Medium | L | Advanced admin feature. Benefits from EDIT-03 foundation. |
 

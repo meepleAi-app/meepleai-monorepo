@@ -373,6 +373,7 @@ builder.Services.AddScoped<IStreamingQaService, StreamingQaService>(); // CHAT-0
 builder.Services.AddScoped<IFollowUpQuestionService, FollowUpQuestionService>(); // CHAT-02: Follow-up question generation
 builder.Services.AddScoped<SetupGuideService>();
 builder.Services.AddScoped<IPromptTemplateService, PromptTemplateService>(); // AI-07.1: Prompt template service with few-shot learning
+builder.Services.AddScoped<IPromptEvaluationService, PromptEvaluationService>(); // ADMIN-01 Phase 4: Prompt evaluation testing framework
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<AiRequestLogService>();
@@ -4330,6 +4331,198 @@ v1Api.MapPost("/admin/prompts/{id}/versions/{versionId}/activate", async (
 .Produces(StatusCodes.Status401Unauthorized)
 .Produces(StatusCodes.Status403Forbidden)
 .Produces(StatusCodes.Status500InternalServerError);
+
+// ADMIN-01 Phase 4: Prompt Evaluation & Testing endpoints
+
+// Evaluate a prompt version
+v1Api.MapPost("/admin/prompts/{templateId}/versions/{versionId}/evaluate", async (
+    string templateId,
+    string versionId,
+    EvaluatePromptRequest request,
+    IPromptEvaluationService evaluationService,
+    HttpContext context,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation("Admin {AdminId} evaluating prompt template {TemplateId}, version {VersionId}",
+            session.User.Id, templateId, versionId);
+
+        var result = await evaluationService.EvaluateAsync(
+            templateId,
+            versionId,
+            request.DatasetPath,
+            progressCallback: null,
+            ct);
+
+        if (request.StoreResults)
+        {
+            await evaluationService.StoreResultsAsync(result, ct);
+            logger.LogInformation("Evaluation result {EvaluationId} stored to database", result.EvaluationId);
+        }
+
+        return Results.Ok(result);
+    }
+    catch (FileNotFoundException ex)
+    {
+        logger.LogWarning("Dataset not found: {Error}", ex.Message);
+        return Results.NotFound(new { error = $"Dataset not found: {ex.Message}" });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Evaluation failed for template {TemplateId}, version {VersionId}", templateId, versionId);
+        return Results.Problem($"Evaluation failed: {ex.Message}");
+    }
+})
+.WithName("EvaluatePromptVersion")
+.WithTags("Admin", "PromptManagement", "Testing")
+.WithDescription("Run automated evaluation tests on a prompt version (admin only)")
+.Produces<PromptEvaluationResult>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status403Forbidden)
+.Produces(StatusCodes.Status404NotFound)
+.Produces(StatusCodes.Status500InternalServerError);
+
+// Compare two prompt versions (A/B testing)
+v1Api.MapPost("/admin/prompts/{templateId}/compare", async (
+    string templateId,
+    ComparePromptsRequest request,
+    IPromptEvaluationService evaluationService,
+    HttpContext context,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        logger.LogInformation(
+            "Admin {AdminId} comparing prompt versions: Baseline {BaselineId} vs Candidate {CandidateId}",
+            session.User.Id, request.BaselineVersionId, request.CandidateVersionId);
+
+        var comparison = await evaluationService.CompareVersionsAsync(
+            templateId,
+            request.BaselineVersionId,
+            request.CandidateVersionId,
+            request.DatasetPath,
+            ct);
+
+        logger.LogInformation("Comparison completed - Recommendation: {Recommendation}", comparison.Recommendation);
+
+        return Results.Ok(comparison);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Comparison failed for template {TemplateId}", templateId);
+        return Results.Problem($"Comparison failed: {ex.Message}");
+    }
+})
+.WithName("ComparePromptVersions")
+.WithTags("Admin", "PromptManagement", "Testing")
+.WithDescription("A/B comparison of two prompt versions with recommendation (admin only)")
+.Produces<PromptComparisonResult>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status403Forbidden)
+.Produces(StatusCodes.Status500InternalServerError);
+
+// Get historical evaluation results
+v1Api.MapGet("/admin/prompts/{templateId}/evaluations", async (
+    string templateId,
+    int limit,
+    IPromptEvaluationService evaluationService,
+    HttpContext context,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var results = await evaluationService.GetHistoricalResultsAsync(templateId, limit, ct);
+    return Results.Ok(results);
+})
+.WithName("GetEvaluationHistory")
+.WithTags("Admin", "PromptManagement", "Testing")
+.WithDescription("Get historical evaluation results for a template (admin only)")
+.Produces<List<PromptEvaluationResult>>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status403Forbidden);
+
+// Generate evaluation report
+v1Api.MapGet("/admin/prompts/evaluations/{evaluationId}/report", async (
+    string evaluationId,
+    string format,
+    IPromptEvaluationService evaluationService,
+    HttpContext context,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        // Get all historical results and find the specific evaluation
+        var allResults = await evaluationService.GetHistoricalResultsAsync("", 1000, ct);
+        var result = allResults.FirstOrDefault(r => r.EvaluationId == evaluationId);
+
+        if (result == null)
+        {
+            return Results.NotFound(new { error = "Evaluation not found" });
+        }
+
+        var reportFormat = format?.ToLowerInvariant() == "json"
+            ? ReportFormat.Json
+            : ReportFormat.Markdown;
+
+        var report = evaluationService.GenerateReport(result, reportFormat);
+
+        var contentType = reportFormat == ReportFormat.Json
+            ? "application/json"
+            : "text/markdown";
+
+        return Results.Content(report, contentType);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to generate report for evaluation {EvaluationId}", evaluationId);
+        return Results.Problem($"Report generation failed: {ex.Message}");
+    }
+})
+.WithName("GetEvaluationReport")
+.WithTags("Admin", "PromptManagement", "Testing")
+.WithDescription("Generate evaluation report in Markdown or JSON format (admin only)")
+.Produces<string>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status403Forbidden)
+.Produces(StatusCodes.Status404NotFound);
 
 // ADMIN-01: User management endpoints
 v1Api.MapGet("/admin/users", async (

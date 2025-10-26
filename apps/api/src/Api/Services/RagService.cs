@@ -639,6 +639,176 @@ public class RagService : IRagService
     }
 
     /// <summary>
+    /// ADMIN-01 Phase 4: Answer a question using a custom system prompt for evaluation purposes.
+    /// This method bypasses normal prompt retrieval and uses the provided custom prompt.
+    /// Used exclusively by PromptEvaluationService to test different prompt versions.
+    /// </summary>
+    public async Task<QaResponse> AskWithCustomPromptAsync(
+        string gameId,
+        string query,
+        string customSystemPrompt,
+        SearchMode searchMode = SearchMode.Hybrid,
+        string? language = null,
+        CancellationToken cancellationToken = default)
+    {
+        // AI-09: Default to English if no language specified
+        language ??= "en";
+
+        // OPS-02: Create distributed trace span
+        using var activity = MeepleAiActivitySources.Rag.StartActivity("RagService.AskWithCustomPrompt");
+        activity?.SetTag("game.id", gameId);
+        activity?.SetTag("query.length", query?.Length ?? 0);
+        activity?.SetTag("operation", "qa_custom_prompt");
+        activity?.SetTag("search.mode", searchMode.ToString());
+        activity?.SetTag("language", language);
+
+        var stopwatch = Stopwatch.StartNew();
+        var success = false;
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return new QaResponse("Please provide a question.", Array.Empty<Snippet>());
+        }
+
+        if (string.IsNullOrWhiteSpace(customSystemPrompt))
+        {
+            return new QaResponse("Custom system prompt is required for evaluation.", Array.Empty<Snippet>());
+        }
+
+        try
+        {
+            // CONFIG-04: Load dynamic RAG configuration for top K
+            var topK = await GetRagConfigAsync("TopK", DefaultTopK);
+            activity?.SetTag("rag.config.topK", topK);
+
+            // Step 1: Parse gameId to Guid for hybrid search
+            if (!Guid.TryParse(gameId, out var gameGuid))
+            {
+                _logger.LogError("Invalid game ID format: {GameId}", gameId);
+                return new QaResponse("Invalid game ID format.", Array.Empty<Snippet>());
+            }
+
+            // Step 2: Use hybrid search service to retrieve results
+            var hybridResults = await _hybridSearchService.SearchAsync(
+                query,
+                gameGuid,
+                mode: searchMode,
+                limit: topK,
+                cancellationToken: cancellationToken);
+
+            if (hybridResults.Count == 0)
+            {
+                LogInformation("No hybrid search results found for query in game {GameId}", gameId);
+                return new QaResponse("Not specified", Array.Empty<Snippet>());
+            }
+
+            // Take top 3-5 results for context building
+            var topResults = hybridResults.Take(Math.Min(5, topK)).ToList();
+            activity?.SetTag("results.hybrid.count", hybridResults.Count);
+            activity?.SetTag("results.final.count", topResults.Count);
+
+            // Step 3: Convert HybridSearchResult to Snippet format
+            var snippets = topResults.Select(r => new Snippet(
+                r.Content,
+                $"PDF:{r.PdfDocumentId}",
+                r.PageNumber ?? 0,
+                0,
+                r.HybridScore
+            )).ToList();
+
+            // Step 4: Build context from retrieved chunks
+            var context = string.Join("\n\n---\n\n", topResults.Select(r =>
+                $"[Page {r.PageNumber ?? 0}]\n{r.Content}"));
+
+            // Step 5: Build user prompt using template pattern
+            // ADMIN-01: Use custom system prompt instead of retrieved prompt
+            var userPrompt = $@"Context from rulebook:
+{context}
+
+Question: {query}
+
+Instructions:
+1. Answer based ONLY on the provided context
+2. If the context doesn't contain enough information, say ""Not specified""
+3. Always cite page numbers when possible
+4. Be concise and accurate";
+
+            _logger.LogDebug(
+                "Using custom system prompt for evaluation (length: {PromptLength} chars)",
+                customSystemPrompt.Length);
+
+            // Step 6: Generate LLM response with custom prompt
+            var llmResult = await _llmService.GenerateCompletionAsync(
+                customSystemPrompt,
+                userPrompt,
+                cancellationToken);
+
+            if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
+            {
+                _logger.LogError("Failed to generate LLM response: {Error}", llmResult.ErrorMessage);
+                return new QaResponse("Unable to generate answer.", snippets);
+            }
+
+            var answer = llmResult.Response.Trim();
+            var confidence = topResults.Count > 0
+                ? (double?)topResults.Max(r => r.HybridScore)
+                : null;
+
+            // OPS-02: Add trace attributes
+            activity?.SetTag("response.tokens", llmResult.Usage.TotalTokens);
+            activity?.SetTag("response.confidence", confidence ?? 0.0);
+            activity?.SetTag("snippets.count", snippets.Count);
+            activity?.SetTag("success", true);
+
+            LogInformation(
+                "Custom prompt QA answered with {SnippetCount} snippets, LLM generated answer: {AnswerPreview}",
+                snippets.Count, answer.Length > 50 ? answer.Substring(0, 50) + "..." : answer);
+
+            var metadata = llmResult.Metadata.Count > 0
+                ? new Dictionary<string, string>(llmResult.Metadata)
+                : null;
+
+            var response = new QaResponse(
+                answer,
+                snippets,
+                llmResult.Usage.PromptTokens,
+                llmResult.Usage.CompletionTokens,
+                llmResult.Usage.TotalTokens,
+                confidence,
+                metadata);
+
+            // OPS-02: Record metrics
+            success = true;
+            stopwatch.Stop();
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success);
+            MeepleAiMetrics.TokensUsed.Record(llmResult.Usage.TotalTokens, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa_custom_prompt" } });
+            if (confidence.HasValue)
+            {
+                MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa_custom_prompt" } });
+            }
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during custom prompt RAG query for game {GameId}", gameId);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa_custom_prompt" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
+            return new QaResponse("An error occurred while processing your question.", Array.Empty<Snippet>());
+        }
+    }
+
+    /// <summary>
     /// PERF-08: Generate query variations for improved recall
     /// Uses rule-based expansion with synonyms and reformulations
     /// CONFIG-04: Now respects dynamic MaxQueryVariations configuration

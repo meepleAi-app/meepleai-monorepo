@@ -3,11 +3,13 @@ using Api.Models;
 namespace Api.Services;
 
 /// <summary>
-/// AI-07.1: Service for managing RAG prompt templates with few-shot learning support
-/// Provides question type classification and template rendering
+/// ADMIN-01 Enhanced: Service for managing RAG prompt templates with database-driven configuration
+/// Combines AI-07.1 few-shot learning with ADMIN-01 admin-configurable prompt management
 /// </summary>
 public interface IPromptTemplateService
 {
+    // AI-07.1: Configuration-based prompt management (backward compatibility)
+
     /// <summary>
     /// Gets the appropriate prompt template for a game and question type
     /// </summary>
@@ -38,4 +40,32 @@ public interface IPromptTemplateService
     /// <param name="query">User's question</param>
     /// <returns>Classified question type</returns>
     QuestionType ClassifyQuestion(string query);
+
+    // ADMIN-01: Database-driven prompt management with Redis caching
+
+    /// <summary>
+    /// Gets active prompt from cache-first architecture (Redis → PostgreSQL → Config fallback)
+    /// </summary>
+    /// <param name="templateName">Unique template name (e.g., "qa-system-prompt")</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>Active prompt content or null if not found</returns>
+    Task<string?> GetActivePromptAsync(string templateName, CancellationToken ct = default);
+
+    /// <summary>
+    /// Activates a specific version with transaction safety and cache invalidation
+    /// Ensures only ONE active version per template
+    /// </summary>
+    /// <param name="templateId">Template ID</param>
+    /// <param name="versionId">Version ID to activate</param>
+    /// <param name="activatedByUserId">User ID performing the activation</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>True if activated successfully, false if version not found</returns>
+    Task<bool> ActivateVersionAsync(string templateId, string versionId, string activatedByUserId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Invalidates cache for a specific template (manual refresh)
+    /// </summary>
+    /// <param name="templateName">Template name to invalidate</param>
+    /// <param name="ct">Cancellation token</param>
+    Task InvalidateCacheAsync(string templateName, CancellationToken ct = default);
 }

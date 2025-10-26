@@ -650,3 +650,5 @@ public record PrometheusAlert(
     DateTime StartsAt,
     DateTime? EndsAt
 );
+
+// ADMIN-01: Prompt Management DTOs - See PromptManagementDto.cs for full definitions

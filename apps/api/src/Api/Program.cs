@@ -364,6 +364,7 @@ builder.Services.AddScoped<GameService>();
 builder.Services.AddScoped<RuleSpecService>();
 builder.Services.AddScoped<RuleSpecDiffService>();
 builder.Services.AddScoped<RuleCommentService>(); // EDIT-05: Comment service with threading and mentions (concrete registration for Minimal API compatibility)
+builder.Services.AddScoped<RuleSpecCommentService>(); // EDIT-02: Legacy comment service (TODO: migrate to RuleCommentService)
 builder.Services.AddScoped<IRagService, RagService>(); // AI-04: RAG service for Q&A and explanations
 builder.Services.AddScoped<IKeywordSearchService, KeywordSearchService>(); // AI-14: PostgreSQL full-text keyword search
 builder.Services.AddScoped<IHybridSearchService, HybridSearchService>(); // AI-14: Hybrid search with RRF fusion
@@ -3971,6 +3972,364 @@ v1Api.MapPost("/admin/alerts/{alertType}/resolve", async (
 .Produces(StatusCodes.Status404NotFound)
 .Produces(StatusCodes.Status401Unauthorized)
 .Produces(StatusCodes.Status403Forbidden);
+
+// ADMIN-01: Prompt Management endpoints
+
+// List all prompt templates with pagination
+v1Api.MapGet("/admin/prompts", async (
+    HttpContext context,
+    MeepleAiDbContext db,
+    int page = 1,
+    int limit = 50,
+    string? category = null,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var query = db.Set<PromptTemplateEntity>()
+        .AsNoTracking()
+        .Include(t => t.CreatedBy)
+        .Include(t => t.Versions)
+        .AsQueryable();
+
+    if (!string.IsNullOrWhiteSpace(category))
+    {
+        query = query.Where(t => t.Category == category);
+    }
+
+    var total = await query.CountAsync(ct);
+    var templates = await query
+        .OrderByDescending(t => t.CreatedAt)
+        .Skip((page - 1) * limit)
+        .Take(limit)
+        .Select(t => new PromptTemplateDto
+        {
+            Id = t.Id,
+            Name = t.Name,
+            Description = t.Description,
+            Category = t.Category,
+            CreatedByUserId = t.CreatedByUserId,
+            CreatedByEmail = t.CreatedBy.Email,
+            CreatedAt = t.CreatedAt,
+            VersionCount = t.Versions.Count,
+            ActiveVersionNumber = t.Versions.FirstOrDefault(v => v.IsActive) != null
+                ? t.Versions.First(v => v.IsActive).VersionNumber
+                : null
+        })
+        .ToListAsync(ct);
+
+    return Results.Ok(new PagedResult<PromptTemplateDto>(templates, total, page, limit));
+})
+.WithName("ListPromptTemplates")
+.WithTags("Admin", "PromptManagement")
+.WithDescription("List all prompt templates with pagination and filtering (admin only)")
+.Produces<PagedResult<PromptTemplateDto>>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden);
+
+// Create new prompt template
+v1Api.MapPost("/admin/prompts", async (
+    CreatePromptTemplateRequest request,
+    HttpContext context,
+    MeepleAiDbContext db,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var exists = await db.Set<PromptTemplateEntity>()
+        .AnyAsync(t => t.Name == request.Name, ct);
+
+    if (exists)
+    {
+        return Results.BadRequest(new { error = $"Template with name '{request.Name}' already exists" });
+    }
+
+    var user = await db.Set<UserEntity>().FindAsync([session.User.Id], ct);
+    if (user == null)
+    {
+        return Results.BadRequest(new { error = "User not found" });
+    }
+
+    var template = new PromptTemplateEntity
+    {
+        Id = Guid.NewGuid().ToString(),
+        Name = request.Name,
+        Description = request.Description,
+        Category = request.Category,
+        CreatedByUserId = session.User.Id,
+        CreatedAt = DateTime.UtcNow,
+        CreatedBy = user
+    };
+
+    db.Set<PromptTemplateEntity>().Add(template);
+    await db.SaveChangesAsync(ct);
+
+    return Results.Created(
+        $"/api/v1/admin/prompts/{template.Id}",
+        new PromptTemplateDto
+        {
+            Id = template.Id,
+            Name = template.Name,
+            Description = template.Description,
+            Category = template.Category,
+            CreatedByUserId = template.CreatedByUserId,
+            CreatedByEmail = user.Email,
+            CreatedAt = template.CreatedAt,
+            VersionCount = 0,
+            ActiveVersionNumber = null
+        });
+})
+.WithName("CreatePromptTemplate")
+.WithTags("Admin", "PromptManagement")
+.WithDescription("Create a new prompt template (admin only)")
+.Produces<PromptTemplateDto>(StatusCodes.Status201Created)
+.Produces(StatusCodes.Status400BadRequest)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden);
+
+// Get template details with versions
+v1Api.MapGet("/admin/prompts/{id}", async (
+    string id,
+    HttpContext context,
+    MeepleAiDbContext db,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var template = await db.Set<PromptTemplateEntity>()
+        .AsNoTracking()
+        .Include(t => t.CreatedBy)
+        .Include(t => t.Versions)
+        .FirstOrDefaultAsync(t => t.Id == id, ct);
+
+    if (template == null)
+    {
+        return Results.NotFound(new { error = "Template not found" });
+    }
+
+    return Results.Ok(new PromptTemplateDto
+    {
+        Id = template.Id,
+        Name = template.Name,
+        Description = template.Description,
+        Category = template.Category,
+        CreatedByUserId = template.CreatedByUserId,
+        CreatedByEmail = template.CreatedBy.Email,
+        CreatedAt = template.CreatedAt,
+        VersionCount = template.Versions.Count,
+        ActiveVersionNumber = template.Versions.FirstOrDefault(v => v.IsActive)?.VersionNumber
+    });
+})
+.WithName("GetPromptTemplate")
+.WithTags("Admin", "PromptManagement")
+.WithDescription("Get template details by ID (admin only)")
+.Produces<PromptTemplateDto>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status404NotFound)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden);
+
+// Create new version for a template
+v1Api.MapPost("/admin/prompts/{id}/versions", async (
+    string id,
+    CreatePromptVersionRequest request,
+    HttpContext context,
+    MeepleAiDbContext db,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var template = await db.Set<PromptTemplateEntity>()
+        .Include(t => t.Versions)
+        .Include(t => t.CreatedBy)
+        .FirstOrDefaultAsync(t => t.Id == id, ct);
+
+    if (template == null)
+    {
+        return Results.NotFound(new { error = "Template not found" });
+    }
+
+    var user = await db.Set<UserEntity>().FindAsync([session.User.Id], ct);
+    if (user == null)
+    {
+        return Results.BadRequest(new { error = "User not found" });
+    }
+
+    var nextVersionNumber = template.Versions.Any()
+        ? template.Versions.Max(v => v.VersionNumber) + 1
+        : 1;
+
+    var version = new PromptVersionEntity
+    {
+        Id = Guid.NewGuid().ToString(),
+        TemplateId = id,
+        VersionNumber = nextVersionNumber,
+        Content = request.Content,
+        IsActive = false, // New versions are inactive by default
+        CreatedByUserId = session.User.Id,
+        CreatedAt = DateTime.UtcNow,
+        Metadata = request.Metadata,
+        Template = template,
+        CreatedBy = user
+    };
+
+    db.Set<PromptVersionEntity>().Add(version);
+    await db.SaveChangesAsync(ct);
+
+    return Results.Created(
+        $"/api/v1/admin/prompts/{id}/versions/{version.Id}",
+        new PromptVersionDto
+        {
+            Id = version.Id,
+            TemplateId = version.TemplateId,
+            VersionNumber = version.VersionNumber,
+            Content = version.Content,
+            IsActive = version.IsActive,
+            CreatedByUserId = version.CreatedByUserId,
+            CreatedByEmail = user.Email,
+            CreatedAt = version.CreatedAt,
+            Metadata = version.Metadata
+        });
+})
+.WithName("CreatePromptVersion")
+.WithTags("Admin", "PromptManagement")
+.WithDescription("Create a new version for a template (admin only)")
+.Produces<PromptVersionDto>(StatusCodes.Status201Created)
+.Produces(StatusCodes.Status404NotFound)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden);
+
+// Get version history for a template
+v1Api.MapGet("/admin/prompts/{id}/versions", async (
+    string id,
+    HttpContext context,
+    MeepleAiDbContext db,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var template = await db.Set<PromptTemplateEntity>()
+        .AsNoTracking()
+        .FirstOrDefaultAsync(t => t.Id == id, ct);
+
+    if (template == null)
+    {
+        return Results.NotFound(new { error = "Template not found" });
+    }
+
+    var versions = await db.Set<PromptVersionEntity>()
+        .AsNoTracking()
+        .Include(v => v.CreatedBy)
+        .Where(v => v.TemplateId == id)
+        .OrderByDescending(v => v.VersionNumber)
+        .Select(v => new PromptVersionDto
+        {
+            Id = v.Id,
+            TemplateId = v.TemplateId,
+            VersionNumber = v.VersionNumber,
+            Content = v.Content,
+            IsActive = v.IsActive,
+            CreatedByUserId = v.CreatedByUserId,
+            CreatedByEmail = v.CreatedBy.Email,
+            CreatedAt = v.CreatedAt,
+            Metadata = v.Metadata
+        })
+        .ToListAsync(ct);
+
+    return Results.Ok(versions);
+})
+.WithName("GetPromptVersionHistory")
+.WithTags("Admin", "PromptManagement")
+.WithDescription("Get version history for a template (admin only)")
+.Produces<List<PromptVersionDto>>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status404NotFound)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden);
+
+// Activate a specific version (CRITICAL endpoint)
+v1Api.MapPost("/admin/prompts/{id}/versions/{versionId}/activate", async (
+    string id,
+    string versionId,
+    HttpContext context,
+    IPromptTemplateService promptService,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    try
+    {
+        var activated = await promptService.ActivateVersionAsync(id, versionId, session.User.Id, ct);
+
+        if (!activated)
+        {
+            return Results.NotFound(new { error = "Version not found" });
+        }
+
+        return Results.Ok(new { message = "Version activated successfully" });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(
+            statusCode: 500,
+            title: "Activation Failed",
+            detail: ex.Message);
+    }
+})
+.WithName("ActivatePromptVersion")
+.WithTags("Admin", "PromptManagement")
+.WithDescription("Activate a specific prompt version with transaction safety and cache invalidation (admin only)")
+.Produces(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status404NotFound)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden)
+.Produces(StatusCodes.Status500InternalServerError);
 
 // ADMIN-01: User management endpoints
 v1Api.MapGet("/admin/users", async (

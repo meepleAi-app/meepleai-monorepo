@@ -134,6 +134,7 @@ builder.Services.Configure<PdfProcessingConfiguration>(builder.Configuration.Get
 builder.Services.Configure<FollowUpQuestionsConfiguration>(builder.Configuration.GetSection("FollowUpQuestions")); // CHAT-02
 builder.Services.Configure<RagPromptsConfiguration>(builder.Configuration.GetSection("RagPrompts")); // AI-07.1: RAG prompt templates
 builder.Services.Configure<HybridCacheConfiguration>(builder.Configuration.GetSection("HybridCache")); // PERF-05: HybridCache configuration
+builder.Services.Configure<HybridSearchConfiguration>(builder.Configuration.GetSection("HybridSearch")); // AI-14: Hybrid search configuration
 
 // Only configure Postgres in non-test environments (tests will override with SQLite)
 if (!builder.Environment.IsEnvironment("Testing"))
@@ -364,6 +365,8 @@ builder.Services.AddScoped<RuleSpecService>();
 builder.Services.AddScoped<RuleSpecDiffService>();
 builder.Services.AddScoped<RuleCommentService>(); // EDIT-05: Comment service with threading and mentions (concrete registration for Minimal API compatibility)
 builder.Services.AddScoped<IRagService, RagService>(); // AI-04: RAG service for Q&A and explanations
+builder.Services.AddScoped<IKeywordSearchService, KeywordSearchService>(); // AI-14: PostgreSQL full-text keyword search
+builder.Services.AddScoped<IHybridSearchService, HybridSearchService>(); // AI-14: Hybrid search with RRF fusion
 builder.Services.AddScoped<IStreamingRagService, StreamingRagService>(); // API-02: Streaming RAG service
 builder.Services.AddScoped<IStreamingQaService, StreamingQaService>(); // CHAT-01: Streaming QA service
 builder.Services.AddScoped<IFollowUpQuestionService, FollowUpQuestionService>(); // CHAT-02: Follow-up question generation
@@ -1269,9 +1272,16 @@ v1Api.MapPost("/agents/qa", async (
                 ct);
         }
 
+        // AI-14: Use hybrid search with configurable search mode (default: Hybrid)
         // PERF-03: Support cache bypass via query parameter
         // AI-09: Language parameter defaults to null (uses "en")
-        var resp = await rag.AskAsync(req.gameId, req.query, language: null, bypassCache, ct);
+        var resp = await rag.AskWithHybridSearchAsync(
+            req.gameId,
+            req.query,
+            searchMode: req.searchMode,
+            language: null,
+            bypassCache,
+            ct);
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
         // CHAT-02: Generate follow-up questions if enabled

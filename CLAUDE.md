@@ -523,6 +523,15 @@ cd apps/web && pnpm dev                                                         
 - **Phase 2 Analysis**: `docs/technic/perf-p2-analysis.md` - P2 optimizations feasibility analysis (ValueTask, Compiled Queries not applicable; Batch Embeddings, Vector Tuning, Read Replicas viable for Phase 3)
 - **RAG Evaluation**: `docs/ai-06-rag-evaluation.md` - Offline evaluation system, IR metrics, quality gates (AI-06)
 - **RAG Optimization**: `docs/technic/ai-07-rag-optimization-phase1.md` - Phase 1 optimization design: prompt engineering, semantic chunking, query expansion (AI-07)
+- **Hybrid Search** (AI-14): `docs/guide/hybrid-search-guide.md` - Comprehensive guide to hybrid search (PostgreSQL full-text + Qdrant vector fusion with RRF algorithm)
+  - **KeywordSearchService** (`Services/KeywordSearchService.cs`): PostgreSQL full-text search with tsvector, ts_rank_cd scoring, phrase search support
+  - **HybridSearchService** (`Services/HybridSearchService.cs`): RRF (Reciprocal Rank Fusion) combining vector + keyword results
+  - **SearchMode enum**: Semantic (vector-only), Keyword (full-text only), Hybrid (RRF fusion, default: 70% vector + 30% keyword)
+  - **Database**: text_chunks table with search_vector tsvector column, GIN indexes, auto-update triggers
+  - **Frontend**: SearchModeToggle component (components/SearchModeToggle.tsx) with 3-way toggle UI
+  - **Configuration**: HybridSearch section in appsettings.json (VectorWeight, KeywordWeight, RrfConstant, BoostTerms)
+  - **Performance**: <300ms target, 20%+ relevance improvement vs vector-only
+  - **Migration**: 20251026085550_AddFullTextSearchSupport.cs
 - **n8n Workflows**: `docs/guide/n8n-integration-guide.md` - n8n webhook integrations (N8N-01: Explain, N8N-03: Q&A)
   - Technical designs: `docs/technic/n8n-webhook-explain-design.md`, `docs/technic/n8n-webhook-qa-design.md`
   - Workflow JSONs: `infra/init/n8n/agent-explain-orchestrator.json`, `infra/init/n8n/agent-qa-webhook.json`

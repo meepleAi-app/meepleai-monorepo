@@ -35,4 +35,23 @@ public interface IRagService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Explain response with outline, script, citations, and estimated reading time</returns>
     Task<ExplainResponse> ExplainAsync(string gameId, string topic, string? language = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// AI-14: Answer a question using hybrid search (vector + keyword) with configurable search mode.
+    /// Supports Semantic (vector-only), Keyword (full-text only), or Hybrid (RRF fusion).
+    /// </summary>
+    /// <param name="gameId">Game ID to search within</param>
+    /// <param name="query">User's question</param>
+    /// <param name="searchMode">Search mode: Semantic, Keyword, or Hybrid (default)</param>
+    /// <param name="language">Target language for response (default: "en")</param>
+    /// <param name="bypassCache">If true, bypasses cache and forces fresh LLM response</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>QA response with hybrid search results</returns>
+    Task<QaResponse> AskWithHybridSearchAsync(
+        string gameId,
+        string query,
+        SearchMode searchMode = SearchMode.Hybrid,
+        string? language = null,
+        bool bypassCache = false,
+        CancellationToken cancellationToken = default);
 }

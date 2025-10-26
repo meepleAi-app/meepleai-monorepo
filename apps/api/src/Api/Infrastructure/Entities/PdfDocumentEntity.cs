@@ -38,6 +38,11 @@ public class PdfDocumentEntity
     // AI-09: Multi-language support
     public string Language { get; set; } = "en"; // ISO 639-1 code: en, it, de, fr, es
 
+    // AI-14: Hybrid search - PostgreSQL full-text search vector (automatically maintained by trigger)
+    // This column is populated by the tsvector_update_pdf_documents trigger
+    [Column("search_vector")]
+    public string? SearchVector { get; set; }
+
     [NotMapped]
     public ProcessingProgress? ProcessingProgress
     {

@@ -22,6 +22,7 @@ public class RagService : IRagService
     private readonly MeepleAiDbContext _dbContext;
     private readonly IEmbeddingService _embeddingService;
     private readonly IQdrantService _qdrantService;
+    private readonly IHybridSearchService _hybridSearchService; // AI-14: Hybrid search service
     private readonly ILlmService _llmService;
     private readonly IAiResponseCacheService _cache;
     private readonly IPromptTemplateService _promptTemplateService;
@@ -33,6 +34,7 @@ public class RagService : IRagService
         MeepleAiDbContext dbContext,
         IEmbeddingService embeddingService,
         IQdrantService qdrantService,
+        IHybridSearchService hybridSearchService, // AI-14: Inject hybrid search service
         ILlmService llmService,
         IAiResponseCacheService cache,
         IPromptTemplateService promptTemplateService,
@@ -43,6 +45,7 @@ public class RagService : IRagService
         _dbContext = dbContext;
         _embeddingService = embeddingService;
         _qdrantService = qdrantService;
+        _hybridSearchService = hybridSearchService; // AI-14
         _llmService = llmService;
         _cache = cache;
         _promptTemplateService = promptTemplateService;
@@ -448,6 +451,191 @@ public class RagService : IRagService
         }
 
         return string.Join("\n", scriptParts);
+    }
+
+    /// <summary>
+    /// AI-14: Answer question using hybrid search (vector + keyword) with configurable search mode.
+    /// Combines Qdrant vector similarity with PostgreSQL full-text search using RRF fusion.
+    /// AI-05: Includes caching support for reduced latency
+    /// OPS-02: OpenTelemetry metrics tracking and distributed tracing
+    /// AI-09: Multilingual support
+    /// </summary>
+    public async Task<QaResponse> AskWithHybridSearchAsync(
+        string gameId,
+        string query,
+        SearchMode searchMode = SearchMode.Hybrid,
+        string? language = null,
+        bool bypassCache = false,
+        CancellationToken cancellationToken = default)
+    {
+        // AI-09: Default to English if no language specified
+        language ??= "en";
+
+        // OPS-02: Create distributed trace span for hybrid search Q&A operation
+        using var activity = MeepleAiActivitySources.Rag.StartActivity("RagService.AskWithHybridSearch");
+        activity?.SetTag("game.id", gameId);
+        activity?.SetTag("query.length", query?.Length ?? 0);
+        activity?.SetTag("operation", "qa_hybrid");
+        activity?.SetTag("search.mode", searchMode.ToString());
+        activity?.SetTag("language", language);
+        activity?.SetTag("cache.bypass", bypassCache);
+
+        // OPS-02: Start tracking duration
+        var stopwatch = Stopwatch.StartNew();
+        var success = false;
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return new QaResponse("Please provide a question.", Array.Empty<Snippet>());
+        }
+
+        // AI-05: Check cache first (unless bypassed)
+        // AI-09: Include language in cache key to avoid cross-language cache hits
+        // AI-14: Include search mode in cache key to differentiate cached responses
+        var cacheKey = $"{_cache.GenerateQaCacheKey(gameId, query)}:lang:{language}:mode:{searchMode}";
+        if (!bypassCache)
+        {
+            var cachedResponse = await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken);
+            if (cachedResponse != null)
+            {
+                LogInformation("Returning cached hybrid search QA response for game {GameId}, mode {SearchMode}", gameId, searchMode);
+                return cachedResponse;
+            }
+        }
+        else
+        {
+            LogInformation("Cache bypassed for game {GameId} (Fresh Hybrid Answer requested)", gameId);
+        }
+
+        try
+        {
+            // CONFIG-04: Load dynamic RAG configuration for top K
+            var topK = await GetRagConfigAsync("TopK", DefaultTopK);
+            activity?.SetTag("rag.config.topK", topK);
+
+            // Step 1: Parse gameId to Guid for hybrid search
+            if (!Guid.TryParse(gameId, out var gameGuid))
+            {
+                _logger.LogError("Invalid game ID format: {GameId}", gameId);
+                return new QaResponse("Invalid game ID format.", Array.Empty<Snippet>());
+            }
+
+            // Step 2: AI-14 - Use hybrid search service to retrieve results
+            var hybridResults = await _hybridSearchService.SearchAsync(
+                query,
+                gameGuid,
+                mode: searchMode,
+                limit: topK,
+                cancellationToken: cancellationToken);
+
+            if (hybridResults.Count == 0)
+            {
+                LogInformation("No hybrid search results found for query in game {GameId}, mode {SearchMode}", gameId, searchMode);
+                return new QaResponse("Not specified", Array.Empty<Snippet>());
+            }
+
+            // Take top 3-5 results for context building (configurable via topK)
+            var topResults = hybridResults.Take(Math.Min(5, topK)).ToList();
+            activity?.SetTag("results.hybrid.count", hybridResults.Count);
+            activity?.SetTag("results.final.count", topResults.Count);
+
+            _logger.LogDebug("Hybrid search returned {Count} results, using top {TopCount} for context",
+                hybridResults.Count, topResults.Count);
+
+            // Step 3: Convert HybridSearchResult to Snippet format
+            var snippets = topResults.Select(r => new Snippet(
+                r.Content,
+                $"PDF:{r.PdfDocumentId}",
+                r.PageNumber ?? 0, // Use page number from hybrid result
+                0, // line number not tracked in chunks
+                r.HybridScore // AI-11: Use hybrid RRF score for quality tracking
+            )).ToList();
+
+            // Step 4: Build context from retrieved chunks
+            var context = string.Join("\n\n---\n\n", topResults.Select(r =>
+                $"[Page {r.PageNumber ?? 0}]\n{r.Content}"));
+
+            // AI-07.1: Use PromptTemplateService for advanced prompt engineering
+            var questionType = _promptTemplateService.ClassifyQuestion(query);
+            Guid? gameGuidNullable = gameGuid;
+            var template = await _promptTemplateService.GetTemplateAsync(gameGuidNullable, questionType);
+
+            var systemPrompt = _promptTemplateService.RenderSystemPrompt(template);
+            var userPrompt = _promptTemplateService.RenderUserPrompt(template, context, query);
+
+            _logger.LogDebug(
+                "Using prompt template for game {GameId}, question type {QuestionType}, search mode {SearchMode}",
+                gameId, questionType, searchMode);
+
+            // Step 5: Generate LLM response
+            var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, cancellationToken);
+
+            if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
+            {
+                _logger.LogError("Failed to generate LLM response: {Error}", llmResult.ErrorMessage);
+                return new QaResponse("Unable to generate answer.", snippets);
+            }
+
+            var answer = llmResult.Response.Trim();
+            var confidence = topResults.Count > 0
+                ? (double?)topResults.Max(r => r.HybridScore)
+                : null;
+
+            // OPS-02: Add trace attributes for successful operation
+            activity?.SetTag("response.tokens", llmResult.Usage.TotalTokens);
+            activity?.SetTag("response.confidence", confidence ?? 0.0);
+            activity?.SetTag("snippets.count", snippets.Count);
+            activity?.SetTag("success", true);
+
+            LogInformation(
+                "Hybrid search ({Mode}) QA answered with {SnippetCount} snippets, LLM generated answer: {AnswerPreview}",
+                searchMode, snippets.Count, answer.Length > 50 ? answer.Substring(0, 50) + "..." : answer);
+
+            var metadata = llmResult.Metadata.Count > 0
+                ? new Dictionary<string, string>(llmResult.Metadata)
+                : null;
+
+            var response = new QaResponse(
+                answer,
+                snippets,
+                llmResult.Usage.PromptTokens,
+                llmResult.Usage.CompletionTokens,
+                llmResult.Usage.TotalTokens,
+                confidence,
+                metadata);
+
+            // AI-05: Cache the response for future requests
+            await _cache.SetAsync(cacheKey, response, 86400, cancellationToken);
+
+            // OPS-02: Record metrics
+            success = true;
+            stopwatch.Stop();
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success);
+            MeepleAiMetrics.TokensUsed.Record(llmResult.Usage.TotalTokens, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa_hybrid" } });
+            if (confidence.HasValue)
+            {
+                MeepleAiMetrics.ConfidenceScore.Record(confidence.Value, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa_hybrid" } });
+            }
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during hybrid search RAG query for game {GameId}, mode {SearchMode}", gameId, searchMode);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa_hybrid" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
+            return new QaResponse("An error occurred while processing your question.", Array.Empty<Snippet>());
+        }
     }
 
     /// <summary>

@@ -21,6 +21,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ChatLogEntity> ChatLogs => Set<ChatLogEntity>();
     public DbSet<PdfDocumentEntity> PdfDocuments => Set<PdfDocumentEntity>();
     public DbSet<VectorDocumentEntity> VectorDocuments => Set<VectorDocumentEntity>();
+    public DbSet<TextChunkEntity> TextChunks => Set<TextChunkEntity>(); // AI-14: Hybrid search
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
     public DbSet<AiRequestLogEntity> AiRequestLogs => Set<AiRequestLogEntity>();
     public DbSet<AgentFeedbackEntity> AgentFeedbacks => Set<AgentFeedbackEntity>();
@@ -291,6 +292,34 @@ public class MeepleAiDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(e => e.GameId);
             entity.HasIndex(e => e.PdfDocumentId).IsUnique();
+        });
+
+        // AI-14: Hybrid search - text chunks table configuration
+        modelBuilder.Entity<TextChunkEntity>(entity =>
+        {
+            entity.ToTable("text_chunks");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
+            entity.Property(e => e.GameId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.PdfDocumentId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.Content).IsRequired(); // No max length for long text chunks
+            entity.Property(e => e.ChunkIndex).IsRequired();
+            entity.Property(e => e.PageNumber);
+            entity.Property(e => e.CharacterCount).IsRequired();
+            entity.Property(e => e.CreatedAt).IsRequired();
+            // SearchVector column is managed by PostgreSQL trigger, no need to configure here
+            entity.HasOne(e => e.Game)
+                .WithMany()
+                .HasForeignKey(e => e.GameId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.PdfDocument)
+                .WithMany()
+                .HasForeignKey(e => e.PdfDocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => e.GameId);
+            entity.HasIndex(e => e.PdfDocumentId);
+            entity.HasIndex(e => e.ChunkIndex);
+            entity.HasIndex(e => e.PageNumber);
         });
 
         modelBuilder.Entity<AuditLogEntity>(entity =>

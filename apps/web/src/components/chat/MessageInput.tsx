@@ -3,11 +3,13 @@
  *
  * Handles user message input and submission.
  * Integrates with ChatProvider for state and submission.
+ * AI-14: Includes SearchModeToggle for hybrid search feature.
  */
 
 import React, { FormEvent } from 'react';
 import { useChatContext } from './ChatProvider';
 import { LoadingButton } from '../loading/LoadingButton';
+import { SearchModeToggle, SearchMode } from '@/components';
 
 export function MessageInput() {
   const {
@@ -16,7 +18,9 @@ export function MessageInput() {
     sendMessage,
     selectedGameId,
     selectedAgentId,
-    loading
+    loading,
+    searchMode,
+    setSearchMode
   } = useChatContext();
 
   const handleSubmit = (e: FormEvent) => {
@@ -31,55 +35,71 @@ export function MessageInput() {
   const isSendDisabled = !inputValue.trim() || isDisabled;
 
   return (
-    <form
-      onSubmit={handleSubmit}
+    <div
       style={{
         padding: 16,
         borderTop: '1px solid #dadce0',
         background: 'white',
         display: 'flex',
-        gap: 8
+        flexDirection: 'column',
+        gap: 12
       }}
     >
-      <label htmlFor="message-input" className="sr-only">
-        Ask a question about the game
-      </label>
-      <input
-        id="message-input"
-        type="text"
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        placeholder="Fai una domanda sul gioco..."
+      {/* AI-14: Search Mode Toggle */}
+      <SearchModeToggle
+        value={searchMode as SearchMode}
+        onChange={(mode) => setSearchMode(mode)}
         disabled={isDisabled}
-        aria-label="Message input"
-        style={{
-          flex: 1,
-          padding: 12,
-          fontSize: 14,
-          border: '1px solid #dadce0',
-          borderRadius: 4
-        }}
       />
-      <LoadingButton
-        type="submit"
-        isLoading={loading.sending}
-        loadingText="Invio..."
-        disabled={isSendDisabled}
-        spinnerSize="sm"
-        aria-label="Send message"
+
+      {/* Message Input Form */}
+      <form
+        onSubmit={handleSubmit}
         style={{
-          padding: '12px 24px',
-          background: isSendDisabled ? '#dadce0' : '#0070f3',
-          color: 'white',
-          border: 'none',
-          borderRadius: 4,
-          fontSize: 14,
-          fontWeight: 500,
-          cursor: isSendDisabled ? 'not-allowed' : 'pointer'
+          display: 'flex',
+          gap: 8
         }}
       >
-        Invia
-      </LoadingButton>
-    </form>
+        <label htmlFor="message-input" className="sr-only">
+          Ask a question about the game
+        </label>
+        <input
+          id="message-input"
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder="Fai una domanda sul gioco..."
+          disabled={isDisabled}
+          aria-label="Message input"
+          style={{
+            flex: 1,
+            padding: 12,
+            fontSize: 14,
+            border: '1px solid #dadce0',
+            borderRadius: 4
+          }}
+        />
+        <LoadingButton
+          type="submit"
+          isLoading={loading.sending}
+          loadingText="Invio..."
+          disabled={isSendDisabled}
+          spinnerSize="sm"
+          aria-label="Send message"
+          style={{
+            padding: '12px 24px',
+            background: isSendDisabled ? '#dadce0' : '#0070f3',
+            color: 'white',
+            border: 'none',
+            borderRadius: 4,
+            fontSize: 14,
+            fontWeight: 500,
+            cursor: isSendDisabled ? 'not-allowed' : 'pointer'
+          }}
+        >
+          Invia
+        </LoadingButton>
+      </form>
+    </div>
   );
 }

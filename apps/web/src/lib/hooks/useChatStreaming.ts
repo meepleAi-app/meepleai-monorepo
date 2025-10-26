@@ -54,7 +54,7 @@ export type StreamingState = {
 };
 
 export type StreamingControls = {
-  startStreaming: (gameId: string, query: string, chatId?: string) => void;
+  startStreaming: (gameId: string, query: string, chatId?: string, searchMode?: string) => void;
   stopStreaming: () => void;
   reset: () => void;
 };
@@ -84,8 +84,8 @@ const INITIAL_STATE: StreamingState = {
  *   }
  * });
  *
- * // Start streaming
- * streamingControls.startStreaming(gameId, userQuery, chatId);
+ * // Start streaming with optional search mode (AI-14)
+ * streamingControls.startStreaming(gameId, userQuery, chatId, searchMode);
  *
  * // Stop streaming
  * streamingControls.stopStreaming();
@@ -117,7 +117,7 @@ export function useChatStreaming(callbacks?: {
   }, [stopStreaming]);
 
   const startStreaming = useCallback(
-    (gameId: string, query: string, chatId?: string) => {
+    (gameId: string, query: string, chatId?: string, searchMode: string = 'Hybrid') => {
       // Stop any existing stream
       stopStreaming();
 
@@ -137,7 +137,8 @@ export function useChatStreaming(callbacks?: {
 
       // EventSource doesn't support POST, so we need to use fetch with streaming
       // We'll use fetch with ReadableStream instead of EventSource for proper POST support
-      const requestBody = JSON.stringify({ gameId, query, chatId });
+      // AI-14: Include searchMode in request body (default: 'Hybrid')
+      const requestBody = JSON.stringify({ gameId, query, chatId, searchMode });
 
       fetch(url.toString(), {
         method: 'POST',

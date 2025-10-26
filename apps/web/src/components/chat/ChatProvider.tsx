@@ -94,6 +94,10 @@ export interface ChatContextValue {
   // Input State
   inputValue: string;
   setInputValue: (value: string) => void;
+
+  // AI-14: Search Mode State
+  searchMode: string;
+  setSearchMode: (mode: string) => void;
 }
 
 // ============================================================================
@@ -150,6 +154,9 @@ export function ChatProvider({ children }: ChatProviderProps) {
   const [inputValue, setInputValue] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // AI-14: Search Mode State (default: 'Hybrid')
+  const [searchMode, setSearchMode] = useState<string>('Hybrid');
 
   // Loading States
   const [loading, setLoading] = useState<LoadingState>({
@@ -577,6 +584,10 @@ export function ChatProvider({ children }: ChatProviderProps) {
     // Input State
     inputValue,
     setInputValue,
+
+    // AI-14: Search Mode State
+    searchMode,
+    setSearchMode,
   }), [
     authUser,
     games,
@@ -606,6 +617,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
     cancelEdit,
     saveEdit,
     inputValue,
+    searchMode,
   ]);
 
   return (

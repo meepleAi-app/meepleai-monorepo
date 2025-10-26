@@ -1,8 +1,8 @@
 # MeepleAI Issue Resolution Roadmap
 
-**Document Version:** 1.4
+**Document Version:** 1.5
 **Last Updated:** 2025-10-26
-**Total Issues:** 35 (29 open, 6 completed: EDIT-04, EDIT-05, ADMIN-02, AI-13, N8N-05, AI-15-ALT)
+**Total Issues:** 35 (28 open, 7 completed: EDIT-04, EDIT-05, ADMIN-02, AI-13, AI-14, N8N-05, AI-15-ALT)
 
 ---
 
@@ -199,7 +199,7 @@ Our approach follows these principles:
 
 | # | Issue | Priority | Effort | Rationale |
 |---|-------|----------|--------|-----------|
-| 32 | #422 AI-14: Hybrid search | 🟡 Medium | L | **PHASE 2 RAG**: Builds on AI-07. Requires research. |
+| 32 | #422 AI-14: Hybrid search | ✅ COMPLETED | L | **PHASE 2 RAG**: Hybrid search combining PostgreSQL full-text (BM25) + Qdrant vector with RRF fusion. 3 search modes (Semantic/Keyword/Hybrid). SearchModeToggle UI component. 5,265 lines added. PR #543. Completed: 2025-10-26 |
 | 33 | #406 AI-12: Personalized ranking | 🟡 Medium | L | User-specific improvements. Requires user behavior data. |
 | 34 | #420 AI-13: BGG API integration | ✅ COMPLETED | M | Backend complete with caching, rate limiting, retry logic. Frontend BggSearchModal component ready. PR #534. Completed: 2025-10-25 |
 | 35 | #424 AI-15: Fine-tuning experiments → AI-15-ALT: GPT-4o-mini upgrade | ✅ COMPLETED | S | **ALTERNATIVE IMPLEMENTED**: Research showed fine-tuning would increase costs 391%. Implemented GPT-4o-mini upgrade with A/B testing instead. 8 tests passing. PR #543. Completed: 2025-10-26 |

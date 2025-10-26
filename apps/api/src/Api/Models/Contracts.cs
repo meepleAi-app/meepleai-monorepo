@@ -1,10 +1,18 @@
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Api.Services; // AI-14: For SearchMode enum
 
 namespace Api.Models;
 
-public record QaRequest(string gameId, string query, Guid? chatId = null);
+/// <summary>
+/// AI-14: Updated to support hybrid search modes
+/// </summary>
+public record QaRequest(
+    string gameId,
+    string query,
+    Guid? chatId = null,
+    SearchMode searchMode = SearchMode.Hybrid); // AI-14: Default to hybrid search
 public record QaResponse(
     string answer,
     IReadOnlyList<Snippet> snippets,

@@ -50,4 +50,12 @@ public interface IOAuthService
     /// </summary>
     /// <param name="state">State token to store</param>
     Task StoreStateAsync(string state);
+
+    /// <summary>
+    /// Refreshes an expired OAuth access token using refresh token (Google, Discord only)
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <param name="provider">OAuth provider (google, discord)</param>
+    /// <returns>New token response, or null if refresh fails (force re-auth)</returns>
+    Task<OAuthTokenResponse?> RefreshTokenAsync(string userId, string provider);
 }

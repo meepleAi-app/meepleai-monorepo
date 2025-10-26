@@ -18,6 +18,7 @@ public class RagServiceMultilingualTests : IDisposable
 {
     private readonly Mock<IQdrantService> _qdrantMock;
     private readonly Mock<IEmbeddingService> _embeddingMock;
+    private readonly Mock<IHybridSearchService> _hybridSearchMock;
     private readonly Mock<ILlmService> _llmMock;
     private readonly Mock<IAiResponseCacheService> _cacheMock;
     private readonly Mock<IPromptTemplateService> _promptTemplateMock;
@@ -28,6 +29,7 @@ public class RagServiceMultilingualTests : IDisposable
     {
         _qdrantMock = new Mock<IQdrantService>();
         _embeddingMock = new Mock<IEmbeddingService>();
+        _hybridSearchMock = CreateHybridSearchMock();
         _llmMock = new Mock<ILlmService>();
         _cacheMock = new Mock<IAiResponseCacheService>();
         _promptTemplateMock = CreatePromptTemplateMock();
@@ -39,11 +41,28 @@ public class RagServiceMultilingualTests : IDisposable
             _dbContext,
             _embeddingMock.Object,
             _qdrantMock.Object,
+            _hybridSearchMock.Object,
             _llmMock.Object,
             _cacheMock.Object,
             _promptTemplateMock.Object,
             NullLogger<RagService>.Instance
         );
+    }
+
+    // AI-14: Helper to create IHybridSearchService mock
+    private static Mock<IHybridSearchService> CreateHybridSearchMock()
+    {
+        var mock = new Mock<IHybridSearchService>();
+        mock.Setup(x => x.SearchAsync(
+            It.IsAny<string>(),
+            It.IsAny<Guid>(),
+            It.IsAny<SearchMode>(),
+            It.IsAny<int>(),
+            It.IsAny<float>(),
+            It.IsAny<float>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HybridSearchResult>());
+        return mock;
     }
 
     private static Mock<IPromptTemplateService> CreatePromptTemplateMock()

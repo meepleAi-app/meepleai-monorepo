@@ -108,7 +108,18 @@ CRITICAL INSTRUCTIONS:
             .Setup(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(llmResult);
 
-        var ragService = new RagService(dbContext, embeddingServiceMock.Object, qdrantServiceMock.Object, llmServiceMock.Object, cacheServiceMock.Object, CreatePromptTemplateMock().Object, ragLoggerMock);
+        var hybridSearchMock = new Mock<IHybridSearchService>();
+        hybridSearchMock.Setup(x => x.SearchAsync(
+            It.IsAny<string>(),
+            It.IsAny<Guid>(),
+            It.IsAny<SearchMode>(),
+            It.IsAny<int>(),
+            It.IsAny<float>(),
+            It.IsAny<float>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HybridSearchResult>());
+
+        var ragService = new RagService(dbContext, embeddingServiceMock.Object, qdrantServiceMock.Object, hybridSearchMock.Object, llmServiceMock.Object, cacheServiceMock.Object, CreatePromptTemplateMock().Object, ragLoggerMock);
 
         var gameId = "demo-chess";
 

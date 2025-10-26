@@ -621,3 +621,32 @@ public record TemplateParameterDto(
 public record ImportTemplateRequest(
     [Required] Dictionary<string, string> Parameters
 );
+
+// OPS-07: Alerting system models
+public record AlertDto(
+    Guid Id,
+    string AlertType,
+    string Severity,
+    string Message,
+    Dictionary<string, object>? Metadata,
+    DateTime TriggeredAt,
+    DateTime? ResolvedAt,
+    bool IsActive,
+    Dictionary<string, bool>? ChannelSent
+);
+
+public record PrometheusAlertWebhook(
+    string Version,
+    string GroupKey,
+    string TruncatedAlerts,
+    string Status,
+    PrometheusAlert[] Alerts
+);
+
+public record PrometheusAlert(
+    string Status, // "firing" or "resolved"
+    Dictionary<string, string> Labels,
+    Dictionary<string, string> Annotations,
+    DateTime StartsAt,
+    DateTime? EndsAt
+);

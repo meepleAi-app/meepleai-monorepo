@@ -238,11 +238,23 @@ public class RagServiceConfigSimpleTests : IDisposable
     [Fact]
     public async Task RagService_OldStyleConstructor_ShouldWorkWithDefaults()
     {
-        // Arrange: Old-style 7-parameter constructor
+        // Arrange: Old-style constructor with AI-14 hybrid search
+        var mockHybridSearch = new Mock<IHybridSearchService>();
+        mockHybridSearch.Setup(x => x.SearchAsync(
+            It.IsAny<string>(),
+            It.IsAny<Guid>(),
+            It.IsAny<SearchMode>(),
+            It.IsAny<int>(),
+            It.IsAny<float>(),
+            It.IsAny<float>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HybridSearchResult>());
+
         var ragService = new RagService(
             _dbContext,
             _mockEmbedding.Object,
             _mockQdrant.Object,
+            mockHybridSearch.Object,
             _mockLlm.Object,
             _mockCache.Object,
             _mockPromptTemplate.Object,
@@ -272,10 +284,22 @@ public class RagServiceConfigSimpleTests : IDisposable
 
     private RagService CreateRagService(IConfiguration? configuration = null)
     {
+        var mockHybridSearch = new Mock<IHybridSearchService>();
+        mockHybridSearch.Setup(x => x.SearchAsync(
+            It.IsAny<string>(),
+            It.IsAny<Guid>(),
+            It.IsAny<SearchMode>(),
+            It.IsAny<int>(),
+            It.IsAny<float>(),
+            It.IsAny<float>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HybridSearchResult>());
+
         return new RagService(
             _dbContext,
             _mockEmbedding.Object,
             _mockQdrant.Object,
+            mockHybridSearch.Object,
             _mockLlm.Object,
             _mockCache.Object,
             _mockPromptTemplate.Object,

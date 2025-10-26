@@ -397,6 +397,13 @@ builder.Services.AddHostedService<SessionAutoRevocationService>();
 // N8N-05: Workflow error logging service
 builder.Services.AddScoped<IWorkflowErrorLoggingService, WorkflowErrorLoggingService>();
 
+// OPS-07: Alerting system
+builder.Services.Configure<AlertingConfiguration>(builder.Configuration.GetSection("Alerting"));
+builder.Services.AddScoped<IAlertingService, AlertingService>();
+builder.Services.AddScoped<IAlertChannel, EmailAlertChannel>();
+builder.Services.AddScoped<IAlertChannel, SlackAlertChannel>();
+builder.Services.AddScoped<IAlertChannel, PagerDutyAlertChannel>();
+
 // ADMIN-01: User management service
 builder.Services.AddScoped<UserManagementService>();
 
@@ -3839,6 +3846,128 @@ v1Api.MapGet("/admin/workflows/errors/{id:guid}", async (
 .WithTags("Admin")
 .WithDescription("Get a specific workflow error by ID (admin only)")
 .Produces<WorkflowErrorDto>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status404NotFound)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden);
+
+// OPS-07: Alerting system endpoints
+
+// Prometheus AlertManager webhook endpoint (no auth - called by Prometheus)
+v1Api.MapPost("/alerts/prometheus", async (
+    IAlertingService alertingService,
+    PrometheusAlertWebhook webhook,
+    ILogger<Program> logger,
+    CancellationToken ct = default) =>
+{
+    logger.LogInformation(
+        "Received Prometheus webhook: {Status}, {AlertCount} alerts",
+        webhook.Status,
+        webhook.Alerts.Length);
+
+    foreach (var alert in webhook.Alerts)
+    {
+        try
+        {
+            if (alert.Status == "firing")
+            {
+                var metadata = new Dictionary<string, object>
+                {
+                    ["labels"] = alert.Labels,
+                    ["annotations"] = alert.Annotations,
+                    ["starts_at"] = alert.StartsAt,
+                    ["group_key"] = webhook.GroupKey
+                };
+
+                await alertingService.SendAlertAsync(
+                    alertType: alert.Labels.GetValueOrDefault("alertname", "Unknown"),
+                    severity: alert.Labels.GetValueOrDefault("severity", "warning"),
+                    message: alert.Annotations.GetValueOrDefault("summary", "Alert triggered"),
+                    metadata: metadata,
+                    cancellationToken: ct);
+            }
+            else if (alert.Status == "resolved")
+            {
+                var alertType = alert.Labels.GetValueOrDefault("alertname", "Unknown");
+                await alertingService.ResolveAlertAsync(alertType, ct);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error processing Prometheus alert: {AlertName}",
+                alert.Labels.GetValueOrDefault("alertname", "Unknown"));
+        }
+    }
+
+    return Results.Ok(new { message = "Webhook processed successfully" });
+})
+.WithName("PrometheusAlertWebhook")
+.WithTags("Alerting")
+.WithDescription("Webhook endpoint for Prometheus AlertManager (no auth required)")
+.Produces(StatusCodes.Status200OK);
+
+// Admin endpoint to get active alerts
+v1Api.MapGet("/admin/alerts", async (
+    HttpContext context,
+    IAlertingService alertingService,
+    bool? activeOnly = true,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var alerts = activeOnly == true
+        ? await alertingService.GetActiveAlertsAsync(ct)
+        : await alertingService.GetAlertHistoryAsync(
+            DateTime.UtcNow.AddDays(-7),
+            DateTime.UtcNow,
+            ct);
+
+    return Results.Ok(alerts);
+})
+.WithName("GetAlerts")
+.WithTags("Admin", "Alerting")
+.WithDescription("Get active alerts or recent alert history (admin only)")
+.Produces<List<AlertDto>>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status401Unauthorized)
+.Produces(StatusCodes.Status403Forbidden);
+
+// Admin endpoint to manually resolve an alert
+v1Api.MapPost("/admin/alerts/{alertType}/resolve", async (
+    HttpContext context,
+    IAlertingService alertingService,
+    string alertType,
+    CancellationToken ct = default) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    var resolved = await alertingService.ResolveAlertAsync(alertType, ct);
+
+    if (!resolved)
+    {
+        return Results.NotFound(new { error = $"No active alerts found for type '{alertType}'" });
+    }
+
+    return Results.Ok(new { message = $"Alert '{alertType}' resolved successfully" });
+})
+.WithName("ResolveAlert")
+.WithTags("Admin", "Alerting")
+.WithDescription("Manually resolve an alert by type (admin only)")
+.Produces(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status404NotFound)
 .Produces(StatusCodes.Status401Unauthorized)
 .Produces(StatusCodes.Status403Forbidden);

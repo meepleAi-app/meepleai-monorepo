@@ -516,8 +516,41 @@ Ogni issue è considerata "Done" quando:
 
 ---
 
-**Document Version**: 1.0
+## DoD Verification Status (Aggiornamento 2025-10-26)
+
+### Summary della Verifica Automatizzata
+
+In data **2025-10-26**, è stata completata una verifica completa dei DoD (Definition of Done) per **59 issue chiuse**.
+
+**Risultati:**
+- **1,139 DoD items** totali analizzati
+- ✅ **111 items (9.7%)** verificati come **implementati** → Checkbox aggiornate su GitHub
+- ❌ **37 items (3.2%)** identificati come **mancanti** → Documentati in MISSING-DOD-ANALYSIS.md
+- ⚠️  **82 items (7.2%)** richiedono **verifica manuale** → Issue #540 creata
+- ❓ **909 items (79.8%)** non verificabili automaticamente → Richiederanno analisi manuale futura
+
+**Azioni Completate:**
+1. ✅ Aggiornate **44 issue su GitHub** con checkbox DoD implementati
+2. ✅ Creata issue #540: "MANUAL-VERIFICATION: DoD Items Requiring Human Validation"
+3. ✅ Generati report completi: `docs/issue/dod-verification-report-*.md` e `MISSING-DOD-ANALYSIS.md`
+4. ✅ Tutti i backup salvati in `docs/issue/backups/`
+
+**Prossimi Passi:**
+- QA team procederà con verifica manuale degli 82 items (issue #540)
+- 37 missing items sono minori (<25% per issue) e non richiedono riapertura immediata
+- Riferimento completo in: `docs/issue/MISSING-DOD-ANALYSIS.md`
+
+**Tool Disponibili:**
+- `tools/verify-dod-completion-simple.ps1` - Estrazione DoD da GitHub
+- `tools/verify-dod-implementation.py` - Verifica automatizzata implementazioni
+- `tools/update-github-dod-checkboxes.py` - Aggiornamento batch GitHub
+- `tools/create-manual-verification-issue.py` - Generazione issue consolidate
+- `tools/analyze-missing-dod-items.py` - Analisi missing items
+
+---
+
+**Document Version**: 1.1
 **Created**: 2025-10-16
-**Last Updated**: 2025-10-16
+**Last Updated**: 2025-10-26
 **Owner**: Engineering Team
 **Reviewers**: Product Owner, Tech Lead, Scrum Master

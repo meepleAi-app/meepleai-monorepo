@@ -1,0 +1,163 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Prompt Evaluation Test Dataset",
+  "description": "Schema for prompt evaluation test datasets (ADMIN-01 Phase 4)",
+  "type": "object",
+  "required": ["dataset_id", "template_name", "version", "description", "test_cases", "quality_thresholds"],
+  "properties": {
+    "dataset_id": {
+      "type": "string",
+      "description": "Unique dataset identifier",
+      "pattern": "^[a-z0-9-]+$",
+      "examples": ["qa-prompt-test-dataset-v1", "chess-prompt-tests"]
+    },
+    "template_name": {
+      "type": "string",
+      "description": "Template name this dataset is for",
+      "enum": ["qa-system-prompt", "chess-system-prompt", "setup-guide-system-prompt", "streaming-qa-system-prompt"]
+    },
+    "version": {
+      "type": "string",
+      "description": "Dataset version (semantic versioning)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "examples": ["1.0.0", "2.1.0"]
+    },
+    "description": {
+      "type": "string",
+      "description": "Dataset description and purpose",
+      "minLength": 10,
+      "maxLength": 500
+    },
+    "test_cases": {
+      "type": "array",
+      "description": "List of test cases",
+      "minItems": 1,
+      "maxItems": 200,
+      "items": {
+        "$ref": "#/definitions/test_case"
+      }
+    },
+    "quality_thresholds": {
+      "$ref": "#/definitions/quality_thresholds"
+    }
+  },
+  "definitions": {
+    "test_case": {
+      "type": "object",
+      "required": ["id", "category", "difficulty", "query"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique test case ID",
+          "pattern": "^TC-\\d{3}$",
+          "examples": ["TC-001", "TC-042"]
+        },
+        "category": {
+          "type": "string",
+          "description": "Test case category",
+          "enum": ["setup", "gameplay", "edge-case", "out-of-context", "specific-rule", "general-knowledge"]
+        },
+        "difficulty": {
+          "type": "string",
+          "description": "Difficulty level",
+          "enum": ["easy", "medium", "hard"]
+        },
+        "query": {
+          "type": "string",
+          "description": "User query to send to the system",
+          "minLength": 5,
+          "maxLength": 500
+        },
+        "game_id": {
+          "type": "string",
+          "description": "Game ID context for the query (UUID format)",
+          "format": "uuid"
+        },
+        "expected_answer": {
+          "type": "string",
+          "description": "Expected answer or key points",
+          "maxLength": 1000
+        },
+        "required_keywords": {
+          "type": "array",
+          "description": "Keywords that MUST appear in response",
+          "items": {
+            "type": "string",
+            "minLength": 2
+          },
+          "uniqueItems": true
+        },
+        "forbidden_keywords": {
+          "type": "array",
+          "description": "Keywords that MUST NOT appear (hallucination detection)",
+          "items": {
+            "type": "string",
+            "minLength": 2
+          },
+          "uniqueItems": true
+        },
+        "expected_citations": {
+          "type": "array",
+          "description": "Expected citations (document IDs or page numbers)",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "min_confidence": {
+          "type": "number",
+          "description": "Minimum confidence threshold for this specific test case",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "max_latency_ms": {
+          "type": "integer",
+          "description": "Maximum acceptable latency in milliseconds",
+          "minimum": 100,
+          "maximum": 30000
+        }
+      }
+    },
+    "quality_thresholds": {
+      "type": "object",
+      "description": "Quality thresholds for pass/fail",
+      "properties": {
+        "min_accuracy": {
+          "type": "number",
+          "description": "Minimum accuracy (0.0-1.0)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.80
+        },
+        "max_hallucination_rate": {
+          "type": "number",
+          "description": "Maximum hallucination rate (0.0-1.0)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.10
+        },
+        "min_avg_confidence": {
+          "type": "number",
+          "description": "Minimum average confidence (0.0-1.0)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.70
+        },
+        "min_citation_correctness": {
+          "type": "number",
+          "description": "Minimum citation correctness (0.0-1.0)",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.80
+        },
+        "max_avg_latency_ms": {
+          "type": "integer",
+          "description": "Maximum average latency in milliseconds",
+          "minimum": 500,
+          "maximum": 10000,
+          "default": 3000
+        }
+      }
+    }
+  }
+}

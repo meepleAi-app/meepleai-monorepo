@@ -1,5 +1,6 @@
 using Api.Models;
 using Api.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -9,12 +10,15 @@ namespace Api.Tests;
 /// <summary>
 /// CHESS-04: Unit tests for chess conversational agent service
 /// Tests question answering, FEN validation, move parsing, and caching
+/// ADMIN-01 Phase 3: Updated with IPromptTemplateService and IConfiguration mocks
 /// </summary>
 public class ChessAgentServiceTests
 {
     private readonly Mock<IChessKnowledgeService> _mockChessKnowledge;
     private readonly Mock<ILlmService> _mockLlmService;
     private readonly Mock<IAiResponseCacheService> _mockCache;
+    private readonly Mock<IPromptTemplateService> _mockPromptTemplate;
+    private readonly Mock<IConfiguration> _mockConfiguration;
     private readonly Mock<ILogger<ChessAgentService>> _mockLogger;
     private readonly ChessAgentService _service;
 
@@ -23,12 +27,22 @@ public class ChessAgentServiceTests
         _mockChessKnowledge = new Mock<IChessKnowledgeService>();
         _mockLlmService = new Mock<ILlmService>();
         _mockCache = new Mock<IAiResponseCacheService>();
+        _mockPromptTemplate = new Mock<IPromptTemplateService>();
+        _mockConfiguration = new Mock<IConfiguration>();
         _mockLogger = new Mock<ILogger<ChessAgentService>>();
+
+        // ADMIN-01 Phase 3: Setup feature flag to use fallback (default behavior)
+        // Mock IConfigurationSection for GetValue<bool> to work correctly
+        var mockSection = new Mock<IConfigurationSection>();
+        mockSection.Setup(s => s.Value).Returns("false");
+        _mockConfiguration.Setup(c => c.GetSection("Features:PromptDatabase")).Returns(mockSection.Object);
 
         _service = new ChessAgentService(
             _mockChessKnowledge.Object,
             _mockLlmService.Object,
             _mockCache.Object,
+            _mockPromptTemplate.Object,
+            _mockConfiguration.Object,
             _mockLogger.Object
         );
     }

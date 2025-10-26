@@ -17,6 +17,8 @@ public class SetupGuideService
     private readonly IQdrantService _qdrantService;
     private readonly ILlmService _llmService;
     private readonly IAiResponseCacheService _cache;
+    private readonly IPromptTemplateService _promptTemplateService;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<SetupGuideService> _logger;
 
     public SetupGuideService(
@@ -25,6 +27,8 @@ public class SetupGuideService
         IQdrantService qdrantService,
         ILlmService llmService,
         IAiResponseCacheService cache,
+        IPromptTemplateService promptTemplateService,
+        IConfiguration configuration,
         ILogger<SetupGuideService> logger)
     {
         _dbContext = dbContext;
@@ -32,6 +36,8 @@ public class SetupGuideService
         _qdrantService = qdrantService;
         _llmService = llmService;
         _cache = cache;
+        _promptTemplateService = promptTemplateService;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -105,25 +111,8 @@ public class SetupGuideService
                     r.Score // AI-11: Include actual search score for quality tracking
                 )).ToList();
 
-                // Use LLM to synthesize structured setup steps from the context
-                var systemPrompt = @"You are a board game setup assistant. Your job is to create clear, actionable setup instructions based ONLY on the provided rulebook context.
-
-CRITICAL INSTRUCTIONS:
-- Generate 3-7 numbered setup steps in a logical order
-- Each step should be concrete and actionable (e.g., 'Place the board in the center')
-- Keep each step instruction concise (1-2 sentences maximum)
-- Mark optional steps with '[OPTIONAL]' prefix in the title
-- Use information ONLY from the provided context
-- If the context is insufficient, generate generic but helpful setup steps
-- Return ONLY the steps in this exact format:
-
-STEP 1: <title>
-<instruction>
-
-STEP 2: <title>
-<instruction>
-
-etc.";
+                // ADMIN-01 Phase 3: Use database-driven prompt with fallback
+                var systemPrompt = await GetSetupGuideSystemPromptAsync(cancellationToken);
 
                 var userPrompt = $@"CONTEXT FROM RULEBOOK:
 {context}
@@ -371,6 +360,64 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
     /// <summary>
     /// Create empty setup guide response
     /// </summary>
+    /// <summary>
+    /// ADMIN-01 Phase 3: Get setup guide system prompt using database-driven prompt management with fallback
+    /// </summary>
+    private async Task<string> GetSetupGuideSystemPromptAsync(CancellationToken ct = default)
+    {
+        // ADMIN-01: Check feature flag for database-driven prompts
+        var usePromptDatabase = _configuration.GetValue<bool>("Features:PromptDatabase", false);
+
+        if (usePromptDatabase)
+        {
+            try
+            {
+                var promptTemplate = await _promptTemplateService.GetActivePromptAsync("setup-guide-system-prompt", ct);
+                if (!string.IsNullOrWhiteSpace(promptTemplate))
+                {
+                    _logger.LogDebug("Using database-driven setup guide system prompt");
+                    return promptTemplate;
+                }
+                else
+                {
+                    _logger.LogWarning("Database prompt 'setup-guide-system-prompt' not found, falling back to hardcoded prompt");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to retrieve setup guide system prompt from database, falling back to hardcoded prompt");
+            }
+        }
+
+        // Fallback: Use hardcoded prompt (backward compatibility)
+        return GetSetupGuideSystemPromptFallback();
+    }
+
+    /// <summary>
+    /// ADMIN-01 Phase 3: Hardcoded fallback prompt for backward compatibility
+    /// </summary>
+    private string GetSetupGuideSystemPromptFallback()
+    {
+        return @"You are a board game setup assistant. Your job is to create clear, actionable setup instructions based ONLY on the provided rulebook context.
+
+CRITICAL INSTRUCTIONS:
+- Generate 3-7 numbered setup steps in a logical order
+- Each step should be concrete and actionable (e.g., 'Place the board in the center')
+- Keep each step instruction concise (1-2 sentences maximum)
+- Mark optional steps with '[OPTIONAL]' prefix in the title
+- Use information ONLY from the provided context
+- If the context is insufficient, generate generic but helpful setup steps
+- Return ONLY the steps in this exact format:
+
+STEP 1: <title>
+<instruction>
+
+STEP 2: <title>
+<instruction>
+
+etc.";
+    }
+
     private SetupGuideResponse CreateEmptySetupGuide(string gameTitle)
     {
         return new SetupGuideResponse(

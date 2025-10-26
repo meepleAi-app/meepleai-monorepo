@@ -3,6 +3,7 @@ using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -12,6 +13,7 @@ namespace Api.Tests;
 /// <summary>
 /// Comprehensive test suite for SetupGuideService (AI-03)
 /// Tests cover: LLM integration, RAG retrieval, parsing, error handling, caching, edge cases
+/// ADMIN-01 Phase 3: Updated with IPromptTemplateService and IConfiguration mocks
 /// </summary>
 public class SetupGuideServiceComprehensiveTests : IDisposable
 {
@@ -20,6 +22,8 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
     private readonly Mock<IQdrantService> _mockQdrantService;
     private readonly Mock<ILlmService> _mockLlmService;
     private readonly Mock<IAiResponseCacheService> _mockCacheService;
+    private readonly Mock<IPromptTemplateService> _mockPromptTemplate;
+    private readonly Mock<IConfiguration> _mockConfiguration;
     private readonly Mock<ILogger<SetupGuideService>> _mockLogger;
     private readonly SetupGuideService _service;
 
@@ -36,7 +40,15 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
         _mockQdrantService = new Mock<IQdrantService>();
         _mockLlmService = new Mock<ILlmService>();
         _mockCacheService = new Mock<IAiResponseCacheService>();
+        _mockPromptTemplate = new Mock<IPromptTemplateService>();
+        _mockConfiguration = new Mock<IConfiguration>();
         _mockLogger = new Mock<ILogger<SetupGuideService>>();
+
+        // ADMIN-01 Phase 3: Setup feature flag to use fallback (default behavior)
+        // Mock IConfigurationSection for GetValue<bool> to work correctly
+        var mockSection = new Mock<IConfigurationSection>();
+        mockSection.Setup(s => s.Value).Returns("false");
+        _mockConfiguration.Setup(c => c.GetSection("Features:PromptDatabase")).Returns(mockSection.Object);
 
         _service = new SetupGuideService(
             _dbContext,
@@ -44,6 +56,8 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
             _mockQdrantService.Object,
             _mockLlmService.Object,
             _mockCacheService.Object,
+            _mockPromptTemplate.Object,
+            _mockConfiguration.Object,
             _mockLogger.Object
         );
     }

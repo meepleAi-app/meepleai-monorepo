@@ -110,25 +110,41 @@ tools/             - PowerShell scripts
 
 **Vector Pipeline**: PDF → PdfTextExtractionService → TextChunkingService → EmbeddingService → QdrantService → RagService
 
-**Prompt Management** (ADMIN-01 Phase 1 MVP):
+**Prompt Management** (ADMIN-01):
 - **PromptTemplateService** (`Services/PromptTemplateService.cs`, `Services/IPromptTemplateService.cs`): Database-driven prompt management with Redis caching
   - `GetActivePromptAsync(templateName)` - Cache-first retrieval (Redis → DB → Config fallback, < 10ms target)
   - `ActivateVersionAsync(templateId, versionId, userId)` - Transaction-safe activation with cache invalidation
   - `InvalidateCacheAsync(templateName)` - Manual cache refresh
   - Architecture: Redis cache (1hr TTL) → PostgreSQL → appsettings.json fallback
   - Backward compatible with AI-07.1 configuration-based templates
-- **Admin API** (`Program.cs` v1Api group, lines 3976-4400+): 5 MVP endpoints
+- **Admin API** (`Program.cs` v1Api group, lines 3976-4400+): 9 endpoints
   - `GET /api/v1/admin/prompts` - List templates (pagination, category filter)
   - `POST /api/v1/admin/prompts` - Create template
   - `GET /api/v1/admin/prompts/{id}` - Get template details
+  - `PUT /api/v1/admin/prompts/{id}` - Update template
+  - `DELETE /api/v1/admin/prompts/{id}` - Delete template
   - `POST /api/v1/admin/prompts/{id}/versions` - Create new version
   - `GET /api/v1/admin/prompts/{id}/versions` - Version history
-  - `POST /api/v1/admin/prompts/{id}/versions/{versionId}/activate` - Activate version (CRITICAL)
+  - `POST /api/v1/admin/prompts/{id}/versions/{versionId}/activate` - Activate version
+  - `GET /api/v1/admin/prompts/{id}/audit` - Audit logs
+- **Admin UI** (Phase 2, PR #551): 6 pages + Monaco editor
+  - `/admin/prompts` - Template list with search, filter, pagination
+  - `/admin/prompts/[id]` - Template detail with version history
+  - `/admin/prompts/[id]/versions/new` - Create new version (Monaco editor)
+  - `/admin/prompts/[id]/versions/[versionId]` - Version detail (readonly Monaco)
+  - `/admin/prompts/[id]/compare` - Side-by-side version diff (Monaco DiffEditor)
+  - `/admin/prompts/[id]/audit` - Audit log viewer
+- **Service Migration** (Phase 3, PR #552): 2 services using database prompts
+  - ChessAgentService: `chess-system-prompt` with dynamic FEN sections
+  - SetupGuideService: `setup-guide-system-prompt`
+  - RagService, StreamingQaService: Already use IPromptTemplateService (Phase 1/AI-07.1)
+  - Feature flag: `Features:PromptDatabase` (default: false for safety)
+  - Fallback strategy: DB lookup fails OR flag disabled → hardcoded prompts
 - **Database**: `prompt_templates`, `prompt_versions`, `prompt_audit_logs` (migrated in AI-14)
-- **DTOs**: `PromptManagementDto.cs` - PromptTemplateDto, PromptVersionDto, PromptAuditLogDto, requests
-- **Tests**: 40/40 passing (6 new ADMIN-01 cache/activation tests + 34 existing AI-07.1 tests)
-- **Phase 1 Deliverables**: Core infrastructure with Redis caching, transaction safety, 5 admin endpoints
-- **Future Phases**: Admin UI (7 pages + Monaco editor), PromptEvaluationService testing framework, service migration (4 services)
+- **DTOs**: `PromptManagementDto.cs` - PromptTemplateDto, PromptVersionDto, PromptAuditLogDto
+- **Tests**: 44 tests passing (24 Chess + 20 SetupGuide, 100% coverage on migrated services)
+- **Seed Data** (Migration 20251026161831): chess-system-prompt, setup-guide-system-prompt (v1, active)
+- **Phase Status**: Phase 1-3 ✅ Complete | Phase 4-5 ⏳ Pending (testing framework, deployment)
 
 ### API Versioning (API-01)
 

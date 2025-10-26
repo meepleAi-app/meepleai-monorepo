@@ -13,6 +13,8 @@ public class ChessAgentService : IChessAgentService
     private readonly IChessKnowledgeService _chessKnowledge;
     private readonly ILlmService _llmService;
     private readonly IAiResponseCacheService _cache;
+    private readonly IPromptTemplateService _promptTemplateService;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<ChessAgentService> _logger;
 
     private const string ChessGameId = "chess"; // Standard game ID for chess knowledge
@@ -21,11 +23,15 @@ public class ChessAgentService : IChessAgentService
         IChessKnowledgeService chessKnowledge,
         ILlmService llmService,
         IAiResponseCacheService cache,
+        IPromptTemplateService promptTemplateService,
+        IConfiguration configuration,
         ILogger<ChessAgentService> logger)
     {
         _chessKnowledge = chessKnowledge;
         _llmService = llmService;
         _cache = cache;
+        _promptTemplateService = promptTemplateService;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -86,7 +92,8 @@ public class ChessAgentService : IChessAgentService
                 $"[Source {i + 1}]\n{r.Text}"));
 
             // Step 4: Generate response using LLM with chess-specialized prompt
-            var systemPrompt = BuildChessSystemPrompt(hasFenPosition, fenValidationError);
+            // ADMIN-01 Phase 3: Use database-driven prompt with fallback
+            var systemPrompt = await BuildChessSystemPromptAsync(hasFenPosition, fenValidationError, ct);
             var userPrompt = BuildChessUserPrompt(request.question, request.fenPosition, context, fenValidationError);
 
             var llmResult = await _llmService.GenerateCompletionAsync(systemPrompt, userPrompt, ct);
@@ -135,7 +142,65 @@ public class ChessAgentService : IChessAgentService
         }
     }
 
-    private string BuildChessSystemPrompt(bool hasFenPosition, string? fenValidationError)
+    /// <summary>
+    /// ADMIN-01 Phase 3: Build chess system prompt using database-driven prompt management with fallback
+    /// </summary>
+    private async Task<string> BuildChessSystemPromptAsync(bool hasFenPosition, string? fenValidationError, CancellationToken ct = default)
+    {
+        // ADMIN-01: Check feature flag for database-driven prompts
+        var usePromptDatabase = _configuration.GetValue<bool>("Features:PromptDatabase", false);
+
+        if (usePromptDatabase)
+        {
+            try
+            {
+                var promptTemplate = await _promptTemplateService.GetActivePromptAsync("chess-system-prompt", ct);
+                if (!string.IsNullOrWhiteSpace(promptTemplate))
+                {
+                    _logger.LogDebug("Using database-driven chess system prompt");
+
+                    // Apply dynamic sections for FEN position analysis
+                    var prompt = promptTemplate;
+
+                    if (hasFenPosition)
+                    {
+                        prompt += @"
+
+POSITION ANALYSIS:
+- A FEN position has been provided - analyze it in your response
+- Identify key features: material balance, pawn structure, king safety, piece activity
+- Suggest 2-4 candidate moves with brief explanations";
+
+                        if (fenValidationError != null)
+                        {
+                            prompt += $@"
+
+WARNING: The provided FEN position appears invalid: {fenValidationError}
+- Acknowledge this to the user but still answer the question if possible";
+                        }
+                    }
+
+                    return prompt;
+                }
+                else
+                {
+                    _logger.LogWarning("Database prompt 'chess-system-prompt' not found, falling back to hardcoded prompt");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to retrieve chess system prompt from database, falling back to hardcoded prompt");
+            }
+        }
+
+        // Fallback: Use hardcoded prompt (backward compatibility)
+        return BuildChessSystemPromptFallback(hasFenPosition, fenValidationError);
+    }
+
+    /// <summary>
+    /// ADMIN-01 Phase 3: Hardcoded fallback prompt for backward compatibility
+    /// </summary>
+    private string BuildChessSystemPromptFallback(bool hasFenPosition, string? fenValidationError)
     {
         var prompt = @"You are a specialized chess AI assistant with deep knowledge of chess rules, openings, tactics, and strategies.
 

@@ -18,11 +18,12 @@ Comprehensive guide for running and interpreting load tests for the MeepleAI API
 
 ## Overview
 
-The MeepleAI load testing framework uses **k6**, an open-source load testing tool, to validate API performance under various load conditions. The framework tests three critical endpoints:
+The MeepleAI load testing framework uses **k6**, an open-source load testing tool, to validate API performance under various load conditions. The framework tests four critical endpoints:
 
 1. **`GET /api/v1/games`**: Games listing (no authentication)
 2. **`POST /api/v1/chat`**: Chat message creation (authenticated)
 3. **`POST /api/v1/agents/qa`**: RAG-powered Q&A agent (authenticated)
+4. **Quality Scoring Performance**: AI-11.3 quality scoring overhead testing (AI-11)
 
 ### Why Load Testing?
 
@@ -37,12 +38,13 @@ The MeepleAI load testing framework uses **k6**, an open-source load testing too
 
 ```
 tests/load/
-├── config.js                    # Shared configuration
-├── utils.js                     # Utility functions (auth, helpers)
-├── games-list-load-test.js      # /api/v1/games test
-├── chat-load-test.js            # /api/v1/chat test
-├── qa-agent-load-test.js        # /api/v1/agents/qa test
-└── README.md                    # Quick reference
+├── config.js                        # Shared configuration
+├── utils.js                         # Utility functions (auth, helpers)
+├── games-list-load-test.js          # /api/v1/games test
+├── chat-load-test.js                # /api/v1/chat test
+├── qa-agent-load-test.js            # /api/v1/agents/qa test
+├── quality-scoring-load-test.js     # AI-11.3: Quality scoring overhead test
+└── README.md                        # Quick reference
 ```
 
 ### Test Flow

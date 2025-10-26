@@ -42,10 +42,36 @@ export const config = {
         http_req_failed: ['rate<0.01'],     // error rate <1%
       },
     },
+    // AI-11.3: Quality scoring performance targets
+    qualityScoring: {
+      baseline: {
+        http_req_duration: ['p(95)<400'], // Baseline without quality overhead
+        http_req_failed: ['rate<0.05'],   // error rate <5%
+      },
+      users100: {
+        http_req_duration: ['p(50)<500', 'p(95)<700', 'p(99)<1200'], // With quality overhead
+        http_req_failed: ['rate<0.05'],   // error rate <5%
+        'quality_score_present': ['rate>0.90'], // 90%+ responses should have scores
+      },
+      users500: {
+        http_req_duration: ['p(50)<800', 'p(95)<1500', 'p(99)<2500'], // Stress test margins
+        http_req_failed: ['rate<0.05'],   // error rate <5%
+        'quality_score_present': ['rate>0.85'], // 85%+ under stress
+      },
+    },
   },
 
   // Load scenarios configuration
   scenarios: {
+    // Scenario for baseline testing (AI-11.3: quality scoring disabled)
+    baseline: {
+      executor: 'ramping-vus',
+      stages: [
+        { duration: '30s', target: 50 },   // ramp up to 50 users
+        { duration: '2m', target: 50 },    // maintain 50 users
+        { duration: '30s', target: 0 },    // ramp down
+      ],
+    },
     // Scenario for 100 concurrent users
     users100: {
       executor: 'ramping-vus',

@@ -995,8 +995,26 @@ v1Api.MapPost("/auth/logout", async (HttpContext context, AuthService auth, Canc
 v1Api.MapGet("/auth/oauth/{provider}/login", async (
     string provider,
     IOAuthService oauthService,
-    HttpContext context) =>
+    HttpContext context,
+    IRateLimitService rateLimiter,
+    IConfiguration config) =>
 {
+    // AUTH-06-P4: Rate limiting to prevent OAuth abuse
+    var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    var oauthRateLimit = config.GetSection("RateLimit:OAuth").Get<RoleLimitConfiguration>()
+        ?? new() { MaxTokens = 10, RefillRate = 0.16667 };
+
+    var rateLimitResult = await rateLimiter.CheckRateLimitAsync(
+        $"oauth:login:{ipAddress}",
+        oauthRateLimit.MaxTokens,
+        oauthRateLimit.RefillRate);
+
+    if (!rateLimitResult.Allowed)
+    {
+        context.Response.Headers["Retry-After"] = "60";
+        return Results.StatusCode(429); // Too Many Requests
+    }
+
     // Generate secure CSRF state
     var state = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
     await oauthService.StoreStateAsync(state);
@@ -1013,16 +1031,33 @@ v1Api.MapGet("/auth/oauth/{provider}/callback", async (
     AuthService authService,
     HttpContext context,
     IConfiguration config,
+    IRateLimitService rateLimiter,
     CancellationToken ct) =>
 {
+    // AUTH-06-P4: Rate limiting on callback to prevent abuse
+    var callbackIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    var oauthRateLimit = config.GetSection("RateLimit:OAuth").Get<RoleLimitConfiguration>()
+        ?? new() { MaxTokens = 10, RefillRate = 0.16667 };
+
+    var rateLimitResult = await rateLimiter.CheckRateLimitAsync(
+        $"oauth:callback:{callbackIp}",
+        oauthRateLimit.MaxTokens,
+        oauthRateLimit.RefillRate);
+
+    if (!rateLimitResult.Allowed)
+    {
+        var frontendUrl = config["FrontendUrl"] ?? "http://localhost:3000";
+        return Results.Redirect($"{frontendUrl}/auth/callback?error=rate_limit");
+    }
+
     try
     {
         var result = await oauthService.HandleCallbackAsync(provider, code, state);
 
         // Create session for the user
-        var ipAddress = context.Connection.RemoteIpAddress?.ToString();
+        var sessionIpAddress = context.Connection.RemoteIpAddress?.ToString();
         var userAgent = context.Request.Headers.UserAgent.ToString();
-        var authResult = await authService.CreateSessionForUserAsync(result.User.Id, ipAddress, userAgent, ct);
+        var authResult = await authService.CreateSessionForUserAsync(result.User.Id, sessionIpAddress, userAgent, ct);
 
         if (authResult == null)
         {

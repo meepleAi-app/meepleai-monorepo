@@ -157,7 +157,7 @@ Our approach follows these principles:
 
 | # | Issue | Priority | Effort | Rationale |
 |---|-------|----------|--------|-----------|
-| 18 | #461 ADMIN-01: Prompt management | 🔴 High | XL | **IN PROGRESS - Phase 4 Started (30% Complete)**: Phase 1-3 complete (backend, admin UI, service migration). Phase 4 (testing framework) Part 1/3 done: IPromptEvaluationService, DTOs, schema, AskWithCustomPromptAsync (821 LOC). Remaining: PromptEvaluationService impl, datasets, tests, UI. See `docs/issue/admin-01-phase4-implementation-tracker.md` for detailed plan. |
+| 18 | #461 ADMIN-01: Prompt management | 🔴 High | XL | **IN PROGRESS - Phase 4 Backend Complete (75% Done, PR #553)**: Phase 1-3 complete. Phase 4: PromptEvaluationService (450 lines), 5-metric engine, A/B testing, 4 admin API endpoints, database migration, 13 unit tests (12 passing). Backend compiling & functional. Remaining: Integration tests, UI pages, additional datasets (29 hours). See PR #553 & `docs/issue/admin-01-phase4-completion-summary.md`. |
 | 19 | #416 ADMIN-01: User management CRUD | 🟡 Medium | M | Admin tools foundation. Can run parallel with prompt mgmt. |
 | 20 | #419 ADMIN-02: Analytics dashboard | ✅ COMPLETED | L | Operational visibility with 8 metrics, 5 charts, auto-refresh. PR #533. Completed: 2025-10-25 |
 

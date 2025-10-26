@@ -54,4 +54,24 @@ public interface IRagService
         string? language = null,
         bool bypassCache = false,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// ADMIN-01 Phase 4: Answer a question using a custom system prompt for evaluation purposes.
+    /// This method is used exclusively by PromptEvaluationService to test different prompt versions
+    /// without activating them in the database. Bypasses normal prompt retrieval.
+    /// </summary>
+    /// <param name="gameId">Game ID to search within</param>
+    /// <param name="query">User's question</param>
+    /// <param name="customSystemPrompt">Custom system prompt to use instead of configured prompt</param>
+    /// <param name="searchMode">Search mode: Semantic, Keyword, or Hybrid (default)</param>
+    /// <param name="language">Target language for response (default: "en")</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>QA response with custom prompt applied</returns>
+    Task<QaResponse> AskWithCustomPromptAsync(
+        string gameId,
+        string query,
+        string customSystemPrompt,
+        SearchMode searchMode = SearchMode.Hybrid,
+        string? language = null,
+        CancellationToken cancellationToken = default);
 }

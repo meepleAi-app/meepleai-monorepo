@@ -191,7 +191,8 @@ Our approach follows these principles:
 | # | Issue | Priority | Effort | Rationale |
 |---|-------|----------|--------|-----------|
 | 30 | #418 AUTH-07: 2FA with TOTP | 📋 SPEC MERGED | L | **SECURITY-CRITICAL**: TotpService spec (~400 lines), backup codes (PBKDF2, single-use), rate limiting, 75+ tests planned. Effort: 104h (13 days). PR #538 merged. security-engineer LEADS. |
-| 31 | #415 AUTH-06: OAuth providers | 📋 SPEC MERGED | L | Security-first spec: OAuthService + EncryptionService, CSRF protection, token encryption, 62+ tests planned. Effort: 80h (2 weeks). PR #537 merged. security-engineer LEADS. |
+| 31 | #415 AUTH-06: OAuth providers | ✅ COMPLETED | L | **MVP IMPLEMENTED**: OAuthService + EncryptionService, CSRF protection, Data Protection API token encryption, 3 providers (Google/Discord/GitHub), auto-link by email, 23 tests. 3,821 LOC. PR #554. Completed: 2025-10-26 |
+| 32 | #555 AUTH-06-P2: Token refresh | ✅ COMPLETED | M | **IMPLEMENTED**: On-demand token refresh (Google/Discord). RefreshTokenAsync method, offline access config, 6 tests. 272 LOC. PR #556. Completed: 2025-10-26 |
 
 **Parallel**: Independent authentication enhancements. Can run simultaneously.
 

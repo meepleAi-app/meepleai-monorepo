@@ -466,4 +466,116 @@ public class OAuthService : IOAuthService
         var randomBytes = RandomNumberGenerator.GetBytes(32);
         return Convert.ToBase64String(randomBytes);
     }
+
+    /// <inheritdoc />
+    public async Task<OAuthTokenResponse?> RefreshTokenAsync(string userId, string provider)
+    {
+        // GitHub doesn't support refresh tokens
+        if (provider.Equals("github", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("GitHub does not support token refresh. UserId: {UserId}", userId);
+            return null;
+        }
+
+        // 1. Get OAuth account with refresh token
+        var oauthAccount = await _db.OAuthAccounts
+            .FirstOrDefaultAsync(oa =>
+                oa.UserId == userId &&
+                oa.Provider == provider.ToLowerInvariant());
+
+        if (oauthAccount == null)
+        {
+            _logger.LogWarning("No OAuth account found. UserId: {UserId}, Provider: {Provider}", userId, provider);
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(oauthAccount.RefreshTokenEncrypted))
+        {
+            _logger.LogWarning("No refresh token available. UserId: {UserId}, Provider: {Provider}", userId, provider);
+            return null; // Force re-auth
+        }
+
+        // 2. Decrypt refresh token
+        string refreshToken;
+        try
+        {
+            refreshToken = await _encryption.DecryptAsync(oauthAccount.RefreshTokenEncrypted, EncryptionPurpose);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to decrypt refresh token. UserId: {UserId}, Provider: {Provider}", userId, provider);
+            return null;
+        }
+
+        // 3. Exchange refresh token for new access token
+        var providerConfig = GetProviderConfig(provider);
+        var newTokenResponse = await ExchangeRefreshTokenAsync(providerConfig, provider, refreshToken);
+
+        if (newTokenResponse == null)
+        {
+            _logger.LogError("Token refresh failed. UserId: {UserId}, Provider: {Provider}", userId, provider);
+            return null; // Invalid refresh token - force re-auth
+        }
+
+        // 4. Update encrypted tokens in database
+        await UpdateOAuthTokenAsync(oauthAccount, newTokenResponse);
+
+        _logger.LogInformation("Token refreshed successfully. UserId: {UserId}, Provider: {Provider}", userId, provider);
+        return newTokenResponse;
+    }
+
+    private async Task<OAuthTokenResponse?> ExchangeRefreshTokenAsync(
+        OAuthProviderConfig config,
+        string provider,
+        string refreshToken)
+    {
+        var httpClient = _httpClientFactory.CreateClient();
+
+        var requestData = new Dictionary<string, string>
+        {
+            { "client_id", config.ClientId },
+            { "client_secret", config.ClientSecret },
+            { "refresh_token", refreshToken },
+            { "grant_type", "refresh_token" }
+        };
+
+        var request = new HttpRequestMessage(HttpMethod.Post, config.TokenUrl)
+        {
+            Content = new FormUrlEncodedContent(requestData)
+        };
+
+        // GitHub requires Accept header (though it doesn't support refresh)
+        if (provider.Equals("github", StringComparison.OrdinalIgnoreCase))
+        {
+            request.Headers.Add("Accept", "application/json");
+        }
+
+        try
+        {
+            var response = await httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            var jsonResponse = await response.Content.ReadAsStringAsync();
+            var tokenData = JsonSerializer.Deserialize<JsonElement>(jsonResponse);
+
+            var accessToken = tokenData.GetProperty("access_token").GetString()
+                ?? throw new InvalidOperationException("No access token in refresh response");
+
+            // Provider may return new refresh token or keep old one
+            var newRefreshToken = tokenData.TryGetProperty("refresh_token", out var rt) && rt.ValueKind != JsonValueKind.Null
+                ? rt.GetString()
+                : refreshToken; // Keep old one if not provided
+
+            var expiresIn = tokenData.TryGetProperty("expires_in", out var ei) ? ei.GetInt32() : (int?)null;
+            var tokenType = tokenData.TryGetProperty("token_type", out var tt) ? tt.GetString() : "Bearer";
+
+            _logger.LogDebug("Successfully refreshed OAuth token. Provider: {Provider}", provider);
+            return new OAuthTokenResponse(accessToken, newRefreshToken, expiresIn, tokenType ?? "Bearer");
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "Failed to refresh OAuth token. Provider: {Provider}", provider);
+            return null; // Force re-auth on any HTTP error
+        }
+    }
 }

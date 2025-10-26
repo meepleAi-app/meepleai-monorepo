@@ -43,10 +43,19 @@ public class LlmService : ILlmService
         _configService = configService;
         _fallbackConfig = fallbackConfig;
 
-        // AI-15-ALT: Initialize model selection configuration
+        // AI-15-ALT: Initialize model selection configuration with validation
         _alternativeModelId = config["LlmService:AlternativeModelId"] ?? DefaultAlternativeModel;
         _useAlternativeModel = config.GetValue<bool>("LlmService:UseAlternativeModel");
-        _alternativeTrafficPercent = config.GetValue<int>("LlmService:AlternativeModelTrafficPercentage");
+
+        var rawTrafficPercent = config.GetValue<int>("LlmService:AlternativeModelTrafficPercentage");
+        _alternativeTrafficPercent = Math.Clamp(rawTrafficPercent, 0, 100);
+
+        if (rawTrafficPercent != _alternativeTrafficPercent)
+        {
+            logger.LogWarning(
+                "AlternativeModelTrafficPercentage clamped from {Original} to {Clamped} (valid range: 0-100)",
+                rawTrafficPercent, _alternativeTrafficPercent);
+        }
 
         _logger.LogInformation(
             "LlmService initialized: AlternativeModel={AlternativeModel}, UseAlternative={UseAlternative}, TrafficPercent={TrafficPercent}%",
@@ -64,10 +73,17 @@ public class LlmService : ILlmService
 
     /// <summary>
     /// AI-15-ALT: Select model based on configuration and A/B testing logic.
-    /// Returns configured model ID or alternative based on traffic percentage.
+    /// Priority: Feature flag > A/B testing > Default model.
     /// </summary>
     private string SelectModel(string configuredModel)
     {
+        // Feature flag: Use alternative if enabled (highest priority)
+        if (_useAlternativeModel)
+        {
+            _logger.LogDebug("Using alternative model via feature flag (overrides A/B test): {Model}", _alternativeModelId);
+            return _alternativeModelId;
+        }
+
         // A/B testing: Random selection based on traffic percentage
         if (_alternativeTrafficPercent > 0)
         {
@@ -79,13 +95,6 @@ public class LlmService : ILlmService
                 random, _alternativeTrafficPercent, selectedModel);
 
             return selectedModel;
-        }
-
-        // Feature flag: Use alternative if enabled
-        if (_useAlternativeModel)
-        {
-            _logger.LogDebug("Using alternative model via feature flag: {Model}", _alternativeModelId);
-            return _alternativeModelId;
         }
 
         // Default: Use configured model

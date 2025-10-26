@@ -327,7 +327,9 @@ builder.Services.AddSingleton<IBackgroundTaskService, BackgroundTaskService>();
 builder.Services.AddSingleton<IQdrantClientAdapter, QdrantClientAdapter>();
 builder.Services.AddSingleton<IQdrantService, QdrantService>();
 builder.Services.AddScoped<IEmbeddingService, EmbeddingService>();
-builder.Services.AddScoped<ILlmService, OllamaLlmService>();
+// AI-15-ALT: Use LlmService (OpenRouter with GPT-4o-mini model selection) instead of OllamaLlmService
+// Switch back to OllamaLlmService if local-only deployment needed
+builder.Services.AddScoped<ILlmService, LlmService>();
 builder.Services.AddScoped<ITextChunkingService, TextChunkingService>();
 builder.Services.AddScoped<PdfIndexingService>();
 

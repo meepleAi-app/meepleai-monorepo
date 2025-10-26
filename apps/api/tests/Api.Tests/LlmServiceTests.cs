@@ -1009,6 +1009,7 @@ data: [DONE]
 
     /// <summary>
     /// AI-15-ALT: Tests that feature flag takes precedence over traffic percentage when both are set.
+    /// Feature flag override ensures 100% alternative model usage even if A/B test is configured.
     /// </summary>
     [Fact]
     public async Task GenerateCompletionAsync_WithBothFlagAndTraffic_FeatureFlagTakesPrecedence()
@@ -1024,12 +1025,18 @@ data: [DONE]
             })
             .Build();
 
-        var handler = new TestHttpMessageHandler((_, _) =>
+        var requestedModels = new List<string>();
+        var handler = new TestHttpMessageHandler(async (request, _) =>
         {
+            var body = await request.Content!.ReadAsStringAsync();
+            using var document = JsonDocument.Parse(body);
+            var model = document.RootElement.GetProperty("model").GetString()!;
+            requestedModels.Add(model);
+
             var payload = new
             {
                 id = "resp_precedence",
-                model = "openai/gpt-4o-mini",
+                model = model,
                 choices = new[]
                 {
                     new
@@ -1041,27 +1048,23 @@ data: [DONE]
                 usage = new { prompt_tokens = 10, completion_tokens = 5, total_tokens = 15 }
             };
 
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(JsonSerializer.Serialize(payload))
-            });
+            };
         });
 
         var service = CreateServiceWithConfig(handler, config);
 
-        // Act
-        var result = await service.GenerateCompletionAsync("system", "user prompt");
+        // Act - Make 20 requests to verify feature flag override is consistent
+        for (int i = 0; i < 20; i++)
+        {
+            await service.GenerateCompletionAsync("system", $"prompt {i}");
+        }
 
-        // Assert
-        Assert.True(result.Success);
-
-        // Feature flag should take precedence - but traffic percentage is checked first in the code
-        // So with traffic percentage > 0, A/B test runs
-        var requestBody = handler.RequestBodies.Single();
-        using var document = JsonDocument.Parse(requestBody!);
-        var root = document.RootElement;
-        // Model could be either based on A/B randomization
-        Assert.Contains(root.GetProperty("model").GetString(), new[] { "deepseek/deepseek-chat-v3.1", "openai/gpt-4o-mini" });
+        // Assert - Feature flag should ALWAYS override A/B test, using alternative 100% of the time
+        Assert.All(requestedModels, model => Assert.Equal("openai/gpt-4o-mini", model));
+        Assert.Equal(20, requestedModels.Count);
     }
 
     /// <summary>

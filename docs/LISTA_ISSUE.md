@@ -191,11 +191,8 @@ Our approach follows these principles:
 | # | Issue | Priority | Effort | Rationale |
 |---|-------|----------|--------|-----------|
 | 30 | #418 AUTH-07: 2FA with TOTP | 📋 SPEC MERGED | L | **SECURITY-CRITICAL**: TotpService spec (~400 lines), backup codes (PBKDF2, single-use), rate limiting, 75+ tests planned. Effort: 104h (13 days). PR #538 merged. security-engineer LEADS. |
-| 31 | #415 AUTH-06: OAuth providers MVP | ✅ COMPLETED | L | **IMPLEMENTED**: OAuthService + EncryptionService, CSRF, Data Protection API, 3 providers (Google/Discord/GitHub), auto-link by email, 23 tests. 3,821 LOC. PR #554. Completed: 2025-10-26 |
-| 32 | #555 AUTH-06-P2: Token refresh | ✅ COMPLETED | M | **IMPLEMENTED**: On-demand token refresh for Google/Discord. RefreshTokenAsync, ExchangeRefreshTokenAsync, offline access config, 6 tests. 272 LOC. PR #556. Completed: 2025-10-26 |
-| 33 | #557 AUTH-06-P3: Profile OAuth UI | ✅ COMPLETED | M | **IMPLEMENTED**: /profile page with OAuth management. Link/unlink UI, responsive design, dark mode, loading states. 242 LOC. PR #558. Completed: 2025-10-26 |
-| 34 | #559 AUTH-06-P4: Rate limiting | ✅ COMPLETED | S | **IMPLEMENTED**: Per-IP rate limiting on OAuth endpoints (10 req/min). Prevents abuse and resource exhaustion. 42 LOC. PR #560. Completed: 2025-10-26 |
-| 35 | #561 AUTH-06-P5: Email verification | 📋 PENDING | L | **SECURITY-CRITICAL**: Email verification before OAuth account linking. Prevents account takeover. PendingOAuthLink entity, verification service, 15+ tests. Effort: 18-20h (2-3 days). Deferred from #559. |
+| 31 | #415 AUTH-06: OAuth providers | ✅ COMPLETED | L | **MVP IMPLEMENTED**: OAuthService + EncryptionService, CSRF protection, Data Protection API token encryption, 3 providers (Google/Discord/GitHub), auto-link by email, 23 tests. 3,821 LOC. PR #554. Completed: 2025-10-26 |
+| 32 | #555 AUTH-06-P2: Token refresh | ✅ COMPLETED | M | **IMPLEMENTED**: On-demand token refresh (Google/Discord). RefreshTokenAsync method, offline access config, 6 tests. 272 LOC. PR #556. Completed: 2025-10-26 |
 
 **Parallel**: Independent authentication enhancements. Can run simultaneously.
 

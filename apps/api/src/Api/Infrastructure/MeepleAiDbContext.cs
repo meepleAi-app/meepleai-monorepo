@@ -13,6 +13,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<UserEntity> Users => Set<UserEntity>();
     public DbSet<UserSessionEntity> UserSessions => Set<UserSessionEntity>();
     public DbSet<ApiKeyEntity> ApiKeys => Set<ApiKeyEntity>();
+    public DbSet<OAuthAccountEntity> OAuthAccounts => Set<OAuthAccountEntity>(); // AUTH-06
     public DbSet<GameEntity> Games => Set<GameEntity>();
     public DbSet<RuleSpecEntity> RuleSpecs => Set<RuleSpecEntity>();
     public DbSet<RuleAtomEntity> RuleAtoms => Set<RuleAtomEntity>();
@@ -107,6 +108,29 @@ public class MeepleAiDbContext : DbContext
             entity.HasIndex(e => e.KeyHash).IsUnique();
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => new { e.IsActive, e.ExpiresAt });
+        });
+
+        // AUTH-06: OAuth Accounts Configuration
+        modelBuilder.Entity<OAuthAccountEntity>(entity =>
+        {
+            entity.ToTable("oauth_accounts");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.Provider).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.ProviderUserId).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.AccessTokenEncrypted).IsRequired();
+            entity.Property(e => e.RefreshTokenEncrypted);
+            entity.Property(e => e.TokenExpiresAt);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.UpdatedAt).IsRequired();
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.Provider);
+            entity.HasIndex(e => new { e.Provider, e.ProviderUserId }).IsUnique();
         });
 
         modelBuilder.Entity<GameEntity>(entity =>

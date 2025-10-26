@@ -75,3 +75,57 @@ public class SessionManagementConfiguration
 // AUTH-04: Password reset models
 public record PasswordResetRequestPayload(string Email);
 public record PasswordResetConfirmPayload(string Token, string NewPassword);
+
+// AUTH-06: OAuth models
+/// <summary>
+/// OAuth account information returned to frontend
+/// </summary>
+public record OAuthAccountDto(
+    string Provider,
+    DateTime CreatedAt);
+
+/// <summary>
+/// Internal result from OAuth callback processing
+/// </summary>
+public record OAuthCallbackResult(
+    AuthUser User,
+    bool IsNewUser);
+
+/// <summary>
+/// OAuth provider configuration
+/// </summary>
+public class OAuthProviderConfig
+{
+    public required string ClientId { get; init; }
+    public required string ClientSecret { get; init; }
+    public required string AuthorizationUrl { get; init; }
+    public required string TokenUrl { get; init; }
+    public required string UserInfoUrl { get; init; }
+    public required string Scope { get; init; }
+}
+
+/// <summary>
+/// OAuth token response from provider
+/// </summary>
+public record OAuthTokenResponse(
+    string AccessToken,
+    string? RefreshToken,
+    int? ExpiresIn,
+    string TokenType);
+
+/// <summary>
+/// User information from OAuth provider
+/// </summary>
+public record OAuthUserInfo(
+    string Id,
+    string Email,
+    string? Name);
+
+/// <summary>
+/// OAuth configuration section
+/// </summary>
+public class OAuthConfiguration
+{
+    public required string CallbackBaseUrl { get; init; }
+    public required Dictionary<string, OAuthProviderConfig> Providers { get; init; }
+}

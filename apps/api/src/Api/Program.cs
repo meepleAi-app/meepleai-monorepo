@@ -129,6 +129,7 @@ if (forwardedHeadersEnabled)
 
 builder.Services.Configure<SessionCookieConfiguration>(builder.Configuration.GetSection("Authentication:SessionCookie"));
 builder.Services.Configure<SessionManagementConfiguration>(builder.Configuration.GetSection("Authentication:SessionManagement"));
+builder.Services.Configure<OAuthConfiguration>(builder.Configuration.GetSection("Authentication:OAuth")); // AUTH-06
 builder.Services.Configure<RateLimitConfiguration>(builder.Configuration.GetSection("RateLimit"));
 builder.Services.Configure<PdfProcessingConfiguration>(builder.Configuration.GetSection("PdfProcessing"));
 builder.Services.Configure<FollowUpQuestionsConfiguration>(builder.Configuration.GetSection("FollowUpQuestions")); // CHAT-02
@@ -226,6 +227,9 @@ builder.Services.AddScoped<IHybridCacheService, HybridCacheService>();
 
 // PERF-09: Configure HttpClient with connection pooling optimizations
 builder.Services.AddHttpClient(); // Default client with pooling
+
+// AUTH-06: Data Protection API for OAuth token encryption
+builder.Services.AddDataProtection();
 
 // Ollama client with optimized settings
 builder.Services.AddHttpClient("Ollama", client =>
@@ -375,6 +379,9 @@ builder.Services.AddScoped<SetupGuideService>();
 builder.Services.AddScoped<IPromptTemplateService, PromptTemplateService>(); // AI-07.1: Prompt template service with few-shot learning
 builder.Services.AddScoped<IPromptEvaluationService, PromptEvaluationService>(); // ADMIN-01 Phase 4: Prompt evaluation testing framework
 builder.Services.AddScoped<AuthService>();
+// AUTH-06: OAuth services
+builder.Services.AddScoped<IEncryptionService, EncryptionService>();
+builder.Services.AddScoped<IOAuthService, OAuthService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<AiRequestLogService>();
 builder.Services.AddScoped<AgentFeedbackService>();
@@ -982,6 +989,90 @@ v1Api.MapPost("/auth/logout", async (HttpContext context, AuthService auth, Canc
 
     RemoveSessionCookie(context);
     return Results.Json(new { ok = true });
+});
+
+// AUTH-06: OAuth endpoints
+v1Api.MapGet("/auth/oauth/{provider}/login", async (
+    string provider,
+    IOAuthService oauthService,
+    HttpContext context) =>
+{
+    // Generate secure CSRF state
+    var state = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+    await oauthService.StoreStateAsync(state);
+
+    var authUrl = await oauthService.GetAuthorizationUrlAsync(provider, state);
+    return Results.Redirect(authUrl);
+});
+
+v1Api.MapGet("/auth/oauth/{provider}/callback", async (
+    string provider,
+    string code,
+    string state,
+    IOAuthService oauthService,
+    AuthService authService,
+    HttpContext context,
+    IConfiguration config,
+    CancellationToken ct) =>
+{
+    try
+    {
+        var result = await oauthService.HandleCallbackAsync(provider, code, state);
+
+        // Create session for the user
+        var ipAddress = context.Connection.RemoteIpAddress?.ToString();
+        var userAgent = context.Request.Headers.UserAgent.ToString();
+        var authResult = await authService.CreateSessionForUserAsync(result.User.Id, ipAddress, userAgent, ct);
+
+        if (authResult == null)
+        {
+            throw new InvalidOperationException("Failed to create session for OAuth user");
+        }
+
+        // Set session cookie
+        WriteSessionCookie(context, authResult.SessionToken, authResult.ExpiresAt);
+
+        // Redirect to frontend with success
+        var frontendUrl = config["FrontendUrl"] ?? "http://localhost:3000";
+        var redirectUrl = $"{frontendUrl}/auth/callback?success=true&new={result.IsNewUser}";
+        return Results.Redirect(redirectUrl);
+    }
+    catch (Exception ex)
+    {
+        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "OAuth callback failed for provider: {Provider}", provider);
+
+        var frontendUrl = config["FrontendUrl"] ?? "http://localhost:3000";
+        var redirectUrl = $"{frontendUrl}/auth/callback?error=oauth_failed";
+        return Results.Redirect(redirectUrl);
+    }
+});
+
+v1Api.MapDelete("/auth/oauth/{provider}/unlink", async (
+    string provider,
+    HttpContext context,
+    IOAuthService oauthService) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    await oauthService.UnlinkOAuthAccountAsync(session.User.Id, provider);
+    return Results.NoContent();
+});
+
+v1Api.MapGet("/users/me/oauth-accounts", async (
+    HttpContext context,
+    IOAuthService oauthService) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    var accounts = await oauthService.GetLinkedAccountsAsync(session.User.Id);
+    return Results.Json(accounts);
 });
 
 v1Api.MapGet("/auth/me", (HttpContext context) =>

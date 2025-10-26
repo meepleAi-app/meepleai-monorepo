@@ -144,7 +144,28 @@ tools/             - PowerShell scripts
 - **DTOs**: `PromptManagementDto.cs` - PromptTemplateDto, PromptVersionDto, PromptAuditLogDto
 - **Tests**: 44 tests passing (24 Chess + 20 SetupGuide, 100% coverage on migrated services)
 - **Seed Data** (Migration 20251026161831): chess-system-prompt, setup-guide-system-prompt (v1, active)
-- **Phase Status**: Phase 1-3 ✅ Complete | Phase 4-5 ⏳ Pending (testing framework, deployment)
+- **Phase Status**: Phase 1-3 ✅ Complete | Phase 4 🟡 75% Complete (PR #553) | Phase 5 ⏳ Pending (deployment)
+- **Testing Framework** (Phase 4, PR #553): PromptEvaluationService with 5-metric engine
+  - `IPromptEvaluationService` (`Services/IPromptEvaluationService.cs`): Automated prompt quality evaluation
+  - `PromptEvaluationService` (`Services/PromptEvaluationService.cs`, 450 lines): 5 metrics (Accuracy, Hallucination, Confidence, Citation, Latency)
+  - `AskWithCustomPromptAsync` in IRagService/RagService: Testing custom prompts without activation
+  - **5 Core Metrics**:
+    * Accuracy ≥80%: Keyword matching (required_keywords validation)
+    * Hallucination ≤10%: Forbidden keyword detection (fabrication prevention)
+    * Avg Confidence ≥0.70: RAG search quality
+    * Citation Correctness ≥80%: Page number validation
+    * Avg Latency ≤3000ms: Performance measurement
+  - **A/B Comparison**: Automated recommendations (ACTIVATE if +5% accuracy OR -5% hallucination; REJECT if -10% accuracy OR fails thresholds; MANUAL_REVIEW otherwise)
+  - **Admin API** (4 endpoints in Program.cs:4335-4526):
+    * POST `/api/v1/admin/prompts/{id}/versions/{versionId}/evaluate` - Run evaluation
+    * POST `/api/v1/admin/prompts/{id}/compare` - A/B comparison
+    * GET `/api/v1/admin/prompts/{id}/evaluations` - Historical results
+    * GET `/api/v1/admin/prompts/evaluations/{id}/report?format=markdown|json` - Generate reports
+  - **Database**: `prompt_evaluation_results` table (Migration 20251026170110), JSONB for detailed query results
+  - **Test Datasets**: JSON schema + sample dataset (10 test cases)
+  - **Tests**: 13 unit tests (12 passing, 70% pass rate)
+  - **Remaining**: Integration tests, UI pages, additional datasets (29 hours estimated)
+  - **Documentation**: `docs/issue/admin-01-phase4-implementation-tracker.md`, `docs/issue/admin-01-phase4-completion-summary.md`
 
 ### API Versioning (API-01)
 

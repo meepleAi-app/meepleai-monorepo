@@ -327,6 +327,117 @@ public class OAuthServiceTests : IDisposable
         Assert.Empty(accounts);
     }
 
+    // AUTH-06-P2: Token Refresh Tests
+
+    [Theory]
+    [InlineData("google")]
+    [InlineData("discord")]
+    public async Task RefreshTokenAsync_WithValidRefreshToken_ReturnsNewToken(string provider)
+    {
+        // Arrange
+        var user = CreateTestUser();
+        var account = CreateTestOAuthAccount(user.Id, provider, "prov-123");
+        account.RefreshTokenEncrypted = "encrypted_refresh123";
+        await _db.SaveChangesAsync();
+
+        MockSuccessfulRefreshTokenExchange("new-access-token");
+
+        // Act
+        var result = await _service.RefreshTokenAsync(user.Id, provider);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("new-access-token", result.AccessToken);
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_GitHub_ReturnsNull()
+    {
+        // Arrange
+        var user = CreateTestUser();
+        CreateTestOAuthAccount(user.Id, "github", "gh-123");
+
+        // Act
+        var result = await _service.RefreshTokenAsync(user.Id, "github");
+
+        // Assert
+        Assert.Null(result); // GitHub doesn't support refresh
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_NoRefreshToken_ReturnsNull()
+    {
+        // Arrange
+        var user = CreateTestUser();
+        var account = CreateTestOAuthAccount(user.Id, "google", "g-123");
+        account.RefreshTokenEncrypted = null; // No refresh token
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _service.RefreshTokenAsync(user.Id, "google");
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_InvalidRefreshToken_ReturnsNull()
+    {
+        // Arrange
+        var user = CreateTestUser();
+        var account = CreateTestOAuthAccount(user.Id, "discord", "d-123");
+        account.RefreshTokenEncrypted = "encrypted_invalidtoken";
+        await _db.SaveChangesAsync();
+
+        MockFailedRefreshTokenExchange(HttpStatusCode.Unauthorized);
+
+        // Act
+        var result = await _service.RefreshTokenAsync(user.Id, "discord");
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_ProviderError_ReturnsNull()
+    {
+        // Arrange
+        var user = CreateTestUser();
+        var account = CreateTestOAuthAccount(user.Id, "google", "g-123");
+        account.RefreshTokenEncrypted = "encrypted_token";
+        await _db.SaveChangesAsync();
+
+        MockFailedRefreshTokenExchange(HttpStatusCode.InternalServerError);
+
+        // Act
+        var result = await _service.RefreshTokenAsync(user.Id, "google");
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_UpdatesDatabaseToken()
+    {
+        // Arrange
+        var user = CreateTestUser();
+        var account = CreateTestOAuthAccount(user.Id, "google", "g-123");
+        account.RefreshTokenEncrypted = "encrypted_oldtoken";
+        var oldAccessToken = account.AccessTokenEncrypted;
+        await _db.SaveChangesAsync();
+
+        MockSuccessfulRefreshTokenExchange("refreshed-access-token");
+
+        // Act
+        await _service.RefreshTokenAsync(user.Id, "google");
+
+        // Assert
+        var updated = await _db.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == account.Id);
+        Assert.NotNull(updated);
+        Assert.NotEqual(oldAccessToken, updated.AccessTokenEncrypted);
+        Assert.Contains("refreshed-access-token", updated.AccessTokenEncrypted);
+    }
+
     // Helper methods
     private UserEntity CreateTestUser(string? email = null)
     {
@@ -405,6 +516,46 @@ public class OAuthServiceTests : IDisposable
             {
                 StatusCode = HttpStatusCode.OK,
                 Content = new StringContent(JsonSerializer.Serialize(userInfo))
+            });
+    }
+
+    private void MockSuccessfulRefreshTokenExchange(string accessToken = "refreshed-access-token")
+    {
+        var tokenResponse = new
+        {
+            access_token = accessToken,
+            token_type = "Bearer",
+            expires_in = 3600,
+            refresh_token = "new-refresh-token" // Optional: provider may return new refresh token
+        };
+
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.RequestUri!.ToString().Contains("token") &&
+                    req.Content != null),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(JsonSerializer.Serialize(tokenResponse))
+            });
+    }
+
+    private void MockFailedRefreshTokenExchange(HttpStatusCode statusCode)
+    {
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.RequestUri!.ToString().Contains("token") &&
+                    req.Content != null),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = statusCode,
+                Content = new StringContent("{\"error\": \"invalid_grant\"}")
             });
     }
 

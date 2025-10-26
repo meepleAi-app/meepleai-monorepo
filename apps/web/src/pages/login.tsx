@@ -8,6 +8,7 @@
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
+import OAuthButtons from '@/components/auth/OAuthButtons';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -80,6 +81,9 @@ export default function LoginPage() {
             <p className="text-center text-slate-600 dark:text-slate-400">
               Login functionality will be implemented here.
             </p>
+
+            {/* AUTH-06: OAuth login buttons */}
+            <OAuthButtons />
 
             <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
               <Link

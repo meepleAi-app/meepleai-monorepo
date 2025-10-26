@@ -69,6 +69,22 @@ CRITICAL INSTRUCTIONS:
         return context;
     }
 
+    // AI-14: Helper to create IHybridSearchService mock
+    private static Mock<IHybridSearchService> CreateHybridSearchMock()
+    {
+        var mock = new Mock<IHybridSearchService>();
+        mock.Setup(x => x.SearchAsync(
+            It.IsAny<string>(),
+            It.IsAny<Guid>(),
+            It.IsAny<SearchMode>(),
+            It.IsAny<int>(),
+            It.IsAny<float>(),
+            It.IsAny<float>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HybridSearchResult>());
+        return mock;
+    }
+
     private static Mock<IAiResponseCacheService> CreateCacheMock()
     {
         var mock = new Mock<IAiResponseCacheService>();
@@ -124,7 +140,7 @@ CRITICAL INSTRUCTIONS:
                 }));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: A user asks "How many players can play Monopoly?"
         var result = await ragService.AskAsync("monopoly", "How many players can play Monopoly?");
@@ -177,7 +193,7 @@ CRITICAL INSTRUCTIONS:
 
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: A user asks about game mechanics
         var result = await ragService.AskAsync("chess", "Can pawns move backward?");
@@ -229,7 +245,7 @@ CRITICAL INSTRUCTIONS:
                 new LlmUsage(200, 2, 202)));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: User asks a question not covered by the retrieved context
         var result = await ragService.AskAsync("catan", "What is the maximum score to win?");
@@ -275,7 +291,7 @@ CRITICAL INSTRUCTIONS:
                 new LlmUsage(400, 25, 425)));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: User asks about combat mechanics
         var result = await ragService.AskAsync("dnd", "How do I make an attack roll?");
@@ -310,7 +326,7 @@ CRITICAL INSTRUCTIONS:
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: User makes a Q&A request
         var result = await ragService.AskAsync("risk", "How many armies do I start with?");
@@ -338,7 +354,7 @@ CRITICAL INSTRUCTIONS:
 
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: User makes a Q&A request
         var result = await ragService.AskAsync("clue", "Who can I accuse?");
@@ -373,7 +389,7 @@ CRITICAL INSTRUCTIONS:
             .ReturnsAsync(LlmCompletionResult.CreateFailure("Rate limit exceeded"));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: User makes a Q&A request
         var result = await ragService.AskAsync("scrabble", "How do I score?");
@@ -429,7 +445,7 @@ CRITICAL INSTRUCTIONS:
         mockCache.Setup(x => x.InvalidateEndpointAsync(It.IsAny<string>(), It.IsAny<AiCacheEndpoint>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // When: Same question is asked
         var result = await ragService.AskAsync("game1", "test query");

@@ -34,6 +34,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<CacheStatEntity> CacheStats => Set<CacheStatEntity>();
     public DbSet<SystemConfigurationEntity> SystemConfigurations => Set<SystemConfigurationEntity>();
     public DbSet<WorkflowErrorLogEntity> WorkflowErrorLogs => Set<WorkflowErrorLogEntity>(); // N8N-05
+    public DbSet<AlertEntity> Alerts => Set<AlertEntity>(); // OPS-07
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -629,6 +630,28 @@ public class MeepleAiDbContext : DbContext
             entity.HasIndex(e => e.WorkflowId);
             entity.HasIndex(e => e.CreatedAt);
             entity.HasIndex(e => e.ExecutionId);
+        });
+
+        // OPS-07: Alerting system
+        modelBuilder.Entity<AlertEntity>(entity =>
+        {
+            entity.ToTable("alerts");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd();
+            entity.Property(e => e.AlertType).HasColumnName("alert_type").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Severity).HasColumnName("severity").HasMaxLength(20).IsRequired();
+            entity.Property(e => e.Message).HasColumnName("message").IsRequired();
+            entity.Property(e => e.Metadata).HasColumnName("metadata").HasColumnType("jsonb");
+            entity.Property(e => e.TriggeredAt).HasColumnName("triggered_at").IsRequired();
+            entity.Property(e => e.ResolvedAt).HasColumnName("resolved_at");
+            entity.Property(e => e.IsActive).HasColumnName("is_active").IsRequired();
+            entity.Property(e => e.ChannelSent).HasColumnName("channel_sent").HasColumnType("jsonb");
+
+            // Index for querying active alerts
+            entity.HasIndex(e => e.IsActive)
+                .HasFilter("is_active = true");
+            // Index for alert type and time-based queries
+            entity.HasIndex(e => new { e.AlertType, e.TriggeredAt });
         });
     }
 }

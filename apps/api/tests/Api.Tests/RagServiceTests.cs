@@ -82,6 +82,22 @@ ANSWER:",
         return mock;
     }
 
+    // AI-14: Helper to create IHybridSearchService mock
+    private static Mock<IHybridSearchService> CreateHybridSearchMock()
+    {
+        var mock = new Mock<IHybridSearchService>();
+        mock.Setup(x => x.SearchAsync(
+            It.IsAny<string>(),
+            It.IsAny<Guid>(),
+            It.IsAny<SearchMode>(),
+            It.IsAny<int>(),
+            It.IsAny<float>(),
+            It.IsAny<float>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HybridSearchResult>());
+        return mock;
+    }
+
     [Fact]
     public async Task AskAsync_WithEmptyQuery_ReturnsErrorMessage()
     {
@@ -89,9 +105,10 @@ ANSWER:",
         await using var dbContext = CreateInMemoryContext();
         var mockEmbedding = new Mock<IEmbeddingService>();
         var mockQdrant = new Mock<IQdrantService>();
+        var mockHybridSearch = CreateHybridSearchMock();
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockHybridSearch.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("game1", "");
@@ -108,9 +125,10 @@ ANSWER:",
         await using var dbContext = CreateInMemoryContext();
         var mockEmbedding = new Mock<IEmbeddingService>();
         var mockQdrant = new Mock<IQdrantService>();
+        var mockHybridSearch = CreateHybridSearchMock();
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockHybridSearch.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("game1", "   ");
@@ -133,7 +151,7 @@ ANSWER:",
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("game1", "test query");
@@ -156,7 +174,7 @@ ANSWER:",
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("game1", "test query");
@@ -188,7 +206,7 @@ ANSWER:",
 
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("game1", "test query");
@@ -234,7 +252,7 @@ ANSWER:",
                 new Dictionary<string, string> { { "model", "anthropic/claude-3.5-sonnet" } }));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("game1", "How many players?");
@@ -284,7 +302,7 @@ ANSWER:",
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Not specified"));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("game1", "What is the recommended age for this game?");
@@ -324,6 +342,7 @@ ANSWER:",
             dbContext,
             mockEmbedding.Object,
             mockQdrant.Object,
+            CreateHybridSearchMock().Object,
             mockLlm.Object,
             mockCache.Object,
             CreatePromptTemplateMock().Object,
@@ -362,9 +381,10 @@ ANSWER:",
         await using var dbContext = CreateInMemoryContext();
         var mockEmbedding = new Mock<IEmbeddingService>();
         var mockQdrant = new Mock<IQdrantService>();
+        var mockHybridSearch = CreateHybridSearchMock();
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockHybridSearch.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("game1", "");
@@ -404,7 +424,7 @@ ANSWER:",
 
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("game1", "game setup");
@@ -463,6 +483,7 @@ ANSWER:",
             dbContext,
             mockEmbedding.Object,
             mockQdrant.Object,
+            CreateHybridSearchMock().Object,
             mockLlm.Object,
             mockCache.Object,
             CreatePromptTemplateMock().Object,
@@ -519,9 +540,10 @@ ANSWER:",
         await using var dbContext = CreateInMemoryContext();
         var mockEmbedding = new Mock<IEmbeddingService>();
         var mockQdrant = new Mock<IQdrantService>();
+        var mockHybridSearch = CreateHybridSearchMock();
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockHybridSearch.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("game1", "   ");
@@ -546,7 +568,7 @@ ANSWER:",
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("game1", "test topic");
@@ -570,7 +592,7 @@ ANSWER:",
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("game1", "test topic");
@@ -602,7 +624,7 @@ ANSWER:",
 
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("game1", "test topic");
@@ -634,7 +656,7 @@ ANSWER:",
 
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("game1", "test topic");
@@ -666,7 +688,7 @@ ANSWER:",
 
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("game1", "test query");
@@ -704,7 +726,7 @@ ANSWER:",
 
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("game1", "test topic");
@@ -748,7 +770,7 @@ ANSWER:",
 
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("game1", "test topic");
@@ -771,7 +793,7 @@ ANSWER:",
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("game1", "test query");
@@ -794,7 +816,7 @@ ANSWER:",
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
         var mockCache = new Mock<IAiResponseCacheService>();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("game1", "test topic");
@@ -833,7 +855,7 @@ ANSWER:",
             .ReturnsAsync(LlmCompletionResult.CreateFailure("LLM service unavailable"));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("game1", "test query");
@@ -871,7 +893,7 @@ ANSWER:",
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("   ")); // Empty response
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("game1", "test query");
@@ -918,7 +940,7 @@ ANSWER:",
                 expectedMetadata));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("game1", "Who goes first?");
@@ -961,7 +983,7 @@ ANSWER:",
                 new Dictionary<string, string>())); // Empty metadata
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("game1", "test query");
@@ -1008,7 +1030,7 @@ ANSWER:",
             .Setup(x => x.GetAsync<QaResponse>(cacheKey, It.IsAny<CancellationToken>()))
             .ReturnsAsync((QaResponse?)null); // Cache miss
 
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync(gameId, query);
@@ -1055,7 +1077,7 @@ ANSWER:",
 
         _mockLogger.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
 
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync(gameId, topic);
@@ -1101,7 +1123,7 @@ ANSWER:",
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Answer", new LlmUsage(10, 5, 15)));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("game1", "test query");
@@ -1137,7 +1159,7 @@ ANSWER:",
 
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.ExplainAsync("game1", "test topic");
@@ -1178,7 +1200,7 @@ ANSWER:",
                 new LlmUsage(10, 5, 15)));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
 
         // Act
         var result = await ragService.AskAsync("game1", "test query");
@@ -1235,6 +1257,7 @@ ANSWER:",
             dbContext,
             mockEmbedding.Object,
             mockQdrant.Object,
+            CreateHybridSearchMock().Object,
             mockLlm.Object,
             mockCache.Object,
             CreatePromptTemplateMock().Object,

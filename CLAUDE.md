@@ -268,6 +268,52 @@ tools/             - PowerShell scripts
   - `WorkflowErrorEndpointsTests.cs` - API endpoints, auth, filtering, BDD-style
 - **Docs**: `docs/guide/n8n-error-handling.md` - Implementation guide, troubleshooting, best practices
 
+**Alerting System** (OPS-07):
+- **AlertingService** (`Services/AlertingService.cs`, `Services/IAlertingService.cs`): Proactive multi-channel alerting service
+  - `SendAlertAsync(alertType, severity, message, metadata?)` - Send alert to all enabled channels (Email, Slack, PagerDuty)
+  - `ResolveAlertAsync(alertType)` - Mark alert as resolved when metrics return to normal
+  - `GetActiveAlertsAsync()` - List currently active alerts
+  - `GetAlertHistoryAsync(fromDate, toDate)` - Query historical alerts
+  - `IsThrottledAsync(alertType)` - Check if alert is throttled (1 per hour max per type)
+  - Alert throttling prevents spam (returns existing alert if sent within throttle window)
+  - Multi-channel strategy pattern with Email/Slack/PagerDuty implementations
+- **Alert Channels** (Strategy pattern):
+  - `EmailAlertChannel`: SMTP email notifications with HTML templates, severity-based coloring
+  - `SlackAlertChannel`: Slack Incoming Webhooks with rich attachments, emoji indicators
+  - `PagerDutyAlertChannel`: PagerDuty Events API v2 for incident creation (critical alerts only)
+- **Endpoints** (see `Program.cs` OPS-07 endpoints around line 3846):
+  - `POST /api/v1/alerts/prometheus` - Webhook from Prometheus AlertManager (no auth)
+  - `GET /api/v1/admin/alerts?activeOnly=true` - List active alerts or 7-day history (admin only)
+  - `POST /api/v1/admin/alerts/{alertType}/resolve` - Manually resolve alert (admin only)
+- **Database** (Migration: `AddAlertsTable`):
+  - `alerts` table with indexes on `is_active` (filtered), `alert_type + triggered_at`
+  - Columns: id, alert_type, severity, message, metadata (jsonb), triggered_at, resolved_at, is_active, channel_sent (jsonb)
+- **Models** (`Models/Contracts.cs`):
+  - `AlertDto(id, alertType, severity, message, metadata, triggeredAt, resolvedAt, isActive, channelSent)` - Alert representation
+  - `PrometheusAlertWebhook(version, groupKey, truncatedAlerts, status, alerts[])` - Webhook payload from AlertManager
+  - `PrometheusAlert(status, labels, annotations, startsAt, endsAt?)` - Individual alert from Prometheus
+- **Prometheus Integration** (`infra/alertmanager.yml`):
+  - Primary receiver: `meepleai-api-webhook` pointing to `/api/v1/alerts/prometheus`
+  - Forwards all firing and resolved alerts to AlertingService
+  - AlertManager handles grouping, throttling (4h repeat interval), and routing
+- **Alert Rules** (`infra/prometheus-rules.yml`):
+  - **Critical**: HighErrorRate (>1 err/s for 2min), ErrorSpike (3x avg), DatabaseDown, RedisDown, QdrantDown
+  - **Warning**: HighErrorRatio (>5% for 5min), RagErrorsDetected, SlowResponseTime, HighMemoryUsage
+  - **AI Quality** (AI-11.2): LowOverallConfidence (<60%), HighLowQualityRate (>30%), LowRagConfidence, LowLlmConfidence, QualityMetricsUnavailable
+- **Configuration** (`appsettings.json:Alerting`):
+  - `Enabled`, `ThrottleMinutes` (default: 60)
+  - Email: SmtpHost, SmtpPort, From, To[], UseTls, Username, Password
+  - Slack: WebhookUrl, Channel
+  - PagerDuty: IntegrationKey
+  - All channels disabled by default (enable via config + environment variables)
+- **Security**:
+  - Prometheus webhook: No auth (trusted internal network)
+  - Admin endpoints: Admin role required
+  - Sensitive config: SMTP password, Slack webhook, PagerDuty key via environment variables
+- **Tests**: 11 unit tests (all passing)
+  - `AlertingServiceTests.cs` - Alert creation, multi-channel distribution, throttling, resolution, channel failure tracking
+- **Docs**: `docs/issue/ops-07-implementation-summary.md` - Complete implementation summary
+
 **Streaming Responses** (CHAT-01):
 - **ILlmService** (`Services/ILlmService.cs`, `Services/LlmService.cs`): Token-by-token streaming support
   - `GenerateCompletionStreamAsync()` - Returns `IAsyncEnumerable<string>` for streaming tokens

@@ -1,5 +1,5 @@
-# OPS-05: Alertmanager Configuration
-# Error monitoring and alerting for MeepleAI
+# OPS-07: Alertmanager Configuration
+# Multi-channel alerting for MeepleAI with API webhook integration
 
 global:
   # Time to wait before sending notifications about resolved alerts
@@ -32,8 +32,8 @@ route:
   # How long to wait before re-sending notifications for unresolved alerts
   repeat_interval: 4h
 
-  # Default receiver for all alerts
-  receiver: 'default'
+  # Default receiver for all alerts (API webhook)
+  receiver: 'meepleai-api-webhook'
 
   # Child routes for specific alert types
   routes:
@@ -68,7 +68,17 @@ route:
 
 # Receivers define where to send notifications
 receivers:
-  # Default receiver - console only (for development)
+  # OPS-07: MeepleAI API webhook receiver (primary)
+  # Forwards all alerts to our AlertingService which handles multi-channel distribution
+  - name: 'meepleai-api-webhook'
+    webhook_configs:
+      - url: 'http://api:8080/api/v1/alerts/prometheus'
+        send_resolved: true
+        http_config:
+          follow_redirects: true
+        max_alerts: 0  # No limit on batch size
+
+  # Legacy receiver - console only (for development/fallback)
   - name: 'default'
     # No configuration needed - alerts appear in Alertmanager UI
 

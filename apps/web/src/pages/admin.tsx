@@ -210,6 +210,58 @@ export default function AdminDashboard() {
           </p>
         </div>
         <div style={{ display: "flex", gap: 12 }}>
+          <Link
+            href="/admin/prompts"
+            style={{
+              padding: "8px 16px",
+              background: "#667eea",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: 4,
+              display: "inline-block"
+            }}
+          >
+            Prompt Management
+          </Link>
+          <Link
+            href="/admin/users"
+            style={{
+              padding: "8px 16px",
+              background: "#4338ca",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: 4,
+              display: "inline-block"
+            }}
+          >
+            Users
+          </Link>
+          <Link
+            href="/admin/analytics"
+            style={{
+              padding: "8px 16px",
+              background: "#7c3aed",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: 4,
+              display: "inline-block"
+            }}
+          >
+            Analytics
+          </Link>
+          <Link
+            href="/admin/cache"
+            style={{
+              padding: "8px 16px",
+              background: "#059669",
+              color: "white",
+              textDecoration: "none",
+              borderRadius: 4,
+              display: "inline-block"
+            }}
+          >
+            Cache
+          </Link>
           <button
             onClick={exportToCSV}
             style={{

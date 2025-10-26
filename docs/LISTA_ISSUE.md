@@ -157,7 +157,7 @@ Our approach follows these principles:
 
 | # | Issue | Priority | Effort | Rationale |
 |---|-------|----------|--------|-----------|
-| 18 | #461 ADMIN-01: Prompt management | 🔴 High | XL | **IN PROGRESS - Phase 2 Complete**: Phase 1 (backend infrastructure, PR #545) + Phase 2 (admin UI, 6 pages + Monaco editor, PR #551). Remaining: Phase 3 (service migration), Phase 4 (testing framework), Phase 5 (deployment). |
+| 18 | #461 ADMIN-01: Prompt management | 🔴 High | XL | **IN PROGRESS - Phase 3 Complete**: Phase 1 (backend, PR #545) + Phase 2 (admin UI, PR #551) + Phase 3 (service migration, PR #552). ChessAgentService & SetupGuideService now database-driven with feature flag. 44/44 tests passing. Remaining: Phase 4 (testing framework), Phase 5 (deployment). |
 | 19 | #416 ADMIN-01: User management CRUD | 🟡 Medium | M | Admin tools foundation. Can run parallel with prompt mgmt. |
 | 20 | #419 ADMIN-02: Analytics dashboard | ✅ COMPLETED | L | Operational visibility with 8 metrics, 5 charts, auto-refresh. PR #533. Completed: 2025-10-25 |
 

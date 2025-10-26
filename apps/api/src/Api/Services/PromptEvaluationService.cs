@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Security;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -20,21 +21,26 @@ public class PromptEvaluationService : IPromptEvaluationService
     private readonly IPromptTemplateService _promptTemplateService;
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<PromptEvaluationService> _logger;
+    private readonly string _allowedDatasetsDirectory;
 
     public PromptEvaluationService(
         IRagService ragService,
         IPromptTemplateService promptTemplateService,
         MeepleAiDbContext dbContext,
-        ILogger<PromptEvaluationService> logger)
+        ILogger<PromptEvaluationService> logger,
+        string? allowedDatasetsDirectory = null)
     {
         _ragService = ragService;
         _promptTemplateService = promptTemplateService;
         _dbContext = dbContext;
         _logger = logger;
+        _allowedDatasetsDirectory = allowedDatasetsDirectory
+            ?? Path.Combine(Directory.GetCurrentDirectory(), "datasets");
     }
 
     /// <summary>
     /// Loads a test dataset from JSON file with validation
+    /// SECURITY: Path traversal protection and file size limits
     /// </summary>
     public async Task<PromptTestDataset> LoadDatasetAsync(string datasetPath, CancellationToken ct = default)
     {
@@ -42,14 +48,39 @@ public class PromptEvaluationService : IPromptEvaluationService
 
         try
         {
-            // Support both absolute and relative paths
+            // SECURITY: Use configured allowed datasets directory (whitelist approach)
+            var allowedDirectory = _allowedDatasetsDirectory;
+
+            // Ensure allowed directory exists
+            if (!Directory.Exists(allowedDirectory))
+            {
+                Directory.CreateDirectory(allowedDirectory);
+            }
+
+            // Resolve to absolute path
             var fullPath = Path.IsPathRooted(datasetPath)
-                ? datasetPath
-                : Path.Combine(Directory.GetCurrentDirectory(), datasetPath);
+                ? Path.GetFullPath(datasetPath)
+                : Path.GetFullPath(Path.Combine(allowedDirectory, datasetPath));
+
+            // SECURITY: Validate path is within allowed directory (prevent path traversal)
+            if (!fullPath.StartsWith(allowedDirectory, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("Path traversal attempt detected: {RequestedPath} resolved to {FullPath}",
+                    datasetPath, fullPath);
+                throw new SecurityException("Dataset path must be within allowed datasets directory");
+            }
 
             if (!File.Exists(fullPath))
             {
                 throw new FileNotFoundException($"Test dataset not found at path: {fullPath}");
+            }
+
+            // SECURITY: Check file size to prevent resource exhaustion
+            var fileInfo = new FileInfo(fullPath);
+            const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
+            if (fileInfo.Length > MaxFileSizeBytes)
+            {
+                throw new ArgumentException($"Dataset file exceeds maximum size of 10 MB (actual: {fileInfo.Length / 1024 / 1024} MB)");
             }
 
             // Read and deserialize JSON
@@ -61,11 +92,8 @@ public class PromptEvaluationService : IPromptEvaluationService
                 throw new JsonException($"Failed to deserialize dataset from {fullPath}");
             }
 
-            // Basic validation
-            if (dataset.TestCases == null || dataset.TestCases.Count == 0)
-            {
-                throw new ArgumentException($"Dataset must contain at least one test case");
-            }
+            // Comprehensive validation
+            ValidateDataset(dataset);
 
             _logger.LogInformation(
                 "Loaded dataset {DatasetId} with {Count} test cases for template {TemplateName}",
@@ -73,11 +101,67 @@ public class PromptEvaluationService : IPromptEvaluationService
 
             return dataset;
         }
-        catch (Exception ex) when (ex is not FileNotFoundException && ex is not JsonException)
+        catch (SecurityException)
+        {
+            throw; // Re-throw security exceptions as-is
+        }
+        catch (Exception ex) when (ex is not FileNotFoundException && ex is not JsonException && ex is not ArgumentException)
         {
             _logger.LogError(ex, "Error loading dataset from {Path}", datasetPath);
             throw new InvalidOperationException($"Failed to load dataset: {ex.Message}", ex);
         }
+    }
+
+    /// <summary>
+    /// Validates dataset structure and content
+    /// SECURITY: Prevents malformed datasets from causing runtime errors or resource exhaustion
+    /// </summary>
+    private void ValidateDataset(PromptTestDataset dataset)
+    {
+        // Validate basic structure
+        if (dataset.TestCases == null || dataset.TestCases.Count == 0)
+        {
+            throw new ArgumentException("Dataset must contain at least one test case");
+        }
+
+        // SECURITY: Limit test case count to prevent resource exhaustion
+        const int MaxTestCases = 200;
+        if (dataset.TestCases.Count > MaxTestCases)
+        {
+            throw new ArgumentException($"Dataset contains {dataset.TestCases.Count} test cases. Maximum allowed: {MaxTestCases}");
+        }
+
+        // Validate each test case
+        foreach (var testCase in dataset.TestCases)
+        {
+            if (string.IsNullOrWhiteSpace(testCase.Id))
+                throw new ArgumentException("Test case missing required 'Id' field");
+
+            if (string.IsNullOrWhiteSpace(testCase.Query))
+                throw new ArgumentException($"Test case {testCase.Id} missing 'Query' field");
+
+            if (testCase.MinConfidence.HasValue && (testCase.MinConfidence < 0.0 || testCase.MinConfidence > 1.0))
+                throw new ArgumentException($"Test case {testCase.Id} has invalid MinConfidence: {testCase.MinConfidence}");
+
+            if (testCase.MaxLatencyMs.HasValue && testCase.MaxLatencyMs <= 0)
+                throw new ArgumentException($"Test case {testCase.Id} has invalid MaxLatencyMs: {testCase.MaxLatencyMs}");
+        }
+
+        // Validate thresholds
+        if (dataset.Thresholds.MinAccuracy < 0.0 || dataset.Thresholds.MinAccuracy > 1.0)
+            throw new ArgumentException($"Invalid MinAccuracy threshold: {dataset.Thresholds.MinAccuracy}");
+
+        if (dataset.Thresholds.MaxHallucinationRate < 0.0 || dataset.Thresholds.MaxHallucinationRate > 1.0)
+            throw new ArgumentException($"Invalid MaxHallucinationRate threshold: {dataset.Thresholds.MaxHallucinationRate}");
+
+        if (dataset.Thresholds.MinAvgConfidence < 0.0 || dataset.Thresholds.MinAvgConfidence > 1.0)
+            throw new ArgumentException($"Invalid MinAvgConfidence threshold: {dataset.Thresholds.MinAvgConfidence}");
+
+        if (dataset.Thresholds.MinCitationCorrectness < 0.0 || dataset.Thresholds.MinCitationCorrectness > 1.0)
+            throw new ArgumentException($"Invalid MinCitationCorrectness threshold: {dataset.Thresholds.MinCitationCorrectness}");
+
+        if (dataset.Thresholds.MaxAvgLatencyMs <= 0)
+            throw new ArgumentException($"Invalid MaxAvgLatencyMs threshold: {dataset.Thresholds.MaxAvgLatencyMs}");
     }
 
     /// <summary>

@@ -49,12 +49,13 @@ public class PromptEvaluationServiceTests : IAsyncLifetime
         _promptServiceMock = new Mock<IPromptTemplateService>();
         _loggerMock = new Mock<ILogger<PromptEvaluationService>>();
 
-        // Create service instance
+        // Create service instance with temp directory for testing
         _service = new PromptEvaluationService(
             _ragServiceMock.Object,
             _promptServiceMock.Object,
             _dbContext,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            allowedDatasetsDirectory: Path.GetTempPath());
     }
 
     public async Task InitializeAsync()

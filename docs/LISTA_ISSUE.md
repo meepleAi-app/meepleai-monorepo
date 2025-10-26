@@ -157,7 +157,7 @@ Our approach follows these principles:
 
 | # | Issue | Priority | Effort | Rationale |
 |---|-------|----------|--------|-----------|
-| 18 | #461 ADMIN-01: Prompt management | 🔴 High | XL | **IN PROGRESS - Phase 1 MVP Complete**: Core infrastructure (Redis caching, transaction-safe activation, 5 admin endpoints, 40 tests passing). PR #545. Phase 2-4 pending (Admin UI, testing framework, service migration). |
+| 18 | #461 ADMIN-01: Prompt management | 🔴 High | XL | **IN PROGRESS - Phase 2 Complete**: Phase 1 (backend infrastructure, PR #545) + Phase 2 (admin UI, 6 pages + Monaco editor, PR #551). Remaining: Phase 3 (service migration), Phase 4 (testing framework), Phase 5 (deployment). |
 | 19 | #416 ADMIN-01: User management CRUD | 🟡 Medium | M | Admin tools foundation. Can run parallel with prompt mgmt. |
 | 20 | #419 ADMIN-02: Analytics dashboard | ✅ COMPLETED | L | Operational visibility with 8 metrics, 5 charts, auto-refresh. PR #533. Completed: 2025-10-25 |
 

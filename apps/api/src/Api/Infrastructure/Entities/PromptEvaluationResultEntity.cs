@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace MeepleAI.Api.Infrastructure.Entities;
+namespace Api.Infrastructure.Entities;
 
 /// <summary>
 /// Entity for storing prompt evaluation results

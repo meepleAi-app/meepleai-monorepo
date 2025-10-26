@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace MeepleAI.Api.Models;
+namespace Api.Models;
 
 /// <summary>
 /// Test dataset for prompt evaluation
@@ -280,4 +280,33 @@ public enum ComparisonRecommendation
 
     /// <summary>Results are mixed or marginal, require manual review</summary>
     ManualReview
+}
+
+// Admin API Request DTOs
+
+/// <summary>
+/// Request to evaluate a prompt version
+/// </summary>
+public class EvaluatePromptRequest
+{
+    /// <summary>Path to test dataset JSON file</summary>
+    public required string DatasetPath { get; set; }
+
+    /// <summary>Whether to store results in database (default: true)</summary>
+    public bool StoreResults { get; set; } = true;
+}
+
+/// <summary>
+/// Request to compare two prompt versions
+/// </summary>
+public class ComparePromptsRequest
+{
+    /// <summary>Baseline version ID (usually current active)</summary>
+    public required string BaselineVersionId { get; set; }
+
+    /// <summary>Candidate version ID (new version to test)</summary>
+    public required string CandidateVersionId { get; set; }
+
+    /// <summary>Path to test dataset JSON file</summary>
+    public required string DatasetPath { get; set; }
 }

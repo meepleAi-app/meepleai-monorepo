@@ -1,6 +1,6 @@
-using MeepleAI.Api.Models;
+using Api.Models;
 
-namespace MeepleAI.Api.Services;
+namespace Api.Services;
 
 /// <summary>
 /// Service for evaluating prompt quality through automated testing

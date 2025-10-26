@@ -18,8 +18,14 @@ public class LlmService : ILlmService
     private readonly IConfigurationService? _configService;
     private readonly IConfiguration? _fallbackConfig;
 
+    // AI-15-ALT: Model selection configuration
+    private readonly string _alternativeModelId;
+    private readonly bool _useAlternativeModel;
+    private readonly int _alternativeTrafficPercent;
+
     // Hardcoded defaults (CONFIG-03: Fallback when database not available)
     private const string DefaultChatModel = "deepseek/deepseek-chat-v3.1";
+    private const string DefaultAlternativeModel = "openai/gpt-4o-mini";
     private const double DefaultTemperature = 0.3;
     private const int DefaultMaxTokens = 500;
     private const int DefaultTimeoutSeconds = 60;
@@ -37,6 +43,15 @@ public class LlmService : ILlmService
         _configService = configService;
         _fallbackConfig = fallbackConfig;
 
+        // AI-15-ALT: Initialize model selection configuration
+        _alternativeModelId = config["LlmService:AlternativeModelId"] ?? DefaultAlternativeModel;
+        _useAlternativeModel = config.GetValue<bool>("LlmService:UseAlternativeModel");
+        _alternativeTrafficPercent = config.GetValue<int>("LlmService:AlternativeModelTrafficPercentage");
+
+        _logger.LogInformation(
+            "LlmService initialized: AlternativeModel={AlternativeModel}, UseAlternative={UseAlternative}, TrafficPercent={TrafficPercent}%",
+            _alternativeModelId, _useAlternativeModel, _alternativeTrafficPercent);
+
         // Configure HttpClient
         _httpClient.BaseAddress = new Uri("https://openrouter.ai/api/v1/");
         _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
@@ -48,8 +63,39 @@ public class LlmService : ILlmService
     }
 
     /// <summary>
+    /// AI-15-ALT: Select model based on configuration and A/B testing logic.
+    /// Returns configured model ID or alternative based on traffic percentage.
+    /// </summary>
+    private string SelectModel(string configuredModel)
+    {
+        // A/B testing: Random selection based on traffic percentage
+        if (_alternativeTrafficPercent > 0)
+        {
+            var random = Random.Shared.Next(100);
+            var selectedModel = random < _alternativeTrafficPercent ? _alternativeModelId : configuredModel;
+
+            _logger.LogDebug(
+                "A/B test model selection: random={Random}, threshold={Threshold}, selected={Selected}",
+                random, _alternativeTrafficPercent, selectedModel);
+
+            return selectedModel;
+        }
+
+        // Feature flag: Use alternative if enabled
+        if (_useAlternativeModel)
+        {
+            _logger.LogDebug("Using alternative model via feature flag: {Model}", _alternativeModelId);
+            return _alternativeModelId;
+        }
+
+        // Default: Use configured model
+        return configuredModel;
+    }
+
+    /// <summary>
     /// Generate a chat completion response
     /// CONFIG-03: Uses dynamic configuration for model, temperature, and max_tokens.
+    /// AI-15-ALT: Supports model selection with A/B testing.
     /// </summary>
     public async Task<LlmCompletionResult> GenerateCompletionAsync(
         string systemPrompt,
@@ -64,7 +110,9 @@ public class LlmService : ILlmService
         try
         {
             // CONFIG-03: Get configuration values with fallback chain
-            var model = await GetAiConfigStringAsync("AI.Model", DefaultChatModel);
+            var configuredModel = await GetAiConfigStringAsync("AI.Model", DefaultChatModel);
+            // AI-15-ALT: Select model (configured or alternative based on A/B test)
+            var model = SelectModel(configuredModel);
             var temperature = await GetAiConfigAsync("AI.Temperature", DefaultTemperature);
             var maxTokens = await GetAiConfigAsync("AI.MaxTokens", DefaultMaxTokens);
 
@@ -152,6 +200,7 @@ public class LlmService : ILlmService
     /// <summary>
     /// CHAT-01: Generate a streaming chat completion response with token-by-token delivery via SSE
     /// CONFIG-03: Uses dynamic configuration for model, temperature, and max_tokens.
+    /// AI-15-ALT: Supports model selection with A/B testing.
     /// </summary>
     public async IAsyncEnumerable<string> GenerateCompletionStreamAsync(
         string systemPrompt,
@@ -165,7 +214,9 @@ public class LlmService : ILlmService
         }
 
         // CONFIG-03: Get configuration values with fallback chain
-        var model = await GetAiConfigStringAsync("AI.Model", DefaultChatModel);
+        var configuredModel = await GetAiConfigStringAsync("AI.Model", DefaultChatModel);
+        // AI-15-ALT: Select model (configured or alternative based on A/B test)
+        var model = SelectModel(configuredModel);
         var temperature = await GetAiConfigAsync("AI.Temperature", DefaultTemperature);
         var maxTokens = await GetAiConfigAsync("AI.MaxTokens", DefaultMaxTokens);
 

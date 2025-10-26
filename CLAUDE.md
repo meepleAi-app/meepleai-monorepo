@@ -233,6 +233,29 @@ Templates: `infra/env/*.env.*.example` (never commit `.env.dev/local/prod`)
 **API**: `OPENROUTER_API_KEY`, `QDRANT_URL` (http://qdrant:6333), `REDIS_URL` (redis:6379), `SEQ_URL` (http://seq:5341), `ConnectionStrings__Postgres`
 **Web**: `NEXT_PUBLIC_API_BASE` (http://localhost:8080)
 
+## Available MCP Servers
+
+The project supports multiple MCP (Model Context Protocol) servers for enhanced AI capabilities:
+
+| MCP Server | Purpose | Use Cases |
+|------------|---------|-----------|
+| **playwright** | Browser automation & E2E testing | Visual testing, form validation, accessibility checks |
+| **chrome-devtools** | Real-time browser inspection | Performance auditing, debugging, network analysis |
+| **serena** | Project memory & semantic code understanding | Symbol operations, session persistence, codebase navigation |
+| **magic (21st.dev)** | UI component generation from patterns | Modern React/Vue components, design systems |
+| **figma** | Design-to-code automation (Optional) | Implement Figma designs, extract design tokens, pixel-perfect UI |
+| **morphllm** | Pattern-based bulk edits | Multi-file transformations, style enforcement |
+| **sequential-thinking** | Complex reasoning & analysis | Root cause analysis, architecture review, debugging |
+| **tavily** | Web search & research | Current information, technical docs, fact-checking |
+| **memory-bank** | Session memory & context | Cross-session knowledge retention |
+
+**Figma Integration**:
+- **Purpose**: Bridge design and code with semantic Figma context
+- **Setup**: See [MCP_Figma.md](C:\Users\Utente\.claude\MCP_Figma.md) for configuration
+- **Options**: Official Figma MCP (Beta, requires Dev seat) or Community servers (Framelink)
+- **Workflow**: Figma design → Magic component generation → Playwright validation
+- **API Key**: Set `FIGMA_API_KEY` for community servers; Official uses OAuth
+
 ## Workflows
 
 **New API Endpoint**:
@@ -288,6 +311,7 @@ cd apps/web && pnpm dev                                                         
 | **RAG Eval** | `docs/ai-06-rag-evaluation.md` | IR metrics, gates (AI-06) |
 | **RAG Opt** | `docs/technic/ai-07-rag-optimization-phase1.md` | Phase 1 design (AI-07) |
 | **Hybrid Search** | `docs/guide/hybrid-search-guide.md` | PG FTS + Qdrant RRF (AI-14) |
+| **Figma MCP Setup** | `docs/guide/figma-mcp-setup.md` | Design-to-code automation |
 | **n8n Integration** | `docs/guide/n8n-integration-guide.md` | N8N-01, N8N-03 webhooks |
 | **n8n Errors** | `docs/guide/n8n-error-handling.md` | Error handling (N8N-05) |
 | **Coverage** | `docs/code-coverage.md` | Measurement & tracking |

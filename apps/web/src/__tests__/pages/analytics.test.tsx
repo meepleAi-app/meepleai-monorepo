@@ -20,7 +20,9 @@ jest.mock("recharts", () => ({
 
 // Mock next/link
 jest.mock("next/link", () => {
-  return ({ children, href }: any) => <a href={href}>{children}</a>;
+  const MockLink = ({ children, href }: any) => <a href={href}>{children}</a>;
+  MockLink.displayName = "Link";
+  return MockLink;
 });
 
 const mockDashboardStats = {

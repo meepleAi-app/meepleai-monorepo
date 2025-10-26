@@ -1,23 +1,55 @@
+using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
+using StackExchange.Redis;
 using Xunit;
 
 namespace Api.Tests;
 
 /// <summary>
-/// AI-07.1: Unit tests for PromptTemplateService
-/// Tests template loading, rendering, question classification, and fallback behavior
+/// ADMIN-01 Enhanced: Unit tests for PromptTemplateService
+/// Tests template loading, rendering, question classification, fallback behavior, and Redis caching
 /// </summary>
-public class PromptTemplateServiceTests
+public class PromptTemplateServiceTests : IDisposable
 {
     private readonly Mock<ILogger<PromptTemplateService>> _mockLogger;
+    private readonly Mock<IConnectionMultiplexer> _mockRedis;
+    private readonly Mock<IDatabase> _mockRedisDb;
+    private readonly SqliteConnection _connection;
+    private readonly MeepleAiDbContext _dbContext;
 
     public PromptTemplateServiceTests()
     {
         _mockLogger = new Mock<ILogger<PromptTemplateService>>();
+
+        // ADMIN-01: Mock Redis
+        _mockRedis = new Mock<IConnectionMultiplexer>();
+        _mockRedisDb = new Mock<IDatabase>();
+        _mockRedis.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
+            .Returns(_mockRedisDb.Object);
+
+        // ADMIN-01: Setup SQLite in-memory database for testing
+        _connection = new SqliteConnection("DataSource=:memory:");
+        _connection.Open();
+
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseSqlite(_connection)
+            .Options;
+
+        _dbContext = new MeepleAiDbContext(options);
+        _dbContext.Database.EnsureCreated();
+    }
+
+    public void Dispose()
+    {
+        _dbContext?.Dispose();
+        _connection?.Dispose();
     }
 
     #region Template Loading Tests
@@ -392,12 +424,199 @@ public class PromptTemplateServiceTests
 
     #endregion
 
+    #region ADMIN-01: Database-Driven Prompt Management Tests
+
+    [Fact]
+    public async Task GetActivePromptAsync_WithCacheHit_ReturnsCachedPrompt()
+    {
+        // Arrange
+        var templateName = "qa-system-prompt";
+        var cachedContent = "Cached prompt content";
+        var cacheKey = $"prompt:{templateName}:active";
+
+        _mockRedisDb.Setup(db => db.StringGetAsync(cacheKey, It.IsAny<CommandFlags>()))
+            .ReturnsAsync((RedisValue)cachedContent);
+
+        var service = CreateService(null);
+
+        // Act
+        var result = await service.GetActivePromptAsync(templateName);
+
+        // Assert
+        Assert.Equal(cachedContent, result);
+        _mockRedisDb.Verify(db => db.StringGetAsync(cacheKey, It.IsAny<CommandFlags>()), Times.Once);
+        // Should NOT query database on cache hit
+    }
+
+    [Fact]
+    public async Task GetActivePromptAsync_WithCacheMiss_QueriesDatabaseAndPopulatesCache()
+    {
+        // Arrange
+        var templateName = "qa-system-prompt";
+        var promptContent = "Database prompt content";
+        var cacheKey = $"prompt:{templateName}:active";
+
+        // Setup cache miss
+        _mockRedisDb.Setup(db => db.StringGetAsync(cacheKey, It.IsAny<CommandFlags>()))
+            .ReturnsAsync(RedisValue.Null);
+
+        // Setup cache write
+        _mockRedisDb.Setup(db => db.StringSetAsync(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<bool>(), // keepTtl
+                It.IsAny<When>(),
+                It.IsAny<CommandFlags>()))
+            .ReturnsAsync(true);
+
+        // Seed database with active prompt
+        await SeedActivePrompt(templateName, promptContent);
+
+        var service = CreateService(null);
+
+        // Act
+        var result = await service.GetActivePromptAsync(templateName);
+
+        // Assert
+        Assert.Equal(promptContent, result);
+        _mockRedisDb.Verify(db => db.StringGetAsync(cacheKey, It.IsAny<CommandFlags>()), Times.Once);
+        _mockRedisDb.Verify(db => db.StringSetAsync(
+            It.IsAny<RedisKey>(),
+            It.Is<RedisValue>(v => v.ToString() == promptContent),
+            It.Is<TimeSpan?>(ttl => ttl != null),
+            It.IsAny<bool>(), // keepTtl parameter
+            It.IsAny<When>(),
+            It.IsAny<CommandFlags>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetActivePromptAsync_WhenRedisUnavailable_FallbackToDatabase()
+    {
+        // Arrange
+        var templateName = "qa-system-prompt";
+        var promptContent = "Database prompt content";
+
+        // Setup Redis failure
+        _mockRedisDb.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ThrowsAsync(new RedisException("Redis connection failed"));
+
+        // Seed database
+        await SeedActivePrompt(templateName, promptContent);
+
+        var service = CreateService(null);
+
+        // Act
+        var result = await service.GetActivePromptAsync(templateName);
+
+        // Assert
+        Assert.Equal(promptContent, result);
+        // Should still work despite Redis failure
+    }
+
+    [Fact]
+    public async Task GetActivePromptAsync_WhenNoActiveVersion_ReturnsNull()
+    {
+        // Arrange
+        var templateName = "nonexistent-prompt";
+
+        _mockRedisDb.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync(RedisValue.Null);
+
+        var service = CreateService(null);
+
+        // Act
+        var result = await service.GetActivePromptAsync(templateName);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task ActivateVersionAsync_SuccessfulActivation_DeactivatesOldVersionAndInvalidatesCache()
+    {
+        // Arrange
+        var (templateId, versionId, templateName) = await SeedTemplateWithMultipleVersions();
+        var userId = await SeedUser("admin@test.com");
+
+        // Setup Redis cache invalidation
+        _mockRedisDb.Setup(db => db.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync(true);
+
+        var service = CreateService(null);
+
+        // Act
+        var result = await service.ActivateVersionAsync(templateId, versionId, userId);
+
+        // Assert
+        Assert.True(result);
+
+        // Verify only the new version is active
+        var allVersions = await _dbContext.Set<PromptVersionEntity>()
+            .Where(v => v.TemplateId == templateId)
+            .ToListAsync();
+
+        Assert.Single(allVersions.Where(v => v.IsActive));
+        Assert.Equal(versionId, allVersions.First(v => v.IsActive).Id);
+
+        // Verify cache invalidation
+        _mockRedisDb.Verify(db => db.KeyDeleteAsync(
+            It.Is<RedisKey>(k => k.ToString().Contains(templateName)),
+            It.IsAny<CommandFlags>()), Times.Once);
+
+        // Verify audit log created
+        var auditLogs = await _dbContext.Set<PromptAuditLogEntity>()
+            .Where(a => a.TemplateId == templateId && a.VersionId == versionId)
+            .ToListAsync();
+
+        Assert.Single(auditLogs);
+        Assert.Equal("version_activated", auditLogs[0].Action);
+    }
+
+    [Fact]
+    public async Task ActivateVersionAsync_WhenVersionNotFound_ReturnsFalse()
+    {
+        // Arrange
+        var nonExistentTemplateId = Guid.NewGuid().ToString();
+        var nonExistentVersionId = Guid.NewGuid().ToString();
+        var userId = await SeedUser("admin@test.com");
+
+        var service = CreateService(null);
+
+        // Act
+        var result = await service.ActivateVersionAsync(nonExistentTemplateId, nonExistentVersionId, userId);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task InvalidateCacheAsync_DeletesCacheKey()
+    {
+        // Arrange
+        var templateName = "qa-system-prompt";
+        var cacheKey = $"prompt:{templateName}:active";
+
+        _mockRedisDb.Setup(db => db.KeyDeleteAsync(cacheKey, It.IsAny<CommandFlags>()))
+            .ReturnsAsync(true);
+
+        var service = CreateService(null);
+
+        // Act
+        await service.InvalidateCacheAsync(templateName);
+
+        // Assert
+        _mockRedisDb.Verify(db => db.KeyDeleteAsync(cacheKey, It.IsAny<CommandFlags>()), Times.Once);
+    }
+
+    #endregion
+
     #region Helper Methods
 
     private PromptTemplateService CreateService(RagPromptsConfiguration? config)
     {
         var options = Options.Create(config ?? new RagPromptsConfiguration());
-        return new PromptTemplateService(options, _mockLogger.Object);
+        return new PromptTemplateService(_dbContext, _mockRedis.Object, options, _mockLogger.Object);
     }
 
     private RagPromptsConfiguration CreateMinimalConfiguration()
@@ -479,6 +698,129 @@ public class PromptTemplateServiceTests
             }
         };
         return config;
+    }
+
+    // ADMIN-01: Database seeding helpers
+
+    private async Task<string> SeedUser(string email)
+    {
+        var userId = Guid.NewGuid().ToString();
+        var user = new UserEntity
+        {
+            Id = userId,
+            Email = email,
+            DisplayName = "Test User",
+            PasswordHash = "hash",
+            Role = UserRole.Admin,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _dbContext.Set<UserEntity>().Add(user);
+        await _dbContext.SaveChangesAsync();
+        return userId;
+    }
+
+    private async Task SeedActivePrompt(string templateName, string content)
+    {
+        var userId = await SeedUser("creator@test.com");
+        var templateId = Guid.NewGuid().ToString();
+
+        var template = new PromptTemplateEntity
+        {
+            Id = templateId,
+            Name = templateName,
+            Description = "Test template",
+            Category = "test",
+            CreatedByUserId = userId,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = await _dbContext.Set<UserEntity>().FindAsync(userId)
+                ?? throw new InvalidOperationException("User not found")
+        };
+
+        var version = new PromptVersionEntity
+        {
+            Id = Guid.NewGuid().ToString(),
+            TemplateId = templateId,
+            VersionNumber = 1,
+            Content = content,
+            IsActive = true,
+            CreatedByUserId = userId,
+            CreatedAt = DateTime.UtcNow,
+            Template = template,
+            CreatedBy = template.CreatedBy
+        };
+
+        _dbContext.Set<PromptTemplateEntity>().Add(template);
+        _dbContext.Set<PromptVersionEntity>().Add(version);
+        await _dbContext.SaveChangesAsync();
+    }
+
+    private async Task<(string templateId, string versionId, string templateName)> SeedTemplateWithMultipleVersions()
+    {
+        var userId = await SeedUser("creator@test.com");
+        var templateId = Guid.NewGuid().ToString();
+        var templateName = "test-prompt";
+
+        var user = await _dbContext.Set<UserEntity>().FindAsync(userId)
+            ?? throw new InvalidOperationException("User not found");
+
+        var template = new PromptTemplateEntity
+        {
+            Id = templateId,
+            Name = templateName,
+            Description = "Test template with multiple versions",
+            Category = "test",
+            CreatedByUserId = userId,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = user
+        };
+
+        // Create 3 versions (v1 active, v2-v3 inactive)
+        var version1 = new PromptVersionEntity
+        {
+            Id = Guid.NewGuid().ToString(),
+            TemplateId = templateId,
+            VersionNumber = 1,
+            Content = "Version 1 content",
+            IsActive = true,
+            CreatedByUserId = userId,
+            CreatedAt = DateTime.UtcNow.AddDays(-2),
+            Template = template,
+            CreatedBy = user
+        };
+
+        var version2Id = Guid.NewGuid().ToString();
+        var version2 = new PromptVersionEntity
+        {
+            Id = version2Id,
+            TemplateId = templateId,
+            VersionNumber = 2,
+            Content = "Version 2 content",
+            IsActive = false,
+            CreatedByUserId = userId,
+            CreatedAt = DateTime.UtcNow.AddDays(-1),
+            Template = template,
+            CreatedBy = user
+        };
+
+        var version3 = new PromptVersionEntity
+        {
+            Id = Guid.NewGuid().ToString(),
+            TemplateId = templateId,
+            VersionNumber = 3,
+            Content = "Version 3 content",
+            IsActive = false,
+            CreatedByUserId = userId,
+            CreatedAt = DateTime.UtcNow,
+            Template = template,
+            CreatedBy = user
+        };
+
+        _dbContext.Set<PromptTemplateEntity>().Add(template);
+        _dbContext.Set<PromptVersionEntity>().AddRange(version1, version2, version3);
+        await _dbContext.SaveChangesAsync();
+
+        return (templateId, version2Id, templateName); // Return v2 for activation tests
     }
 
     #endregion

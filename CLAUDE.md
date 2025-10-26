@@ -1,27 +1,20 @@
 # CLAUDE.md
 
-Guidance for Claude Code working with this MeepleAI monorepo.
-
-## Overview
-
-AI-powered board game rules assistant. Processes PDF rulebooks, semantic search with vector embeddings, intelligent Q&A.
+AI-powered board game rules assistant. PDF processing → vector embeddings → semantic Q&A.
 
 **Stack**: ASP.NET Core 9.0, Next.js 14, PostgreSQL, Qdrant, Redis, OpenRouter API, n8n, Docker
 
 ## Structure
-
 ```
 apps/api/          - Backend (ASP.NET Core)
-  src/Api/
-    Services/      - Business logic
-    Infrastructure/ - DB context & entities
-    Models/        - DTOs
-    Migrations/    - EF Core
-    Program.cs     - Entry point & DI
-  tests/Api.Tests/ - xUnit + Testcontainers
+  src/Api/Services/      - Business logic
+  src/Api/Infrastructure/ - DB context & entities
+  src/Api/Models/        - DTOs
+  src/Api/Migrations/    - EF Core
+  tests/Api.Tests/       - xUnit + Testcontainers
 apps/web/          - Frontend (Next.js)
   src/pages/       - Routes
-  src/lib/         - Utilities & API client
+  src/lib/         - API client
 infra/             - Docker Compose
 schemas/           - JSON schemas
 docs/              - Documentation
@@ -30,572 +23,252 @@ tools/             - PowerShell scripts
 
 ## Commands
 
-**Backend** (`apps/api`):
-- `dotnet build` / `dotnet test` - Build & test
-- `dotnet test /p:CollectCoverage=true` - Coverage
-- `pwsh tools/measure-coverage.ps1 -Project api` - Quick coverage
-- `dotnet ef migrations add <Name> --project src/Api` - New migration
-- `dotnet ef database update --project src/Api` - Apply migrations
-- Test: xUnit + Moq + Testcontainers
+| Task | Command | Notes |
+|------|---------|-------|
+| **Backend** (`apps/api`) |||
+| Build/Test | `dotnet build` / `dotnet test` | xUnit+Moq+Testcontainers |
+| Coverage | `dotnet test /p:CollectCoverage=true` | |
+| Quick Coverage | `pwsh tools/measure-coverage.ps1 -Project api` | ~10min full |
+| New Migration | `dotnet ef migrations add <Name> --project src/Api` | |
+| Apply Migrations | `dotnet ef database update --project src/Api` | Auto-applied on startup |
+| **Frontend** (`apps/web`, pnpm 9) |||
+| Dev/Build/Prod | `pnpm dev` / `pnpm build` / `pnpm start` | Ports: 3000 |
+| Lint/Typecheck | `pnpm lint` / `pnpm typecheck` | |
+| Test | `pnpm test` / `pnpm test:coverage` | Jest 90% threshold |
+| E2E | `pnpm test:e2e` / `pnpm test:e2e:ui` | Playwright |
+| **Docker** (`infra`) |||
+| Start/Rebuild | `docker compose up -d [--build]` | |
+| Logs | `docker compose logs -f [service]` | |
+| Stop/Clean | `docker compose down [-v]` | |
 
-**Frontend** (`apps/web`, pnpm 9):
-- `pnpm dev` / `pnpm build` / `pnpm start` - Dev/build/prod
-- `pnpm lint` / `pnpm typecheck` - Linting & type checking
-- `pnpm test` / `pnpm test:coverage` - Jest (90% threshold)
-- `pnpm test:e2e` / `pnpm test:e2e:ui` - Playwright E2E
-
-**Docker** (`infra`):
-- `docker compose up -d [--build]` - Start [rebuild]
-- `docker compose logs -f [service]` - View logs
-- `docker compose down [-v]` - Stop [delete volumes]
-- **Ports**: postgres:5432, qdrant:6333/6334, redis:6379, ollama:11434, n8n:5678, seq:8081, jaeger:16686, prometheus:9090, grafana:3001, api:8080, web:3000
+**Ports**: postgres:5432, qdrant:6333/6334, redis:6379, ollama:11434, n8n:5678, seq:8081, jaeger:16686, prometheus:9090, grafana:3001, api:8080, web:3000
 
 ## Architecture
 
-**Services** (DI in `Program.cs`, search for `builder.Services.Add`):
-- **AI/RAG**: EmbeddingService, QdrantService, TextChunkingService (sentence-aware chunking, 256-768 chars adaptive), RagService (query expansion with RRF fusion), LlmService (OpenRouter)
-- **PDF**: PdfStorageService, PdfTextExtractionService (Docnet.Core), PdfTableExtractionService (iText7), PdfValidationService (PDF-09)
-- **Domain**: GameService, RuleSpecService, RuleSpecDiffService, SetupGuideService
-- **Infra**: AuthService (session cookies), SessionManagementService, SessionAutoRevocationService, AuditService, AiRequestLogService, RateLimitService, N8nConfigService, BackgroundTaskService, WorkflowErrorLoggingService (N8N-05)
-- **Caching** (PERF-05): HybridCacheService (L1 in-memory + L2 Redis, cache stampede protection), AiResponseCacheService (adapter wrapping HybridCache)
-- **Query Optimization** (PERF-06): AsNoTracking on read-only queries (30% faster reads), AsNoTrackingWithIdentityResolution for relationship queries
-- **Text Chunking** (PERF-07): Sentence-aware chunking with abbreviation detection, paragraph boundaries, adaptive sizing (20% better RAG accuracy)
-- **Query Expansion** (PERF-08): Rule-based query variations with Reciprocal Rank Fusion (15-25% better recall)
-- **Connection Pooling** (PERF-09): Optimized Postgres (min 10, max 100, 5min lifetime), Redis (3 retries, 60s keep-alive), HTTP clients (10-30 connections, HTTP/2 multiplexing)
-- **Response Compression** (PERF-11): Brotli/Gzip compression for 60-80% bandwidth reduction, CompressionLevel.Fastest for optimal latency/compression balance
+### Services (DI in `Program.cs`)
 
-**Database** (EF Core 9.0 + PostgreSQL):
+| Category | Services | Key Features |
+|----------|----------|--------------|
+| **AI/RAG** | EmbeddingService, QdrantService, RagService, LlmService | Sentence chunking (256-768 chars), RRF fusion, OpenRouter |
+| **PDF** | PdfStorageService, PdfTextExtractionService, PdfTableExtractionService, PdfValidationService | Docnet.Core, iText7, PDF-09 validation |
+| **Domain** | GameService, RuleSpecService, RuleSpecDiffService, SetupGuideService | Core business logic |
+| **Auth** | AuthService, ApiKeyAuthenticationService, SessionManagementService, SessionAutoRevocationService | Cookie+API key dual auth |
+| **Admin** | UserManagementService, AdminStatsService, WorkflowErrorLoggingService | ADMIN-01/02, N8N-05 |
+| **Infra** | AuditService, AiRequestLogService, RateLimitService, N8nConfigService, BackgroundTaskService, AlertingService | OPS-07 multi-channel alerts |
+| **Cache** (PERF-05) | HybridCacheService, AiResponseCacheService | L1 memory + L2 Redis, stampede protection |
+
+**Performance Optimizations**:
+- PERF-05: HybridCache L1+L2, 5min TTL
+- PERF-06: AsNoTracking (30% faster reads)
+- PERF-07: Sentence-aware chunking (20% better RAG)
+- PERF-08: Query expansion + RRF (15-25% recall)
+- PERF-09: Connection pools (PG: 10-100, Redis: 3 retries)
+- PERF-11: Brotli/Gzip compression (60-80% reduction)
+
+### Database (EF Core 9.0 + PostgreSQL)
+
 - **Context**: `MeepleAiDbContext` (`Infrastructure/MeepleAiDbContext.cs`)
-- **Entities**: User/Auth, Game/RuleSpec, PDF/Vector docs, Chat logs, AI logs, Agents, N8n config
-- **Migrations**: Auto-applied in `Program.cs` (search for `Database.Migrate`)
-- **Seed Data** (DB-02): Demo users (admin/editor/user@meepleai.dev, pwd: `Demo123!`), games (Tic-Tac-Toe, Chess), rule specs, agents. Migration: `20251009140700_SeedDemoData`. Tests: `SeedDataTests.cs`
+- **Entities**: User/Auth, Game/RuleSpec, PDF/Vector docs, Chat logs, AI logs, Agents, N8n config, API keys, Sessions, Alerts
+- **Migrations**: Auto-applied in `Program.cs` (search `Database.Migrate`)
+- **Seed Data** (DB-02): Demo users (admin/editor/user@meepleai.dev, pwd: `Demo123!`), games, specs. Migration: `20251009140700_SeedDemoData`
 
-**Frontend** (Next.js 14):
-- **Pages**: index, chat, upload (complex), editor (EDIT-03: rich text), versions, admin, admin/users (ADMIN-01), admin/analytics (ADMIN-02), admin/cache, n8n, logs, setup (AI-03)
-- **API Client**: `lib/api.ts` - `get/post/put/delete`, cookie auth (`credentials: "include"`), 401 handling, base URL from `NEXT_PUBLIC_API_BASE`
-- **Tests**: Jest (90% coverage) + Playwright E2E
+### Frontend (Next.js 14)
 
-**Rich Text Editor** (EDIT-03):
-- **RichTextEditor** (`components/editor/RichTextEditor.tsx`): TipTap-based WYSIWYG editor
-  - Text formatting (bold, italic, strikethrough, code)
-  - Headings (H1-H6), lists (bullet, ordered), code blocks
-  - Character/word count display
-  - Auto-save integration with debouncing
-  - Keyboard shortcuts (Ctrl+Z undo, Ctrl+Shift+Z redo)
-- **EditorToolbar** (`components/editor/EditorToolbar.tsx`): Comprehensive formatting toolbar
-  - 15+ formatting options with visual grouping
-  - Active state highlighting, tooltips with shortcuts
-  - Undo/Redo integration
-- **ViewModeToggle** (`components/editor/ViewModeToggle.tsx`): Rich text ↔ JSON mode switching
-- **useDebounce** (`hooks/useDebounce.ts`): 2-second debounce for auto-save
-- **Enhanced Editor Page** (`pages/editor.tsx`): Integrated rich text + JSON editing
-  - Default rich text mode with seamless JSON fallback
-  - Auto-save (2s debounce), unsaved changes tracking
-  - Bidirectional HTML ↔ JSON conversion
-- **Dependencies**: @tiptap/react@3.8.0, @tiptap/starter-kit@3.8.0, @tiptap/extension-placeholder@3.8.0, @tiptap/extension-character-count@3.8.0
-- **Tests**: Unit tests (ViewModeToggle 11/11 passing, EditorToolbar comprehensive), E2E tests (`e2e/editor-rich-text.spec.ts`)
-- **Docs**: `docs/issue/edit-03-rich-text-editor-implementation.md` - Complete implementation guide
+**Pages**: index, chat, upload, editor (EDIT-03 rich text), versions, admin, admin/users (ADMIN-01), admin/analytics (ADMIN-02), admin/cache, n8n, logs, setup (AI-03)
 
-**Auth** (configured in `Program.cs`): Dual authentication system supports both cookie-based sessions and API keys
-- **Cookie Auth**: Session cookies → `AuthService.ValidateSessionAsync()` → ClaimsPrincipal (UserId, Email, DisplayName, Role)
-- **API Key Auth**: X-API-Key header → `ApiKeyAuthenticationService.ValidateApiKeyAsync()` → ClaimsPrincipal with scopes
-- API key takes precedence if both are provided
+**API Client**: `lib/api.ts` - get/post/put/delete, cookie auth (`credentials: "include"`), 401 handling, `NEXT_PUBLIC_API_BASE`
 
-**API Key Authentication** (API-01):
-- **ApiKeyAuthenticationService** (`Services/ApiKeyAuthenticationService.cs`): Core API key operations
-  - `ValidateApiKeyAsync(apiKey)` - Validates API key via PBKDF2 hash verification
-  - `GenerateApiKeyAsync(userId, keyName, scopes, expiresAt, environment)` - Generates new API key
-  - `RevokeApiKeyAsync(keyId, revokedByUserId)` - Revokes API key
-  - Uses PBKDF2 with 210,000 iterations (SHA256) for key hashing, consistent with password hashing
-- **ApiKeyAuthenticationMiddleware** (`Middleware/ApiKeyAuthenticationMiddleware.cs`): HTTP middleware
-  - Processes `/api/*` paths only (skips health checks, swagger, root)
-  - Validates `X-API-Key` header
-  - Sets ClaimsPrincipal with user info and scopes on successful validation
-  - Returns 401 Unauthorized with JSON error response on failure
-  - Falls through to cookie auth if no API key provided
-- **API Key Format**: `mpl_{environment}_{random_base64}` (e.g., `mpl_live_abc123...`, `mpl_test_xyz789...`)
-- **Database**: `api_keys` table with indexes on `key_hash` (unique), `user_id`, `is_active+expires_at`
-- **Migration**: `20251015084754_AddApiKeysTable` - Creates api_keys table and relationships
-- **Security Features**:
-  - Secure hash storage (never stores plaintext keys)
-  - Constant-time hash comparison (prevents timing attacks)
-  - Key expiration support (optional)
-  - Key revocation support
-  - Scoped permissions per key
-  - Last used timestamp tracking
-  - Environment tagging (live/test)
-- **Tests**: 21 unit tests (all passing) + 17 integration tests
-  - `ApiKeyAuthenticationServiceTests.cs` - Unit tests with SQLite in-memory
-  - `ApiKeyAuthenticationIntegrationTests.cs` - Integration tests with Testcontainers
+**Tests**: Jest (90% coverage) + Playwright E2E
 
-**Session Management** (AUTH-03):
-- **SessionManagementService** (`Services/SessionManagementService.cs`): Core session management
-  - `GetUserSessionsAsync()` - List user's active sessions
-  - `GetAllSessionsAsync()` - Admin: list all sessions (with filters, pagination)
-  - `RevokeSessionAsync()` - Revoke specific session by ID
-  - `RevokeAllUserSessionsAsync()` - Revoke all sessions for user (e.g., password change)
-  - `RevokeInactiveSessionsAsync()` - Auto-revoke sessions exceeding inactivity threshold
-- **SessionAutoRevocationService** (`Services/SessionAutoRevocationService.cs`): Background service
-  - Runs periodically (configurable interval, default: 1 hour)
-  - Auto-revokes sessions inactive > N days (configurable, default: 30 days)
-  - Waits 1 minute after startup before first run
-  - Graceful shutdown on cancellation
-- **Configuration** (`appsettings.json`): `Authentication:SessionManagement`
-  - `InactivityTimeoutDays`: Days before inactive session is revoked (default: 30)
-  - `AutoRevocationIntervalHours`: Hours between auto-revocation runs (default: 1)
-- **Endpoints** (Admin only, see `Program.cs` session management endpoints):
-  - `GET /admin/sessions` - List sessions (optional filters: userId, limit)
-  - `DELETE /admin/sessions/{id}` - Revoke specific session
-  - `DELETE /admin/users/{userId}/sessions` - Revoke all sessions for user
-  - `GET /users/me/sessions` - User views own sessions
-- **Tests**: 39 tests (25 unit + 13 integration + 13 background service)
-  - `SessionManagementServiceTests.cs` - Unit tests with SQLite in-memory
-  - `SessionManagementEndpointsTests.cs` - Integration tests with auth
-  - `SessionAutoRevocationServiceTests.cs` - Background service tests
+### Auth (Dual System)
 
-**User Management** (ADMIN-01):
-- **UserManagementService** (`Services/UserManagementService.cs`): Admin user CRUD operations
-  - `GetUsersAsync(search, role, sortBy, sortOrder, page, limit)` - Paginated user list with filters
-  - `CreateUserAsync(CreateUserRequest)` - Create user with role assignment via AuthService
-  - `UpdateUserAsync(userId, UpdateUserRequest)` - Update email, displayName, role
-  - `DeleteUserAsync(userId, requestingUserId)` - Delete user with safety checks
-- **Endpoints** (Admin only, see `Program.cs` user management endpoints around line 3613):
-  - `GET /api/v1/admin/users` - List users (search, role filter, sorting, pagination)
-  - `POST /api/v1/admin/users` - Create new user
-  - `PUT /api/v1/admin/users/{id}` - Update existing user
-  - `DELETE /api/v1/admin/users/{id}` - Delete user
-- **Models** (`Models/Contracts.cs`):
-  - `UserDto(id, email, displayName, role, createdAt, lastSeenAt)` - User information with session tracking
-  - `CreateUserRequest(email, password, displayName, role)` - User creation with validation
-  - `UpdateUserRequest(email?, displayName?, role?)` - Partial user updates
-  - `PagedResult<T>(items, total, page, pageSize)` - Generic pagination container
-- **Frontend** (`pages/admin/users.tsx`): Complete user management UI
-  - User list table with sortable columns (email, displayName, role, createdAt)
-  - Search by email/name, filter by role, pagination (20/page)
-  - Create user modal with form validation
-  - Edit user modal with pre-filled data
-  - Delete confirmation dialog
-  - Bulk selection and delete with checkboxes
-  - Toast notifications for success/error feedback
-  - Role badge color coding (Admin=red, Editor=yellow, User=green)
-  - Last seen tracking from active sessions
-- **Security Features**:
-  - Admin-only authorization on all endpoints
-  - Email uniqueness validation
-  - Self-deletion prevention
-  - Last admin deletion prevention
-  - UserRole enum type safety
-  - Password strength validation (8+ chars)
-- **Tests**: 75 tests (29 unit + 13 integration + 33 frontend)
-  - `UserManagementServiceTests.cs` - Unit tests with SQLite (CRUD, filters, sorting, safety checks)
-  - `UserManagementEndpointsTests.cs` - Integration tests with Testcontainers (auth, validation)
-  - `admin-users.test.tsx` - Frontend tests (22 passing: list, search, filter, pagination, selection)
-  - `admin-users.spec.ts` - E2E tests with Playwright (complete lifecycle, bulk ops, sorting)
+| Method | Flow | Format |
+|--------|------|--------|
+| **Cookie** | Session cookie → `AuthService.ValidateSessionAsync()` → ClaimsPrincipal | Standard session |
+| **API Key** | X-API-Key header → `ApiKeyAuthenticationService.ValidateApiKeyAsync()` → ClaimsPrincipal | `mpl_{env}_{base64}` |
 
-**Analytics Dashboard** (ADMIN-02):
-- **AdminStatsService** (`Services/AdminStatsService.cs`, `Services/IAdminStatsService.cs`): Analytics data aggregation service
-  - `GetDashboardStatsAsync(queryParams)` - Comprehensive dashboard statistics with metrics and time-series trends
-  - `ExportDashboardDataAsync(request)` - Export analytics data in CSV or JSON format
-  - Uses HybridCache (PERF-05) with 5-minute TTL for performance optimization
-  - Parallel query execution for independent metrics
-  - AsNoTracking() for all read queries (PERF-06 optimization)
-- **Endpoints** (Admin only, see `Program.cs` analytics endpoints around line 3536):
-  - `GET /api/v1/admin/analytics` - Get dashboard statistics (supports date range, game filter, days parameter)
-  - `POST /api/v1/admin/analytics/export` - Export analytics data (CSV or JSON format)
-- **Database Optimization** (Migration: `20251025183226_AddAnalyticsIndexes`):
-  - Indexes on `created_at` columns (users, user_sessions, pdf_documents, chat_logs, ai_request_logs)
-  - Improves query performance for date range aggregations (<500ms for 90-day range)
-- **Models** (`Models/Contracts.cs`):
-  - `DashboardStatsDto(metrics, userTrend, sessionTrend, apiRequestTrend, pdfUploadTrend, chatMessageTrend, generatedAt)`
-  - `DashboardMetrics` - 8 key metrics: totalUsers, activeSessions, apiRequestsToday, totalPdfDocuments, totalChatMessages, averageConfidenceScore, totalRagRequests, totalTokensUsed
-  - `TimeSeriesDataPoint(date, count, averageValue?)` - Time-series data for trend charts
-  - `AnalyticsQueryParams(fromDate?, toDate?, days, gameId?, roleFilter?)` - Query filtering
-  - `ExportDataRequest(format, fromDate?, toDate?, gameId?)` - Export request parameters
-- **Frontend** (`pages/admin/analytics.tsx`): Interactive analytics dashboard
-  - 8 metric cards with icons and color coding
-  - 5 recharts line charts: user registrations, sessions, API requests (with avg confidence), PDF uploads (with avg pages), chat messages
-  - Auto-refresh every 30 seconds (toggleable on/off)
-  - Time period filter: 7/30/90 days
-  - CSV/JSON export with file download
-  - Loading states, error handling, toast notifications
-  - Responsive grid layout
-  - Last update timestamp display
-- **Performance**:
-  - Backend queries: <500ms for 90-day range (with indexes + caching)
-  - Dashboard load: <2s with 100k+ data points (HybridCache optimization)
-  - Cache TTL: 5 minutes (configurable in service)
-  - Date gap filling for continuous chart visualization
-- **Tests**: 20 tests (11 unit + 9 frontend E2E)
-  - `AdminStatsServiceTests.cs` - Unit tests with SQLite (aggregation, caching, filtering, export, 11/11 passing)
-  - `analytics.test.tsx` - Frontend tests (9/15 passing: rendering, filters, export, auto-refresh)
-  - `admin-analytics.spec.ts` - E2E tests with Playwright (dashboard load, charts, filters, export, navigation)
+**Priority**: API key > cookie
 
-**Workflow Error Logging** (N8N-05):
-- **WorkflowErrorLoggingService** (`Services/WorkflowErrorLoggingService.cs`, `Services/IWorkflowErrorLoggingService.cs`): n8n error tracking service
-  - `LogErrorAsync(request)` - Log workflow error from n8n webhook (with sensitive data redaction)
-  - `GetErrorsAsync(queryParams)` - Retrieve errors with filtering (workflow ID, date range) and pagination
-  - `GetErrorByIdAsync(id)` - Get specific error details
-  - Uses HybridCache (PERF-05) with 5-minute TTL for performance
-  - AsNoTracking() for all read queries (PERF-06)
-  - Automatic sensitive data sanitization (API keys, tokens, passwords)
-- **Endpoints** (see `Program.cs` N8N-05 endpoints around line 3751):
-  - `POST /api/v1/logs/workflow-error` - Webhook from n8n (no auth required for simplicity)
-  - `GET /api/v1/admin/workflows/errors` - List errors with filters (admin only)
-  - `GET /api/v1/admin/workflows/errors/{id}` - Get error details (admin only)
-- **Database** (Migration: `20251025203850_AddWorkflowErrorLogsTable`):
-  - `workflow_error_logs` table with indexes on workflow_id, created_at, execution_id
-  - Columns: id, workflow_id, execution_id, error_message (max 5000), node_name, retry_count, stack_trace (max 10000), created_at
-- **Models** (`Models/Contracts.cs`):
-  - `LogWorkflowErrorRequest(workflowId, executionId, errorMessage, nodeName?, retryCount, stackTrace?)` - Webhook request
-  - `WorkflowErrorDto(id, workflowId, executionId, errorMessage, nodeName, retryCount, stackTrace, createdAt)` - Error details
-  - `WorkflowErrorsQueryParams(workflowId?, fromDate?, toDate?, page, limit)` - Query filtering
-- **Frontend** (Spec ready at `docs/issue/n8n-05-frontend-spec.md`): Admin dashboard for monitoring workflow errors
-  - Page: `/admin/workflow-errors` (implementation pending)
-  - Features: Error list table, workflow ID filter, date range filter, pagination, error detail modal
-- **n8n Integration** (`docs/guide/n8n-error-handling.md`): Complete error handling guide
-  - Error Trigger nodes for automatic error capture
-  - Retry logic with exponential backoff (already configured: 3 attempts)
-  - Error logging to MeepleAI API webhook
-  - Optional Slack alerts for persistent failures
-  - Graceful fallback responses
-- **Security**:
-  - Webhook endpoint: No auth (rate limited for abuse prevention)
-  - Admin endpoints: Admin role required
-  - Sensitive data redaction: Regex-based removal of API keys, tokens, passwords
-  - Max length validation: 5000 chars error message, 10000 chars stack trace
-- **Tests**: 33 tests (20 unit + 13 integration, all passing)
-  - `WorkflowErrorLoggingServiceTests.cs` - Service logic, caching, sanitization, pagination
-  - `WorkflowErrorEndpointsTests.cs` - API endpoints, auth, filtering, BDD-style
-- **Docs**: `docs/guide/n8n-error-handling.md` - Implementation guide, troubleshooting, best practices
+### Key Features
 
-**Alerting System** (OPS-07):
-- **AlertingService** (`Services/AlertingService.cs`, `Services/IAlertingService.cs`): Proactive multi-channel alerting service
-  - `SendAlertAsync(alertType, severity, message, metadata?)` - Send alert to all enabled channels (Email, Slack, PagerDuty)
-  - `ResolveAlertAsync(alertType)` - Mark alert as resolved when metrics return to normal
-  - `GetActiveAlertsAsync()` - List currently active alerts
-  - `GetAlertHistoryAsync(fromDate, toDate)` - Query historical alerts
-  - `IsThrottledAsync(alertType)` - Check if alert is throttled (1 per hour max per type)
-  - Alert throttling prevents spam (returns existing alert if sent within throttle window)
-  - Multi-channel strategy pattern with Email/Slack/PagerDuty implementations
-- **Alert Channels** (Strategy pattern):
-  - `EmailAlertChannel`: SMTP email notifications with HTML templates, severity-based coloring
-  - `SlackAlertChannel`: Slack Incoming Webhooks with rich attachments, emoji indicators
-  - `PagerDutyAlertChannel`: PagerDuty Events API v2 for incident creation (critical alerts only)
-- **Endpoints** (see `Program.cs` OPS-07 endpoints around line 3846):
-  - `POST /api/v1/alerts/prometheus` - Webhook from Prometheus AlertManager (no auth)
-  - `GET /api/v1/admin/alerts?activeOnly=true` - List active alerts or 7-day history (admin only)
-  - `POST /api/v1/admin/alerts/{alertType}/resolve` - Manually resolve alert (admin only)
-- **Database** (Migration: `AddAlertsTable`):
-  - `alerts` table with indexes on `is_active` (filtered), `alert_type + triggered_at`
-  - Columns: id, alert_type, severity, message, metadata (jsonb), triggered_at, resolved_at, is_active, channel_sent (jsonb)
-- **Models** (`Models/Contracts.cs`):
-  - `AlertDto(id, alertType, severity, message, metadata, triggeredAt, resolvedAt, isActive, channelSent)` - Alert representation
-  - `PrometheusAlertWebhook(version, groupKey, truncatedAlerts, status, alerts[])` - Webhook payload from AlertManager
-  - `PrometheusAlert(status, labels, annotations, startsAt, endsAt?)` - Individual alert from Prometheus
-- **Prometheus Integration** (`infra/alertmanager.yml`):
-  - Primary receiver: `meepleai-api-webhook` pointing to `/api/v1/alerts/prometheus`
-  - Forwards all firing and resolved alerts to AlertingService
-  - AlertManager handles grouping, throttling (4h repeat interval), and routing
-- **Alert Rules** (`infra/prometheus-rules.yml`):
-  - **Critical**: HighErrorRate (>1 err/s for 2min), ErrorSpike (3x avg), DatabaseDown, RedisDown, QdrantDown
-  - **Warning**: HighErrorRatio (>5% for 5min), RagErrorsDetected, SlowResponseTime, HighMemoryUsage
-  - **AI Quality** (AI-11.2): LowOverallConfidence (<60%), HighLowQualityRate (>30%), LowRagConfidence, LowLlmConfidence, QualityMetricsUnavailable
-- **Configuration** (`appsettings.json:Alerting`):
-  - `Enabled`, `ThrottleMinutes` (default: 60)
-  - Email: SmtpHost, SmtpPort, From, To[], UseTls, Username, Password
-  - Slack: WebhookUrl, Channel
-  - PagerDuty: IntegrationKey
-  - All channels disabled by default (enable via config + environment variables)
-- **Security**:
-  - Prometheus webhook: No auth (trusted internal network)
-  - Admin endpoints: Admin role required
-  - Sensitive config: SMTP password, Slack webhook, PagerDuty key via environment variables
-- **Tests**: 11 unit tests (all passing)
-  - `AlertingServiceTests.cs` - Alert creation, multi-channel distribution, throttling, resolution, channel failure tracking
-- **Docs**: `docs/issue/ops-07-implementation-summary.md` - Complete implementation summary
+| Feature | ID | Implementation | Tests |
+|---------|----|--------------|----|
+| **API Key Auth** | API-01 | ApiKeyAuthenticationService, Middleware, PBKDF2 (210k iter) | 21 unit + 17 integration |
+| **Session Mgmt** | AUTH-03 | SessionManagementService, auto-revoke (30d default), background svc | 39 tests |
+| **User Mgmt** | ADMIN-01 | UserManagementService, CRUD endpoints, safety checks | 75 tests |
+| **Analytics** | ADMIN-02 | AdminStatsService, 8 metrics, 5 charts, CSV/JSON export | 20 tests |
+| **Workflow Errors** | N8N-05 | WorkflowErrorLoggingService, n8n webhook, sensitive data redaction | 33 tests |
+| **Alerting** | OPS-07 | Email/Slack/PagerDuty, throttling (1hr), Prometheus integration | 11 tests |
+| **Streaming QA** | CHAT-01 | ILlmService, SSE endpoint, token-by-token | - |
+| **BGG Integration** | AI-13 | BggApiService, search/details, 7d cache, Polly retry | - |
+| **Setup Guide** | AI-03 | SetupGuideService, RAG-powered, 10 chunks, citations | 20+ tests |
+| **RAG Evaluation** | AI-06 | RagEvaluationService, P@K, MRR, quality gates | 28 tests |
+| **PDF Validation** | PDF-09 | PdfValidationService, magic bytes, size, page count | 42 tests |
+| **Hybrid Search** | AI-14 | KeywordSearchService, HybridSearchService, RRF fusion (70% vec + 30% keyword) | - |
+| **Rich Text Editor** | EDIT-03 | TipTap WYSIWYG, 15+ formats, auto-save (2s debounce) | 11/11 unit + E2E |
+| **Prompt Management** | ADMIN-01 | PromptTemplateService, Redis cache-first (<10ms), transaction-safe activation, version control | 40 tests |
 
-**Streaming Responses** (CHAT-01):
-- **ILlmService** (`Services/ILlmService.cs`, `Services/LlmService.cs`): Token-by-token streaming support
-  - `GenerateCompletionStreamAsync()` - Returns `IAsyncEnumerable<string>` for streaming tokens
-  - Supports both OpenRouter and Ollama LLM backends
-  - Proper SSE format parsing with cancellation support
-- **IStreamingQaService** (`Services/IStreamingQaService.cs`, `Services/StreamingQaService.cs`): Progressive QA responses via SSE
-  - `AskStreamAsync(gameId, query, chatId?)` - Streams QA response with events
-  - Event flow: StateUpdate → Citations → Token(s) → Complete
-  - Integrates with AI-05 response caching (simulates streaming for cached responses)
-  - Tracks tokens, confidence, and snippets for logging
-- **SSE Endpoint** (see `/api/v1/agents/qa/stream` in `Program.cs`):
-  - `POST /api/v1/agents/qa/stream` - Server-Sent Events endpoint for streaming QA
-  - SSE headers: `Content-Type: text/event-stream`, `Cache-Control: no-cache`, `Connection: keep-alive`
-  - Chat persistence of complete response after streaming
-  - AI request logging with latency, tokens, and confidence metrics
-  - Error events sent to client on failure
-- **Event Types** (`Models/Contracts.cs`):
-  - `StreamingEventType.Token` - Individual LLM token
-  - `StreamingToken(string token)` - Token data model
-  - Reuses existing: StateUpdate, Citations, Complete, Error, Heartbeat
-- **Docs**: `docs/issue/chat-01-streaming-sse-implementation.md` - Complete implementation guide
+**Vector Pipeline**: PDF → PdfTextExtractionService → TextChunkingService → EmbeddingService → QdrantService → RagService
 
-**BoardGameGeek Integration** (AI-13):
-- **BggApiService** (`Services/BggApiService.cs`, `Services/IBggApiService.cs`): BGG XML API v2 integration
-  - `SearchGamesAsync(query, exact)` - Search BGG by name, returns top 5 results
-  - `GetGameDetailsAsync(bggId)` - Fetch full game metadata (20+ fields)
-  - HybridCache integration with 7-day TTL (80%+ cache hit rate expected)
-  - Rate limiting via RateLimitService (2 req/s max to respect BGG limits)
-  - Retry logic with Polly (exponential backoff: 2s, 4s, 8s)
-- **Configuration** (`appsettings.json:Bgg`):
-  - BaseUrl, CacheTtlDays, MaxRequestsPerSecond, RetryCount, RetryDelaySeconds, TimeoutSeconds
-- **HTTP Client**: Named client "BggApi" with connection pooling (max 5 connections)
-- **Endpoints** (authentication required):
-  - `GET /api/v1/bgg/search?q={query}&exact={bool}` - Search BGG
-  - `GET /api/v1/bgg/games/{bggId}` - Get game details
-- **Frontend** (`lib/api.ts`):
-  - `api.bgg.search(query, exact?)` - Search BGG games
-  - `api.bgg.getGameDetails(bggId)` - Get game metadata
-  - `BggSearchModal` component for game import UI
-- **Database**: `bgg_id` (int nullable), `bgg_metadata` (jsonb) columns in `games` table
-- **Dependencies**: Microsoft.Extensions.Http.Polly 9.0.10
-- **Docs**: `docs/issue/ai-13-bgg-integration-implementation.md` - Complete implementation guide
+**Prompt Management** (ADMIN-01 Phase 1 MVP):
+- **PromptTemplateService** (`Services/PromptTemplateService.cs`, `Services/IPromptTemplateService.cs`): Database-driven prompt management with Redis caching
+  - `GetActivePromptAsync(templateName)` - Cache-first retrieval (Redis → DB → Config fallback, < 10ms target)
+  - `ActivateVersionAsync(templateId, versionId, userId)` - Transaction-safe activation with cache invalidation
+  - `InvalidateCacheAsync(templateName)` - Manual cache refresh
+  - Architecture: Redis cache (1hr TTL) → PostgreSQL → appsettings.json fallback
+  - Backward compatible with AI-07.1 configuration-based templates
+- **Admin API** (`Program.cs` v1Api group, lines 3976-4400+): 5 MVP endpoints
+  - `GET /api/v1/admin/prompts` - List templates (pagination, category filter)
+  - `POST /api/v1/admin/prompts` - Create template
+  - `GET /api/v1/admin/prompts/{id}` - Get template details
+  - `POST /api/v1/admin/prompts/{id}/versions` - Create new version
+  - `GET /api/v1/admin/prompts/{id}/versions` - Version history
+  - `POST /api/v1/admin/prompts/{id}/versions/{versionId}/activate` - Activate version (CRITICAL)
+- **Database**: `prompt_templates`, `prompt_versions`, `prompt_audit_logs` (migrated in AI-14)
+- **DTOs**: `PromptManagementDto.cs` - PromptTemplateDto, PromptVersionDto, PromptAuditLogDto, requests
+- **Tests**: 40/40 passing (6 new ADMIN-01 cache/activation tests + 34 existing AI-07.1 tests)
+- **Phase 1 Deliverables**: Core infrastructure with Redis caching, transaction safety, 5 admin endpoints
+- **Future Phases**: Admin UI (7 pages + Monaco editor), PromptEvaluationService testing framework, service migration (4 services)
 
-**Setup Guide Generation** (AI-03):
-- **SetupGuideService** (`Services/SetupGuideService.cs`): RAG-powered game setup wizard
-  - `GenerateSetupGuideAsync(gameId, chatId?)` - LLM synthesizes setup steps from RAG context
-  - Retrieves 10 most relevant chunks via RAG for comprehensive context
-  - Uses ILlmService to generate coherent, game-specific instructions
-  - Supports optional steps detection (setup variations)
-  - Distributes citation references across generated steps
-  - Falls back to default steps if LLM/RAG unavailable
-  - Integrates with AI-05 response caching for performance
-  - Returns structured response: steps with descriptions, citations, time estimates, confidence
-- **Frontend** (`pages/setup.tsx`, 735 lines): Interactive setup wizard
-  - Game selection with auto-load from /api/v1/games
-  - Generate button triggers RAG-powered step synthesis
-  - Real-time progress tracking with checkboxes
-  - Progress percentage calculation (completed/total)
-  - Citation modal for viewing rulebook references with page numbers
-  - Reset progress confirmation dialog
-  - Authentication gate (login required)
-  - Empty state before guide generation
-  - Loading indicators during API calls
-- **Endpoint** (`Program.cs`, v1Api group):
-  - `POST /api/v1/setup/generate` - Generate setup guide (requires authentication)
-  - Request: `{ "gameId": "uuid", "chatId": "uuid?" }`
-  - Response: `{ "steps": [...], "totalSteps": int, "estimatedTimeMinutes": int, "confidence": float? }`
-- **Tests**: Comprehensive coverage across all layers
-  - **Backend Unit**: `SetupGuideServiceComprehensiveTests.cs` (20+ tests) - RAG failures, LLM parsing, optional steps, cache scenarios, error handling
-  - **Backend Integration**: `SetupGuideEndpointIntegrationTests.cs` (11 tests) - BDD-style, auth, validation, token tracking, concurrent requests
-  - **Frontend Unit**: `pages/__tests__/setup.test.tsx` - Component behavior, authentication, data loading, step interactions, citations modal, edge cases
-  - **E2E**: `e2e/setup.spec.ts` - Full user flow, authentication gate, guide generation, step completion, progress tracking, citation modal interactions
+### API Versioning (API-01)
 
-**RAG Offline Evaluation** (AI-06):
-- **RagEvaluationService** (`Services/RagEvaluationService.cs`): Comprehensive IR metrics for RAG system
-  - `LoadDatasetAsync(filePath)` - Load test queries from JSON
-  - `EvaluateAsync(dataset, topK, thresholds?)` - Run evaluation with quality gates
-  - `GenerateMarkdownReport(report)` - Human-readable report with tables
-  - `GenerateJsonReport(report)` - Machine-readable JSON output
-  - Calculates: Precision@K (K=1,3,5,10), Recall@K, Mean Reciprocal Rank (MRR), latency percentiles (p50, p95, p99)
-  - Quality thresholds: P@5 ≥ 0.70, MRR ≥ 0.60, Latency p95 ≤ 2000ms, Success rate ≥ 95%
-- **Test Dataset** (`tests/Api.Tests/TestData/rag-evaluation-dataset.json`): 24 queries
-  - 8 Tic-Tac-Toe queries (setup, gameplay, winning conditions)
-  - 16 Chess queries (setup, piece movement, special moves, draw conditions)
-  - Ground truth answers and relevant document IDs for recall calculation
-  - Difficulty levels (easy, medium, hard) and categories for analysis
-- **CI Integration** (`.github/workflows/ci.yml`): `rag-evaluation` job
-  - Runs integration tests with Testcontainers (Postgres + Qdrant)
-  - Generates evaluation report (markdown summary)
-  - Uploads artifacts (30-day retention)
-  - Enforces quality gates (fails CI if thresholds not met)
-- **Tests**: 28+ tests (20 unit + 8 integration)
-  - `RagEvaluationServiceTests.cs` - Metric calculations, edge cases, report generation
-  - `RagEvaluationIntegrationTests.cs` - End-to-end with real Qdrant, quality gate enforcement
-- **Docs**: `docs/ai-06-rag-evaluation.md` - Complete guide with metrics explanations, troubleshooting
+- **Versioned**: `/api/v1/*` (all business endpoints)
+- **Unversioned**: `/`, `/health`, `/health/ready`, `/health/live`
+- **Swagger**: `/api/docs` (dev only)
+- **Auth**: ApiKey (X-API-Key) + Cookie
 
-**Vector Pipeline**: PDF → PdfTextExtractionService → TextChunkingService → EmbeddingService (OpenRouter) → QdrantService → RagService (search)
+### Observability
 
-**PDF Validation** (PDF-09):
-- **PdfValidationService** (`Services/PdfValidationService.cs`): Pre-upload PDF validation
-  - `ValidateAsync(stream, fileName)` - Comprehensive validation: magic bytes, structure, page count, PDF version
-  - `ValidateFileSize(bytes)` - File size validation (max 100MB configurable)
-  - `ValidateMimeType(contentType)` - MIME type validation (application/pdf)
-  - Thread-safe with Docnet.Core semaphore
-  - Returns structured errors: `{ "error": "validation_failed", "details": { "fileSize": "...", "pageCount": "..." } }`
-- **Configuration** (`appsettings.json:PdfProcessing`):
-  - `MaxFileSizeBytes`: 104857600 (100 MB)
-  - `MaxPageCount`: 500
-  - `MinPageCount`: 1
-  - `MinPdfVersion`: "1.4"
-  - `AllowedContentTypes`: ["application/pdf"]
-- **Client-Side Validation** (`pages/upload.tsx`):
-  - MIME type check (application/pdf)
-  - File size check (100MB limit)
-  - PDF magic bytes validation (%PDF-)
-  - Real-time validation on file selection
-  - Visual feedback (red border, error list, success indicator)
-- **Server-Side Endpoint** (PDF upload validation in `Program.cs`):
-  - Validates before `PdfStorageService.UploadPdfAsync()`
-  - Returns 400 Bad Request with structured error details
-  - Falls back to upload on validation success
-- **Tests**: 42 tests (33 unit + 9 integration)
-  - `PdfValidationServiceTests.cs` - File size, MIME, magic bytes, page count, PDF version, structure
-  - `PdfUploadValidationIntegrationTests.cs` - End-to-end validation flow, error responses
-- **Docs**: `docs/issue/pdf-09-validation-implementation.md` - Complete implementation guide
+| Component | Purpose | Location |
+|-----------|---------|----------|
+| **Health Checks** (OPS-01) | `/health`, `/health/ready`, `/health/live` | Postgres, Redis, Qdrant |
+| **Logging** | Serilog → Console + Seq | `X-Correlation-Id` header |
+| **Seq Dashboard** | Centralized logs | `http://localhost:8081` |
+| **Tracing** (OPS-02) | OTLP → Jaeger, W3C context | `http://localhost:16686` |
+| **Metrics** | Prometheus `/metrics` | `http://localhost:9090` |
+| **Grafana** | Dashboards (API, AI/RAG, Infra, Quality) | `http://localhost:3001` (admin/admin) |
 
-**API Versioning** (API-01):
-- **URL Path Strategy**: All API endpoints under `/api/v1/*`
-- **Infrastructure Endpoints**: Unversioned (`/`, `/health`, `/health/ready`, `/health/live`)
-- **Swagger/OpenAPI**: Available at `/api/docs` in development mode
-  - Supports both ApiKey (`X-API-Key` header) and Cookie authentication
-  - Security definitions for both auth methods
-  - Bearer token style for API keys
-- **Example URLs**:
-  - `/api/v1/auth/login` - Authentication
-  - `/api/v1/games` - Games list
-  - `/api/v1/agents/qa` - Q&A agent
-  - `/api/v1/logs/workflow-error` - N8N-05: Workflow error webhook (no auth)
-  - `/api/v1/admin/workflows/errors` - N8N-05: Admin workflow errors list
-  - `/health/ready` - Health check (unversioned)
+**Custom Metrics** (`Api/Observability/MeepleAiMetrics.cs`):
+- RAG: requests, duration, tokens, confidence, errors
+- Vector: search, indexing, results
+- PDF: upload, processing, pages, errors
+- Cache: hits, misses, evictions
+- Quality (AI-11.2): score (rag/llm/citation/overall), low_quality_count
 
-**CORS** (configured in `Program.cs`): Policy "web", origins from config, fallback `http://localhost:3000`, credentials enabled
-
-**Logging** (Serilog, see `Api/Logging/LoggingConfiguration.cs`): Console + Seq, enriched (MachineName, EnvironmentName, CorrelationId), X-Correlation-Id header. Levels: Info (default), Warning (AspNetCore, EF)
-
-**Observability** (OPS-01):
-- **Health Checks** (configured in `Program.cs`): `/health` (detailed), `/health/ready` (K8s readiness), `/health/live` (K8s liveness). Monitors Postgres, Redis, Qdrant (HTTP + collection)
-- **Seq Dashboard**: `http://localhost:8081` - Centralized log aggregation, search by correlation ID, user ID, endpoint. Configured via `SEQ_URL` env var
-- **Correlation IDs**: Every request gets `X-Correlation-Id` response header (= `TraceIdentifier`). All logs enriched with `RequestId`, `RequestPath`, `RequestMethod`, `UserAgent`, `RemoteIp`, `UserId`, `UserEmail`
-- **Docs**: `docs/observability.md` - Complete observability guide
-
-**OpenTelemetry** (OPS-02):
-- **Distributed Tracing**: OTLP export to Jaeger, W3C Trace Context propagation, filtered health checks/metrics from traces
-- **Metrics**: Prometheus exporter at `/metrics`, custom meters for RAG/AI, vector search, PDF processing, cache ops
-- **Infrastructure**: Jaeger UI (:16686), Prometheus (:9090), Grafana (:3001) with auto-provisioned dashboards
-- **Custom Metrics** (`Api/Observability/MeepleAiMetrics.cs`):
-  - RAG: `meepleai.rag.requests.total`, `meepleai.rag.request.duration`, `meepleai.ai.tokens.used`, `meepleai.rag.confidence.score`, `meepleai.rag.errors.total`
-  - Vector Search: `meepleai.vector.search.total`, `meepleai.vector.search.duration`, `meepleai.vector.results.count`, `meepleai.vector.indexing.duration`
-  - PDF: `meepleai.pdf.upload.total`, `meepleai.pdf.processing.duration`, `meepleai.pdf.pages.processed`, `meepleai.pdf.extraction.errors`
-  - Cache: `meepleai.cache.hits.total`, `meepleai.cache.misses.total`, `meepleai.cache.evictions.total`
-  - Quality (AI-11.2): `meepleai.quality.score` (histogram by dimension: rag_confidence, llm_confidence, citation_quality, overall_confidence), `meepleai.quality.low_quality_responses.total` (counter)
-- **Dashboards**: `infra/dashboards/` - API Performance, AI/RAG Operations, Infrastructure, AI Quality Monitoring (auto-provisioned)
-- **Prometheus Alerts** (`infra/prometheus-rules.yml`): Error monitoring (OPS-05), AI quality alerts (AI-11.2: LowOverallConfidence, HighLowQualityRate, LowRagConfidence, LowLlmConfidence, QualityMetricsUnavailable)
-- **Configuration**: `OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318` in `infra/env/api.env.dev`
-- **Packages**: OpenTelemetry 1.13.1 (core), Instrumentation 1.12.0 (AspNetCore, Http, Runtime), Prometheus Exporter 1.13.1-beta.1
-- **Tests**: `OpenTelemetryIntegrationTests.cs` - Metrics endpoint, HTTP/runtime metrics, Prometheus format
-- **Docs**: `docs/ops-02-opentelemetry-design.md` - Architecture & implementation guide, `docs/observability.md` - AI Quality Monitoring section, `docs/runbooks/ai-quality-low.md` - Quality alert troubleshooting
+**Prometheus Alerts** (`infra/prometheus-rules.yml`):
+- Critical: HighErrorRate (>1/s 2min), ErrorSpike (3x), DatabaseDown, RedisDown, QdrantDown
+- Warning: HighErrorRatio (>5% 5min), RagErrors, SlowResponse, HighMemory
+- AI Quality: LowOverallConfidence (<60%), HighLowQualityRate (>30%), LowRagConfidence, LowLlmConfidence
 
 ## Testing
 
-**API**: xUnit + Moq + Testcontainers (Postgres, Qdrant), WebApplicationFactory, Coverlet. SQLite for unit tests, Testcontainers for integration. CI: `CI=true`, `DocnetRuntime=linux`
+| Layer | Stack | Coverage |
+|-------|-------|----------|
+| **API** | xUnit + Moq + Testcontainers (Postgres, Qdrant) | SQLite (unit), Testcontainers (integration) |
+| **Web** | Jest (jsdom) + Playwright | 90% threshold |
+| **CI** | `CI=true`, `DocnetRuntime=linux` | |
 
-**Web**: Jest (jsdom, 90% threshold) + Playwright E2E. Patterns: `**/__tests__/**/*.[jt]s?(x)`, module alias `@/*`
-
-**Coverage**: `pwsh tools/measure-coverage.ps1 [-Project api|web] [-GenerateHtml]`. See `docs/code-coverage.md`. Note: Full API coverage ~10min, use test filters in dev
+**Coverage**: `pwsh tools/measure-coverage.ps1 [-Project api|web] [-GenerateHtml]`
 
 ## CI/CD
 
 **Main Pipeline** (`.github/workflows/ci.yml`):
-- **ci-web**: Lint → Typecheck → Test (Node 20, pnpm 9)
-- **ci-api**: Build → Test (.NET 9, postgres, qdrant, libgdiplus, `CI=true`)
-- **Current Performance**: ~10-12 minutes (post-OPS-06 optimizations)
-- **CI Strategy**: See `docs/technic/ops-08-self-hosted-runners-analysis.md` for performance enhancement options
+- ci-web: Lint → Typecheck → Test (Node 20, pnpm 9)
+- ci-api: Build → Test (.NET 9, postgres, qdrant, libgdiplus)
+- Performance: ~10-12min (post-OPS-06)
 
-**Security** (`.github/workflows/security-scan.yml`, see `docs/security-scanning.md`):
-1. **CodeQL SAST**: C#, JS/TS, security-extended queries
-2. **Deps**: `dotnet list package --vulnerable`, `pnpm audit` (fails on HIGH/CRITICAL)
-3. **.NET Analyzers**: SecurityCodeScan v5.6.7, NetAnalyzers v9.0.0 (SQL injection, XSS, crypto)
-4. **Dependabot**: Weekly (Mondays), NuGet, npm, Actions, Docker
-- Quick scan: `cd apps/api && dotnet list package --vulnerable --include-transitive` / `cd apps/web && pnpm audit --audit-level=high`
-- Reports: 30-day CI artifacts
+**Security** (`.github/workflows/security-scan.yml`):
+1. CodeQL SAST (C#, JS/TS)
+2. Deps: `dotnet list package --vulnerable`, `pnpm audit`
+3. .NET Analyzers: SecurityCodeScan v5.6.7, NetAnalyzers v9.0.0
+4. Dependabot: Weekly (Mondays)
+
+**Quick Scan**:
+```bash
+cd apps/api && dotnet list package --vulnerable --include-transitive
+cd apps/web && pnpm audit --audit-level=high
+```
 
 ## Environment
 
-Templates: `infra/env/*.env.*.example`. Never commit `.env.dev/local/prod`
+Templates: `infra/env/*.env.*.example` (never commit `.env.dev/local/prod`)
 
-**API**: `OPENROUTER_API_KEY`, `QDRANT_URL` (default: `http://qdrant:6333`), `REDIS_URL` (default: `redis:6379`), `SEQ_URL` (default: `http://seq:5341`), `ConnectionStrings__Postgres`
-**Web**: `NEXT_PUBLIC_API_BASE` (default: `http://localhost:8080`)
-**n8n**: Workflow config
+**API**: `OPENROUTER_API_KEY`, `QDRANT_URL` (http://qdrant:6333), `REDIS_URL` (redis:6379), `SEQ_URL` (http://seq:5341), `ConnectionStrings__Postgres`
+**Web**: `NEXT_PUBLIC_API_BASE` (http://localhost:8080)
 
 ## Workflows
 
-**New API Endpoint**: Service method → `Program.cs` v1 route group endpoint (line 468+) → models in `Models/` → tests → auth/authz
-- All new endpoints must use versioned path: `v1Api.MapGet("/resource", ...)` not `app.MapGet("/api/v1/resource", ...)`
-- Infrastructure endpoints (health checks, root) remain unversioned
+**New API Endpoint**:
+1. Service method → `Program.cs` v1Api group (line 468+) → `Models/` DTOs → tests → auth
+2. Use `v1Api.MapGet("/resource", ...)` NOT `app.MapGet("/api/v1/resource", ...)`
+3. Infrastructure endpoints remain unversioned
 
-**New DB Entity**: `Infrastructure/Entities/` → `DbSet<T>` in `MeepleAiDbContext` → `dotnet ef migrations add <Name> --project src/Api` → review → `dotnet ef database update --project src/Api`
+**New DB Entity**:
+`Infrastructure/Entities/` → `DbSet<T>` in `MeepleAiDbContext` → `dotnet ef migrations add <Name> --project src/Api` → review → `dotnet ef database update --project src/Api`
 
-**Vector Search Flow**: Upload PDF → PdfTextExtractionService → TextChunkingService → EmbeddingService → `QdrantService.IndexTextChunksAsync()` → query via `RagService.SearchAsync()`. Note: shared context, no tenant partitioning
+**Vector Search Flow**:
+Upload PDF → PdfTextExtractionService → TextChunkingService → EmbeddingService → `QdrantService.IndexTextChunksAsync()` → query via `RagService.SearchAsync()`
 
-**New Frontend Page**: Create `pages/<name>.tsx` → use `@/lib/api` → tests in `__tests__/<name>.test.tsx` → 90% coverage
+**New Frontend Page**:
+`pages/<name>.tsx` → use `@/lib/api` → `__tests__/<name>.test.tsx` → 90% coverage
 
 **Local Full Stack**:
 ```bash
-cd infra && docker compose up postgres qdrant redis ollama n8n seq jaeger prometheus grafana  # Terminal 1
-cd apps/api/src/Api && dotnet run                                                              # Terminal 2 (port 8080)
-cd apps/web && pnpm dev                                                                        # Terminal 3 (port 3000)
-# Observability UIs:
-# - Seq (logs): http://localhost:8081
-# - Jaeger (traces): http://localhost:16686
-# - Prometheus (metrics): http://localhost:9090
-# - Grafana (dashboards): http://localhost:3001 (admin/admin)
-# - API metrics: http://localhost:8080/metrics
+cd infra && docker compose up postgres qdrant redis ollama n8n seq jaeger prometheus grafana  # T1
+cd apps/api/src/Api && dotnet run                                                              # T2 (8080)
+cd apps/web && pnpm dev                                                                        # T3 (3000)
+# UIs: Seq :8081, Jaeger :16686, Prometheus :9090, Grafana :3001, Metrics /metrics
 ```
 
-**RuleSpec v0** (`schemas/rulespec.v0.schema.json`): Machine-readable board game rules for AI/LLM
-- **Structure**: Metadata, Setup, Phases, Actions, Scoring, End Conditions, Edge Cases, Glossary
-- **Examples**: `tic-tac-toe.rulespec.json`, `chess.rulespec.json` (1146 lines)
-- **Validate**: `node schemas/validate-all-examples.js`
-- **Code**: `Models/RuleSpecV0.cs`, `Entities/RuleSpecEntity.cs`, `RuleSpecService`, `RuleSpecDiffService`, `RuleSpecV0ModelTests.cs` (786 lines)
-- **Docs**: `schemas/README.md`
+**RuleSpec v0** (`schemas/rulespec.v0.schema.json`): Machine-readable rules for AI/LLM
+- Structure: Metadata, Setup, Phases, Actions, Scoring, End, Edge Cases, Glossary
+- Examples: tic-tac-toe, chess (1146 lines)
+- Validate: `node schemas/validate-all-examples.js`
+- Code: `Models/RuleSpecV0.cs`, `Entities/RuleSpecEntity.cs`, Services, Tests (786 lines)
 
-## Quality
+## Quality Standards
 
-**C#**: Standard conventions, nullable refs (`<Nullable>enable</Nullable>`), async I/O, DI in `Program.cs`, `ILogger<T>`, Serilog, appropriate HTTP status codes
+**C#**: Standard conventions, nullable refs, async I/O, DI in `Program.cs`, `ILogger<T>`, Serilog, proper HTTP codes
+**TS/React**: Strict mode, ESLint, avoid `any`, use `@/lib/api`, AAA tests
 
-**TS/React**: Strict mode, ESLint (Next.js), avoid `any`, use `@/lib/api`, Arrange-Act-Assert tests
+## Key Docs
 
-## Key Documentation
-
-- **Security**: `docs/SECURITY.md` - Security policies, secret management, key rotation procedures
-- **Database**: `docs/database-schema.md` - Complete DB schema reference
-- **Observability**: `docs/observability.md` - Health checks, logging, Seq dashboard, correlation IDs (OPS-01)
-- **OpenTelemetry**: `docs/technic/ops-02-opentelemetry-design.md` - Distributed tracing & metrics architecture (OPS-02)
-- **Performance Optimizations Summary**: `docs/technic/performance-optimization-summary.md` - Complete overview of PERF-05 through PERF-11 implementations
-- **HybridCache**: `docs/technic/perf-05-hybridcache-implementation.md` - HybridCache L1+L2 caching, cache stampede protection (PERF-05)
-- **AsNoTracking**: `docs/technic/perf-06-asnotracking-implementation.md` - EF Core query optimization for 30% faster reads (PERF-06)
-- **Sentence-Aware Chunking**: `docs/technic/perf-07-sentence-aware-chunking.md` - Intelligent text segmentation for 20% better RAG accuracy (PERF-07)
-- **Query Expansion**: `docs/technic/perf-08-query-expansion.md` - Rule-based query variations with RRF fusion for 15-25% better recall (PERF-08)
-- **Connection Pooling**: `docs/technic/perf-09-connection-pooling.md` - Optimized Postgres, Redis, and HTTP client pooling for 30-50% better throughput (PERF-09)
-- **Async All The Way**: `docs/technic/perf-10-async-all-the-way.md` - 100% async I/O coverage audit, best practices documentation (PERF-10)
-- **Response Compression**: `docs/technic/perf-11-response-compression.md` - Brotli/Gzip compression for 60-80% bandwidth reduction (PERF-11)
-- **Phase 2 Analysis**: `docs/technic/perf-p2-analysis.md` - P2 optimizations feasibility analysis (ValueTask, Compiled Queries not applicable; Batch Embeddings, Vector Tuning, Read Replicas viable for Phase 3)
-- **RAG Evaluation**: `docs/ai-06-rag-evaluation.md` - Offline evaluation system, IR metrics, quality gates (AI-06)
-- **RAG Optimization**: `docs/technic/ai-07-rag-optimization-phase1.md` - Phase 1 optimization design: prompt engineering, semantic chunking, query expansion (AI-07)
-- **Hybrid Search** (AI-14): `docs/guide/hybrid-search-guide.md` - Comprehensive guide to hybrid search (PostgreSQL full-text + Qdrant vector fusion with RRF algorithm)
-  - **KeywordSearchService** (`Services/KeywordSearchService.cs`): PostgreSQL full-text search with tsvector, ts_rank_cd scoring, phrase search support
-  - **HybridSearchService** (`Services/HybridSearchService.cs`): RRF (Reciprocal Rank Fusion) combining vector + keyword results
-  - **SearchMode enum**: Semantic (vector-only), Keyword (full-text only), Hybrid (RRF fusion, default: 70% vector + 30% keyword)
-  - **Database**: text_chunks table with search_vector tsvector column, GIN indexes, auto-update triggers
-  - **Frontend**: SearchModeToggle component (components/SearchModeToggle.tsx) with 3-way toggle UI
-  - **Configuration**: HybridSearch section in appsettings.json (VectorWeight, KeywordWeight, RrfConstant, BoostTerms)
-  - **Performance**: <300ms target, 20%+ relevance improvement vs vector-only
-  - **Migration**: 20251026085550_AddFullTextSearchSupport.cs
-- **n8n Workflows**: `docs/guide/n8n-integration-guide.md` - n8n webhook integrations (N8N-01: Explain, N8N-03: Q&A)
-  - Technical designs: `docs/technic/n8n-webhook-explain-design.md`, `docs/technic/n8n-webhook-qa-design.md`
-  - Workflow JSONs: `infra/init/n8n/agent-explain-orchestrator.json`, `infra/init/n8n/agent-qa-webhook.json`
-  - **Error Handling** (N8N-05): `docs/guide/n8n-error-handling.md` - Comprehensive error handling, retry logic, Slack alerts, centralized logging
-  - **Workflow Templates** (N8N-04): Spec at `docs/issue/n8n-04-implementation-spec.md`, example template in `infra/n8n/templates/integration-slack-notifications.json`, DTOs ready (WorkflowTemplateDto, TemplateParameterDto, ImportTemplateRequest)
-- **Coverage**: `docs/code-coverage.md` - Coverage measurement & tracking
-- **Security Scanning**: `docs/security-scanning.md` - CI security scanning guide
-- **Repository Migration**: `docs/guide/repository-visibility-migration.md` - Complete guide for changing repository visibility (public ↔ private)
-- **Schemas**: `schemas/README.md` - RuleSpec v0 schema reference
-- **Skills Guide**: `docs/guides/SKILLS_GUIDE.md` - Complete guide to 21 available skills (testing, pdf-design, excel, UI design, visual assets, themed output)
+| Category | Path | Content |
+|----------|------|---------|
+| **Security** | `docs/SECURITY.md` | Policies, secrets, key rotation |
+| **Database** | `docs/database-schema.md` | Complete schema ref |
+| **Observability** | `docs/observability.md` | Health, logging, correlation (OPS-01) |
+| **OpenTelemetry** | `docs/technic/ops-02-opentelemetry-design.md` | Tracing, metrics (OPS-02) |
+| **Perf Summary** | `docs/technic/performance-optimization-summary.md` | PERF-05 to PERF-11 |
+| **HybridCache** | `docs/technic/perf-05-hybridcache-implementation.md` | L1+L2 cache (PERF-05) |
+| **AsNoTracking** | `docs/technic/perf-06-asnotracking-implementation.md` | EF optimization (PERF-06) |
+| **Chunking** | `docs/technic/perf-07-sentence-aware-chunking.md` | Sentence-aware (PERF-07) |
+| **Query Expansion** | `docs/technic/perf-08-query-expansion.md` | RRF fusion (PERF-08) |
+| **Pooling** | `docs/technic/perf-09-connection-pooling.md` | PG/Redis/HTTP (PERF-09) |
+| **Async** | `docs/technic/perf-10-async-all-the-way.md` | 100% async audit (PERF-10) |
+| **Compression** | `docs/technic/perf-11-response-compression.md` | Brotli/Gzip (PERF-11) |
+| **P2 Analysis** | `docs/technic/perf-p2-analysis.md` | Phase 2 feasibility |
+| **RAG Eval** | `docs/ai-06-rag-evaluation.md` | IR metrics, gates (AI-06) |
+| **RAG Opt** | `docs/technic/ai-07-rag-optimization-phase1.md` | Phase 1 design (AI-07) |
+| **Hybrid Search** | `docs/guide/hybrid-search-guide.md` | PG FTS + Qdrant RRF (AI-14) |
+| **n8n Integration** | `docs/guide/n8n-integration-guide.md` | N8N-01, N8N-03 webhooks |
+| **n8n Errors** | `docs/guide/n8n-error-handling.md` | Error handling (N8N-05) |
+| **Coverage** | `docs/code-coverage.md` | Measurement & tracking |
+| **Security Scan** | `docs/security-scanning.md` | CI scanning guide |
+| **Repo Migration** | `docs/guide/repository-visibility-migration.md` | Public ↔ private |
+| **Schemas** | `schemas/README.md` | RuleSpec v0 reference |
+| **Skills** | `docs/guides/SKILLS_GUIDE.md` | 21 available skills |
 
 ## Troubleshooting
 
-- **Migration errors**: Check `__EFMigrationsHistory`, rollback: `dotnet ef database update <PreviousMigration>`
-- **Qdrant failures**: `curl http://localhost:6333/healthz`, check API startup logs
-- **CORS errors**: Verify `NEXT_PUBLIC_API_BASE`, check `Program.cs` CORS config, ensure `credentials: "include"`
-- **CI test failures**: Check Docker/Linux issues (Docnet runtime), verify env vars, ensure services healthy
-- **Auth issues**: Check `SessionCookieConfiguration`, verify `user_sessions` table, check browser cookie settings
-- **Health check failures**: `curl http://localhost:8080/health` - Check Postgres/Redis/Qdrant status. See `docs/observability.md`
-- **Seq not receiving logs**: Verify `SEQ_URL` in env, check `docker compose logs seq`, test `curl http://localhost:5341/api`
-- i documenti guida mettili in ./docs/guide, i documenti tecnici in ./docs/technic, i documenti sulle risoluzioni issue/pr in ./docs/issue, i documenti sull'app in ./docs
+| Issue | Check | Fix |
+|-------|-------|-----|
+| **Migration errors** | `__EFMigrationsHistory` | `dotnet ef database update <PreviousMigration>` |
+| **Qdrant failures** | `curl http://localhost:6333/healthz` | Check API logs |
+| **CORS errors** | `NEXT_PUBLIC_API_BASE`, `Program.cs` CORS | Verify `credentials: "include"` |
+| **CI test failures** | Docker/Linux, env vars | Verify Docnet runtime=linux |
+| **Auth issues** | `SessionCookieConfiguration`, `user_sessions` | Check browser cookies |
+| **Health check failures** | `curl http://localhost:8080/health` | Check PG/Redis/Qdrant |
+| **Seq logs missing** | `SEQ_URL`, `docker compose logs seq` | `curl http://localhost:5341/api` |
+
+**Doc Locations**: guides → `docs/guide`, technical → `docs/technic`, issues/PRs → `docs/issue`, app docs → `docs`

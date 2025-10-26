@@ -1,18 +1,30 @@
+using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using StackExchange.Redis;
 using System.Text;
+using System.Text.Json;
 
 namespace Api.Services;
 
 /// <summary>
-/// AI-07.1: Service for managing RAG prompt templates with few-shot learning support
-/// Implements LangChain-style prompt engineering with configurable templates and examples
+/// ADMIN-01: Enhanced prompt template service with database-driven prompts and Redis caching
+/// Combines AI-07.1 few-shot learning with admin-configurable prompt management
+/// Architecture: Redis cache-first → PostgreSQL fallback → Configuration fallback
 /// </summary>
 public class PromptTemplateService : IPromptTemplateService
 {
+    private readonly MeepleAiDbContext _dbContext;
+    private readonly IConnectionMultiplexer _redis;
     private readonly RagPromptsConfiguration _config;
     private readonly ILogger<PromptTemplateService> _logger;
+
+    // ADMIN-01: Cache configuration
+    private const string CacheKeyPrefix = "prompt:";
+    private const int DefaultCacheTtlSeconds = 3600; // 1 hour
 
     // Fallback hardcoded prompts for backward compatibility
     private static readonly PromptTemplate FallbackTemplate = new()
@@ -37,11 +49,15 @@ ANSWER:",
     };
 
     public PromptTemplateService(
+        MeepleAiDbContext dbContext,
+        IConnectionMultiplexer redis,
         IOptions<RagPromptsConfiguration> config,
         ILogger<PromptTemplateService> logger)
     {
+        _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _redis = redis ?? throw new ArgumentNullException(nameof(redis));
         _config = config?.Value ?? new RagPromptsConfiguration();
-        _logger = logger;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>
@@ -235,6 +251,231 @@ ANSWER:",
             GameId = gameId,
             QuestionType = questionType
         };
+    }
+
+    #endregion
+
+    #region ADMIN-01: Database-Driven Prompt Management with Redis Caching
+
+    /// <summary>
+    /// ADMIN-01: Gets active prompt from cache-first architecture
+    /// Flow: Redis cache → PostgreSQL → Configuration fallback
+    /// </summary>
+    public async Task<string?> GetActivePromptAsync(string templateName, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(templateName))
+        {
+            throw new ArgumentException("Template name cannot be null or empty", nameof(templateName));
+        }
+
+        var cacheKey = $"{CacheKeyPrefix}{templateName}:active";
+
+        try
+        {
+            // Step 1: Try Redis cache first (< 10ms target)
+            var db = _redis.GetDatabase();
+            var cachedPrompt = await db.StringGetAsync(cacheKey);
+
+            if (cachedPrompt.HasValue)
+            {
+                _logger.LogDebug("Cache HIT for prompt template {TemplateName}", templateName);
+                return cachedPrompt.ToString();
+            }
+
+            _logger.LogDebug("Cache MISS for prompt template {TemplateName}, querying database", templateName);
+
+            // Step 2: Query PostgreSQL for active version
+            var activeVersion = await _dbContext.Set<PromptVersionEntity>()
+                .AsNoTracking() // PERF-06: Read-only query optimization
+                .Include(v => v.Template)
+                .Where(v => v.Template.Name == templateName && v.IsActive)
+                .OrderByDescending(v => v.VersionNumber)
+                .FirstOrDefaultAsync(ct);
+
+            if (activeVersion != null)
+            {
+                // Step 3: Populate cache with TTL (FIX: Wait for acknowledgment instead of fire-and-forget)
+                var cacheSet = await db.StringSetAsync(
+                    cacheKey,
+                    activeVersion.Content,
+                    TimeSpan.FromSeconds(DefaultCacheTtlSeconds));
+
+                if (cacheSet)
+                {
+                    _logger.LogInformation(
+                        "Loaded active prompt {TemplateName} version {Version} from database and cached successfully",
+                        templateName, activeVersion.VersionNumber);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Cache write failed for prompt {TemplateName}, will retry on next cache miss",
+                        templateName);
+                }
+
+                return activeVersion.Content;
+            }
+
+            // Step 4: Fallback to configuration (backward compatibility)
+            _logger.LogWarning(
+                "No active database prompt found for {TemplateName}, falling back to configuration",
+                templateName);
+
+            return null; // Caller should handle fallback logic
+        }
+        catch (RedisException ex)
+        {
+            // Redis failure: fallback to database (degraded mode)
+            _logger.LogWarning(ex, "Redis unavailable for prompt {TemplateName}, using database directly", templateName);
+
+            var activeVersion = await _dbContext.Set<PromptVersionEntity>()
+                .AsNoTracking()
+                .Include(v => v.Template)
+                .Where(v => v.Template.Name == templateName && v.IsActive)
+                .OrderByDescending(v => v.VersionNumber)
+                .FirstOrDefaultAsync(ct);
+
+            return activeVersion?.Content;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving prompt template {TemplateName}", templateName);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// ADMIN-01: Activates a prompt version with transaction safety and cache invalidation
+    /// Critical: Ensures only ONE active version per template + atomic cache invalidation
+    /// </summary>
+    public async Task<bool> ActivateVersionAsync(string templateId, string versionId, string activatedByUserId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(templateId))
+        {
+            throw new ArgumentException("Template ID cannot be null or empty", nameof(templateId));
+        }
+        if (string.IsNullOrWhiteSpace(versionId))
+        {
+            throw new ArgumentException("Version ID cannot be null or empty", nameof(versionId));
+        }
+        if (string.IsNullOrWhiteSpace(activatedByUserId))
+        {
+            throw new ArgumentException("Activated by user ID cannot be null or empty", nameof(activatedByUserId));
+        }
+
+        // FIX: Load user BEFORE transaction to reduce transaction scope and lock duration
+        // Note: NOT using AsNoTracking because user entity is reused in audit log (needs tracking)
+        var changedByUser = await _dbContext.Set<UserEntity>()
+            .FirstOrDefaultAsync(u => u.Id == activatedByUserId, ct);
+
+        if (changedByUser == null)
+        {
+            _logger.LogWarning("User {UserId} not found for activation", activatedByUserId);
+            throw new InvalidOperationException($"User {activatedByUserId} not found");
+        }
+
+        using var transaction = await _dbContext.Database.BeginTransactionAsync(ct);
+
+        try
+        {
+            // Step 1: Verify version exists and belongs to template
+            var versionToActivate = await _dbContext.Set<PromptVersionEntity>()
+                .Include(v => v.Template)
+                .FirstOrDefaultAsync(v => v.Id == versionId && v.TemplateId == templateId, ct);
+
+            if (versionToActivate == null)
+            {
+                _logger.LogWarning(
+                    "Version {VersionId} not found for template {TemplateId}",
+                    versionId, templateId);
+                return false;
+            }
+
+            // Step 2: Deactivate all other versions for this template (ensure single active)
+            var otherVersions = await _dbContext.Set<PromptVersionEntity>()
+                .Where(v => v.TemplateId == templateId && v.Id != versionId && v.IsActive)
+                .ToListAsync(ct);
+
+            foreach (var version in otherVersions)
+            {
+                version.IsActive = false;
+                _logger.LogDebug(
+                    "Deactivating version {VersionId} (v{VersionNumber})",
+                    version.Id, version.VersionNumber);
+            }
+
+            // Step 3: Activate the target version
+            versionToActivate.IsActive = true;
+
+            // Step 4: Create audit log entry (navigation properties set via FK, not entity references)
+            // Note: changedByUser was fetched with AsNoTracking(), so we use only the FK
+            var auditLog = new PromptAuditLogEntity
+            {
+                Id = Guid.NewGuid().ToString(),
+                TemplateId = templateId,
+                VersionId = versionId,
+                Action = "version_activated",
+                ChangedByUserId = activatedByUserId,
+                ChangedAt = DateTime.UtcNow,
+                Details = $"Activated version {versionToActivate.VersionNumber}",
+                Template = versionToActivate.Template,
+                ChangedBy = changedByUser // EF Core will handle FK relationship
+            };
+
+            _dbContext.Set<PromptAuditLogEntity>().Add(auditLog);
+
+            // Step 5: Save changes (within transaction)
+            await _dbContext.SaveChangesAsync(ct);
+
+            // Step 6: Commit transaction (atomic) - FIX: Commit BEFORE cache invalidation
+            await transaction.CommitAsync(ct);
+
+            _logger.LogInformation(
+                "Transaction committed for template {TemplateName} version {VersionNumber}",
+                versionToActivate.Template.Name, versionToActivate.VersionNumber);
+
+            // Step 7: Invalidate cache AFTER transaction commit (prevents stale cache)
+            // This ensures cache doesn't contain old data while transaction uncommitted
+            var cacheKey = $"{CacheKeyPrefix}{versionToActivate.Template.Name}:active";
+            var db = _redis.GetDatabase();
+            var deleted = await db.KeyDeleteAsync(cacheKey);
+
+            _logger.LogInformation(
+                "Cache invalidation for template {TemplateName} after activation: {Result}",
+                versionToActivate.Template.Name, deleted ? "SUCCESS" : "KEY_NOT_FOUND");
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            // Rollback on any error
+            await transaction.RollbackAsync(ct);
+            _logger.LogError(
+                ex,
+                "Error activating version {VersionId} for template {TemplateId}",
+                versionId, templateId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// ADMIN-01: Invalidates cache for a specific template
+    /// Used for manual cache refresh or debugging
+    /// </summary>
+    public async Task InvalidateCacheAsync(string templateName, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(templateName))
+        {
+            throw new ArgumentException("Template name cannot be null or empty", nameof(templateName));
+        }
+
+        var cacheKey = $"{CacheKeyPrefix}{templateName}:active";
+        var db = _redis.GetDatabase();
+        var deleted = await db.KeyDeleteAsync(cacheKey);
+
+        _logger.LogInformation(
+            "Cache invalidation for template {TemplateName}: {Result}",
+            templateName, deleted ? "SUCCESS" : "KEY_NOT_FOUND");
     }
 
     #endregion

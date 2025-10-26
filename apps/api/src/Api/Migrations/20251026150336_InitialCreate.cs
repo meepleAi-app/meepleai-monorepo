@@ -52,11 +52,35 @@ namespace Api.Migrations
                     UserAgent = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     Model = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
                     FinishReason = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    RagConfidence = table.Column<double>(type: "double precision", nullable: true),
+                    LlmConfidence = table.Column<double>(type: "double precision", nullable: true),
+                    CitationQuality = table.Column<double>(type: "double precision", nullable: true),
+                    OverallConfidence = table.Column<double>(type: "double precision", nullable: true),
+                    IsLowQuality = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_ai_request_logs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "alerts",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    alert_type = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    severity = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    message = table.Column<string>(type: "text", nullable: false),
+                    metadata = table.Column<string>(type: "jsonb", nullable: true),
+                    triggered_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    resolved_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    is_active = table.Column<bool>(type: "boolean", nullable: false),
+                    channel_sent = table.Column<string>(type: "jsonb", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_alerts", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -103,7 +127,9 @@ namespace Api.Migrations
                 {
                     Id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     Name = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    BggId = table.Column<int>(type: "integer", nullable: true),
+                    BggMetadata = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -124,6 +150,24 @@ namespace Api.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_users", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "workflow_error_logs",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    workflow_id = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    execution_id = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    error_message = table.Column<string>(type: "character varying(5000)", maxLength: 5000, nullable: false),
+                    node_name = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    retry_count = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
+                    stack_trace = table.Column<string>(type: "character varying(10000)", maxLength: 10000, nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_workflow_error_logs", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -257,7 +301,9 @@ namespace Api.Migrations
                     TableCount = table.Column<int>(type: "integer", nullable: true),
                     DiagramCount = table.Column<int>(type: "integer", nullable: true),
                     AtomicRuleCount = table.Column<int>(type: "integer", nullable: true),
-                    ProcessingProgressJson = table.Column<string>(type: "text", nullable: true)
+                    ProcessingProgressJson = table.Column<string>(type: "text", nullable: true),
+                    Language = table.Column<string>(type: "text", nullable: false),
+                    search_vector = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -342,7 +388,14 @@ namespace Api.Migrations
                     UserId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
                     CommentText = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    LineNumber = table.Column<int>(type: "integer", nullable: true),
+                    LineContext = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    ParentCommentId = table.Column<Guid>(type: "uuid", nullable: true),
+                    IsResolved = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    ResolvedByUserId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    ResolvedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    MentionedUserIds = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -354,8 +407,58 @@ namespace Api.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
+                        name: "FK_rulespec_comments_rulespec_comments_ParentCommentId",
+                        column: x => x.ParentCommentId,
+                        principalTable: "rulespec_comments",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_rulespec_comments_users_ResolvedByUserId",
+                        column: x => x.ResolvedByUserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
                         name: "FK_rulespec_comments_users_UserId",
                         column: x => x.UserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "system_configurations",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    Key = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    Value = table.Column<string>(type: "text", nullable: false),
+                    ValueType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    Category = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    RequiresRestart = table.Column<bool>(type: "boolean", nullable: false),
+                    Environment = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Version = table.Column<int>(type: "integer", nullable: false),
+                    PreviousValue = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedByUserId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    UpdatedByUserId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    LastToggledAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_system_configurations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_system_configurations_users_CreatedByUserId",
+                        column: x => x.CreatedByUserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_system_configurations_users_UpdatedByUserId",
+                        column: x => x.UpdatedByUserId,
                         principalTable: "users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
@@ -416,6 +519,37 @@ namespace Api.Migrations
                         name: "FK_chats_users_UserId",
                         column: x => x.UserId,
                         principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "text_chunks",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    GameId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    PdfDocumentId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    Content = table.Column<string>(type: "text", nullable: false),
+                    ChunkIndex = table.Column<int>(type: "integer", nullable: false),
+                    PageNumber = table.Column<int>(type: "integer", nullable: true),
+                    CharacterCount = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    search_vector = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_text_chunks", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_text_chunks_games_GameId",
+                        column: x => x.GameId,
+                        principalTable: "games",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_text_chunks_pdf_documents_PdfDocumentId",
+                        column: x => x.PdfDocumentId,
+                        principalTable: "pdf_documents",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -629,6 +763,17 @@ namespace Api.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_alerts_alert_type_triggered_at",
+                table: "alerts",
+                columns: new[] { "alert_type", "triggered_at" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_alerts_is_active",
+                table: "alerts",
+                column: "is_active",
+                filter: "is_active = true");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_api_keys_IsActive_ExpiresAt",
                 table: "api_keys",
                 columns: new[] { "IsActive", "ExpiresAt" });
@@ -833,6 +978,26 @@ namespace Api.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "idx_rulespec_comments_game_version_line",
+                table: "rulespec_comments",
+                columns: new[] { "GameId", "Version", "LineNumber" });
+
+            migrationBuilder.CreateIndex(
+                name: "idx_rulespec_comments_is_resolved",
+                table: "rulespec_comments",
+                column: "IsResolved");
+
+            migrationBuilder.CreateIndex(
+                name: "idx_rulespec_comments_parent_id",
+                table: "rulespec_comments",
+                column: "ParentCommentId");
+
+            migrationBuilder.CreateIndex(
+                name: "idx_rulespec_comments_user_id",
+                table: "rulespec_comments",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_rulespec_comments_AtomId",
                 table: "rulespec_comments",
                 column: "AtomId");
@@ -843,9 +1008,65 @@ namespace Api.Migrations
                 columns: new[] { "GameId", "Version" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_rulespec_comments_UserId",
+                name: "IX_rulespec_comments_ResolvedByUserId",
                 table: "rulespec_comments",
-                column: "UserId");
+                column: "ResolvedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_system_configurations_Category",
+                table: "system_configurations",
+                column: "Category");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_system_configurations_CreatedByUserId",
+                table: "system_configurations",
+                column: "CreatedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_system_configurations_Environment",
+                table: "system_configurations",
+                column: "Environment");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_system_configurations_IsActive",
+                table: "system_configurations",
+                column: "IsActive");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_system_configurations_Key_Environment",
+                table: "system_configurations",
+                columns: new[] { "Key", "Environment" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_system_configurations_UpdatedAt",
+                table: "system_configurations",
+                column: "UpdatedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_system_configurations_UpdatedByUserId",
+                table: "system_configurations",
+                column: "UpdatedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_text_chunks_ChunkIndex",
+                table: "text_chunks",
+                column: "ChunkIndex");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_text_chunks_GameId",
+                table: "text_chunks",
+                column: "GameId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_text_chunks_PageNumber",
+                table: "text_chunks",
+                column: "PageNumber");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_text_chunks_PdfDocumentId",
+                table: "text_chunks",
+                column: "PdfDocumentId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_user_sessions_TokenHash",
@@ -874,6 +1095,21 @@ namespace Api.Migrations
                 table: "vector_documents",
                 column: "PdfDocumentId",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_workflow_error_logs_created_at",
+                table: "workflow_error_logs",
+                column: "created_at");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_workflow_error_logs_execution_id",
+                table: "workflow_error_logs",
+                column: "execution_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_workflow_error_logs_workflow_id",
+                table: "workflow_error_logs",
+                column: "workflow_id");
         }
 
         /// <inheritdoc />
@@ -884,6 +1120,9 @@ namespace Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "ai_request_logs");
+
+            migrationBuilder.DropTable(
+                name: "alerts");
 
             migrationBuilder.DropTable(
                 name: "api_keys");
@@ -913,10 +1152,19 @@ namespace Api.Migrations
                 name: "rulespec_comments");
 
             migrationBuilder.DropTable(
+                name: "system_configurations");
+
+            migrationBuilder.DropTable(
+                name: "text_chunks");
+
+            migrationBuilder.DropTable(
                 name: "user_sessions");
 
             migrationBuilder.DropTable(
                 name: "vector_documents");
+
+            migrationBuilder.DropTable(
+                name: "workflow_error_logs");
 
             migrationBuilder.DropTable(
                 name: "chats");

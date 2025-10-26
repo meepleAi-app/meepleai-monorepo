@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Api.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20251025153626_EDIT05_EnhancedCommentsSystem")]
-    partial class EDIT05_EnhancedCommentsSystem
+    [Migration("20251026150336_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -211,6 +211,60 @@ namespace Api.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("ai_request_logs", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.AlertEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AlertType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("alert_type");
+
+                    b.Property<string>("ChannelSent")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("channel_sent");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("message");
+
+                    b.Property<string>("Metadata")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("metadata");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("severity");
+
+                    b.Property<DateTime>("TriggeredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("triggered_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive")
+                        .HasFilter("is_active = true");
+
+                    b.HasIndex("AlertType", "TriggeredAt");
+
+                    b.ToTable("alerts", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.ApiKeyEntity", b =>
@@ -491,6 +545,12 @@ namespace Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<int?>("BggId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("BggMetadata")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -681,6 +741,10 @@ namespace Api.Migrations
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
+
+                    b.Property<string>("SearchVector")
+                        .HasColumnType("text")
+                        .HasColumnName("search_vector");
 
                     b.Property<int?>("TableCount")
                         .HasColumnType("integer");
@@ -1085,6 +1149,55 @@ namespace Api.Migrations
                     b.ToTable("system_configurations", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.TextChunkEntity", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("CharacterCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ChunkIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("GameId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int?>("PageNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PdfDocumentId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("SearchVector")
+                        .HasColumnType("text")
+                        .HasColumnName("search_vector");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChunkIndex");
+
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("PageNumber");
+
+                    b.HasIndex("PdfDocumentId");
+
+                    b.ToTable("text_chunks", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.UserEntity", b =>
                 {
                     b.Property<string>("Id")
@@ -1215,6 +1328,62 @@ namespace Api.Migrations
                         .IsUnique();
 
                     b.ToTable("vector_documents", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.WorkflowErrorLogEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("ErrorMessage")
+                        .IsRequired()
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)")
+                        .HasColumnName("error_message");
+
+                    b.Property<string>("ExecutionId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("execution_id");
+
+                    b.Property<string>("NodeName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("node_name");
+
+                    b.Property<int>("RetryCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("retry_count");
+
+                    b.Property<string>("StackTrace")
+                        .HasMaxLength(10000)
+                        .HasColumnType("character varying(10000)")
+                        .HasColumnName("stack_trace");
+
+                    b.Property<string>("WorkflowId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("workflow_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("ExecutionId");
+
+                    b.HasIndex("WorkflowId");
+
+                    b.ToTable("workflow_error_logs", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AgentEntity", b =>
@@ -1477,6 +1646,25 @@ namespace Api.Migrations
                     b.Navigation("CreatedBy");
 
                     b.Navigation("UpdatedBy");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.TextChunkEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.PdfDocumentEntity", "PdfDocument")
+                        .WithMany()
+                        .HasForeignKey("PdfDocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Game");
+
+                    b.Navigation("PdfDocument");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserSessionEntity", b =>

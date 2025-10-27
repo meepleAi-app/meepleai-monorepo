@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Api.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20251026161831_SeedChessAndSetupGuidePrompts")]
-    partial class SeedChessAndSetupGuidePrompts
+    [Migration("20251027183948_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -426,7 +426,11 @@ namespace Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("cache_stats");
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("QuestionHash");
+
+                    b.ToTable("cache_stats", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.ChatEntity", b =>
@@ -623,6 +627,55 @@ namespace Api.Migrations
                     b.ToTable("n8n_configs", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.OAuthAccountEntity", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("AccessTokenEncrypted")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ProviderUserId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("RefreshTokenEncrypted")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("TokenExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Provider");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("Provider", "ProviderUserId")
+                        .IsUnique();
+
+                    b.ToTable("oauth_accounts", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.PasswordResetTokenEntity", b =>
                 {
                     b.Property<string>("Id")
@@ -811,6 +864,93 @@ namespace Api.Migrations
                     b.HasIndex("VersionId");
 
                     b.ToTable("prompt_audit_logs", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.PromptEvaluationResultEntity", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("id");
+
+                    b.Property<double>("Accuracy")
+                        .HasColumnType("double precision")
+                        .HasColumnName("accuracy");
+
+                    b.Property<double>("AvgConfidence")
+                        .HasColumnType("double precision")
+                        .HasColumnName("avg_confidence");
+
+                    b.Property<double>("AvgLatencyMs")
+                        .HasColumnType("double precision")
+                        .HasColumnName("avg_latency_ms");
+
+                    b.Property<double>("CitationCorrectness")
+                        .HasColumnType("double precision")
+                        .HasColumnName("citation_correctness");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DatasetId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("dataset_id");
+
+                    b.Property<DateTime>("ExecutedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("executed_at");
+
+                    b.Property<double>("HallucinationRate")
+                        .HasColumnType("double precision")
+                        .HasColumnName("hallucination_rate");
+
+                    b.Property<bool>("Passed")
+                        .HasColumnType("boolean")
+                        .HasColumnName("passed");
+
+                    b.Property<string>("QueryResultsJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("query_results_json");
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("summary");
+
+                    b.Property<string>("TemplateId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("template_id");
+
+                    b.Property<int>("TotalQueries")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_queries");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<string>("VersionId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("version_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExecutedAt");
+
+                    b.HasIndex("TemplateId");
+
+                    b.HasIndex("VersionId");
+
+                    b.HasIndex("TemplateId", "VersionId", "ExecutedAt");
+
+                    b.ToTable("prompt_evaluation_results", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.PromptTemplateEntity", b =>
@@ -1048,6 +1188,14 @@ namespace Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<string>("MergedFromVersionIds")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<Guid?>("ParentVersionId")
+                        .HasMaxLength(64)
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Version")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -1058,6 +1206,8 @@ namespace Api.Migrations
                     b.HasIndex("CreatedByUserId");
 
                     b.HasIndex("GameEntityId");
+
+                    b.HasIndex("ParentVersionId");
 
                     b.HasIndex("GameId", "Version")
                         .IsUnique();
@@ -1149,6 +1299,52 @@ namespace Api.Migrations
                     b.ToTable("system_configurations", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.TempSessionEntity", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<bool>("IsUsed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("temp_sessions", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.TextChunkEntity", b =>
                 {
                     b.Property<string>("Id")
@@ -1198,6 +1394,46 @@ namespace Api.Migrations
                     b.ToTable("text_chunks", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.UserBackupCodeEntity", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsUsed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CodeHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "IsUsed")
+                        .HasFilter("\"IsUsed\" = FALSE");
+
+                    b.ToTable("user_backup_codes", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.UserEntity", b =>
                 {
                     b.Property<string>("Id")
@@ -1216,6 +1452,11 @@ namespace Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<bool>("IsTwoFactorEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1224,6 +1465,13 @@ namespace Api.Migrations
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
+
+                    b.Property<string>("TotpSecretEncrypted")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTime?>("TwoFactorEnabledAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -1478,6 +1726,17 @@ namespace Api.Migrations
                     b.Navigation("CreatedBy");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.OAuthAccountEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.PasswordResetTokenEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
@@ -1625,9 +1884,16 @@ namespace Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Api.Infrastructure.Entities.RuleSpecEntity", "ParentVersion")
+                        .WithMany()
+                        .HasForeignKey("ParentVersionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("CreatedBy");
 
                     b.Navigation("Game");
+
+                    b.Navigation("ParentVersion");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfigurationEntity", b =>
@@ -1648,6 +1914,17 @@ namespace Api.Migrations
                     b.Navigation("UpdatedBy");
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.TempSessionEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.TextChunkEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
@@ -1665,6 +1942,17 @@ namespace Api.Migrations
                     b.Navigation("Game");
 
                     b.Navigation("PdfDocument");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.UserBackupCodeEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
+                        .WithMany("BackupCodes")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserSessionEntity", b =>
@@ -1740,6 +2028,8 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserEntity", b =>
                 {
+                    b.Navigation("BackupCodes");
+
                     b.Navigation("Sessions");
                 });
 #pragma warning restore 612, 618

@@ -384,10 +384,28 @@ public class ConfigurationService : IConfigurationService
 
             return updatedConfigs;
         }
-        catch
+        catch (Exception ex)
         {
-            await transaction.RollbackAsync();
-            throw;
+            _logger.LogError(
+                ex,
+                "Bulk configuration update failed for user {UserId}. Attempting rollback. Updates: {UpdateCount}",
+                userId,
+                request.Updates.Count);
+
+            try
+            {
+                await transaction.RollbackAsync();
+            }
+            catch (Exception rollbackEx)
+            {
+                _logger.LogError(
+                    rollbackEx,
+                    "Failed to rollback transaction after bulk update error for user {UserId}",
+                    userId);
+                // Don't throw rollback exception - original exception is more important
+            }
+
+            throw; // Re-throw original exception
         }
     }
 
@@ -577,10 +595,29 @@ public class ConfigurationService : IConfigurationService
 
             return importedCount;
         }
-        catch
+        catch (Exception ex)
         {
-            await transaction.RollbackAsync();
-            throw;
+            _logger.LogError(
+                ex,
+                "Configuration import failed for user {UserId}. Attempting rollback. Total configs: {TotalCount}, Imported before failure: {ImportedCount}",
+                userId,
+                request.Configurations.Count,
+                importedCount);
+
+            try
+            {
+                await transaction.RollbackAsync();
+            }
+            catch (Exception rollbackEx)
+            {
+                _logger.LogError(
+                    rollbackEx,
+                    "Failed to rollback transaction after import error for user {UserId}",
+                    userId);
+                // Don't throw rollback exception - original exception is more important
+            }
+
+            throw; // Re-throw original exception
         }
     }
 

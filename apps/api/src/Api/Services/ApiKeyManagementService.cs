@@ -330,7 +330,7 @@ public class ApiKeyManagementService
 
     #region Helper Methods
 
-    private static ApiKeyDto MapToDto(ApiKeyEntity entity)
+    private ApiKeyDto MapToDto(ApiKeyEntity entity)
     {
         var quota = ParseQuotaFromMetadata(entity.Metadata);
 
@@ -359,7 +359,7 @@ public class ApiKeyManagementService
         };
     }
 
-    private static (int? MaxRequestsPerDay, int? MaxRequestsPerHour) ParseQuotaFromMetadata(string? metadata)
+    private (int? MaxRequestsPerDay, int? MaxRequestsPerHour) ParseQuotaFromMetadata(string? metadata)
     {
         if (string.IsNullOrWhiteSpace(metadata))
             return (null, null);
@@ -379,8 +379,20 @@ public class ApiKeyManagementService
 
             return (maxPerDay, maxPerHour);
         }
-        catch
+        catch (System.Text.Json.JsonException ex)
         {
+            _logger.LogWarning(
+                ex,
+                "Failed to parse API key metadata as JSON. Metadata will be ignored: {Metadata}",
+                metadata?.Length > 100 ? metadata[..100] + "..." : metadata);
+            return (null, null);
+        }
+        catch (Exception ex) when (ex is FormatException or InvalidOperationException)
+        {
+            _logger.LogWarning(
+                ex,
+                "Failed to extract quota values from API key metadata. Metadata: {Metadata}",
+                metadata?.Length > 100 ? metadata[..100] + "..." : metadata);
             return (null, null);
         }
     }

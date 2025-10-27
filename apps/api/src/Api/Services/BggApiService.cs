@@ -201,7 +201,7 @@ public class BggApiService : IBggApiService
         }
     }
 
-    private static BggSearchResultDto? ParseSearchResult(XElement item)
+    private BggSearchResultDto? ParseSearchResult(XElement item)
     {
         try
         {
@@ -224,13 +224,19 @@ public class BggApiService : IBggApiService
                 type
             );
         }
-        catch
+        catch (Exception ex) when (ex is FormatException or OverflowException)
         {
+            // BGG API occasionally returns malformed data - skip this result
+            // Logging at Debug level to avoid noise from external API issues
+            _logger.LogDebug(
+                ex,
+                "Skipped malformed BGG search result. Item ID attribute: {ItemId}",
+                item.Attribute("id")?.Value ?? "unknown");
             return null;
         }
     }
 
-    private static BggGameDetailsDto? ParseGameDetails(XElement item, int bggId)
+    private BggGameDetailsDto? ParseGameDetails(XElement item, int bggId)
     {
         try
         {
@@ -320,8 +326,14 @@ public class BggApiService : IBggApiService
                 publishers
             );
         }
-        catch
+        catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException)
         {
+            // BGG API occasionally returns malformed data - caller will log this
+            // Only log at Debug level to avoid duplicate errors
+            _logger.LogDebug(
+                ex,
+                "Failed to parse BGG game details for ID {BggId}. Data may be malformed in BGG API response",
+                bggId);
             return null;
         }
     }

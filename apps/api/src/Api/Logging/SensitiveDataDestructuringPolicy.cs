@@ -176,9 +176,16 @@ public partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
                     }
                 }
             }
-            catch
+            catch (Exception ex) when (
+                ex is TargetException or
+                TargetInvocationException or
+                TargetParameterCountException or
+                MethodAccessException or
+                NotSupportedException)
             {
-                // Skip properties that throw on access
+                // Intentionally skip properties that throw on access during logging
+                // This prevents logging infrastructure failures from propagating
+                // Cannot log here as it would risk infinite recursion in logging pipeline
             }
         }
 

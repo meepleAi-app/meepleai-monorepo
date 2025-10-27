@@ -384,10 +384,31 @@ public class PromptManagementService : IPromptManagementService
 
             return MapToVersionDto(createdVersion);
         }
-        catch
+        catch (Exception ex)
         {
-            await transaction.RollbackAsync(ct);
-            throw;
+            _logger.LogError(
+                ex,
+                "Prompt version creation failed for template {TemplateId} by user {UserId}. Version number: {VersionNumber}, Activate immediately: {ActivateImmediately}",
+                templateId,
+                createdByUserId,
+                nextVersionNumber,
+                request.ActivateImmediately);
+
+            try
+            {
+                await transaction.RollbackAsync(ct);
+            }
+            catch (Exception rollbackEx)
+            {
+                _logger.LogError(
+                    rollbackEx,
+                    "Failed to rollback transaction after prompt version creation error. Template: {TemplateId}, User: {UserId}",
+                    templateId,
+                    createdByUserId);
+                // Don't throw rollback exception - original exception is more important
+            }
+
+            throw; // Re-throw original exception
         }
     }
 
@@ -542,10 +563,31 @@ public class PromptManagementService : IPromptManagementService
 
             return MapToVersionDto(versionToActivate);
         }
-        catch
+        catch (Exception ex)
         {
-            await transaction.RollbackAsync(ct);
-            throw;
+            _logger.LogError(
+                ex,
+                "Prompt version activation failed. Template: {TemplateId}, Version: {VersionId}, User: {UserId}, Reason: {Reason}",
+                templateId,
+                versionId,
+                activatedByUserId,
+                reason ?? "Manual activation");
+
+            try
+            {
+                await transaction.RollbackAsync(ct);
+            }
+            catch (Exception rollbackEx)
+            {
+                _logger.LogError(
+                    rollbackEx,
+                    "Failed to rollback transaction after prompt activation error. Template: {TemplateId}, Version: {VersionId}",
+                    templateId,
+                    versionId);
+                // Don't throw rollback exception - original exception is more important
+            }
+
+            throw; // Re-throw original exception
         }
     }
 

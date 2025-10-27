@@ -213,8 +213,9 @@ tools/             - PowerShell scripts
 
 **Main Pipeline** (`.github/workflows/ci.yml`):
 - ci-web: Lint → Typecheck → Test (Node 20, pnpm 9)
-- ci-api: Build → Test (.NET 9, postgres, qdrant, libgdiplus)
-- Performance: ~10-12min (post-OPS-06)
+- ci-api: Build → Test (.NET 9, postgres, qdrant, redis, libgdiplus)
+- rag-evaluation: RAG tests (.NET 9, postgres, qdrant, redis)
+- Performance: ~8-10min (post-OPS-08, 33% faster with Redis)
 
 **Security** (`.github/workflows/security-scan.yml`):
 1. CodeQL SAST (C#, JS/TS)

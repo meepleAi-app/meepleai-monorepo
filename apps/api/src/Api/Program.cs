@@ -382,6 +382,9 @@ builder.Services.AddScoped<AuthService>();
 // AUTH-06: OAuth services
 builder.Services.AddScoped<IEncryptionService, EncryptionService>();
 builder.Services.AddScoped<IOAuthService, OAuthService>();
+// AUTH-07: Two-factor authentication services
+builder.Services.AddScoped<ITotpService, TotpService>();
+builder.Services.AddScoped<ITempSessionService, TempSessionService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<AiRequestLogService>();
 builder.Services.AddScoped<AgentFeedbackService>();
@@ -391,6 +394,7 @@ builder.Services.AddScoped<PdfTableExtractionService>();
 builder.Services.AddScoped<IPdfValidationService, PdfValidationService>(); // PDF-09: PDF validation service
 builder.Services.AddScoped<PdfStorageService>();
 builder.Services.AddScoped<N8nConfigService>();
+builder.Services.AddScoped<N8nTemplateService>(); // N8N-04: Workflow template service
 builder.Services.AddScoped<ChatService>();
 
 // CHAT-05: Chat export services
@@ -898,7 +902,7 @@ v1Api.MapPost("/auth/register", async (RegisterPayload payload, HttpContext cont
     }
 });
 
-v1Api.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, AuthService auth, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, AuthService auth, MeepleAiDbContext db, ITempSessionService tempSessionService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (payload == null)
     {
@@ -930,6 +934,25 @@ v1Api.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, 
             return Results.Unauthorized();
         }
 
+        // AUTH-07: Check if 2FA is enabled
+        var user = await db.Users.FindAsync(result.User.Id);
+        if (user?.IsTwoFactorEnabled == true)
+        {
+            // Create temp session for 2FA verification
+            var tempToken = await tempSessionService.CreateTempSessionAsync(
+                result.User.Id,
+                context.Connection.RemoteIpAddress?.ToString());
+
+            logger.LogInformation("User {UserId} requires 2FA, temp session created", result.User.Id);
+            return Results.Json(new
+            {
+                requiresTwoFactor = true,
+                sessionToken = tempToken, // Secure temp token (5-min TTL, single-use)
+                message = "Two-factor authentication required"
+            });
+        }
+
+        // Normal login (no 2FA)
         WriteSessionCookie(context, result.SessionToken, result.ExpiresAt);
         logger.LogInformation("User {UserId} logged in successfully", result.User.Id);
         return Results.Json(new AuthResponse(result.User, result.ExpiresAt));
@@ -940,6 +963,173 @@ v1Api.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, 
         return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 });
+
+// AUTH-07: Two-Factor Authentication Endpoints
+
+v1Api.MapPost("/auth/2fa/setup", async (HttpContext context, ITotpService totpService, ILogger<Program> logger) =>
+{
+    var userId = context.User.FindFirst("sub")?.Value;
+    var userEmail = context.User.FindFirst("email")?.Value;
+
+    if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(userEmail))
+    {
+        return Results.Unauthorized();
+    }
+
+    try
+    {
+        var setup = await totpService.GenerateSetupAsync(userId, userEmail);
+        logger.LogInformation("2FA setup generated for user {UserId}", userId);
+        return Results.Ok(setup);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "2FA setup failed for user {UserId}", userId);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
+    }
+})
+.RequireAuthorization()
+.WithName("Setup2FA")
+.WithTags("Authentication");
+
+v1Api.MapPost("/auth/2fa/enable", async (TwoFactorEnableRequest request, HttpContext context, ITotpService totpService, ILogger<Program> logger) =>
+{
+    var userId = context.User.FindFirst("sub")?.Value;
+    if (string.IsNullOrEmpty(userId))
+    {
+        return Results.Unauthorized();
+    }
+
+    try
+    {
+        var success = await totpService.EnableTwoFactorAsync(userId, request.Code);
+        if (!success)
+        {
+            logger.LogWarning("2FA enable failed: Invalid code for user {UserId}", userId);
+            return Results.BadRequest(new { error = "Invalid verification code" });
+        }
+
+        logger.LogInformation("2FA enabled for user {UserId}", userId);
+        return Results.Ok(new { message = "Two-factor authentication enabled successfully" });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "2FA enable error for user {UserId}", userId);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
+    }
+})
+.RequireAuthorization()
+.WithName("Enable2FA")
+.WithTags("Authentication");
+
+v1Api.MapPost("/auth/2fa/verify", async (TwoFactorVerifyRequest request, HttpContext context, ITotpService totpService, ITempSessionService tempSessionService, IRateLimitService rateLimitService, AuthService authService, ILogger<Program> logger) =>
+{
+    // Rate limit: 3 attempts per minute per session token
+    var rateLimitKey = $"2fa:verify:{request.SessionToken}";
+    var result = await rateLimitService.CheckRateLimitAsync(rateLimitKey, maxTokens: 3, refillRate: 0.05);
+
+    if (!result.Allowed)
+    {
+        logger.LogWarning("2FA verify rate limited for session {SessionToken}", request.SessionToken);
+        return Results.StatusCode(429);
+    }
+
+    try
+    {
+        // Validate and consume temp session (5-min TTL, single-use)
+        var userId = await tempSessionService.ValidateAndConsumeTempSessionAsync(request.SessionToken);
+        if (userId == null)
+        {
+            logger.LogWarning("2FA verify failed: Invalid temp session");
+            return Results.Unauthorized();
+        }
+
+        // Verify TOTP or backup code
+        var isValid = await totpService.VerifyCodeAsync(userId, request.Code);
+        if (!isValid)
+        {
+            isValid = await totpService.VerifyBackupCodeAsync(userId, request.Code);
+        }
+
+        if (!isValid)
+        {
+            logger.LogWarning("2FA verify failed for user {UserId}", userId);
+            return Results.Unauthorized();
+        }
+
+        // Create actual session after 2FA verification
+        var loginResult = await authService.CreateSessionForUserAsync(userId,
+            context.Connection.RemoteIpAddress?.ToString(),
+            context.Request.Headers.UserAgent.ToString());
+        if (loginResult != null)
+        {
+            WriteSessionCookie(context, loginResult.SessionToken, loginResult.ExpiresAt);
+            logger.LogInformation("2FA verified, session created for user {UserId}", userId);
+            return Results.Ok(new { message = "2FA verification successful", user = loginResult.User });
+        }
+
+        return Results.Problem("Failed to create session after 2FA", statusCode: 500);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "2FA verify error");
+        return Results.Problem(detail: ex.Message, statusCode: 500);
+    }
+})
+.WithName("Verify2FA")
+.WithTags("Authentication");
+
+v1Api.MapPost("/auth/2fa/disable", async (TwoFactorDisableRequest request, HttpContext context, ITotpService totpService, ILogger<Program> logger) =>
+{
+    var userId = context.User.FindFirst("sub")?.Value;
+    if (string.IsNullOrEmpty(userId))
+    {
+        return Results.Unauthorized();
+    }
+
+    try
+    {
+        await totpService.DisableTwoFactorAsync(userId, request.Password, request.Code);
+        logger.LogInformation("2FA disabled for user {UserId}", userId);
+        return Results.Ok(new { message = "Two-factor authentication disabled successfully" });
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        logger.LogWarning("2FA disable unauthorized for user {UserId}: {Message}", userId, ex.Message);
+        return Results.Unauthorized();
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "2FA disable error for user {UserId}", userId);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
+    }
+})
+.RequireAuthorization()
+.WithName("Disable2FA")
+.WithTags("Authentication");
+
+v1Api.MapGet("/users/me/2fa/status", async (HttpContext context, ITotpService totpService, ILogger<Program> logger) =>
+{
+    var userId = context.User.FindFirst("sub")?.Value;
+    if (string.IsNullOrEmpty(userId))
+    {
+        return Results.Unauthorized();
+    }
+
+    try
+    {
+        var status = await totpService.GetTwoFactorStatusAsync(userId);
+        return Results.Ok(status);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Get 2FA status error for user {UserId}", userId);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
+    }
+})
+.RequireAuthorization()
+.WithName("Get2FAStatus")
+.WithTags("Users");
 
 static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)
 {
@@ -1021,7 +1211,22 @@ v1Api.MapGet("/auth/oauth/{provider}/login", async (
 
     var authUrl = await oauthService.GetAuthorizationUrlAsync(provider, state);
     return Results.Redirect(authUrl);
-});
+})
+.WithName("InitiateOAuthLogin")
+.WithTags("Authentication", "OAuth")
+.WithSummary("Initiate OAuth 2.0 login flow")
+.WithDescription(@"Redirects user to OAuth provider (Google, Discord, or GitHub) for authentication.
+Generates cryptographically secure CSRF state parameter (32 bytes) with 10-minute expiration.
+Rate limited to 10 requests per minute per IP address.
+
+**Supported Providers**: google, discord, github
+
+**Security**: CSRF protection via state parameter, rate limiting prevents abuse.
+
+**Flow**: User clicks OAuth button → Backend redirects to provider → User authorizes → Provider redirects to callback endpoint")
+.Produces(302)
+.Produces(429)
+.Produces(400);
 
 v1Api.MapGet("/auth/oauth/{provider}/callback", async (
     string provider,
@@ -1081,7 +1286,25 @@ v1Api.MapGet("/auth/oauth/{provider}/callback", async (
         var redirectUrl = $"{frontendUrl}/auth/callback?error=oauth_failed";
         return Results.Redirect(redirectUrl);
     }
-});
+})
+.WithName("HandleOAuthCallback")
+.WithTags("Authentication", "OAuth")
+.WithSummary("Handle OAuth 2.0 callback from provider")
+.WithDescription(@"Processes OAuth authorization code from provider and creates user session.
+Validates CSRF state parameter (single-use, 10-minute expiration).
+Creates new user if email doesn't exist, or links OAuth to existing user by email.
+Rate limited to 10 requests per minute per IP address.
+
+**Parameters**:
+- `provider`: OAuth provider (google, discord, github)
+- `code`: Authorization code from provider
+- `state`: CSRF protection state parameter
+
+**Security**: State validation prevents CSRF attacks, tokens encrypted at rest.
+
+**Flow**: Provider redirects here → Validate state → Exchange code for token → Get user info → Create/link account → Create session → Redirect to frontend")
+.Produces(302)
+.Produces(429);
 
 v1Api.MapDelete("/auth/oauth/{provider}/unlink", async (
     string provider,
@@ -1095,7 +1318,22 @@ v1Api.MapDelete("/auth/oauth/{provider}/unlink", async (
 
     await oauthService.UnlinkOAuthAccountAsync(session.User.Id, provider);
     return Results.NoContent();
-});
+})
+.WithName("UnlinkOAuthAccount")
+.WithTags("Authentication", "OAuth", "User Profile")
+.WithSummary("Unlink OAuth provider from user account")
+.WithDescription(@"Removes the specified OAuth provider link from the authenticated user's account.
+User must have at least one authentication method remaining (password or another OAuth provider).
+
+**Parameters**:
+- `provider`: OAuth provider to unlink (google, discord, github)
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Security**: Cannot unlink if it's the only authentication method (prevents account lockout).")
+.Produces(204)
+.Produces(401)
+.Produces(404);
 
 v1Api.MapGet("/users/me/oauth-accounts", async (
     HttpContext context,
@@ -1108,7 +1346,19 @@ v1Api.MapGet("/users/me/oauth-accounts", async (
 
     var accounts = await oauthService.GetLinkedAccountsAsync(session.User.Id);
     return Results.Json(accounts);
-});
+})
+.WithName("GetLinkedOAuthAccounts")
+.WithTags("Authentication", "OAuth", "User Profile")
+.WithSummary("Get user's linked OAuth accounts")
+.WithDescription(@"Returns list of OAuth providers linked to the authenticated user's account.
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Response**: Array of OAuthAccountDto objects containing:
+- `provider`: Provider name (google, discord, github)
+- `createdAt`: Timestamp when account was linked")
+.Produces<List<OAuthAccountDto>>(200)
+.Produces(401);
 
 v1Api.MapGet("/auth/me", (HttpContext context) =>
 {
@@ -3796,6 +4046,111 @@ v1Api.MapPost("/admin/n8n/{configId}/test", async (string configId, HttpContext 
         return Results.BadRequest(new { error = ex.Message });
     }
 });
+
+// N8N-04: Workflow template endpoints
+v1Api.MapGet("/n8n/templates", async (
+    string? category,
+    N8nTemplateService templateService,
+    HttpContext context,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+    }
+
+    var templates = await templateService.GetTemplatesAsync(category, ct);
+    return Results.Ok(templates);
+})
+.RequireAuthorization()
+.WithName("GetN8nTemplates")
+.WithTags("N8N")
+.WithDescription("Get all n8n workflow templates, optionally filtered by category");
+
+v1Api.MapGet("/n8n/templates/{id}", async (
+    string id,
+    N8nTemplateService templateService,
+    HttpContext context,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+    }
+
+    var template = await templateService.GetTemplateAsync(id, ct);
+    if (template == null)
+    {
+        return Results.NotFound(new { error = $"Template '{id}' not found" });
+    }
+
+    return Results.Ok(template);
+})
+.RequireAuthorization()
+.WithName("GetN8nTemplate")
+.WithTags("N8N")
+.WithDescription("Get a specific n8n workflow template by ID with full details");
+
+v1Api.MapPost("/n8n/templates/{id}/import", async (
+    string id,
+    ImportTemplateRequest request,
+    N8nTemplateService templateService,
+    HttpContext context,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+    }
+
+    try
+    {
+        logger.LogInformation("User {UserId} importing n8n template {TemplateId}", session.User.Id, id);
+        var result = await templateService.ImportTemplateAsync(id, request.Parameters, session.User.Id, ct);
+        logger.LogInformation("Template {TemplateId} imported successfully as workflow {WorkflowId}", id, result.WorkflowId);
+        return Results.Ok(result);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Failed to import template {TemplateId}: {Error}", id, ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Unexpected error importing template {TemplateId}", id);
+        return Results.Problem("An unexpected error occurred while importing the template");
+    }
+})
+.RequireAuthorization()
+.WithName("ImportN8nTemplate")
+.WithTags("N8N")
+.WithDescription("Import an n8n workflow template with parameter substitution");
+
+v1Api.MapPost("/n8n/templates/validate", async (
+    ValidateTemplateRequest request,
+    N8nTemplateService templateService,
+    HttpContext context,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+    }
+
+    // Only admins can validate templates
+    if (session.User.Role != "Admin")
+    {
+        return Results.Forbid();
+    }
+
+    var result = templateService.ValidateTemplate(request.TemplateJson);
+    return Results.Ok(result);
+})
+.RequireAuthorization()
+.WithName("ValidateN8nTemplate")
+.WithTags("N8N")
+.WithDescription("Validate n8n workflow template JSON structure (admin only)");
 
 // AUTH-03: Session management endpoints
 v1Api.MapGet("/admin/sessions", async (HttpContext context, ISessionManagementService sessionManagement, int limit = 100, string? userId = null, CancellationToken ct = default) =>

@@ -52,7 +52,7 @@ tools/             - PowerShell scripts
 | **AI/RAG** | EmbeddingService, QdrantService, RagService, LlmService | Sentence chunking (256-768 chars), RRF fusion, OpenRouter |
 | **PDF** | PdfStorageService, PdfTextExtractionService, PdfTableExtractionService, PdfValidationService | Docnet.Core, iText7, PDF-09 validation |
 | **Domain** | GameService, RuleSpecService, RuleSpecDiffService, SetupGuideService | Core business logic |
-| **Auth** | AuthService, ApiKeyAuthenticationService, SessionManagementService, SessionAutoRevocationService | Cookie+API key dual auth |
+| **Auth** | AuthService, ApiKeyAuthenticationService, SessionManagementService, SessionAutoRevocationService, **OAuthService (AUTH-06), EncryptionService (AUTH-06), TotpService (AUTH-07), TempSessionService (AUTH-07)** | Cookie+API key+**OAuth (Google/Discord/GitHub)** dual auth + **2FA (TOTP)** |
 | **Admin** | UserManagementService, AdminStatsService, WorkflowErrorLoggingService | ADMIN-01/02, N8N-05 |
 | **Infra** | AuditService, AiRequestLogService, RateLimitService, N8nConfigService, BackgroundTaskService, AlertingService | OPS-07 multi-channel alerts |
 | **Cache** (PERF-05) | HybridCacheService, AiResponseCacheService | L1 memory + L2 Redis, stampede protection |
@@ -69,26 +69,137 @@ tools/             - PowerShell scripts
 ### Database (EF Core 9.0 + PostgreSQL)
 
 - **Context**: `MeepleAiDbContext` (`Infrastructure/MeepleAiDbContext.cs`)
-- **Entities**: User/Auth, Game/RuleSpec, PDF/Vector docs, Chat logs, AI logs, Agents, N8n config, API keys, Sessions, Alerts
+- **Entities**: User/Auth, Game/RuleSpec, PDF/Vector docs, Chat logs, AI logs, Agents, N8n config, API keys, Sessions, OAuth accounts, Alerts
 - **Migrations**: Auto-applied in `Program.cs` (search `Database.Migrate`)
 - **Seed Data** (DB-02): Demo users (admin/editor/user@meepleai.dev, pwd: `Demo123!`), games, specs. Migration: `20251009140700_SeedDemoData`
 
 ### Frontend (Next.js 14)
 
-**Pages**: index, chat, upload, editor (EDIT-03 rich text), versions, admin, admin/users (ADMIN-01), admin/analytics (ADMIN-02), admin/cache, admin/configuration (CONFIG-06), n8n, logs, setup (AI-03)
+**Pages**: index, chat, upload, editor (EDIT-03 rich text), versions, admin, admin/users (ADMIN-01), admin/analytics (ADMIN-02), admin/cache, admin/configuration (CONFIG-06), admin/n8n-templates (N8N-04), n8n, logs, setup (AI-03)
 
 **API Client**: `lib/api.ts` - get/post/put/delete, cookie auth (`credentials: "include"`), 401 handling, `NEXT_PUBLIC_API_BASE`
 
 **Tests**: Jest (90% coverage) + Playwright E2E
 
-### Auth (Dual System)
+### Auth (Dual System + 2FA)
 
 | Method | Flow | Format |
 |--------|------|--------|
 | **Cookie** | Session cookie → `AuthService.ValidateSessionAsync()` → ClaimsPrincipal | Standard session |
 | **API Key** | X-API-Key header → `ApiKeyAuthenticationService.ValidateApiKeyAsync()` → ClaimsPrincipal | `mpl_{env}_{base64}` |
+| **OAuth (AUTH-06)** | Provider redirect → OAuth callback → `OAuthService.HandleCallbackAsync()` → Session | Google/Discord/GitHub |
+| **2FA (AUTH-07)** | Password → TempSession (5min) → TOTP/backup code → Session | TOTP 6-digit OR backup XXXX-XXXX |
 
 **Priority**: API key > cookie
+**OAuth**: Social login (Google, Discord, GitHub), auto-link by email
+**2FA**: Optional per-user, TOTP-based with backup codes
+
+#### Two-Factor Authentication (AUTH-07)
+
+**Endpoints**:
+- `POST /api/v1/auth/2fa/setup` - Generate TOTP secret + QR code + 10 backup codes
+- `POST /api/v1/auth/2fa/enable` - Enable after code verification (prevents misconfiguration)
+- `POST /api/v1/auth/2fa/verify` - Verify TOTP/backup during login (rate-limited 3/min)
+- `POST /api/v1/auth/2fa/disable` - Disable with password + code
+- `GET /api/v1/users/me/2fa/status` - Get status + backup codes count
+
+**Security**:
+- TOTP secrets encrypted with DataProtection API (purpose: "TotpSecrets")
+- Backup codes: PBKDF2 hashing (210K iterations), single-use enforcement
+- Temp sessions: 256-bit tokens, SHA-256 hashed, 5-min TTL, single-use
+- Rate limiting: 3 attempts/min prevents brute force
+- Serializable transactions: Prevents race conditions (backup codes + temp sessions)
+- Audit logging: All 2FA events logged
+
+**Frontend**:
+- `/settings` - 2FA enrollment (QR code, backup codes, enable/disable)
+- `/login` - Two-step verification (password → TOTP code)
+
+**Database**:
+- `user_backup_codes` table (id, user_id, code_hash, is_used, used_at)
+- `temp_sessions` table (id, user_id, token_hash, ip, created_at, expires_at, is_used, used_at)
+- Users table: +totp_secret_encrypted, +is_two_factor_enabled, +two_factor_enabled_at
+
+**Migrations**: AUTH07_Add2FASupport, AUTH07_AddTempSessionsTable
+
+#### OAuth 2.0 Authentication (AUTH-06)
+
+**Endpoints**:
+- `GET /api/v1/auth/oauth/{provider}/login` - Initiate OAuth flow (Google/Discord/GitHub)
+- `GET /api/v1/auth/oauth/{provider}/callback` - Handle OAuth redirect and create session
+- `DELETE /api/v1/auth/oauth/{provider}/unlink` - Unlink OAuth account
+- `GET /api/v1/users/me/oauth-accounts` - List linked OAuth providers
+
+**Supported Providers**:
+- **Google**: OAuth 2.0 with OpenID Connect (scopes: openid, profile, email)
+- **Discord**: OAuth 2.0 (scopes: identify, email)
+- **GitHub**: OAuth 2.0 (scopes: read:user, user:email)
+
+**Security**:
+- Token encryption at rest (ASP.NET Data Protection API, purpose: "OAuthTokens")
+- CSRF protection (32-byte cryptographically secure state, 10-min expiry, single-use)
+- Rate limiting: 10 requests/min per IP (login + callback endpoints)
+- Auto-link strategy: Trusts OAuth provider email verification (MVP)
+- Session creation: Standard session flow after OAuth validation
+
+**Services**:
+- `OAuthService` (`Services/OAuthService.cs`, 582 lines): OAuth 2.0 flow implementation
+  - `GetAuthorizationUrlAsync(provider, state)` - Generate OAuth authorization URL
+  - `HandleCallbackAsync(provider, code, state)` - Process OAuth callback and create/link account
+  - `UnlinkOAuthAccountAsync(userId, provider)` - Remove OAuth account link
+  - `GetLinkedAccountsAsync(userId)` - List user's linked OAuth providers
+  - `RefreshTokenAsync(userId, provider)` - Refresh expired OAuth tokens (Google/Discord only)
+  - `ValidateStateAsync(state)` - Verify CSRF state parameter (single-use)
+  - `StoreStateAsync(state)` - Store CSRF state with 10-min expiration
+- `EncryptionService` (`Services/EncryptionService.cs`, 68 lines): Token encryption via Data Protection API
+  - `EncryptAsync(plaintext, purpose)` - Encrypt sensitive data (OAuth tokens, TOTP secrets)
+  - `DecryptAsync(ciphertext, purpose)` - Decrypt with purpose validation
+
+**Frontend**:
+- `/login` - OAuth buttons (Google, Discord, GitHub)
+- `/auth/callback` - OAuth redirect handler with success/error states
+- `/profile` - Linked accounts management (link/unlink providers)
+
+**Database**:
+- `oauth_accounts` table (id, user_id, provider, provider_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at, created_at, updated_at)
+- Unique constraint: (provider, provider_user_id)
+- Cascade delete: ON DELETE CASCADE (remove OAuth accounts when user deleted)
+
+**Configuration** (`appsettings.json`):
+```json
+{
+  "Authentication": {
+    "OAuth": {
+      "CallbackBaseUrl": "http://localhost:8080",
+      "Providers": {
+        "Google": { "ClientId": "${GOOGLE_OAUTH_CLIENT_ID}", "ClientSecret": "${GOOGLE_OAUTH_CLIENT_SECRET}", ... },
+        "Discord": { "ClientId": "${DISCORD_OAUTH_CLIENT_ID}", "ClientSecret": "${DISCORD_OAUTH_CLIENT_SECRET}", ... },
+        "GitHub": { "ClientId": "${GITHUB_OAUTH_CLIENT_ID}", "ClientSecret": "${GITHUB_OAUTH_CLIENT_SECRET}", ... }
+      }
+    }
+  }
+}
+```
+
+**Environment Variables**:
+- `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`
+- `DISCORD_OAUTH_CLIENT_ID` / `DISCORD_OAUTH_CLIENT_SECRET`
+- `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET`
+
+**Migrations**: 20251026185101_AddOAuthAccountsTable
+
+**Tests**: 23 tests (10 EncryptionService + 13 OAuthService)
+
+**Documentation**:
+- Setup Guide: `docs/guide/oauth-setup-guide.md` - Provider registration and configuration
+- Security Docs: `docs/security/oauth-security.md` - CSRF, encryption, incident response
+- User Guide: `docs/guide/oauth-user-guide.md` - Linking/unlinking accounts
+
+**Production Considerations**:
+- ⚠️ State storage is in-memory (lost on restart) - migrate to Redis for production
+- ⚠️ Data Protection keys must be persisted (Azure Key Vault, Redis, or file system)
+- ⚠️ CallbackBaseUrl must use HTTPS in production
+- ⚠️ OAuth apps must be registered with production callback URLs
 
 ### Key Features
 
@@ -96,9 +207,12 @@ tools/             - PowerShell scripts
 |---------|----|--------------|----|
 | **API Key Auth** | API-01 | ApiKeyAuthenticationService, Middleware, PBKDF2 (210k iter) | 21 unit + 17 integration |
 | **Session Mgmt** | AUTH-03 | SessionManagementService, auto-revoke (30d default), background svc | 39 tests |
+| **OAuth 2.0 Auth** | AUTH-06 | OAuthService, EncryptionService, Google/Discord/GitHub, CSRF protection, token encryption, 4 endpoints | 23 tests |
+| **Two-Factor Auth** | AUTH-07 | TotpService, TempSessionService, TOTP+backup codes, DataProtection encryption, 5 endpoints | 11 tests |
 | **User Mgmt** | ADMIN-01 | UserManagementService, CRUD endpoints, safety checks | 75 tests |
 | **Analytics** | ADMIN-02 | AdminStatsService, 8 metrics, 5 charts, CSV/JSON export | 20 tests |
 | **Workflow Errors** | N8N-05 | WorkflowErrorLoggingService, n8n webhook, sensitive data redaction | 33 tests |
+| **Workflow Templates** | N8N-04 | N8nTemplateService, 12+ templates, n8n API integration, parameter substitution, template gallery UI | 16 unit + 11 integration |
 | **Alerting** | OPS-07 | Email/Slack/PagerDuty, throttling (1hr), Prometheus integration | 11 tests |
 | **Streaming QA** | CHAT-01 | ILlmService, SSE endpoint, token-by-token | - |
 | **BGG Integration** | AI-13 | BggApiService, search/details, 7d cache, Polly retry | - |
@@ -212,8 +326,9 @@ tools/             - PowerShell scripts
 
 **Main Pipeline** (`.github/workflows/ci.yml`):
 - ci-web: Lint → Typecheck → Test (Node 20, pnpm 9)
-- ci-api: Build → Test (.NET 9, postgres, qdrant, libgdiplus)
-- Performance: ~10-12min (post-OPS-06)
+- ci-api: Build → Test (.NET 9, postgres, qdrant, redis, libgdiplus)
+- rag-evaluation: RAG tests (.NET 9, postgres, qdrant, redis)
+- Performance: ~8-10min (post-OPS-08, 33% faster with Redis)
 
 **Security** (`.github/workflows/security-scan.yml`):
 1. CodeQL SAST (C#, JS/TS)
@@ -315,8 +430,12 @@ cd apps/web && pnpm dev                                                         
 | **Figma MCP Setup** | `docs/guide/figma-mcp-setup.md` | Design-to-code automation |
 | **n8n Integration** | `docs/guide/n8n-integration-guide.md` | N8N-01, N8N-03 webhooks |
 | **n8n Errors** | `docs/guide/n8n-error-handling.md` | Error handling (N8N-05) |
+| **n8n Templates** | `docs/guide/n8n-template-library.md` | 12+ workflow templates, import wizard (N8N-04) |
 | **Coverage** | `docs/code-coverage.md` | Measurement & tracking |
 | **Security Scan** | `docs/security-scanning.md` | CI scanning guide |
+| **OAuth Security** | `docs/security/oauth-security.md` | CSRF, token encryption, incident response (AUTH-06) |
+| **OAuth Setup** | `docs/guide/oauth-setup-guide.md` | Provider registration (Google/Discord/GitHub) |
+| **OAuth User Guide** | `docs/guide/oauth-user-guide.md` | Linking/unlinking accounts |
 | **Repo Migration** | `docs/guide/repository-visibility-migration.md` | Public ↔ private |
 | **Schemas** | `schemas/README.md` | RuleSpec v0 reference |
 | **Skills** | `docs/guides/SKILLS_GUIDE.md` | 21 available skills |

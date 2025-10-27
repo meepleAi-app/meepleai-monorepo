@@ -1,0 +1,183 @@
+{
+  "id": "pdf-processing-pipeline",
+  "name": "Automated PDF Processing Pipeline",
+  "version": "1.0.0",
+  "description": "Complete PDF processing workflow: extract text → chunk → generate embeddings → index to Qdrant vector database",
+  "category": "data-processing",
+  "author": "MeepleAI",
+  "tags": ["pdf", "rag", "embedding", "qdrant", "automation"],
+  "icon": "🔄",
+  "screenshot": null,
+  "documentation": "docs/n8n-templates/pdf-processing-pipeline.md",
+  "parameters": [
+    {
+      "name": "webhookPath",
+      "type": "string",
+      "label": "Webhook Path",
+      "description": "Webhook path to trigger PDF processing",
+      "required": true,
+      "default": "/webhook/process-pdf",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "apiBaseUrl",
+      "type": "string",
+      "label": "API Base URL",
+      "description": "MeepleAI API URL",
+      "required": true,
+      "default": "http://api:8080",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "chunkSize",
+      "type": "number",
+      "label": "Chunk Size (chars)",
+      "description": "Character count per text chunk",
+      "required": true,
+      "default": "512",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "chunkOverlap",
+      "type": "number",
+      "label": "Chunk Overlap (chars)",
+      "description": "Overlap between chunks for context preservation",
+      "required": true,
+      "default": "50",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "embeddingModel",
+      "type": "select",
+      "label": "Embedding Model",
+      "description": "Model to use for generating embeddings",
+      "required": true,
+      "default": "text-embedding-3-small",
+      "options": ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"],
+      "sensitive": false
+    }
+  ],
+  "workflow": {
+    "nodes": [
+      {
+        "id": "webhook",
+        "name": "PDF Processing Trigger",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [250, 300],
+        "parameters": {
+          "path": "{{webhookPath}}",
+          "httpMethod": "POST",
+          "responseMode": "onReceived"
+        }
+      },
+      {
+        "id": "extract-text",
+        "name": "Extract PDF Text",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [450, 300],
+        "parameters": {
+          "url": "={{apiBaseUrl}}/api/v1/pdf/extract",
+          "method": "POST",
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {"name": "pdfId", "value": "={{ $json.pdfId }}"},
+              {"name": "gameId", "value": "={{ $json.gameId }}"}
+            ]
+          }
+        }
+      },
+      {
+        "id": "chunk-text",
+        "name": "Create Text Chunks",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [650, 300],
+        "parameters": {
+          "url": "={{apiBaseUrl}}/api/v1/text/chunk",
+          "method": "POST",
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {"name": "text", "value": "={{ $json.text }}"},
+              {"name": "chunkSize", "value": "{{chunkSize}}"},
+              {"name": "overlap", "value": "{{chunkOverlap}}"}
+            ]
+          }
+        }
+      },
+      {
+        "id": "generate-embeddings",
+        "name": "Generate Embeddings",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [850, 300],
+        "parameters": {
+          "url": "={{apiBaseUrl}}/api/v1/embeddings/generate",
+          "method": "POST",
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {"name": "chunks", "value": "={{ $json.chunks }}"},
+              {"name": "model", "value": "{{embeddingModel}}"}
+            ]
+          }
+        }
+      },
+      {
+        "id": "index-qdrant",
+        "name": "Index to Qdrant",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [1050, 300],
+        "parameters": {
+          "url": "={{apiBaseUrl}}/api/v1/qdrant/index",
+          "method": "POST",
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {"name": "gameId", "value": "={{ $json.gameId }}"},
+              {"name": "embeddings", "value": "={{ $json.embeddings }}"},
+              {"name": "chunks", "value": "={{ $json.chunks }}"}
+            ]
+          }
+        }
+      },
+      {
+        "id": "notify-complete",
+        "name": "Processing Complete",
+        "type": "n8n-nodes-base.noOp",
+        "typeVersion": 1,
+        "position": [1250, 300],
+        "parameters": {}
+      }
+    ],
+    "connections": {
+      "webhook": {
+        "main": [[{"node": "extract-text", "type": "main", "index": 0}]]
+      },
+      "extract-text": {
+        "main": [[{"node": "chunk-text", "type": "main", "index": 0}]]
+      },
+      "chunk-text": {
+        "main": [[{"node": "generate-embeddings", "type": "main", "index": 0}]]
+      },
+      "generate-embeddings": {
+        "main": [[{"node": "index-qdrant", "type": "main", "index": 0}]]
+      },
+      "index-qdrant": {
+        "main": [[{"node": "notify-complete", "type": "main", "index": 0}]]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null
+  }
+}

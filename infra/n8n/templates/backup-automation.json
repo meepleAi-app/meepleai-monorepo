@@ -1,0 +1,170 @@
+{
+  "id": "backup-automation",
+  "name": "Database Backup to S3",
+  "version": "1.0.0",
+  "description": "Automated daily database backups to S3-compatible storage with configurable retention policy",
+  "category": "automation",
+  "author": "MeepleAI",
+  "tags": ["backup", "database", "s3", "automation", "postgres"],
+  "icon": "💾",
+  "screenshot": null,
+  "documentation": "docs/n8n-templates/backup-automation.md",
+  "parameters": [
+    {
+      "name": "s3Endpoint",
+      "type": "string",
+      "label": "S3 Endpoint",
+      "description": "S3-compatible storage endpoint URL",
+      "required": true,
+      "default": "s3.amazonaws.com",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "s3Bucket",
+      "type": "string",
+      "label": "S3 Bucket Name",
+      "description": "Target bucket for backups",
+      "required": true,
+      "default": null,
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "s3AccessKey",
+      "type": "string",
+      "label": "S3 Access Key",
+      "description": "AWS access key ID or S3-compatible credentials",
+      "required": true,
+      "default": null,
+      "options": null,
+      "sensitive": true
+    },
+    {
+      "name": "s3SecretKey",
+      "type": "string",
+      "label": "S3 Secret Key",
+      "description": "AWS secret access key",
+      "required": true,
+      "default": null,
+      "options": null,
+      "sensitive": true
+    },
+    {
+      "name": "backupSchedule",
+      "type": "select",
+      "label": "Backup Schedule",
+      "description": "When to run backups",
+      "required": true,
+      "default": "0 3 * * *",
+      "options": ["0 3 * * *", "0 */6 * * *", "0 3 * * 0"],
+      "sensitive": false
+    },
+    {
+      "name": "retentionDays",
+      "type": "number",
+      "label": "Retention Days",
+      "description": "How many days to keep backups",
+      "required": true,
+      "default": "30",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "dbConnectionString",
+      "type": "string",
+      "label": "Database Connection",
+      "description": "PostgreSQL connection string",
+      "required": true,
+      "default": "postgresql://user:pass@postgres:5432/meepleai",
+      "options": null,
+      "sensitive": true
+    }
+  ],
+  "workflow": {
+    "nodes": [
+      {
+        "id": "schedule",
+        "name": "Backup Schedule",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [250, 300],
+        "parameters": {
+          "rule": {
+            "interval": [{"cronExpression": "{{backupSchedule}}"}]
+          }
+        }
+      },
+      {
+        "id": "pg-dump",
+        "name": "Create DB Dump",
+        "type": "n8n-nodes-base.executeCommand",
+        "typeVersion": 1,
+        "position": [450, 300],
+        "parameters": {
+          "command": "pg_dump {{dbConnectionString}} --format=custom --file=/tmp/backup_$(date +%Y%m%d_%H%M%S).dump"
+        }
+      },
+      {
+        "id": "upload-s3",
+        "name": "Upload to S3",
+        "type": "n8n-nodes-base.aws",
+        "typeVersion": 1,
+        "position": [650, 300],
+        "parameters": {
+          "service": "s3",
+          "operation": "upload",
+          "bucket": "{{s3Bucket}}",
+          "fileName": "backups/meepleai_{{ $now.format('YYYYMMDD_HHmmss') }}.dump",
+          "binaryData": true
+        },
+        "credentials": {
+          "aws": {
+            "accessKeyId": "{{s3AccessKey}}",
+            "secretAccessKey": "{{s3SecretKey}}",
+            "endpoint": "{{s3Endpoint}}"
+          }
+        }
+      },
+      {
+        "id": "cleanup-old",
+        "name": "Delete Old Backups",
+        "type": "n8n-nodes-base.aws",
+        "typeVersion": 1,
+        "position": [850, 300],
+        "parameters": {
+          "service": "s3",
+          "operation": "delete",
+          "bucket": "{{s3Bucket}}",
+          "fileName": "={{ $item(0).$json.key }}",
+          "options": {
+            "deleteMultiple": true,
+            "deleteOlderThan": "{{retentionDays}}"
+          }
+        },
+        "credentials": {
+          "aws": {
+            "accessKeyId": "{{s3AccessKey}}",
+            "secretAccessKey": "{{s3SecretKey}}",
+            "endpoint": "{{s3Endpoint}}"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "schedule": {
+        "main": [[{"node": "pg-dump", "type": "main", "index": 0}]]
+      },
+      "pg-dump": {
+        "main": [[{"node": "upload-s3", "type": "main", "index": 0}]]
+      },
+      "upload-s3": {
+        "main": [[{"node": "cleanup-old", "type": "main", "index": 0}]]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null
+  }
+}

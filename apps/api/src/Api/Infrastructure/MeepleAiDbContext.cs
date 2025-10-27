@@ -38,6 +38,8 @@ public class MeepleAiDbContext : DbContext
     // ADMIN-01 Phase 4: Prompt Evaluation Results
     public DbSet<PromptEvaluationResultEntity> PromptEvaluationResults { get; set; }
     public DbSet<AlertEntity> Alerts => Set<AlertEntity>(); // OPS-07
+    public DbSet<UserBackupCodeEntity> UserBackupCodes => Set<UserBackupCodeEntity>(); // AUTH-07
+    public DbSet<TempSessionEntity> TempSessions => Set<TempSessionEntity>(); // AUTH-07
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -56,10 +58,23 @@ public class MeepleAiDbContext : DbContext
                 .HasMaxLength(32)
                 .IsRequired();
             entity.Property(e => e.CreatedAt).IsRequired();
+
+            // AUTH-07: Two-Factor Authentication
+            entity.Property(e => e.TotpSecretEncrypted).HasMaxLength(512);
+            entity.Property(e => e.IsTwoFactorEnabled).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.TwoFactorEnabledAt);
+
+            // Relationships
             entity.HasMany(e => e.Sessions)
                 .WithOne(s => s.User)
                 .HasForeignKey(s => s.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(e => e.BackupCodes)
+                .WithOne(bc => bc.User)
+                .HasForeignKey(bc => bc.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Indexes
             entity.HasIndex(e => e.Email).IsUnique();
         });
 
@@ -78,6 +93,44 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.RevokedAt);
             entity.HasIndex(e => e.TokenHash).IsUnique();
             entity.HasIndex(e => e.UserId);
+        });
+
+        // AUTH-07: User backup codes for 2FA recovery
+        modelBuilder.Entity<UserBackupCodeEntity>(entity =>
+        {
+            entity.ToTable("user_backup_codes");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.CodeHash).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.IsUsed).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.UsedAt);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => new { e.UserId, e.IsUsed }).HasFilter("\"IsUsed\" = FALSE");
+            entity.HasIndex(e => e.CodeHash).IsUnique();
+        });
+
+        // AUTH-07: Temporary sessions for 2FA verification (short-lived, single-use)
+        modelBuilder.Entity<TempSessionEntity>(entity =>
+        {
+            entity.ToTable("temp_sessions");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(64);
+            entity.Property(e => e.UserId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.TokenHash).IsRequired().HasMaxLength(128);
+            entity.Property(e => e.IpAddress).HasMaxLength(64);
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.ExpiresAt).IsRequired();
+            entity.Property(e => e.IsUsed).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.UsedAt);
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(e => e.TokenHash).IsUnique();
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.ExpiresAt); // For cleanup queries
         });
 
         modelBuilder.Entity<ApiKeyEntity>(entity =>

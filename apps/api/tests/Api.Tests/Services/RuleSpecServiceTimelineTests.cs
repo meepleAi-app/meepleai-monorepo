@@ -21,10 +21,12 @@ public class RuleSpecServiceTimelineTests : IDisposable
     public RuleSpecServiceTimelineTests()
     {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseInMemoryDatabase(databaseName: $"TimelineTestDb_{Guid.NewGuid()}")
+            .UseSqlite("DataSource=:memory:")
             .Options;
 
         _context = new MeepleAiDbContext(options);
+        _context.Database.OpenConnection();
+        _context.Database.EnsureCreated();
         _mockCache = new Mock<IAiResponseCacheService>();
         _service = new RuleSpecService(_context, _mockCache.Object);
 
@@ -396,7 +398,7 @@ public class RuleSpecServiceTimelineTests : IDisposable
 
     public void Dispose()
     {
-        _context.Database.EnsureDeleted();
+        _context.Database.CloseConnection();
         _context.Dispose();
     }
 }

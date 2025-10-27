@@ -1,0 +1,176 @@
+{
+  "id": "email-notification",
+  "name": "PDF Processing Complete Email",
+  "version": "1.0.0",
+  "description": "Send email notifications when PDF processing completes successfully or fails",
+  "category": "automation",
+  "author": "MeepleAI",
+  "tags": ["email", "notification", "pdf", "automation"],
+  "icon": "📧",
+  "screenshot": null,
+  "documentation": "docs/n8n-templates/email-notification.md",
+  "parameters": [
+    {
+      "name": "smtpHost",
+      "type": "string",
+      "label": "SMTP Server",
+      "description": "SMTP server hostname",
+      "required": true,
+      "default": "smtp.gmail.com",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "smtpPort",
+      "type": "number",
+      "label": "SMTP Port",
+      "description": "SMTP server port (typically 587 for TLS)",
+      "required": true,
+      "default": "587",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "smtpUser",
+      "type": "string",
+      "label": "SMTP Username",
+      "description": "Email account username for authentication",
+      "required": true,
+      "default": null,
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "smtpPassword",
+      "type": "string",
+      "label": "SMTP Password",
+      "description": "Email account password or app password",
+      "required": true,
+      "default": null,
+      "options": null,
+      "sensitive": true
+    },
+    {
+      "name": "recipientEmail",
+      "type": "string",
+      "label": "Recipient Email",
+      "description": "Email address to send notifications to",
+      "required": true,
+      "default": null,
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "webhookUrl",
+      "type": "string",
+      "label": "Webhook URL",
+      "description": "URL to receive PDF processing events",
+      "required": true,
+      "default": "http://localhost:5678/webhook/pdf-complete",
+      "options": null,
+      "sensitive": false
+    }
+  ],
+  "workflow": {
+    "nodes": [
+      {
+        "id": "webhook-trigger",
+        "name": "PDF Processing Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [250, 300],
+        "webhookId": "pdf-processing-complete",
+        "parameters": {
+          "path": "{{webhookUrl}}",
+          "httpMethod": "POST",
+          "responseMode": "onReceived"
+        }
+      },
+      {
+        "id": "check-status",
+        "name": "Check Processing Status",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [450, 300],
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{ $json.status }}",
+                "operation": "equals",
+                "value2": "success"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "send-success-email",
+        "name": "Send Success Email",
+        "type": "n8n-nodes-base.emailSend",
+        "typeVersion": 2,
+        "position": [650, 200],
+        "parameters": {
+          "transport": "smtp",
+          "fromEmail": "{{smtpUser}}",
+          "toEmail": "{{recipientEmail}}",
+          "subject": "PDF Processing Complete - {{ $json.gameName }}",
+          "message": "The PDF for game '{{ $json.gameName }}' has been processed successfully.\\n\\nDetails:\\n- Game ID: {{ $json.gameId }}\\n- Pages: {{ $json.pageCount }}\\n- Chunks: {{ $json.chunkCount }}\\n- Processing Time: {{ $json.processingTime }}ms",
+          "options": {
+            "allowUnauthorizedCerts": false
+          }
+        },
+        "credentials": {
+          "smtp": {
+            "host": "{{smtpHost}}",
+            "port": "{{smtpPort}}",
+            "secure": true,
+            "user": "{{smtpUser}}",
+            "password": "{{smtpPassword}}"
+          }
+        }
+      },
+      {
+        "id": "send-failure-email",
+        "name": "Send Failure Email",
+        "type": "n8n-nodes-base.emailSend",
+        "typeVersion": 2,
+        "position": [650, 400],
+        "parameters": {
+          "transport": "smtp",
+          "fromEmail": "{{smtpUser}}",
+          "toEmail": "{{recipientEmail}}",
+          "subject": "PDF Processing Failed - {{ $json.gameName }}",
+          "message": "The PDF for game '{{ $json.gameName }}' failed to process.\\n\\nError:\\n{{ $json.error }}\\n\\nPlease check the logs for more details.",
+          "options": {
+            "allowUnauthorizedCerts": false
+          }
+        },
+        "credentials": {
+          "smtp": {
+            "host": "{{smtpHost}}",
+            "port": "{{smtpPort}}",
+            "secure": true,
+            "user": "{{smtpUser}}",
+            "password": "{{smtpPassword}}"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "webhook-trigger": {
+        "main": [[{"node": "check-status", "type": "main", "index": 0}]]
+      },
+      "check-status": {
+        "main": [
+          [{"node": "send-success-email", "type": "main", "index": 0}],
+          [{"node": "send-failure-email", "type": "main", "index": 0}]
+        ]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null
+  }
+}

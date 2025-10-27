@@ -1,8 +1,8 @@
 # MeepleAI Issue Resolution Roadmap
 
-**Document Version:** 1.5
-**Last Updated:** 2025-10-26
-**Total Issues:** 35 (26 open, 9 completed: EDIT-04, EDIT-05, EDIT-06, ADMIN-02, AI-13, AI-14, N8N-05, AI-15-ALT, OPS-07)
+**Document Version:** 1.6
+**Last Updated:** 2025-10-27
+**Total Issues:** 35 (25 open, 10 completed: EDIT-04, EDIT-05, EDIT-06, ADMIN-02, AI-13, AI-14, N8N-04, N8N-05, AI-15-ALT, OPS-07)
 
 ---
 
@@ -170,7 +170,7 @@ Our approach follows these principles:
 | 21 | #425 OPS-07: Alerting system | ✅ COMPLETED | L | **CRITICAL OPS**: Multi-channel alerting (Email/Slack/PagerDuty), Prometheus integration, throttling, auto-resolution. 11 tests passing. Fixed 67 pre-existing test errors. PR #544. Completed: 2025-10-26 |
 | 22 | OPS-08: CI larger runners analysis | ✅ COMPLETED | S | **RESEARCH PHASE**: Documented self-hosted runner options and decision framework. Implementation deferred pending OPS-06 validation. |
 | 23 | #427 N8N-05: Error handling & retry | ✅ COMPLETED | M | Backend complete with error logging service, admin API endpoints, 23 comprehensive tests, n8n integration guide. Frontend spec ready. PR #535. Completed: 2025-10-25 |
-| 24 | #417 N8N-04: Workflow templates | 📋 SPEC MERGED | L | Specification deployed: implementation roadmap (366 lines), DTOs in codebase, example template. PR #536 merged. Full implementation: 29-40h (3.5-5 days). Issue OPEN for implementation tracking. |
+| 24 | #417 N8N-04: Workflow templates | ✅ COMPLETED | L | Complete template library with 12 workflows, n8n API integration, template gallery UI. N8nTemplateService (580 lines), 4 endpoints, 27 tests (16 unit + 11 integration). PR #571. Completed: 2025-10-27 |
 
 **Parallel**: #425 (alerting) is critical path. #427 and #417 can run in parallel with each other. OPS-08 is documentation-only (no implementation yet).
 

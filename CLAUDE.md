@@ -75,7 +75,7 @@ tools/             - PowerShell scripts
 
 ### Frontend (Next.js 14)
 
-**Pages**: index, chat, upload, editor (EDIT-03 rich text), versions, admin, admin/users (ADMIN-01), admin/analytics (ADMIN-02), admin/cache, admin/configuration (CONFIG-06), n8n, logs, setup (AI-03)
+**Pages**: index, chat, upload, editor (EDIT-03 rich text), versions, admin, admin/users (ADMIN-01), admin/analytics (ADMIN-02), admin/cache, admin/configuration (CONFIG-06), admin/n8n-templates (N8N-04), n8n, logs, setup (AI-03)
 
 **API Client**: `lib/api.ts` - get/post/put/delete, cookie auth (`credentials: "include"`), 401 handling, `NEXT_PUBLIC_API_BASE`
 
@@ -99,6 +99,7 @@ tools/             - PowerShell scripts
 | **User Mgmt** | ADMIN-01 | UserManagementService, CRUD endpoints, safety checks | 75 tests |
 | **Analytics** | ADMIN-02 | AdminStatsService, 8 metrics, 5 charts, CSV/JSON export | 20 tests |
 | **Workflow Errors** | N8N-05 | WorkflowErrorLoggingService, n8n webhook, sensitive data redaction | 33 tests |
+| **Workflow Templates** | N8N-04 | N8nTemplateService, 12+ templates, n8n API integration, parameter substitution, template gallery UI | 16 unit + 11 integration |
 | **Alerting** | OPS-07 | Email/Slack/PagerDuty, throttling (1hr), Prometheus integration | 11 tests |
 | **Streaming QA** | CHAT-01 | ILlmService, SSE endpoint, token-by-token | - |
 | **BGG Integration** | AI-13 | BggApiService, search/details, 7d cache, Polly retry | - |
@@ -315,6 +316,7 @@ cd apps/web && pnpm dev                                                         
 | **Figma MCP Setup** | `docs/guide/figma-mcp-setup.md` | Design-to-code automation |
 | **n8n Integration** | `docs/guide/n8n-integration-guide.md` | N8N-01, N8N-03 webhooks |
 | **n8n Errors** | `docs/guide/n8n-error-handling.md` | Error handling (N8N-05) |
+| **n8n Templates** | `docs/guide/n8n-template-library.md` | 12+ workflow templates, import wizard (N8N-04) |
 | **Coverage** | `docs/code-coverage.md` | Measurement & tracking |
 | **Security Scan** | `docs/security-scanning.md` | CI scanning guide |
 | **Repo Migration** | `docs/guide/repository-visibility-migration.md` | Public ↔ private |

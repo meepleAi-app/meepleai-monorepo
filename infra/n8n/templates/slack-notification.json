@@ -1,0 +1,113 @@
+{
+  "id": "slack-notification",
+  "name": "Slack New User Registration Alert",
+  "version": "1.0.0",
+  "description": "Post to Slack channel when new users register, with user details and admin action links",
+  "category": "integration",
+  "author": "MeepleAI",
+  "tags": ["slack", "notification", "user", "registration"],
+  "icon": "💬",
+  "screenshot": null,
+  "documentation": "docs/n8n-templates/slack-notification.md",
+  "parameters": [
+    {
+      "name": "slackWebhookUrl",
+      "type": "string",
+      "label": "Slack Webhook URL",
+      "description": "Incoming webhook URL from Slack app configuration",
+      "required": true,
+      "default": null,
+      "options": null,
+      "sensitive": true
+    },
+    {
+      "name": "slackChannel",
+      "type": "string",
+      "label": "Slack Channel",
+      "description": "Channel to post notifications (#general, #admin, etc.)",
+      "required": true,
+      "default": "#admin",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "webhookPath",
+      "type": "string",
+      "label": "Webhook Path",
+      "description": "Path for receiving registration webhooks",
+      "required": true,
+      "default": "/webhook/user-registered",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "apiBaseUrl",
+      "type": "string",
+      "label": "API Base URL",
+      "description": "MeepleAI API base URL for admin links",
+      "required": true,
+      "default": "https://meepleai.dev",
+      "options": null,
+      "sensitive": false
+    }
+  ],
+  "workflow": {
+    "nodes": [
+      {
+        "id": "webhook",
+        "name": "User Registration Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [250, 300],
+        "parameters": {
+          "path": "{{webhookPath}}",
+          "httpMethod": "POST",
+          "responseMode": "onReceived"
+        }
+      },
+      {
+        "id": "format-message",
+        "name": "Format Slack Message",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [450, 300],
+        "parameters": {
+          "functionCode": "return [{\\n  json: {\\n    channel: '{{slackChannel}}',\\n    text: ':wave: New User Registration',\\n    blocks: [\\n      {\\n        type: 'section',\\n        text: {\\n          type: 'mrkdwn',\\n          text: `*New User Registered*\\\\n\\\\n*Email:* ${items[0].json.email}\\\\n*Display Name:* ${items[0].json.displayName}\\\\n*Role:* ${items[0].json.role}\\\\n*Registered:* ${new Date(items[0].json.createdAt).toLocaleString()}`\\n        }\\n      },\\n      {\\n        type: 'actions',\\n        elements: [\\n          {\\n            type: 'button',\\n            text: { type: 'plain_text', text: 'View User' },\\n            url: '{{apiBaseUrl}}/admin/users?userId=' + items[0].json.userId\\n          }\\n        ]\\n      }\\n    ]\\n  }\\n}];"
+        }
+      },
+      {
+        "id": "send-slack",
+        "name": "Post to Slack",
+        "type": "n8n-nodes-base.slack",
+        "typeVersion": 2,
+        "position": [650, 300],
+        "parameters": {
+          "resource": "message",
+          "operation": "post",
+          "channel": "={{ $json.channel }}",
+          "text": "={{ $json.text }}",
+          "blocksUi": {
+            "blocksValues": "={{ $json.blocks }}"
+          }
+        },
+        "credentials": {
+          "slackWebhookApi": {
+            "url": "{{slackWebhookUrl}}"
+          }
+        }
+      }
+    ],
+    "connections": {
+      "webhook": {
+        "main": [[{"node": "format-message", "type": "main", "index": 0}]]
+      },
+      "format-message": {
+        "main": [[{"node": "send-slack", "type": "main", "index": 0}]]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null
+  }
+}

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Api.Services;
+using Api.Services.Pdf;
 using Microsoft.Extensions.Logging;
 using Moq;
 using QuestPDF.Fluent;

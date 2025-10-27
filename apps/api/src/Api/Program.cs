@@ -1211,7 +1211,22 @@ v1Api.MapGet("/auth/oauth/{provider}/login", async (
 
     var authUrl = await oauthService.GetAuthorizationUrlAsync(provider, state);
     return Results.Redirect(authUrl);
-});
+})
+.WithName("InitiateOAuthLogin")
+.WithTags("Authentication", "OAuth")
+.WithSummary("Initiate OAuth 2.0 login flow")
+.WithDescription(@"Redirects user to OAuth provider (Google, Discord, or GitHub) for authentication.
+Generates cryptographically secure CSRF state parameter (32 bytes) with 10-minute expiration.
+Rate limited to 10 requests per minute per IP address.
+
+**Supported Providers**: google, discord, github
+
+**Security**: CSRF protection via state parameter, rate limiting prevents abuse.
+
+**Flow**: User clicks OAuth button → Backend redirects to provider → User authorizes → Provider redirects to callback endpoint")
+.Produces(302)
+.Produces(429)
+.Produces(400);
 
 v1Api.MapGet("/auth/oauth/{provider}/callback", async (
     string provider,
@@ -1271,7 +1286,25 @@ v1Api.MapGet("/auth/oauth/{provider}/callback", async (
         var redirectUrl = $"{frontendUrl}/auth/callback?error=oauth_failed";
         return Results.Redirect(redirectUrl);
     }
-});
+})
+.WithName("HandleOAuthCallback")
+.WithTags("Authentication", "OAuth")
+.WithSummary("Handle OAuth 2.0 callback from provider")
+.WithDescription(@"Processes OAuth authorization code from provider and creates user session.
+Validates CSRF state parameter (single-use, 10-minute expiration).
+Creates new user if email doesn't exist, or links OAuth to existing user by email.
+Rate limited to 10 requests per minute per IP address.
+
+**Parameters**:
+- `provider`: OAuth provider (google, discord, github)
+- `code`: Authorization code from provider
+- `state`: CSRF protection state parameter
+
+**Security**: State validation prevents CSRF attacks, tokens encrypted at rest.
+
+**Flow**: Provider redirects here → Validate state → Exchange code for token → Get user info → Create/link account → Create session → Redirect to frontend")
+.Produces(302)
+.Produces(429);
 
 v1Api.MapDelete("/auth/oauth/{provider}/unlink", async (
     string provider,
@@ -1285,7 +1318,22 @@ v1Api.MapDelete("/auth/oauth/{provider}/unlink", async (
 
     await oauthService.UnlinkOAuthAccountAsync(session.User.Id, provider);
     return Results.NoContent();
-});
+})
+.WithName("UnlinkOAuthAccount")
+.WithTags("Authentication", "OAuth", "User Profile")
+.WithSummary("Unlink OAuth provider from user account")
+.WithDescription(@"Removes the specified OAuth provider link from the authenticated user's account.
+User must have at least one authentication method remaining (password or another OAuth provider).
+
+**Parameters**:
+- `provider`: OAuth provider to unlink (google, discord, github)
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Security**: Cannot unlink if it's the only authentication method (prevents account lockout).")
+.Produces(204)
+.Produces(401)
+.Produces(404);
 
 v1Api.MapGet("/users/me/oauth-accounts", async (
     HttpContext context,
@@ -1298,7 +1346,19 @@ v1Api.MapGet("/users/me/oauth-accounts", async (
 
     var accounts = await oauthService.GetLinkedAccountsAsync(session.User.Id);
     return Results.Json(accounts);
-});
+})
+.WithName("GetLinkedOAuthAccounts")
+.WithTags("Authentication", "OAuth", "User Profile")
+.WithSummary("Get user's linked OAuth accounts")
+.WithDescription(@"Returns list of OAuth providers linked to the authenticated user's account.
+
+**Authorization**: Requires active session (cookie-based authentication).
+
+**Response**: Array of OAuthAccountDto objects containing:
+- `provider`: Provider name (google, discord, github)
+- `createdAt`: Timestamp when account was linked")
+.Produces<List<OAuthAccountDto>>(200)
+.Produces(401);
 
 v1Api.MapGet("/auth/me", (HttpContext context) =>
 {

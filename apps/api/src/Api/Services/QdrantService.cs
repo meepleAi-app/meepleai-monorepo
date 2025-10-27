@@ -294,12 +294,15 @@ public class QdrantService : IQdrantService
         int limit = 5,
         CancellationToken ct = default)
     {
+        // Validate parameters
+        ArgumentNullException.ThrowIfNull(queryEmbedding);
+
         // OPS-02: Create distributed trace span for vector search
         using var activity = MeepleAiActivitySources.VectorSearch.StartActivity("QdrantService.Search");
         activity?.SetTag("game.id", gameId);
         activity?.SetTag("limit", limit);
         activity?.SetTag("collection", CollectionName);
-        activity?.SetTag("vector.dimension", queryEmbedding?.Length ?? 0);
+        activity?.SetTag("vector.dimension", queryEmbedding.Length);
 
         // OPS-02: Start tracking duration
         var stopwatch = Stopwatch.StartNew();
@@ -783,12 +786,15 @@ public class QdrantService : IQdrantService
         int limit = 5,
         CancellationToken ct = default)
     {
+        // Validate parameters
+        ArgumentNullException.ThrowIfNull(queryEmbedding);
+
         using var activity = MeepleAiActivitySources.VectorSearch.StartActivity("QdrantService.Search");
         activity?.SetTag("game.id", gameId);
         activity?.SetTag("language", language);
         activity?.SetTag("limit", limit);
         activity?.SetTag("collection", CollectionName);
-        activity?.SetTag("vector.dimension", queryEmbedding?.Length ?? 0);
+        activity?.SetTag("vector.dimension", queryEmbedding.Length);
 
         var stopwatch = Stopwatch.StartNew();
 

@@ -48,7 +48,7 @@ public class UserManagementService
             var term = searchTerm.ToLower();
             query = query.Where(u =>
                 u.Email.ToLower().Contains(term) ||
-                u.DisplayName.ToLower().Contains(term));
+                u.DisplayName != null && u.DisplayName.ToLower().Contains(term));
         }
 
         // Role filter

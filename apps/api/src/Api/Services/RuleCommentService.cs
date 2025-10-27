@@ -268,7 +268,7 @@ public partial class RuleCommentService : IRuleCommentService
             // Query users: exact DisplayName match (case-insensitive) or Email prefix match
             var users = await _dbContext.Users
                 .AsNoTracking()
-                .Where(u => mentionedUsernames.Contains(u.DisplayName.ToLower())
+                .Where(u => (u.DisplayName != null && mentionedUsernames.Contains(u.DisplayName.ToLower()))
                     || mentionedUsernames.Any(m => u.Email.ToLower().StartsWith(m)))
                 .Select(u => u.Id)
                 .Distinct()

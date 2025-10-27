@@ -56,6 +56,7 @@ tools/             - PowerShell scripts
 | **Admin** | UserManagementService, AdminStatsService, WorkflowErrorLoggingService | ADMIN-01/02, N8N-05 |
 | **Infra** | AuditService, AiRequestLogService, RateLimitService, N8nConfigService, BackgroundTaskService, AlertingService | OPS-07 multi-channel alerts |
 | **Cache** (PERF-05) | HybridCacheService, AiResponseCacheService | L1 memory + L2 Redis, stampede protection |
+| **Config** (CONFIG-01-06) | ConfigurationService, FeatureFlagService | Dynamic runtime configuration, feature flags, admin UI at `/admin/configuration` |
 
 **Performance Optimizations**:
 - PERF-05: HybridCache L1+L2, 5min TTL
@@ -74,7 +75,7 @@ tools/             - PowerShell scripts
 
 ### Frontend (Next.js 14)
 
-**Pages**: index, chat, upload, editor (EDIT-03 rich text), versions, admin, admin/users (ADMIN-01), admin/analytics (ADMIN-02), admin/cache, n8n, logs, setup (AI-03)
+**Pages**: index, chat, upload, editor (EDIT-03 rich text), versions, admin, admin/users (ADMIN-01), admin/analytics (ADMIN-02), admin/cache, admin/configuration (CONFIG-06), n8n, logs, setup (AI-03)
 
 **API Client**: `lib/api.ts` - get/post/put/delete, cookie auth (`credentials: "include"`), 401 handling, `NEXT_PUBLIC_API_BASE`
 

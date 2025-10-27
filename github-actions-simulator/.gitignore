@@ -1,0 +1,36 @@
+# Secrets (NEVER commit these!)
+config/.secrets
+
+# Logs
+logs/*.log
+logs/**/*.log
+
+# Artifacts
+artifacts/*
+!artifacts/.gitkeep
+
+# Cache
+cache/*
+!cache/.gitkeep
+
+# Act runtime
+.act/*
+!.act/.gitkeep
+
+# Docker volumes
+*.tar.gz
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp

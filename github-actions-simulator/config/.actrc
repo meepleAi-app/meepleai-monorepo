@@ -1,0 +1,35 @@
+# act Configuration for GitHub Actions Simulator
+# This file contains environment variables for act
+
+# CI Environment
+CI=true
+DOTNET_CLI_TELEMETRY_OPTOUT=1
+DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+
+# .NET Version
+DOTNET_VERSION=9.0.x
+
+# Node.js Version
+NODE_VERSION=20
+
+# Database Configuration
+POSTGRES_USER=meeple
+POSTGRES_PASSWORD=meeplepass
+POSTGRES_DB=meepleai
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+
+# Redis Configuration
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_URL=redis:6379
+
+# Qdrant Configuration
+QDRANT_HOST=qdrant
+QDRANT_URL=http://qdrant:6333
+
+# Seq Configuration (optional, can be disabled)
+SEQ_URL=http://localhost:5341
+
+# Docnet Runtime (for PDF processing in Linux)
+DocnetRuntime=linux

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { api } from "../lib/api";
 import { CommentThread } from "../components/CommentThread";
 import { DiffViewerEnhanced } from "../components/DiffViewerEnhanced";
+import { VersionTimeline } from "../components/VersionTimeline";
+import { VersionTimelineFilters } from "../components/VersionTimelineFilters";
 
 type AuthUser = {
   id: string;
@@ -95,6 +97,10 @@ export default function VersionHistory() {
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [showOnlyChanges, setShowOnlyChanges] = useState<boolean>(true);
+  // EDIT-06: Timeline view toggle
+  const [viewMode, setViewMode] = useState<"list" | "timeline">("list");
+  const [timelineFilters, setTimelineFilters] = useState({});
+  const [timelineAuthors, setTimelineAuthors] = useState<string[]>([]);
 
   const loadCurrentUser = useCallback(async () => {
     try {
@@ -130,6 +136,18 @@ export default function VersionHistory() {
     }
   }, []);
 
+  // EDIT-06: Load timeline authors for filters
+  const loadTimelineAuthors = useCallback(async (gId: string) => {
+    try {
+      const response = await api.get<any>(`/api/v1/games/${gId}/rulespec/versions/timeline`);
+      if (response && response.authors) {
+        setTimelineAuthors(response.authors);
+      }
+    } catch (err) {
+      console.error("Failed to load timeline authors:", err);
+    }
+  }, []);
+
   const loadDiff = useCallback(async () => {
     if (!gameId || typeof gameId !== "string" || !selectedFromVersion || !selectedToVersion) {
       return;
@@ -160,8 +178,10 @@ export default function VersionHistory() {
   useEffect(() => {
     if (authUser && gameId && typeof gameId === "string") {
       void loadHistory(gameId);
+      // EDIT-06: Load timeline authors
+      void loadTimelineAuthors(gameId);
     }
-  }, [authUser, gameId, loadHistory]);
+  }, [authUser, gameId, loadHistory, loadTimelineAuthors]);
 
   const handleRestoreVersion = async (version: string) => {
     if (!gameId || typeof gameId !== "string") {
@@ -279,8 +299,63 @@ export default function VersionHistory() {
         </div>
       )}
 
+      {/* EDIT-06: View mode toggle */}
+      <div style={{ marginBottom: 16, borderBottom: "2px solid #ddd" }}>
+        <div style={{ display: "flex", gap: 0 }}>
+          <button
+            onClick={() => setViewMode("list")}
+            style={{
+              padding: "12px 24px",
+              background: viewMode === "list" ? "#0070f3" : "transparent",
+              color: viewMode === "list" ? "white" : "#666",
+              border: "none",
+              borderBottom: viewMode === "list" ? "2px solid #0070f3" : "2px solid transparent",
+              cursor: "pointer",
+              fontSize: 14,
+              fontWeight: viewMode === "list" ? "bold" : "normal",
+              transition: "all 0.2s"
+            }}
+          >
+            📋 List View
+          </button>
+          <button
+            onClick={() => setViewMode("timeline")}
+            style={{
+              padding: "12px 24px",
+              background: viewMode === "timeline" ? "#0070f3" : "transparent",
+              color: viewMode === "timeline" ? "white" : "#666",
+              border: "none",
+              borderBottom: viewMode === "timeline" ? "2px solid #0070f3" : "2px solid transparent",
+              cursor: "pointer",
+              fontSize: 14,
+              fontWeight: viewMode === "timeline" ? "bold" : "normal",
+              transition: "all 0.2s"
+            }}
+          >
+            🕒 Timeline View
+          </button>
+        </div>
+      </div>
+
       {isLoadingHistory ? (
         <p>Caricamento storico...</p>
+      ) : viewMode === "timeline" ? (
+        // EDIT-06: Timeline view
+        <div>
+          <VersionTimelineFilters
+            authors={timelineAuthors}
+            filters={timelineFilters}
+            onFiltersChange={setTimelineFilters}
+            onReset={() => setTimelineFilters({})}
+          />
+          <VersionTimeline
+            gameId={gameId as string}
+            onVersionClick={(version) => {
+              setSelectedToVersion(version);
+              setViewMode("list");
+            }}
+          />
+        </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24 }}>
           {/* Left sidebar: Version list */}

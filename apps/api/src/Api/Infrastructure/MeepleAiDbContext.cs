@@ -152,6 +152,9 @@ public class MeepleAiDbContext : DbContext
             entity.Property(e => e.CreatedAt).IsRequired();
             entity.Property(e => e.GameId).IsRequired().HasMaxLength(64);
             entity.Property(e => e.CreatedByUserId).HasMaxLength(64);
+            // EDIT-06: Version timeline support
+            entity.Property(e => e.ParentVersionId).HasMaxLength(64);
+            entity.Property(e => e.MergedFromVersionIds).HasMaxLength(1024);
             entity.HasOne(e => e.Game)
                 .WithMany()
                 .HasForeignKey(e => e.GameId)
@@ -160,7 +163,13 @@ public class MeepleAiDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.CreatedByUserId)
                 .OnDelete(DeleteBehavior.SetNull);
+            // EDIT-06: Parent version relationship (self-referencing)
+            entity.HasOne(e => e.ParentVersion)
+                .WithMany()
+                .HasForeignKey(e => e.ParentVersionId)
+                .OnDelete(DeleteBehavior.SetNull);
             entity.HasIndex(e => new { e.GameId, e.Version }).IsUnique();
+            entity.HasIndex(e => e.ParentVersionId);
         });
 
         modelBuilder.Entity<RuleAtomEntity>(entity =>

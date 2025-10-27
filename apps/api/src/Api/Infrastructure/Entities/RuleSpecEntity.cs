@@ -9,7 +9,12 @@ public class RuleSpecEntity
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public string? CreatedByUserId { get; set; }
 
+    // EDIT-06: Version timeline and branching support
+    public Guid? ParentVersionId { get; set; }
+    public string? MergedFromVersionIds { get; set; } // Comma-separated GUIDs
+
     public GameEntity Game { get; set; } = default!;
     public UserEntity? CreatedBy { get; set; }
+    public RuleSpecEntity? ParentVersion { get; set; }
     public ICollection<RuleAtomEntity> Atoms { get; set; } = new List<RuleAtomEntity>();
 }

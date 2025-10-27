@@ -52,7 +52,7 @@ tools/             - PowerShell scripts
 | **AI/RAG** | EmbeddingService, QdrantService, RagService, LlmService | Sentence chunking (256-768 chars), RRF fusion, OpenRouter |
 | **PDF** | PdfStorageService, PdfTextExtractionService, PdfTableExtractionService, PdfValidationService | Docnet.Core, iText7, PDF-09 validation |
 | **Domain** | GameService, RuleSpecService, RuleSpecDiffService, SetupGuideService | Core business logic |
-| **Auth** | AuthService, ApiKeyAuthenticationService, SessionManagementService, SessionAutoRevocationService, **TotpService (AUTH-07), TempSessionService (AUTH-07)** | Cookie+API key dual auth + **2FA (TOTP)** |
+| **Auth** | AuthService, ApiKeyAuthenticationService, SessionManagementService, SessionAutoRevocationService, **OAuthService (AUTH-06), EncryptionService (AUTH-06), TotpService (AUTH-07), TempSessionService (AUTH-07)** | Cookie+API key+**OAuth (Google/Discord/GitHub)** dual auth + **2FA (TOTP)** |
 | **Admin** | UserManagementService, AdminStatsService, WorkflowErrorLoggingService | ADMIN-01/02, N8N-05 |
 | **Infra** | AuditService, AiRequestLogService, RateLimitService, N8nConfigService, BackgroundTaskService, AlertingService | OPS-07 multi-channel alerts |
 | **Cache** (PERF-05) | HybridCacheService, AiResponseCacheService | L1 memory + L2 Redis, stampede protection |
@@ -69,7 +69,7 @@ tools/             - PowerShell scripts
 ### Database (EF Core 9.0 + PostgreSQL)
 
 - **Context**: `MeepleAiDbContext` (`Infrastructure/MeepleAiDbContext.cs`)
-- **Entities**: User/Auth, Game/RuleSpec, PDF/Vector docs, Chat logs, AI logs, Agents, N8n config, API keys, Sessions, Alerts
+- **Entities**: User/Auth, Game/RuleSpec, PDF/Vector docs, Chat logs, AI logs, Agents, N8n config, API keys, Sessions, OAuth accounts, Alerts
 - **Migrations**: Auto-applied in `Program.cs` (search `Database.Migrate`)
 - **Seed Data** (DB-02): Demo users (admin/editor/user@meepleai.dev, pwd: `Demo123!`), games, specs. Migration: `20251009140700_SeedDemoData`
 
@@ -87,9 +87,11 @@ tools/             - PowerShell scripts
 |--------|------|--------|
 | **Cookie** | Session cookie → `AuthService.ValidateSessionAsync()` → ClaimsPrincipal | Standard session |
 | **API Key** | X-API-Key header → `ApiKeyAuthenticationService.ValidateApiKeyAsync()` → ClaimsPrincipal | `mpl_{env}_{base64}` |
+| **OAuth (AUTH-06)** | Provider redirect → OAuth callback → `OAuthService.HandleCallbackAsync()` → Session | Google/Discord/GitHub |
 | **2FA (AUTH-07)** | Password → TempSession (5min) → TOTP/backup code → Session | TOTP 6-digit OR backup XXXX-XXXX |
 
 **Priority**: API key > cookie
+**OAuth**: Social login (Google, Discord, GitHub), auto-link by email
 **2FA**: Optional per-user, TOTP-based with backup codes
 
 #### Two-Factor Authentication (AUTH-07)
@@ -120,12 +122,92 @@ tools/             - PowerShell scripts
 
 **Migrations**: AUTH07_Add2FASupport, AUTH07_AddTempSessionsTable
 
+#### OAuth 2.0 Authentication (AUTH-06)
+
+**Endpoints**:
+- `GET /api/v1/auth/oauth/{provider}/login` - Initiate OAuth flow (Google/Discord/GitHub)
+- `GET /api/v1/auth/oauth/{provider}/callback` - Handle OAuth redirect and create session
+- `DELETE /api/v1/auth/oauth/{provider}/unlink` - Unlink OAuth account
+- `GET /api/v1/users/me/oauth-accounts` - List linked OAuth providers
+
+**Supported Providers**:
+- **Google**: OAuth 2.0 with OpenID Connect (scopes: openid, profile, email)
+- **Discord**: OAuth 2.0 (scopes: identify, email)
+- **GitHub**: OAuth 2.0 (scopes: read:user, user:email)
+
+**Security**:
+- Token encryption at rest (ASP.NET Data Protection API, purpose: "OAuthTokens")
+- CSRF protection (32-byte cryptographically secure state, 10-min expiry, single-use)
+- Rate limiting: 10 requests/min per IP (login + callback endpoints)
+- Auto-link strategy: Trusts OAuth provider email verification (MVP)
+- Session creation: Standard session flow after OAuth validation
+
+**Services**:
+- `OAuthService` (`Services/OAuthService.cs`, 582 lines): OAuth 2.0 flow implementation
+  - `GetAuthorizationUrlAsync(provider, state)` - Generate OAuth authorization URL
+  - `HandleCallbackAsync(provider, code, state)` - Process OAuth callback and create/link account
+  - `UnlinkOAuthAccountAsync(userId, provider)` - Remove OAuth account link
+  - `GetLinkedAccountsAsync(userId)` - List user's linked OAuth providers
+  - `RefreshTokenAsync(userId, provider)` - Refresh expired OAuth tokens (Google/Discord only)
+  - `ValidateStateAsync(state)` - Verify CSRF state parameter (single-use)
+  - `StoreStateAsync(state)` - Store CSRF state with 10-min expiration
+- `EncryptionService` (`Services/EncryptionService.cs`, 68 lines): Token encryption via Data Protection API
+  - `EncryptAsync(plaintext, purpose)` - Encrypt sensitive data (OAuth tokens, TOTP secrets)
+  - `DecryptAsync(ciphertext, purpose)` - Decrypt with purpose validation
+
+**Frontend**:
+- `/login` - OAuth buttons (Google, Discord, GitHub)
+- `/auth/callback` - OAuth redirect handler with success/error states
+- `/profile` - Linked accounts management (link/unlink providers)
+
+**Database**:
+- `oauth_accounts` table (id, user_id, provider, provider_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at, created_at, updated_at)
+- Unique constraint: (provider, provider_user_id)
+- Cascade delete: ON DELETE CASCADE (remove OAuth accounts when user deleted)
+
+**Configuration** (`appsettings.json`):
+```json
+{
+  "Authentication": {
+    "OAuth": {
+      "CallbackBaseUrl": "http://localhost:8080",
+      "Providers": {
+        "Google": { "ClientId": "${GOOGLE_OAUTH_CLIENT_ID}", "ClientSecret": "${GOOGLE_OAUTH_CLIENT_SECRET}", ... },
+        "Discord": { "ClientId": "${DISCORD_OAUTH_CLIENT_ID}", "ClientSecret": "${DISCORD_OAUTH_CLIENT_SECRET}", ... },
+        "GitHub": { "ClientId": "${GITHUB_OAUTH_CLIENT_ID}", "ClientSecret": "${GITHUB_OAUTH_CLIENT_SECRET}", ... }
+      }
+    }
+  }
+}
+```
+
+**Environment Variables**:
+- `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`
+- `DISCORD_OAUTH_CLIENT_ID` / `DISCORD_OAUTH_CLIENT_SECRET`
+- `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET`
+
+**Migrations**: 20251026185101_AddOAuthAccountsTable
+
+**Tests**: 23 tests (10 EncryptionService + 13 OAuthService)
+
+**Documentation**:
+- Setup Guide: `docs/guide/oauth-setup-guide.md` - Provider registration and configuration
+- Security Docs: `docs/security/oauth-security.md` - CSRF, encryption, incident response
+- User Guide: `docs/guide/oauth-user-guide.md` - Linking/unlinking accounts
+
+**Production Considerations**:
+- ⚠️ State storage is in-memory (lost on restart) - migrate to Redis for production
+- ⚠️ Data Protection keys must be persisted (Azure Key Vault, Redis, or file system)
+- ⚠️ CallbackBaseUrl must use HTTPS in production
+- ⚠️ OAuth apps must be registered with production callback URLs
+
 ### Key Features
 
 | Feature | ID | Implementation | Tests |
 |---------|----|--------------|----|
 | **API Key Auth** | API-01 | ApiKeyAuthenticationService, Middleware, PBKDF2 (210k iter) | 21 unit + 17 integration |
 | **Session Mgmt** | AUTH-03 | SessionManagementService, auto-revoke (30d default), background svc | 39 tests |
+| **OAuth 2.0 Auth** | AUTH-06 | OAuthService, EncryptionService, Google/Discord/GitHub, CSRF protection, token encryption, 4 endpoints | 23 tests |
 | **Two-Factor Auth** | AUTH-07 | TotpService, TempSessionService, TOTP+backup codes, DataProtection encryption, 5 endpoints | 11 tests |
 | **User Mgmt** | ADMIN-01 | UserManagementService, CRUD endpoints, safety checks | 75 tests |
 | **Analytics** | ADMIN-02 | AdminStatsService, 8 metrics, 5 charts, CSV/JSON export | 20 tests |
@@ -351,6 +433,9 @@ cd apps/web && pnpm dev                                                         
 | **n8n Templates** | `docs/guide/n8n-template-library.md` | 12+ workflow templates, import wizard (N8N-04) |
 | **Coverage** | `docs/code-coverage.md` | Measurement & tracking |
 | **Security Scan** | `docs/security-scanning.md` | CI scanning guide |
+| **OAuth Security** | `docs/security/oauth-security.md` | CSRF, token encryption, incident response (AUTH-06) |
+| **OAuth Setup** | `docs/guide/oauth-setup-guide.md` | Provider registration (Google/Discord/GitHub) |
+| **OAuth User Guide** | `docs/guide/oauth-user-guide.md` | Linking/unlinking accounts |
 | **Repo Migration** | `docs/guide/repository-visibility-migration.md` | Public ↔ private |
 | **Schemas** | `schemas/README.md` | RuleSpec v0 reference |
 | **Skills** | `docs/guides/SKILLS_GUIDE.md` | 21 available skills |

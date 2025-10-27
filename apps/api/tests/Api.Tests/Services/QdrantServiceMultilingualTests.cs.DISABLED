@@ -1,4 +1,5 @@
 using Api.Services;
+using Api.Services.Qdrant;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -14,18 +15,24 @@ namespace Api.Tests.Services;
 /// </summary>
 public class QdrantServiceMultilingualTests
 {
-    private readonly Mock<IQdrantClientAdapter> _clientAdapterMock;
+    private readonly Mock<IQdrantCollectionManager> _collectionManagerMock;
+    private readonly Mock<IQdrantVectorIndexer> _vectorIndexerMock;
+    private readonly Mock<IQdrantVectorSearcher> _vectorSearcherMock;
     private readonly Mock<IConfiguration> _configMock;
     private readonly QdrantService _service;
 
     public QdrantServiceMultilingualTests()
     {
-        _clientAdapterMock = new Mock<IQdrantClientAdapter>();
+        _collectionManagerMock = new Mock<IQdrantCollectionManager>();
+        _vectorIndexerMock = new Mock<IQdrantVectorIndexer>();
+        _vectorSearcherMock = new Mock<IQdrantVectorSearcher>();
         _configMock = new Mock<IConfiguration>();
-        _configMock.Setup(c => c["QDRANT_COLLECTION_NAME"]).Returns("test_documents");
+        _configMock.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("ollama");
 
         _service = new QdrantService(
-            _clientAdapterMock.Object,
+            _collectionManagerMock.Object,
+            _vectorIndexerMock.Object,
+            _vectorSearcherMock.Object,
             _configMock.Object,
             NullLogger<QdrantService>.Instance
         );
@@ -46,15 +53,26 @@ public class QdrantServiceMultilingualTests
         var chunks = CreateTestChunks(2);
         IReadOnlyList<PointStruct>? capturedPoints = null;
 
-        _clientAdapterMock
-            .Setup(c => c.UpsertAsync(
-                "test_documents",
+        // TODO: This test needs refactoring due to facade pattern changes
+        // The QdrantService now delegates to specialized services
+        _vectorIndexerMock
+            .Setup(i => i.BuildPoints(
+                It.IsAny<List<DocumentChunk>>(),
+                It.IsAny<Dictionary<string, Value>>()))
+            .Returns<List<DocumentChunk>, Dictionary<string, Value>>((chunks, payload) =>
+            {
+                capturedPoints = chunks.Select((chunk, i) => new PointStruct
+                {
+                    Payload = { payload }
+                }).ToList();
+                return capturedPoints;
+            });
+
+        _vectorIndexerMock
+            .Setup(i => i.UpsertPointsAsync(
+                "meepleai_documents",
                 It.IsAny<IReadOnlyList<PointStruct>>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<string, IReadOnlyList<PointStruct>, CancellationToken>((_, points, _) =>
-            {
-                capturedPoints = points;
-            })
             .Returns(Task.CompletedTask);
 
         // Act

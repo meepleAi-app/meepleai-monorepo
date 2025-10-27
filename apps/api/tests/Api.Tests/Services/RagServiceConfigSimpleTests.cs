@@ -259,7 +259,10 @@ public class RagServiceConfigSimpleTests : IDisposable
             _mockLlm.Object,
             _mockCache.Object,
             _mockPromptTemplate.Object,
-            _mockLogger.Object
+            _mockLogger.Object,
+            CreateQueryExpansionMock().Object,
+            CreateRerankerMock().Object,
+            CreateCitationExtractorMock().Object
             // No configService, no configuration
         );
 

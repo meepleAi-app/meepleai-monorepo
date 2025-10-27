@@ -8,6 +8,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.Services.Qdrant;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -81,9 +82,24 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime
         var embeddingLogger = loggerFactory.CreateLogger<MockEmbeddingService>();
         var evaluationLogger = loggerFactory.CreateLogger<RagEvaluationService>();
 
-        var qdrantAdapterLogger = new Mock<ILogger<QdrantClientAdapter>>().Object;
+        var qdrantAdapterLogger = loggerFactory.CreateLogger<QdrantClientAdapter>();
         var qdrantClientAdapter = new QdrantClientAdapter(config, qdrantAdapterLogger);
-        _qdrantService = new QdrantService(qdrantClientAdapter, config, qdrantLogger);
+
+        var collectionManagerLogger = loggerFactory.CreateLogger<QdrantCollectionManager>();
+        var collectionManager = new QdrantCollectionManager(qdrantClientAdapter, collectionManagerLogger);
+
+        var vectorIndexerLogger = loggerFactory.CreateLogger<QdrantVectorIndexer>();
+        var vectorIndexer = new QdrantVectorIndexer(qdrantClientAdapter, vectorIndexerLogger);
+
+        var vectorSearcherLogger = loggerFactory.CreateLogger<QdrantVectorSearcher>();
+        var vectorSearcher = new QdrantVectorSearcher(qdrantClientAdapter, vectorSearcherLogger);
+
+        _qdrantService = new QdrantService(
+            collectionManager,
+            vectorIndexer,
+            vectorSearcher,
+            config,
+            qdrantLogger);
         await _qdrantService.EnsureCollectionExistsAsync();
 
         // Use mock embedding service for predictable tests

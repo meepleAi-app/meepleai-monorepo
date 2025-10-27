@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Api.Services;
+using Api.Services.Qdrant;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -113,8 +114,22 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
         var adapterLogger = new Mock<ILogger<QdrantClientAdapter>>();
         var clientAdapter = new QdrantClientAdapter(configuration, adapterLogger.Object);
 
+        var collectionManagerLogger = new Mock<ILogger<QdrantCollectionManager>>();
+        var collectionManager = new QdrantCollectionManager(clientAdapter, collectionManagerLogger.Object);
+
+        var vectorIndexerLogger = new Mock<ILogger<QdrantVectorIndexer>>();
+        var vectorIndexer = new QdrantVectorIndexer(clientAdapter, vectorIndexerLogger.Object);
+
+        var vectorSearcherLogger = new Mock<ILogger<QdrantVectorSearcher>>();
+        var vectorSearcher = new QdrantVectorSearcher(clientAdapter, vectorSearcherLogger.Object);
+
         var loggerMock = new Mock<ILogger<QdrantService>>();
-        QdrantService = new QdrantService(clientAdapter, configuration, loggerMock.Object);
+        QdrantService = new QdrantService(
+            collectionManager,
+            vectorIndexer,
+            vectorSearcher,
+            configuration,
+            loggerMock.Object);
 
         // Ensure collection exists for tests
         await QdrantService.EnsureCollectionExistsAsync();

@@ -519,7 +519,7 @@ data: [DONE]
         var service = CreateService(handler);
 
         // Act
-        var result = await service.GenerateCompletionAsync(null, "user prompt");
+        var result = await service.GenerateCompletionAsync(null!, "user prompt");
 
         // Assert
         Assert.True(result.Success);

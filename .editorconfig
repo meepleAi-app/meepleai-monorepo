@@ -62,7 +62,7 @@ dotnet_style_prefer_conditional_expression_over_return = true:silent
 dotnet_diagnostic.CA2000.severity = error
 
 # Relax for test projects
-[tests/**/*.cs]
+[**/tests/**/*.cs]
 dotnet_diagnostic.CA2000.severity = warning
 
 # CA1001: Types that own disposable fields should be disposable

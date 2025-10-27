@@ -243,6 +243,11 @@ export interface PagedResult<T> {
   pageSize: number;
 }
 
+// EDIT-07: Bulk RuleSpec operations types
+export interface BulkExportRequest {
+  ruleSpecIds: string[];
+}
+
 // Enhanced error class with correlation ID (PDF-06)
 export class ApiError extends Error {
   constructor(
@@ -706,6 +711,62 @@ export const api = {
     async invalidateCache(key?: string): Promise<void> {
       const body = key ? { key } : {};
       return api.post<void>("/api/v1/admin/configurations/cache/invalidate", body);
+    }
+  },
+
+  // EDIT-07: Bulk RuleSpec operations API
+  ruleSpecs: {
+    /**
+     * Export multiple rule specs as a ZIP file
+     * @param ruleSpecIds Array of game IDs to export
+     */
+    async bulkExport(ruleSpecIds: string[]): Promise<void> {
+      const res = await fetch(`${getApiBase()}/api/v1/rulespecs/bulk/export`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ruleSpecIds })
+      });
+
+      if (res.status === 401) {
+        const correlationId = res.headers.get('X-Correlation-Id') || undefined;
+        throw new ApiError('Unauthorized', 401, correlationId, res);
+      }
+
+      if (res.status === 403) {
+        const correlationId = res.headers.get('X-Correlation-Id') || undefined;
+        throw new ApiError('Forbidden - Editor or Admin role required', 403, correlationId, res);
+      }
+
+      if (!res.ok) {
+        throw await createApiError(`/api/v1/rulespecs/bulk/export`, res);
+      }
+
+      // Extract filename from Content-Disposition header
+      const contentDisposition = res.headers.get('Content-Disposition');
+      let filename = `meepleai-rulespecs-${new Date().toISOString().split('T')[0]}.zip`;
+
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, '');
+        }
+      }
+
+      // Convert response to blob
+      const blob = await res.blob();
+
+      // Create download link and trigger download
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+
+      // Clean up
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     }
   }
 };

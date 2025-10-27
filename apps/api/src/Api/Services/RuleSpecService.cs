@@ -4,6 +4,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -486,5 +487,94 @@ public class RuleSpecService
             TotalVersions = versionNodes.Count,
             Authors = authors
         };
+    }
+
+    /// <summary>
+    /// Creates a ZIP archive containing multiple rule specs as JSON files
+    /// </summary>
+    /// <param name="gameIds">List of game IDs to export</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Byte array containing the ZIP archive</returns>
+    public async Task<byte[]> CreateZipArchiveAsync(List<string> gameIds, CancellationToken cancellationToken = default)
+    {
+        if (gameIds == null || gameIds.Count == 0)
+        {
+            throw new ArgumentException("At least one game ID must be provided", nameof(gameIds));
+        }
+
+        // Validate: Maximum 100 rule specs
+        if (gameIds.Count > 100)
+        {
+            throw new ArgumentException("Cannot export more than 100 rule specs at once", nameof(gameIds));
+        }
+
+        // Fetch all rule specs with their latest versions
+        var ruleSpecs = new List<(string gameId, RuleSpec spec)>();
+
+        foreach (var gameId in gameIds.Distinct())
+        {
+            var spec = await GetRuleSpecAsync(gameId, cancellationToken);
+            if (spec != null)
+            {
+                ruleSpecs.Add((gameId, spec));
+            }
+        }
+
+        if (ruleSpecs.Count == 0)
+        {
+            throw new InvalidOperationException("No rule specs found for the provided game IDs");
+        }
+
+        // Create ZIP archive in memory
+        using var memoryStream = new MemoryStream();
+        using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var (gameId, spec) in ruleSpecs)
+            {
+                // Sanitize filename: Remove invalid characters
+                var safeGameId = SanitizeFileName(gameId);
+                var fileName = $"{safeGameId}_{spec.version}.json";
+
+                // Create entry in ZIP
+                var entry = archive.CreateEntry(fileName, CompressionLevel.Optimal);
+
+                // Write JSON to entry
+                using (var entryStream = entry.Open())
+                using (var writer = new StreamWriter(entryStream))
+                {
+                    var jsonOptions = new JsonSerializerOptions
+                    {
+                        WriteIndented = true,
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                    };
+                    var json = JsonSerializer.Serialize(spec, jsonOptions);
+                    await writer.WriteAsync(json);
+                }
+            }
+        }
+
+        // Return ZIP as byte array
+        return memoryStream.ToArray();
+    }
+
+    /// <summary>
+    /// Sanitizes a filename by removing invalid characters
+    /// </summary>
+    private static string SanitizeFileName(string filename)
+    {
+        // Remove invalid filename characters
+        var invalid = Path.GetInvalidFileNameChars();
+        var sanitized = new string(filename.Where(c => !invalid.Contains(c)).ToArray());
+
+        // Remove path traversal attempts
+        sanitized = sanitized.Replace("..", "").Replace("/", "_").Replace("\\", "_");
+
+        // Limit length
+        if (sanitized.Length > 50)
+        {
+            sanitized = sanitized.Substring(0, 50);
+        }
+
+        return string.IsNullOrWhiteSpace(sanitized) ? "rulespec" : sanitized;
     }
 }

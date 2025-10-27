@@ -396,17 +396,15 @@ ANSWER:";
                 answer.Contains(kw, StringComparison.OrdinalIgnoreCase));
 
             // Extract key considerations (sentences with tactical/strategic keywords)
-            var considerations = new List<string>();
+            // CODE-04: Use LINQ for filtering and transformation
             var tacticalKeywords = new[] { "threat", "attack", "defend", "weakness", "strength", "control", "development", "king safety" };
 
             var sentences = answer.Split('.', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var sentence in sentences)
-            {
-                if (tacticalKeywords.Any(kw => sentence.Contains(kw, StringComparison.OrdinalIgnoreCase)))
-                {
-                    considerations.Add(sentence.Trim() + ".");
-                }
-            }
+            var considerations = sentences
+                .Where(sentence => tacticalKeywords.Any(kw =>
+                    sentence.Contains(kw, StringComparison.OrdinalIgnoreCase)))
+                .Select(sentence => sentence.Trim() + ".")
+                .ToList();
 
             if (!string.IsNullOrEmpty(evaluationSummary) || considerations.Count > 0)
             {

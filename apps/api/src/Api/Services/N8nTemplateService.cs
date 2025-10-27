@@ -317,8 +317,9 @@ public class N8nTemplateService
 
         foreach (var param in templateParams.Where(p => p.Required))
         {
-            if (!providedParams.ContainsKey(param.Name) ||
-                string.IsNullOrWhiteSpace(providedParams[param.Name]))
+            // CODE-04: Use TryGetValue to avoid double dictionary lookup
+            if (!providedParams.TryGetValue(param.Name, out var paramValue) ||
+                string.IsNullOrWhiteSpace(paramValue))
             {
                 missingParams.Add(param.Name);
             }
@@ -333,10 +334,9 @@ public class N8nTemplateService
         // Validate parameter types (basic validation)
         foreach (var param in templateParams)
         {
-            if (!providedParams.ContainsKey(param.Name))
+            // CODE-04: Use TryGetValue to avoid double dictionary lookup
+            if (!providedParams.TryGetValue(param.Name, out var value))
                 continue;
-
-            var value = providedParams[param.Name];
 
             switch (param.Type.ToLower())
             {

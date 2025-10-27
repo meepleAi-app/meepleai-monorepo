@@ -1,6 +1,7 @@
 using Api.Infrastructure;
 using Api.Models;
 using Api.Services;
+using Api.Services.Rag;
 using System.Collections.Generic;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +42,37 @@ CRITICAL INSTRUCTIONS:
         mock.Setup(x => x.ClassifyQuestion(It.IsAny<string>()))
             .Returns(QuestionType.General);
 
+        return mock;
+    }
+
+    // AI-14: Helper to create IQueryExpansionService mock (pass-through)
+    private static Mock<IQueryExpansionService> CreateQueryExpansionMock()
+    {
+        var mock = new Mock<IQueryExpansionService>();
+        mock.Setup(x => x.GenerateQueryVariationsAsync(
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string query, string _, CancellationToken __) => new List<string> { query });
+        return mock;
+    }
+
+    // AI-14: Helper to create ISearchResultReranker mock (pass-through)
+    private static Mock<ISearchResultReranker> CreateRerankerMock()
+    {
+        var mock = new Mock<ISearchResultReranker>();
+        mock.Setup(x => x.FuseSearchResultsAsync(It.IsAny<List<SearchResult>>()))
+            .ReturnsAsync((List<SearchResult> results) =>
+                results.SelectMany(r => r.Items).ToList());
+        return mock;
+    }
+
+    // AI-14: Helper to create ICitationExtractorService mock (pass-through)
+    private static Mock<ICitationExtractorService> CreateCitationExtractorMock()
+    {
+        var mock = new Mock<ICitationExtractorService>();
+        mock.Setup(x => x.ValidateCitations(It.IsAny<List<Snippet>>(), It.IsAny<string>()))
+            .Returns(true);
         return mock;
     }
 
@@ -119,7 +151,7 @@ CRITICAL INSTRUCTIONS:
             It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>());
 
-        var ragService = new RagService(dbContext, embeddingServiceMock.Object, qdrantServiceMock.Object, hybridSearchMock.Object, llmServiceMock.Object, cacheServiceMock.Object, CreatePromptTemplateMock().Object, ragLoggerMock);
+        var ragService = new RagService(dbContext, embeddingServiceMock.Object, qdrantServiceMock.Object, hybridSearchMock.Object, llmServiceMock.Object, cacheServiceMock.Object, CreatePromptTemplateMock().Object, ragLoggerMock, CreateQueryExpansionMock().Object, CreateRerankerMock().Object, CreateCitationExtractorMock().Object);
 
         var gameId = "demo-chess";
 

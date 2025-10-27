@@ -27,7 +27,10 @@ public class PdfTableExtractionServiceTests : IDisposable
     {
         QuestPDF.Settings.License = LicenseType.Community;
         _mockLogger = new Mock<ILogger<PdfTableExtractionService>>();
-        _service = new PdfTableExtractionService(_mockLogger.Object);
+        _service = new PdfTableExtractionService(
+            Mock.Of<ITableDetectionService>(),
+            Mock.Of<ITableStructureAnalyzer>(),
+            _mockLogger.Object);
     }
 
     public void Dispose()

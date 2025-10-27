@@ -1,6 +1,7 @@
 using Api.Infrastructure;
 using Api.Models;
 using Api.Services;
+using Api.Services.Rag;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -282,6 +283,37 @@ public class RagServiceConfigSimpleTests : IDisposable
 
     #region Helper Methods
 
+    // AI-14: Helper to create IQueryExpansionService mock (pass-through)
+    private static Mock<IQueryExpansionService> CreateQueryExpansionMock()
+    {
+        var mock = new Mock<IQueryExpansionService>();
+        mock.Setup(x => x.GenerateQueryVariationsAsync(
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string query, string _, CancellationToken __) => new List<string> { query });
+        return mock;
+    }
+
+    // AI-14: Helper to create ISearchResultReranker mock (pass-through)
+    private static Mock<ISearchResultReranker> CreateRerankerMock()
+    {
+        var mock = new Mock<ISearchResultReranker>();
+        mock.Setup(x => x.FuseSearchResultsAsync(It.IsAny<List<SearchResult>>()))
+            .ReturnsAsync((List<SearchResult> results) =>
+                results.SelectMany(r => r.Results).ToList());
+        return mock;
+    }
+
+    // AI-14: Helper to create ICitationExtractorService mock (pass-through)
+    private static Mock<ICitationExtractorService> CreateCitationExtractorMock()
+    {
+        var mock = new Mock<ICitationExtractorService>();
+        mock.Setup(x => x.ValidateCitations(It.IsAny<List<Snippet>>(), It.IsAny<string>()))
+            .Returns(true);
+        return mock;
+    }
+
     private RagService CreateRagService(IConfiguration? configuration = null)
     {
         var mockHybridSearch = new Mock<IHybridSearchService>();
@@ -304,6 +336,9 @@ public class RagServiceConfigSimpleTests : IDisposable
             _mockCache.Object,
             _mockPromptTemplate.Object,
             _mockLogger.Object,
+            CreateQueryExpansionMock().Object,
+            CreateRerankerMock().Object,
+            CreateCitationExtractorMock().Object,
             configurationService: null, // No DB config in simple tests
             configuration: configuration
         );

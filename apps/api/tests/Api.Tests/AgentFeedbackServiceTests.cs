@@ -12,7 +12,7 @@ public class AgentFeedbackServiceTests
 {
     private static MeepleAiDbContext CreateInMemoryContext()
     {
-        var connection = new SqliteConnection("Filename=:memory:");
+        using var connection = new SqliteConnection("Filename=:memory:");
         connection.Open();
 
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()

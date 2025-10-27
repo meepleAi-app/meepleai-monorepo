@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Api.Services;
+using Api.Services.Qdrant;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -16,7 +17,9 @@ public class QdrantServiceTests
 {
     private const string CollectionName = "meepleai_documents";
 
-    private readonly Mock<IQdrantClientAdapter> _clientAdapterMock = new();
+    private readonly Mock<IQdrantCollectionManager> _collectionManagerMock = new();
+    private readonly Mock<IQdrantVectorIndexer> _vectorIndexerMock = new();
+    private readonly Mock<IQdrantVectorSearcher> _vectorSearcherMock = new();
     private readonly Mock<IConfiguration> _configurationMock = new();
     private readonly Mock<ILogger<QdrantService>> _loggerMock = new();
     private readonly QdrantService _sut;
@@ -26,36 +29,35 @@ public class QdrantServiceTests
         // Configure embedding provider to use OpenAI (1536 dimensions) for tests
         _configurationMock.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("openai");
 
-        _sut = new QdrantService(_clientAdapterMock.Object, _configurationMock.Object, _loggerMock.Object);
+        _sut = new QdrantService(
+            _collectionManagerMock.Object,
+            _vectorIndexerMock.Object,
+            _vectorSearcherMock.Object,
+            _configurationMock.Object,
+            _loggerMock.Object);
     }
 
     [Fact]
     public async Task EnsureCollectionExistsAsync_WhenCollectionExists_DoesNotCreateCollection()
     {
-        _clientAdapterMock
-            .Setup(x => x.ListCollectionsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { CollectionName });
+        _collectionManagerMock
+            .Setup(x => x.CollectionExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         await _sut.EnsureCollectionExistsAsync();
 
-        _clientAdapterMock.Verify(x => x.CreateCollectionAsync(It.IsAny<string>(), It.IsAny<VectorParams>(), It.IsAny<CancellationToken>()), Times.Never);
-        _clientAdapterMock.Verify(x => x.CreatePayloadIndexAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<PayloadSchemaType>(), It.IsAny<CancellationToken>()), Times.Never);
+        _collectionManagerMock.Verify(x => x.EnsureCollectionExistsAsync(It.IsAny<string>(), It.IsAny<uint>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task EnsureCollectionExistsAsync_WhenCollectionMissing_CreatesCollectionAndIndexes()
     {
-        _clientAdapterMock
-            .Setup(x => x.ListCollectionsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { "another_collection" });
+        _collectionManagerMock
+            .Setup(x => x.CollectionExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
 
-        _clientAdapterMock
-            .Setup(x => x.CreateCollectionAsync(CollectionName, It.IsAny<VectorParams>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask)
-            .Verifiable();
-
-        _clientAdapterMock
-            .Setup(x => x.CreatePayloadIndexAsync(CollectionName, "game_id", PayloadSchemaType.Keyword, It.IsAny<CancellationToken>()))
+        _collectionManagerMock
+            .Setup(x => x.EnsureCollectionExistsAsync(CollectionName, It.IsAny<uint>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask)
             .Verifiable();
 

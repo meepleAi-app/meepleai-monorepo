@@ -14,7 +14,7 @@ public class N8nConfigServiceTests
 {
     private static MeepleAiDbContext CreateInMemoryContext()
     {
-        var connection = new SqliteConnection("Filename=:memory:");
+        using var connection = new SqliteConnection("Filename=:memory:");
         connection.Open();
 
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
@@ -46,9 +46,12 @@ public class N8nConfigServiceTests
         string? encryptionKey = "test-encryption-key")
     {
         httpClientFactoryMock ??= new Mock<IHttpClientFactory>();
+        // Create a mock handler to avoid CA2000 error
+        var mockHandler = new Mock<HttpMessageHandler>();
+        var mockHttpClient = new HttpClient(mockHandler.Object);
         httpClientFactoryMock
             .Setup(f => f.CreateClient(It.IsAny<string>()))
-            .Returns(new HttpClient());
+            .Returns(mockHttpClient);
 
         var configurationMock = new Mock<IConfiguration>();
         configurationMock

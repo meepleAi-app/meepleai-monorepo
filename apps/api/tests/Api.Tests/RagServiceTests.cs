@@ -59,7 +59,7 @@ ANSWER:",
 
     private static MeepleAiDbContext CreateInMemoryContext()
     {
-        var connection = new SqliteConnection("Filename=:memory:");
+        using var connection = new SqliteConnection("Filename=:memory:");
         connection.Open();
 
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
@@ -351,6 +351,7 @@ ANSWER:",
         await using var dbContext = CreateInMemoryContext();
         var mockEmbedding = new Mock<IEmbeddingService>(MockBehavior.Strict);
         var mockQdrant = new Mock<IQdrantService>(MockBehavior.Strict);
+        var mockHybridSearch = CreateHybridSearchMock();
         var mockLlm = new Mock<ILlmService>(MockBehavior.Strict);
         var mockCache = CreateCacheMock();
         const string gameId = "game1";

@@ -1189,11 +1189,11 @@ Instructions:
 
                 var rrfScore = 1.0 / (k + rank + 1); // rank is 0-indexed, add 1 for proper formula
 
-                if (rrfScores.ContainsKey(docKey))
+                // CODE-04: Use TryGetValue to avoid double dictionary lookup
+                if (rrfScores.TryGetValue(docKey, out var existingEntry))
                 {
                     // Document appears in multiple result sets - accumulate RRF scores
-                    var (existingItem, existingScore) = rrfScores[docKey];
-                    rrfScores[docKey] = (existingItem, existingScore + rrfScore);
+                    rrfScores[docKey] = (existingEntry.Item1, existingEntry.Item2 + rrfScore);
                 }
                 else
                 {

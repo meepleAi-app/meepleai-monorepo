@@ -176,12 +176,13 @@ public class RuleSpecDiffService
                         lines.Add($"  ~ Modified: {change.OldAtom}");
                         if (change.FieldChanges != null)
                         {
-                            foreach (var fieldChange in change.FieldChanges)
+                            // CODE-04: Use LINQ with AddRange for better functional style
+                            lines.AddRange(change.FieldChanges.SelectMany(fc => new[]
                             {
-                                lines.Add($"    {fieldChange.FieldName}:");
-                                lines.Add($"      - {fieldChange.OldValue ?? "(null)"}");
-                                lines.Add($"      + {fieldChange.NewValue ?? "(null)"}");
-                            }
+                                $"    {fc.FieldName}:",
+                                $"      - {fc.OldValue ?? "(null)"}",
+                                $"      + {fc.NewValue ?? "(null)"}"
+                            }));
                         }
                         break;
                 }

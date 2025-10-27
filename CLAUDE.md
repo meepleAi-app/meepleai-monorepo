@@ -52,7 +52,7 @@ tools/             - PowerShell scripts
 | **AI/RAG** | EmbeddingService, QdrantService, RagService, LlmService | Sentence chunking (256-768 chars), RRF fusion, OpenRouter |
 | **PDF** | PdfStorageService, PdfTextExtractionService, PdfTableExtractionService, PdfValidationService | Docnet.Core, iText7, PDF-09 validation |
 | **Domain** | GameService, RuleSpecService, RuleSpecDiffService, SetupGuideService | Core business logic |
-| **Auth** | AuthService, ApiKeyAuthenticationService, SessionManagementService, SessionAutoRevocationService | Cookie+API key dual auth |
+| **Auth** | AuthService, ApiKeyAuthenticationService, SessionManagementService, SessionAutoRevocationService, **TotpService (AUTH-07), TempSessionService (AUTH-07)** | Cookie+API key dual auth + **2FA (TOTP)** |
 | **Admin** | UserManagementService, AdminStatsService, WorkflowErrorLoggingService | ADMIN-01/02, N8N-05 |
 | **Infra** | AuditService, AiRequestLogService, RateLimitService, N8nConfigService, BackgroundTaskService, AlertingService | OPS-07 multi-channel alerts |
 | **Cache** (PERF-05) | HybridCacheService, AiResponseCacheService | L1 memory + L2 Redis, stampede protection |
@@ -81,14 +81,44 @@ tools/             - PowerShell scripts
 
 **Tests**: Jest (90% coverage) + Playwright E2E
 
-### Auth (Dual System)
+### Auth (Dual System + 2FA)
 
 | Method | Flow | Format |
 |--------|------|--------|
 | **Cookie** | Session cookie → `AuthService.ValidateSessionAsync()` → ClaimsPrincipal | Standard session |
 | **API Key** | X-API-Key header → `ApiKeyAuthenticationService.ValidateApiKeyAsync()` → ClaimsPrincipal | `mpl_{env}_{base64}` |
+| **2FA (AUTH-07)** | Password → TempSession (5min) → TOTP/backup code → Session | TOTP 6-digit OR backup XXXX-XXXX |
 
 **Priority**: API key > cookie
+**2FA**: Optional per-user, TOTP-based with backup codes
+
+#### Two-Factor Authentication (AUTH-07)
+
+**Endpoints**:
+- `POST /api/v1/auth/2fa/setup` - Generate TOTP secret + QR code + 10 backup codes
+- `POST /api/v1/auth/2fa/enable` - Enable after code verification (prevents misconfiguration)
+- `POST /api/v1/auth/2fa/verify` - Verify TOTP/backup during login (rate-limited 3/min)
+- `POST /api/v1/auth/2fa/disable` - Disable with password + code
+- `GET /api/v1/users/me/2fa/status` - Get status + backup codes count
+
+**Security**:
+- TOTP secrets encrypted with DataProtection API (purpose: "TotpSecrets")
+- Backup codes: PBKDF2 hashing (210K iterations), single-use enforcement
+- Temp sessions: 256-bit tokens, SHA-256 hashed, 5-min TTL, single-use
+- Rate limiting: 3 attempts/min prevents brute force
+- Serializable transactions: Prevents race conditions (backup codes + temp sessions)
+- Audit logging: All 2FA events logged
+
+**Frontend**:
+- `/settings` - 2FA enrollment (QR code, backup codes, enable/disable)
+- `/login` - Two-step verification (password → TOTP code)
+
+**Database**:
+- `user_backup_codes` table (id, user_id, code_hash, is_used, used_at)
+- `temp_sessions` table (id, user_id, token_hash, ip, created_at, expires_at, is_used, used_at)
+- Users table: +totp_secret_encrypted, +is_two_factor_enabled, +two_factor_enabled_at
+
+**Migrations**: AUTH07_Add2FASupport, AUTH07_AddTempSessionsTable
 
 ### Key Features
 
@@ -96,6 +126,7 @@ tools/             - PowerShell scripts
 |---------|----|--------------|----|
 | **API Key Auth** | API-01 | ApiKeyAuthenticationService, Middleware, PBKDF2 (210k iter) | 21 unit + 17 integration |
 | **Session Mgmt** | AUTH-03 | SessionManagementService, auto-revoke (30d default), background svc | 39 tests |
+| **Two-Factor Auth** | AUTH-07 | TotpService, TempSessionService, TOTP+backup codes, DataProtection encryption, 5 endpoints | 11 tests |
 | **User Mgmt** | ADMIN-01 | UserManagementService, CRUD endpoints, safety checks | 75 tests |
 | **Analytics** | ADMIN-02 | AdminStatsService, 8 metrics, 5 charts, CSV/JSON export | 20 tests |
 | **Workflow Errors** | N8N-05 | WorkflowErrorLoggingService, n8n webhook, sensitive data redaction | 33 tests |

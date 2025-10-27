@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Api.Services;
+using Api.Services.Qdrant;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -16,31 +17,35 @@ namespace Api.Tests;
 /// <summary>
 /// Comprehensive unit tests for QdrantService following BDD naming conventions.
 /// Target: ≥90% code coverage for TEST-02-P3.
-/// Uses Moq for IQdrantClientAdapter to ensure fast, deterministic tests.
+/// Uses Moq for specialized Qdrant interfaces to ensure fast, deterministic tests.
 /// </summary>
 public class QdrantServiceComprehensiveTests
 {
-    private readonly Mock<IQdrantClientAdapter> _mockClient;
+    private readonly Mock<IQdrantCollectionManager> _collectionManagerMock;
+    private readonly Mock<IQdrantVectorIndexer> _vectorIndexerMock;
+    private readonly Mock<IQdrantVectorSearcher> _vectorSearcherMock;
+    private readonly Mock<IConfiguration> _configurationMock;
     private readonly Mock<ILogger<QdrantService>> _mockLogger;
-    private readonly IConfiguration _configuration;
     private readonly QdrantService _service;
 
     public QdrantServiceComprehensiveTests()
     {
-        _mockClient = new Mock<IQdrantClientAdapter>();
+        _collectionManagerMock = new Mock<IQdrantCollectionManager>();
+        _vectorIndexerMock = new Mock<IQdrantVectorIndexer>();
+        _vectorSearcherMock = new Mock<IQdrantVectorSearcher>();
+        _configurationMock = new Mock<IConfiguration>();
         _mockLogger = new Mock<ILogger<QdrantService>>();
 
         // Default configuration: Ollama provider (768 dimensions)
-        var configDict = new Dictionary<string, string?>
-        {
-            ["EMBEDDING_PROVIDER"] = "ollama",
-            ["QDRANT_URL"] = "http://localhost:6333"
-        };
-        _configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(configDict)
-            .Build();
+        _configurationMock.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("ollama");
+        _configurationMock.Setup(c => c["QDRANT_URL"]).Returns("http://localhost:6333");
 
-        _service = new QdrantService(_mockClient.Object, _configuration, _mockLogger.Object);
+        _service = new QdrantService(
+            _collectionManagerMock.Object,
+            _vectorIndexerMock.Object,
+            _vectorSearcherMock.Object,
+            _configurationMock.Object,
+            _mockLogger.Object);
     }
 
     #region Constructor and Configuration Tests
@@ -49,16 +54,16 @@ public class QdrantServiceComprehensiveTests
     public void Constructor_WhenOllamaProvider_ShouldUse768Dimensions()
     {
         // Arrange
-        var configDict = new Dictionary<string, string?>
-        {
-            ["EMBEDDING_PROVIDER"] = "ollama"
-        };
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(configDict)
-            .Build();
+        var configMock = new Mock<IConfiguration>();
+        configMock.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("ollama");
 
         // Act
-        var service = new QdrantService(_mockClient.Object, config, _mockLogger.Object);
+        var service = new QdrantService(
+            _collectionManagerMock.Object,
+            _vectorIndexerMock.Object,
+            _vectorSearcherMock.Object,
+            configMock.Object,
+            _mockLogger.Object);
 
         // Assert - Service should be created successfully
         Assert.NotNull(service);
@@ -70,16 +75,16 @@ public class QdrantServiceComprehensiveTests
     public void Constructor_WhenOpenAIProvider_ShouldUse1536Dimensions()
     {
         // Arrange
-        var configDict = new Dictionary<string, string?>
-        {
-            ["EMBEDDING_PROVIDER"] = "openai"
-        };
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(configDict)
-            .Build();
+        var configMock = new Mock<IConfiguration>();
+        configMock.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("openai");
 
         // Act
-        var service = new QdrantService(_mockClient.Object, config, _mockLogger.Object);
+        var service = new QdrantService(
+            _collectionManagerMock.Object,
+            _vectorIndexerMock.Object,
+            _vectorSearcherMock.Object,
+            configMock.Object,
+            _mockLogger.Object);
 
         // Assert - Service should be created successfully
         Assert.NotNull(service);
@@ -89,16 +94,16 @@ public class QdrantServiceComprehensiveTests
     public void Constructor_WhenOpenRouterProvider_ShouldUse1536Dimensions()
     {
         // Arrange
-        var configDict = new Dictionary<string, string?>
-        {
-            ["EMBEDDING_PROVIDER"] = "openrouter"
-        };
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(configDict)
-            .Build();
+        var configMock = new Mock<IConfiguration>();
+        configMock.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("openrouter");
 
         // Act
-        var service = new QdrantService(_mockClient.Object, config, _mockLogger.Object);
+        var service = new QdrantService(
+            _collectionManagerMock.Object,
+            _vectorIndexerMock.Object,
+            _vectorSearcherMock.Object,
+            configMock.Object,
+            _mockLogger.Object);
 
         // Assert - Service should be created successfully
         Assert.NotNull(service);
@@ -108,13 +113,16 @@ public class QdrantServiceComprehensiveTests
     public void Constructor_WhenNoProviderConfigured_ShouldDefaultToOllama()
     {
         // Arrange
-        var configDict = new Dictionary<string, string?>();
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(configDict)
-            .Build();
+        var configMock = new Mock<IConfiguration>();
+        configMock.Setup(c => c["EMBEDDING_PROVIDER"]).Returns((string?)null);
 
         // Act
-        var service = new QdrantService(_mockClient.Object, config, _mockLogger.Object);
+        var service = new QdrantService(
+            _collectionManagerMock.Object,
+            _vectorIndexerMock.Object,
+            _vectorSearcherMock.Object,
+            configMock.Object,
+            _mockLogger.Object);
 
         // Assert - Service should be created successfully with default
         Assert.NotNull(service);
@@ -128,16 +136,16 @@ public class QdrantServiceComprehensiveTests
     public async Task CollectionExistsAsync_WhenCollectionExists_ShouldReturnTrue()
     {
         // Arrange
-        _mockClient
-            .Setup(x => x.ListCollectionsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new[] { "meepleai_documents", "other_collection" });
+        _collectionManagerMock
+            .Setup(x => x.CollectionExistsAsync("meepleai_documents", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         // Act
         var result = await _service.CollectionExistsAsync();
 
         // Assert
         Assert.True(result);
-        _mockClient.Verify(x => x.ListCollectionsAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _collectionManagerMock.Verify(x => x.CollectionExistsAsync("meepleai_documents", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

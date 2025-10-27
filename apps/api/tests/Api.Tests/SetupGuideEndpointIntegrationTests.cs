@@ -57,7 +57,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         // When: User requests a setup guide for that game
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
-            Content = JsonContent.Create(new SetupGuideRequest(game.Id, null))
+            Content = JsonContent.Create(new SetupGuideRequest(game.Id, null!))
         };
         AddCookies(request, cookies);
 
@@ -261,7 +261,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         // When: User requests a setup guide
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
-            Content = JsonContent.Create(new SetupGuideRequest(game.Id, null))
+            Content = JsonContent.Create(new SetupGuideRequest(game.Id, null!))
         };
         AddCookies(request, cookies);
 
@@ -302,7 +302,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         // When: User requests a setup guide
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
-            Content = JsonContent.Create(new SetupGuideRequest(game.Id, null))
+            Content = JsonContent.Create(new SetupGuideRequest(game.Id, null!))
         };
         AddCookies(request, cookies);
 
@@ -345,7 +345,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         // When: User requests a setup guide
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
-            Content = JsonContent.Create(new SetupGuideRequest(game.Id, null))
+            Content = JsonContent.Create(new SetupGuideRequest(game.Id, null!))
         };
         AddCookies(request, cookies);
 
@@ -399,19 +399,19 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
 
         var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
-            Content = JsonContent.Create(new SetupGuideRequest(game.Id, null))
+            Content = JsonContent.Create(new SetupGuideRequest(game.Id, null!))
         };
         AddCookies(request1, cookies1);
 
         var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
-            Content = JsonContent.Create(new SetupGuideRequest(game.Id, null))
+            Content = JsonContent.Create(new SetupGuideRequest(game.Id, null!))
         };
         AddCookies(request2, cookies2);
 
         var request3 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
-            Content = JsonContent.Create(new SetupGuideRequest(game.Id, null))
+            Content = JsonContent.Create(new SetupGuideRequest(game.Id, null!))
         };
         AddCookies(request3, cookies3);
 
@@ -459,7 +459,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         // When: User requests a setup guide
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
-            Content = JsonContent.Create(new SetupGuideRequest(game.Id, null))
+            Content = JsonContent.Create(new SetupGuideRequest(game.Id, null!))
         };
         AddCookies(request, cookies);
 

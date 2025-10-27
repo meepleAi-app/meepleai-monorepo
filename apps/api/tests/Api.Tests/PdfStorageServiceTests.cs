@@ -316,13 +316,15 @@ public class PdfStorageServiceTests
                 MockBehavior.Strict,
                 Mock.Of<ILogger<PdfTextExtractionService>>(),
                 Mock.Of<IConfiguration>(),
-                (IOcrService?)null);
+                null!);
             textExtractionMock
                 .Setup(s => s.ExtractTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(PdfTextExtractionResult.CreateSuccess("chunk-one\nchunk-two", 1, 18));
 
             var tableExtractionMock = new Mock<PdfTableExtractionService>(
                 MockBehavior.Strict,
+                Mock.Of<ITableDetectionService>(),
+                Mock.Of<ITableStructureAnalyzer>(),
                 Mock.Of<ILogger<PdfTableExtractionService>>());
             tableExtractionMock
                 .Setup(s => s.ExtractStructuredContentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))

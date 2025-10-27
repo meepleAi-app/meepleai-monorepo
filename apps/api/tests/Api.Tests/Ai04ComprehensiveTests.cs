@@ -694,7 +694,7 @@ CRITICAL INSTRUCTIONS:
         var mockHybridSearch = CreateHybridSearchMock();
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockHybridSearch.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockHybridSearch.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object, CreateQueryExpansionMock().Object, CreateRerankerMock().Object, CreateCitationExtractorMock().Object);
 
         var cts = new CancellationTokenSource();
         cts.Cancel();

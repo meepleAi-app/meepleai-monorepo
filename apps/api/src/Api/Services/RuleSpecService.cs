@@ -364,4 +364,127 @@ public class RuleSpecService
 
         return new RuleAtom($"r{index}", cleanedText, null, page, null);
     }
+
+    /// <summary>
+    /// EDIT-06: Get version timeline with filtering and branching support
+    /// </summary>
+    public async Task<VersionTimelineResponse> GetVersionTimelineAsync(
+        string gameId,
+        VersionTimelineFilters? filters = null,
+        CancellationToken cancellationToken = default)
+    {
+        filters ??= new VersionTimelineFilters();
+
+        var query = _dbContext.RuleSpecs
+            .AsNoTracking() // PERF-06
+            .Include(r => r.CreatedBy)
+            .Where(r => r.GameId == gameId);
+
+        // Apply filters
+        if (filters.StartDate.HasValue)
+            query = query.Where(r => r.CreatedAt >= filters.StartDate.Value);
+
+        if (filters.EndDate.HasValue)
+            query = query.Where(r => r.CreatedAt <= filters.EndDate.Value);
+
+        if (!string.IsNullOrWhiteSpace(filters.Author))
+        {
+            var authorFilter = filters.Author.Trim();
+            query = query.Where(r => r.CreatedBy != null &&
+                (r.CreatedBy.DisplayName!.Contains(authorFilter) ||
+                 r.CreatedBy.Email.Contains(authorFilter)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filters.SearchQuery))
+        {
+            var searchTerm = filters.SearchQuery.Trim();
+            query = query.Where(r => r.Version.Contains(searchTerm));
+        }
+
+        var versions = await query
+            .OrderBy(r => r.CreatedAt)
+            .Select(r => new
+            {
+                r.Id,
+                r.Version,
+                r.CreatedAt,
+                r.ParentVersionId,
+                r.MergedFromVersionIds,
+                AtomCount = r.Atoms.Count,
+                AuthorName = r.CreatedBy != null
+                    ? r.CreatedBy.DisplayName ?? r.CreatedBy.Email
+                    : "Unknown"
+            })
+            .ToListAsync(cancellationToken);
+
+        // Build version nodes with parent/merge relationships
+        var versionNodes = new List<VersionNodeDto>();
+        var versionMap = versions.ToDictionary(v => v.Id, v => v.Version);
+
+        foreach (var version in versions)
+        {
+            var node = new VersionNodeDto
+            {
+                Id = version.Id,
+                Version = version.Version,
+                Title = $"Version {version.Version}",
+                Description = $"{version.AtomCount} rule atoms",
+                Author = version.AuthorName,
+                CreatedAt = version.CreatedAt,
+                ParentVersionId = version.ParentVersionId,
+                ParentVersion = version.ParentVersionId.HasValue &&
+                    versionMap.TryGetValue(version.ParentVersionId.Value, out var parentVer)
+                    ? parentVer
+                    : null,
+                ChangeCount = version.AtomCount,
+                IsCurrentVersion = false // Will be updated below
+            };
+
+            // Parse merged from version IDs
+            if (!string.IsNullOrWhiteSpace(version.MergedFromVersionIds))
+            {
+                var mergedIds = version.MergedFromVersionIds
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(id => Guid.TryParse(id.Trim(), out var guid) ? guid : (Guid?)null)
+                    .Where(id => id.HasValue)
+                    .Select(id => id!.Value)
+                    .ToList();
+
+                node = node with
+                {
+                    MergedFromVersionIds = mergedIds,
+                    MergedFromVersions = mergedIds
+                        .Where(id => versionMap.ContainsKey(id))
+                        .Select(id => versionMap[id])
+                        .ToList()
+                };
+            }
+
+            versionNodes.Add(node);
+        }
+
+        // Mark the most recent version as current
+        if (versionNodes.Any())
+        {
+            var latestVersion = versionNodes.OrderByDescending(v => v.CreatedAt).First();
+            versionNodes = versionNodes.Select(v =>
+                v.Id == latestVersion.Id ? v with { IsCurrentVersion = true } : v
+            ).ToList();
+        }
+
+        // Extract unique authors for filter dropdown
+        var authors = versionNodes
+            .Select(v => v.Author)
+            .Distinct()
+            .OrderBy(a => a)
+            .ToList();
+
+        return new VersionTimelineResponse
+        {
+            GameId = gameId,
+            Versions = versionNodes,
+            TotalVersions = versionNodes.Count,
+            Authors = authors
+        };
+    }
 }

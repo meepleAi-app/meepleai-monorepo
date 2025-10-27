@@ -2967,6 +2967,46 @@ v1Api.MapGet("/games/{gameId}/rulespec/history", async (string gameId, HttpConte
     return Results.Json(history);
 });
 
+// EDIT-06: Get version timeline with filters
+v1Api.MapGet("/games/{gameId}/rulespec/versions/timeline", async (
+    string gameId,
+    DateTime? startDate,
+    DateTime? endDate,
+    string? author,
+    string? searchQuery,
+    HttpContext context,
+    RuleSpecService ruleSpecService,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    logger.LogInformation("Fetching RuleSpec version timeline for game {GameId}", gameId);
+
+    var filters = new VersionTimelineFilters
+    {
+        StartDate = startDate,
+        EndDate = endDate,
+        Author = author,
+        SearchQuery = searchQuery
+    };
+
+    var timeline = await ruleSpecService.GetVersionTimelineAsync(gameId, filters, ct);
+    return Results.Json(timeline);
+})
+.RequireAuthorization()
+.WithName("GetVersionTimeline")
+.WithTags("Versions");
+
 // RULE-02: Get specific version
 v1Api.MapGet("/games/{gameId}/rulespec/versions/{version}", async (string gameId, string version, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
 {

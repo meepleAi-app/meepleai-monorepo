@@ -1,0 +1,152 @@
+{
+  "id": "error-alerting",
+  "name": "API Error Alert System",
+  "version": "1.0.0",
+  "description": "Monitor API errors and send alerts when error threshold is exceeded with configurable cooldown",
+  "category": "monitoring",
+  "author": "MeepleAI",
+  "tags": ["monitoring", "errors", "alerts", "webhook"],
+  "icon": "🚨",
+  "screenshot": null,
+  "documentation": "docs/n8n-templates/error-alerting.md",
+  "parameters": [
+    {
+      "name": "webhookPath",
+      "type": "string",
+      "label": "Webhook Path",
+      "description": "Path for error webhook",
+      "required": true,
+      "default": "/webhook/api-error",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "errorThreshold",
+      "type": "number",
+      "label": "Error Threshold",
+      "description": "Number of errors before triggering alert",
+      "required": true,
+      "default": "10",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "cooldownMinutes",
+      "type": "number",
+      "label": "Cooldown Period (minutes)",
+      "description": "Minimum time between alerts to prevent spam",
+      "required": true,
+      "default": "60",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "alertWebhookUrl",
+      "type": "string",
+      "label": "Alert Webhook URL",
+      "description": "Slack/Discord/Teams webhook for alerts",
+      "required": true,
+      "default": null,
+      "options": null,
+      "sensitive": true
+    }
+  ],
+  "workflow": {
+    "nodes": [
+      {
+        "id": "webhook",
+        "name": "Error Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [250, 300],
+        "parameters": {
+          "path": "{{webhookPath}}",
+          "httpMethod": "POST"
+        }
+      },
+      {
+        "id": "count-errors",
+        "name": "Count Recent Errors",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [450, 300],
+        "parameters": {
+          "functionCode": "const errorCount = $input.all().length;\\nconst threshold = {{errorThreshold}};\\nreturn [{\\n  json: {\\n    errorCount,\\n    threshold,\\n    shouldAlert: errorCount >= threshold,\\n    errors: $input.all().map(i => i.json)\\n  }\\n}];"
+        }
+      },
+      {
+        "id": "check-threshold",
+        "name": "Check Threshold",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [650, 300],
+        "parameters": {
+          "conditions": {
+            "boolean": [
+              {
+                "value1": "={{ $json.shouldAlert }}",
+                "operation": "true"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "check-cooldown",
+        "name": "Check Cooldown",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [850, 300],
+        "parameters": {
+          "functionCode": "const lastAlert = $getWorkflowStaticData('node').lastAlertTime || 0;\\nconst now = Date.now();\\nconst cooldownMs = {{cooldownMinutes}} * 60 * 1000;\\nconst shouldSend = (now - lastAlert) > cooldownMs;\\n\\nif (shouldSend) {\\n  $getWorkflowStaticData('node').lastAlertTime = now;\\n}\\n\\nreturn [{\\n  json: {\\n    ...items[0].json,\\n    shouldSend,\\n    lastAlertMinutesAgo: Math.floor((now - lastAlert) / 60000)\\n  }\\n}];"
+        }
+      },
+      {
+        "id": "send-alert",
+        "name": "Send Alert",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [1050, 300],
+        "parameters": {
+          "url": "{{alertWebhookUrl}}",
+          "method": "POST",
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "text",
+                "value": "🚨 Error Alert: {{ $json.errorCount }} errors detected (threshold: {{ $json.threshold }})"
+              },
+              {
+                "name": "details",
+                "value": "={{ JSON.stringify($json.errors, null, 2) }}"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "connections": {
+      "webhook": {
+        "main": [[{"node": "count-errors", "type": "main", "index": 0}]]
+      },
+      "count-errors": {
+        "main": [[{"node": "check-threshold", "type": "main", "index": 0}]]
+      },
+      "check-threshold": {
+        "main": [[{"node": "check-cooldown", "type": "main", "index": 0}]]
+      },
+      "check-cooldown": {
+        "main": [[{"node": "send-alert", "type": "main", "index": 0}]]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": {
+      "node": {
+        "lastAlertTime": 0
+      }
+    }
+  }
+}

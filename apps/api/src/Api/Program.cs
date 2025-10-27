@@ -391,6 +391,7 @@ builder.Services.AddScoped<PdfTableExtractionService>();
 builder.Services.AddScoped<IPdfValidationService, PdfValidationService>(); // PDF-09: PDF validation service
 builder.Services.AddScoped<PdfStorageService>();
 builder.Services.AddScoped<N8nConfigService>();
+builder.Services.AddScoped<N8nTemplateService>(); // N8N-04: Workflow template service
 builder.Services.AddScoped<ChatService>();
 
 // CHAT-05: Chat export services
@@ -3796,6 +3797,111 @@ v1Api.MapPost("/admin/n8n/{configId}/test", async (string configId, HttpContext 
         return Results.BadRequest(new { error = ex.Message });
     }
 });
+
+// N8N-04: Workflow template endpoints
+v1Api.MapGet("/n8n/templates", async (
+    string? category,
+    N8nTemplateService templateService,
+    HttpContext context,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+    }
+
+    var templates = await templateService.GetTemplatesAsync(category, ct);
+    return Results.Ok(templates);
+})
+.RequireAuthorization()
+.WithName("GetN8nTemplates")
+.WithTags("N8N")
+.WithDescription("Get all n8n workflow templates, optionally filtered by category");
+
+v1Api.MapGet("/n8n/templates/{id}", async (
+    string id,
+    N8nTemplateService templateService,
+    HttpContext context,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+    }
+
+    var template = await templateService.GetTemplateAsync(id, ct);
+    if (template == null)
+    {
+        return Results.NotFound(new { error = $"Template '{id}' not found" });
+    }
+
+    return Results.Ok(template);
+})
+.RequireAuthorization()
+.WithName("GetN8nTemplate")
+.WithTags("N8N")
+.WithDescription("Get a specific n8n workflow template by ID with full details");
+
+v1Api.MapPost("/n8n/templates/{id}/import", async (
+    string id,
+    ImportTemplateRequest request,
+    N8nTemplateService templateService,
+    HttpContext context,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+    }
+
+    try
+    {
+        logger.LogInformation("User {UserId} importing n8n template {TemplateId}", session.User.Id, id);
+        var result = await templateService.ImportTemplateAsync(id, request.Parameters, session.User.Id, ct);
+        logger.LogInformation("Template {TemplateId} imported successfully as workflow {WorkflowId}", id, result.WorkflowId);
+        return Results.Ok(result);
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Failed to import template {TemplateId}: {Error}", id, ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Unexpected error importing template {TemplateId}", id);
+        return Results.Problem("An unexpected error occurred while importing the template");
+    }
+})
+.RequireAuthorization()
+.WithName("ImportN8nTemplate")
+.WithTags("N8N")
+.WithDescription("Import an n8n workflow template with parameter substitution");
+
+v1Api.MapPost("/n8n/templates/validate", async (
+    ValidateTemplateRequest request,
+    N8nTemplateService templateService,
+    HttpContext context,
+    CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+    }
+
+    // Only admins can validate templates
+    if (session.User.Role != "Admin")
+    {
+        return Results.Forbid();
+    }
+
+    var result = templateService.ValidateTemplate(request.TemplateJson);
+    return Results.Ok(result);
+})
+.RequireAuthorization()
+.WithName("ValidateN8nTemplate")
+.WithTags("N8N")
+.WithDescription("Validate n8n workflow template JSON structure (admin only)");
 
 // AUTH-03: Session management endpoints
 v1Api.MapGet("/admin/sessions", async (HttpContext context, ISessionManagementService sessionManagement, int limit = 100, string? userId = null, CancellationToken ct = default) =>

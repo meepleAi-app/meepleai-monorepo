@@ -118,7 +118,7 @@ CRITICAL INSTRUCTIONS:
         var mock = new Mock<ISearchResultReranker>();
         mock.Setup(x => x.FuseSearchResultsAsync(It.IsAny<List<SearchResult>>()))
             .ReturnsAsync((List<SearchResult> results) =>
-                results.SelectMany(r => r.Items).ToList());
+                results.SelectMany(r => r.Results).ToList());
         return mock;
     }
 

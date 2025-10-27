@@ -4,6 +4,7 @@ using System.Text;
 using System;
 using Api.Infrastructure;
 using Api.Services;
+using Api.Services.Qdrant;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -240,8 +241,24 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
                 .Returns(Task.CompletedTask);
 
             services.AddSingleton(mockQdrantAdapter.Object);
+
+            // Create mocks for QdrantService specialized interfaces
+            var mockCollectionManager = new Mock<IQdrantCollectionManager>();
+            mockCollectionManager.Setup(x => x.CollectionExistsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+            mockCollectionManager.Setup(x => x.EnsureCollectionExistsAsync(It.IsAny<string>(), It.IsAny<uint>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            var mockVectorIndexer = new Mock<IQdrantVectorIndexer>();
+            var mockVectorSearcher = new Mock<IQdrantVectorSearcher>();
+
+            services.AddSingleton(mockCollectionManager.Object);
+            services.AddSingleton(mockVectorIndexer.Object);
+            services.AddSingleton(mockVectorSearcher.Object);
             services.AddSingleton<IQdrantService>(sp => new QdrantService(
-                sp.GetRequiredService<IQdrantClientAdapter>(),
+                sp.GetRequiredService<IQdrantCollectionManager>(),
+                sp.GetRequiredService<IQdrantVectorIndexer>(),
+                sp.GetRequiredService<IQdrantVectorSearcher>(),
                 sp.GetRequiredService<IConfiguration>(),
                 sp.GetRequiredService<ILogger<QdrantService>>()
             ));

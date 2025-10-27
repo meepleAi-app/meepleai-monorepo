@@ -56,12 +56,12 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
             var service = new PdfStorageService(
                 DbContext,
                 scopeFactory,
-                configuration,
                 NullLogger<PdfStorageService>.Instance,
                 textExtractionService,
                 tableExtractionService,
                 backgroundService,
-                cacheService);
+                cacheService,
+                Mock.Of<IBlobStorageService>());
 
             var file = CreateFormFile("rules.pdf", "application/pdf", new byte[] { 0x25, 0x50, 0x44, 0x46 });
 
@@ -178,7 +178,10 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
     private sealed class TestPdfTableExtractionService : PdfTableExtractionService
     {
         public TestPdfTableExtractionService()
-            : base(NullLogger<PdfTableExtractionService>.Instance)
+            : base(
+                Mock.Of<ITableDetectionService>(),
+                Mock.Of<ITableStructureAnalyzer>(),
+                NullLogger<PdfTableExtractionService>.Instance)
         {
         }
 

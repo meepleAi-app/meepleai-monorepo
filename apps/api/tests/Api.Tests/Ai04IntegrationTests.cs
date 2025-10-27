@@ -2,6 +2,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.Services.Rag;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -101,6 +102,37 @@ CRITICAL INSTRUCTIONS:
         return mock;
     }
 
+    // AI-14: Helper to create IQueryExpansionService mock (pass-through)
+    private static Mock<IQueryExpansionService> CreateQueryExpansionMock()
+    {
+        var mock = new Mock<IQueryExpansionService>();
+        mock.Setup(x => x.GenerateQueryVariationsAsync(
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string query, string _, CancellationToken __) => new List<string> { query });
+        return mock;
+    }
+
+    // AI-14: Helper to create ISearchResultReranker mock (pass-through)
+    private static Mock<ISearchResultReranker> CreateRerankerMock()
+    {
+        var mock = new Mock<ISearchResultReranker>();
+        mock.Setup(x => x.FuseSearchResultsAsync(It.IsAny<List<SearchResult>>()))
+            .ReturnsAsync((List<SearchResult> results) =>
+                results.SelectMany(r => r.Items).ToList());
+        return mock;
+    }
+
+    // AI-14: Helper to create ICitationExtractorService mock (pass-through)
+    private static Mock<ICitationExtractorService> CreateCitationExtractorMock()
+    {
+        var mock = new Mock<ICitationExtractorService>();
+        mock.Setup(x => x.ValidateCitations(It.IsAny<List<Snippet>>(), It.IsAny<string>()))
+            .Returns(true);
+        return mock;
+    }
+
     #region Scenario: End-to-End Q&A Flow with Valid Context
 
     [Fact]
@@ -140,7 +172,7 @@ CRITICAL INSTRUCTIONS:
                 }));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object, CreateQueryExpansionMock().Object, CreateRerankerMock().Object, CreateCitationExtractorMock().Object);
 
         // When: A user asks "How many players can play Monopoly?"
         var result = await ragService.AskAsync("monopoly", "How many players can play Monopoly?");
@@ -193,7 +225,7 @@ CRITICAL INSTRUCTIONS:
 
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object, CreateQueryExpansionMock().Object, CreateRerankerMock().Object, CreateCitationExtractorMock().Object);
 
         // When: A user asks about game mechanics
         var result = await ragService.AskAsync("chess", "Can pawns move backward?");
@@ -245,7 +277,7 @@ CRITICAL INSTRUCTIONS:
                 new LlmUsage(200, 2, 202)));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object, CreateQueryExpansionMock().Object, CreateRerankerMock().Object, CreateCitationExtractorMock().Object);
 
         // When: User asks a question not covered by the retrieved context
         var result = await ragService.AskAsync("catan", "What is the maximum score to win?");
@@ -291,7 +323,7 @@ CRITICAL INSTRUCTIONS:
                 new LlmUsage(400, 25, 425)));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object, CreateQueryExpansionMock().Object, CreateRerankerMock().Object, CreateCitationExtractorMock().Object);
 
         // When: User asks about combat mechanics
         var result = await ragService.AskAsync("dnd", "How do I make an attack roll?");
@@ -326,7 +358,7 @@ CRITICAL INSTRUCTIONS:
         var mockQdrant = new Mock<IQdrantService>();
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object, CreateQueryExpansionMock().Object, CreateRerankerMock().Object, CreateCitationExtractorMock().Object);
 
         // When: User makes a Q&A request
         var result = await ragService.AskAsync("risk", "How many armies do I start with?");
@@ -354,7 +386,7 @@ CRITICAL INSTRUCTIONS:
 
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object, CreateQueryExpansionMock().Object, CreateRerankerMock().Object, CreateCitationExtractorMock().Object);
 
         // When: User makes a Q&A request
         var result = await ragService.AskAsync("clue", "Who can I accuse?");
@@ -389,7 +421,7 @@ CRITICAL INSTRUCTIONS:
             .ReturnsAsync(LlmCompletionResult.CreateFailure("Rate limit exceeded"));
 
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object, CreateQueryExpansionMock().Object, CreateRerankerMock().Object, CreateCitationExtractorMock().Object);
 
         // When: User makes a Q&A request
         var result = await ragService.AskAsync("scrabble", "How do I score?");
@@ -445,7 +477,7 @@ CRITICAL INSTRUCTIONS:
         mockCache.Setup(x => x.InvalidateEndpointAsync(It.IsAny<string>(), It.IsAny<AiCacheEndpoint>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, CreateHybridSearchMock().Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object, CreateQueryExpansionMock().Object, CreateRerankerMock().Object, CreateCitationExtractorMock().Object);
 
         // When: Same question is asked
         var result = await ragService.AskAsync("game1", "test query");

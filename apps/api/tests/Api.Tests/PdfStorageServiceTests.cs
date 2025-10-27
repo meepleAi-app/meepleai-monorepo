@@ -45,9 +45,6 @@ public class PdfStorageServiceTests
         IEmbeddingService? embeddingService = null,
         IQdrantService? qdrantService = null)
     {
-        var configurationMock = new Mock<IConfiguration>();
-        configurationMock.Setup(c => c[It.Is<string>(key => key == "PDF_STORAGE_PATH")]).Returns(storagePath);
-
         scopeFactoryMock ??= new Mock<IServiceScopeFactory>(MockBehavior.Strict);
         cacheMock ??= new Mock<IAiResponseCacheService>();
         cacheMock
@@ -58,18 +55,23 @@ public class PdfStorageServiceTests
             .Returns(Task.CompletedTask);
 
         var loggerMock = new Mock<ILogger<PdfStorageService>>();
+        var blobStorageMock = new Mock<IBlobStorageService>();
+
         return new PdfStorageService(
             dbContext,
             scopeFactoryMock.Object,
-            configurationMock.Object,
             loggerMock.Object,
             textExtractionService ?? new PdfTextExtractionService(
                 Mock.Of<ILogger<PdfTextExtractionService>>(),
                 Mock.Of<IConfiguration>(),
                 ocrService: null),
-            tableExtractionService ?? new PdfTableExtractionService(Mock.Of<ILogger<PdfTableExtractionService>>()),
+            tableExtractionService ?? new PdfTableExtractionService(
+                Mock.Of<ITableDetectionService>(),
+                Mock.Of<ITableStructureAnalyzer>(),
+                Mock.Of<ILogger<PdfTableExtractionService>>()),
             backgroundTaskMock.Object,
             cacheMock.Object,
+            blobStorageMock.Object,
             textChunkingService,
             embeddingService,
             qdrantService);

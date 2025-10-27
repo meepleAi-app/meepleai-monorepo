@@ -25,7 +25,10 @@ public class PdfTableExtractionRealWorldTests
     {
         _output = output;
         _mockLogger = new Mock<ILogger<PdfTableExtractionService>>();
-        _service = new PdfTableExtractionService(_mockLogger.Object);
+        _service = new PdfTableExtractionService(
+            Mock.Of<ITableDetectionService>(),
+            Mock.Of<ITableStructureAnalyzer>(),
+            _mockLogger.Object);
     }
 
     private string GetTestPdfPath(string fileName)

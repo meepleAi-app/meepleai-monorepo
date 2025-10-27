@@ -1,6 +1,7 @@
 using Api.Infrastructure;
 using Api.Models;
 using Api.Observability;
+using Api.Services.Rag;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -15,9 +16,6 @@ public class RagService : IRagService
     // CONFIG-04: Hardcoded defaults (lowest priority fallback)
     private const int DefaultTopK = 5;
     private const double DefaultMinScore = 0.7;
-    private const int DefaultRrfK = 60;
-    private const bool DefaultEnableQueryExpansion = true;
-    private const int DefaultMaxQueryVariations = 4;
 
     private readonly MeepleAiDbContext _dbContext;
     private readonly IEmbeddingService _embeddingService;
@@ -30,6 +28,11 @@ public class RagService : IRagService
     private readonly IConfigurationService? _configurationService; // CONFIG-04: For DB configuration
     private readonly IConfiguration? _configuration; // CONFIG-04: For appsettings.json fallback
 
+    // SOLID Refactoring Phase 3: Extracted specialized services
+    private readonly IQueryExpansionService _queryExpansion;
+    private readonly ISearchResultReranker _reranker;
+    private readonly ICitationExtractorService _citationExtractor;
+
     public RagService(
         MeepleAiDbContext dbContext,
         IEmbeddingService embeddingService,
@@ -39,6 +42,9 @@ public class RagService : IRagService
         IAiResponseCacheService cache,
         IPromptTemplateService promptTemplateService,
         ILogger<RagService> logger,
+        IQueryExpansionService queryExpansion,
+        ISearchResultReranker reranker,
+        ICitationExtractorService citationExtractor,
         IConfigurationService? configurationService = null, // CONFIG-04: Optional DI
         IConfiguration? configuration = null) // CONFIG-04: Optional DI
     {
@@ -50,6 +56,9 @@ public class RagService : IRagService
         _cache = cache;
         _promptTemplateService = promptTemplateService;
         _logger = logger;
+        _queryExpansion = queryExpansion;
+        _reranker = reranker;
+        _citationExtractor = citationExtractor;
         _configurationService = configurationService; // CONFIG-04
         _configuration = configuration; // CONFIG-04
     }
@@ -108,7 +117,7 @@ public class RagService : IRagService
             activity?.SetTag("rag.config.topK", topK);
 
             // Step 1: PERF-08 - Generate query variations for improved recall
-            var queryVariations = await GenerateQueryVariationsAsync(query, language, cancellationToken);
+            var queryVariations = await _queryExpansion.GenerateQueryVariationsAsync(query, language, cancellationToken);
             activity?.SetTag("query.variations.count", queryVariations.Count);
 
             _logger.LogDebug("Generated {Count} query variations: {Variations}",
@@ -140,8 +149,7 @@ public class RagService : IRagService
             var searchResults = await Task.WhenAll(searchTasks);
 
             // Step 4: PERF-08 - Fuse and deduplicate results using Reciprocal Rank Fusion (RRF)
-            // CONFIG-04: FuseSearchResults is now async for dynamic RrfK
-            var fusedResults = await FuseSearchResults(searchResults.Where(r => r.Success).ToList());
+            var fusedResults = await _reranker.FuseSearchResultsAsync(searchResults.Where(r => r.Success).ToList());
 
             if (fusedResults.Count == 0)
             {
@@ -1080,150 +1088,6 @@ Instructions:
         }
     }
 
-    /// <summary>
-    /// PERF-08: Generate query variations for improved recall
-    /// Uses rule-based expansion with synonyms and reformulations
-    /// CONFIG-04: Now respects dynamic MaxQueryVariations configuration
-    /// </summary>
-    private async Task<List<string>> GenerateQueryVariationsAsync(string query, string language, CancellationToken cancellationToken)
-    {
-        // CONFIG-04: Load dynamic max variations configuration
-        var maxVariations = await GetRagConfigAsync("MaxQueryVariations", DefaultMaxQueryVariations);
-
-        var variations = new List<string> { query }; // Always include original query
-
-        // Rule-based query expansion patterns for board games domain
-        var expansionRules = new Dictionary<string, string[]>
-        {
-            // Setup-related synonyms
-            { "setup", new[] { "initial setup", "game setup", "starting position", "prepare" } },
-            { "prepare", new[] { "setup", "initial setup", "getting started" } },
-
-            // Movement-related synonyms
-            { "move", new[] { "movement", "moving", "how to move", "can move" } },
-            { "movement", new[] { "move", "moving pieces", "piece movement" } },
-
-            // Action-related synonyms
-            { "play", new[] { "playing", "take action", "perform action" } },
-            { "action", new[] { "move", "play", "turn action" } },
-
-            // Turn-related synonyms
-            { "turn", new[] { "player turn", "round", "phase" } },
-            { "round", new[] { "turn", "game round", "playing round" } },
-
-            // Win condition synonyms
-            { "win", new[] { "winning", "victory", "how to win", "win condition" } },
-            { "victory", new[] { "win", "winning condition", "game end" } },
-
-            // Rule-related synonyms
-            { "rule", new[] { "rules", "regulation", "how does" } },
-            { "allowed", new[] { "can I", "is it legal", "permitted" } }
-        };
-
-        // Apply expansion rules (case-insensitive)
-        var queryLower = query.ToLowerInvariant();
-        foreach (var rule in expansionRules)
-        {
-            if (queryLower.Contains(rule.Key))
-            {
-                foreach (var synonym in rule.Value.Take(2)) // Limit to 2 synonyms per rule
-                {
-                    var expandedQuery = query.Replace(rule.Key, synonym, StringComparison.OrdinalIgnoreCase);
-                    if (!variations.Contains(expandedQuery, StringComparer.OrdinalIgnoreCase))
-                    {
-                        variations.Add(expandedQuery);
-                    }
-                }
-            }
-        }
-
-        // Add question reformulations for common patterns
-        if (queryLower.StartsWith("how") || queryLower.StartsWith("what") || queryLower.StartsWith("can"))
-        {
-            // "How do I X?" → "X rules", "X instructions"
-            var baseQuery = query.Replace("how do i ", "", StringComparison.OrdinalIgnoreCase)
-                                 .Replace("how to ", "", StringComparison.OrdinalIgnoreCase)
-                                 .Replace("what is ", "", StringComparison.OrdinalIgnoreCase)
-                                 .Replace("can i ", "", StringComparison.OrdinalIgnoreCase)
-                                 .TrimEnd('?').Trim();
-
-            if (!string.IsNullOrWhiteSpace(baseQuery))
-            {
-                variations.Add($"{baseQuery} rules");
-                variations.Add($"{baseQuery} instructions");
-            }
-        }
-
-        // CONFIG-04: Limit total variations using dynamic configuration
-        var finalVariations = variations.Distinct(StringComparer.OrdinalIgnoreCase).Take(maxVariations).ToList();
-
-        _logger.LogDebug("Query expansion: '{Original}' → {Count} variations (max: {Max})",
-            query, finalVariations.Count, maxVariations);
-
-        return await Task.FromResult(finalVariations);
-    }
-
-    /// <summary>
-    /// PERF-08: Fuse search results using Reciprocal Rank Fusion (RRF)
-    /// Combines results from multiple queries with deduplication
-    /// CONFIG-04: Now uses dynamic RrfK configuration
-    /// </summary>
-    private async Task<List<SearchResultItem>> FuseSearchResults(List<SearchResult> searchResults)
-    {
-        // CONFIG-04: Load dynamic RRF constant from configuration
-        var k = await GetRagConfigAsync("RrfK", DefaultRrfK);
-
-        // Dictionary to store RRF scores for each unique document
-        var rrfScores = new Dictionary<string, (SearchResultItem item, double score)>();
-
-        // Process each search result list
-        for (int queryIndex = 0; queryIndex < searchResults.Count; queryIndex++)
-        {
-            var results = searchResults[queryIndex].Results;
-
-            // Calculate RRF score for each result: 1 / (k + rank)
-            for (int rank = 0; rank < results.Count; rank++)
-            {
-                var result = results[rank];
-                var docKey = $"{result.PdfId}_{result.Page}_{result.Text.GetHashCode()}";
-
-                var rrfScore = 1.0 / (k + rank + 1); // rank is 0-indexed, add 1 for proper formula
-
-                // CODE-04: Use TryGetValue to avoid double dictionary lookup
-                if (rrfScores.TryGetValue(docKey, out var existingEntry))
-                {
-                    // Document appears in multiple result sets - accumulate RRF scores
-                    rrfScores[docKey] = (existingEntry.Item1, existingEntry.Item2 + rrfScore);
-                }
-                else
-                {
-                    // First time seeing this document
-                    rrfScores[docKey] = (result, rrfScore);
-                }
-            }
-        }
-
-        // Sort by RRF score (descending) and return items
-        var fusedResults = rrfScores.Values
-            .OrderByDescending(x => x.score)
-            .Select(x => new SearchResultItem
-            {
-                Text = x.item.Text,
-                PdfId = x.item.PdfId,
-                Page = x.item.Page,
-                ChunkIndex = x.item.ChunkIndex,
-                Score = (float)x.score // Use RRF score as the final relevance score
-            })
-            .ToList();
-
-        _logger.LogDebug(
-            "Result fusion: {InputLists} lists with {TotalResults} results → {FusedResults} unique results",
-            searchResults.Count,
-            searchResults.Sum(r => r.Results.Count),
-            fusedResults.Count);
-
-        return fusedResults;
-    }
 
     // CONFIG-04: RAG configuration helper methods (3-tier fallback: DB → appsettings → defaults)
 

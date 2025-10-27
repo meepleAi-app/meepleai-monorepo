@@ -1,8 +1,7 @@
 using Api.Observability;
-using Grpc.Core;
+using Api.Services.Qdrant;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Qdrant.Client;
 using Qdrant.Client.Grpc;
 using System.Diagnostics;
 
@@ -10,12 +9,14 @@ namespace Api.Services;
 
 /// <summary>
 /// Service for vector storage and retrieval using Qdrant
+/// Facade pattern - delegates to specialized services
 /// </summary>
 public class QdrantService : IQdrantService
 {
-    private readonly IQdrantClientAdapter _clientAdapter;
+    private readonly IQdrantCollectionManager _collectionManager;
+    private readonly IQdrantVectorIndexer _vectorIndexer;
+    private readonly IQdrantVectorSearcher _vectorSearcher;
     private readonly ILogger<QdrantService> _logger;
-    private readonly IConfiguration _configuration;
     private const string CollectionName = "meepleai_documents";
 
     // Vector size depends on embedding provider:
@@ -24,16 +25,19 @@ public class QdrantService : IQdrantService
     private readonly uint _vectorSize;
 
     public QdrantService(
-        IQdrantClientAdapter clientAdapter,
+        IQdrantCollectionManager collectionManager,
+        IQdrantVectorIndexer vectorIndexer,
+        IQdrantVectorSearcher vectorSearcher,
         IConfiguration configuration,
         ILogger<QdrantService> logger)
     {
-        _clientAdapter = clientAdapter;
-        _configuration = configuration;
+        _collectionManager = collectionManager;
+        _vectorIndexer = vectorIndexer;
+        _vectorSearcher = vectorSearcher;
         _logger = logger;
 
         // Determine vector size based on embedding provider
-        var provider = _configuration["EMBEDDING_PROVIDER"]?.ToLowerInvariant() ?? "ollama";
+        var provider = configuration["EMBEDDING_PROVIDER"]?.ToLowerInvariant() ?? "ollama";
         _vectorSize = provider == "ollama" ? 768u : 1536u;
 
         _logger.LogInformation("QdrantService initialized with vector size {VectorSize} for provider {Provider}",
@@ -45,26 +49,7 @@ public class QdrantService : IQdrantService
     /// </summary>
     public async Task<bool> CollectionExistsAsync(CancellationToken ct = default)
     {
-        try
-        {
-            var collectionsResponse = await _clientAdapter.ListCollectionsAsync(ct);
-            return collectionsResponse.Any(c => c == CollectionName);
-        }
-        catch (RpcException ex)
-        {
-            _logger.LogError(ex, "gRPC error checking if collection exists: {Status}", ex.Status);
-            throw;
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation while checking if collection exists");
-            throw;
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogError(ex, "Operation cancelled while checking if collection exists");
-            throw;
-        }
+        return await _collectionManager.CollectionExistsAsync(CollectionName, ct);
     }
 
     /// <summary>
@@ -72,81 +57,7 @@ public class QdrantService : IQdrantService
     /// </summary>
     public async Task EnsureCollectionExistsAsync(CancellationToken ct = default)
     {
-        try
-        {
-            var exists = await CollectionExistsAsync(ct);
-
-            if (exists)
-            {
-                _logger.LogInformation("Collection {CollectionName} already exists", CollectionName);
-                return;
-            }
-
-            _logger.LogInformation("Creating collection {CollectionName} with vector size {VectorSize}",
-                CollectionName, _vectorSize);
-
-            await _clientAdapter.CreateCollectionAsync(
-                collectionName: CollectionName,
-                vectorsConfig: new VectorParams
-                {
-                    Size = _vectorSize,
-                    Distance = Distance.Cosine
-                },
-                cancellationToken: ct
-            );
-
-            // Create payload indexes for filtering
-            await _clientAdapter.CreatePayloadIndexAsync(
-                collectionName: CollectionName,
-                fieldName: "game_id",
-                schemaType: PayloadSchemaType.Keyword,
-                cancellationToken: ct
-            );
-
-            await _clientAdapter.CreatePayloadIndexAsync(
-                collectionName: CollectionName,
-                fieldName: "pdf_id",
-                schemaType: PayloadSchemaType.Keyword,
-                cancellationToken: ct
-            );
-
-            await _clientAdapter.CreatePayloadIndexAsync(
-                collectionName: CollectionName,
-                fieldName: "category",
-                schemaType: PayloadSchemaType.Keyword,
-                cancellationToken: ct
-            );
-
-            // AI-09: Create payload index for language field
-            await _clientAdapter.CreatePayloadIndexAsync(
-                collectionName: CollectionName,
-                fieldName: "language",
-                schemaType: PayloadSchemaType.Keyword,
-                cancellationToken: ct
-            );
-
-            _logger.LogInformation("Collection {CollectionName} created successfully with indexes", CollectionName);
-        }
-        catch (ArgumentException ex)
-        {
-            _logger.LogError(ex, "Invalid argument while ensuring collection exists");
-            throw;
-        }
-        catch (RpcException ex)
-        {
-            _logger.LogError(ex, "gRPC error ensuring collection exists: {Status}", ex.Status);
-            throw;
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation while ensuring collection exists");
-            throw;
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogError(ex, "Operation cancelled while ensuring collection exists");
-            throw;
-        }
+        await _collectionManager.EnsureCollectionExistsAsync(CollectionName, _vectorSize, ct);
     }
 
     /// <summary>
@@ -180,40 +91,18 @@ public class QdrantService : IQdrantService
         {
             _logger.LogInformation("Indexing {Count} chunks for PDF {PdfId}", chunks.Count, pdfId);
 
-            var points = new List<PointStruct>();
-
-            for (int i = 0; i < chunks.Count; i++)
+            // Build base payload
+            var basePayload = new Dictionary<string, Value>
             {
-                var chunk = chunks[i];
-                var pointId = Guid.NewGuid().ToString();
+                ["game_id"] = gameId,
+                ["pdf_id"] = pdfId
+            };
 
-                var payload = new Dictionary<string, Value>
-                {
-                    ["game_id"] = gameId,
-                    ["pdf_id"] = pdfId,
-                    ["chunk_index"] = i,
-                    ["text"] = chunk.Text,
-                    ["page"] = chunk.Page,
-                    ["char_start"] = chunk.CharStart,
-                    ["char_end"] = chunk.CharEnd,
-                    ["indexed_at"] = DateTime.UtcNow.ToString("o")
-                };
+            // Build points from chunks
+            var points = _vectorIndexer.BuildPoints(chunks, basePayload);
 
-                var point = new PointStruct
-                {
-                    Id = new PointId { Uuid = pointId },
-                    Vectors = chunk.Embedding,
-                    Payload = { payload }
-                };
-
-                points.Add(point);
-            }
-
-            await _clientAdapter.UpsertAsync(
-                collectionName: CollectionName,
-                points: points.AsReadOnly(),
-                cancellationToken: ct
-            );
+            // Upsert to Qdrant
+            await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), ct);
 
             _logger.LogInformation("Successfully indexed {Count} chunks for PDF {PdfId}", chunks.Count, pdfId);
 
@@ -227,53 +116,9 @@ public class QdrantService : IQdrantService
 
             return IndexResult.CreateSuccess(chunks.Count);
         }
-        catch (ArgumentNullException ex)
+        catch (Exception ex)
         {
-            _logger.LogError(ex, "Null argument while indexing document chunks for PDF {PdfId}", pdfId);
-
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
-            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
-        }
-        catch (ArgumentException ex)
-        {
-            _logger.LogError(ex, "Invalid argument while indexing document chunks for PDF {PdfId}", pdfId);
-
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
-            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
-        }
-        catch (RpcException ex)
-        {
-            _logger.LogError(ex, "gRPC error indexing document chunks for PDF {PdfId}: {Status}", pdfId, ex.Status);
-
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
-            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation while indexing document chunks for PDF {PdfId}", pdfId);
-
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
-            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogError(ex, "Operation cancelled while indexing document chunks for PDF {PdfId}", pdfId);
+            _logger.LogError(ex, "Error indexing document chunks for PDF {PdfId}", pdfId);
 
             activity?.SetTag("success", false);
             activity?.SetTag("error.type", ex.GetType().Name);
@@ -311,37 +156,17 @@ public class QdrantService : IQdrantService
         {
             _logger.LogInformation("Searching in game {GameId}, limit {Limit}", gameId, limit);
 
-            var filter = new Filter
-            {
-                Must =
-                {
-                    new Condition
-                    {
-                        Field = new FieldCondition
-                        {
-                            Key = "game_id",
-                            Match = new Match { Keyword = gameId }
-                        }
-                    }
-                }
-            };
+            var filter = _vectorSearcher.BuildGameFilter(gameId);
 
-            var searchResults = await _clientAdapter.SearchAsync(
+            var searchResults = await _vectorSearcher.SearchAsync(
                 collectionName: CollectionName,
-                vector: queryEmbedding,
+                queryEmbedding: queryEmbedding,
                 filter: filter,
-                limit: (ulong)limit,
-                cancellationToken: ct
+                limit: limit,
+                ct: ct
             );
 
-            var results = searchResults.Select(r => new SearchResultItem
-            {
-                Score = r.Score,
-                Text = r.Payload["text"].StringValue,
-                PdfId = r.Payload["pdf_id"].StringValue,
-                Page = (int)r.Payload["page"].IntegerValue,
-                ChunkIndex = (int)r.Payload["chunk_index"].IntegerValue
-            }).ToList();
+            var results = _vectorSearcher.ConvertToSearchResults(searchResults);
 
             _logger.LogInformation("Found {Count} results", results.Count);
 
@@ -359,53 +184,9 @@ public class QdrantService : IQdrantService
 
             return SearchResult.CreateSuccess(results);
         }
-        catch (ArgumentNullException ex)
+        catch (Exception ex)
         {
-            _logger.LogError(ex, "Null argument during search for game {GameId}", gameId);
-
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
-            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
-        }
-        catch (ArgumentException ex)
-        {
-            _logger.LogError(ex, "Invalid argument during search for game {GameId}", gameId);
-
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
-            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
-        }
-        catch (RpcException ex)
-        {
-            _logger.LogError(ex, "gRPC error during search for game {GameId}: {Status}", gameId, ex.Status);
-
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
-            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation during search for game {GameId}", gameId);
-
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
-            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogError(ex, "Operation cancelled during search for game {GameId}", gameId);
+            _logger.LogError(ex, "Error during search for game {GameId}", gameId);
 
             activity?.SetTag("success", false);
             activity?.SetTag("error.type", ex.GetType().Name);
@@ -425,48 +206,15 @@ public class QdrantService : IQdrantService
         {
             _logger.LogInformation("Deleting vectors for PDF {PdfId}", pdfId);
 
-            var filter = new Filter
-            {
-                Must =
-                {
-                    new Condition
-                    {
-                        Field = new FieldCondition
-                        {
-                            Key = "pdf_id",
-                            Match = new Match { Keyword = pdfId }
-                        }
-                    }
-                }
-            };
-
-            await _clientAdapter.DeleteAsync(
-                collectionName: CollectionName,
-                filter: filter,
-                cancellationToken: ct
-            );
+            var filter = _vectorSearcher.BuildPdfFilter(pdfId);
+            await _vectorIndexer.DeleteByFilterAsync(CollectionName, filter, ct);
 
             _logger.LogInformation("Successfully deleted vectors for PDF {PdfId}", pdfId);
             return true;
         }
-        catch (ArgumentException ex)
+        catch (Exception ex)
         {
-            _logger.LogError(ex, "Invalid argument while deleting vectors for PDF {PdfId}", pdfId);
-            return false;
-        }
-        catch (RpcException ex)
-        {
-            _logger.LogError(ex, "gRPC error deleting vectors for PDF {PdfId}: {Status}", pdfId, ex.Status);
-            return false;
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation while deleting vectors for PDF {PdfId}", pdfId);
-            return false;
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogError(ex, "Operation cancelled while deleting vectors for PDF {PdfId}", pdfId);
+            _logger.LogError(ex, "Error deleting vectors for PDF {PdfId}", pdfId);
             return false;
         }
     }
@@ -489,71 +237,25 @@ public class QdrantService : IQdrantService
             var category = metadata.GetValueOrDefault("category", "unknown");
             _logger.LogInformation("Indexing {Count} chunks with category {Category}", chunks.Count, category);
 
-            var points = new List<PointStruct>();
-
-            for (int i = 0; i < chunks.Count; i++)
+            // Convert metadata to Value dictionary
+            var basePayload = new Dictionary<string, Value>();
+            foreach (var kvp in metadata)
             {
-                var chunk = chunks[i];
-                var pointId = Guid.NewGuid().ToString();
-
-                var payload = new Dictionary<string, Value>();
-
-                // Add all provided metadata
-                foreach (var kvp in metadata)
-                {
-                    payload[kvp.Key] = kvp.Value;
-                }
-
-                // Add chunk-specific data
-                payload["chunk_index"] = i;
-                payload["text"] = chunk.Text;
-                payload["page"] = chunk.Page;
-                payload["char_start"] = chunk.CharStart;
-                payload["char_end"] = chunk.CharEnd;
-                payload["indexed_at"] = DateTime.UtcNow.ToString("o");
-
-                var point = new PointStruct
-                {
-                    Id = new PointId { Uuid = pointId },
-                    Vectors = chunk.Embedding,
-                    Payload = { payload }
-                };
-
-                points.Add(point);
+                basePayload[kvp.Key] = kvp.Value;
             }
 
-            await _clientAdapter.UpsertAsync(
-                collectionName: CollectionName,
-                points: points.AsReadOnly(),
-                cancellationToken: ct
-            );
+            // Build points from chunks
+            var points = _vectorIndexer.BuildPoints(chunks, basePayload);
+
+            // Upsert to Qdrant
+            await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), ct);
 
             _logger.LogInformation("Successfully indexed {Count} chunks with metadata", chunks.Count);
             return IndexResult.CreateSuccess(chunks.Count);
         }
-        catch (ArgumentNullException ex)
+        catch (Exception ex)
         {
-            _logger.LogError(ex, "Null argument while indexing chunks with metadata");
-            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
-        }
-        catch (ArgumentException ex)
-        {
-            _logger.LogError(ex, "Invalid argument while indexing chunks with metadata");
-            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
-        }
-        catch (RpcException ex)
-        {
-            _logger.LogError(ex, "gRPC error indexing chunks with metadata: {Status}", ex.Status);
-            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation while indexing chunks with metadata");
-            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogError(ex, "Operation cancelled while indexing chunks with metadata");
+            _logger.LogError(ex, "Error indexing chunks with metadata");
             return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
         }
     }
@@ -571,64 +273,24 @@ public class QdrantService : IQdrantService
         {
             _logger.LogInformation("Searching in category {Category}, limit {Limit}", category, limit);
 
-            var filter = new Filter
-            {
-                Must =
-                {
-                    new Condition
-                    {
-                        Field = new FieldCondition
-                        {
-                            Key = "category",
-                            Match = new Match { Keyword = category }
-                        }
-                    }
-                }
-            };
+            var filter = _vectorSearcher.BuildCategoryFilter(category);
 
-            var searchResults = await _clientAdapter.SearchAsync(
+            var searchResults = await _vectorSearcher.SearchAsync(
                 collectionName: CollectionName,
-                vector: queryEmbedding,
+                queryEmbedding: queryEmbedding,
                 filter: filter,
-                limit: (ulong)limit,
-                cancellationToken: ct
+                limit: limit,
+                ct: ct
             );
 
-            var results = searchResults.Select(r => new SearchResultItem
-            {
-                Score = r.Score,
-                Text = r.Payload["text"].StringValue,
-                PdfId = r.Payload.ContainsKey("pdf_id") ? r.Payload["pdf_id"].StringValue : "",
-                Page = (int)r.Payload["page"].IntegerValue,
-                ChunkIndex = (int)r.Payload["chunk_index"].IntegerValue
-            }).ToList();
+            var results = _vectorSearcher.ConvertToSearchResults(searchResults);
 
             _logger.LogInformation("Found {Count} results in category {Category}", results.Count, category);
             return SearchResult.CreateSuccess(results);
         }
-        catch (ArgumentNullException ex)
+        catch (Exception ex)
         {
-            _logger.LogError(ex, "Null argument during search for category {Category}", category);
-            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
-        }
-        catch (ArgumentException ex)
-        {
-            _logger.LogError(ex, "Invalid argument during search for category {Category}", category);
-            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
-        }
-        catch (RpcException ex)
-        {
-            _logger.LogError(ex, "gRPC error during search for category {Category}: {Status}", category, ex.Status);
-            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation during search for category {Category}", category);
-            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogError(ex, "Operation cancelled during search for category {Category}", category);
+            _logger.LogError(ex, "Error during search for category {Category}", category);
             return SearchResult.CreateFailure($"Search failed: {ex.Message}");
         }
     }
@@ -666,41 +328,19 @@ public class QdrantService : IQdrantService
             _logger.LogInformation("Indexing {Count} chunks for PDF {PdfId} with language {Language}",
                 chunks.Count, pdfId, language);
 
-            var points = new List<PointStruct>();
-
-            for (int i = 0; i < chunks.Count; i++)
+            // Build base payload with language
+            var basePayload = new Dictionary<string, Value>
             {
-                var chunk = chunks[i];
-                var pointId = Guid.NewGuid().ToString();
+                ["game_id"] = gameId,
+                ["pdf_id"] = pdfId,
+                ["language"] = language
+            };
 
-                var payload = new Dictionary<string, Value>
-                {
-                    ["game_id"] = gameId,
-                    ["pdf_id"] = pdfId,
-                    ["chunk_index"] = i,
-                    ["text"] = chunk.Text,
-                    ["page"] = chunk.Page,
-                    ["char_start"] = chunk.CharStart,
-                    ["char_end"] = chunk.CharEnd,
-                    ["language"] = language, // AI-09: Language metadata
-                    ["indexed_at"] = DateTime.UtcNow.ToString("o")
-                };
+            // Build points from chunks
+            var points = _vectorIndexer.BuildPoints(chunks, basePayload);
 
-                var point = new PointStruct
-                {
-                    Id = new PointId { Uuid = pointId },
-                    Vectors = chunk.Embedding,
-                    Payload = { payload }
-                };
-
-                points.Add(point);
-            }
-
-            await _clientAdapter.UpsertAsync(
-                collectionName: CollectionName,
-                points: points.AsReadOnly(),
-                cancellationToken: ct
-            );
+            // Upsert to Qdrant
+            await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), ct);
 
             _logger.LogInformation("Successfully indexed {Count} chunks for PDF {PdfId} with language {Language}",
                 chunks.Count, pdfId, language);
@@ -714,57 +354,9 @@ public class QdrantService : IQdrantService
 
             return IndexResult.CreateSuccess(chunks.Count);
         }
-        catch (ArgumentNullException ex)
+        catch (Exception ex)
         {
-            _logger.LogError(ex, "Null argument while indexing document chunks for PDF {PdfId} with language {Language}",
-                pdfId, language);
-
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
-            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
-        }
-        catch (ArgumentException ex)
-        {
-            _logger.LogError(ex, "Invalid argument while indexing document chunks for PDF {PdfId} with language {Language}",
-                pdfId, language);
-
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
-            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
-        }
-        catch (RpcException ex)
-        {
-            _logger.LogError(ex, "gRPC error indexing document chunks for PDF {PdfId} with language {Language}: {Status}",
-                pdfId, language, ex.Status);
-
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
-            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation while indexing document chunks for PDF {PdfId} with language {Language}",
-                pdfId, language);
-
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
-            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogError(ex, "Operation cancelled while indexing document chunks for PDF {PdfId} with language {Language}",
+            _logger.LogError(ex, "Error indexing document chunks for PDF {PdfId} with language {Language}",
                 pdfId, language);
 
             activity?.SetTag("success", false);
@@ -803,45 +395,17 @@ public class QdrantService : IQdrantService
             _logger.LogInformation("Searching in game {GameId} for language {Language}, limit {Limit}",
                 gameId, language, limit);
 
-            var filter = new Filter
-            {
-                Must =
-                {
-                    new Condition
-                    {
-                        Field = new FieldCondition
-                        {
-                            Key = "game_id",
-                            Match = new Match { Keyword = gameId }
-                        }
-                    },
-                    new Condition
-                    {
-                        Field = new FieldCondition
-                        {
-                            Key = "language",
-                            Match = new Match { Keyword = language }
-                        }
-                    }
-                }
-            };
+            var filter = _vectorSearcher.BuildGameLanguageFilter(gameId, language);
 
-            var searchResults = await _clientAdapter.SearchAsync(
+            var searchResults = await _vectorSearcher.SearchAsync(
                 collectionName: CollectionName,
-                vector: queryEmbedding,
+                queryEmbedding: queryEmbedding,
                 filter: filter,
-                limit: (ulong)limit,
-                cancellationToken: ct
+                limit: limit,
+                ct: ct
             );
 
-            var results = searchResults.Select(r => new SearchResultItem
-            {
-                Score = r.Score,
-                Text = r.Payload["text"].StringValue,
-                PdfId = r.Payload["pdf_id"].StringValue,
-                Page = (int)r.Payload["page"].IntegerValue,
-                ChunkIndex = (int)r.Payload["chunk_index"].IntegerValue
-            }).ToList();
+            var results = _vectorSearcher.ConvertToSearchResults(searchResults);
 
             _logger.LogInformation("Found {Count} results for language {Language}", results.Count, language);
 
@@ -857,53 +421,9 @@ public class QdrantService : IQdrantService
 
             return SearchResult.CreateSuccess(results);
         }
-        catch (ArgumentNullException ex)
+        catch (Exception ex)
         {
-            _logger.LogError(ex, "Null argument during search for game {GameId} and language {Language}", gameId, language);
-
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
-            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
-        }
-        catch (ArgumentException ex)
-        {
-            _logger.LogError(ex, "Invalid argument during search for game {GameId} and language {Language}", gameId, language);
-
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
-            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
-        }
-        catch (RpcException ex)
-        {
-            _logger.LogError(ex, "gRPC error during search for game {GameId} and language {Language}: {Status}", gameId, language, ex.Status);
-
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
-            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation during search for game {GameId} and language {Language}", gameId, language);
-
-            activity?.SetTag("success", false);
-            activity?.SetTag("error.type", ex.GetType().Name);
-            activity?.SetTag("error.message", ex.Message);
-            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
-            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogError(ex, "Operation cancelled during search for game {GameId} and language {Language}", gameId, language);
+            _logger.LogError(ex, "Error during search for game {GameId} and language {Language}", gameId, language);
 
             activity?.SetTag("success", false);
             activity?.SetTag("error.type", ex.GetType().Name);
@@ -923,48 +443,15 @@ public class QdrantService : IQdrantService
         {
             _logger.LogInformation("Deleting vectors for category {Category}", category);
 
-            var filter = new Filter
-            {
-                Must =
-                {
-                    new Condition
-                    {
-                        Field = new FieldCondition
-                        {
-                            Key = "category",
-                            Match = new Match { Keyword = category }
-                        }
-                    }
-                }
-            };
-
-            await _clientAdapter.DeleteAsync(
-                collectionName: CollectionName,
-                filter: filter,
-                cancellationToken: ct
-            );
+            var filter = _vectorSearcher.BuildCategoryFilter(category);
+            await _vectorIndexer.DeleteByFilterAsync(CollectionName, filter, ct);
 
             _logger.LogInformation("Successfully deleted vectors for category {Category}", category);
             return true;
         }
-        catch (ArgumentException ex)
+        catch (Exception ex)
         {
-            _logger.LogError(ex, "Invalid argument while deleting vectors for category {Category}", category);
-            return false;
-        }
-        catch (RpcException ex)
-        {
-            _logger.LogError(ex, "gRPC error deleting vectors for category {Category}: {Status}", category, ex.Status);
-            return false;
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogError(ex, "Invalid operation while deleting vectors for category {Category}", category);
-            return false;
-        }
-        catch (OperationCanceledException ex)
-        {
-            _logger.LogError(ex, "Operation cancelled while deleting vectors for category {Category}", category);
+            _logger.LogError(ex, "Error deleting vectors for category {Category}", category);
             return false;
         }
     }

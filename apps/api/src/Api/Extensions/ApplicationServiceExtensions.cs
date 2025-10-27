@@ -1,5 +1,8 @@
 using Api.Services;
 using Api.Services.Chat;
+using Api.Services.Pdf;
+using Api.Services.Qdrant;
+using Api.Services.Rag;
 using Api.Observability;
 
 namespace Api.Extensions;
@@ -25,7 +28,15 @@ public static class ApplicationServiceExtensions
     {
         // AI-01: Vector search services
         services.AddSingleton<IQdrantClientAdapter, QdrantClientAdapter>();
+
+        // Qdrant specialized services (SOLID refactoring)
+        services.AddScoped<IQdrantCollectionManager, QdrantCollectionManager>();
+        services.AddScoped<IQdrantVectorIndexer, QdrantVectorIndexer>();
+        services.AddScoped<IQdrantVectorSearcher, QdrantVectorSearcher>();
+
+        // Qdrant facade service
         services.AddSingleton<IQdrantService, QdrantService>();
+
         services.AddScoped<IEmbeddingService, EmbeddingService>();
         services.AddScoped<ITextChunkingService, TextChunkingService>();
         services.AddScoped<PdfIndexingService>();
@@ -69,8 +80,13 @@ public static class ApplicationServiceExtensions
         // AI-05: AI response caching (PERF-03: Changed from Singleton to Scoped due to MeepleAiDbContext dependency)
         services.AddScoped<IAiResponseCacheService, AiResponseCacheService>();
 
+        // SOLID Phase 3: RAG sub-services (specialized services extracted from RagService)
+        services.AddScoped<IQueryExpansionService, QueryExpansionService>();
+        services.AddScoped<ISearchResultReranker, SearchResultReranker>();
+        services.AddScoped<ICitationExtractorService, CitationExtractorService>();
+
         // RAG and search services
-        services.AddScoped<IRagService, RagService>(); // AI-04: RAG service for Q&A and explanations
+        services.AddScoped<IRagService, RagService>(); // AI-04: RAG service (now a facade over specialized sub-services)
         services.AddScoped<IKeywordSearchService, KeywordSearchService>(); // AI-14: PostgreSQL full-text keyword search
         services.AddScoped<IHybridSearchService, HybridSearchService>(); // AI-14: Hybrid search with RRF fusion
 
@@ -99,10 +115,18 @@ public static class ApplicationServiceExtensions
 
     private static IServiceCollection AddPdfServices(this IServiceCollection services)
     {
+        // PDF sub-services (SOLID refactoring - Phase 3)
+        services.AddScoped<ITableDetectionService, TableDetectionService>();
+        services.AddScoped<ITableCellParser, TableCellParser>();
+        services.AddScoped<ITableStructureAnalyzer, TableStructureAnalyzer>();
+        services.AddScoped<IPdfMetadataExtractor, PdfMetadataExtractor>();
+        services.AddScoped<IBlobStorageService, BlobStorageService>();
+
+        // PDF main services
         services.AddScoped<PdfTextExtractionService>();
-        services.AddScoped<PdfTableExtractionService>();
+        services.AddScoped<PdfTableExtractionService>(); // Refactored facade
         services.AddScoped<IPdfValidationService, PdfValidationService>(); // PDF-09: PDF validation service
-        services.AddScoped<PdfStorageService>();
+        services.AddScoped<PdfStorageService>(); // Refactored facade
 
         // PDF-02: OCR service for fallback text extraction
         services.AddSingleton<IOcrService, TesseractOcrService>();

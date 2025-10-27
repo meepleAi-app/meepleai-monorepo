@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Api.Services;
+using Api.Services.Pdf;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;

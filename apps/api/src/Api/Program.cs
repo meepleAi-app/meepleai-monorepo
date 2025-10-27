@@ -3739,6 +3739,53 @@ v1Api.MapGet("/users/search", async (
 .Produces<IEnumerable<UserSearchResultDto>>(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status401Unauthorized);
 
+// EDIT-07: Bulk RuleSpec operations
+v1Api.MapPost("/rulespecs/bulk/export", async (BulkExportRequest request, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+{
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+    {
+        logger.LogWarning("User {UserId} with role {Role} attempted to export rule specs without permission", session.User.Id, session.User.Role);
+        return Results.StatusCode(StatusCodes.Status403Forbidden);
+    }
+
+    if (request?.RuleSpecIds == null || request.RuleSpecIds.Count == 0)
+    {
+        return Results.BadRequest(new { error = "At least one rule spec ID must be provided" });
+    }
+
+    try
+    {
+        logger.LogInformation("User {UserId} exporting {Count} rule specs", session.User.Id, request.RuleSpecIds.Count);
+        var zipBytes = await ruleSpecService.CreateZipArchiveAsync(request.RuleSpecIds, ct);
+
+        var fileName = $"meepleai-rulespecs-{DateTime.UtcNow:yyyy-MM-dd}.zip";
+        logger.LogInformation("Successfully created ZIP archive {FileName} with {Size} bytes", fileName, zipBytes.Length);
+
+        return Results.File(zipBytes, "application/zip", fileName);
+    }
+    catch (ArgumentException ex)
+    {
+        logger.LogWarning("Invalid export request: {Error}", ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+    catch (InvalidOperationException ex)
+    {
+        logger.LogWarning("Export operation failed: {Error}", ex.Message);
+        return Results.Problem(ex.Message, statusCode: StatusCodes.Status500InternalServerError);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Unexpected error during rule spec export");
+        return Results.Problem("An error occurred during export", statusCode: StatusCodes.Status500InternalServerError);
+    }
+});
+
 v1Api.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, RuleSpecService rules, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)

@@ -75,11 +75,23 @@ tools/             - PowerShell scripts
 
 ### Frontend (Next.js 14)
 
-**Pages**: index, chat, upload, editor (EDIT-03 rich text), versions, admin, admin/users (ADMIN-01), admin/analytics (ADMIN-02), admin/cache, admin/configuration (CONFIG-06), admin/n8n-templates (N8N-04), n8n, logs, setup (AI-03)
+**Pages**: index, chat, upload, editor (EDIT-03 rich text), versions, admin, admin/users (ADMIN-01), admin/analytics (ADMIN-02), admin/cache, admin/configuration (CONFIG-06), admin/n8n-templates (N8N-04), admin/bulk-export (EDIT-07), n8n, logs, setup (AI-03)
 
 **API Client**: `lib/api.ts` - get/post/put/delete, cookie auth (`credentials: "include"`), 401 handling, `NEXT_PUBLIC_API_BASE`
 
 **Tests**: Jest (90% coverage) + Playwright E2E
+
+**Bulk RuleSpec Export** (EDIT-07):
+- **Export API**: `POST /api/v1/rulespecs/bulk/export` - Export multiple rule specs as ZIP
+  - Request: `{ ruleSpecIds: string[] }` (max 100)
+  - Response: ZIP file with JSON files (format: `{gameId}_{version}.json`)
+  - Authorization: Editor or Admin only
+  - Security: Filename sanitization, path traversal prevention, 100 rule spec limit
+- **Service**: `RuleSpecService.CreateZipArchiveAsync()` - Creates ZIP with System.IO.Compression
+- **Frontend**: `/admin/bulk-export` - Game list with checkbox selection, select all, export button
+- **API Client**: `api.ruleSpecs.bulkExport(gameIds)` - Blob download with auto-save to filesystem
+- **Tests**: 8 unit (RuleSpecService) + 6 integration (endpoint) + 6 Jest (UI) - all passing
+- **Future**: Import, Delete, Duplicate operations (EDIT-07 Phase 2-4)
 
 ### Auth (Dual System + 2FA)
 

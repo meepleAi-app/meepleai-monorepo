@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO.Compression;
 using System.Linq;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -571,5 +572,235 @@ public class RuleSpecServiceTests : IDisposable
     public async Task GenerateRuleSpecFromPdfAsync_WhenPdfMissing_Throws()
     {
         await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GenerateRuleSpecFromPdfAsync("missing"));
+    }
+
+    // CreateZipArchiveAsync Tests
+
+    [Fact]
+    public async Task CreateZipArchiveAsync_WithSingleGameId_CreatesValidZip()
+    {
+        // Arrange
+        var game = new GameEntity
+        {
+            Id = "chess",
+            Name = "Chess",
+            CreatedAt = DateTime.UtcNow
+        };
+        var spec = new RuleSpecEntity
+        {
+            GameId = game.Id,
+            Version = "v1",
+            CreatedAt = DateTime.UtcNow
+        };
+        spec.Atoms.Add(new RuleAtomEntity
+        {
+            RuleSpec = spec,
+            Key = "r1",
+            Text = "Two players",
+            Section = "Basics",
+            PageNumber = 1,
+            LineNumber = 1,
+            SortOrder = 1
+        });
+
+        _dbContext.Games.Add(game);
+        _dbContext.RuleSpecs.Add(spec);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var zipBytes = await _service.CreateZipArchiveAsync(new List<string> { "chess" });
+
+        // Assert
+        Assert.NotNull(zipBytes);
+        Assert.True(zipBytes.Length > 0);
+
+        // Verify ZIP structure
+        using var memoryStream = new MemoryStream(zipBytes);
+        using var archive = new ZipArchive(memoryStream, ZipArchiveMode.Read);
+
+        Assert.Single(archive.Entries);
+        var entry = archive.Entries[0];
+        Assert.Equal("chess_v1.json", entry.Name);
+
+        // Verify JSON content
+        using var entryStream = entry.Open();
+        using var reader = new StreamReader(entryStream);
+        var json = await reader.ReadToEndAsync();
+        var ruleSpec = JsonSerializer.Deserialize<RuleSpec>(json, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+
+        Assert.NotNull(ruleSpec);
+        Assert.Equal("chess", ruleSpec.gameId);
+        Assert.Equal("v1", ruleSpec.version);
+        Assert.Single(ruleSpec.rules);
+        Assert.Equal("Two players", ruleSpec.rules[0].text);
+    }
+
+    [Fact]
+    public async Task CreateZipArchiveAsync_WithMultipleGameIds_CreatesZipWithAllGames()
+    {
+        // Arrange
+        var game1 = new GameEntity { Id = "chess", Name = "Chess", CreatedAt = DateTime.UtcNow };
+        var game2 = new GameEntity { Id = "checkers", Name = "Checkers", CreatedAt = DateTime.UtcNow };
+
+        var spec1 = new RuleSpecEntity
+        {
+            GameId = game1.Id,
+            Version = "v1",
+            CreatedAt = DateTime.UtcNow
+        };
+        spec1.Atoms.Add(new RuleAtomEntity
+        {
+            RuleSpec = spec1,
+            Key = "r1",
+            Text = "Chess rule",
+            SortOrder = 1
+        });
+
+        var spec2 = new RuleSpecEntity
+        {
+            GameId = game2.Id,
+            Version = "v2",
+            CreatedAt = DateTime.UtcNow
+        };
+        spec2.Atoms.Add(new RuleAtomEntity
+        {
+            RuleSpec = spec2,
+            Key = "r1",
+            Text = "Checkers rule",
+            SortOrder = 1
+        });
+
+        _dbContext.Games.AddRange(game1, game2);
+        _dbContext.RuleSpecs.AddRange(spec1, spec2);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var zipBytes = await _service.CreateZipArchiveAsync(new List<string> { "chess", "checkers" });
+
+        // Assert
+        using var memoryStream = new MemoryStream(zipBytes);
+        using var archive = new ZipArchive(memoryStream, ZipArchiveMode.Read);
+
+        Assert.Equal(2, archive.Entries.Count);
+        Assert.Contains(archive.Entries, e => e.Name == "chess_v1.json");
+        Assert.Contains(archive.Entries, e => e.Name == "checkers_v2.json");
+    }
+
+    [Fact]
+    public async Task CreateZipArchiveAsync_WithEmptyGameIds_ThrowsArgumentException()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.CreateZipArchiveAsync(new List<string>()));
+    }
+
+    [Fact]
+    public async Task CreateZipArchiveAsync_WithNullGameIds_ThrowsArgumentException()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.CreateZipArchiveAsync(null!));
+    }
+
+    [Fact]
+    public async Task CreateZipArchiveAsync_WithTooManyGameIds_ThrowsArgumentException()
+    {
+        var tooManyIds = Enumerable.Range(1, 101).Select(i => $"game{i}").ToList();
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.CreateZipArchiveAsync(tooManyIds));
+
+        Assert.Contains("100", ex.Message);
+    }
+
+    [Fact]
+    public async Task CreateZipArchiveAsync_WithNonExistentGameIds_ThrowsInvalidOperationException()
+    {
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _service.CreateZipArchiveAsync(new List<string> { "non-existent-game" }));
+    }
+
+    [Fact]
+    public async Task CreateZipArchiveAsync_WithDuplicateGameIds_CreatesZipWithSingleEntry()
+    {
+        // Arrange
+        var game = new GameEntity
+        {
+            Id = "chess",
+            Name = "Chess",
+            CreatedAt = DateTime.UtcNow
+        };
+        var spec = new RuleSpecEntity
+        {
+            GameId = game.Id,
+            Version = "v1",
+            CreatedAt = DateTime.UtcNow
+        };
+        spec.Atoms.Add(new RuleAtomEntity
+        {
+            RuleSpec = spec,
+            Key = "r1",
+            Text = "Rule",
+            SortOrder = 1
+        });
+
+        _dbContext.Games.Add(game);
+        _dbContext.RuleSpecs.Add(spec);
+        await _dbContext.SaveChangesAsync();
+
+        // Act - Pass same game ID multiple times
+        var zipBytes = await _service.CreateZipArchiveAsync(new List<string> { "chess", "chess", "chess" });
+
+        // Assert - Should deduplicate to single entry
+        using var memoryStream = new MemoryStream(zipBytes);
+        using var archive = new ZipArchive(memoryStream, ZipArchiveMode.Read);
+
+        Assert.Single(archive.Entries);
+        Assert.Equal("chess_v1.json", archive.Entries[0].Name);
+    }
+
+    [Fact]
+    public async Task CreateZipArchiveAsync_SanitizesInvalidFileNames()
+    {
+        // Arrange
+        var game = new GameEntity
+        {
+            Id = "game/with:invalid*chars",
+            Name = "Invalid Name",
+            CreatedAt = DateTime.UtcNow
+        };
+        var spec = new RuleSpecEntity
+        {
+            GameId = game.Id,
+            Version = "v1",
+            CreatedAt = DateTime.UtcNow
+        };
+        spec.Atoms.Add(new RuleAtomEntity
+        {
+            RuleSpec = spec,
+            Key = "r1",
+            Text = "Rule",
+            SortOrder = 1
+        });
+
+        _dbContext.Games.Add(game);
+        _dbContext.RuleSpecs.Add(spec);
+        await _dbContext.SaveChangesAsync();
+
+        // Act
+        var zipBytes = await _service.CreateZipArchiveAsync(new List<string> { "game/with:invalid*chars" });
+
+        // Assert
+        using var memoryStream = new MemoryStream(zipBytes);
+        using var archive = new ZipArchive(memoryStream, ZipArchiveMode.Read);
+
+        Assert.Single(archive.Entries);
+        var entry = archive.Entries[0];
+
+        // Filename should not contain invalid characters
+        Assert.DoesNotContain("/", entry.Name);
+        Assert.DoesNotContain(":", entry.Name);
+        Assert.DoesNotContain("*", entry.Name);
     }
 }

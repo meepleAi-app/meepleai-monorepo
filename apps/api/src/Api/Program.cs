@@ -382,6 +382,9 @@ builder.Services.AddScoped<AuthService>();
 // AUTH-06: OAuth services
 builder.Services.AddScoped<IEncryptionService, EncryptionService>();
 builder.Services.AddScoped<IOAuthService, OAuthService>();
+// AUTH-07: Two-factor authentication services
+builder.Services.AddScoped<ITotpService, TotpService>();
+builder.Services.AddScoped<ITempSessionService, TempSessionService>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<AiRequestLogService>();
 builder.Services.AddScoped<AgentFeedbackService>();
@@ -899,7 +902,7 @@ v1Api.MapPost("/auth/register", async (RegisterPayload payload, HttpContext cont
     }
 });
 
-v1Api.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, AuthService auth, ILogger<Program> logger, CancellationToken ct) =>
+v1Api.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, AuthService auth, MeepleAiDbContext db, ITempSessionService tempSessionService, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (payload == null)
     {
@@ -931,6 +934,25 @@ v1Api.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, 
             return Results.Unauthorized();
         }
 
+        // AUTH-07: Check if 2FA is enabled
+        var user = await db.Users.FindAsync(result.User.Id);
+        if (user?.IsTwoFactorEnabled == true)
+        {
+            // Create temp session for 2FA verification
+            var tempToken = await tempSessionService.CreateTempSessionAsync(
+                result.User.Id,
+                context.Connection.RemoteIpAddress?.ToString());
+
+            logger.LogInformation("User {UserId} requires 2FA, temp session created", result.User.Id);
+            return Results.Json(new
+            {
+                requiresTwoFactor = true,
+                sessionToken = tempToken, // Secure temp token (5-min TTL, single-use)
+                message = "Two-factor authentication required"
+            });
+        }
+
+        // Normal login (no 2FA)
         WriteSessionCookie(context, result.SessionToken, result.ExpiresAt);
         logger.LogInformation("User {UserId} logged in successfully", result.User.Id);
         return Results.Json(new AuthResponse(result.User, result.ExpiresAt));
@@ -941,6 +963,173 @@ v1Api.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, 
         return Results.Problem(detail: ex.Message, statusCode: 500);
     }
 });
+
+// AUTH-07: Two-Factor Authentication Endpoints
+
+v1Api.MapPost("/auth/2fa/setup", async (HttpContext context, ITotpService totpService, ILogger<Program> logger) =>
+{
+    var userId = context.User.FindFirst("sub")?.Value;
+    var userEmail = context.User.FindFirst("email")?.Value;
+
+    if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(userEmail))
+    {
+        return Results.Unauthorized();
+    }
+
+    try
+    {
+        var setup = await totpService.GenerateSetupAsync(userId, userEmail);
+        logger.LogInformation("2FA setup generated for user {UserId}", userId);
+        return Results.Ok(setup);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "2FA setup failed for user {UserId}", userId);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
+    }
+})
+.RequireAuthorization()
+.WithName("Setup2FA")
+.WithTags("Authentication");
+
+v1Api.MapPost("/auth/2fa/enable", async (TwoFactorEnableRequest request, HttpContext context, ITotpService totpService, ILogger<Program> logger) =>
+{
+    var userId = context.User.FindFirst("sub")?.Value;
+    if (string.IsNullOrEmpty(userId))
+    {
+        return Results.Unauthorized();
+    }
+
+    try
+    {
+        var success = await totpService.EnableTwoFactorAsync(userId, request.Code);
+        if (!success)
+        {
+            logger.LogWarning("2FA enable failed: Invalid code for user {UserId}", userId);
+            return Results.BadRequest(new { error = "Invalid verification code" });
+        }
+
+        logger.LogInformation("2FA enabled for user {UserId}", userId);
+        return Results.Ok(new { message = "Two-factor authentication enabled successfully" });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "2FA enable error for user {UserId}", userId);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
+    }
+})
+.RequireAuthorization()
+.WithName("Enable2FA")
+.WithTags("Authentication");
+
+v1Api.MapPost("/auth/2fa/verify", async (TwoFactorVerifyRequest request, HttpContext context, ITotpService totpService, ITempSessionService tempSessionService, IRateLimitService rateLimitService, AuthService authService, ILogger<Program> logger) =>
+{
+    // Rate limit: 3 attempts per minute per session token
+    var rateLimitKey = $"2fa:verify:{request.SessionToken}";
+    var result = await rateLimitService.CheckRateLimitAsync(rateLimitKey, maxTokens: 3, refillRate: 0.05);
+
+    if (!result.Allowed)
+    {
+        logger.LogWarning("2FA verify rate limited for session {SessionToken}", request.SessionToken);
+        return Results.StatusCode(429);
+    }
+
+    try
+    {
+        // Validate and consume temp session (5-min TTL, single-use)
+        var userId = await tempSessionService.ValidateAndConsumeTempSessionAsync(request.SessionToken);
+        if (userId == null)
+        {
+            logger.LogWarning("2FA verify failed: Invalid temp session");
+            return Results.Unauthorized();
+        }
+
+        // Verify TOTP or backup code
+        var isValid = await totpService.VerifyCodeAsync(userId, request.Code);
+        if (!isValid)
+        {
+            isValid = await totpService.VerifyBackupCodeAsync(userId, request.Code);
+        }
+
+        if (!isValid)
+        {
+            logger.LogWarning("2FA verify failed for user {UserId}", userId);
+            return Results.Unauthorized();
+        }
+
+        // Create actual session after 2FA verification
+        var loginResult = await authService.CreateSessionForUserAsync(userId,
+            context.Connection.RemoteIpAddress?.ToString(),
+            context.Request.Headers.UserAgent.ToString());
+        if (loginResult != null)
+        {
+            WriteSessionCookie(context, loginResult.SessionToken, loginResult.ExpiresAt);
+            logger.LogInformation("2FA verified, session created for user {UserId}", userId);
+            return Results.Ok(new { message = "2FA verification successful", user = loginResult.User });
+        }
+
+        return Results.Problem("Failed to create session after 2FA", statusCode: 500);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "2FA verify error");
+        return Results.Problem(detail: ex.Message, statusCode: 500);
+    }
+})
+.WithName("Verify2FA")
+.WithTags("Authentication");
+
+v1Api.MapPost("/auth/2fa/disable", async (TwoFactorDisableRequest request, HttpContext context, ITotpService totpService, ILogger<Program> logger) =>
+{
+    var userId = context.User.FindFirst("sub")?.Value;
+    if (string.IsNullOrEmpty(userId))
+    {
+        return Results.Unauthorized();
+    }
+
+    try
+    {
+        await totpService.DisableTwoFactorAsync(userId, request.Password, request.Code);
+        logger.LogInformation("2FA disabled for user {UserId}", userId);
+        return Results.Ok(new { message = "Two-factor authentication disabled successfully" });
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        logger.LogWarning("2FA disable unauthorized for user {UserId}: {Message}", userId, ex.Message);
+        return Results.Unauthorized();
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "2FA disable error for user {UserId}", userId);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
+    }
+})
+.RequireAuthorization()
+.WithName("Disable2FA")
+.WithTags("Authentication");
+
+v1Api.MapGet("/users/me/2fa/status", async (HttpContext context, ITotpService totpService, ILogger<Program> logger) =>
+{
+    var userId = context.User.FindFirst("sub")?.Value;
+    if (string.IsNullOrEmpty(userId))
+    {
+        return Results.Unauthorized();
+    }
+
+    try
+    {
+        var status = await totpService.GetTwoFactorStatusAsync(userId);
+        return Results.Ok(status);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Get 2FA status error for user {UserId}", userId);
+        return Results.Problem(detail: ex.Message, statusCode: 500);
+    }
+})
+.RequireAuthorization()
+.WithName("Get2FAStatus")
+.WithTags("Users");
 
 static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)
 {

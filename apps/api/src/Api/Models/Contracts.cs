@@ -154,6 +154,65 @@ public record N8nTestResult(
     int? LatencyMs
 );
 
+// N8N-04: Workflow template models
+public record WorkflowTemplateDto(
+    string Id,
+    string Name,
+    string Version,
+    string Description,
+    string Category,
+    string Author,
+    List<string> Tags,
+    string Icon,
+    string? Screenshot,
+    string? Documentation,
+    List<TemplateParameterDto> Parameters
+);
+
+public record TemplateParameterDto(
+    string Name,
+    string Type,
+    string Label,
+    string Description,
+    bool Required,
+    string? Default,
+    List<string>? Options,
+    bool Sensitive
+);
+
+public record WorkflowTemplateDetailDto(
+    string Id,
+    string Name,
+    string Version,
+    string Description,
+    string Category,
+    string Author,
+    List<string> Tags,
+    string Icon,
+    string? Screenshot,
+    string? Documentation,
+    List<TemplateParameterDto> Parameters,
+    object Workflow
+);
+
+public record ImportTemplateRequest(
+    Dictionary<string, string> Parameters
+);
+
+public record ImportTemplateResponse(
+    string WorkflowId,
+    string Message
+);
+
+public record ValidateTemplateRequest(
+    string TemplateJson
+);
+
+public record ValidateTemplateResponse(
+    bool Valid,
+    List<string>? Errors
+);
+
 // UI-01: Chat management models
 public record ChatDto(
     Guid Id,
@@ -592,34 +651,6 @@ public record WorkflowErrorsQueryParams(
     DateTime? ToDate = null,
     int Page = 1,
     int Limit = 20
-);
-
-// N8N-04: Workflow Templates models
-public record WorkflowTemplateDto(
-    string Id,
-    string Name,
-    string Version,
-    string Description,
-    string Category,
-    string Icon,
-    string? Screenshot,
-    List<string> Tags,
-    List<TemplateParameterDto> Parameters
-);
-
-public record TemplateParameterDto(
-    string Name,
-    string Type,
-    string Label,
-    string Description,
-    bool Required,
-    string? Default,
-    List<string>? Options,
-    bool Sensitive
-);
-
-public record ImportTemplateRequest(
-    [Required] Dictionary<string, string> Parameters
 );
 
 // OPS-07: Alerting system models

@@ -1,0 +1,99 @@
+{
+  "id": "discord-webhook",
+  "name": "Discord Game Upload Notifications",
+  "version": "1.0.0",
+  "description": "Send Discord notifications when new games are uploaded with automatic role mentions",
+  "category": "integration",
+  "author": "MeepleAI",
+  "tags": ["discord", "notification", "webhook", "games"],
+  "icon": "🎮",
+  "screenshot": null,
+  "documentation": "docs/n8n-templates/discord-webhook.md",
+  "parameters": [
+    {
+      "name": "webhookPath",
+      "type": "string",
+      "label": "Webhook Path",
+      "description": "Path to receive game upload events",
+      "required": true,
+      "default": "/webhook/game-uploaded",
+      "options": null,
+      "sensitive": false
+    },
+    {
+      "name": "discordWebhookUrl",
+      "type": "string",
+      "label": "Discord Webhook URL",
+      "description": "Discord webhook URL from channel settings",
+      "required": true,
+      "default": null,
+      "options": null,
+      "sensitive": true
+    },
+    {
+      "name": "mentionRole",
+      "type": "string",
+      "label": "Role to Mention",
+      "description": "Discord role ID to mention (optional)",
+      "required": false,
+      "default": null,
+      "options": null,
+      "sensitive": false
+    }
+  ],
+  "workflow": {
+    "nodes": [
+      {
+        "id": "webhook",
+        "name": "Game Upload Webhook",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [250, 300],
+        "parameters": {
+          "path": "{{webhookPath}}",
+          "httpMethod": "POST"
+        }
+      },
+      {
+        "id": "format-message",
+        "name": "Format Discord Message",
+        "type": "n8n-nodes-base.function",
+        "typeVersion": 1,
+        "position": [450, 300],
+        "parameters": {
+          "functionCode": "const game = items[0].json;\\nconst mention = '{{mentionRole}}' ? `<@&{{mentionRole}}>` : '';\\n\\nreturn [{\\n  json: {\\n    content: mention,\\n    embeds: [{\\n      title: ':game_die: New Game Added',\\n      description: `**${game.gameName}** has been uploaded to MeepleAI`,\\n      color: 5793266,\\n      fields: [\\n        { name: 'Game ID', value: game.gameId, inline: true },\\n        { name: 'Pages', value: String(game.pageCount), inline: true },\\n        { name: 'Uploaded By', value: game.uploaderName, inline: true }\\n      ],\\n      timestamp: new Date().toISOString()\\n    }]\\n  }\\n}];"
+        }
+      },
+      {
+        "id": "send-discord",
+        "name": "Post to Discord",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [650, 300],
+        "parameters": {
+          "url": "{{discordWebhookUrl}}",
+          "method": "POST",
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {"name": "content", "value": "={{ $json.content }}"},
+              {"name": "embeds", "value": "={{ $json.embeds }}"}
+            ]
+          }
+        }
+      }
+    ],
+    "connections": {
+      "webhook": {
+        "main": [[{"node": "format-message", "type": "main", "index": 0}]]
+      },
+      "format-message": {
+        "main": [[{"node": "send-discord", "type": "main", "index": 0}]]
+      }
+    },
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "staticData": null
+  }
+}

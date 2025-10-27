@@ -158,7 +158,7 @@ jobs:
             ${{ runner.os }}-buildx-
 
       - name: Build API with cache
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./apps/api
           file: ./apps/api/src/Api/Dockerfile

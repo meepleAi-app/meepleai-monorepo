@@ -311,7 +311,97 @@ Vector embeddings for semantic search (Qdrant integration).
 
 ## Authentication & Configuration Tables
 
-### 10. User Sessions (`user_sessions`)
+### 10. System Configurations (`system_configurations`)
+
+Runtime-modifiable system configurations for dynamic application behavior.
+
+**Columns**:
+- `Id` (PK, varchar(64)) - Configuration unique identifier
+- `Key` (varchar(256)) - Hierarchical configuration key (e.g., "RateLimit:Admin:MaxTokens")
+- `Value` (text) - Configuration value (stored as string, deserialized by ValueType)
+- `ValueType` (varchar(32)) - Value type: "string", "int", "long", "double", "bool", "json"
+- `Description` (text, nullable) - Human-readable description for admin UI
+- `Category` (varchar(128)) - Grouping category (e.g., "RateLimit", "AI", "FeatureFlags")
+- `IsActive` (bool) - Whether configuration is currently applied
+- `RequiresRestart` (bool) - Whether changing this requires server restart
+- `Environment` (varchar(32)) - Target environment: "Development", "Staging", "Production", "All"
+- `Version` (int) - Version number, incremented on each update
+- `PreviousValue` (text, nullable) - Value before last update (enables quick rollback)
+- `CreatedAt` (timestamptz) - Creation timestamp
+- `UpdatedAt` (timestamptz) - Last update timestamp
+- `CreatedByUserId` (FK, varchar(64)) - User who created configuration
+- `UpdatedByUserId` (FK, varchar(64), nullable) - User who last updated configuration
+- `LastToggledAt` (timestamptz, nullable) - When IsActive last changed
+
+**Relationships**:
+- Many-to-One → `users` (RESTRICT on CreatedBy, SET NULL on UpdatedBy)
+
+**Indexes**:
+- Primary key on `Id`
+- Unique composite index on `(Key, Environment)`
+- Index on `Category` (for category filtering)
+- Index on `IsActive` (for active-only queries)
+
+**Example Queries**:
+
+```sql
+-- Get active configuration by key with environment prioritization
+SELECT * FROM system_configurations
+WHERE "Key" = 'RateLimit:Admin:MaxTokens'
+  AND "IsActive" = true
+  AND ("Environment" = 'Production' OR "Environment" = 'All')
+ORDER BY CASE WHEN "Environment" = 'Production' THEN 0 ELSE 1 END
+LIMIT 1;
+
+-- Audit trail for configuration changes
+SELECT
+    sc."Key",
+    sc."Value",
+    sc."PreviousValue",
+    sc."Version",
+    sc."UpdatedAt",
+    u."Email" AS "UpdatedBy"
+FROM system_configurations sc
+LEFT JOIN users u ON sc."UpdatedByUserId" = u."Id"
+WHERE sc."Key" = 'Rag:TopK'
+ORDER BY sc."UpdatedAt" DESC
+LIMIT 10;
+
+-- Rollback configuration to previous value
+UPDATE system_configurations
+SET "Value" = "PreviousValue",
+    "PreviousValue" = "Value",
+    "Version" = "Version" + 1,
+    "UpdatedAt" = NOW(),
+    "UpdatedByUserId" = 'admin-user-id'
+WHERE "Id" = 'config-rag-topk-prod'
+  AND "PreviousValue" IS NOT NULL;
+
+-- List all configurations by category
+SELECT "Key", "Value", "ValueType", "IsActive", "Environment"
+FROM system_configurations
+WHERE "Category" = 'RateLimit'
+  AND "IsActive" = true
+ORDER BY "Key";
+```
+
+**Configuration Categories**:
+- **FeatureFlags**: Runtime feature toggles (e.g., `Features:StreamingResponses`)
+- **RateLimit**: API throttling per role (e.g., `RateLimit:Admin:MaxTokens`)
+- **AI**: LLM model parameters (e.g., `AI:Temperature`, `AI:MaxTokens`)
+- **Rag**: Vector search configuration (e.g., `Rag:TopK`, `Rag:MinScore`)
+- **PDF**: Upload limits and validation (e.g., `PDF:MaxSizeBytes`)
+- **TextChunking**: Chunk size and overlap (e.g., `TextChunking:ChunkSize`)
+- **Email**: SMTP configuration (e.g., `Email:SmtpTimeout`)
+
+**Performance Notes**:
+- HybridCache (L1 in-memory + L2 Redis) with 5-minute TTL
+- Cache invalidation on create/update/delete operations
+- Composite index on `(Key, Environment)` ensures fast lookups
+
+---
+
+### 11. User Sessions (`user_sessions`)
 
 Active user sessions for cookie-based authentication.
 
@@ -335,7 +425,7 @@ Active user sessions for cookie-based authentication.
 
 ---
 
-### 11. n8n Configurations (`n8n_configs`)
+### 12. n8n Configurations (`n8n_configs`)
 
 n8n workflow engine integration settings.
 
@@ -361,7 +451,7 @@ n8n workflow engine integration settings.
 
 ---
 
-### 12. Agent Feedback (`agent_feedback`)
+### 13. Agent Feedback (`agent_feedback`)
 
 User feedback for AI agent interactions (added in migration 20251020123000).
 
@@ -402,7 +492,8 @@ users
   ├── rule_specs (1:N, SET NULL)
   ├── n8n_configs (1:N, RESTRICT)
   ├── chats (1:N, CASCADE)
-  └── agent_feedback (1:N, CASCADE)
+  ├── agent_feedback (1:N, CASCADE)
+  └── system_configurations (1:N, RESTRICT on CreatedBy, SET NULL on UpdatedBy)
 
 games
   ├── agents (1:N, CASCADE)

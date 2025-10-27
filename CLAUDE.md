@@ -213,6 +213,72 @@ tools/             - PowerShell scripts
 - ⚠️ CallbackBaseUrl must use HTTPS in production
 - ⚠️ OAuth apps must be registered with production callback URLs
 
+### Dynamic Configuration System (CONFIG-01 to CONFIG-07)
+
+**Architecture**: 3-tier fallback (Database → appsettings.json → hardcoded defaults)
+
+**Categories**:
+- Feature Flags: Runtime feature toggles
+- Rate Limiting: API throttling per role
+- AI/LLM: Model parameters (temperature, max tokens)
+- RAG: Vector search configuration (TopK, MinScore)
+- PDF Processing: Upload limits and validation
+- Text Chunking: Chunk size and overlap
+
+**Admin UI**: `/admin/configuration` (Admin role required)
+
+**Services Using Dynamic Config**:
+- RagService (Rag:TopK, Rag:MinScore, Rag:RrfK)
+- LlmService (AI:Temperature, AI:MaxTokens, AI:Model, AI:TimeoutSeconds)
+- RateLimitService (RateLimit:MaxTokens:*, RateLimit:RefillRate:*)
+- FeatureFlagService (Features:*)
+
+**ConfigurationService** (`Services/ConfigurationService.cs`): 3-tier fallback system
+- `GetValueAsync<T>(key, defaultValue)` - Retrieve typed configuration values
+- `GetConfigurationByKeyAsync(key, environment)` - Get configuration by key with environment prioritization
+- `CreateConfigurationAsync(request, userId)` - Create new configuration
+- `UpdateConfigurationAsync(id, request, userId)` - Update with version tracking
+- `DeleteConfigurationAsync(id)` - Delete configuration
+- `BulkUpdateConfigurationsAsync(request, userId)` - Atomic bulk updates
+- `ValidateConfigurationAsync(key, value, valueType)` - Type-safe validation
+- `ExportConfigurationsAsync(environment, activeOnly)` - Export for backup
+- `ImportConfigurationsAsync(request, userId)` - Import from backup
+- `RollbackConfigurationAsync(configId, toVersion, userId)` - Restore previous value
+
+**API Endpoints** (14 total in `Program.cs:5263-5787`):
+- `GET /api/v1/admin/configurations` - List with filters (category, environment, activeOnly)
+- `GET /api/v1/admin/configurations/{id}` - Get by ID
+- `GET /api/v1/admin/configurations/key/{key}` - Get by key
+- `POST /api/v1/admin/configurations` - Create
+- `PUT /api/v1/admin/configurations/{id}` - Update
+- `DELETE /api/v1/admin/configurations/{id}` - Delete
+- `PATCH /api/v1/admin/configurations/{id}/toggle` - Toggle active status
+- `POST /api/v1/admin/configurations/bulk-update` - Bulk update
+- `POST /api/v1/admin/configurations/validate` - Validate value
+- `GET /api/v1/admin/configurations/export` - Export
+- `POST /api/v1/admin/configurations/import` - Import
+- `GET /api/v1/admin/configurations/{id}/history` - History
+- `POST /api/v1/admin/configurations/{id}/rollback/{version}` - Rollback
+- `GET /api/v1/admin/configurations/categories` - List categories
+
+**Database**: `system_configurations` table (18 columns)
+- Key, Value, ValueType (string/int/long/double/bool/json)
+- Description, Category, Environment (Development/Staging/Production/All)
+- IsActive, RequiresRestart, Version, PreviousValue
+- CreatedAt, UpdatedAt, CreatedByUserId, UpdatedByUserId, LastToggledAt
+
+**Caching**: HybridCache L1+L2, 5-minute TTL, automatic invalidation on updates
+
+**Documentation**:
+- Architecture: [docs/technic/dynamic-configuration-architecture.md](docs/technic/dynamic-configuration-architecture.md)
+- API Reference: [docs/api/configuration-endpoints.md](docs/api/configuration-endpoints.md)
+- Admin Guide: [docs/guide/admin-configuration.md](docs/guide/admin-configuration.md)
+- AI/LLM Config: [docs/issue/config-03-ai-llm-configuration-guide.md](docs/issue/config-03-ai-llm-configuration-guide.md)
+
+**Tests**: 30 integration tests (27/30 passing, 90% pass rate)
+
+---
+
 ### Key Features
 
 | Feature | ID | Implementation | Tests |

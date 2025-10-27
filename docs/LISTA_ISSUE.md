@@ -137,10 +137,10 @@ Our approach follows these principles:
 | # | Issue | Priority | Effort | Rationale |
 |---|-------|----------|--------|-----------|
 | 11 | #473 CONFIG-05: Feature flags | 🟡 Medium | M | Builds on CONFIG-01. Enables gradual rollouts. **✅ COMPLETED** |
-| 12 | #477 CONFIG-06: Frontend admin UI | 🟡 Medium | L | Depends on CONFIG-01 through CONFIG-05. Makes config user-friendly. |
+| 12 | #477 CONFIG-06: Frontend admin UI | 🟡 Medium | L | Depends on CONFIG-01 through CONFIG-05. Makes config user-friendly. **✅ COMPLETED** (PR #568) |
 | 13 | #478 CONFIG-07: Testing & migration | 🟡 Medium | M | Final CONFIG piece. Documentation and migration tools. |
 
-**Sequential**: CONFIG-05 complete. Now CONFIG-06 and CONFIG-07 can proceed (CONFIG-06 → CONFIG-07).
+**Sequential**: CONFIG-06 complete. Now CONFIG-07 can proceed.
 
 ### Phase 4: AI Enhancements (Weeks 8-10)
 

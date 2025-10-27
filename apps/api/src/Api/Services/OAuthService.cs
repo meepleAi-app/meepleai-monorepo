@@ -92,7 +92,7 @@ public class OAuthService : IOAuthService
                 oa.Provider == provider.ToLowerInvariant() &&
                 oa.ProviderUserId == userInfo.Id);
 
-        UserEntity user;
+        UserEntity? user;
         bool isNewUser = false;
 
         if (oauthAccount != null)

@@ -3784,11 +3784,11 @@ v1Api.MapGet("/users/search", async (
     logger.LogInformation("User {UserId} searching for users with query: {Query}", userId, query);
 
     var users = await db.Users
-        .Where(u => u.DisplayName.Contains(query) || u.Email.Contains(query))
-        .OrderBy(u => u.DisplayName)
+        .Where(u => (u.DisplayName != null && u.DisplayName.Contains(query)) || u.Email.Contains(query))
+        .OrderBy(u => u.DisplayName ?? u.Email)
         .Take(10)
         .AsNoTracking()
-        .Select(u => new UserSearchResultDto(u.Id, u.DisplayName, u.Email))
+        .Select(u => new UserSearchResultDto(u.Id, u.DisplayName ?? u.Email, u.Email))
         .ToListAsync(ct);
 
     logger.LogInformation("Found {Count} users matching query: {Query}", users.Count, query);

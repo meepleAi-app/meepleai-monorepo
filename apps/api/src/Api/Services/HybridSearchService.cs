@@ -313,32 +313,55 @@ public class HybridSearchService : IHybridSearchService
 
             if (hasVector)
             {
-                vectorRrfScore = vectorWeight / (rrfK + vectorItem.Rank);
+                vectorRrfScore = vectorItem != null ? vectorWeight / (rrfK + vectorItem.Rank) : 0f;
             }
 
             if (hasKeyword)
             {
-                keywordRrfScore = keywordWeight / (rrfK + keywordItem.Rank);
+                keywordRrfScore = keywordItem != null ? keywordWeight / (rrfK + keywordItem.Rank) : 0f;
             }
 
             var hybridScore = vectorRrfScore + keywordRrfScore;
 
             // Use data from whichever result has it (prefer vector for metadata consistency)
-            var matchedTerms = hasKeyword ? keywordItem!.Result.MatchedTerms : new List<string>();
+            var matchedTerms = hasKeyword && keywordItem != null
+                ? keywordItem.Result.MatchedTerms
+                : new List<string>();
+
+            // At least one of vectorItem or keywordItem must exist since we got the chunkId from their union
+            var content = hasVector && vectorItem != null
+                ? vectorItem.Result.Text
+                : (keywordItem?.Result.Content ?? string.Empty);
+
+            var pdfDocumentId = hasVector && vectorItem != null
+                ? vectorItem.Result.PdfId
+                : (keywordItem?.Result.PdfDocumentId ?? string.Empty);
+
+            var chunkGameId = hasKeyword && keywordItem != null
+                ? keywordItem.Result.GameId
+                : gameId; // Use from keyword or fall back to query gameId
+
+            var chunkIndex = hasVector && vectorItem != null
+                ? vectorItem.Result.ChunkIndex
+                : (keywordItem?.Result.ChunkIndex ?? 0);
+
+            var pageNumber = hasVector && vectorItem != null
+                ? vectorItem.Result.Page
+                : (keywordItem?.Result.PageNumber ?? 0);
 
             fusedResults.Add(new HybridSearchResult
             {
                 ChunkId = chunkId,
-                Content = hasVector ? vectorItem.Result.Text : keywordItem!.Result.Content,
-                PdfDocumentId = hasVector ? vectorItem.Result.PdfId : keywordItem!.Result.PdfDocumentId,
-                GameId = hasKeyword ? keywordItem.Result.GameId : gameId, // Use from keyword or fall back to query gameId
-                ChunkIndex = hasVector ? vectorItem.Result.ChunkIndex : keywordItem!.Result.ChunkIndex,
-                PageNumber = hasVector ? vectorItem.Result.Page : keywordItem!.Result.PageNumber,
+                Content = content,
+                PdfDocumentId = pdfDocumentId,
+                GameId = chunkGameId,
+                ChunkIndex = chunkIndex,
+                PageNumber = pageNumber,
                 HybridScore = hybridScore,
-                VectorScore = hasVector ? vectorItem.Result.Score : null,
-                KeywordScore = hasKeyword ? keywordItem.Result.RelevanceScore : null,
-                VectorRank = hasVector ? vectorItem.Rank : null,
-                KeywordRank = hasKeyword ? keywordItem.Rank : null,
+                VectorScore = hasVector && vectorItem != null ? vectorItem.Result.Score : null,
+                KeywordScore = hasKeyword && keywordItem != null ? keywordItem.Result.RelevanceScore : null,
+                VectorRank = hasVector && vectorItem != null ? vectorItem.Rank : null,
+                KeywordRank = hasKeyword && keywordItem != null ? keywordItem.Rank : null,
                 MatchedTerms = matchedTerms,
                 Mode = SearchMode.Hybrid
             });

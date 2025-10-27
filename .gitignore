@@ -452,3 +452,4 @@ test-output.txt
 apps/api/web/
 nul
 .serena/
+codeql-db/

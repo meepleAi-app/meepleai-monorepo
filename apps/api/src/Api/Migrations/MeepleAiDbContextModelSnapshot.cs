@@ -423,7 +423,11 @@ namespace Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("cache_stats");
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("QuestionHash");
+
+                    b.ToTable("cache_stats", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.ChatEntity", b =>
@@ -935,7 +939,15 @@ namespace Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("prompt_evaluation_results");
+                    b.HasIndex("ExecutedAt");
+
+                    b.HasIndex("TemplateId");
+
+                    b.HasIndex("VersionId");
+
+                    b.HasIndex("TemplateId", "VersionId", "ExecutedAt");
+
+                    b.ToTable("prompt_evaluation_results", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.PromptTemplateEntity", b =>

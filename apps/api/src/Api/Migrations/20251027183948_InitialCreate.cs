@@ -137,6 +137,32 @@ namespace Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "prompt_evaluation_results",
+                columns: table => new
+                {
+                    id = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    template_id = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    version_id = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    dataset_id = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    executed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    total_queries = table.Column<int>(type: "integer", nullable: false),
+                    accuracy = table.Column<double>(type: "double precision", nullable: false),
+                    hallucination_rate = table.Column<double>(type: "double precision", nullable: false),
+                    avg_confidence = table.Column<double>(type: "double precision", nullable: false),
+                    citation_correctness = table.Column<double>(type: "double precision", nullable: false),
+                    avg_latency_ms = table.Column<double>(type: "double precision", nullable: false),
+                    passed = table.Column<bool>(type: "boolean", nullable: false),
+                    summary = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    query_results_json = table.Column<string>(type: "jsonb", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_prompt_evaluation_results", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "users",
                 columns: table => new
                 {
@@ -145,7 +171,10 @@ namespace Api.Migrations
                     DisplayName = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
                     PasswordHash = table.Column<string>(type: "text", nullable: false),
                     Role = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    TotpSecretEncrypted = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: true),
+                    IsTwoFactorEnabled = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    TwoFactorEnabledAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -254,6 +283,31 @@ namespace Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "oauth_accounts",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    UserId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    Provider = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
+                    ProviderUserId = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    AccessTokenEncrypted = table.Column<string>(type: "text", nullable: false),
+                    RefreshTokenEncrypted = table.Column<string>(type: "text", nullable: true),
+                    TokenExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_oauth_accounts", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_oauth_accounts_users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "password_reset_tokens",
                 columns: table => new
                 {
@@ -353,6 +407,8 @@ namespace Api.Migrations
                     Version = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     CreatedByUserId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    ParentVersionId = table.Column<Guid>(type: "uuid", maxLength: 64, nullable: true),
+                    MergedFromVersionIds = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
                     GameEntityId = table.Column<string>(type: "character varying(64)", nullable: true)
                 },
                 constraints: table =>
@@ -369,6 +425,12 @@ namespace Api.Migrations
                         principalTable: "games",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_rule_specs_rule_specs_ParentVersionId",
+                        column: x => x.ParentVersionId,
+                        principalTable: "rule_specs",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_rule_specs_users_CreatedByUserId",
                         column: x => x.CreatedByUserId,
@@ -462,6 +524,52 @@ namespace Api.Migrations
                         principalTable: "users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "temp_sessions",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    UserId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    TokenHash = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    IpAddress = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsUsed = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    UsedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_temp_sessions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_temp_sessions_users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "user_backup_codes",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    UserId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    CodeHash = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    IsUsed = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    UsedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_user_backup_codes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_user_backup_codes_users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -805,6 +913,16 @@ namespace Api.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_cache_stats_game_id",
+                table: "cache_stats",
+                column: "game_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_cache_stats_question_hash",
+                table: "cache_stats",
+                column: "question_hash");
+
+            migrationBuilder.CreateIndex(
                 name: "idx_chat_logs_chat_id_sequence_role",
                 table: "chat_logs",
                 columns: new[] { "ChatId", "SequenceNumber", "Level" });
@@ -864,6 +982,22 @@ namespace Api.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_oauth_accounts_Provider",
+                table: "oauth_accounts",
+                column: "Provider");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_oauth_accounts_Provider_ProviderUserId",
+                table: "oauth_accounts",
+                columns: new[] { "Provider", "ProviderUserId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_oauth_accounts_UserId",
+                table: "oauth_accounts",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_password_reset_tokens_ExpiresAt",
                 table: "password_reset_tokens",
                 column: "ExpiresAt");
@@ -913,6 +1047,26 @@ namespace Api.Migrations
                 name: "IX_prompt_audit_logs_VersionId",
                 table: "prompt_audit_logs",
                 column: "VersionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_prompt_evaluation_results_executed_at",
+                table: "prompt_evaluation_results",
+                column: "executed_at");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_prompt_evaluation_results_template_id",
+                table: "prompt_evaluation_results",
+                column: "template_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_prompt_evaluation_results_template_id_version_id_executed_at",
+                table: "prompt_evaluation_results",
+                columns: new[] { "template_id", "version_id", "executed_at" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_prompt_evaluation_results_version_id",
+                table: "prompt_evaluation_results",
+                column: "version_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_prompt_templates_Category",
@@ -976,6 +1130,11 @@ namespace Api.Migrations
                 table: "rule_specs",
                 columns: new[] { "GameId", "Version" },
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_rule_specs_ParentVersionId",
+                table: "rule_specs",
+                column: "ParentVersionId");
 
             migrationBuilder.CreateIndex(
                 name: "idx_rulespec_comments_game_version_line",
@@ -1049,6 +1208,22 @@ namespace Api.Migrations
                 column: "UpdatedByUserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_temp_sessions_ExpiresAt",
+                table: "temp_sessions",
+                column: "ExpiresAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_temp_sessions_TokenHash",
+                table: "temp_sessions",
+                column: "TokenHash",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_temp_sessions_UserId",
+                table: "temp_sessions",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_text_chunks_ChunkIndex",
                 table: "text_chunks",
                 column: "ChunkIndex");
@@ -1067,6 +1242,23 @@ namespace Api.Migrations
                 name: "IX_text_chunks_PdfDocumentId",
                 table: "text_chunks",
                 column: "PdfDocumentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_user_backup_codes_CodeHash",
+                table: "user_backup_codes",
+                column: "CodeHash",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_user_backup_codes_UserId",
+                table: "user_backup_codes",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_user_backup_codes_UserId_IsUsed",
+                table: "user_backup_codes",
+                columns: new[] { "UserId", "IsUsed" },
+                filter: "\"IsUsed\" = FALSE");
 
             migrationBuilder.CreateIndex(
                 name: "IX_user_sessions_TokenHash",
@@ -1140,10 +1332,16 @@ namespace Api.Migrations
                 name: "n8n_configs");
 
             migrationBuilder.DropTable(
+                name: "oauth_accounts");
+
+            migrationBuilder.DropTable(
                 name: "password_reset_tokens");
 
             migrationBuilder.DropTable(
                 name: "prompt_audit_logs");
+
+            migrationBuilder.DropTable(
+                name: "prompt_evaluation_results");
 
             migrationBuilder.DropTable(
                 name: "rule_atoms");
@@ -1155,7 +1353,13 @@ namespace Api.Migrations
                 name: "system_configurations");
 
             migrationBuilder.DropTable(
+                name: "temp_sessions");
+
+            migrationBuilder.DropTable(
                 name: "text_chunks");
+
+            migrationBuilder.DropTable(
+                name: "user_backup_codes");
 
             migrationBuilder.DropTable(
                 name: "user_sessions");

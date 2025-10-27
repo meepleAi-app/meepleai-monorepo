@@ -372,7 +372,7 @@ public class N8nTemplateServiceTests : IDisposable
                 Content = new StringContent("Invalid workflow")
             });
 
-        var httpClient = new HttpClient(mockHandler.Object);
+        using var httpClient = new HttpClient(mockHandler.Object);
         _mockHttpClientFactory.Setup(f => f.CreateClient(It.IsAny<string>()))
             .Returns(httpClient);
 

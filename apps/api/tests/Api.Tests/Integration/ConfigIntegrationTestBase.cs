@@ -25,7 +25,7 @@ public abstract class ConfigIntegrationTestBase : AdminTestFixture
         string uri,
         T payload)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, uri)
+        using var request = new HttpRequestMessage(HttpMethod.Post, uri)
         {
             Content = JsonContent.Create(payload)
         };
@@ -41,7 +41,7 @@ public abstract class ConfigIntegrationTestBase : AdminTestFixture
         List<string> cookies,
         string uri)
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
         AddCookies(request, cookies);
         return await client.SendAsync(request);
     }
@@ -55,7 +55,7 @@ public abstract class ConfigIntegrationTestBase : AdminTestFixture
         string uri,
         T payload)
     {
-        var request = new HttpRequestMessage(HttpMethod.Put, uri)
+        using var request = new HttpRequestMessage(HttpMethod.Put, uri)
         {
             Content = JsonContent.Create(payload)
         };
@@ -71,7 +71,7 @@ public abstract class ConfigIntegrationTestBase : AdminTestFixture
         List<string> cookies,
         string uri)
     {
-        var request = new HttpRequestMessage(HttpMethod.Delete, uri);
+        using var request = new HttpRequestMessage(HttpMethod.Delete, uri);
         AddCookies(request, cookies);
         return await client.SendAsync(request);
     }

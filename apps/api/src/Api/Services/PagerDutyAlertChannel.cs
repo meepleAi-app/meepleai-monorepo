@@ -58,7 +58,9 @@ public class PagerDutyAlertChannel : IAlertChannel
         try
         {
             var payload = BuildPagerDutyPayload(alertType, severity, message, metadata);
+#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
             var httpClient = _httpClientFactory.CreateClient();
+#pragma warning restore CA2000
 
             var response = await httpClient.PostAsJsonAsync(
                 PagerDutyEventsApiUrl,

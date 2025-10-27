@@ -403,7 +403,9 @@ public class N8nTemplateService
         string workflowJson,
         CancellationToken ct)
     {
+#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
         var httpClient = _httpClientFactory.CreateClient();
+#pragma warning restore CA2000
 
         // Decrypt API key
         var apiKey = DecryptApiKey(config.ApiKeyEncrypted);

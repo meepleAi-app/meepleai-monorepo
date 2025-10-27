@@ -137,7 +137,7 @@ public class EmbeddingService : IEmbeddingService
             };
 
             var json = JsonSerializer.Serialize(request);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await _httpClient.PostAsync("/api/embeddings", content, ct);
             var responseBody = await response.Content.ReadAsStringAsync(ct);
@@ -174,7 +174,7 @@ public class EmbeddingService : IEmbeddingService
         };
 
         var json = JsonSerializer.Serialize(request);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         var response = await _httpClient.PostAsync("embeddings", content, ct);
         var responseBody = await response.Content.ReadAsStringAsync(ct);
@@ -315,7 +315,7 @@ public class EmbeddingService : IEmbeddingService
             };
 
             var json = JsonSerializer.Serialize(request);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var response = await _localEmbeddingClient.PostAsync("/embeddings", content, ct);
             var responseBody = await response.Content.ReadAsStringAsync(ct);

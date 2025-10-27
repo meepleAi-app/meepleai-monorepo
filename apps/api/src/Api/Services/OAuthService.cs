@@ -252,7 +252,9 @@ public class OAuthService : IOAuthService
         string provider,
         string code)
     {
+#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
         var httpClient = _httpClientFactory.CreateClient();
+#pragma warning restore CA2000
         var callbackUrl = GetCallbackUrl(provider);
 
         var requestData = new Dictionary<string, string>
@@ -264,7 +266,7 @@ public class OAuthService : IOAuthService
             { "grant_type", "authorization_code" }
         };
 
-        var request = new HttpRequestMessage(HttpMethod.Post, config.TokenUrl)
+        using var request = new HttpRequestMessage(HttpMethod.Post, config.TokenUrl)
         {
             Content = new FormUrlEncodedContent(requestData)
         };
@@ -277,7 +279,7 @@ public class OAuthService : IOAuthService
 
         try
         {
-            var response = await httpClient.SendAsync(request);
+            using var response = await httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
 
             var jsonResponse = await response.Content.ReadAsStringAsync();
@@ -305,8 +307,10 @@ public class OAuthService : IOAuthService
         string provider,
         string accessToken)
     {
+#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
         var httpClient = _httpClientFactory.CreateClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, config.UserInfoUrl);
+#pragma warning restore CA2000
+        using var request = new HttpRequestMessage(HttpMethod.Get, config.UserInfoUrl);
         request.Headers.Add("Authorization", $"Bearer {accessToken}");
 
         // GitHub requires User-Agent header
@@ -317,7 +321,7 @@ public class OAuthService : IOAuthService
 
         try
         {
-            var response = await httpClient.SendAsync(request);
+            using var response = await httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
 
             var jsonResponse = await response.Content.ReadAsStringAsync();
@@ -380,12 +384,14 @@ public class OAuthService : IOAuthService
 
     private async Task<string> GetGitHubPrimaryEmailAsync(string accessToken)
     {
+#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
         var httpClient = _httpClientFactory.CreateClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/user/emails");
+#pragma warning restore CA2000
+        using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/user/emails");
         request.Headers.Add("Authorization", $"Bearer {accessToken}");
         request.Headers.Add("User-Agent", "MeepleAI");
 
-        var response = await httpClient.SendAsync(request);
+        using var response = await httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
 
         var jsonResponse = await response.Content.ReadAsStringAsync();
@@ -534,7 +540,9 @@ public class OAuthService : IOAuthService
         string provider,
         string refreshToken)
     {
+#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
         var httpClient = _httpClientFactory.CreateClient();
+#pragma warning restore CA2000
 
         var requestData = new Dictionary<string, string>
         {
@@ -544,7 +552,7 @@ public class OAuthService : IOAuthService
             { "grant_type", "refresh_token" }
         };
 
-        var request = new HttpRequestMessage(HttpMethod.Post, config.TokenUrl)
+        using var request = new HttpRequestMessage(HttpMethod.Post, config.TokenUrl)
         {
             Content = new FormUrlEncodedContent(requestData)
         };
@@ -557,7 +565,7 @@ public class OAuthService : IOAuthService
 
         try
         {
-            var response = await httpClient.SendAsync(request);
+            using var response = await httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
 
             var jsonResponse = await response.Content.ReadAsStringAsync();

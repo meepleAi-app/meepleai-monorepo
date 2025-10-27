@@ -22,7 +22,10 @@ public class QualityMetrics
 
     public QualityMetrics(IMeterFactory meterFactory)
     {
+        // CA2000: Meter lifetime managed by IMeterFactory (long-lived, singleton)
+#pragma warning disable CA2000
         var meter = meterFactory.Create("MeepleAI.Api", "1.0.0");
+#pragma warning restore CA2000
 
         _qualityScoreHistogram = meter.CreateHistogram<double>(
             name: "meepleai.quality.score",

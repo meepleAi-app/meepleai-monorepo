@@ -158,6 +158,91 @@ export interface ExportChatRequest {
   dateTo?: string;
 }
 
+// CONFIG-06: Dynamic Configuration System types
+export interface SystemConfigurationDto {
+  id: string;
+  key: string;
+  value: string;
+  valueType: string;
+  description: string | null;
+  category: string;
+  isActive: boolean;
+  requiresRestart: boolean;
+  environment: string;
+  version: number;
+  previousValue: string | null;
+  createdAt: string;
+  updatedAt: string;
+  createdByUserId: string;
+  updatedByUserId: string | null;
+  lastToggledAt: string | null;
+}
+
+export interface CreateConfigurationRequest {
+  key: string;
+  value: string;
+  valueType?: string;
+  description?: string | null;
+  category?: string;
+  isActive?: boolean;
+  requiresRestart?: boolean;
+  environment?: string;
+}
+
+export interface UpdateConfigurationRequest {
+  value?: string | null;
+  valueType?: string | null;
+  description?: string | null;
+  category?: string | null;
+  isActive?: boolean | null;
+  requiresRestart?: boolean | null;
+  environment?: string | null;
+}
+
+export interface ConfigurationHistoryDto {
+  id: string;
+  configurationId: string;
+  key: string;
+  oldValue: string;
+  newValue: string;
+  version: number;
+  changedAt: string;
+  changedByUserId: string;
+  changeReason: string;
+}
+
+export interface BulkConfigurationUpdateRequest {
+  updates: ConfigurationUpdate[];
+}
+
+export interface ConfigurationUpdate {
+  id: string;
+  value: string;
+}
+
+export interface ConfigurationValidationResult {
+  isValid: boolean;
+  errors: string[];
+}
+
+export interface ConfigurationExportDto {
+  configurations: SystemConfigurationDto[];
+  exportedAt: string;
+  environment: string;
+}
+
+export interface ConfigurationImportRequest {
+  configurations: CreateConfigurationRequest[];
+  overwriteExisting?: boolean;
+}
+
+export interface PagedResult<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 // Enhanced error class with correlation ID (PDF-06)
 export class ApiError extends Error {
   constructor(
@@ -441,6 +526,186 @@ export const api = {
         throw new Error(`Game with BGG ID ${bggId} not found`);
       }
       return response;
+    }
+  },
+
+  // CONFIG-06: Dynamic Configuration System API
+  config: {
+    /**
+     * Get all configurations with optional filtering and pagination
+     */
+    async getConfigurations(
+      category?: string,
+      environment?: string,
+      activeOnly: boolean = true,
+      page: number = 1,
+      pageSize: number = 50
+    ): Promise<PagedResult<SystemConfigurationDto>> {
+      const params = new URLSearchParams();
+      if (category) params.append("category", category);
+      if (environment) params.append("environment", environment);
+      params.append("activeOnly", activeOnly.toString());
+      params.append("page", page.toString());
+      params.append("pageSize", pageSize.toString());
+
+      const response = await api.get<PagedResult<SystemConfigurationDto>>(
+        `/api/v1/admin/configurations?${params}`
+      );
+      if (!response) {
+        throw new Error("Failed to fetch configurations");
+      }
+      return response;
+    },
+
+    /**
+     * Get a single configuration by ID
+     */
+    async getConfiguration(id: string): Promise<SystemConfigurationDto> {
+      const response = await api.get<SystemConfigurationDto>(`/api/v1/admin/configurations/${id}`);
+      if (!response) {
+        throw new Error(`Configuration ${id} not found`);
+      }
+      return response;
+    },
+
+    /**
+     * Get a configuration by key
+     */
+    async getConfigurationByKey(key: string, environment?: string): Promise<SystemConfigurationDto> {
+      const params = new URLSearchParams();
+      if (environment) params.append("environment", environment);
+
+      const response = await api.get<SystemConfigurationDto>(
+        `/api/v1/admin/configurations/key/${encodeURIComponent(key)}?${params}`
+      );
+      if (!response) {
+        throw new Error(`Configuration with key '${key}' not found`);
+      }
+      return response;
+    },
+
+    /**
+     * Create a new configuration
+     */
+    async createConfiguration(request: CreateConfigurationRequest): Promise<SystemConfigurationDto> {
+      return api.post<SystemConfigurationDto>("/api/v1/admin/configurations", request);
+    },
+
+    /**
+     * Update an existing configuration
+     */
+    async updateConfiguration(
+      id: string,
+      request: UpdateConfigurationRequest
+    ): Promise<SystemConfigurationDto> {
+      return api.put<SystemConfigurationDto>(`/api/v1/admin/configurations/${id}`, request);
+    },
+
+    /**
+     * Delete a configuration
+     */
+    async deleteConfiguration(id: string): Promise<void> {
+      return api.delete(`/api/v1/admin/configurations/${id}`);
+    },
+
+    /**
+     * Bulk update multiple configurations
+     */
+    async bulkUpdate(request: BulkConfigurationUpdateRequest): Promise<SystemConfigurationDto[]> {
+      const response = await api.post<SystemConfigurationDto[]>(
+        "/api/v1/admin/configurations/bulk-update",
+        request
+      );
+      return response;
+    },
+
+    /**
+     * Validate a configuration value
+     */
+    async validateConfiguration(
+      key: string,
+      value: string,
+      valueType: string
+    ): Promise<ConfigurationValidationResult> {
+      const response = await api.post<ConfigurationValidationResult>(
+        "/api/v1/admin/configurations/validate",
+        { key, value, valueType }
+      );
+      return response;
+    },
+
+    /**
+     * Export configurations for an environment
+     */
+    async exportConfigurations(
+      environment: string,
+      activeOnly: boolean = true
+    ): Promise<ConfigurationExportDto> {
+      const params = new URLSearchParams();
+      params.append("environment", environment);
+      params.append("activeOnly", activeOnly.toString());
+
+      const response = await api.get<ConfigurationExportDto>(
+        `/api/v1/admin/configurations/export?${params}`
+      );
+      if (!response) {
+        throw new Error("Failed to export configurations");
+      }
+      return response;
+    },
+
+    /**
+     * Import configurations from export file
+     */
+    async importConfigurations(request: ConfigurationImportRequest): Promise<number> {
+      const response = await api.post<number>("/api/v1/admin/configurations/import", request);
+      return response;
+    },
+
+    /**
+     * Get configuration change history
+     */
+    async getHistory(configurationId: string, limit: number = 20): Promise<ConfigurationHistoryDto[]> {
+      const response = await api.get<ConfigurationHistoryDto[]>(
+        `/api/v1/admin/configurations/${configurationId}/history?limit=${limit}`
+      );
+      if (!response) {
+        return [];
+      }
+      return response;
+    },
+
+    /**
+     * Rollback configuration to a previous version
+     */
+    async rollback(
+      configurationId: string,
+      toVersion: number
+    ): Promise<SystemConfigurationDto> {
+      const response = await api.post<SystemConfigurationDto>(
+        `/api/v1/admin/configurations/${configurationId}/rollback/${toVersion}`,
+        {}
+      );
+      return response;
+    },
+
+    /**
+     * Get all unique categories
+     */
+    async getCategories(): Promise<string[]> {
+      const response = await api.get<string[]>("/api/v1/admin/configurations/categories");
+      if (!response) {
+        return [];
+      }
+      return response;
+    },
+
+    /**
+     * Invalidate configuration cache
+     */
+    async invalidateCache(key?: string): Promise<void> {
+      const body = key ? { key } : {};
+      return api.post<void>("/api/v1/admin/configurations/cache/invalidate", body);
     }
   }
 };

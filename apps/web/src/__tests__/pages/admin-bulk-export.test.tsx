@@ -1,6 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import BulkExport from '../../pages/admin/bulk-export';
 
 type FetchMock = jest.MockedFunction<typeof fetch>;
 
@@ -9,21 +8,6 @@ const createJsonResponse = (data: unknown, ok = true, status = 200) =>
     ok,
     status,
     json: async () => data
-  } as unknown as Response);
-
-const createBlobResponse = (blob: Blob, filename: string, ok = true, status = 200) =>
-  ({
-    ok,
-    status,
-    blob: async () => blob,
-    headers: {
-      get: (name: string) => {
-        if (name === 'Content-Disposition') {
-          return `attachment; filename="${filename}"`;
-        }
-        return null;
-      }
-    }
   } as unknown as Response);
 
 describe('BulkExport Page', () => {

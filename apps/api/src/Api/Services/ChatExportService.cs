@@ -81,6 +81,8 @@ public class ChatExportService : IChatExportService
         }
         catch (Exception ex)
         {
+            // Service layer: Catches all exceptions to return domain result object
+            // Detailed error logged, returned as failure result for caller handling
             _logger.LogError(ex, "Failed to export chat {ChatId} for user {UserId} in {Format} format",
                 chatId, userId, format);
             return ExportResult.GenerationFailed($"Export generation failed: {ex.Message}");

@@ -146,6 +146,12 @@ public class BggApiService : IBggApiService
         }
         catch (Exception ex)
         {
+            // EXTERNAL API PATTERN: BGG XML parsing errors return null instead of throwing
+            // Rationale: BGG API search is already successfully completed - we received XML from
+            // their server. Parsing failures indicate malformed/unexpected XML structure, not a
+            // system error. Returning null allows callers to gracefully handle "no results found"
+            // scenarios. HttpRequestException above handles actual API connectivity failures.
+            // Context: Parsing failures are typically BGG-side (schema changes, malformed XML)
             _logger.LogError(ex, "Error parsing BGG search results for query: {Query}", query);
             return null;
         }
@@ -196,6 +202,12 @@ public class BggApiService : IBggApiService
         }
         catch (Exception ex)
         {
+            // EXTERNAL API PATTERN: BGG XML parsing errors return null instead of throwing
+            // Rationale: BGG API request is already successfully completed - we received XML from
+            // their server. Parsing failures indicate malformed/unexpected XML structure, not a
+            // system error. Returning null allows callers to gracefully handle "game not found"
+            // scenarios. HttpRequestException above handles actual API connectivity failures.
+            // Context: Parsing failures are typically BGG-side (schema changes, malformed XML)
             _logger.LogError(ex, "Error parsing BGG game details for ID: {BggId}", bggId);
             return null;
         }

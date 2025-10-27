@@ -3,6 +3,7 @@ using System.Text.Json;
 using Api.Configuration;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Options;
+using StackExchange.Redis;
 
 namespace Api.Services;
 
@@ -103,10 +104,26 @@ public class HybridCacheService : IHybridCacheService
 
             return result;
         }
-        catch (Exception ex)
+        catch (RedisConnectionException ex)
         {
-            _logger.LogError(ex, "Error in HybridCache GetOrCreateAsync for key: {CacheKey}", cacheKey);
-            throw;
+            _logger.LogError(ex, "Redis connection failed for key {CacheKey}. Falling back to factory.", cacheKey);
+            // Redis unavailable, execute factory directly
+            return await factory(ct);
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Redis timeout for key {CacheKey}. Falling back to factory.", cacheKey);
+            return await factory(ct);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid cache operation for key {CacheKey}. Falling back to factory.", cacheKey);
+            return await factory(ct);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "JSON serialization error for key {CacheKey}. Falling back to factory.", cacheKey);
+            return await factory(ct);
         }
     }
 
@@ -127,9 +144,19 @@ public class HybridCacheService : IHybridCacheService
 
             _logger.LogInformation("Removed cache entry: {CacheKey}", cacheKey);
         }
-        catch (Exception ex)
+        catch (RedisConnectionException ex)
         {
-            _logger.LogError(ex, "Error removing cache entry: {CacheKey}", cacheKey);
+            _logger.LogError(ex, "Redis connection failed removing key {CacheKey}", cacheKey);
+            throw;
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Redis timeout removing key {CacheKey}", cacheKey);
+            throw;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation removing key {CacheKey}", cacheKey);
             throw;
         }
     }
@@ -168,9 +195,19 @@ public class HybridCacheService : IHybridCacheService
             _logger.LogInformation("Removed {Count} cache entries for tag: {Tag}", keysToRemove.Count, tag);
             return keysToRemove.Count;
         }
-        catch (Exception ex)
+        catch (RedisConnectionException ex)
         {
-            _logger.LogError(ex, "Error removing cache entries by tag: {Tag}", tag);
+            _logger.LogError(ex, "Redis connection failed removing entries for tag {Tag}", tag);
+            throw;
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Redis timeout removing entries for tag {Tag}", tag);
+            throw;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation removing entries for tag {Tag}", tag);
             throw;
         }
     }
@@ -213,9 +250,19 @@ public class HybridCacheService : IHybridCacheService
 
             return keysToRemove.Count;
         }
-        catch (Exception ex)
+        catch (RedisConnectionException ex)
         {
-            _logger.LogError(ex, "Error removing cache entries by tags: {Tags}", string.Join(", ", tags));
+            _logger.LogError(ex, "Redis connection failed removing entries for tags {Tags}", string.Join(", ", tags));
+            throw;
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Redis timeout removing entries for tags {Tags}", string.Join(", ", tags));
+            throw;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation removing entries for tags {Tags}", string.Join(", ", tags));
             throw;
         }
     }

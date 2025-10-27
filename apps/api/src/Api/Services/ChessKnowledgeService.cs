@@ -141,6 +141,12 @@ public class ChessKnowledgeService : IChessKnowledgeService
         }
         catch (Exception ex)
         {
+            // ERROR STATE MANAGEMENT: Chess knowledge indexing failures return structured error result
+            // Rationale: Indexing involves multiple external systems (file I/O, Qdrant, embedding API).
+            // Returning a typed failure result allows callers to distinguish success/failure cases and
+            // display appropriate error messages to administrators. Throwing would cause 500 errors
+            // without context about which indexing stage failed.
+            // Context: Indexing failures typically from Qdrant unavailable or file read errors
             _logger.LogError(ex, "Error during chess knowledge indexing");
             return ChessIndexResult.CreateFailure($"Indexing error: {ex.Message}");
         }
@@ -175,6 +181,12 @@ public class ChessKnowledgeService : IChessKnowledgeService
         }
         catch (Exception ex)
         {
+            // ERROR STATE MANAGEMENT: Chess knowledge search failures return structured error result
+            // Rationale: Search involves multiple external systems (embedding API, Qdrant). Returning
+            // a typed failure result allows callers to distinguish success/failure and display appropriate
+            // error messages. Throwing would cause 500 errors without context about which search stage
+            // failed (embedding generation vs vector search).
+            // Context: Search failures typically from embedding API timeout or Qdrant unavailable
             _logger.LogError(ex, "Error during chess knowledge search");
             return SearchResult.CreateFailure($"Search error: {ex.Message}");
         }
@@ -194,6 +206,12 @@ public class ChessKnowledgeService : IChessKnowledgeService
         }
         catch (Exception ex)
         {
+            // ERROR STATE MANAGEMENT: Chess knowledge deletion failures return false
+            // Rationale: Deletion failure (typically Qdrant unavailable) should allow the API to
+            // respond with a meaningful error. Returning false lets callers check success and display
+            // appropriate error messages to administrators. Throwing would cause 500 errors without
+            // context about the Qdrant connectivity issue.
+            // Context: Deletion failures typically from Qdrant unavailable or network timeout
             _logger.LogError(ex, "Error during chess knowledge deletion");
             return false;
         }

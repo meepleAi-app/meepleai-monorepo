@@ -124,6 +124,8 @@ public class KeywordSearchService : IKeywordSearchService
         }
         catch (Exception ex)
         {
+            // Service layer: Logs PostgreSQL full-text search errors before re-throwing
+            // Caller receives exception with full diagnostic context for query troubleshooting
             _logger.LogError(ex, "Error during keyword search for query '{Query}'", query);
             throw;
         }
@@ -198,6 +200,8 @@ public class KeywordSearchService : IKeywordSearchService
         }
         catch (Exception ex)
         {
+            // Service layer: Logs PostgreSQL document search errors before re-throwing
+            // Caller receives exception with full diagnostic context for search troubleshooting
             _logger.LogError(ex, "Error during document keyword search for query '{Query}'", query);
             throw;
         }

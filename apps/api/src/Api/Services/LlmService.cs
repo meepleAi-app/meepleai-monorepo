@@ -199,9 +199,24 @@ public class LlmService : ILlmService
             _logger.LogError(ex, "Chat completion timed out");
             return LlmCompletionResult.CreateFailure("Request timed out");
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request failed during chat completion");
+            return LlmCompletionResult.CreateFailure($"HTTP error: {ex.Message}");
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize chat completion response");
+            return LlmCompletionResult.CreateFailure("Invalid response format");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation during chat completion");
+            return LlmCompletionResult.CreateFailure($"Configuration error: {ex.Message}");
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to generate chat completion");
+            _logger.LogError(ex, "Unexpected error during chat completion");
             return LlmCompletionResult.CreateFailure($"Error: {ex.Message}");
         }
     }
@@ -271,9 +286,27 @@ public class LlmService : ILlmService
                 yield break;
             }
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request failed initiating streaming chat completion");
+            response?.Dispose();
+            yield break;
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Streaming chat completion request timed out");
+            response?.Dispose();
+            yield break;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation initiating streaming chat completion");
+            response?.Dispose();
+            yield break;
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error initiating streaming chat completion");
+            _logger.LogError(ex, "Unexpected error initiating streaming chat completion");
             response?.Dispose();
             yield break;
         }
@@ -380,6 +413,21 @@ public class LlmService : ILlmService
             _logger.LogWarning(ex,
                 "Failed to parse LLM JSON response. Raw response: {Response}",
                 truncatedResponse);
+            return null;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request failed during JSON generation");
+            return null;
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "JSON generation request timed out");
+            return null;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation during JSON generation");
             return null;
         }
         catch (Exception ex)

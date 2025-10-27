@@ -52,6 +52,8 @@ public class CacheMetricsRecorder : ICacheMetricsRecorder
             }
             catch (Exception ex)
             {
+                // Observability: Metrics recording must not break application functionality
+                // Fire-and-forget pattern - metrics are non-critical, fail silently
                 // Log error but don't throw - cache operations must not break
                 _logger.LogError(ex, "Failed to record cache hit metric for operation={Operation}, cacheType={CacheType}",
                     operation, cacheType);
@@ -82,6 +84,8 @@ public class CacheMetricsRecorder : ICacheMetricsRecorder
             }
             catch (Exception ex)
             {
+                // Observability: Metrics recording must not break application functionality
+                // Fire-and-forget pattern - metrics are non-critical, fail silently
                 _logger.LogError(ex, "Failed to record cache miss metric for operation={Operation}, cacheType={CacheType}",
                     operation, cacheType);
             }
@@ -110,6 +114,8 @@ public class CacheMetricsRecorder : ICacheMetricsRecorder
             }
             catch (Exception ex)
             {
+                // Observability: Metrics recording must not break application functionality
+                // Fire-and-forget pattern - metrics are non-critical, fail silently
                 _logger.LogError(ex, "Failed to record cache eviction metric for reason={Reason}", reason);
             }
         });

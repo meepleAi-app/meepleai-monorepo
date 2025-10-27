@@ -240,11 +240,17 @@ public class TotpService : ITotpService
                 "Failed backup code attempt");
             return false;
         }
-        catch (Exception ex)
+        catch (DbUpdateException ex)
         {
-            _logger.LogError(ex, "Backup code verification error for user {UserId}", userId);
+            _logger.LogError(ex, "Database error during backup code verification for user {UserId}", userId);
             await transaction.RollbackAsync();
-            throw;
+            throw new InvalidOperationException("Failed to verify backup code due to database error", ex);
+        }
+        catch (CryptographicException ex)
+        {
+            _logger.LogError(ex, "Cryptographic error during backup code verification for user {UserId}", userId);
+            await transaction.RollbackAsync();
+            throw new InvalidOperationException("Failed to verify backup code due to cryptographic error", ex);
         }
     }
 
@@ -369,9 +375,14 @@ public class TotpService : ITotpService
 
             return isValid;
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
         {
-            _logger.LogError(ex, "TOTP verification error");
+            _logger.LogError(ex, "Invalid TOTP secret or code format during verification");
+            return false;
+        }
+        catch (FormatException ex)
+        {
+            _logger.LogError(ex, "TOTP code format error during verification");
             return false;
         }
     }

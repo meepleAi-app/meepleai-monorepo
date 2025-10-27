@@ -193,6 +193,8 @@ public class FollowUpQuestionService : IFollowUpQuestionService
         }
         catch (Exception ex)
         {
+            // Service layer: Catches all exceptions with configurable failure behavior
+            // If FailOnGenerationError=true, re-throws; otherwise gracefully degrades to empty list
             stopwatch.Stop();
             _errorsCounter.Add(1, tags);
 

@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.DataProtection;
 
 namespace Api.Services;
@@ -35,10 +36,15 @@ public class EncryptionService : IEncryptionService
             _logger.LogDebug("Successfully encrypted data with purpose: {Purpose}", purpose);
             return Task.FromResult(encrypted);
         }
-        catch (Exception ex)
+        catch (CryptographicException ex)
         {
-            _logger.LogError(ex, "Encryption failed for purpose: {Purpose}", purpose);
-            throw new InvalidOperationException("Encryption operation failed", ex);
+            _logger.LogError(ex, "Cryptographic error during encryption for purpose: {Purpose}", purpose);
+            throw new InvalidOperationException("Encryption operation failed due to cryptographic error", ex);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogError(ex, "Invalid argument during encryption for purpose: {Purpose}", purpose);
+            throw new InvalidOperationException("Encryption operation failed due to invalid input", ex);
         }
     }
 
@@ -58,10 +64,20 @@ public class EncryptionService : IEncryptionService
             _logger.LogDebug("Successfully decrypted data with purpose: {Purpose}", purpose);
             return Task.FromResult(decrypted);
         }
-        catch (Exception ex)
+        catch (CryptographicException ex)
         {
-            _logger.LogError(ex, "Decryption failed for purpose: {Purpose}", purpose);
+            _logger.LogError(ex, "Cryptographic error during decryption for purpose: {Purpose}. Key may have been rotated or data corrupted.", purpose);
             throw new InvalidOperationException("Decryption operation failed. Key may have been rotated or data corrupted.", ex);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogError(ex, "Invalid ciphertext format during decryption for purpose: {Purpose}", purpose);
+            throw new InvalidOperationException("Decryption operation failed due to invalid ciphertext format", ex);
+        }
+        catch (FormatException ex)
+        {
+            _logger.LogError(ex, "Ciphertext format error during decryption for purpose: {Purpose}", purpose);
+            throw new InvalidOperationException("Decryption operation failed due to format error", ex);
         }
     }
 }

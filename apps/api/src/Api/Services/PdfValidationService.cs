@@ -1,6 +1,7 @@
 using Docnet.Core;
 using Docnet.Core.Models;
 using Microsoft.Extensions.Options;
+using Api.Services.Exceptions;
 
 namespace Api.Services;
 
@@ -149,9 +150,23 @@ public class PdfValidationService : IPdfValidationService
                             File.Delete(tempFile);
                         }
                     }
+                    catch (IOException ex)
+                    {
+                        _logger.LogWarning(ex, "I/O error deleting temporary validation file {TempFile}", tempFile);
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        _logger.LogWarning(ex, "Access denied deleting temporary validation file {TempFile}", tempFile);
+                    }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, "Failed to delete temporary validation file {TempFile}", tempFile);
+                        // CLEANUP PATTERN: Temp file deletion failures are logged but not thrown
+                        // Rationale: Validation is already complete and result determined. Temporary file
+                        // cleanup is a best-effort operation - failing to delete the temp file should not
+                        // change the validation result or fail the upload. OS will eventually clean up temp
+                        // directory, and we log for monitoring filesystem issues.
+                        // Context: File failures are typically permission/locking (antivirus, backup processes)
+                        _logger.LogWarning(ex, "Unexpected error deleting temporary validation file {TempFile}", tempFile);
                     }
                 }
             }
@@ -175,11 +190,30 @@ public class PdfValidationService : IPdfValidationService
         {
             throw;
         }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation during PDF validation for {FileName}", fileName);
+            throw new PdfValidationException($"Invalid PDF validation operation: {ex.Message}", ex);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogError(ex, "Invalid argument during PDF validation for {FileName}", fileName);
+            throw new PdfValidationException($"Invalid validation argument: {ex.Message}", ex);
+        }
+        catch (IOException ex)
+        {
+            _logger.LogError(ex, "I/O error during PDF validation for {FileName}", fileName);
+            throw new PdfValidationException($"Failed to read PDF file for validation: {ex.Message}", ex);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogError(ex, "Access denied during PDF validation for {FileName}", fileName);
+            throw new PdfValidationException("Failed to access PDF file: Permission denied.", ex);
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during PDF validation for {FileName}", fileName);
-            errors["validation"] = $"PDF validation failed: {ex.Message}";
-            return PdfValidationResult.CreateFailure(errors);
+            _logger.LogError(ex, "Unexpected error during PDF validation for {FileName}", fileName);
+            throw new PdfValidationException($"PDF validation failed: {ex.Message}", ex);
         }
     }
 
@@ -284,6 +318,18 @@ public class PdfValidationService : IPdfValidationService
                 PdfVersion = pdfVersion,
                 FileSizeBytes = new FileInfo(filePath).Length
             };
+        }
+        catch (InvalidOperationException ex)
+        {
+            errors["pdfStructure"] = $"Invalid PDF structure: {ex.Message}";
+        }
+        catch (ArgumentException ex)
+        {
+            errors["pdfStructure"] = $"Invalid PDF argument: {ex.Message}";
+        }
+        catch (NotSupportedException ex)
+        {
+            errors["pdfStructure"] = $"Unsupported PDF format: {ex.Message}";
         }
         catch (Exception ex)
         {

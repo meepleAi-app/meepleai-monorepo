@@ -199,6 +199,12 @@ public class PdfIndexingService
         }
         catch (Exception ex)
         {
+            // ERROR STATE MANAGEMENT: Top-level catch ensures graceful failure handling
+            // Rationale: PDF indexing involves multiple external systems (Qdrant, DB, file system).
+            // Any unhandled error should be captured, logged, and persisted as a failed indexing
+            // attempt rather than throwing to the caller. This maintains data consistency and
+            // provides operators with debugging context via the indexing_error field.
+            // Context: Covers unforeseen errors after specific exception handlers above
             _logger.LogError(ex, "Unexpected error indexing PDF {PdfId}", pdfId);
             return await MarkIndexingFailedAsync(existingVectorDoc,
                 $"Unexpected error: {ex.Message}",

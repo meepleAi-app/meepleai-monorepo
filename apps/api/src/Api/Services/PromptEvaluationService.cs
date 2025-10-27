@@ -257,9 +257,21 @@ public class PromptEvaluationService : IPromptEvaluationService
                 Summary = summary
             };
         }
-        catch (Exception ex)
+        catch (FileNotFoundException ex)
         {
-            _logger.LogError(ex, "Evaluation failed for template {TemplateId}, version {VersionId}",
+            _logger.LogError(ex, "Dataset file not found for evaluation of template {TemplateId}, version {VersionId}",
+                templateId, versionId);
+            throw new InvalidOperationException("Evaluation dataset file not found", ex);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Invalid JSON in dataset for template {TemplateId}, version {VersionId}",
+                templateId, versionId);
+            throw new InvalidOperationException("Failed to parse evaluation dataset", ex);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation during evaluation for template {TemplateId}, version {VersionId}",
                 templateId, versionId);
             throw;
         }
@@ -309,11 +321,32 @@ public class PromptEvaluationService : IPromptEvaluationService
                 Notes = GenerateQueryNotes(isAccurate, isHallucinated, areCitationsCorrect, qaResponse.confidence)
             };
         }
-        catch (Exception ex)
+        catch (HttpRequestException ex)
         {
             queryStopwatch.Stop();
 
-            _logger.LogError(ex, "Error evaluating test case {TestCaseId}: {Query}",
+            _logger.LogError(ex, "HTTP error evaluating test case {TestCaseId}: {Query}",
+                testCase.Id, testCase.Query);
+
+            // Return failed result on error
+            return new QueryEvaluationResult
+            {
+                TestCaseId = testCase.Id,
+                Query = testCase.Query,
+                Response = $"HTTP error: {ex.Message}",
+                Confidence = 0.0,
+                LatencyMs = (int)queryStopwatch.ElapsedMilliseconds,
+                IsAccurate = false,
+                IsHallucinated = false,
+                AreCitationsCorrect = false,
+                Notes = $"HTTP error: {ex.Message}"
+            };
+        }
+        catch (TaskCanceledException ex)
+        {
+            queryStopwatch.Stop();
+
+            _logger.LogError(ex, "Timeout evaluating test case {TestCaseId}: {Query}",
                 testCase.Id, testCase.Query);
 
             // Return failed result on error
@@ -545,9 +578,14 @@ public class PromptEvaluationService : IPromptEvaluationService
                 RecommendationReason = reasoning
             };
         }
-        catch (Exception ex)
+        catch (FileNotFoundException ex)
         {
-            _logger.LogError(ex, "Comparison failed for template {TemplateId}", templateId);
+            _logger.LogError(ex, "Dataset not found during comparison for template {TemplateId}", templateId);
+            throw new InvalidOperationException("Failed to compare prompts: dataset file not found", ex);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation during comparison for template {TemplateId}", templateId);
             throw;
         }
     }
@@ -753,10 +791,15 @@ public class PromptEvaluationService : IPromptEvaluationService
 
             _logger.LogInformation("Successfully stored evaluation result {EvaluationId}", result.EvaluationId);
         }
-        catch (Exception ex)
+        catch (DbUpdateException ex)
         {
-            _logger.LogError(ex, "Failed to store evaluation result {EvaluationId}", result.EvaluationId);
-            throw;
+            _logger.LogError(ex, "Database error storing evaluation result {EvaluationId}", result.EvaluationId);
+            throw new InvalidOperationException($"Failed to store evaluation result due to database error", ex);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "JSON serialization error storing evaluation result {EvaluationId}", result.EvaluationId);
+            throw new InvalidOperationException($"Failed to serialize query results", ex);
         }
     }
 
@@ -809,10 +852,15 @@ public class PromptEvaluationService : IPromptEvaluationService
 
             return results;
         }
-        catch (Exception ex)
+        catch (DbUpdateException ex)
         {
-            _logger.LogError(ex, "Failed to retrieve historical results for template {TemplateId}", templateId);
-            throw;
+            _logger.LogError(ex, "Database error retrieving historical results for template {TemplateId}", templateId);
+            throw new InvalidOperationException($"Failed to retrieve historical results due to database error", ex);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "JSON deserialization error retrieving historical results for template {TemplateId}", templateId);
+            throw new InvalidOperationException($"Failed to deserialize query results from database", ex);
         }
     }
 }

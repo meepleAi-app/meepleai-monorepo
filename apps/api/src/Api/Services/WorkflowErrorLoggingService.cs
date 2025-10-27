@@ -50,7 +50,12 @@ public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
         }
         catch (Exception ex)
         {
-            // Don't fail the request if error logging fails (resilience pattern from AuditService)
+            // RESILIENCE PATTERN: Error logging must never fail n8n webhook operations
+            // Rationale: n8n workflow error logging is telemetry for debugging - failing the
+            // webhook response because we cannot persist error logs would create a cascading
+            // failure (error handler fails → n8n retries → more errors). We log the meta-failure
+            // for monitoring but maintain webhook reliability.
+            // Context: Logging failures are typically DB-related (connection loss, disk full)
             _logger.LogError(ex,
                 "Failed to log workflow error for WorkflowId={WorkflowId}, ExecutionId={ExecutionId}",
                 request.WorkflowId, request.ExecutionId);

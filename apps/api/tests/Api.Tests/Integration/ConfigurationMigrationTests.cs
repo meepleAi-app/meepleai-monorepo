@@ -31,7 +31,7 @@ public class ConfigurationMigrationTests : AdminTestFixture
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         // Act: Verify system_configurations table exists
-        var tableExists = await dbContext.SystemConfigurations.AnyAsync();
+        _ = await dbContext.SystemConfigurations.AnyAsync();
 
         // Assert: Table exists and is queryable (migrations applied successfully)
         // The fact that we can query it means the table was created during test initialization
@@ -54,7 +54,7 @@ public class ConfigurationMigrationTests : AdminTestFixture
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         // Act: Verify table structure by checking we can query key fields
-        var hasRecords = await dbContext.SystemConfigurations.AnyAsync();
+        _ = await dbContext.SystemConfigurations.AnyAsync();
 
         // Create a test configuration to verify all required fields work
         var userId = await GetUserIdByEmailAsync(testEmail);

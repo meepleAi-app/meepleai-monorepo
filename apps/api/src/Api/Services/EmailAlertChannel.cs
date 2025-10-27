@@ -85,6 +85,11 @@ public class EmailAlertChannel : IAlertChannel
         }
         catch (Exception ex)
         {
+            // RESILIENCE PATTERN: Email alert channel failures must return false, not throw
+            // Rationale: Alert channels implement IAlertChannel which requires returning success/
+            // failure status. Throwing would prevent other channels from executing (Slack, PagerDuty).
+            // Caller (AlertingService) tracks per-channel results for graceful degradation.
+            // Context: Email failures are typically external (SMTP down, authentication expired)
             _logger.LogError(ex, "Failed to send email alert for {AlertType}", alertType);
             return false;
         }

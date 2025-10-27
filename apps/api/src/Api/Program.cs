@@ -959,6 +959,8 @@ v1Api.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, 
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (AuthService)
         logger.LogError(ex, "Login endpoint error");
         return Results.Problem(detail: ex.Message, statusCode: 500);
     }
@@ -984,6 +986,8 @@ v1Api.MapPost("/auth/2fa/setup", async (HttpContext context, ITotpService totpSe
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (TotpService)
         logger.LogError(ex, "2FA setup failed for user {UserId}", userId);
         return Results.Problem(detail: ex.Message, statusCode: 500);
     }
@@ -1014,6 +1018,8 @@ v1Api.MapPost("/auth/2fa/enable", async (TwoFactorEnableRequest request, HttpCon
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (TotpService)
         logger.LogError(ex, "2FA enable error for user {UserId}", userId);
         return Results.Problem(detail: ex.Message, statusCode: 500);
     }
@@ -1072,6 +1078,8 @@ v1Api.MapPost("/auth/2fa/verify", async (TwoFactorVerifyRequest request, HttpCon
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (TotpService, TempSessionService)
         logger.LogError(ex, "2FA verify error");
         return Results.Problem(detail: ex.Message, statusCode: 500);
     }
@@ -1100,6 +1108,8 @@ v1Api.MapPost("/auth/2fa/disable", async (TwoFactorDisableRequest request, HttpC
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (TotpService)
         logger.LogError(ex, "2FA disable error for user {UserId}", userId);
         return Results.Problem(detail: ex.Message, statusCode: 500);
     }
@@ -1123,6 +1133,8 @@ v1Api.MapGet("/users/me/2fa/status", async (HttpContext context, ITotpService to
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (TotpService)
         logger.LogError(ex, "Get 2FA status error for user {UserId}", userId);
         return Results.Problem(detail: ex.Message, statusCode: 500);
     }
@@ -1279,6 +1291,8 @@ v1Api.MapGet("/auth/oauth/{provider}/callback", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP redirect with error
+        // Specific exception handling occurs in service layer (OAuthService)
         var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
         logger.LogError(ex, "OAuth callback failed for provider: {Provider}", provider);
 
@@ -1518,6 +1532,8 @@ v1Api.MapPost("/auth/password-reset/request", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (PasswordResetService)
         logger.LogError(ex, "Password reset request endpoint error");
         return Results.Problem(detail: "An error occurred processing your request", statusCode: 500);
     }
@@ -1547,6 +1563,8 @@ v1Api.MapGet("/auth/password-reset/verify", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (PasswordResetService)
         logger.LogError(ex, "Password reset verify endpoint error");
         return Results.Problem(detail: "An error occurred processing your request", statusCode: 500);
     }
@@ -1605,6 +1623,8 @@ v1Api.MapPut("/auth/password-reset/confirm", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (PasswordResetService)
         logger.LogError(ex, "Password reset confirm endpoint error");
         return Results.Problem(detail: "An error occurred processing your request", statusCode: 500);
     }
@@ -1793,6 +1813,8 @@ v1Api.MapPost("/agents/qa", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (RagService, LlmService, etc.)
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
         // Persist error to chat if chatId provided
@@ -1810,6 +1832,8 @@ v1Api.MapPost("/agents/qa", async (
             }
             catch (Exception chatEx)
             {
+                // Resilience pattern: Chat logging failure shouldn't break error response flow
+                // Fail-open to ensure client receives error message even if chat persistence fails
                 logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
             }
         }
@@ -1924,6 +1948,8 @@ v1Api.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context,
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (RagService, LlmService, etc.)
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
         // Persist error to chat if chatId provided
@@ -1941,6 +1967,8 @@ v1Api.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context,
             }
             catch (Exception chatEx)
             {
+                // Resilience pattern: Chat logging failure shouldn't break error response flow
+                // Fail-open to ensure client receives error message even if chat persistence fails
                 logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
             }
         }
@@ -2004,6 +2032,8 @@ v1Api.MapPost("/agents/explain/stream", async (ExplainRequest req, HttpContext c
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions for SSE streaming endpoint
+        // Sends error event to client stream, specific exception handling in service layer
         logger.LogError(ex, "Error during streaming explain for game {GameId}, topic: {Topic}", req.gameId, req.topic);
 
         // Send error event if possible
@@ -2160,6 +2190,8 @@ v1Api.MapPost("/agents/qa/stream", async (
                         }
                         catch (Exception ex)
                         {
+                            // Resilience pattern: Follow-up question generation failure shouldn't break main QA response
+                            // Fail-open to ensure user gets answer even if follow-up suggestions unavailable
                             logger.LogWarning(ex, "Failed to generate follow-up questions for game {GameId}", req.gameId);
                             return new List<string>().AsReadOnly();
                         }
@@ -2193,6 +2225,8 @@ v1Api.MapPost("/agents/qa/stream", async (
             }
             catch (Exception ex)
             {
+                // Resilience pattern: SSE event sending failure for follow-up questions shouldn't break response
+                // Fail-open to ensure client receives main answer even if follow-up streaming fails
                 logger.LogWarning(ex, "Failed to send follow-up questions event for game {GameId}", req.gameId);
             }
         }
@@ -2242,6 +2276,8 @@ v1Api.MapPost("/agents/qa/stream", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions for SSE streaming endpoint
+        // Sends error event to client stream, specific exception handling in service layer
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
         logger.LogError(ex, "Error during streaming QA for game {GameId}, query: {Query}", req.gameId, req.query);
 
@@ -2260,6 +2296,8 @@ v1Api.MapPost("/agents/qa/stream", async (
             }
             catch (Exception chatEx)
             {
+                // Resilience pattern: Chat logging failure shouldn't break error response flow
+                // Fail-open to ensure client receives error message even if chat persistence fails
                 logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
             }
         }
@@ -2403,6 +2441,8 @@ v1Api.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (RagService, LlmService, etc.)
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
         // Persist error to chat if chatId provided
@@ -2420,6 +2460,8 @@ v1Api.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context
             }
             catch (Exception chatEx)
             {
+                // Resilience pattern: Chat logging failure shouldn't break error response flow
+                // Fail-open to ensure client receives error message even if chat persistence fails
                 logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
             }
         }
@@ -2480,6 +2522,8 @@ v1Api.MapPost("/agents/feedback", async (AgentFeedbackRequest req, HttpContext c
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (AgentFeedbackService)
         logger.LogError(ex, "Failed to record feedback for message {MessageId}", req.messageId);
         return Results.Problem(detail: "Unable to record feedback", statusCode: 500);
     }
@@ -2591,6 +2635,8 @@ v1Api.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (RagService, LlmService, etc.)
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
         // Persist error to chat if chatId provided
@@ -2608,6 +2654,8 @@ v1Api.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context
             }
             catch (Exception chatEx)
             {
+                // Resilience pattern: Chat logging failure shouldn't break error response flow
+                // Fail-open to ensure client receives error message even if chat persistence fails
                 logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
             }
         }
@@ -2798,6 +2846,8 @@ v1Api.MapGet("/bgg/search", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (BggApiService)
         logger.LogError(ex, "Unexpected error during BGG search: {Query}", q);
         return Results.Json(new
         {
@@ -2849,6 +2899,8 @@ v1Api.MapGet("/bgg/games/{bggId:int}", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (BggApiService)
         logger.LogError(ex, "Unexpected error retrieving BGG game details: {BggId}", bggId);
         return Results.Json(new
         {
@@ -3007,6 +3059,8 @@ v1Api.MapGet("/pdfs/{pdfId}/progress", async (string pdfId, HttpContext context,
         }
         catch (Exception ex)
         {
+            // Resilience pattern: JSON deserialization failure shouldn't break PDF retrieval
+            // Fail-open to return PDF metadata even if progress field is corrupted
             // Log error but return null progress instead of failing
             var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
             logger.LogWarning(ex, "Failed to deserialize progress for PDF {PdfId}", pdfId);
@@ -3460,6 +3514,8 @@ v1Api.MapPost("/rulespecs/{gameId}/{version}/comments", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 400
+        // Specific exception handling occurs in service layer (RuleSpecService)
         logger.LogError(ex, "Failed to create comment on RuleSpec {GameId} version {Version}", gameId, version);
         return Results.BadRequest(new { error = ex.Message });
     }
@@ -3511,6 +3567,8 @@ v1Api.MapPost("/comments/{commentId}/replies", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 400
+        // Specific exception handling occurs in service layer (RuleSpecService)
         logger.LogError(ex, "Unexpected error creating reply to comment {CommentId}", commentId);
         return Results.BadRequest(new { error = ex.Message });
     }
@@ -3629,6 +3687,8 @@ v1Api.MapPost("/comments/{commentId}/resolve", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 400
+        // Specific exception handling occurs in service layer (RuleSpecService)
         logger.LogError(ex, "Failed to resolve comment {CommentId}", commentId);
         return Results.BadRequest(new { error = ex.Message });
     }
@@ -3686,6 +3746,8 @@ v1Api.MapPost("/comments/{commentId}/unresolve", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 400
+        // Specific exception handling occurs in service layer (RuleSpecService)
         logger.LogError(ex, "Failed to unresolve comment {CommentId}", commentId);
         return Results.BadRequest(new { error = ex.Message });
     }
@@ -3781,6 +3843,8 @@ v1Api.MapPost("/rulespecs/bulk/export", async (BulkExportRequest request, HttpCo
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (RuleSpecService)
         logger.LogError(ex, "Unexpected error during rule spec export");
         return Results.Problem("An error occurred during export", statusCode: StatusCodes.Status500InternalServerError);
     }
@@ -4165,6 +4229,8 @@ v1Api.MapPost("/n8n/templates/{id}/import", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (N8nTemplateService)
         logger.LogError(ex, "Unexpected error importing template {TemplateId}", id);
         return Results.Problem("An unexpected error occurred while importing the template");
     }
@@ -4463,6 +4529,8 @@ v1Api.MapPost("/alerts/prometheus", async (
         }
         catch (Exception ex)
         {
+            // Resilience pattern: Individual alert processing failure shouldn't break other alerts
+            // Fail-open to ensure one malformed alert doesn't prevent processing remaining alerts
             logger.LogError(ex, "Error processing Prometheus alert: {AlertName}",
                 alert.Labels.GetValueOrDefault("alertname", "Unknown"));
         }
@@ -4885,6 +4953,8 @@ v1Api.MapPost("/admin/prompts/{id}/versions/{versionId}/activate", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (PromptManagementService)
         return Results.Problem(
             statusCode: 500,
             title: "Activation Failed",
@@ -4949,6 +5019,8 @@ v1Api.MapPost("/admin/prompts/{templateId}/versions/{versionId}/evaluate", async
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (PromptEvaluationService)
         logger.LogError(ex, "Evaluation failed for template {TemplateId}, version {VersionId}", templateId, versionId);
         return Results.Problem($"Evaluation failed: {ex.Message}");
     }
@@ -4999,6 +5071,8 @@ v1Api.MapPost("/admin/prompts/{templateId}/compare", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (PromptEvaluationService)
         logger.LogError(ex, "Comparison failed for template {TemplateId}", templateId);
         return Results.Problem($"Comparison failed: {ex.Message}");
     }
@@ -5081,6 +5155,8 @@ v1Api.MapGet("/admin/prompts/evaluations/{evaluationId}/report", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (PromptEvaluationService)
         logger.LogError(ex, "Failed to generate report for evaluation {EvaluationId}", evaluationId);
         return Results.Problem($"Report generation failed: {ex.Message}");
     }
@@ -5602,6 +5678,8 @@ v1Api.MapPost("/admin/configurations/import", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 400
+        // Specific exception handling occurs in service layer (ConfigurationService)
         logger.LogError(ex, "Failed to import configurations");
         return Results.BadRequest(new { error = ex.Message });
     }
@@ -5681,6 +5759,8 @@ v1Api.MapPut("/admin/features/{featureName}", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 400
+        // Specific exception handling occurs in service layer (FeatureFlagService)
         logger.LogError(ex, "Failed to update feature flag {FeatureName}", featureName);
         return Results.BadRequest(new { error = ex.Message });
     }
@@ -5849,6 +5929,8 @@ v1Api.MapGet("/admin/cache/stats", async (HttpContext context, IAiResponseCacheS
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (HybridCacheService)
         return Results.Problem(detail: $"Failed to retrieve cache stats: {ex.Message}", statusCode: 500);
     }
 })
@@ -5894,6 +5976,8 @@ v1Api.MapDelete("/admin/cache/games/{gameId}", async (string gameId, HttpContext
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (HybridCacheService)
         logger.LogError(ex, "Failed to invalidate cache for game {GameId}", gameId);
         return Results.Problem(detail: $"Failed to invalidate cache: {ex.Message}", statusCode: 500);
     }
@@ -5934,6 +6018,8 @@ v1Api.MapDelete("/admin/cache/tags/{tag}", async (string tag, HttpContext contex
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (HybridCacheService)
         logger.LogError(ex, "Failed to invalidate cache by tag {Tag}", tag);
         return Results.Problem(detail: $"Failed to invalidate cache: {ex.Message}", statusCode: 500);
     }
@@ -6614,6 +6700,8 @@ v1Api.MapPut("/chats/{chatId:guid}/messages/{messageId:guid}",
         }
         catch (Exception ex)
         {
+            // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+            // Specific exception handling occurs in service layer (ChatService)
             logger.LogError(ex, "Error updating message {MessageId} in chat {ChatId}", messageId, chatId);
             return Results.Problem(statusCode: 500, detail: "An error occurred while updating the message", title: "Internal Server Error");
         }
@@ -6675,6 +6763,8 @@ v1Api.MapDelete("/chats/{chatId:guid}/messages/{messageId:guid}",
         }
         catch (Exception ex)
         {
+            // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+            // Specific exception handling occurs in service layer (ChatService)
             logger.LogError(ex, "Error deleting message {MessageId} in chat {ChatId}", messageId, chatId);
             return Results.Problem(statusCode: 500, detail: "An error occurred while deleting the message", title: "Internal Server Error");
         }
@@ -6742,6 +6832,8 @@ v1Api.MapPost("/chats/{chatId:guid}/export", async (
     }
     catch (Exception ex)
     {
+        // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (ChatExportService)
         logger.LogError(ex, "Unexpected error during chat export for user {UserId}, chat {ChatId}",
             session.User.Id, chatId);
         return Results.Problem("An unexpected error occurred during export");

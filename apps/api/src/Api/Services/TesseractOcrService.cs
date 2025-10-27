@@ -102,6 +102,8 @@ public class TesseractOcrService : IOcrService, IDisposable
         }
         catch (Exception ex)
         {
+            // Service layer: Catches all exceptions to return domain result object
+            // OCR errors logged, returned as failure result with diagnostic message
             _logger.LogError(ex, "OCR failed for page {PageIndex} of {PdfPath}", pageIndex, pdfPath);
             return OcrResult.CreateFailure($"OCR failed: {ex.Message}");
         }
@@ -180,6 +182,8 @@ public class TesseractOcrService : IOcrService, IDisposable
         }
         catch (Exception ex)
         {
+            // Service layer: Catches all exceptions to return domain result object
+            // Full PDF OCR errors logged, returned as failure result with error details
             _logger.LogError(ex, "OCR failed for PDF: {PdfPath}", pdfPath);
             return OcrResult.CreateFailure($"OCR failed: {ex.Message}");
         }

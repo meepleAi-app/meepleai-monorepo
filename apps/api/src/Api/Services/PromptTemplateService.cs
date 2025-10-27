@@ -104,11 +104,27 @@ ANSWER:",
                 gameId, questionType);
             return Task.FromResult(FallbackTemplate);
         }
-        catch (Exception ex)
+        catch (RedisException ex)
         {
             _logger.LogError(
                 ex,
-                "Error loading prompt template for game {GameId}, question type {QuestionType}. Using fallback.",
+                "Redis error loading prompt template for game {GameId}, question type {QuestionType}. Using fallback.",
+                gameId, questionType);
+            return Task.FromResult(FallbackTemplate);
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(
+                ex,
+                "Database error loading prompt template for game {GameId}, question type {QuestionType}. Using fallback.",
+                gameId, questionType);
+            return Task.FromResult(FallbackTemplate);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(
+                ex,
+                "JSON parsing error loading prompt template for game {GameId}, question type {QuestionType}. Using fallback.",
                 gameId, questionType);
             return Task.FromResult(FallbackTemplate);
         }
@@ -337,10 +353,15 @@ ANSWER:",
 
             return activeVersion?.Content;
         }
-        catch (Exception ex)
+        catch (DbUpdateException ex)
         {
-            _logger.LogError(ex, "Error retrieving prompt template {TemplateName}", templateName);
-            throw;
+            _logger.LogError(ex, "Database error retrieving prompt template {TemplateName}", templateName);
+            throw new InvalidOperationException($"Failed to retrieve prompt template '{templateName}' due to database error", ex);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "JSON parsing error for prompt template {TemplateName}", templateName);
+            throw new InvalidOperationException($"Failed to parse prompt template '{templateName}' content", ex);
         }
     }
 
@@ -446,15 +467,25 @@ ANSWER:",
 
             return true;
         }
-        catch (Exception ex)
+        catch (DbUpdateException ex)
         {
             // Rollback on any error
             await transaction.RollbackAsync(ct);
             _logger.LogError(
                 ex,
-                "Error activating version {VersionId} for template {TemplateId}",
+                "Database error activating version {VersionId} for template {TemplateId}",
                 versionId, templateId);
-            throw;
+            throw new InvalidOperationException($"Failed to activate version {versionId} due to database error", ex);
+        }
+        catch (RedisException ex)
+        {
+            // Transaction already committed, cache invalidation failed (degraded mode)
+            _logger.LogError(
+                ex,
+                "Redis error during cache invalidation for version {VersionId}, template {TemplateId}. Activation succeeded but cache may be stale.",
+                versionId, templateId);
+            // Don't rollback - transaction already committed
+            return true;
         }
     }
 

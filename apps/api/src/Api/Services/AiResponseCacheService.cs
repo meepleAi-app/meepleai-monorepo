@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 
 namespace Api.Services;
 
@@ -56,10 +58,25 @@ public class AiResponseCacheService : IAiResponseCacheService
 
             return result;
         }
-        catch (Exception ex)
+        catch (RedisConnectionException ex)
         {
-            _logger.LogWarning(ex, "Cache get failed for key {CacheKey}. Proceeding without cache.", cacheKey);
-            return null; // Fail gracefully
+            _logger.LogWarning(ex, "Redis connection failed for key {CacheKey}. Proceeding without cache.", cacheKey);
+            return null; // Fail-open: cache miss
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Redis timeout for key {CacheKey}. Proceeding without cache.", cacheKey);
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "JSON deserialization error for key {CacheKey}. Proceeding without cache.", cacheKey);
+            return null;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid cache operation for key {CacheKey}. Proceeding without cache.", cacheKey);
+            return null;
         }
     }
 
@@ -84,10 +101,22 @@ public class AiResponseCacheService : IAiResponseCacheService
 
             _logger.LogInformation("Cached response for key: {CacheKey} (TTL: {TTL}s)", cacheKey, ttlSeconds);
         }
-        catch (Exception ex)
+        catch (RedisConnectionException ex)
         {
-            _logger.LogWarning(ex, "Cache set failed for key {CacheKey}. Proceeding without cache.", cacheKey);
-            // Fail gracefully - don't throw
+            _logger.LogWarning(ex, "Redis connection failed setting key {CacheKey}. Proceeding without cache.", cacheKey);
+            // Fail-open: cache write failure is non-critical
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Redis timeout setting key {CacheKey}. Proceeding without cache.", cacheKey);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "JSON serialization error for key {CacheKey}. Proceeding without cache.", cacheKey);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid cache operation for key {CacheKey}. Proceeding without cache.", cacheKey);
         }
     }
 

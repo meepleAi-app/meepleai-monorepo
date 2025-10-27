@@ -64,6 +64,12 @@ public class LanguageDetectionService : ILanguageDetectionService
         }
         catch (Exception ex)
         {
+            // FALLBACK PATTERN: Language detection failures default to English (en)
+            // Rationale: Language detection is a best-effort enhancement for RAG and embedding
+            // operations. Failing the entire operation because we cannot detect language would
+            // reduce system availability. Defaulting to English is reasonable given it's the most
+            // common language for board game rules and our primary training data language.
+            // Context: Detection failures are typically edge cases (empty text, unsupported encoding)
             _logger.LogError(ex, "Error during language detection, defaulting to 'en'");
             return "en";
         }

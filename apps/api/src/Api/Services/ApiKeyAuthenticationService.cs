@@ -205,10 +205,22 @@ public class ApiKeyAuthenticationService
 
             _logger.LogDebug("Updated last_used_at for API key {KeyId}", keyId);
         }
-        catch (Exception ex)
+        catch (DbUpdateException ex)
         {
-            // Don't throw - this is a fire-and-forget operation
-            _logger.LogError(ex, "Failed to update last_used_at for API key {KeyId}", keyId);
+            // FIRE-AND-FORGET PATTERN: last_used_at update must not fail authentication
+            // Rationale: Updating the last_used_at timestamp is a telemetry operation that
+            // tracks API key usage patterns. Authentication already succeeded - failing the
+            // request because we cannot update metadata violates fail-safe principles.
+            // Context: DB failures are typically transient (connection loss, lock timeout)
+            _logger.LogError(ex, "Database error updating last_used_at for API key {KeyId}", keyId);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // FIRE-AND-FORGET PATTERN: last_used_at update must not fail authentication
+            // Rationale: InvalidOperationException indicates context/DbSet disposal during
+            // async execution. Authentication succeeded, metadata update is best-effort only.
+            // Context: Typically occurs during high load or aggressive DbContext pooling
+            _logger.LogError(ex, "Invalid operation updating last_used_at for API key {KeyId}", keyId);
         }
     }
 

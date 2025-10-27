@@ -501,9 +501,14 @@ public class OAuthService : IOAuthService
         {
             refreshToken = await _encryption.DecryptAsync(oauthAccount.RefreshTokenEncrypted, EncryptionPurpose);
         }
-        catch (Exception ex)
+        catch (CryptographicException ex)
         {
-            _logger.LogError(ex, "Failed to decrypt refresh token. UserId: {UserId}, Provider: {Provider}", userId, provider);
+            _logger.LogError(ex, "Cryptographic error decrypting refresh token. UserId: {UserId}, Provider: {Provider}", userId, provider);
+            return null;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Failed to decrypt refresh token (key rotation or corruption). UserId: {UserId}, Provider: {Provider}", userId, provider);
             return null;
         }
 

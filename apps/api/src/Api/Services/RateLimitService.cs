@@ -127,8 +127,13 @@ public class RateLimitService : IRateLimitService
         }
         catch (Exception ex)
         {
+            // FAIL-OPEN PATTERN: Rate limiting failures must not block legitimate traffic
+            // Rationale: Rate limiting is a protective control - failing closed when Redis is
+            // unavailable creates a self-inflicted denial of service. We favor availability over
+            // strict rate enforcement during infrastructure failures. Monitoring alerts on this
+            // error enable operators to detect and resolve Redis issues without impacting users.
+            // Context: Redis failures are typically transient (network blip, container restart)
             _logger.LogError(ex, "Rate limit check failed for key {Key}. Allowing request (fail-open)", key);
-            // Fail-open: allow request if Redis is unavailable
             return new RateLimitResult(true, maxTokens, 0);
         }
     }

@@ -6,6 +6,7 @@ using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Canvas.Parser;
 using iText.Kernel.Pdf.Canvas.Parser.Data;
 using iText.Kernel.Pdf.Canvas.Parser.Listener;
+using Api.Services.Exceptions;
 
 namespace Api.Services;
 
@@ -43,10 +44,34 @@ public class PdfTableExtractionService
             var result = await Task.Run(() => ExtractStructuredData(filePath), ct);
             return result;
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation extracting structured content from PDF: {FilePath}", filePath);
+            throw new PdfExtractionException($"Invalid PDF operation: {ex.Message}", ex);
+        }
+        catch (NotSupportedException ex)
+        {
+            _logger.LogError(ex, "Unsupported PDF format for structured extraction: {FilePath}", filePath);
+            throw new PdfExtractionException($"Unsupported PDF format: {ex.Message}", ex);
+        }
+        catch (IOException ex)
+        {
+            _logger.LogError(ex, "I/O error extracting structured content from PDF: {FilePath}", filePath);
+            throw new PdfExtractionException($"Failed to read PDF file: {ex.Message}", ex);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogError(ex, "Invalid argument extracting structured content from PDF: {FilePath}", filePath);
+            throw new PdfExtractionException($"Invalid PDF argument: {ex.Message}", ex);
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to extract structured content from PDF: {FilePath}", filePath);
-            return PdfStructuredExtractionResult.CreateFailure($"Extraction failed: {ex.Message}");
+            _logger.LogError(ex, "Unexpected error extracting structured content from PDF: {FilePath}", filePath);
+            throw new PdfExtractionException($"Failed to extract structured content: {ex.Message}", ex);
         }
     }
 
@@ -879,9 +904,21 @@ public class PdfTableExtractionService
                 });
             }
         }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid operation extracting images from page {PageNum}", pageNum);
+        }
+        catch (NotSupportedException ex)
+        {
+            _logger.LogWarning(ex, "Unsupported image format on page {PageNum}", pageNum);
+        }
+        catch (IOException ex)
+        {
+            _logger.LogWarning(ex, "I/O error extracting images from page {PageNum}", pageNum);
+        }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to extract images from page {PageNum}", pageNum);
+            _logger.LogWarning(ex, "Unexpected error extracting images from page {PageNum}", pageNum);
         }
 
         return diagrams;

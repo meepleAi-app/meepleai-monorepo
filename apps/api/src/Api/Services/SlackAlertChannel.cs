@@ -72,6 +72,11 @@ public class SlackAlertChannel : IAlertChannel
         }
         catch (Exception ex)
         {
+            // RESILIENCE PATTERN: Slack alert channel failures must return false, not throw
+            // Rationale: Alert channels implement IAlertChannel which requires returning success/
+            // failure status. Throwing would prevent other channels from executing (email, PagerDuty).
+            // Caller (AlertingService) tracks per-channel results for graceful degradation.
+            // Context: Slack failures are typically external (webhook timeout, API rate limit)
             _logger.LogError(ex, "Failed to send Slack alert for {AlertType}", alertType);
             return false;
         }

@@ -86,6 +86,8 @@ public class HybridSearchService : IHybridSearchService
         }
         catch (Exception ex)
         {
+            // Service layer: Logs exception details before re-throwing
+            // Caller receives exception with full diagnostic context
             _logger.LogError(ex, "Error during hybrid search for query '{Query}', mode={Mode}", query, mode);
             throw;
         }

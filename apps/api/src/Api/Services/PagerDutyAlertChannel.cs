@@ -82,6 +82,11 @@ public class PagerDutyAlertChannel : IAlertChannel
         }
         catch (Exception ex)
         {
+            // RESILIENCE PATTERN: PagerDuty alert channel failures must return false, not throw
+            // Rationale: Alert channels implement IAlertChannel which requires returning success/
+            // failure status. Throwing would prevent other channels from executing (email, Slack).
+            // Caller (AlertingService) tracks per-channel results for graceful degradation.
+            // Context: PagerDuty failures are typically external (API timeout, rate limit, auth)
             _logger.LogError(ex, "Failed to send PagerDuty alert for {AlertType}", alertType);
             return false;
         }

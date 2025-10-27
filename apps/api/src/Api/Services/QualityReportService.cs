@@ -97,6 +97,8 @@ public class QualityReportService : BackgroundService, IQualityReportService
             }
             catch (Exception ex)
             {
+                // Background service: Generic catch prevents service from crashing host process
+                // Report generation failure logged but service continues scheduled execution
                 _logger.LogError(ex, "Error generating scheduled quality report");
                 // Continue to next iteration despite error
             }

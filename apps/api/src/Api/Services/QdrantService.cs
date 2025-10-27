@@ -1,4 +1,5 @@
 using Api.Observability;
+using Grpc.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Qdrant.Client;
@@ -49,9 +50,19 @@ public class QdrantService : IQdrantService
             var collectionsResponse = await _clientAdapter.ListCollectionsAsync(ct);
             return collectionsResponse.Any(c => c == CollectionName);
         }
-        catch (Exception ex)
+        catch (RpcException ex)
         {
-            _logger.LogError(ex, "Failed to check if collection exists");
+            _logger.LogError(ex, "gRPC error checking if collection exists: {Status}", ex.Status);
+            throw;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation while checking if collection exists");
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogError(ex, "Operation cancelled while checking if collection exists");
             throw;
         }
     }
@@ -116,9 +127,24 @@ public class QdrantService : IQdrantService
 
             _logger.LogInformation("Collection {CollectionName} created successfully with indexes", CollectionName);
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
         {
-            _logger.LogError(ex, "Failed to ensure collection exists");
+            _logger.LogError(ex, "Invalid argument while ensuring collection exists");
+            throw;
+        }
+        catch (RpcException ex)
+        {
+            _logger.LogError(ex, "gRPC error ensuring collection exists: {Status}", ex.Status);
+            throw;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation while ensuring collection exists");
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogError(ex, "Operation cancelled while ensuring collection exists");
             throw;
         }
     }
@@ -201,11 +227,54 @@ public class QdrantService : IQdrantService
 
             return IndexResult.CreateSuccess(chunks.Count);
         }
-        catch (Exception ex)
+        catch (ArgumentNullException ex)
         {
-            _logger.LogError(ex, "Failed to index document chunks for PDF {PdfId}", pdfId);
+            _logger.LogError(ex, "Null argument while indexing document chunks for PDF {PdfId}", pdfId);
 
-            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogError(ex, "Invalid argument while indexing document chunks for PDF {PdfId}", pdfId);
+
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
+        }
+        catch (RpcException ex)
+        {
+            _logger.LogError(ex, "gRPC error indexing document chunks for PDF {PdfId}: {Status}", pdfId, ex.Status);
+
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation while indexing document chunks for PDF {PdfId}", pdfId);
+
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogError(ex, "Operation cancelled while indexing document chunks for PDF {PdfId}", pdfId);
+
             activity?.SetTag("success", false);
             activity?.SetTag("error.type", ex.GetType().Name);
             activity?.SetTag("error.message", ex.Message);
@@ -287,11 +356,54 @@ public class QdrantService : IQdrantService
 
             return SearchResult.CreateSuccess(results);
         }
-        catch (Exception ex)
+        catch (ArgumentNullException ex)
         {
-            _logger.LogError(ex, "Search failed for game {GameId}", gameId);
+            _logger.LogError(ex, "Null argument during search for game {GameId}", gameId);
 
-            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogError(ex, "Invalid argument during search for game {GameId}", gameId);
+
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
+        }
+        catch (RpcException ex)
+        {
+            _logger.LogError(ex, "gRPC error during search for game {GameId}: {Status}", gameId, ex.Status);
+
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation during search for game {GameId}", gameId);
+
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogError(ex, "Operation cancelled during search for game {GameId}", gameId);
+
             activity?.SetTag("success", false);
             activity?.SetTag("error.type", ex.GetType().Name);
             activity?.SetTag("error.message", ex.Message);
@@ -334,9 +446,24 @@ public class QdrantService : IQdrantService
             _logger.LogInformation("Successfully deleted vectors for PDF {PdfId}", pdfId);
             return true;
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
         {
-            _logger.LogError(ex, "Failed to delete vectors for PDF {PdfId}", pdfId);
+            _logger.LogError(ex, "Invalid argument while deleting vectors for PDF {PdfId}", pdfId);
+            return false;
+        }
+        catch (RpcException ex)
+        {
+            _logger.LogError(ex, "gRPC error deleting vectors for PDF {PdfId}: {Status}", pdfId, ex.Status);
+            return false;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation while deleting vectors for PDF {PdfId}", pdfId);
+            return false;
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogError(ex, "Operation cancelled while deleting vectors for PDF {PdfId}", pdfId);
             return false;
         }
     }
@@ -401,9 +528,29 @@ public class QdrantService : IQdrantService
             _logger.LogInformation("Successfully indexed {Count} chunks with metadata", chunks.Count);
             return IndexResult.CreateSuccess(chunks.Count);
         }
-        catch (Exception ex)
+        catch (ArgumentNullException ex)
         {
-            _logger.LogError(ex, "Failed to index chunks with metadata");
+            _logger.LogError(ex, "Null argument while indexing chunks with metadata");
+            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogError(ex, "Invalid argument while indexing chunks with metadata");
+            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
+        }
+        catch (RpcException ex)
+        {
+            _logger.LogError(ex, "gRPC error indexing chunks with metadata: {Status}", ex.Status);
+            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation while indexing chunks with metadata");
+            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogError(ex, "Operation cancelled while indexing chunks with metadata");
             return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
         }
     }
@@ -456,9 +603,29 @@ public class QdrantService : IQdrantService
             _logger.LogInformation("Found {Count} results in category {Category}", results.Count, category);
             return SearchResult.CreateSuccess(results);
         }
-        catch (Exception ex)
+        catch (ArgumentNullException ex)
         {
-            _logger.LogError(ex, "Search failed for category {Category}", category);
+            _logger.LogError(ex, "Null argument during search for category {Category}", category);
+            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogError(ex, "Invalid argument during search for category {Category}", category);
+            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
+        }
+        catch (RpcException ex)
+        {
+            _logger.LogError(ex, "gRPC error during search for category {Category}: {Status}", category, ex.Status);
+            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation during search for category {Category}", category);
+            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogError(ex, "Operation cancelled during search for category {Category}", category);
             return SearchResult.CreateFailure($"Search failed: {ex.Message}");
         }
     }
@@ -544,9 +711,57 @@ public class QdrantService : IQdrantService
 
             return IndexResult.CreateSuccess(chunks.Count);
         }
-        catch (Exception ex)
+        catch (ArgumentNullException ex)
         {
-            _logger.LogError(ex, "Failed to index document chunks for PDF {PdfId} with language {Language}",
+            _logger.LogError(ex, "Null argument while indexing document chunks for PDF {PdfId} with language {Language}",
+                pdfId, language);
+
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogError(ex, "Invalid argument while indexing document chunks for PDF {PdfId} with language {Language}",
+                pdfId, language);
+
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
+        }
+        catch (RpcException ex)
+        {
+            _logger.LogError(ex, "gRPC error indexing document chunks for PDF {PdfId} with language {Language}: {Status}",
+                pdfId, language, ex.Status);
+
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation while indexing document chunks for PDF {PdfId} with language {Language}",
+                pdfId, language);
+
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogError(ex, "Operation cancelled while indexing document chunks for PDF {PdfId} with language {Language}",
                 pdfId, language);
 
             activity?.SetTag("success", false);
@@ -636,9 +851,53 @@ public class QdrantService : IQdrantService
 
             return SearchResult.CreateSuccess(results);
         }
-        catch (Exception ex)
+        catch (ArgumentNullException ex)
         {
-            _logger.LogError(ex, "Search failed for game {GameId} and language {Language}", gameId, language);
+            _logger.LogError(ex, "Null argument during search for game {GameId} and language {Language}", gameId, language);
+
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogError(ex, "Invalid argument during search for game {GameId} and language {Language}", gameId, language);
+
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
+        }
+        catch (RpcException ex)
+        {
+            _logger.LogError(ex, "gRPC error during search for game {GameId} and language {Language}: {Status}", gameId, language, ex.Status);
+
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation during search for game {GameId} and language {Language}", gameId, language);
+
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            return SearchResult.CreateFailure($"Search failed: {ex.Message}");
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogError(ex, "Operation cancelled during search for game {GameId} and language {Language}", gameId, language);
 
             activity?.SetTag("success", false);
             activity?.SetTag("error.type", ex.GetType().Name);
@@ -682,9 +941,24 @@ public class QdrantService : IQdrantService
             _logger.LogInformation("Successfully deleted vectors for category {Category}", category);
             return true;
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
         {
-            _logger.LogError(ex, "Failed to delete vectors for category {Category}", category);
+            _logger.LogError(ex, "Invalid argument while deleting vectors for category {Category}", category);
+            return false;
+        }
+        catch (RpcException ex)
+        {
+            _logger.LogError(ex, "gRPC error deleting vectors for category {Category}: {Status}", category, ex.Status);
+            return false;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation while deleting vectors for category {Category}", category);
+            return false;
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogError(ex, "Operation cancelled while deleting vectors for category {Category}", category);
             return false;
         }
     }

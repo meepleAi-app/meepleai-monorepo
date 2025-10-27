@@ -1,4 +1,6 @@
+using Api.Infrastructure;
 using Api.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Api.Services;
@@ -56,9 +58,13 @@ public class SessionAutoRevocationService : BackgroundService
             {
                 await RevokeInactiveSessionsAsync(stoppingToken);
             }
-            catch (Exception ex)
+            catch (DbUpdateException ex)
             {
-                _logger.LogError(ex, "Error during session auto-revocation");
+                _logger.LogError(ex, "Database error during session auto-revocation");
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogError(ex, "Invalid operation during session auto-revocation");
             }
 
             // Wait for the configured interval before next run
@@ -90,10 +96,10 @@ public class SessionAutoRevocationService : BackgroundService
                 _logger.LogDebug("No inactive sessions to revoke");
             }
         }
-        catch (Exception ex)
+        catch (DbUpdateException ex)
         {
-            _logger.LogError(ex, "Failed to auto-revoke inactive sessions");
-            throw;
+            _logger.LogError(ex, "Database error revoking expired sessions");
+            throw new InvalidOperationException("Failed to revoke expired sessions due to database error", ex);
         }
     }
 }

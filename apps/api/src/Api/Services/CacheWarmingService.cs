@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Api.Infrastructure;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
@@ -88,14 +89,15 @@ public class CacheWarmingService : BackgroundService
                     _logger.LogInformation("Cache warming service is shutting down (cancellation requested).");
                     break;
                 }
-                catch (Exception ex)
+                catch (InvalidOperationException ex)
                 {
-                    _logger.LogError(ex, "Error during cache warming cycle. Will retry after interval.");
-
-                    // Continue after error (don't crash the service)
-                    await Task.Delay(
-                        TimeSpan.FromHours(_config.WarmingIntervalHours),
-                        stoppingToken);
+                    _logger.LogError(ex, "Invalid operation during cache warming cycle. Will retry after interval.");
+                    await Task.Delay(TimeSpan.FromHours(_config.WarmingIntervalHours), stoppingToken);
+                }
+                catch (HttpRequestException ex)
+                {
+                    _logger.LogError(ex, "HTTP error during cache warming cycle. Will retry after interval.");
+                    await Task.Delay(TimeSpan.FromHours(_config.WarmingIntervalHours), stoppingToken);
                 }
             }
         }
@@ -154,9 +156,24 @@ public class CacheWarmingService : BackgroundService
 
             _logger.LogInformation("Cache warming cycle completed successfully.");
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
-            _logger.LogError(ex, "Error during cache warming cycle");
+            _logger.LogError(ex, "Invalid operation during cache warming cycle");
+            throw;
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP error during cache warming cycle");
+            throw;
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogInformation(ex, "Cache warming cycle cancelled");
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogInformation(ex, "Cache warming cycle operation cancelled");
             throw;
         }
     }
@@ -199,11 +216,25 @@ public class CacheWarmingService : BackgroundService
                 "Successfully warmed cache for query: {Query} (game {GameId})",
                 frequentQuery.Query, frequentQuery.GameId);
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
-            // Log error but continue with next query (individual failures should not crash warming)
-            _logger.LogError(ex,
-                "Failed to warm cache for query: {Query} (game {GameId})",
+            // Background service resilience: individual failures should not crash warming
+            _logger.LogError(ex, "Invalid operation warming cache for query: {Query} (game {GameId})",
+                frequentQuery.Query, frequentQuery.GameId);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP error warming cache for query: {Query} (game {GameId})",
+                frequentQuery.Query, frequentQuery.GameId);
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogWarning(ex, "Task cancelled warming cache for query: {Query} (game {GameId})",
+                frequentQuery.Query, frequentQuery.GameId);
+        }
+        catch (OperationCanceledException ex)
+        {
+            _logger.LogInformation(ex, "Operation cancelled warming cache for query: {Query} (game {GameId})",
                 frequentQuery.Query, frequentQuery.GameId);
         }
     }

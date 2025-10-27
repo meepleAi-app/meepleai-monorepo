@@ -99,9 +99,24 @@ public class EmbeddingService : IEmbeddingService
             _logger.LogError(ex, "Embedding generation timed out");
             return EmbeddingResult.CreateFailure("Request timed out");
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request failed during embedding generation");
+            return EmbeddingResult.CreateFailure($"HTTP error: {ex.Message}");
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize embedding response");
+            return EmbeddingResult.CreateFailure("Invalid response format");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation during embedding generation");
+            return EmbeddingResult.CreateFailure($"Configuration error: {ex.Message}");
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to generate embeddings");
+            _logger.LogError(ex, "Unexpected error during embedding generation");
             return EmbeddingResult.CreateFailure($"Error: {ex.Message}");
         }
     }
@@ -248,9 +263,24 @@ public class EmbeddingService : IEmbeddingService
             _logger.LogError(ex, "Embedding generation timed out for language {Language}", language);
             return EmbeddingResult.CreateFailure("Request timed out");
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request failed during embedding generation for language {Language}", language);
+            return EmbeddingResult.CreateFailure($"HTTP error: {ex.Message}");
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize embedding response for language {Language}", language);
+            return EmbeddingResult.CreateFailure("Invalid response format");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation during embedding generation for language {Language}", language);
+            return EmbeddingResult.CreateFailure($"Configuration error: {ex.Message}");
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to generate embeddings for language {Language}", language);
+            _logger.LogError(ex, "Unexpected error during embedding generation for language {Language}", language);
             return EmbeddingResult.CreateFailure($"Error: {ex.Message}");
         }
     }
@@ -313,9 +343,19 @@ public class EmbeddingService : IEmbeddingService
             _logger.LogWarning(ex, "Local embedding service unavailable");
             return EmbeddingResult.CreateFailure("Local service unavailable");
         }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogWarning(ex, "Local embedding service request timed out");
+            return EmbeddingResult.CreateFailure("Local service timeout");
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize local embedding service response");
+            return EmbeddingResult.CreateFailure("Invalid local service response");
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error calling local embedding service");
+            _logger.LogError(ex, "Unexpected error calling local embedding service");
             return EmbeddingResult.CreateFailure($"Local service error: {ex.Message}");
         }
     }

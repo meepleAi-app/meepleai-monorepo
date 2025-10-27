@@ -81,6 +81,8 @@ public class AgentFeedbackService
         }
         catch (Exception ex)
         {
+            // Service layer: Logs exception details before re-throwing
+            // Caller receives exception with full diagnostic context
             _logger.LogError(ex, "Failed to record feedback for message {MessageId}", messageId);
             throw;
         }

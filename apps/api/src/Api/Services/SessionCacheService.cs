@@ -44,10 +44,25 @@ public class SessionCacheService : ISessionCacheService
             var session = JsonSerializer.Deserialize<ActiveSession>(cached.ToString(), JsonOptions);
             return session;
         }
-        catch (Exception ex)
+        catch (RedisConnectionException ex)
         {
-            _logger.LogWarning(ex, "Session cache get failed for hash {TokenHash}. Proceeding without cache.", tokenHash.Substring(0, 8));
-            return null; // Fail gracefully
+            _logger.LogWarning(ex, "Redis connection failed for session hash {TokenHash}. Proceeding without cache.", tokenHash.Substring(0, 8));
+            return null; // Fail-open: fall back to database
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Redis timeout for session hash {TokenHash}. Proceeding without cache.", tokenHash.Substring(0, 8));
+            return null;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "JSON deserialization error for session hash {TokenHash}. Proceeding without cache.", tokenHash.Substring(0, 8));
+            return null;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid cache operation for session hash {TokenHash}. Proceeding without cache.", tokenHash.Substring(0, 8));
+            return null;
         }
     }
 
@@ -75,10 +90,22 @@ public class SessionCacheService : ISessionCacheService
             await db.SetAddAsync(userSetKey, cacheKey);
             await db.KeyExpireAsync(userSetKey, ttl); // Set same expiration
         }
-        catch (Exception ex)
+        catch (RedisConnectionException ex)
         {
-            _logger.LogWarning(ex, "Session cache set failed for hash {TokenHash}. Proceeding without cache.", tokenHash.Substring(0, 8));
-            // Fail gracefully - don't throw
+            _logger.LogWarning(ex, "Redis connection failed setting session hash {TokenHash}. Proceeding without cache.", tokenHash.Substring(0, 8));
+            // Fail-open: session write failure is non-critical
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Redis timeout setting session hash {TokenHash}. Proceeding without cache.", tokenHash.Substring(0, 8));
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "JSON serialization error for session hash {TokenHash}. Proceeding without cache.", tokenHash.Substring(0, 8));
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid cache operation for session hash {TokenHash}. Proceeding without cache.", tokenHash.Substring(0, 8));
         }
     }
 
@@ -95,9 +122,17 @@ public class SessionCacheService : ISessionCacheService
                 _logger.LogInformation("Invalidated session cache for hash: {TokenHash}", tokenHash.Substring(0, 8));
             }
         }
-        catch (Exception ex)
+        catch (RedisConnectionException ex)
         {
-            _logger.LogWarning(ex, "Session cache invalidation failed for hash {TokenHash}", tokenHash.Substring(0, 8));
+            _logger.LogWarning(ex, "Redis connection failed invalidating session hash {TokenHash}", tokenHash.Substring(0, 8));
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Redis timeout invalidating session hash {TokenHash}", tokenHash.Substring(0, 8));
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid cache operation invalidating session hash {TokenHash}", tokenHash.Substring(0, 8));
         }
     }
 
@@ -126,9 +161,17 @@ public class SessionCacheService : ISessionCacheService
 
             _logger.LogInformation("Invalidated {Count} session(s) for user: {UserId}", removed, userId);
         }
-        catch (Exception ex)
+        catch (RedisConnectionException ex)
         {
-            _logger.LogWarning(ex, "Session cache invalidation failed for user {UserId}", userId);
+            _logger.LogWarning(ex, "Redis connection failed invalidating sessions for user {UserId}", userId);
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Redis timeout invalidating sessions for user {UserId}", userId);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid cache operation invalidating sessions for user {UserId}", userId);
         }
     }
 

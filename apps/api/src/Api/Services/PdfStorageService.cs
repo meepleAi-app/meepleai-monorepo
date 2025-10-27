@@ -4,6 +4,7 @@ using Api.Infrastructure.Entities;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Api.Services.Exceptions;
 
 namespace Api.Services;
 
@@ -165,10 +166,29 @@ public class PdfStorageService
                 UploadedByUserId = pdfDoc.UploadedByUserId
             });
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (IOException ex)
+        {
+            _logger.LogError(ex, "File I/O error during PDF upload for game {GameId}", gameId);
+            throw new PdfStorageException("Failed to save PDF file: I/O error occurred.", ex);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _logger.LogError(ex, "Access denied during PDF upload for game {GameId}", gameId);
+            throw new PdfStorageException("Failed to save PDF file: Access denied to storage location.", ex);
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error during PDF upload for game {GameId}", gameId);
+            throw new PdfStorageException("Failed to save PDF metadata: Database error occurred.", ex);
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to upload PDF for game {GameId}", gameId);
-            return new PdfUploadResult(false, "Unable to upload PDF due to a server error. Please try again or contact support if the problem persists.", null);
+            _logger.LogError(ex, "Unexpected error during PDF upload for game {GameId}", gameId);
+            throw new PdfStorageException($"Failed to upload PDF: {ex.Message}", ex);
         }
     }
 
@@ -238,9 +258,23 @@ public class PdfStorageService
                         }
                     }
                 }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (InvalidOperationException ex)
+                {
+                    _logger.LogWarning(ex, "Invalid operation deleting vectors from Qdrant for PDF {PdfId}", pdfId);
+                }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Error deleting vectors from Qdrant for PDF {PdfId}", pdfId);
+                    // CLEANUP PATTERN: Qdrant deletion failures must not prevent PDF deletion
+                    // Rationale: PDF deletion is a critical user operation. If Qdrant is unavailable,
+                    // we still delete the DB records and file to maintain data consistency from the
+                    // user's perspective. Orphaned Qdrant vectors can be cleaned up later via maintenance
+                    // jobs. Blocking deletion would create a poor user experience during Qdrant outages.
+                    // Context: Qdrant failures are typically external (service down, network timeout)
+                    _logger.LogWarning(ex, "Unexpected error deleting vectors from Qdrant for PDF {PdfId}", pdfId);
                 }
             }
 
@@ -259,10 +293,25 @@ public class PdfStorageService
                     _logger.LogInformation("Deleted physical file at {FilePath}", filePath);
                 }
             }
+            catch (IOException ex)
+            {
+                _logger.LogWarning(ex, "I/O error deleting physical file for PDF {PdfId} at {FilePath}", pdfId, filePath);
+                // Don't fail the operation if file deletion fails
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _logger.LogWarning(ex, "Access denied deleting physical file for PDF {PdfId} at {FilePath}", pdfId, filePath);
+                // Don't fail the operation if file deletion fails
+            }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to delete physical file for PDF {PdfId} at {FilePath}", pdfId, filePath);
-                // Don't fail the operation if file deletion fails
+                // CLEANUP PATTERN: File deletion failures must not prevent PDF deletion completion
+                // Rationale: Database records are already deleted successfully. File deletion is
+                // a cleanup operation - failing the entire PDF deletion because we cannot remove the
+                // physical file would create inconsistency (DB says deleted, file exists). Orphaned
+                // files can be cleaned up later via filesystem maintenance. User sees successful deletion.
+                // Context: File failures are typically permission/locking issues (antivirus, backup)
+                _logger.LogWarning(ex, "Unexpected error deleting physical file for PDF {PdfId} at {FilePath}", pdfId, filePath);
             }
 
             // Invalidate cache
@@ -270,10 +319,24 @@ public class PdfStorageService
 
             return new PdfDeleteResult(true, "PDF deleted successfully", gameId);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogError(ex, "Concurrency conflict deleting PDF {PdfId}", pdfId);
+            throw new PdfStorageException("Failed to delete PDF: The PDF was modified by another operation.", ex);
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error deleting PDF {PdfId}", pdfId);
+            throw new PdfStorageException("Failed to delete PDF metadata: Database error occurred.", ex);
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to delete PDF {PdfId}", pdfId);
-            return new PdfDeleteResult(false, $"Failed to delete PDF: {ex.Message}", null);
+            _logger.LogError(ex, "Unexpected error deleting PDF {PdfId}", pdfId);
+            throw new PdfStorageException($"Failed to delete PDF: {ex.Message}", ex);
         }
     }
 
@@ -479,10 +542,38 @@ public class PdfStorageService
                 await db.SaveChangesAsync(CancellationToken.None);
             }
         }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation during PDF processing for {PdfId}", pdfId);
+            await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, $"Invalid operation: {ex.Message}", CancellationToken.None);
+
+            var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfId }, CancellationToken.None);
+            if (pdfDoc != null)
+            {
+                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingError = $"Invalid operation: {ex.Message}";
+                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                await db.SaveChangesAsync(CancellationToken.None);
+            }
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error during PDF processing for {PdfId}", pdfId);
+            await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, "Database error occurred", CancellationToken.None);
+
+            var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfId }, CancellationToken.None);
+            if (pdfDoc != null)
+            {
+                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingError = "Database error occurred";
+                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                await db.SaveChangesAsync(CancellationToken.None);
+            }
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "PDF processing failed for {PdfId}", pdfId);
-            await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, ex.Message, CancellationToken.None);
+            _logger.LogError(ex, "Unexpected error during PDF processing for {PdfId}", pdfId);
+            await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, $"Unexpected error: {ex.Message}", CancellationToken.None);
 
             var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfId }, CancellationToken.None);
             if (pdfDoc != null)
@@ -533,9 +624,17 @@ public class PdfStorageService
             await db.SaveChangesAsync(ct);
             _logger.LogDebug("Updated progress for PDF {PdfId}: {Step} {Percent}%", pdfId, step, percentComplete);
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogWarning(ex, "Database error updating progress for PDF {PdfId}", pdfId);
+        }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to update progress for PDF {PdfId}", pdfId);
+            _logger.LogWarning(ex, "Unexpected error updating progress for PDF {PdfId}", pdfId);
         }
     }
 
@@ -629,9 +728,57 @@ public class PdfStorageService
                 await db.SaveChangesAsync();
             }
         }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation during text extraction for PDF {PdfId}", pdfId);
+
+            try
+            {
+                var pdfDoc = await db.PdfDocuments.FindAsync(pdfId);
+                if (pdfDoc != null)
+                {
+                    pdfDoc.ProcessingStatus = "failed";
+                    pdfDoc.ProcessingError = $"Invalid operation: {ex.Message}";
+                    pdfDoc.ProcessedAt = DateTime.UtcNow;
+                    await db.SaveChangesAsync();
+                }
+            }
+            catch (DbUpdateException innerEx)
+            {
+                _logger.LogError(innerEx, "Database error updating error status for PDF {PdfId}", pdfId);
+            }
+            catch (Exception innerEx)
+            {
+                _logger.LogError(innerEx, "Unexpected error updating error status for PDF {PdfId}", pdfId);
+            }
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error during text extraction for PDF {PdfId}", pdfId);
+
+            try
+            {
+                var pdfDoc = await db.PdfDocuments.FindAsync(pdfId);
+                if (pdfDoc != null)
+                {
+                    pdfDoc.ProcessingStatus = "failed";
+                    pdfDoc.ProcessingError = "Database error occurred";
+                    pdfDoc.ProcessedAt = DateTime.UtcNow;
+                    await db.SaveChangesAsync();
+                }
+            }
+            catch (DbUpdateException innerEx)
+            {
+                _logger.LogError(innerEx, "Database error updating error status for PDF {PdfId}", pdfId);
+            }
+            catch (Exception innerEx)
+            {
+                _logger.LogError(innerEx, "Unexpected error updating error status for PDF {PdfId}", pdfId);
+            }
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during text extraction for PDF {PdfId}", pdfId);
+            _logger.LogError(ex, "Unexpected error during text extraction for PDF {PdfId}", pdfId);
 
             try
             {
@@ -644,9 +791,13 @@ public class PdfStorageService
                     await db.SaveChangesAsync();
                 }
             }
+            catch (DbUpdateException innerEx)
+            {
+                _logger.LogError(innerEx, "Database error updating error status for PDF {PdfId}", pdfId);
+            }
             catch (Exception innerEx)
             {
-                _logger.LogError(innerEx, "Failed to update error status for PDF {PdfId}", pdfId);
+                _logger.LogError(innerEx, "Unexpected error updating error status for PDF {PdfId}", pdfId);
             }
         }
     }
@@ -749,9 +900,57 @@ public class PdfStorageService
                 "Vector indexing completed for PDF {PdfId}: {ChunkCount} chunks indexed",
                 pdfId, indexResult.IndexedCount);
         }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation during vector indexing for PDF {PdfId}", pdfId);
+
+            try
+            {
+                var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId);
+                if (vectorDoc != null)
+                {
+                    vectorDoc.IndexingStatus = "failed";
+                    vectorDoc.IndexingError = $"Invalid operation: {ex.Message}";
+                    vectorDoc.IndexedAt = DateTime.UtcNow;
+                    await db.SaveChangesAsync();
+                }
+            }
+            catch (DbUpdateException innerEx)
+            {
+                _logger.LogError(innerEx, "Database error updating vector document error status for PDF {PdfId}", pdfId);
+            }
+            catch (Exception innerEx)
+            {
+                _logger.LogError(innerEx, "Unexpected error updating vector document error status for PDF {PdfId}", pdfId);
+            }
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error during vector indexing for PDF {PdfId}", pdfId);
+
+            try
+            {
+                var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId);
+                if (vectorDoc != null)
+                {
+                    vectorDoc.IndexingStatus = "failed";
+                    vectorDoc.IndexingError = "Database error occurred";
+                    vectorDoc.IndexedAt = DateTime.UtcNow;
+                    await db.SaveChangesAsync();
+                }
+            }
+            catch (DbUpdateException innerEx)
+            {
+                _logger.LogError(innerEx, "Database error updating vector document error status for PDF {PdfId}", pdfId);
+            }
+            catch (Exception innerEx)
+            {
+                _logger.LogError(innerEx, "Unexpected error updating vector document error status for PDF {PdfId}", pdfId);
+            }
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Vector indexing failed for PDF {PdfId}", pdfId);
+            _logger.LogError(ex, "Unexpected error during vector indexing for PDF {PdfId}", pdfId);
 
             try
             {
@@ -764,9 +963,13 @@ public class PdfStorageService
                     await db.SaveChangesAsync();
                 }
             }
+            catch (DbUpdateException innerEx)
+            {
+                _logger.LogError(innerEx, "Database error updating vector document error status for PDF {PdfId}", pdfId);
+            }
             catch (Exception innerEx)
             {
-                _logger.LogError(innerEx, "Failed to update vector document error status for PDF {PdfId}", pdfId);
+                _logger.LogError(innerEx, "Unexpected error updating vector document error status for PDF {PdfId}", pdfId);
             }
         }
     }
@@ -793,9 +996,13 @@ public class PdfStorageService
         {
             throw;
         }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid operation invalidating AI cache for game {GameId} after {Operation}", gameId, operation);
+        }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to invalidate AI cache for game {GameId} after {Operation}", gameId, operation);
+            _logger.LogWarning(ex, "Unexpected error invalidating AI cache for game {GameId} after {Operation}", gameId, operation);
         }
     }
 }

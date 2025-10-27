@@ -47,12 +47,18 @@ public class RedisFrequencyTracker : IRedisFrequencyTracker
                 "Incremented access count for query in game {GameId}: {Query}",
                 gameId, query);
         }
-        catch (Exception ex)
+        catch (RedisConnectionException ex)
         {
-            // Log error but don't throw - frequency tracking is non-critical
-            _logger.LogError(ex,
-                "Failed to track access for query in game {GameId}: {Query}",
-                gameId, query);
+            // Fail-open: frequency tracking is non-critical
+            _logger.LogWarning(ex, "Redis connection failed tracking access for game {GameId}", gameId);
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Redis timeout tracking access for game {GameId}", gameId);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation tracking access for game {GameId}: {Query}", gameId, query);
         }
     }
 
@@ -85,11 +91,19 @@ public class RedisFrequencyTracker : IRedisFrequencyTracker
 
             return result;
         }
-        catch (Exception ex)
+        catch (RedisConnectionException ex)
         {
-            _logger.LogError(ex,
-                "Failed to get top queries for game {GameId}, returning empty list",
-                gameId);
+            _logger.LogWarning(ex, "Redis connection failed getting top queries for game {GameId}, returning empty list", gameId);
+            return new List<FrequentQuery>();
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Redis timeout getting top queries for game {GameId}, returning empty list", gameId);
+            return new List<FrequentQuery>();
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation getting top queries for game {GameId}, returning empty list", gameId);
             return new List<FrequentQuery>();
         }
     }
@@ -114,11 +128,19 @@ public class RedisFrequencyTracker : IRedisFrequencyTracker
 
             return frequency;
         }
-        catch (Exception ex)
+        catch (RedisConnectionException ex)
         {
-            _logger.LogError(ex,
-                "Failed to get frequency for query in game {GameId}: {Query}, returning 0",
-                gameId, query);
+            _logger.LogWarning(ex, "Redis connection failed getting frequency for game {GameId}, returning 0", gameId);
+            return 0;
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Redis timeout getting frequency for game {GameId}, returning 0", gameId);
+            return 0;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation getting frequency for game {GameId}: {Query}, returning 0", gameId, query);
             return 0;
         }
     }

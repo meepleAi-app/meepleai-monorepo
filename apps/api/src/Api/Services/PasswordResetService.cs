@@ -114,11 +114,16 @@ public class PasswordResetService : IPasswordResetService
         }
         catch (Exception ex)
         {
+            // SECURITY + RESILIENCE PATTERN: Email failures must not leak user enumeration
+            // Rationale: Password reset requests must have consistent behavior regardless of
+            // whether the email sends successfully. Throwing an exception would allow attackers
+            // to enumerate valid email addresses by observing response differences. We silently
+            // fail and log the error for operational monitoring only.
+            // Context: Email failures are typically external (SMTP down, network timeout)
             _logger.LogError(
                 ex,
                 "Failed to send password reset email to user: {UserId}",
                 user.Id);
-            // Don't throw - we don't want to expose whether the email was sent successfully
         }
 
         _logger.LogInformation(

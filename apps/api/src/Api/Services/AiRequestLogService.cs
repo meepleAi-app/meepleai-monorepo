@@ -70,7 +70,11 @@ public class AiRequestLogService
         }
         catch (Exception ex)
         {
-            // Don't fail the request if logging fails
+            // RESILIENCE PATTERN: AI request logging must never fail AI operations
+            // Rationale: AI request logging is telemetry - failing an AI query because we
+            // cannot log the request violates fail-safe principles. The AI operation succeeded
+            // and we must return results to the user, even if we cannot track metrics.
+            // Context: Logging failures are typically DB-related (connection loss, disk full)
             _logger.LogError(ex, "Failed to log AI request for endpoint {Endpoint}", endpoint);
         }
     }

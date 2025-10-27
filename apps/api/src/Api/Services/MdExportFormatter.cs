@@ -140,7 +140,12 @@ public class MdExportFormatter : IExportFormatter
                 }
                 catch (Exception ex)
                 {
-                    // Skip malformed citation entries, log warning
+                    // DATA ROBUSTNESS PATTERN: Malformed citation entries are skipped, not fatal
+                    // Rationale: Chat export with incomplete/malformed citations should still succeed.
+                    // Citations are metadata enrichment - missing a citation field (source/page) should
+                    // not prevent the entire export. We skip the problematic entry and continue parsing
+                    // remaining citations. User gets valid citations that parsed successfully.
+                    // Context: Citation malformation from RAG JSON structure changes or DB corruption
                     _logger?.LogWarning(ex, "Failed to parse citation from metadata: {Metadata}", element.ToString());
                 }
             }

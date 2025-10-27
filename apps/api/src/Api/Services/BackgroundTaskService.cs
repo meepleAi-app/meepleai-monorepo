@@ -23,9 +23,16 @@ public class BackgroundTaskService : IBackgroundTaskService
             {
                 await task();
             }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogError(ex, "Invalid operation in background task");
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Background task failed");
+                // Background service: Generic catch prevents task exception from crashing host process
+                // Fire-and-forget tasks must not throw unhandled exceptions
+                // Catch-all for unexpected errors in fire-and-forget tasks
+                _logger.LogError(ex, "Unexpected error in background task");
             }
         }, CancellationToken.None);
     }
@@ -53,9 +60,14 @@ public class BackgroundTaskService : IBackgroundTaskService
             {
                 _logger.LogInformation("Background task {TaskId} was cancelled", taskId);
             }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogError(ex, "Invalid operation in background task {TaskId}", taskId);
+            }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Background task {TaskId} failed", taskId);
+                // Catch-all for unexpected errors in fire-and-forget tasks
+                _logger.LogError(ex, "Unexpected error in background task {TaskId}", taskId);
             }
             finally
             {

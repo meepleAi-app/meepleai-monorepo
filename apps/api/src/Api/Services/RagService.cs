@@ -230,9 +230,77 @@ public class RagService : IRagService
 
             return response;
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request failed during RAG query for game {GameId}", gameId);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
+            return new QaResponse("Network error while processing your question.", Array.Empty<Snippet>());
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "RAG query timed out for game {GameId}", gameId);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
+            return new QaResponse("Request timed out. Please try again.", Array.Empty<Snippet>());
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation during RAG query for game {GameId}", gameId);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
+            return new QaResponse("Configuration error. Please contact support.", Array.Empty<Snippet>());
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error during RAG query for game {GameId}", gameId);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
+            return new QaResponse("Database error. Please try again.", Array.Empty<Snippet>());
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during RAG query for game {GameId}", gameId);
+            _logger.LogError(ex, "Unexpected error during RAG query for game {GameId}", gameId);
 
             // OPS-02: Record exception in trace span
             activity?.SetTag("success", false);
@@ -371,9 +439,77 @@ public class RagService : IRagService
 
             return response;
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request failed during RAG explain for topic {Topic} in game {GameId}", topic, gameId);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "explain" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
+            return CreateEmptyExplainResponse("Network error while generating explanation.");
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "RAG explain timed out for topic {Topic} in game {GameId}", topic, gameId);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "explain" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
+            return CreateEmptyExplainResponse("Request timed out. Please try again.");
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation during RAG explain for topic {Topic} in game {GameId}", topic, gameId);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "explain" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
+            return CreateEmptyExplainResponse("Configuration error. Please contact support.");
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error during RAG explain for topic {Topic} in game {GameId}", topic, gameId);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "explain" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
+            return CreateEmptyExplainResponse("Database error. Please try again.");
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during RAG explain for topic {Topic} in game {GameId}", topic, gameId);
+            _logger.LogError(ex, "Unexpected error during RAG explain for topic {Topic} in game {GameId}", topic, gameId);
 
             // OPS-02: Record exception in trace span
             activity?.SetTag("success", false);
@@ -619,9 +755,77 @@ public class RagService : IRagService
 
             return response;
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request failed during hybrid search RAG query for game {GameId}, mode {SearchMode}", gameId, searchMode);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa_hybrid" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
+            return new QaResponse("Network error while processing your question.", Array.Empty<Snippet>());
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Hybrid search RAG query timed out for game {GameId}, mode {SearchMode}", gameId, searchMode);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa_hybrid" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
+            return new QaResponse("Request timed out. Please try again.", Array.Empty<Snippet>());
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation during hybrid search RAG query for game {GameId}, mode {SearchMode}", gameId, searchMode);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa_hybrid" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
+            return new QaResponse("Configuration error. Please contact support.", Array.Empty<Snippet>());
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error during hybrid search RAG query for game {GameId}, mode {SearchMode}", gameId, searchMode);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa_hybrid" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
+            return new QaResponse("Database error. Please try again.", Array.Empty<Snippet>());
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during hybrid search RAG query for game {GameId}, mode {SearchMode}", gameId, searchMode);
+            _logger.LogError(ex, "Unexpected error during hybrid search RAG query for game {GameId}, mode {SearchMode}", gameId, searchMode);
 
             // OPS-02: Record exception in trace span
             activity?.SetTag("success", false);
@@ -789,9 +993,77 @@ Instructions:
 
             return response;
         }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request failed during custom prompt RAG query for game {GameId}", gameId);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa_custom_prompt" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
+            return new QaResponse("Network error while processing your question.", Array.Empty<Snippet>());
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Custom prompt RAG query timed out for game {GameId}", gameId);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa_custom_prompt" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
+            return new QaResponse("Request timed out. Please try again.", Array.Empty<Snippet>());
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogError(ex, "Invalid operation during custom prompt RAG query for game {GameId}", gameId);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa_custom_prompt" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
+            return new QaResponse("Configuration error. Please contact support.", Array.Empty<Snippet>());
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogError(ex, "Database error during custom prompt RAG query for game {GameId}", gameId);
+
+            // OPS-02: Record exception in trace span
+            activity?.SetTag("success", false);
+            activity?.SetTag("error.type", ex.GetType().Name);
+            activity?.SetTag("error.message", ex.Message);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+
+            // OPS-02: Record error metrics
+            stopwatch.Stop();
+            MeepleAiMetrics.RagErrorsTotal.Add(1, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa_custom_prompt" }, { "error.type", ex.GetType().Name } });
+            MeepleAiMetrics.RecordRagRequest(stopwatch.Elapsed.TotalMilliseconds, gameId, success: false);
+
+            return new QaResponse("Database error. Please try again.", Array.Empty<Snippet>());
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during custom prompt RAG query for game {GameId}", gameId);
+            _logger.LogError(ex, "Unexpected error during custom prompt RAG query for game {GameId}", gameId);
 
             // OPS-02: Record exception in trace span
             activity?.SetTag("success", false);

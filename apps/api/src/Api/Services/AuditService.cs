@@ -45,7 +45,11 @@ public class AuditService
         }
         catch (Exception ex)
         {
-            // Don't fail the request if audit logging fails
+            // RESILIENCE PATTERN: Audit logging must never fail business operations
+            // Rationale: Auditing is a secondary concern - failing a user request because
+            // we cannot write an audit log violates fail-safe principles. We log the error
+            // for monitoring but allow the primary operation to succeed.
+            // Context: Audit logging failures are typically DB-related (connection loss, disk full)
             _logger.LogError(ex, "Failed to write audit log for action {Action} on {Resource}", action, resource);
         }
     }

@@ -82,9 +82,15 @@ public class TempSessionService : ITempSessionService
             _logger.LogInformation("Temp session validated and consumed for user {UserId}", tempSession.UserId);
             return tempSession.UserId;
         }
-        catch (Exception ex)
+        catch (DbUpdateException ex)
         {
-            _logger.LogError(ex, "Temp session validation error");
+            _logger.LogError(ex, "Database error during temp session validation");
+            await transaction.RollbackAsync();
+            return null;
+        }
+        catch (CryptographicException ex)
+        {
+            _logger.LogError(ex, "Cryptographic error during temp session token validation");
             await transaction.RollbackAsync();
             return null;
         }

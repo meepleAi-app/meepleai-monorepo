@@ -115,6 +115,11 @@ public class AlertingService : IAlertingService
             }
             catch (Exception ex)
             {
+                // RESILIENCE PATTERN: Alert channel failures must not stop other alert channels
+                // Rationale: Multi-channel alerting requires fault isolation - if email fails,
+                // Slack/PagerDuty should still deliver. We track per-channel results and log
+                // failures for monitoring. This enables graceful degradation when channels fail.
+                // Context: Channel failures are typically external (SMTP down, Slack API timeout)
                 _logger.LogError(
                     ex,
                     "Error sending alert {AlertType} via {Channel}",

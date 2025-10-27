@@ -45,7 +45,10 @@ public class FollowUpQuestionService : IFollowUpQuestionService
         _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
 
         // Initialize OpenTelemetry metrics
+        // CA2000: Meter lifetime managed by IMeterFactory (long-lived, singleton)
+#pragma warning disable CA2000
         var meter = meterFactory.Create("MeepleAI.FollowUpQuestions");
+#pragma warning restore CA2000
 
         _questionsGeneratedCounter = meter.CreateCounter<long>(
             "meepleai.followups.generated.total",

@@ -245,8 +245,13 @@ public class PdfStorageService
                 // Delete vectors from Qdrant
                 try
                 {
-                    var qdrantService = _qdrantServiceOverride
-                        ?? _scopeFactory.CreateScope().ServiceProvider.GetService<IQdrantService>();
+                    IQdrantService? qdrantService = _qdrantServiceOverride;
+
+                    if (qdrantService == null)
+                    {
+                        using var scope = _scopeFactory.CreateScope();
+                        qdrantService = scope.ServiceProvider.GetService<IQdrantService>();
+                    }
 
                     if (qdrantService != null)
                     {

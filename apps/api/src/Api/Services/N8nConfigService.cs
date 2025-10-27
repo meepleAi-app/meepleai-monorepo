@@ -199,7 +199,9 @@ public class N8nConfigService
         }
 
         var apiKey = DecryptApiKey(config.ApiKeyEncrypted);
+#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
         var httpClient = _httpClientFactory.CreateClient();
+#pragma warning restore CA2000
 
         try
         {

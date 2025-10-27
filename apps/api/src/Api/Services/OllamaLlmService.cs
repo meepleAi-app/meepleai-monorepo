@@ -63,7 +63,7 @@ public class OllamaLlmService : ILlmService
             };
 
             var json = JsonSerializer.Serialize(request);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             _logger.LogInformation("Generating chat completion using Ollama {Model}", ChatModel);
 
@@ -163,7 +163,7 @@ public class OllamaLlmService : ILlmService
 
         _logger.LogInformation("Starting streaming chat completion using Ollama {Model}", ChatModel);
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/chat")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/chat")
         {
             Content = content
         };
@@ -178,6 +178,7 @@ public class OllamaLlmService : ILlmService
             {
                 var errorBody = await response.Content.ReadAsStringAsync(ct);
                 _logger.LogError("Ollama streaming API error: {Status} - {Body}", response.StatusCode, errorBody);
+                response.Dispose();
                 yield break;
             }
         }

@@ -48,7 +48,9 @@ public class SlackAlertChannel : IAlertChannel
         try
         {
             var payload = BuildSlackPayload(alertType, severity, message, metadata);
+#pragma warning disable CA2000 // HttpClient lifetime managed by IHttpClientFactory
             var httpClient = _httpClientFactory.CreateClient();
+#pragma warning restore CA2000
 
             var response = await httpClient.PostAsJsonAsync(
                 _config.WebhookUrl,

@@ -143,7 +143,7 @@ public class LlmService : ILlmService
             };
 
             var json = JsonSerializer.Serialize(request);
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             _logger.LogInformation("Generating chat completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
                 model, temperature, maxTokens);
@@ -268,7 +268,7 @@ public class LlmService : ILlmService
         _logger.LogInformation("Starting streaming chat completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
             model, temperature, maxTokens);
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "chat/completions")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "chat/completions")
         {
             Content = content
         };
@@ -283,6 +283,7 @@ public class LlmService : ILlmService
             {
                 var errorBody = await response.Content.ReadAsStringAsync(ct);
                 _logger.LogError("OpenRouter streaming API error: {Status} - {Body}", response.StatusCode, errorBody);
+                response.Dispose();
                 yield break;
             }
         }

@@ -483,6 +483,15 @@ cd apps/web && pnpm dev                                                         
 ## Quality Standards
 
 **C#**: Standard conventions, nullable refs, async I/O, DI in `Program.cs`, `ILogger<T>`, Serilog, proper HTTP codes
+
+**IDisposable Best Practices** (CODE-01):
+- Always use `using` statements for IDisposable resources (HttpRequestMessage, HttpResponseMessage, FileStream, DbContext scopes)
+- HttpClient: Inject via `IHttpClientFactory`, never create with `new HttpClient()`
+- StringContent/FormUrlEncodedContent: Use `using var content = new StringContent(...)` before passing to HttpClient
+- IServiceScope: Always wrap in `using var scope = _scopeFactory.CreateScope()`
+- Async disposal: Use `await using` for IAsyncDisposable resources
+- Roslyn analyzers: CA2000 (error), CA1001 (warning), IDE0067 (error) enforced via `.editorconfig`
+
 **TS/React**: Strict mode, ESLint, avoid `any`, use `@/lib/api`, AAA tests
 
 ## Key Docs

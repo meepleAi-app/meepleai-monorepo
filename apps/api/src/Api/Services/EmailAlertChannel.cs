@@ -61,7 +61,7 @@ public class EmailAlertChannel : IAlertChannel
 
             var body = FormatEmailBody(alertType, severity, message, metadata);
 
-            var mailMessage = new MailMessage
+            using var mailMessage = new MailMessage
             {
                 From = new MailAddress(_config.From),
                 Subject = subject,

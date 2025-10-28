@@ -61,7 +61,19 @@ public class TestProcessCleanup : IDisposable
                         var output = process.StandardOutput.ReadToEnd();
                         var error = process.StandardError.ReadToEnd();
 
-                        process.WaitForExit();
+                        // Wait with timeout to prevent indefinite hang (ISSUE-319 fix)
+                        if (!process.WaitForExit(10000)) // 10 second timeout
+                        {
+                            Console.WriteLine("⚠️ Cleanup script timed out after 10s, killing process");
+                            try
+                            {
+                                process.Kill();
+                            }
+                            catch (Exception killEx)
+                            {
+                                Console.Error.WriteLine($"Failed to kill cleanup process: {killEx.Message}");
+                            }
+                        }
 
                         if (!string.IsNullOrWhiteSpace(output))
                         {

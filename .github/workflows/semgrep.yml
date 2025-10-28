@@ -122,7 +122,7 @@ jobs:
     steps:
       - name: Download Semgrep results
         id: download-artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: semgrep-results
         continue-on-error: true

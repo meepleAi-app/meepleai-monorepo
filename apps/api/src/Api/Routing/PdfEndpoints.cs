@@ -105,46 +105,6 @@ group.MapGet("/games", async (HttpContext context, GameService gameService, Canc
     return Results.Json(response);
 });
 
-group.MapPost("/games", async (CreateGameRequest? request, HttpContext context, GameService gameService, ILogger<Program> logger, CancellationToken ct) =>
-{
-    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-    {
-        return Results.Unauthorized();
-    }
-
-    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-        !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
-    {
-        logger.LogWarning(
-            "User {UserId} with role {Role} attempted to create a game without permission",
-            session.User.Id,
-            session.User.Role);
-        return Results.StatusCode(StatusCodes.Status403Forbidden);
-    }
-
-    if (request is null)
-    {
-        return Results.BadRequest(new { error = "Request body is required" });
-    }
-
-    try
-    {
-        var game = await gameService.CreateGameAsync(request.Name, request.GameId, ct);
-        logger.LogInformation("Created game {GameId}", game.Id);
-        return Results.Created($"/games/{game.Id}", new GameResponse(game.Id, game.Name, game.CreatedAt));
-    }
-    catch (ArgumentException ex)
-    {
-        logger.LogWarning(ex, "Invalid game creation request");
-        return Results.BadRequest(new { error = ex.Message });
-    }
-    catch (InvalidOperationException ex)
-    {
-        logger.LogWarning(ex, "Conflict creating game");
-        return Results.Conflict(new { error = ex.Message });
-    }
-});
-
 // AI-13: BoardGameGeek API endpoints
 group.MapGet("/bgg/search", async (
     HttpContext context,

@@ -149,7 +149,7 @@ jobs:
         run: pnpm test:e2e e2e/accessibility.spec.ts
       - name: Upload Playwright Report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: playwright-a11y-report-${{ github.run_number }}
           path: apps/web/playwright-report/
@@ -283,7 +283,7 @@ jobs:
       # TEST-02-P5: Upload coverage artifacts
       - name: Upload Coverage Report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: coverage-report-api-${{ github.run_number }}
           path: apps/api/tests/Api.Tests/coverage-report/
@@ -301,7 +301,7 @@ jobs:
 
       - name: Upload Coverage Report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: api-coverage-report-${{ github.run_number }}
           path: apps/api/tests/Api.Tests/coverage-report/
@@ -479,7 +479,7 @@ jobs:
 
       - name: Upload RAG Evaluation Report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: rag-evaluation-report-${{ github.run_number }}
           path: apps/api/evaluation-reports/

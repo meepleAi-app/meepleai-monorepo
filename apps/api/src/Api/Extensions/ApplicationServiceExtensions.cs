@@ -34,8 +34,8 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IQdrantVectorIndexer, QdrantVectorIndexer>();
         services.AddScoped<IQdrantVectorSearcher, QdrantVectorSearcher>();
 
-        // Qdrant facade service
-        services.AddSingleton<IQdrantService, QdrantService>();
+        // Qdrant facade service (Scoped to match specialized services lifetime)
+        services.AddScoped<IQdrantService, QdrantService>();
 
         services.AddScoped<IEmbeddingService, EmbeddingService>();
         services.AddScoped<ITextChunkingService, TextChunkingService>();

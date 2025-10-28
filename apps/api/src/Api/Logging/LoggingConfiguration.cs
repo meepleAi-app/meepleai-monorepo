@@ -40,8 +40,10 @@ public static class LoggingConfiguration
             .Enrich.WithProperty("Application", "MeepleAI")
             .Enrich.WithProperty("Environment", environment.EnvironmentName);
 
-        // Add sensitive data redaction
-        loggerConfig.Destructure.With<SensitiveDataDestructuringPolicy>();
+        // Add sensitive data redaction (objects + scalar strings)
+        loggerConfig
+            .Destructure.With<SensitiveDataDestructuringPolicy>()
+            .Enrich.With(new SensitiveStringRedactionEnricher());
 
         // Console sink with appropriate formatting
         var consoleTemplate = environment.IsDevelopment()

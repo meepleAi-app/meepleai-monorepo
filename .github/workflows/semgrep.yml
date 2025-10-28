@@ -91,7 +91,7 @@ jobs:
         if: always()
 
       - name: Upload Semgrep results as artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: semgrep-results
           path: |

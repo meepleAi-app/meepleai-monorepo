@@ -711,6 +711,23 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
             expiresAt,
             environment);
 
+        // Persist the generated key for endpoint tests
+        // Aligns with IntegrationTestBase helper behavior
+        var db = scope.ServiceProvider.GetRequiredService<Api.Infrastructure.MeepleAiDbContext>();
+        // Avoid EF tracking conflict on User navigation
+        entity.User = null!;
+        // Apply quota metadata if provided (used by usage tests)
+        if (maxRequestsPerDay.HasValue || maxRequestsPerHour.HasValue)
+        {
+            var quota = new { maxRequestsPerDay, maxRequestsPerHour };
+            entity.Metadata = System.Text.Json.JsonSerializer.Serialize(quota);
+        }
+        db.ApiKeys.Add(entity);
+        await db.SaveChangesAsync();
+
+        // Track for automatic cleanup
+        TrackApiKeyId(entity.Id);
+
         // Note: Quota fields (maxRequestsPerDay, maxRequestsPerHour) are not yet implemented
         // They will be added in a future iteration of the API key management feature
 

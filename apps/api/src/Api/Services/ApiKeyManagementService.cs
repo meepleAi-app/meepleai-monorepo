@@ -54,12 +54,15 @@ public class ApiKeyManagementService
 
         var totalCount = await query.CountAsync(ct);
 
-        var keys = await query
+        var keyEntities = await query
             .OrderByDescending(k => k.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(k => MapToDto(k))
             .ToListAsync(ct);
+
+        var keys = keyEntities
+            .Select(k => MapToDto(k))
+            .ToList();
 
         return new ApiKeyListResponse
         {

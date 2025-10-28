@@ -46,6 +46,8 @@ public static class WebApplicationExtensions
             options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
             {
                 diagnosticContext.Set("RequestId", httpContext.TraceIdentifier);
+                // Provide a CorrelationId property to align with logging tests and tooling
+                diagnosticContext.Set("CorrelationId", httpContext.TraceIdentifier);
                 diagnosticContext.Set("RequestPath", httpContext.Request.Path.Value ?? string.Empty);
                 diagnosticContext.Set("RequestMethod", httpContext.Request.Method);
                 diagnosticContext.Set("UserAgent", httpContext.Request.Headers.UserAgent.ToString());
@@ -57,6 +59,17 @@ public static class WebApplicationExtensions
                     diagnosticContext.Set("UserEmail", httpContext.User.FindFirst(ClaimTypes.Email)?.Value ?? "unknown");
                 }
             };
+        });
+
+        // Ensure at least one lightweight log per request (helps tests capture correlation id on health endpoints)
+        app.Use(async (context, next) =>
+        {
+            using (Serilog.Context.LogContext.PushProperty("CorrelationId", context.TraceIdentifier))
+            {
+                var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("RequestLog");
+                logger.LogInformation("{Method} {Path}", context.Request.Method, context.Request.Path.Value ?? string.Empty);
+            }
+            await next();
         });
 
         // Add correlation ID to response headers
@@ -73,6 +86,9 @@ public static class WebApplicationExtensions
 
         // API-01: API key authentication middleware (must be before authorization)
         app.UseApiKeyAuthentication();
+
+        // Session cookie authentication to populate ActiveSession for endpoints
+        app.UseSessionAuthentication();
 
         // Note: Additional authentication, authorization, and rate limiting middleware
         // should be configured after calling this method but before MapEndpoints.

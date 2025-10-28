@@ -309,11 +309,13 @@ public class LoggingTestFactory : WebApplicationFactoryFixture
             var logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .Destructure.With<SensitiveDataDestructuringPolicy>()
+                .Enrich.With(new SensitiveStringRedactionEnricher())
                 .Enrich.FromLogContext()
                 .Enrich.WithProperty("Environment", "Testing")
                 .WriteTo.TestCorrelator() // Enables log assertions in tests
                 .CreateLogger();
-
+            // Ensure Serilog request logging middleware writes to TestCorrelator logger
+            Log.Logger = logger;
             logging.AddSerilog(logger, dispose: true);
         });
     }

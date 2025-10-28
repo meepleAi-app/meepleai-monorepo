@@ -70,6 +70,15 @@ public partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
 
     private const string RedactedValue = "[REDACTED]";
 
+    /// <summary>
+    /// Redacts sensitive patterns inside an arbitrary string for logging scenarios
+    /// where destructuring is not applied (e.g., scalar string parameters).
+    /// </summary>
+    public static string RedactInStringForLogging(string input)
+    {
+        return RedactSensitiveStringPatterns(input);
+    }
+
     public bool TryDestructure(object value, ILogEventPropertyValueFactory propertyValueFactory, out LogEventPropertyValue? result)
     {
         if (value == null)

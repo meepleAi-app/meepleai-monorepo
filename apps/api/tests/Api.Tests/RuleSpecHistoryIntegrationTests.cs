@@ -432,10 +432,8 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
     {
         var request = new HttpRequestMessage(method, url);
 
-        foreach (var cookie in cookies)
-        {
-            request.Headers.TryAddWithoutValidation("Cookie", cookie);
-        }
+        // Use shared helper to correctly format cookies into a single header
+        AddCookies(request, cookies);
 
         return client.SendAsync(request);
     }

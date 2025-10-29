@@ -160,6 +160,7 @@ export const InlineCommentIndicator: React.FC<InlineCommentIndicatorProps> = ({
               `}
             </style>
             <span
+              data-testid="inline-comment-unresolved-dot"
               style={{
                 position: 'absolute',
                 bottom: '-2px',

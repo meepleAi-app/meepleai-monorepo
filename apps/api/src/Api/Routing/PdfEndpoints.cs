@@ -17,17 +17,17 @@ public static class PdfEndpoints
     {
 group.MapPost("/ingest/pdf", async (HttpContext context, IPdfValidationService pdfValidation, PdfStorageService pdfStorage, IFeatureFlagService featureFlags, ILogger<Program> logger, CancellationToken ct) =>
 {
-    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-    {
-        return Results.Unauthorized();
-    }
-
-    // CONFIG-05: Check if PDF upload feature is enabled
+    // CONFIG-05: Check if PDF upload feature is enabled (return 403 before auth to reflect feature gating)
     if (!await featureFlags.IsEnabledAsync("Features.PdfUpload"))
     {
         return Results.Json(
             new { error = "feature_disabled", message = "PDF uploads are currently disabled", featureName = "Features.PdfUpload" },
             statusCode: 403);
+    }
+
+    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
+    {
+        return Results.Unauthorized();
     }
 
     if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
@@ -93,17 +93,7 @@ group.MapPost("/ingest/pdf", async (HttpContext context, IPdfValidationService p
     return Results.Json(new { documentId = result.Document.Id, fileName = result.Document.FileName });
 });
 
-group.MapGet("/games", async (HttpContext context, GameService gameService, CancellationToken ct) =>
-{
-    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
-    {
-        return Results.Unauthorized();
-    }
-
-    var games = await gameService.GetGamesAsync(ct);
-    var response = games.Select(g => new GameResponse(g.Id, g.Name, g.CreatedAt)).ToList();
-    return Results.Json(response);
-});
+// Note: Game listing is handled in GameEndpoints to avoid route duplication
 
 // AI-13: BoardGameGeek API endpoints
 group.MapGet("/bgg/search", async (

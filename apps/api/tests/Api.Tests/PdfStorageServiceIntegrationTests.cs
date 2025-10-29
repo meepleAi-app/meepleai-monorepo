@@ -61,7 +61,7 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
                 tableExtractionService,
                 backgroundService,
                 cacheService,
-                Mock.Of<IBlobStorageService>());
+                new TestBlobStorageService(storagePath));
 
             var file = CreateFormFile("rules.pdf", "application/pdf", new byte[] { 0x25, 0x50, 0x44, 0x46 });
 
@@ -74,17 +74,15 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
             // Execute extraction task
             await backgroundService.ExecuteNextAsync();
 
-            // Indexing should have been scheduled by extraction
-            Assert.Equal(1, backgroundService.PendingTasks);
-
-            // Execute indexing task
-            await backgroundService.ExecuteNextAsync();
-
+            Assert.Equal(1, backgroundService.ExecutedTasksCount);
             Assert.Equal(0, backgroundService.PendingTasks);
 
             // Assert chunking, embedding and qdrant services resolved from scope were used
-            var chunkingService = Assert.Single(scopeFactory.ChunkingServices.Where(c => c.PrepareForEmbeddingCallCount > 0));
+            var chunkingService = Assert.Single(scopeFactory.ChunkingServices.Where(c => c.PrepareForEmbeddingCallCount > 0 && c.ChunkTextCallCount > 0));
             Assert.Equal("chunk-one\nchunk-two", chunkingService.LastText);
+            Assert.Equal("chunk-one\nchunk-two", chunkingService.LastChunkText);
+            Assert.Equal(1, chunkingService.PrepareForEmbeddingCallCount);
+            Assert.Equal(1, chunkingService.ChunkTextCallCount);
 
             var embeddingService = Assert.Single(scopeFactory.EmbeddingServices.Where(e => e.GenerateEmbeddingsCallCount > 0));
             Assert.Equal(new[] { "chunk-one", "chunk-two" }, embeddingService.LastRequestedTexts);
@@ -110,6 +108,97 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
         }
     }
 
+    private sealed class TestBlobStorageService : IBlobStorageService
+    {
+        private readonly string _root;
+
+        public TestBlobStorageService(string root)
+        {
+            _root = root;
+        }
+
+        public Task<BlobStorageResult> StoreAsync(Stream stream, string fileName, string gameId, CancellationToken ct = default)
+        {
+            if (stream == null) throw new ArgumentNullException(nameof(stream));
+
+            var extension = Path.GetExtension(fileName);
+            if (string.IsNullOrWhiteSpace(extension))
+            {
+                extension = ".pdf";
+            }
+
+            var fileId = Guid.NewGuid().ToString("N");
+            var gameDirectory = Path.Combine(_root, gameId);
+            Directory.CreateDirectory(gameDirectory);
+
+            var destinationPath = Path.Combine(gameDirectory, $"{fileId}{extension}");
+            using (var destination = File.Create(destinationPath))
+            {
+                stream.CopyTo(destination);
+            }
+
+            var info = new FileInfo(destinationPath);
+            return Task.FromResult(new BlobStorageResult(true, fileId, destinationPath, info.Length));
+        }
+
+        public Task<Stream?> RetrieveAsync(string fileId, string gameId, CancellationToken ct = default)
+        {
+            var path = ResolvePath(fileId, gameId);
+            if (path == null || !File.Exists(path))
+            {
+                return Task.FromResult<Stream?>(null);
+            }
+
+            Stream stream = File.OpenRead(path);
+            return Task.FromResult<Stream?>(stream);
+        }
+
+        public Task<bool> DeleteAsync(string fileId, string gameId, CancellationToken ct = default)
+        {
+            var path = ResolvePath(fileId, gameId);
+            if (path == null || !File.Exists(path))
+            {
+                return Task.FromResult(false);
+            }
+
+            File.Delete(path);
+            return Task.FromResult(true);
+        }
+
+        public string GetStoragePath(string fileId, string gameId, string fileName)
+        {
+            var extension = Path.GetExtension(fileName);
+            if (string.IsNullOrWhiteSpace(extension))
+            {
+                extension = ".pdf";
+            }
+
+            return Path.Combine(_root, gameId, $"{fileId}{extension}");
+        }
+
+        public bool Exists(string fileId, string gameId)
+        {
+            var directory = Path.Combine(_root, gameId);
+            if (!Directory.Exists(directory))
+            {
+                return false;
+            }
+
+            return Directory.EnumerateFiles(directory, $"{fileId}*").Any();
+        }
+
+        private string? ResolvePath(string fileId, string gameId)
+        {
+            var directory = Path.Combine(_root, gameId);
+            if (!Directory.Exists(directory))
+            {
+                return null;
+            }
+
+            return Directory.EnumerateFiles(directory, $"{fileId}*").FirstOrDefault();
+        }
+    }
+
     private static IFormFile CreateFormFile(string fileName, string contentType, byte[] content)
     {
         var stream = new MemoryStream(content);
@@ -124,6 +213,7 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
 
     private sealed class TestBackgroundTaskService : IBackgroundTaskService
     {
+        public int ExecutedTasksCount { get; private set; }
         private readonly Queue<Func<Task>> _tasks = new();
 
         public int PendingTasks => _tasks.Count;
@@ -154,6 +244,7 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
 
             var task = _tasks.Dequeue();
             await task();
+            ExecutedTasksCount++;
         }
     }
 
@@ -172,6 +263,20 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
         public override Task<PdfTextExtractionResult> ExtractTextAsync(string filePath, CancellationToken ct = default)
         {
             return Task.FromResult(PdfTextExtractionResult.CreateSuccess(Extracted, 1, Extracted.Length));
+        }
+
+        public override Task<PagedExtractionResult> ExtractPagedTextAsync(string filePath, CancellationToken ct = default)
+        {
+            var chunks = new List<PagedTextChunk>
+            {
+                new(
+                    Text: Extracted,
+                    PageNumber: 1,
+                    CharStartIndex: 0,
+                    CharEndIndex: Extracted.Length - 1)
+            };
+
+            return Task.FromResult(PagedExtractionResult.CreateSuccess(chunks, 1));
         }
     }
 
@@ -195,6 +300,8 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
     {
         public int PrepareForEmbeddingCallCount { get; private set; }
         public string? LastText { get; private set; }
+        public int ChunkTextCallCount { get; private set; }
+        public string? LastChunkText { get; private set; }
 
         private static readonly List<DocumentChunkInput> Chunks = new()
         {
@@ -204,6 +311,9 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
 
         public List<TextChunk> ChunkText(string text, int chunkSize = 512, int overlap = 50)
         {
+            ChunkTextCallCount++;
+            LastChunkText = text;
+
             var index = 0;
             return Chunks.Select(c => new TextChunk
             {
@@ -219,7 +329,7 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
         {
             PrepareForEmbeddingCallCount++;
             LastText = text;
-            return Chunks;
+            return new List<DocumentChunkInput>();
         }
     }
 
@@ -424,3 +534,9 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
         }
     }
 }
+
+
+
+
+
+

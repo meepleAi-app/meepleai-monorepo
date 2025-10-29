@@ -60,6 +60,143 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
             // Cleanup test data in reverse dependency order
             if (_testUserIds.Count > 0)
             {
+                var userIdSet = _testUserIds.ToHashSet();
+
+                // Remove audit and credential artifacts created by test users
+                var auditLogs = await db.AuditLogs
+                    .Where(l => l.UserId != null && userIdSet.Contains(l.UserId))
+                    .ToListAsync();
+                db.AuditLogs.RemoveRange(auditLogs);
+
+                var apiKeys = await db.ApiKeys
+                    .Where(k => userIdSet.Contains(k.UserId))
+                    .ToListAsync();
+                db.ApiKeys.RemoveRange(apiKeys);
+
+                var oauthAccounts = await db.OAuthAccounts
+                    .Where(a => userIdSet.Contains(a.UserId))
+                    .ToListAsync();
+                db.OAuthAccounts.RemoveRange(oauthAccounts);
+
+                var passwordResetTokens = await db.PasswordResetTokens
+                    .Where(t => userIdSet.Contains(t.UserId))
+                    .ToListAsync();
+                db.PasswordResetTokens.RemoveRange(passwordResetTokens);
+
+                var backupCodes = await db.UserBackupCodes
+                    .Where(c => userIdSet.Contains(c.UserId))
+                    .ToListAsync();
+                db.UserBackupCodes.RemoveRange(backupCodes);
+
+                var tempSessions = await db.TempSessions
+                    .Where(t => userIdSet.Contains(t.UserId))
+                    .ToListAsync();
+                db.TempSessions.RemoveRange(tempSessions);
+
+                // Remove chat data created during tests
+                var chatIds = await db.Chats
+                    .Where(c => userIdSet.Contains(c.UserId))
+                    .Select(c => c.Id)
+                    .ToListAsync();
+
+                if (chatIds.Count > 0)
+                {
+                    var chatLogs = await db.ChatLogs
+                        .Where(l =>
+                            chatIds.Contains(l.ChatId) ||
+                            (l.UserId != null && userIdSet.Contains(l.UserId)) ||
+                            (l.DeletedByUserId != null && userIdSet.Contains(l.DeletedByUserId)))
+                        .ToListAsync();
+                    db.ChatLogs.RemoveRange(chatLogs);
+
+                    var chats = await db.Chats
+                        .Where(c => chatIds.Contains(c.Id))
+                        .ToListAsync();
+                    db.Chats.RemoveRange(chats);
+                }
+                else
+                {
+                    var standaloneChatLogs = await db.ChatLogs
+                        .Where(l =>
+                            (l.UserId != null && userIdSet.Contains(l.UserId)) ||
+                            (l.DeletedByUserId != null && userIdSet.Contains(l.DeletedByUserId)))
+                        .ToListAsync();
+                    db.ChatLogs.RemoveRange(standaloneChatLogs);
+                }
+
+                // Remove rule comments and threaded replies linked to test users
+                var commentIds = await db.RuleSpecComments
+                    .Where(c => userIdSet.Contains(c.UserId) || (c.ResolvedByUserId != null && userIdSet.Contains(c.ResolvedByUserId)))
+                    .Select(c => c.Id)
+                    .ToListAsync();
+
+                if (commentIds.Count > 0)
+                {
+                    var cascadeCommentIds = new HashSet<Guid>(commentIds);
+                    bool added;
+                    do
+                    {
+                        var childIds = await db.RuleSpecComments
+                            .Where(c => c.ParentCommentId != null && cascadeCommentIds.Contains(c.ParentCommentId.Value))
+                            .Select(c => c.Id)
+                            .ToListAsync();
+
+                        added = false;
+                        foreach (var id in childIds)
+                        {
+                            if (cascadeCommentIds.Add(id))
+                            {
+                                added = true;
+                            }
+                        }
+                    } while (added);
+
+                    var comments = await db.RuleSpecComments
+                        .Where(c => cascadeCommentIds.Contains(c.Id))
+                        .ToListAsync();
+                    db.RuleSpecComments.RemoveRange(comments);
+                }
+
+                // Remove PDF artifacts uploaded by test users
+                var pdfIds = await db.PdfDocuments
+                    .Where(p => userIdSet.Contains(p.UploadedByUserId))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                if (pdfIds.Count > 0)
+                {
+                    var textChunks = await db.TextChunks
+                        .Where(tc => pdfIds.Contains(tc.PdfDocumentId))
+                        .ToListAsync();
+                    db.TextChunks.RemoveRange(textChunks);
+
+                    var vectorDocs = await db.VectorDocuments
+                        .Where(v => pdfIds.Contains(v.PdfDocumentId))
+                        .ToListAsync();
+                    db.VectorDocuments.RemoveRange(vectorDocs);
+
+                    var pdfs = await db.PdfDocuments
+                        .Where(p => pdfIds.Contains(p.Id))
+                        .ToListAsync();
+                    db.PdfDocuments.RemoveRange(pdfs);
+                }
+
+                // Remove prompt assets owned by test users
+                var promptAuditLogs = await db.PromptAuditLogs
+                    .Where(p => userIdSet.Contains(p.ChangedByUserId))
+                    .ToListAsync();
+                db.PromptAuditLogs.RemoveRange(promptAuditLogs);
+
+                var promptVersions = await db.PromptVersions
+                    .Where(p => userIdSet.Contains(p.CreatedByUserId))
+                    .ToListAsync();
+                db.PromptVersions.RemoveRange(promptVersions);
+
+                var promptTemplates = await db.PromptTemplates
+                    .Where(p => userIdSet.Contains(p.CreatedByUserId))
+                    .ToListAsync();
+                db.PromptTemplates.RemoveRange(promptTemplates);
+
                 // Remove user sessions
                 var sessions = await db.UserSessions
                     .Where(s => s.UserId != null && _testUserIds.Contains(s.UserId))
@@ -77,6 +214,14 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
                     .Where(f => f.UserId != null && _testUserIds.Contains(f.UserId))
                     .ToListAsync();
                 db.AgentFeedbacks.RemoveRange(feedback);
+
+                // Remove system configurations created or updated by test users (DeleteBehavior.Restrict)
+                var systemConfigs = await db.SystemConfigurations
+                    .Where(c =>
+                        _testUserIds.Contains(c.CreatedByUserId) ||
+                        (c.UpdatedByUserId != null && _testUserIds.Contains(c.UpdatedByUserId)))
+                    .ToListAsync();
+                db.SystemConfigurations.RemoveRange(systemConfigs);
 
                 // Remove users
                 var users = await db.Users

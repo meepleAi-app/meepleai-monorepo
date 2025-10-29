@@ -311,7 +311,7 @@ public class PdfTextExtractionServiceTests : IDisposable
 
         // Assert
         Assert.False(result.Success);
-        Assert.Contains("Extraction failed", result.ErrorMessage);
+        Assert.Contains("Failed to extract text from PDF", result.ErrorMessage);
     }
 
     [Fact]

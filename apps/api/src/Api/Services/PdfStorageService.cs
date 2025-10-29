@@ -376,42 +376,48 @@ public class PdfStorageService
             var totalPages = extractResult.TotalPageCount;
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, totalPages, totalPages, startTime, null, ct);
 
+
+
             // Step 2: Chunk text with page tracking (AI-08) (40-60%)
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Chunking, 0, totalPages, startTime, null, ct);
             var chunkingService = _textChunkingServiceOverride ?? scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
+            const int chunkSize = 512;
+            const int chunkOverlap = 50;
 
-            // Process each page separately to preserve page numbers
-            var allDocumentChunks = new List<DocumentChunkInput>();
-
-            foreach (var pageChunk in extractResult.PageChunks.Where(pc => !pc.IsEmpty))
-            {
-                var pageTextChunks = chunkingService.ChunkText(pageChunk.Text, 512, 50);
-
-                foreach (var textChunk in pageTextChunks)
+            var allDocumentChunks = chunkingService.PrepareForEmbedding(fullText, chunkSize, chunkOverlap)
+                ?.Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
+                .Select(chunk => new DocumentChunkInput
                 {
-                    allDocumentChunks.Add(new DocumentChunkInput
-                    {
-                        Text = textChunk.Text,
-                        Page = pageChunk.PageNumber,
-                        CharStart = textChunk.CharStart,
-                        CharEnd = textChunk.CharEnd
-                    });
-                }
-            }
+                    Text = chunk.Text,
+                    Page = chunk.Page,
+                    CharStart = chunk.CharStart,
+                    CharEnd = chunk.CharEnd
+                })
+                .ToList()
+                ?? new List<DocumentChunkInput>();
 
             if (allDocumentChunks.Count == 0)
             {
-                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, "No chunks generated from text", ct);
-                pdfDoc.ProcessingStatus = "failed";
-                pdfDoc.ProcessingError = "No chunks generated from text";
-                pdfDoc.ProcessedAt = DateTime.UtcNow;
-                await db.SaveChangesAsync(ct);
-                return;
+                foreach (var pageChunk in extractResult.PageChunks.Where(pc => !pc.IsEmpty))
+                {
+                    var pageTextChunks = chunkingService.ChunkText(pageChunk.Text, chunkSize, chunkOverlap);
+
+                    foreach (var textChunk in pageTextChunks.Where(t => !string.IsNullOrWhiteSpace(t.Text)))
+                    {
+                        allDocumentChunks.Add(new DocumentChunkInput
+                        {
+                            Text = textChunk.Text,
+                            Page = pageChunk.PageNumber,
+                            CharStart = textChunk.CharStart,
+                            CharEnd = textChunk.CharEnd
+                        });
+                    }
+                }
             }
 
-            _logger.LogInformation("Generated {ChunkCount} chunks for PDF {PdfId} across {PageCount} pages",
-                allDocumentChunks.Count, pdfId, extractResult.PageChunks.Count(pc => !pc.IsEmpty));
-            await UpdateProgressAsync(db, pdfId, ProcessingStep.Chunking, totalPages, totalPages, startTime, null, ct);
+            allDocumentChunks = allDocumentChunks
+                .Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
+                .ToList();
 
             // Step 3: Generate embeddings (60-80%)
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, 0, totalPages, startTime, null, ct);
@@ -430,6 +436,44 @@ public class PdfStorageService
             }
 
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Embedding, totalPages, totalPages, startTime, null, ct);
+
+            var embeddings = embeddingResult.Embeddings ?? new List<float[]>();
+
+            if (embeddings.Count != allDocumentChunks.Count)
+            {
+                var mismatchMessage = $"Embedding service returned {embeddings.Count} vectors for {allDocumentChunks.Count} chunks";
+                _logger.LogWarning("Embedding count mismatch for PDF {PdfId}: {Message}", pdfId, mismatchMessage);
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, mismatchMessage, ct);
+                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingError = mismatchMessage;
+                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                await db.SaveChangesAsync(ct);
+                return;
+            }
+
+            var invalidEmbeddingIndexes = new List<int>();
+            for (var i = 0; i < embeddings.Count; i++)
+            {
+                var vector = embeddings[i];
+                if (vector == null || vector.Length == 0 || Array.Exists(vector, v => float.IsNaN(v) || float.IsInfinity(v)))
+                {
+                    invalidEmbeddingIndexes.Add(i);
+                }
+            }
+
+            if (invalidEmbeddingIndexes.Count > 0)
+            {
+                var detail = string.Join(", ", invalidEmbeddingIndexes);
+                var error = $"Embedding service returned invalid vectors for chunk indices: {detail}";
+                _logger.LogWarning("Invalid embeddings detected for PDF {PdfId}: {Detail}", pdfId, detail);
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, error, ct);
+                pdfDoc.ProcessingStatus = "failed";
+                pdfDoc.ProcessingError = error;
+                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                await db.SaveChangesAsync(ct);
+                return;
+            }
+
 
             // Step 4: Index in Qdrant with accurate page numbers (AI-08) (80-100%)
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Indexing, 0, totalPages, startTime, null, ct);
@@ -635,3 +679,6 @@ public record PdfDocumentDto
     public string UploadedByUserId { get; init; } = default!;
     public string Language { get; init; } = "en";
 }
+
+
+

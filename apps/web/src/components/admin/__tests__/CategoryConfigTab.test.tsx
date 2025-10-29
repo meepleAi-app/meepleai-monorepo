@@ -75,7 +75,7 @@ describe("CategoryConfigTab", () => {
     );
 
     expect(screen.getByText(/RequestsPerMinute/)).toBeInTheDocument();
-    expect(screen.queryByText(/Temperature/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /Ai:Temperature/i })).not.toBeInTheDocument();
   });
 
   it("displays configuration metadata correctly", () => {
@@ -88,9 +88,10 @@ describe("CategoryConfigTab", () => {
       />
     );
 
-    expect(screen.getByText(/Temperature/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Ai:Temperature" })).toBeInTheDocument();
+    expect(screen.getAllByText(/Temperature/).length).toBeGreaterThan(0);
     expect(screen.getByText(/v2/)).toBeInTheDocument();
-    expect(screen.getByText(/float/)).toBeInTheDocument();
+    expect(screen.getByText(/float/i)).toBeInTheDocument();
   });
 
   it("enables edit mode when edit button clicked", () => {

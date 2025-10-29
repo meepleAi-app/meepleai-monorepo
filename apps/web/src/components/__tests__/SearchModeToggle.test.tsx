@@ -4,6 +4,21 @@ import SearchModeToggle, { SearchMode } from '../SearchModeToggle';
 describe('SearchModeToggle', () => {
   const mockOnChange = jest.fn();
 
+  const getSemanticButton = () =>
+    screen.getByRole('button', {
+      name: /Semantic search mode: Natural language understanding/i,
+    });
+
+  const getHybridButton = () =>
+    screen.getByRole('button', {
+      name: /Hybrid search mode: Best of both worlds/i,
+    });
+
+  const getKeywordButton = () =>
+    screen.getByRole('button', {
+      name: /Keyword search mode: Exact term matching/i,
+    });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -12,9 +27,9 @@ describe('SearchModeToggle', () => {
     it('renders all three mode buttons', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
 
-      expect(screen.getByRole('button', { name: /Semantic search mode/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Hybrid search mode/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Keyword search mode/i })).toBeInTheDocument();
+      expect(getSemanticButton()).toBeInTheDocument();
+      expect(getHybridButton()).toBeInTheDocument();
+      expect(getKeywordButton()).toBeInTheDocument();
     });
 
     it('renders search mode label', () => {
@@ -36,9 +51,9 @@ describe('SearchModeToggle', () => {
     it('displays correct icons for each mode', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
 
-      const semanticIcon = screen.getByRole('button', { name: /Semantic/i }).querySelector('.mode-icon');
-      const hybridIcon = screen.getByRole('button', { name: /Hybrid/i }).querySelector('.mode-icon');
-      const keywordIcon = screen.getByRole('button', { name: /Keyword/i }).querySelector('.mode-icon');
+      const semanticIcon = getSemanticButton().querySelector('.mode-icon');
+      const hybridIcon = getHybridButton().querySelector('.mode-icon');
+      const keywordIcon = getKeywordButton().querySelector('.mode-icon');
 
       expect(semanticIcon).toHaveTextContent('🧠');
       expect(hybridIcon).toHaveTextContent('⚡');
@@ -59,30 +74,27 @@ describe('SearchModeToggle', () => {
     it('shows active state for Semantic mode when selected', () => {
       render(<SearchModeToggle value={SearchMode.Semantic} onChange={mockOnChange} />);
 
-      const semanticButton = screen.getByRole('button', { name: /Semantic/i });
-      expect(semanticButton).toHaveClass('active');
+      expect(getSemanticButton()).toHaveClass('active');
     });
 
     it('shows active state for Hybrid mode when selected', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
 
-      const hybridButton = screen.getByRole('button', { name: /Hybrid/i });
-      expect(hybridButton).toHaveClass('active');
+      expect(getHybridButton()).toHaveClass('active');
     });
 
     it('shows active state for Keyword mode when selected', () => {
       render(<SearchModeToggle value={SearchMode.Keyword} onChange={mockOnChange} />);
 
-      const keywordButton = screen.getByRole('button', { name: /Keyword/i });
-      expect(keywordButton).toHaveClass('active');
+      expect(getKeywordButton()).toHaveClass('active');
     });
 
     it('shows active indicator (✓) only on selected mode', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
 
-      const semanticButton = screen.getByRole('button', { name: /Semantic/i });
-      const hybridButton = screen.getByRole('button', { name: /Hybrid/i });
-      const keywordButton = screen.getByRole('button', { name: /Keyword/i });
+      const semanticButton = getSemanticButton();
+      const hybridButton = getHybridButton();
+      const keywordButton = getKeywordButton();
 
       expect(semanticButton.querySelector('.active-indicator')).not.toBeInTheDocument();
       expect(hybridButton.querySelector('.active-indicator')).toBeInTheDocument();
@@ -93,8 +105,8 @@ describe('SearchModeToggle', () => {
     it('does not show active class on inactive modes', () => {
       render(<SearchModeToggle value={SearchMode.Semantic} onChange={mockOnChange} />);
 
-      const hybridButton = screen.getByRole('button', { name: /Hybrid/i });
-      const keywordButton = screen.getByRole('button', { name: /Keyword/i });
+      const hybridButton = getHybridButton();
+      const keywordButton = getKeywordButton();
 
       expect(hybridButton).not.toHaveClass('active');
       expect(keywordButton).not.toHaveClass('active');
@@ -105,8 +117,7 @@ describe('SearchModeToggle', () => {
     it('calls onChange with Semantic when Semantic button clicked', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
 
-      const semanticButton = screen.getByRole('button', { name: /Semantic/i });
-      fireEvent.click(semanticButton);
+      fireEvent.click(getSemanticButton());
 
       expect(mockOnChange).toHaveBeenCalledWith(SearchMode.Semantic);
       expect(mockOnChange).toHaveBeenCalledTimes(1);
@@ -115,8 +126,7 @@ describe('SearchModeToggle', () => {
     it('calls onChange with Hybrid when Hybrid button clicked', () => {
       render(<SearchModeToggle value={SearchMode.Semantic} onChange={mockOnChange} />);
 
-      const hybridButton = screen.getByRole('button', { name: /Hybrid/i });
-      fireEvent.click(hybridButton);
+      fireEvent.click(getHybridButton());
 
       expect(mockOnChange).toHaveBeenCalledWith(SearchMode.Hybrid);
       expect(mockOnChange).toHaveBeenCalledTimes(1);
@@ -125,8 +135,7 @@ describe('SearchModeToggle', () => {
     it('calls onChange with Keyword when Keyword button clicked', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
 
-      const keywordButton = screen.getByRole('button', { name: /Keyword/i });
-      fireEvent.click(keywordButton);
+      fireEvent.click(getKeywordButton());
 
       expect(mockOnChange).toHaveBeenCalledWith(SearchMode.Keyword);
       expect(mockOnChange).toHaveBeenCalledTimes(1);
@@ -135,8 +144,7 @@ describe('SearchModeToggle', () => {
     it('allows clicking the same mode button (does not prevent redundant clicks)', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
 
-      const hybridButton = screen.getByRole('button', { name: /Hybrid/i });
-      fireEvent.click(hybridButton);
+      fireEvent.click(getHybridButton());
 
       expect(mockOnChange).toHaveBeenCalledWith(SearchMode.Hybrid);
       expect(mockOnChange).toHaveBeenCalledTimes(1);
@@ -145,9 +153,9 @@ describe('SearchModeToggle', () => {
     it('handles rapid mode switching', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
 
-      const semanticButton = screen.getByRole('button', { name: /Semantic/i });
-      const keywordButton = screen.getByRole('button', { name: /Keyword/i });
-      const hybridButton = screen.getByRole('button', { name: /Hybrid/i });
+      const semanticButton = getSemanticButton();
+      const keywordButton = getKeywordButton();
+      const hybridButton = getHybridButton();
 
       fireEvent.click(semanticButton);
       fireEvent.click(keywordButton);
@@ -166,8 +174,7 @@ describe('SearchModeToggle', () => {
     it('does not call onChange when disabled and button clicked', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} disabled />);
 
-      const semanticButton = screen.getByRole('button', { name: /Semantic/i });
-      fireEvent.click(semanticButton);
+      fireEvent.click(getSemanticButton());
 
       expect(mockOnChange).not.toHaveBeenCalled();
     });
@@ -175,9 +182,9 @@ describe('SearchModeToggle', () => {
     it('disables all buttons when disabled prop is true', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} disabled />);
 
-      const semanticButton = screen.getByRole('button', { name: /Semantic/i });
-      const hybridButton = screen.getByRole('button', { name: /Hybrid/i });
-      const keywordButton = screen.getByRole('button', { name: /Keyword/i });
+      const semanticButton = getSemanticButton();
+      const hybridButton = getHybridButton();
+      const keywordButton = getKeywordButton();
 
       expect(semanticButton).toBeDisabled();
       expect(hybridButton).toBeDisabled();
@@ -187,9 +194,9 @@ describe('SearchModeToggle', () => {
     it('enables all buttons when disabled prop is false', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} disabled={false} />);
 
-      const semanticButton = screen.getByRole('button', { name: /Semantic/i });
-      const hybridButton = screen.getByRole('button', { name: /Hybrid/i });
-      const keywordButton = screen.getByRole('button', { name: /Keyword/i });
+      const semanticButton = getSemanticButton();
+      const hybridButton = getHybridButton();
+      const keywordButton = getKeywordButton();
 
       expect(semanticButton).not.toBeDisabled();
       expect(hybridButton).not.toBeDisabled();
@@ -201,26 +208,22 @@ describe('SearchModeToggle', () => {
     it('has proper ARIA labels for each mode button', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
 
-      expect(screen.getByRole('button', { name: /Semantic search mode: Natural language understanding/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Hybrid search mode: Best of both worlds/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Keyword search mode: Exact term matching/i })).toBeInTheDocument();
+      expect(getSemanticButton()).toBeInTheDocument();
+      expect(getHybridButton()).toBeInTheDocument();
+      expect(getKeywordButton()).toBeInTheDocument();
     });
 
     it('has aria-pressed=true on selected mode', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
 
-      const hybridButton = screen.getByRole('button', { name: /Hybrid/i });
-      expect(hybridButton).toHaveAttribute('aria-pressed', 'true');
+      expect(getHybridButton()).toHaveAttribute('aria-pressed', 'true');
     });
 
     it('has aria-pressed=false on unselected modes', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
 
-      const semanticButton = screen.getByRole('button', { name: /Semantic/i });
-      const keywordButton = screen.getByRole('button', { name: /Keyword/i });
-
-      expect(semanticButton).toHaveAttribute('aria-pressed', 'false');
-      expect(keywordButton).toHaveAttribute('aria-pressed', 'false');
+      expect(getSemanticButton()).toHaveAttribute('aria-pressed', 'false');
+      expect(getKeywordButton()).toHaveAttribute('aria-pressed', 'false');
     });
 
     it('has role="group" with aria-label on button container', () => {
@@ -233,13 +236,9 @@ describe('SearchModeToggle', () => {
     it('displays tooltips with mode descriptions', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
 
-      const semanticButton = screen.getByRole('button', { name: /Semantic/i });
-      const hybridButton = screen.getByRole('button', { name: /Hybrid/i });
-      const keywordButton = screen.getByRole('button', { name: /Keyword/i });
-
-      expect(semanticButton).toHaveAttribute('title', 'Natural language understanding (AI embeddings)');
-      expect(hybridButton).toHaveAttribute('title', 'Best of both worlds (default, 70% semantic + 30% keyword)');
-      expect(keywordButton).toHaveAttribute('title', 'Exact term matching (faster, more precise)');
+      expect(getSemanticButton()).toHaveAttribute('title', 'Natural language understanding (AI embeddings)');
+      expect(getHybridButton()).toHaveAttribute('title', 'Best of both worlds (default, 70% semantic + 30% keyword)');
+      expect(getKeywordButton()).toHaveAttribute('title', 'Exact term matching (faster, more precise)');
     });
 
     it('marks icons as aria-hidden', () => {
@@ -254,8 +253,7 @@ describe('SearchModeToggle', () => {
     it('has aria-label on active indicator', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
 
-      const hybridButton = screen.getByRole('button', { name: /Hybrid/i });
-      const activeIndicator = hybridButton.querySelector('.active-indicator');
+      const activeIndicator = getHybridButton().querySelector('.active-indicator');
 
       expect(activeIndicator).toHaveAttribute('aria-label', 'Currently selected');
     });
@@ -263,7 +261,7 @@ describe('SearchModeToggle', () => {
     it('can focus on mode buttons for keyboard navigation', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
 
-      const semanticButton = screen.getByRole('button', { name: /Semantic/i });
+      const semanticButton = getSemanticButton();
       semanticButton.focus();
 
       expect(semanticButton).toHaveFocus();
@@ -274,13 +272,9 @@ describe('SearchModeToggle', () => {
     it('has type="button" to prevent form submission', () => {
       render(<SearchModeToggle value={SearchMode.Hybrid} onChange={mockOnChange} />);
 
-      const semanticButton = screen.getByRole('button', { name: /Semantic/i });
-      const hybridButton = screen.getByRole('button', { name: /Hybrid/i });
-      const keywordButton = screen.getByRole('button', { name: /Keyword/i });
-
-      expect(semanticButton).toHaveAttribute('type', 'button');
-      expect(hybridButton).toHaveAttribute('type', 'button');
-      expect(keywordButton).toHaveAttribute('type', 'button');
+      expect(getSemanticButton()).toHaveAttribute('type', 'button');
+      expect(getHybridButton()).toHaveAttribute('type', 'button');
+      expect(getKeywordButton()).toHaveAttribute('type', 'button');
     });
   });
 });

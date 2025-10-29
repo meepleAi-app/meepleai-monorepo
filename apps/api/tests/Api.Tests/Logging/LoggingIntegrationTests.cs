@@ -32,21 +32,24 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
     [Fact]
     public async Task Request_WithNoAuthentication_LogsWithCorrelationId()
     {
-        // Act
-        var response = await _client.GetAsync("/health/live");
+        // Arrange + Act within a correlator context to ensure capture
+        List<LogEvent> logEvents;
+        HttpResponseMessage response;
+        using (TestCorrelator.CreateContext())
+        {
+            TestLogSink.Clear();
+            response = await _client.GetAsync("/health/live");
+            response.EnsureSuccessStatusCode();
+            logEvents = TestLogSink.GetEvents().ToList();
+        }
 
-        // Assert
-        response.EnsureSuccessStatusCode();
-
-        // Check correlation ID in response headers
+        // Assert - check correlation header
         Assert.True(response.Headers.Contains("X-Correlation-Id"));
         var correlationId = response.Headers.GetValues("X-Correlation-Id").First();
         Assert.NotEmpty(correlationId);
 
-        // Check logs contain correlation ID
-        var logEvents = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
+        // Assert - logs include correlation id
         Assert.NotEmpty(logEvents);
-
         var requestLog = logEvents.FirstOrDefault(e => e.Properties.ContainsKey("CorrelationId"));
         Assert.NotNull(requestLog);
         var loggedCorrelationId = requestLog.Properties["CorrelationId"].ToString().Trim('"');
@@ -313,6 +316,7 @@ public class LoggingTestFactory : WebApplicationFactoryFixture
                 .Enrich.FromLogContext()
                 .Enrich.WithProperty("Environment", "Testing")
                 .WriteTo.TestCorrelator() // Enables log assertions in tests
+                .WriteTo.Sink(new TestLogSink()) // Capture all events in-memory for request pipeline assertions
                 .CreateLogger();
             // Ensure Serilog request logging middleware writes to TestCorrelator logger
             Log.Logger = logger;

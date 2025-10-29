@@ -1,10 +1,14 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
 using System;
 using Api.Infrastructure;
+using Api.Models;
 using Api.Services;
 using Api.Services.Qdrant;
+using Api.Tests.Helpers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -31,9 +35,11 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
     {
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
+            Environment.SetEnvironmentVariable("OPENROUTER_API_KEY", "test-openrouter-key");
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["N8N_ENCRYPTION_KEY"] = "integration-test-encryption-key"
+                ["N8N_ENCRYPTION_KEY"] = "integration-test-encryption-key",
+                ["OPENROUTER_API_KEY"] = "test-openrouter-key"
             });
         });
 
@@ -51,7 +57,8 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
                 d.ServiceType == typeof(QdrantService) ||
                 d.ServiceType == typeof(IQdrantService) ||
                 d.ServiceType == typeof(IQdrantClientAdapter) ||
-                d.ServiceType == typeof(IEmbeddingService)
+                d.ServiceType == typeof(IEmbeddingService) ||
+                d.ServiceType == typeof(ILlmService)
             ).ToList();
 
             foreach (var descriptor in descriptors)
@@ -249,12 +256,15 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
             mockCollectionManager.Setup(x => x.EnsureCollectionExistsAsync(It.IsAny<string>(), It.IsAny<uint>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
 
-            var mockVectorIndexer = new Mock<IQdrantVectorIndexer>();
-            var mockVectorSearcher = new Mock<IQdrantVectorSearcher>();
-
             services.AddSingleton(mockCollectionManager.Object);
-            services.AddSingleton(mockVectorIndexer.Object);
-            services.AddSingleton(mockVectorSearcher.Object);
+            services.AddSingleton<IQdrantVectorIndexer>(_ =>
+                new QdrantVectorIndexer(
+                    mockQdrantAdapter.Object,
+                    NullLogger<QdrantVectorIndexer>.Instance));
+            services.AddSingleton<IQdrantVectorSearcher>(_ =>
+                new QdrantVectorSearcher(
+                    mockQdrantAdapter.Object,
+                    NullLogger<QdrantVectorSearcher>.Instance));
             services.AddSingleton<IQdrantService>(sp => new QdrantService(
                 sp.GetRequiredService<IQdrantCollectionManager>(),
                 sp.GetRequiredService<IQdrantVectorIndexer>(),
@@ -262,6 +272,7 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
                 sp.GetRequiredService<IConfiguration>(),
                 sp.GetRequiredService<ILogger<QdrantService>>()
             ));
+            services.AddSingleton<ILlmService, TestLlmService>();
 
             // Mock embedding service to return dummy embeddings (1536 dimensions for text-embedding-3-small)
             var mockEmbeddingService = new Mock<IEmbeddingService>();
@@ -413,6 +424,30 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
         };
 
         db.Games.AddRange(ticTacToeGame, chessGame);
+
+        if (!db.SystemConfigurations.Any(c => c.Key == "Features.PdfUpload"))
+        {
+            var pdfUploadFlag = new Api.Infrastructure.Entities.SystemConfigurationEntity
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                Key = "Features.PdfUpload",
+                Value = "true",
+                ValueType = "Boolean",
+                Description = "Enable PDF uploads for integration tests",
+                Category = "FeatureFlags",
+                IsActive = true,
+                RequiresRestart = false,
+                Environment = "All",
+                Version = 1,
+                CreatedAt = now,
+                UpdatedAt = now,
+                CreatedByUserId = adminUser.Id,
+                UpdatedByUserId = adminUser.Id,
+                LastToggledAt = now
+            };
+
+            db.SystemConfigurations.Add(pdfUploadFlag);
+        }
 
         // Seed demo rule specs
         var ticTacToeRuleSpec = new Api.Infrastructure.Entities.RuleSpecEntity

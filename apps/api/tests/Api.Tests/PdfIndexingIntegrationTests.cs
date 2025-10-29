@@ -110,9 +110,12 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
     public async Task SearchIndexedPdf_FilteredByGame_ReturnsOnlyGameResults()
     {
         // GIVEN: PDFs indexed for two different games
-        var tttPdfId = await CreateAndIndexPdfAsync("tic-tac-toe",
+        var ticTacToeGame = await CreateGameAsync("Tic-Tac-Toe");
+        var chessGame = await CreateGameAsync("Chess");
+
+        var tttPdfId = await CreateAndIndexPdfAsync(ticTacToeGame.Id,
             "Players alternate marking X or O. Three in a row wins.");
-        var chessPdfId = await CreateAndIndexPdfAsync("chess",
+        var chessPdfId = await CreateAndIndexPdfAsync(chessGame.Id,
             "The knight moves in an L-shape. Checkmate ends the game.");
 
         // WHEN: I search in the tic-tac-toe game
@@ -120,7 +123,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         _client.DefaultRequestHeaders.Add("Cookie", _sessionToken);
         var searchResponse = await _client.PostAsJsonAsync("/api/v1/agents/qa", new
         {
-            gameId = "tic-tac-toe",
+            gameId = ticTacToeGame.Id,
             query = "how do players win the game?"
         });
 
@@ -445,6 +448,20 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         response.EnsureSuccessStatusCode();
 
         return pdfId;
+    }
+
+    private async Task<GameEntity> CreateGameAsync(string name)
+    {
+        var game = new GameEntity
+        {
+            Id = Guid.NewGuid().ToString(),
+            Name = $"{name}-{Guid.NewGuid():N}",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _db!.Games.Add(game);
+        await _db.SaveChangesAsync();
+        return game;
     }
 
     private static string GenerateLargeText(int characterCount)

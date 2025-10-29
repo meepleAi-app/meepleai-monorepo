@@ -131,28 +131,28 @@ public class PdfTextExtractionService
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogError(ex, "Invalid operation extracting text from PDF: {FilePath}", filePath);
-            throw new PdfExtractionException($"Invalid PDF operation: {ex.Message}", ex);
+            _logger.LogError(ex, "Failed to extract text from PDF {FilePath}: invalid operation", filePath);
+            return PdfTextExtractionResult.CreateFailure($"Invalid PDF operation: {ex.Message}");
         }
         catch (ArgumentException ex)
         {
-            _logger.LogError(ex, "Invalid argument extracting text from PDF: {FilePath}", filePath);
-            throw new PdfExtractionException($"Invalid PDF argument: {ex.Message}", ex);
+            _logger.LogError(ex, "Failed to extract text from PDF {FilePath}: invalid argument", filePath);
+            return PdfTextExtractionResult.CreateFailure($"Invalid PDF argument: {ex.Message}");
         }
         catch (NotSupportedException ex)
         {
-            _logger.LogError(ex, "Unsupported PDF format: {FilePath}", filePath);
-            throw new PdfExtractionException($"Unsupported PDF format: {ex.Message}", ex);
+            _logger.LogError(ex, "Failed to extract text from PDF {FilePath}: unsupported format", filePath);
+            return PdfTextExtractionResult.CreateFailure($"Unsupported PDF format: {ex.Message}");
         }
         catch (IOException ex)
         {
-            _logger.LogError(ex, "I/O error extracting text from PDF: {FilePath}", filePath);
-            throw new PdfExtractionException($"Failed to read PDF file: {ex.Message}", ex);
+            _logger.LogError(ex, "Failed to extract text from PDF {FilePath}: I/O error", filePath);
+            return PdfTextExtractionResult.CreateFailure($"Failed to read PDF file: {ex.Message}");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error extracting text from PDF: {FilePath}", filePath);
-            throw new PdfExtractionException($"Failed to extract text from PDF: {ex.Message}", ex);
+            _logger.LogError(ex, "Failed to extract text from PDF {FilePath}", filePath);
+            return PdfTextExtractionResult.CreateFailure($"Failed to extract text from PDF: {ex.Message}");
         }
     }
 
@@ -207,28 +207,28 @@ public class PdfTextExtractionService
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogError(ex, "Invalid operation extracting paged text from PDF: {FilePath}", filePath);
-            throw new PdfExtractionException($"Invalid PDF operation: {ex.Message}", ex);
+            _logger.LogError(ex, "Failed to extract paged text from PDF {FilePath}: invalid operation", filePath);
+            return PagedExtractionResult.CreateFailure($"Invalid PDF operation: {ex.Message}");
         }
         catch (ArgumentException ex)
         {
-            _logger.LogError(ex, "Invalid argument extracting paged text from PDF: {FilePath}", filePath);
-            throw new PdfExtractionException($"Invalid PDF argument: {ex.Message}", ex);
+            _logger.LogError(ex, "Failed to extract paged text from PDF {FilePath}: invalid argument", filePath);
+            return PagedExtractionResult.CreateFailure($"Invalid PDF argument: {ex.Message}");
         }
         catch (NotSupportedException ex)
         {
-            _logger.LogError(ex, "Unsupported PDF format for paged extraction: {FilePath}", filePath);
-            throw new PdfExtractionException($"Unsupported PDF format: {ex.Message}", ex);
+            _logger.LogError(ex, "Failed to extract paged text from PDF {FilePath}: unsupported format", filePath);
+            return PagedExtractionResult.CreateFailure($"Unsupported PDF format: {ex.Message}");
         }
         catch (IOException ex)
         {
-            _logger.LogError(ex, "I/O error extracting paged text from PDF: {FilePath}", filePath);
-            throw new PdfExtractionException($"Failed to read PDF file: {ex.Message}", ex);
+            _logger.LogError(ex, "Failed to extract paged text from PDF {FilePath}: I/O error", filePath);
+            return PagedExtractionResult.CreateFailure($"Failed to read PDF file: {ex.Message}");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error extracting paged text from PDF: {FilePath}", filePath);
-            throw new PdfExtractionException($"Failed to extract paged text from PDF: {ex.Message}", ex);
+            _logger.LogError(ex, "Failed to extract paged text from PDF {FilePath}", filePath);
+            return PagedExtractionResult.CreateFailure($"Failed to extract paged text from PDF: {ex.Message}");
         }
     }
 

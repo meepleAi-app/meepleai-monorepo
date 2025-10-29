@@ -298,7 +298,7 @@ describe("api", () => {
 
         expect(result).toEqual(commentsData);
         expect(fetchMock).toHaveBeenCalledWith(
-          `http://localhost:8080/api/v1/games/${gameId}/rulespec/versions/${version}/comments`,
+          `http://localhost:8080/api/v1/games/${gameId}/rulespec/versions/${version}/comments?includeResolved=true`,
           {
             method: "GET",
             credentials: "include"
@@ -320,7 +320,7 @@ describe("api", () => {
         await expect(
           api.ruleSpecComments.getComments(gameId, version)
         ).rejects.toThrow(
-          `API /api/v1/games/${gameId}/rulespec/versions/${version}/comments 500`
+          `API /api/v1/games/${gameId}/rulespec/versions/${version}/comments?includeResolved=true 500`
         );
       });
     });

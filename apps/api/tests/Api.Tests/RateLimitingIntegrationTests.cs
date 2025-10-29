@@ -113,7 +113,49 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
         // Cleanup happens automatically via DisposeAsync
     }
 
-    private async Task<TestClientContext> CreateClientContextAsync()
+    /// <summary>
+    /// Scenario outline: Authenticated users receive role-specific rate limit headers.
+    ///   Given a signed-in user with role <Role>
+    ///   And the rate limiter allows the request with <Remaining> tokens left
+    ///   When the user calls a general authenticated endpoint
+    ///   Then the response carries X-RateLimit headers matching the role quota.
+    /// </summary>
+    [Theory]
+    [InlineData(UserRole.Editor, 500, 498)]
+    [InlineData(UserRole.User, 100, 42)]
+    public async Task AuthenticatedUsers_EmitRoleSpecificRateLimitHeaders(UserRole role, int expectedLimit, int expectedRemaining)
+    {
+        await using var context = await CreateClientContextAsync(role);
+
+        context.RateLimitService.EnqueueResponse(allowed: true, tokensRemaining: expectedRemaining, retryAfterSeconds: 0);
+
+        var response = await context.Client.GetAsync("/api/v1/auth/me");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(expectedLimit.ToString(CultureInfo.InvariantCulture), GetSingleHeaderValue(response, "X-RateLimit-Limit"));
+        Assert.Equal(expectedRemaining.ToString(CultureInfo.InvariantCulture), GetSingleHeaderValue(response, "X-RateLimit-Remaining"));
+        Assert.False(response.Headers.Contains("Retry-After"));
+    }
+
+    /// <summary>
+    /// Scenario: Anonymous callers are rate limited using the anonymous quota.
+    /// </summary>
+    [Fact]
+    public async Task AnonymousRequests_EmitAnonymousQuotaHeaders()
+    {
+        await using var context = await CreateClientContextAsync(role: null);
+
+        context.RateLimitService.EnqueueResponse(allowed: true, tokensRemaining: 12, retryAfterSeconds: 0);
+
+        var response = await context.Client.GetAsync("/api/v1/auth/me");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal("60", GetSingleHeaderValue(response, "X-RateLimit-Limit"));
+        Assert.Equal("12", GetSingleHeaderValue(response, "X-RateLimit-Remaining"));
+        Assert.False(response.Headers.Contains("Retry-After"));
+    }
+
+    private async Task<TestClientContext> CreateClientContextAsync(UserRole? role = UserRole.Admin)
     {
         var rateLimitService = new TestRateLimitService();
 
@@ -134,19 +176,25 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
 
         var client = factory.CreateClient();
 
-        var email = $"rate-limit-admin-{TestRunId}-{Guid.NewGuid():N}@example.com";
-        var registerPayload = new RegisterPayload(Email: email, Password: "Password123!", DisplayName: "Rate Limit Admin", Role: null);
-        var registerResponse = await client.PostAsJsonAsync("/api/v1/auth/register", registerPayload);
-        registerResponse.EnsureSuccessStatusCode();
+        if (role is UserRole assignedRole)
+        {
+            var email = $"rate-limit-{assignedRole.ToString().ToLowerInvariant()}-{TestRunId}-{Guid.NewGuid():N}@example.com";
+            var registerPayload = new RegisterPayload(Email: email, Password: "Password123!", DisplayName: $"Rate Limit {assignedRole}", Role: null);
+            var registerResponse = await client.PostAsJsonAsync("/api/v1/auth/register", registerPayload);
+            registerResponse.EnsureSuccessStatusCode();
 
-        // Track user for cleanup
-        var userId = await GetUserIdByEmailAsync(factory.Services, email);
-        TrackUserId(userId);
+            var userId = await GetUserIdByEmailAsync(factory.Services, email);
+            TrackUserId(userId);
 
-        await PromoteUserAsync(factory.Services, email, UserRole.Admin);
+            await PromoteUserAsync(factory.Services, email, assignedRole);
 
-        var cookies = ExtractCookies(registerResponse);
-        AttachCookies(client, cookies);
+            var cookies = ExtractCookies(registerResponse);
+            AttachCookies(client, cookies);
+        }
+        else
+        {
+            client.DefaultRequestHeaders.Remove("Cookie");
+        }
 
         return new TestClientContext(factory, client, rateLimitService);
     }

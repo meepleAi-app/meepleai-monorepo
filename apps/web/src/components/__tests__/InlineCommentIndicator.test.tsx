@@ -114,7 +114,7 @@ describe('InlineCommentIndicator', () => {
 
   describe('Unresolved Indicator', () => {
     it('shows unresolved dot when hasUnresolved = true', () => {
-      const { container } = render(
+      render(
         <InlineCommentIndicator
           lineNumber={10}
           commentCount={1}
@@ -123,18 +123,17 @@ describe('InlineCommentIndicator', () => {
         />
       );
 
-      // Check for pulsing dot with specific styles (must match CSS exactly)
-      const dots = Array.from(container.querySelectorAll('span')).filter(
-        (span) =>
-          span.style.getPropertyValue('width') === '8px' &&
-          span.style.getPropertyValue('height') === '8px' &&
-          span.style.getPropertyValue('background') === '#d93025'
-      );
-      expect(dots.length).toBeGreaterThan(0);
+      const dot = screen.getByTestId('inline-comment-unresolved-dot') as HTMLSpanElement;
+      expect(dot).toBeInTheDocument();
+      expect(dot).toHaveStyle({
+        width: '8px',
+        height: '8px',
+        borderRadius: '50%',
+      });
     });
 
     it('hides unresolved dot when hasUnresolved = false', () => {
-      const { container } = render(
+      const { queryByTestId } = render(
         <InlineCommentIndicator
           lineNumber={10}
           commentCount={1}
@@ -143,17 +142,11 @@ describe('InlineCommentIndicator', () => {
         />
       );
 
-      const dots = Array.from(container.querySelectorAll('span')).filter(
-        (span) =>
-          span.style.width === '8px' &&
-          span.style.height === '8px' &&
-          span.style.background === '#d93025'
-      );
-      expect(dots).toHaveLength(0);
+      expect(queryByTestId('inline-comment-unresolved-dot')).toBeNull();
     });
 
     it('shows pulse animation when unresolved', () => {
-      const { container } = render(
+      render(
         <InlineCommentIndicator
           lineNumber={10}
           commentCount={1}
@@ -162,11 +155,9 @@ describe('InlineCommentIndicator', () => {
         />
       );
 
-      // Check for animation style tag
-      const style = container.querySelector('style');
-      expect(style).toBeInTheDocument();
-      expect(style?.textContent).toContain('@keyframes pulse');
-      expect(style?.textContent).toContain('pulse 2s ease-in-out infinite');
+      const dot = screen.getByTestId('inline-comment-unresolved-dot') as HTMLSpanElement;
+      expect(dot.style.animation).toContain('pulse');
+      expect(dot.style.animation).toContain('infinite');
     });
   });
 
@@ -679,13 +670,8 @@ describe('InlineCommentIndicator', () => {
       expect(badge).toBeInTheDocument();
 
       // Check for unresolved dot
-      const dots = Array.from(container.querySelectorAll('span')).filter(
-        (span) =>
-          span.style.getPropertyValue('width') === '8px' &&
-          span.style.getPropertyValue('height') === '8px' &&
-          span.style.getPropertyValue('background') === '#d93025'
-      );
-      expect(dots.length).toBeGreaterThan(0);
+      const dot = container.querySelector('[data-testid="inline-comment-unresolved-dot"]');
+      expect(dot).toBeInTheDocument();
     });
   });
 });

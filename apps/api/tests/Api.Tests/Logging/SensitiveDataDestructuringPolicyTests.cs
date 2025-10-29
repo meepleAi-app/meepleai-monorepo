@@ -246,7 +246,7 @@ public class SensitiveDataDestructuringPolicyTests
         Assert.Equal("Test user", descValue.Value);
     }
 
-    [Fact(Skip = "TODO: Nested anonymous type destructuring with mock factory needs refinement")]
+    [Fact]
     public void TryDestructure_WithNestedSensitiveData_RedactsAtAllLevels()
     {
         // Arrange

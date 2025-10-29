@@ -15,6 +15,25 @@ const mockApi = api as jest.Mocked<typeof api>;
 const mockToast = toast as jest.Mocked<typeof toast>;
 
 describe("FeatureFlagsTab", () => {
+  const criticalStreamingFlag = {
+    id: "2",
+    key: "Features:StreamingResponses",
+    value: "false",
+    valueType: "boolean",
+    description: "Enable SSE streaming for QA",
+    category: "FeatureFlag",
+    isActive: true,
+    requiresRestart: true,
+    environment: "All",
+    version: 1,
+    previousValue: null,
+    createdAt: "2025-01-01T00:00:00Z",
+    updatedAt: "2025-01-01T00:00:00Z",
+    createdByUserId: "admin",
+    updatedByUserId: null,
+    lastToggledAt: null,
+  } as const;
+
   const mockConfigurations = [
     {
       id: "1",
@@ -34,15 +53,16 @@ describe("FeatureFlagsTab", () => {
       updatedByUserId: null,
       lastToggledAt: null,
     },
+    criticalStreamingFlag,
     {
-      id: "2",
-      key: "Features:StreamingResponses",
+      id: "3",
+      key: "Features:BetaSurvey",
       value: "false",
       valueType: "boolean",
-      description: "Enable SSE streaming for QA",
+      description: "Show beta survey banner",
       category: "FeatureFlag",
       isActive: true,
-      requiresRestart: true,
+      requiresRestart: false,
       environment: "All",
       version: 1,
       previousValue: null,
@@ -51,7 +71,7 @@ describe("FeatureFlagsTab", () => {
       createdByUserId: "admin",
       updatedByUserId: null,
       lastToggledAt: null,
-    },
+    }
   ];
 
   const mockOnChange = jest.fn();
@@ -73,8 +93,8 @@ describe("FeatureFlagsTab", () => {
       />
     );
 
-    expect(screen.getByText(/RagCaching/)).toBeInTheDocument();
-    expect(screen.getByText(/StreamingResponses/)).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { name: /RagCaching/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('heading', { name: /StreamingResponses/i }).length).toBeGreaterThan(0);
   });
 
   it("shows active features preview", () => {
@@ -86,10 +106,13 @@ describe("FeatureFlagsTab", () => {
     );
 
     expect(screen.getByText(/Currently Active Features \(1\)/)).toBeInTheDocument();
-    expect(screen.getByText("RagCaching")).toBeInTheDocument();
+    const activeBadges = screen.getAllByText("RagCaching");
+    expect(activeBadges.length).toBeGreaterThan(0);
   });
 
-  it("toggles feature flag on click", async () => {
+  it("toggles non-critical feature flags without confirmation", async () => {
+    const confirmSpy = jest.spyOn(window, "confirm").mockImplementation(() => true);
+
     render(
       <FeatureFlagsTab
         configurations={mockConfigurations}
@@ -98,20 +121,23 @@ describe("FeatureFlagsTab", () => {
     );
 
     const toggleButtons = screen.getAllByRole("switch");
-    const ragCachingToggle = toggleButtons[0];
+    const betaSurveyToggle = toggleButtons[2];
 
-    fireEvent.click(ragCachingToggle);
+    fireEvent.click(betaSurveyToggle);
 
     await waitFor(() => {
-      expect(mockApi.config.updateConfiguration).toHaveBeenCalledWith("1", {
-        value: "false",
+      expect(mockApi.config.updateConfiguration).toHaveBeenCalledWith("3", {
+        value: "true",
       });
       expect(mockToast.success).toHaveBeenCalled();
       expect(mockOnChange).toHaveBeenCalled();
     });
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
   });
 
-  it("shows confirmation for critical features", () => {
+  it("shows confirmation prompt for critical features before disabling", () => {
     const confirmSpy = jest.spyOn(window, "confirm").mockReturnValue(false);
 
     render(
@@ -121,8 +147,8 @@ describe("FeatureFlagsTab", () => {
       />
     );
 
-    const toggleButtons = screen.getAllByRole("switch");
-    fireEvent.click(toggleButtons[0]);
+    const ragCachingToggle = screen.getAllByRole("switch")[0];
+    fireEvent.click(ragCachingToggle);
 
     expect(confirmSpy).toHaveBeenCalled();
     expect(mockApi.config.updateConfiguration).not.toHaveBeenCalled();
@@ -150,7 +176,8 @@ describe("FeatureFlagsTab", () => {
     expect(screen.getByText(/No feature flags found/)).toBeInTheDocument();
   });
 
-  it("handles API errors gracefully", async () => {
+  it("surfaces API errors and keeps toggle state unchanged", async () => {
+    const confirmSpy = jest.spyOn(window, "confirm").mockImplementation(() => true);
     mockApi.config.updateConfiguration = jest
       .fn()
       .mockRejectedValue(new Error("API Error"));
@@ -162,11 +189,13 @@ describe("FeatureFlagsTab", () => {
       />
     );
 
-    const toggleButtons = screen.getAllByRole("switch");
-    fireEvent.click(toggleButtons[1]); // Click non-critical flag
+    const streamingToggle = screen.getAllByRole("switch")[1];
+    fireEvent.click(streamingToggle);
 
     await waitFor(() => {
       expect(mockToast.error).toHaveBeenCalled();
     });
+
+    confirmSpy.mockRestore();
   });
 });

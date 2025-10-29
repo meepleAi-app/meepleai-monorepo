@@ -1,9 +1,13 @@
+using System.Collections.Generic;
 using System.Net;
+using System.Net.Http;
 using System.Net.Http.Json;
+using System.Linq;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Xunit;
 
 namespace Api.Tests;
@@ -38,10 +42,11 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         // Given: I am authenticated as an admin
         using var client = Factory.CreateHttpsClient();
         var adminEmail = $"feature-admin-{Guid.NewGuid():N}@test.com";
-        await RegisterAndAuthenticateAsync(client, adminEmail, "Admin");
+        var adminCookies = await RegisterAndAuthenticateAsync(client, adminEmail, "Admin");
 
         // When: I request GET /api/v1/admin/features
-        var response = await client.GetAsync("/api/v1/admin/features");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/features");
+        var response = await SendWithCookiesAsync(client, request, adminCookies);
 
         // Then: I receive a list of all feature flags with their states
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -64,10 +69,11 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         // Given: I am authenticated as a regular user
         using var client = Factory.CreateHttpsClient();
         var userEmail = $"feature-user-{Guid.NewGuid():N}@test.com";
-        await RegisterAndAuthenticateAsync(client, userEmail, "User");
+        var userCookies = await RegisterAndAuthenticateAsync(client, userEmail, "User");
 
         // When: I request GET /api/v1/admin/features
-        var response = await client.GetAsync("/api/v1/admin/features");
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/features");
+        var response = await SendWithCookiesAsync(client, request, userCookies);
 
         // Then: I receive 403 Forbidden
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -86,13 +92,14 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         // Given: I am authenticated as an admin
         using var client = Factory.CreateHttpsClient();
         var adminEmail = $"feature-enable-{Guid.NewGuid():N}@test.com";
-        await RegisterAndAuthenticateAsync(client, adminEmail, "Admin");
+        var adminCookies = await RegisterAndAuthenticateAsync(client, adminEmail, "Admin");
 
         var featureName = $"Features.TestEnable{Guid.NewGuid():N}";
 
         // When: I send PUT with enabled=true
         var updateRequest = new { enabled = true };
-        var response = await client.PutAsJsonAsync($"/api/v1/admin/features/{featureName}", updateRequest);
+        var request = CreateJsonRequest(HttpMethod.Put, $"/api/v1/admin/features/{featureName}", updateRequest);
+        var response = await SendWithCookiesAsync(client, request, adminCookies);
 
         // Then: The feature is enabled
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -121,16 +128,18 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         // Given: I am authenticated as an admin with a feature to disable
         using var client = Factory.CreateHttpsClient();
         var adminEmail = $"feature-disable-{Guid.NewGuid():N}@test.com";
-        await RegisterAndAuthenticateAsync(client, adminEmail, "Admin");
+        var adminCookies = await RegisterAndAuthenticateAsync(client, adminEmail, "Admin");
 
         var featureName = $"Features.TestDisable{Guid.NewGuid():N}";
 
         // Enable first
-        await client.PutAsJsonAsync($"/api/v1/admin/features/{featureName}", new { enabled = true });
+        var enableRequest = CreateJsonRequest(HttpMethod.Put, $"/api/v1/admin/features/{featureName}", new { enabled = true });
+        await SendWithCookiesAsync(client, enableRequest, adminCookies);
 
         // When: I send PUT with enabled=false
         var disableRequest = new { enabled = false };
-        var response = await client.PutAsJsonAsync($"/api/v1/admin/features/{featureName}", disableRequest);
+        var request = CreateJsonRequest(HttpMethod.Put, $"/api/v1/admin/features/{featureName}", disableRequest);
+        var response = await SendWithCookiesAsync(client, request, adminCookies);
 
         // Then: The feature is disabled
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -158,19 +167,21 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         // Given: Admin disables StreamingResponses feature
         using var adminClient = Factory.CreateHttpsClient();
         var adminEmail = $"stream-admin-{Guid.NewGuid():N}@test.com";
-        await RegisterAndAuthenticateAsync(adminClient, adminEmail, "Admin");
+        var adminCookies = await RegisterAndAuthenticateAsync(adminClient, adminEmail, "Admin");
 
-        await adminClient.PutAsJsonAsync("/api/v1/admin/features/Features.StreamingResponses",
-            new { enabled = false });
+        var disableRequest = CreateJsonRequest(HttpMethod.Put, "/api/v1/admin/features/Features.StreamingResponses", new { enabled = false });
+        var disableResponse = await SendWithCookiesAsync(adminClient, disableRequest, adminCookies);
+        Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
 
         // And: Regular user is authenticated
         using var userClient = Factory.CreateHttpsClient();
         var userEmail = $"stream-user-{Guid.NewGuid():N}@test.com";
-        await RegisterAndAuthenticateAsync(userClient, userEmail, "User");
+        var userCookies = await RegisterAndAuthenticateAsync(userClient, userEmail, "User");
 
         // When: User calls streaming endpoint
-        var request = new { gameId = Guid.NewGuid().ToString(), query = "test query" };
-        var response = await userClient.PostAsJsonAsync("/api/v1/agents/qa/stream", request);
+        var payload = new { gameId = Guid.NewGuid().ToString(), query = "test query" };
+        var request = CreateJsonRequest(HttpMethod.Post, "/api/v1/agents/qa/stream", payload);
+        var response = await SendWithCookiesAsync(userClient, request, userCookies);
 
         // Then: They receive 403 Forbidden
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -181,8 +192,9 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         Assert.Equal("Features.StreamingResponses", error.FeatureName);
 
         // Cleanup: Re-enable for other tests
-        await adminClient.PutAsJsonAsync("/api/v1/admin/features/Features.StreamingResponses",
-            new { enabled = true });
+        var reenableRequest = CreateJsonRequest(HttpMethod.Put, "/api/v1/admin/features/Features.StreamingResponses", new { enabled = true });
+        var reenableResponse = await SendWithCookiesAsync(adminClient, reenableRequest, adminCookies);
+        Assert.Equal(HttpStatusCode.OK, reenableResponse.StatusCode);
     }
 
     /// <summary>
@@ -194,38 +206,50 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
     [Fact]
     public async Task PdfUploadEndpoint_Returns403_WhenFeatureDisabled()
     {
-        // Given: Admin disables PdfUpload feature
+        // Given: PdfUpload feature is disabled via service
         using var adminClient = Factory.CreateHttpsClient();
         var adminEmail = $"pdf-admin-{Guid.NewGuid():N}@test.com";
-        await RegisterAndAuthenticateAsync(adminClient, adminEmail, "Admin");
+        _ = await RegisterAndAuthenticateAsync(adminClient, adminEmail, "Admin");
+        var adminUserId = await GetUserIdByEmailAsync(adminEmail);
+        using var featureScope = Factory.Services.CreateScope();
+        var featureFlags = featureScope.ServiceProvider.GetRequiredService<IFeatureFlagService>();
+        var configurationService = featureScope.ServiceProvider.GetRequiredService<IConfigurationService>();
+        var environment = featureScope.ServiceProvider.GetRequiredService<IHostEnvironment>().EnvironmentName;
+        await SetFeatureFlagAsync(configurationService, "Features.PdfUpload", false, adminUserId, environment);
+        var configuration = await configurationService.GetConfigurationByKeyAsync("Features.PdfUpload", environment);
+        Assert.NotNull(configuration);
+        Assert.True(new[] { environment, "All" }.Contains(configuration!.Environment));
+        Assert.False(bool.Parse(configuration.Value));
+        Assert.False(await featureFlags.IsEnabledAsync("Features.PdfUpload"));
 
-        await adminClient.PutAsJsonAsync("/api/v1/admin/features/Features.PdfUpload",
-            new { enabled = false });
-
-        // And: Editor user is authenticated
-        using var editorClient = Factory.CreateHttpsClient();
-        var editorEmail = $"pdf-editor-{Guid.NewGuid():N}@test.com";
-        await RegisterAndAuthenticateAsync(editorClient, editorEmail, "Editor");
-
-        // When: Editor attempts to upload PDF
-        var content = new MultipartFormDataContent
+        try
         {
-            { new StringContent(Guid.NewGuid().ToString()), "gameId" },
-            { new ByteArrayContent(new byte[] { 0x25, 0x50, 0x44, 0x46 }), "file", "test.pdf" }
-        };
+            // And: Editor user is authenticated
+            using var editorClient = Factory.CreateHttpsClient();
+            var editorEmail = $"pdf-editor-{Guid.NewGuid():N}@test.com";
+            var editorCookies = await RegisterAndAuthenticateAsync(editorClient, editorEmail, "Editor");
 
-        var response = await editorClient.PostAsync("/api/v1/ingest/pdf", content);
+            // When: Editor attempts to upload PDF
+            var content = new MultipartFormDataContent
+            {
+                { new StringContent(Guid.NewGuid().ToString()), "gameId" },
+                { new ByteArrayContent(new byte[] { 0x25, 0x50, 0x44, 0x46 }), "file", "test.pdf" }
+            };
 
-        // Then: They receive 403 Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf") { Content = content };
+            var response = await SendWithCookiesAsync(editorClient, request, editorCookies);
 
-        var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-        Assert.NotNull(error);
-        Assert.Equal("feature_disabled", error.Error);
+            // Then: They receive 403 Forbidden
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
-        // Cleanup: Re-enable
-        await adminClient.PutAsJsonAsync("/api/v1/admin/features/Features.PdfUpload",
-            new { enabled = true });
+            var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            Assert.NotNull(error);
+            Assert.Equal("feature_disabled", error.Error);
+        }
+        finally
+        {
+            await SetFeatureFlagAsync(configurationService, "Features.PdfUpload", true, adminUserId, environment);
+        }
     }
 
     /// <summary>
@@ -240,26 +264,27 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         // Given: Admin disables SetupGuideGeneration
         using var adminClient = Factory.CreateHttpsClient();
         var adminEmail = $"setup-admin-{Guid.NewGuid():N}@test.com";
-        await RegisterAndAuthenticateAsync(adminClient, adminEmail, "Admin");
+        var adminCookies = await RegisterAndAuthenticateAsync(adminClient, adminEmail, "Admin");
 
-        await adminClient.PutAsJsonAsync("/api/v1/admin/features/Features.SetupGuideGeneration",
-            new { enabled = false });
+        var disableRequest = CreateJsonRequest(HttpMethod.Put, "/api/v1/admin/features/Features.SetupGuideGeneration", new { enabled = false });
+        await SendWithCookiesAsync(adminClient, disableRequest, adminCookies);
 
         // And: Regular user is authenticated
         using var userClient = Factory.CreateHttpsClient();
         var userEmail = $"setup-user-{Guid.NewGuid():N}@test.com";
-        await RegisterAndAuthenticateAsync(userClient, userEmail, "User");
+        var userCookies = await RegisterAndAuthenticateAsync(userClient, userEmail, "User");
 
         // When: User requests setup guide
-        var request = new { gameId = Guid.NewGuid().ToString() };
-        var response = await userClient.PostAsJsonAsync("/api/v1/agents/setup", request);
+        var payload = new { gameId = Guid.NewGuid().ToString() };
+        var request = CreateJsonRequest(HttpMethod.Post, "/api/v1/agents/setup", payload);
+        var response = await SendWithCookiesAsync(userClient, request, userCookies);
 
         // Then: They receive 403 Forbidden
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
         // Cleanup: Re-enable
-        await adminClient.PutAsJsonAsync("/api/v1/admin/features/Features.SetupGuideGeneration",
-            new { enabled = true });
+        var reenableRequest = CreateJsonRequest(HttpMethod.Put, "/api/v1/admin/features/Features.SetupGuideGeneration", new { enabled = true });
+        await SendWithCookiesAsync(adminClient, reenableRequest, adminCookies);
     }
 
     #endregion
@@ -278,11 +303,11 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         // Given: Admin enables a new feature
         using var client = Factory.CreateHttpsClient();
         var adminEmail = $"persist-admin-{Guid.NewGuid():N}@test.com";
-        await RegisterAndAuthenticateAsync(client, adminEmail, "Admin");
+        var adminCookies = await RegisterAndAuthenticateAsync(client, adminEmail, "Admin");
 
         var featureName = $"Features.PersistTest{Guid.NewGuid():N}";
-        var enableResponse = await client.PutAsJsonAsync($"/api/v1/admin/features/{featureName}",
-            new { enabled = true });
+        var request = CreateJsonRequest(HttpMethod.Put, $"/api/v1/admin/features/{featureName}", new { enabled = true });
+        var enableResponse = await SendWithCookiesAsync(client, request, adminCookies);
         Assert.Equal(HttpStatusCode.OK, enableResponse.StatusCode);
 
         // When: Feature is checked in new scope
@@ -294,7 +319,8 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         Assert.True(isEnabled);
 
         // Verify via GET endpoint
-        var getResponse = await client.GetAsync("/api/v1/admin/features");
+        var getRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/features");
+        var getResponse = await SendWithCookiesAsync(client, getRequest, adminCookies);
         var listResult = await getResponse.Content.ReadFromJsonAsync<FeatureFlagsListResponse>();
         Assert.Contains(listResult!.Features, f => f.FeatureName == featureName && f.IsEnabled);
     }
@@ -317,11 +343,11 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         // Given: Admin enables a role-specific feature
         using var client = Factory.CreateHttpsClient();
         var adminEmail = $"role-admin-{Guid.NewGuid():N}@test.com";
-        await RegisterAndAuthenticateAsync(client, adminEmail, "Admin");
+        var adminCookies = await RegisterAndAuthenticateAsync(client, adminEmail, "Admin");
 
         var featureName = $"Features.RoleTest{Guid.NewGuid():N}";
-        await client.PutAsJsonAsync($"/api/v1/admin/features/{featureName}",
-            new { enabled = true, role = "Admin" });
+        var request = CreateJsonRequest(HttpMethod.Put, $"/api/v1/admin/features/{featureName}", new { enabled = true, role = "Admin" });
+        await SendWithCookiesAsync(client, request, adminCookies);
 
         using var scope = Factory.Services.CreateScope();
         var featureFlags = scope.ServiceProvider.GetRequiredService<IFeatureFlagService>();
@@ -355,23 +381,23 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         // Given: Admin disables chat export
         using var adminClient = Factory.CreateHttpsClient();
         var adminEmail = $"error-admin-{Guid.NewGuid():N}@test.com";
-        await RegisterAndAuthenticateAsync(adminClient, adminEmail, "Admin");
+        var adminCookies = await RegisterAndAuthenticateAsync(adminClient, adminEmail, "Admin");
 
-        await adminClient.PutAsJsonAsync("/api/v1/admin/features/Features.ChatExport",
-            new { enabled = false });
+        var disableRequest = CreateJsonRequest(HttpMethod.Put, "/api/v1/admin/features/Features.ChatExport", new { enabled = false });
+        await SendWithCookiesAsync(adminClient, disableRequest, adminCookies);
 
         // And: User is authenticated
         using var userClient = Factory.CreateHttpsClient();
         var userEmail = $"error-user-{Guid.NewGuid():N}@test.com";
-        await RegisterAndAuthenticateAsync(userClient, userEmail, "User");
+        var userCookies = await RegisterAndAuthenticateAsync(userClient, userEmail, "User");
 
         // When: User calls chat export endpoint (need a valid chat ID, so create one first)
-        var chatResponse = await userClient.PostAsJsonAsync("/api/v1/chats",
-            new { title = "Test Chat", gameId = (string?)null });
+        var chatRequest = CreateJsonRequest(HttpMethod.Post, "/api/v1/chats", new { title = "Test Chat", gameId = (string?)null });
+        var chatResponse = await SendWithCookiesAsync(userClient, chatRequest, userCookies);
         var chat = await chatResponse.Content.ReadFromJsonAsync<ChatDto>();
 
-        var exportResponse = await userClient.PostAsJsonAsync($"/api/v1/chats/{chat!.Id}/export",
-            new { format = "markdown" });
+        var exportRequest = CreateJsonRequest(HttpMethod.Post, $"/api/v1/chats/{chat!.Id}/export", new { format = "markdown" });
+        var exportResponse = await SendWithCookiesAsync(userClient, exportRequest, userCookies);
 
         // Then: Error response has correct format
         Assert.Equal(HttpStatusCode.Forbidden, exportResponse.StatusCode);
@@ -383,8 +409,8 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         Assert.Equal("Features.ChatExport", error.FeatureName);
 
         // Cleanup: Re-enable
-        await adminClient.PutAsJsonAsync("/api/v1/admin/features/Features.ChatExport",
-            new { enabled = true });
+        var reenableRequest = CreateJsonRequest(HttpMethod.Put, "/api/v1/admin/features/Features.ChatExport", new { enabled = true });
+        await SendWithCookiesAsync(adminClient, reenableRequest, adminCookies);
     }
 
     #endregion
@@ -465,6 +491,61 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
 
     #endregion
 
+    private static async Task SetFeatureFlagAsync(
+        IConfigurationService configurationService,
+        string featureName,
+        bool enabled,
+        string userId,
+        string environment)
+    {
+        var configs = await configurationService.GetConfigurationsAsync(
+            category: "FeatureFlags",
+            activeOnly: true,
+            pageSize: 200);
+
+        var matchingConfigs = configs.Items
+            .Where(c => string.Equals(c.Key, featureName, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        foreach (var config in matchingConfigs)
+        {
+            var updateRequest = new UpdateConfigurationRequest(Value: enabled ? "true" : "false");
+            await configurationService.UpdateConfigurationAsync(config.Id, updateRequest, userId);
+        }
+
+        if (!matchingConfigs.Any(c => string.Equals(c.Environment, environment, StringComparison.OrdinalIgnoreCase)))
+        {
+            var createRequest = new CreateConfigurationRequest(
+                Key: featureName,
+                Value: enabled ? "true" : "false",
+                ValueType: "Boolean",
+                Description: matchingConfigs.FirstOrDefault()?.Description ?? $"Feature flag: {featureName}",
+                Category: matchingConfigs.FirstOrDefault()?.Category ?? "FeatureFlags",
+                IsActive: true,
+                RequiresRestart: false,
+                Environment: environment);
+
+            await configurationService.CreateConfigurationAsync(createRequest, userId);
+        }
+
+        await configurationService.InvalidateCacheAsync(featureName);
+    }
+    private async Task<HttpResponseMessage> SendWithCookiesAsync(HttpClient client, HttpRequestMessage request, IEnumerable<string> cookies)
+    {
+        AddCookies(request, cookies);
+        return await client.SendAsync(request);
+    }
+
+    private static HttpRequestMessage CreateJsonRequest(HttpMethod method, string uri, object? payload = null)
+    {
+        var request = new HttpRequestMessage(method, uri);
+        if (payload != null)
+        {
+            request.Content = JsonContent.Create(payload);
+        }
+
+        return request;
+    }
     #region Helper Records
 
     private record FeatureFlagsListResponse(List<FeatureFlagDto> Features);
@@ -474,3 +555,4 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
 
     #endregion
 }
+

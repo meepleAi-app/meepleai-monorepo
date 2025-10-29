@@ -17,7 +17,7 @@
  * });
  */
 
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within, fireEvent } from '@testing-library/react';
 
 // =============================================================================
 // AUTHENTICATION HELPERS
@@ -171,11 +171,24 @@ export const waitForEditorReady = async (timeout = 5000): Promise<void> => {
  * fireEvent.change(textarea, { target: { value: '{ "test": true }' } });
  */
 export const getEditorTextarea = (): HTMLTextAreaElement => {
-  const textarea = screen.queryAllByRole('textbox').find((el) => el.tagName === 'TEXTAREA');
-  if (!textarea) {
-    throw new Error('Editor textarea not found');
+  const findTextarea = () =>
+    screen.queryAllByRole('textbox').find((el) => el.tagName === 'TEXTAREA') as HTMLTextAreaElement | undefined;
+
+  let textarea = findTextarea();
+  if (textarea) {
+    return textarea;
   }
-  return textarea as HTMLTextAreaElement;
+
+  const jsonToggle = screen.queryByRole('button', { name: /codice json/i });
+  if (jsonToggle) {
+    fireEvent.click(jsonToggle);
+    textarea = findTextarea();
+    if (textarea) {
+      return textarea;
+    }
+  }
+
+  throw new Error('Editor textarea not found');
 };
 
 /**

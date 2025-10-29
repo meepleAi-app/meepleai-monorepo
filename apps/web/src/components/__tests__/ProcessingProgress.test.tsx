@@ -43,8 +43,8 @@ describe('ProcessingProgress', () => {
 
       render(<ProcessingProgress pdfId="test-pdf-id" />);
 
-      expect(screen.getByText(/processing pdf/i)).toBeInTheDocument();
-      expect(screen.getByText(/loading progress information/i)).toBeInTheDocument();
+      const skeleton = screen.getByLabelText(/Loading processing progress/i);
+      expect(skeleton).toBeInTheDocument();
     });
 
     it('should render progress bar with correct percentage', async () => {

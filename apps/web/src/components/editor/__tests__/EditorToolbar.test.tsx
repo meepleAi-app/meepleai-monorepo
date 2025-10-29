@@ -28,8 +28,8 @@ describe("EditorToolbar", () => {
     };
 
     mockEditor = {
-      isActive: jest.fn((name: string, attrs?: any) => false),
-      can: jest.fn(() => createChain(true)),
+      isActive: jest.fn(() => false),
+      can: jest.fn(() => ({ chain: jest.fn(() => createChain(true)) })),
       chain: jest.fn(() => createChain(true))
     } as any;
   });

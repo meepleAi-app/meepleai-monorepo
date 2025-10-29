@@ -4,9 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Qdrant.Client.Grpc;
 using System.Diagnostics;
-
 namespace Api.Services;
-
 /// <summary>
 /// Service for vector storage and retrieval using Qdrant
 /// Facade pattern - delegates to specialized services
@@ -18,12 +16,10 @@ public class QdrantService : IQdrantService
     private readonly IQdrantVectorSearcher _vectorSearcher;
     private readonly ILogger<QdrantService> _logger;
     private const string CollectionName = "meepleai_documents";
-
     // Vector size depends on embedding provider:
     // - OpenAI text-embedding-3-small: 1536
     // - Ollama nomic-embed-text: 768
     private readonly uint _vectorSize;
-
     public QdrantService(
         IQdrantCollectionManager collectionManager,
         IQdrantVectorIndexer vectorIndexer,
@@ -35,15 +31,12 @@ public class QdrantService : IQdrantService
         _vectorIndexer = vectorIndexer;
         _vectorSearcher = vectorSearcher;
         _logger = logger;
-
         // Determine vector size based on embedding provider
         var provider = configuration["EMBEDDING_PROVIDER"]?.ToLowerInvariant() ?? "ollama";
         _vectorSize = provider == "ollama" ? 768u : 1536u;
-
         _logger.LogInformation("QdrantService initialized with vector size {VectorSize} for provider {Provider}",
             _vectorSize, provider);
     }
-
     /// <summary>
     /// Check if collection exists
     /// </summary>
@@ -51,7 +44,6 @@ public class QdrantService : IQdrantService
     {
         return await _collectionManager.CollectionExistsAsync(CollectionName, ct);
     }
-
     /// <summary>
     /// Initialize Qdrant collection if it doesn't exist
     /// </summary>
@@ -59,7 +51,6 @@ public class QdrantService : IQdrantService
     {
         await _collectionManager.EnsureCollectionExistsAsync(CollectionName, _vectorSize, ct);
     }
-
     /// <summary>
     /// Index document chunks with embeddings
     /// OPS-02: Now with OpenTelemetry metrics tracking and distributed tracing
@@ -70,65 +61,100 @@ public class QdrantService : IQdrantService
         List<DocumentChunk> chunks,
         CancellationToken ct = default)
     {
-        // OPS-02: Create distributed trace span for vector indexing
         using var activity = MeepleAiActivitySources.VectorSearch.StartActivity("QdrantService.IndexDocumentChunks");
         activity?.SetTag("game.id", gameId);
         activity?.SetTag("pdf.id", pdfId);
-        activity?.SetTag("chunks.count", chunks?.Count ?? 0);
+        var originalChunkCount = chunks?.Count ?? 0;
+        activity?.SetTag("chunks.original_count", originalChunkCount);
         activity?.SetTag("collection", CollectionName);
-
-        if (chunks == null || chunks.Count == 0)
+        if (chunks == null || originalChunkCount == 0)
         {
             activity?.SetTag("success", false);
             activity?.SetTag("error", "No chunks to index");
             return IndexResult.CreateFailure("No chunks to index");
         }
-
-        // OPS-02: Start tracking duration
+        var validChunks = new List<DocumentChunk>(chunks.Count);
+        var invalidReasons = new List<string>();
+        for (var i = 0; i < chunks.Count; i++)
+        {
+            var chunk = chunks[i];
+            if (chunk == null)
+            {
+                invalidReasons.Add($"{i}: null chunk");
+                continue;
+            }
+            if (string.IsNullOrWhiteSpace(chunk.Text))
+            {
+                invalidReasons.Add($"{i}: empty text");
+                continue;
+            }
+            var embedding = chunk.Embedding;
+            if (embedding == null || embedding.Length == 0)
+            {
+                invalidReasons.Add($"{i}: missing embedding");
+                continue;
+            }
+            var hasInvalidValue = false;
+            foreach (var value in embedding)
+            {
+                if (float.IsNaN(value) || float.IsInfinity(value))
+                {
+                    hasInvalidValue = true;
+                    break;
+                }
+            }
+            if (hasInvalidValue)
+            {
+                invalidReasons.Add($"{i}: non-finite embedding value");
+                continue;
+            }
+            if (embedding.Length != _vectorSize)
+            {
+                invalidReasons.Add($"{i}: dimension {embedding.Length} expected {_vectorSize}");
+                continue;
+            }
+            validChunks.Add(chunk);
+        }
+        if (invalidReasons.Count > 0)
+        {
+            _logger.LogWarning("Skipping {InvalidCount} invalid chunks for PDF {PdfId}: {Reasons}", invalidReasons.Count, pdfId, string.Join(", ", invalidReasons));
+            activity?.SetTag("chunks.filtered", invalidReasons.Count);
+        }
+        if (validChunks.Count == 0)
+        {
+            activity?.SetTag("success", false);
+            activity?.SetTag("error", "No valid chunks to index");
+            return IndexResult.CreateFailure("No valid chunks to index");
+        }
+        activity?.SetTag("chunks.count", validChunks.Count);
         var stopwatch = Stopwatch.StartNew();
-
         try
         {
-            _logger.LogInformation("Indexing {Count} chunks for PDF {PdfId}", chunks.Count, pdfId);
-
-            // Build base payload
+            _logger.LogInformation("Indexing {Count} chunks for PDF {PdfId}", validChunks.Count, pdfId);
             var basePayload = new Dictionary<string, Value>
             {
                 ["game_id"] = gameId,
                 ["pdf_id"] = pdfId
             };
-
-            // Build points from chunks
-            var points = _vectorIndexer.BuildPoints(chunks, basePayload);
-
-            // Upsert to Qdrant
+            var points = _vectorIndexer.BuildPoints(validChunks, basePayload);
             await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), ct);
-
-            _logger.LogInformation("Successfully indexed {Count} chunks for PDF {PdfId}", chunks.Count, pdfId);
-
-            // OPS-02: Add trace attributes for successful operation
+            _logger.LogInformation("Successfully indexed {Count} chunks for PDF {PdfId}", validChunks.Count, pdfId);
             activity?.SetTag("success", true);
-            activity?.SetTag("indexed.count", chunks.Count);
-
-            // OPS-02: Record metrics
+            activity?.SetTag("indexed.count", validChunks.Count);
             stopwatch.Stop();
             MeepleAiMetrics.VectorIndexingDuration.Record(stopwatch.Elapsed.TotalMilliseconds, new TagList { { "collection", CollectionName } });
-
-            return IndexResult.CreateSuccess(chunks.Count);
+            return IndexResult.CreateSuccess(validChunks.Count);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error indexing document chunks for PDF {PdfId}", pdfId);
-
             activity?.SetTag("success", false);
             activity?.SetTag("error.type", ex.GetType().Name);
             activity?.SetTag("error.message", ex.Message);
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
             return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
         }
     }
-
     /// <summary>
     /// Search for similar chunks filtered by game identifier
     /// OPS-02: Now with OpenTelemetry metrics tracking and distributed tracing
@@ -141,23 +167,18 @@ public class QdrantService : IQdrantService
     {
         // Validate parameters
         ArgumentNullException.ThrowIfNull(queryEmbedding);
-
         // OPS-02: Create distributed trace span for vector search
         using var activity = MeepleAiActivitySources.VectorSearch.StartActivity("QdrantService.Search");
         activity?.SetTag("game.id", gameId);
         activity?.SetTag("limit", limit);
         activity?.SetTag("collection", CollectionName);
         activity?.SetTag("vector.dimension", queryEmbedding.Length);
-
         // OPS-02: Start tracking duration
         var stopwatch = Stopwatch.StartNew();
-
         try
         {
             _logger.LogInformation("Searching in game {GameId}, limit {Limit}", gameId, limit);
-
             var filter = _vectorSearcher.BuildGameFilter(gameId);
-
             var searchResults = await _vectorSearcher.SearchAsync(
                 collectionName: CollectionName,
                 queryEmbedding: queryEmbedding,
@@ -165,11 +186,8 @@ public class QdrantService : IQdrantService
                 limit: limit,
                 ct: ct
             );
-
             var results = _vectorSearcher.ConvertToSearchResults(searchResults);
-
             _logger.LogInformation("Found {Count} results", results.Count);
-
             // OPS-02: Add trace attributes for successful operation
             activity?.SetTag("results.count", results.Count);
             activity?.SetTag("success", true);
@@ -177,26 +195,21 @@ public class QdrantService : IQdrantService
             {
                 activity?.SetTag("top.score", results[0].Score);
             }
-
             // OPS-02: Record metrics
             stopwatch.Stop();
             MeepleAiMetrics.RecordVectorSearch(stopwatch.Elapsed.TotalMilliseconds, results.Count, CollectionName);
-
             return SearchResult.CreateSuccess(results);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during search for game {GameId}", gameId);
-
             activity?.SetTag("success", false);
             activity?.SetTag("error.type", ex.GetType().Name);
             activity?.SetTag("error.message", ex.Message);
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
             return SearchResult.CreateFailure($"Search failed: {ex.Message}");
         }
     }
-
     /// <summary>
     /// Delete all vectors for a specific PDF
     /// </summary>
@@ -205,10 +218,8 @@ public class QdrantService : IQdrantService
         try
         {
             _logger.LogInformation("Deleting vectors for PDF {PdfId}", pdfId);
-
             var filter = _vectorSearcher.BuildPdfFilter(pdfId);
             await _vectorIndexer.DeleteByFilterAsync(CollectionName, filter, ct);
-
             _logger.LogInformation("Successfully deleted vectors for PDF {PdfId}", pdfId);
             return true;
         }
@@ -218,7 +229,6 @@ public class QdrantService : IQdrantService
             return false;
         }
     }
-
     /// <summary>
     /// Index document chunks with custom metadata
     /// </summary>
@@ -231,25 +241,20 @@ public class QdrantService : IQdrantService
         {
             return IndexResult.CreateFailure("No chunks to index");
         }
-
         try
         {
             var category = metadata.GetValueOrDefault("category", "unknown");
             _logger.LogInformation("Indexing {Count} chunks with category {Category}", chunks.Count, category);
-
             // Convert metadata to Value dictionary
             var basePayload = new Dictionary<string, Value>();
             foreach (var kvp in metadata)
             {
                 basePayload[kvp.Key] = kvp.Value;
             }
-
             // Build points from chunks
             var points = _vectorIndexer.BuildPoints(chunks, basePayload);
-
             // Upsert to Qdrant
             await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), ct);
-
             _logger.LogInformation("Successfully indexed {Count} chunks with metadata", chunks.Count);
             return IndexResult.CreateSuccess(chunks.Count);
         }
@@ -259,7 +264,6 @@ public class QdrantService : IQdrantService
             return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
         }
     }
-
     /// <summary>
     /// Search for similar chunks filtered by category
     /// </summary>
@@ -272,9 +276,7 @@ public class QdrantService : IQdrantService
         try
         {
             _logger.LogInformation("Searching in category {Category}, limit {Limit}", category, limit);
-
             var filter = _vectorSearcher.BuildCategoryFilter(category);
-
             var searchResults = await _vectorSearcher.SearchAsync(
                 collectionName: CollectionName,
                 queryEmbedding: queryEmbedding,
@@ -282,9 +284,7 @@ public class QdrantService : IQdrantService
                 limit: limit,
                 ct: ct
             );
-
             var results = _vectorSearcher.ConvertToSearchResults(searchResults);
-
             _logger.LogInformation("Found {Count} results in category {Category}", results.Count, category);
             return SearchResult.CreateSuccess(results);
         }
@@ -294,9 +294,7 @@ public class QdrantService : IQdrantService
             return SearchResult.CreateFailure($"Search failed: {ex.Message}");
         }
     }
-
     // AI-09: Multi-language support
-
     /// <summary>
     /// Index document chunks with embeddings and language metadata
     /// </summary>
@@ -313,21 +311,17 @@ public class QdrantService : IQdrantService
         activity?.SetTag("chunks.count", chunks?.Count ?? 0);
         activity?.SetTag("language", language);
         activity?.SetTag("collection", CollectionName);
-
         if (chunks == null || chunks.Count == 0)
         {
             activity?.SetTag("success", false);
             activity?.SetTag("error", "No chunks to index");
             return IndexResult.CreateFailure("No chunks to index");
         }
-
         var stopwatch = Stopwatch.StartNew();
-
         try
         {
             _logger.LogInformation("Indexing {Count} chunks for PDF {PdfId} with language {Language}",
                 chunks.Count, pdfId, language);
-
             // Build base payload with language
             var basePayload = new Dictionary<string, Value>
             {
@@ -335,39 +329,30 @@ public class QdrantService : IQdrantService
                 ["pdf_id"] = pdfId,
                 ["language"] = language
             };
-
             // Build points from chunks
             var points = _vectorIndexer.BuildPoints(chunks, basePayload);
-
             // Upsert to Qdrant
             await _vectorIndexer.UpsertPointsAsync(CollectionName, points.AsReadOnly(), ct);
-
             _logger.LogInformation("Successfully indexed {Count} chunks for PDF {PdfId} with language {Language}",
                 chunks.Count, pdfId, language);
-
             activity?.SetTag("success", true);
             activity?.SetTag("indexed.count", chunks.Count);
-
             stopwatch.Stop();
             MeepleAiMetrics.VectorIndexingDuration.Record(stopwatch.Elapsed.TotalMilliseconds,
                 new TagList { { "collection", CollectionName }, { "language", language } });
-
             return IndexResult.CreateSuccess(chunks.Count);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error indexing document chunks for PDF {PdfId} with language {Language}",
                 pdfId, language);
-
             activity?.SetTag("success", false);
             activity?.SetTag("error.type", ex.GetType().Name);
             activity?.SetTag("error.message", ex.Message);
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
             return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
         }
     }
-
     /// <summary>
     /// Search for similar chunks filtered by game and language
     /// </summary>
@@ -380,23 +365,18 @@ public class QdrantService : IQdrantService
     {
         // Validate parameters
         ArgumentNullException.ThrowIfNull(queryEmbedding);
-
         using var activity = MeepleAiActivitySources.VectorSearch.StartActivity("QdrantService.Search");
         activity?.SetTag("game.id", gameId);
         activity?.SetTag("language", language);
         activity?.SetTag("limit", limit);
         activity?.SetTag("collection", CollectionName);
         activity?.SetTag("vector.dimension", queryEmbedding.Length);
-
         var stopwatch = Stopwatch.StartNew();
-
         try
         {
             _logger.LogInformation("Searching in game {GameId} for language {Language}, limit {Limit}",
                 gameId, language, limit);
-
             var filter = _vectorSearcher.BuildGameLanguageFilter(gameId, language);
-
             var searchResults = await _vectorSearcher.SearchAsync(
                 collectionName: CollectionName,
                 queryEmbedding: queryEmbedding,
@@ -404,36 +384,28 @@ public class QdrantService : IQdrantService
                 limit: limit,
                 ct: ct
             );
-
             var results = _vectorSearcher.ConvertToSearchResults(searchResults);
-
             _logger.LogInformation("Found {Count} results for language {Language}", results.Count, language);
-
             activity?.SetTag("results.count", results.Count);
             activity?.SetTag("success", true);
             if (results.Count > 0)
             {
                 activity?.SetTag("top.score", results[0].Score);
             }
-
             stopwatch.Stop();
             MeepleAiMetrics.RecordVectorSearch(stopwatch.Elapsed.TotalMilliseconds, results.Count, CollectionName);
-
             return SearchResult.CreateSuccess(results);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during search for game {GameId} and language {Language}", gameId, language);
-
             activity?.SetTag("success", false);
             activity?.SetTag("error.type", ex.GetType().Name);
             activity?.SetTag("error.message", ex.Message);
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
-
             return SearchResult.CreateFailure($"Search failed: {ex.Message}");
         }
     }
-
     /// <summary>
     /// Delete all vectors for a specific category
     /// </summary>
@@ -442,10 +414,8 @@ public class QdrantService : IQdrantService
         try
         {
             _logger.LogInformation("Deleting vectors for category {Category}", category);
-
             var filter = _vectorSearcher.BuildCategoryFilter(category);
             await _vectorIndexer.DeleteByFilterAsync(CollectionName, filter, ct);
-
             _logger.LogInformation("Successfully deleted vectors for category {Category}", category);
             return true;
         }
@@ -456,7 +426,6 @@ public class QdrantService : IQdrantService
         }
     }
 }
-
 /// <summary>
 /// Document chunk with embedding
 /// </summary>
@@ -468,7 +437,6 @@ public record DocumentChunk
     public int CharStart { get; init; }
     public int CharEnd { get; init; }
 }
-
 /// <summary>
 /// Result of indexing operation
 /// </summary>
@@ -477,14 +445,11 @@ public record IndexResult
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
     public int IndexedCount { get; init; }
-
     public static IndexResult CreateSuccess(int count) =>
         new() { Success = true, IndexedCount = count };
-
     public static IndexResult CreateFailure(string error) =>
         new() { Success = false, ErrorMessage = error };
 }
-
 /// <summary>
 /// Result of search operation
 /// </summary>
@@ -493,14 +458,11 @@ public record SearchResult
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
     public List<SearchResultItem> Results { get; init; } = new();
-
     public static SearchResult CreateSuccess(List<SearchResultItem> results) =>
         new() { Success = true, Results = results };
-
     public static SearchResult CreateFailure(string error) =>
         new() { Success = false, ErrorMessage = error };
 }
-
 /// <summary>
 /// Single search result item
 /// </summary>
@@ -512,3 +474,8 @@ public record SearchResultItem
     public int Page { get; init; }
     public int ChunkIndex { get; init; }
 }
+
+
+
+
+

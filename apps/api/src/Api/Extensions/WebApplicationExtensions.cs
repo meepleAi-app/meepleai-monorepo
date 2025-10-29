@@ -61,23 +61,13 @@ public static class WebApplicationExtensions
             };
         });
 
-        // Ensure at least one lightweight log per request (helps tests capture correlation id on health endpoints)
-        app.Use(async (context, next) =>
-        {
-            using (Serilog.Context.LogContext.PushProperty("CorrelationId", context.TraceIdentifier))
-            {
-                var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("RequestLog");
-                logger.LogInformation("{Method} {Path}", context.Request.Method, context.Request.Path.Value ?? string.Empty);
-            }
-            await next();
-        });
-
         // Add correlation ID to response headers
         app.Use(async (context, next) =>
         {
             context.Response.OnStarting(() =>
             {
-                context.Response.Headers.Append("X-Correlation-ID", context.TraceIdentifier);
+                // Use canonical header casing expected by clients and tests
+                context.Response.Headers.Append("X-Correlation-Id", context.TraceIdentifier);
                 return Task.CompletedTask;
             });
 
@@ -86,9 +76,6 @@ public static class WebApplicationExtensions
 
         // API-01: API key authentication middleware (must be before authorization)
         app.UseApiKeyAuthentication();
-
-        // Session cookie authentication to populate ActiveSession for endpoints
-        app.UseSessionAuthentication();
 
         // Note: Additional authentication, authorization, and rate limiting middleware
         // should be configured after calling this method but before MapEndpoints.

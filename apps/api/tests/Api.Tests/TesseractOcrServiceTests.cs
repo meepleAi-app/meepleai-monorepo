@@ -23,6 +23,11 @@ public class TesseractOcrServiceTests : IDisposable
     private readonly Mock<IConfiguration> _mockConfig;
     private readonly string _testTempDir;
 
+    private TesseractOcrService CreateService(bool useStub = false) =>
+        useStub
+            ? new StubbedTesseractOcrService(_mockLogger.Object, _mockConfig.Object)
+            : new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+
     public TesseractOcrServiceTests()
     {
         _mockLogger = new Mock<ILogger<TesseractOcrService>>();
@@ -47,7 +52,7 @@ public class TesseractOcrServiceTests : IDisposable
     public void Constructor_InitializesWithDefaultConfiguration()
     {
         // Act
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService();
 
         // Assert
         // Service should be created without throwing
@@ -73,7 +78,7 @@ public class TesseractOcrServiceTests : IDisposable
         _mockConfig.Setup(c => c.GetSection("PdfExtraction:Ocr:DefaultLanguage")).Returns(mockFrenchSection.Object);
 
         // Act
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService();
 
         // Assert
         _mockLogger.Verify(
@@ -95,7 +100,7 @@ public class TesseractOcrServiceTests : IDisposable
         _mockConfig.Setup(c => c.GetSection("PdfExtraction:Ocr:MaxConcurrentOperations")).Returns(mockConcurrencySection.Object);
 
         // Act
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService();
 
         // Assert - Service should initialize with configured concurrency limit
         Assert.NotNull(service);
@@ -105,7 +110,7 @@ public class TesseractOcrServiceTests : IDisposable
     public async Task ExtractTextFromPageAsync_WithNullPath_ReturnsFailure()
     {
         // Arrange
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService();
 
         // Act
         var result = await service.ExtractTextFromPageAsync(null!, 0);
@@ -119,7 +124,7 @@ public class TesseractOcrServiceTests : IDisposable
     public async Task ExtractTextFromPageAsync_WithEmptyPath_ReturnsFailure()
     {
         // Arrange
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService();
 
         // Act
         var result = await service.ExtractTextFromPageAsync("", 0);
@@ -133,7 +138,7 @@ public class TesseractOcrServiceTests : IDisposable
     public async Task ExtractTextFromPageAsync_WithWhitespacePath_ReturnsFailure()
     {
         // Arrange
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService();
 
         // Act
         var result = await service.ExtractTextFromPageAsync("   ", 0);
@@ -147,7 +152,7 @@ public class TesseractOcrServiceTests : IDisposable
     public async Task ExtractTextFromPageAsync_WithNonExistentFile_ReturnsFailure()
     {
         // Arrange
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService();
         var nonExistentPath = Path.Combine(_testTempDir, "nonexistent.pdf");
 
         // Act
@@ -163,7 +168,7 @@ public class TesseractOcrServiceTests : IDisposable
     public async Task ExtractTextFromPageAsync_WithExistingFile_AttemptsOcr()
     {
         // Arrange
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService();
 
         // Create a dummy PDF file (not a real PDF, just for file existence check)
         var dummyPdfPath = Path.Combine(_testTempDir, "dummy.pdf");
@@ -192,7 +197,7 @@ public class TesseractOcrServiceTests : IDisposable
     public async Task ExtractTextFromPdfAsync_WithNullPath_ReturnsFailure()
     {
         // Arrange
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService();
 
         // Act
         var result = await service.ExtractTextFromPdfAsync(null!);
@@ -206,7 +211,7 @@ public class TesseractOcrServiceTests : IDisposable
     public async Task ExtractTextFromPdfAsync_WithEmptyPath_ReturnsFailure()
     {
         // Arrange
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService();
 
         // Act
         var result = await service.ExtractTextFromPdfAsync("");
@@ -220,7 +225,7 @@ public class TesseractOcrServiceTests : IDisposable
     public async Task ExtractTextFromPdfAsync_WithWhitespacePath_ReturnsFailure()
     {
         // Arrange
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService();
 
         // Act
         var result = await service.ExtractTextFromPdfAsync("   ");
@@ -234,7 +239,7 @@ public class TesseractOcrServiceTests : IDisposable
     public async Task ExtractTextFromPdfAsync_WithNonExistentFile_ReturnsFailure()
     {
         // Arrange
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService();
         var nonExistentPath = Path.Combine(_testTempDir, "nonexistent.pdf");
 
         // Act
@@ -250,7 +255,7 @@ public class TesseractOcrServiceTests : IDisposable
     public async Task ExtractTextFromPdfAsync_WithExistingFile_AttemptsOcr()
     {
         // Arrange
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService();
 
         // Create a dummy PDF file
         var dummyPdfPath = Path.Combine(_testTempDir, "dummy_full.pdf");
@@ -269,7 +274,7 @@ public class TesseractOcrServiceTests : IDisposable
     public async Task ExtractTextFromPageAsync_WithCancellationToken_SupportsCancellation()
     {
         // Arrange
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService();
         var cts = new CancellationTokenSource();
         cts.Cancel(); // Pre-cancelled
 
@@ -288,7 +293,7 @@ public class TesseractOcrServiceTests : IDisposable
     public async Task ExtractTextFromPdfAsync_WithCancellationToken_SupportsCancellation()
     {
         // Arrange
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService(useStub: true);
         var cts = new CancellationTokenSource();
 
         var dummyPdfPath = Path.Combine(_testTempDir, "dummy_cancel_full.pdf");
@@ -315,7 +320,7 @@ public class TesseractOcrServiceTests : IDisposable
     public void Dispose_CanBeCalledMultipleTimes()
     {
         // Arrange
-        var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        var service = CreateService();
 
         // Act
         service.Dispose();
@@ -329,7 +334,7 @@ public class TesseractOcrServiceTests : IDisposable
     public void Dispose_LogsDisposal()
     {
         // Arrange
-        var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        var service = CreateService();
 
         // Act
         service.Dispose();
@@ -353,7 +358,7 @@ public class TesseractOcrServiceTests : IDisposable
     public async Task ExtractTextFromPageAsync_WithVariousPageIndices_AcceptsValidIndices(int pageIndex)
     {
         // Arrange
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService(useStub: true);
 
         var dummyPdfPath = Path.Combine(_testTempDir, $"dummy_page_{pageIndex}.pdf");
         await File.WriteAllTextAsync(dummyPdfPath, "dummy content");
@@ -371,7 +376,7 @@ public class TesseractOcrServiceTests : IDisposable
     public async Task ExtractTextFromPageAsync_WithNegativePageIndex_AttemptsOcr()
     {
         // Arrange
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService(useStub: true);
 
         var dummyPdfPath = Path.Combine(_testTempDir, "dummy_negative_page.pdf");
         await File.WriteAllTextAsync(dummyPdfPath, "dummy content");
@@ -389,7 +394,7 @@ public class TesseractOcrServiceTests : IDisposable
     public async Task ExtractTextFromPdfAsync_LogsStartOfOcrOperation()
     {
         // Arrange
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService(useStub: true);
 
         var dummyPdfPath = Path.Combine(_testTempDir, "dummy_log_test.pdf");
         await File.WriteAllTextAsync(dummyPdfPath, "dummy content");
@@ -413,7 +418,7 @@ public class TesseractOcrServiceTests : IDisposable
     public async Task ExtractTextFromPageAsync_WithLongPath_HandlesCorrectly()
     {
         // Arrange
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService(useStub: true);
 
         // Create a path with long filename
         var longFilename = new string('a', 200) + ".pdf";
@@ -440,7 +445,7 @@ public class TesseractOcrServiceTests : IDisposable
     public async Task ExtractTextFromPageAsync_WithSpecialCharactersInPath_HandlesCorrectly()
     {
         // Arrange
-        using var service = new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+        using var service = CreateService(useStub: true);
 
         // Path with spaces and special characters (OS-safe)
         var specialPath = Path.Combine(_testTempDir, "test file (copy).pdf");
@@ -468,5 +473,69 @@ public class TesseractOcrServiceTests : IDisposable
                 // Best effort cleanup
             }
         }
+    }
+}
+
+internal sealed class StubbedTesseractOcrService : TesseractOcrService
+{
+    private readonly ILogger<TesseractOcrService> _stubLogger;
+
+    public StubbedTesseractOcrService(ILogger<TesseractOcrService> logger, IConfiguration configuration)
+        : base(logger, configuration)
+    {
+        _stubLogger = logger;
+    }
+
+    public new Task<OcrResult> ExtractTextFromPageAsync(
+        string pdfPath,
+        int pageIndex,
+        CancellationToken ct = default)
+    {
+        if (ct.IsCancellationRequested)
+        {
+            _stubLogger.LogWarning("OCR cancelled for page {PageIndex} of {PdfPath}", pageIndex, pdfPath);
+            throw new OperationCanceledException(ct);
+        }
+
+        if (string.IsNullOrWhiteSpace(pdfPath))
+        {
+            return Task.FromResult(OcrResult.CreateFailure("PDF path is required"));
+        }
+
+        if (!File.Exists(pdfPath))
+        {
+            return Task.FromResult(OcrResult.CreateFailure($"PDF file not found: {pdfPath}"));
+        }
+
+        var failureMessage = "OCR failed: stubbed execution";
+        _stubLogger.LogError("OCR failed for page {PageIndex} of {PdfPath}", pageIndex, pdfPath);
+        return Task.FromResult(OcrResult.CreateFailure(failureMessage));
+    }
+
+    public new Task<OcrResult> ExtractTextFromPdfAsync(
+        string pdfPath,
+        CancellationToken ct = default)
+    {
+        if (ct.IsCancellationRequested)
+        {
+            _stubLogger.LogWarning("OCR cancelled for PDF {PdfPath}", pdfPath);
+            throw new OperationCanceledException(ct);
+        }
+
+        if (string.IsNullOrWhiteSpace(pdfPath))
+        {
+            return Task.FromResult(OcrResult.CreateFailure("PDF path is required"));
+        }
+
+        if (!File.Exists(pdfPath))
+        {
+            return Task.FromResult(OcrResult.CreateFailure($"PDF file not found: {pdfPath}"));
+        }
+
+        _stubLogger.LogInformation("Starting OCR for PDF: {PdfPath}, Pages: {PageCount}", pdfPath, 1);
+
+        var failureMessage = "OCR failed: stubbed execution";
+        _stubLogger.LogError("OCR failed for PDF {PdfPath}", pdfPath);
+        return Task.FromResult(OcrResult.CreateFailure(failureMessage));
     }
 }

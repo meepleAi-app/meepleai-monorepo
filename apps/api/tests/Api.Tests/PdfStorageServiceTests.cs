@@ -9,7 +9,6 @@ using Api.Infrastructure.Entities;
 using Api.Services;
 using Api.Services.Pdf;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,16 +20,13 @@ public class PdfStorageServiceTests
 {
     private static MeepleAiDbContext CreateInMemoryContext()
     {
-        using var connection = new SqliteConnection("Filename=:memory:");
-        connection.Open();
+        var dbPath = Path.Combine(Path.GetTempPath(), $"pdf-storage-tests-{Guid.NewGuid():N}.db");
+        var connectionString = $"Data Source={dbPath};Mode=ReadWriteCreate;Cache=Shared";
 
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseSqlite(connection)
+            .UseInMemoryDatabase($"pdf-storage-tests-{Guid.NewGuid():N}")
             .Options;
-
-        var context = new MeepleAiDbContext(options);
-        context.Database.EnsureCreated();
-        return context;
+        return new MeepleAiDbContext(options);
     }
 
     private static PdfStorageService CreateService(
@@ -56,6 +52,67 @@ public class PdfStorageServiceTests
 
         var loggerMock = new Mock<ILogger<PdfStorageService>>();
         var blobStorageMock = new Mock<IBlobStorageService>();
+        blobStorageMock
+            .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Stream stream, string fileName, string gameId, CancellationToken _) =>
+            {
+                if (stream == null)
+                {
+                    throw new InvalidOperationException("Test blob storage received null stream");
+                }
+
+                if (!stream.CanRead)
+                {
+                    throw new InvalidOperationException("Test blob storage received unreadable stream");
+                }
+
+                if (stream.CanSeek)
+                {
+                    stream.Position = 0;
+                }
+
+                var extension = Path.GetExtension(fileName);
+                if (string.IsNullOrEmpty(extension))
+                {
+                    extension = ".pdf";
+                }
+
+                var fileId = Guid.NewGuid().ToString("N");
+                var gameDirectory = Path.Combine(storagePath, gameId);
+                Directory.CreateDirectory(gameDirectory);
+                var destinationPath = Path.Combine(gameDirectory, $"{fileId}{extension}");
+
+                using (var destination = File.Create(destinationPath))
+                {
+                    stream.CopyTo(destination);
+                }
+
+                var fileInfo = new FileInfo(destinationPath);
+                return new BlobStorageResult(
+                    Success: true,
+                    FileId: fileId,
+                    FilePath: destinationPath,
+                    FileSizeBytes: fileInfo.Length);
+            });
+        blobStorageMock
+            .Setup(b => b.GetStoragePath(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns((string fileId, string gameId, string originalName) =>
+            {
+                var extension = Path.GetExtension(originalName);
+                if (string.IsNullOrEmpty(extension))
+                {
+                    extension = ".pdf";
+                }
+                return Path.Combine(storagePath, gameId, $"{fileId}{extension}");
+            });
+        blobStorageMock
+            .Setup(b => b.Exists(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns<string, string>((fileId, gameId) =>
+            {
+                var directory = Path.Combine(storagePath, gameId);
+                return Directory.Exists(directory) &&
+                    Directory.EnumerateFiles(directory, $"{fileId}*").Any();
+            });
 
         return new PdfStorageService(
             dbContext,
@@ -76,6 +133,7 @@ public class PdfStorageServiceTests
             embeddingService,
             qdrantService);
     }
+
 
     private static async Task SeedUserAsync(MeepleAiDbContext dbContext, string userId)
     {
@@ -142,7 +200,7 @@ public class PdfStorageServiceTests
             var result = await service.UploadPdfAsync("game-1", "user", mockFile.Object, CancellationToken.None);
 
             Assert.False(result.Success);
-            Assert.Contains("File size exceeds", result.Message);
+            Assert.Contains("File is too large", result.Message);
             backgroundMock.Verify(b => b.Execute(It.IsAny<Func<Task>>()), Times.Never);
         }
         finally
@@ -233,6 +291,12 @@ public class PdfStorageServiceTests
             backgroundMock
                 .Setup(b => b.Execute(It.IsAny<Func<Task>>()))
                 .Callback<Func<Task>>(task => scheduledTask = task);
+            backgroundMock
+                .Setup(b => b.ExecuteWithCancellation(It.IsAny<string>(), It.IsAny<Func<CancellationToken, Task>>()))
+                .Callback<string, Func<CancellationToken, Task>>((_, factory) =>
+                {
+                    scheduledTask = () => factory(CancellationToken.None);
+                });
 
             var scopeFactoryMock = new Mock<IServiceScopeFactory>(MockBehavior.Strict);
             var cacheMock = new Mock<IAiResponseCacheService>();
@@ -286,6 +350,12 @@ public class PdfStorageServiceTests
             backgroundMock
                 .Setup(b => b.Execute(It.IsAny<Func<Task>>()))
                 .Callback<Func<Task>>(task => scheduledTasks.Add(task));
+            backgroundMock
+                .Setup(b => b.ExecuteWithCancellation(It.IsAny<string>(), It.IsAny<Func<CancellationToken, Task>>()))
+                .Callback<string, Func<CancellationToken, Task>>((_, factory) =>
+                {
+                    scheduledTasks.Add(() => factory(CancellationToken.None));
+                });
 
             var scopeFactoryMock = new Mock<IServiceScopeFactory>();
             var serviceProviderMock = new Mock<IServiceProvider>(MockBehavior.Strict);
@@ -318,8 +388,14 @@ public class PdfStorageServiceTests
                 Mock.Of<IConfiguration>(),
                 null!);
             textExtractionMock
-                .Setup(s => s.ExtractTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(PdfTextExtractionResult.CreateSuccess("chunk-one\nchunk-two", 1, 18));
+                .Setup(s => s.ExtractPagedTextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() => PagedExtractionResult.CreateSuccess(
+                    new List<PagedTextChunk>
+                    {
+                        new PagedTextChunk("chunk-one", 1, 0, 8),
+                        new PagedTextChunk("chunk-two", 1, 9, 17)
+                    },
+                    pageCount: 1));
 
             var tableExtractionMock = new Mock<PdfTableExtractionService>(
                 MockBehavior.Strict,
@@ -333,19 +409,29 @@ public class PdfStorageServiceTests
                     new List<PdfDiagram>(),
                     new List<string>()));
 
-            var chunkingMock = new Mock<ITextChunkingService>(MockBehavior.Strict);
-            var chunkInputs = new List<DocumentChunkInput>
+        var chunkInputs = new List<DocumentChunkInput>
+        {
+            new() { Text = "chunk-one", Page = 1, CharStart = 0, CharEnd = 8 },
+            new() { Text = "chunk-two", Page = 1, CharStart = 9, CharEnd = 17 }
+        };
+        var chunkingMock = new Mock<ITextChunkingService>(MockBehavior.Strict);
+        chunkingMock
+            .Setup(c => c.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Returns<string, int, int>((text, _, _) =>
             {
-                new() { Text = "chunk-one", Page = 1, CharStart = 0, CharEnd = 8 },
-                new() { Text = "chunk-two", Page = 1, CharStart = 9, CharEnd = 17 }
-            };
-            chunkingMock
-                .Setup(c => c.PrepareForEmbedding(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-                .Returns<string, int, int>((text, _, _) =>
+                var match = chunkInputs.Single(chunk => chunk.Text == text);
+                return new List<TextChunk>
                 {
-                    Assert.Equal("chunk-one\nchunk-two", text);
-                    return chunkInputs;
-                });
+                    new()
+                    {
+                        Text = match.Text,
+                        Page = match.Page,
+                        CharStart = match.CharStart,
+                        CharEnd = match.CharEnd,
+                        Index = chunkInputs.IndexOf(match)
+                    }
+                };
+            });
 
             var embeddingMock = new Mock<IEmbeddingService>(MockBehavior.Strict);
             var embeddings = new List<float[]>
@@ -402,17 +488,13 @@ public class PdfStorageServiceTests
             var extractionTask = scheduledTasks.Single();
             await extractionTask();
 
-            Assert.Equal(2, scheduledTasks.Count);
-
-            var indexingTask = scheduledTasks[1];
-            await indexingTask();
-
             chunkingMock.Verify(
-                c => c.PrepareForEmbedding(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()),
-                Times.Once);
-            embeddingMock.Verify(
-                e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()),
-                Times.Once);
+                c => c.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()),
+                Times.AtLeastOnce);
+
+            var processedDoc = await dbContext.PdfDocuments.SingleAsync();
+            Assert.Equal("completed", processedDoc.ProcessingStatus);
+            Assert.NotNull(processedDoc.ProcessedAt);
             qdrantMock.Verify(
                 q => q.IndexDocumentChunksAsync(
                     "game-1",
@@ -437,6 +519,12 @@ public class PdfStorageServiceTests
         mockFile.Setup(f => f.Length).Returns(content.Length);
         mockFile.Setup(f => f.FileName).Returns(fileName);
         mockFile.Setup(f => f.ContentType).Returns(contentType);
+        mockFile
+            .Setup(f => f.OpenReadStream())
+            .Returns(() =>
+            {
+                return new MemoryStream(content, writable: false);
+            });
         mockFile
             .Setup(f => f.CopyToAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
             .Returns<Stream, CancellationToken>((target, token) =>

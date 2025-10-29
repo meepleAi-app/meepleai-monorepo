@@ -104,22 +104,26 @@ describe('useChatStreaming', () => {
         expect(mockFetch).toHaveBeenCalledTimes(1);
       });
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/agents/qa/stream'),
+      const [url, options] = mockFetch.mock.calls[0] as [string, RequestInit];
+
+      expect(url).toContain('/api/v1/agents/qa/stream');
+      expect(options).toEqual(
         expect.objectContaining({
           method: 'POST',
-          headers: {
+          headers: expect.objectContaining({
             'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            gameId: 'game-456',
-            query: 'How do I play?',
-            chatId: 'chat-789',
           }),
           credentials: 'include',
           signal: expect.any(AbortSignal),
         })
       );
+
+      expect(JSON.parse(options.body as string)).toEqual({
+        gameId: 'game-456',
+        query: 'How do I play?',
+        chatId: 'chat-789',
+        searchMode: 'Hybrid',
+      });
     });
   });
 

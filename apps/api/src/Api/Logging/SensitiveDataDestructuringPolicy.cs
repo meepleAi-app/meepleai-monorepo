@@ -163,7 +163,11 @@ public partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
             try
             {
                 var propValue = prop.GetValue(value);
-                if (IsSensitiveProperty(prop.Name))
+
+                // If the property name is sensitive AND the value is a simple/scalar type, redact entirely.
+                // For complex objects (e.g., Credentials), recurse instead of redacting the whole structure.
+                if (IsSensitiveProperty(prop.Name) &&
+                    (propValue is string || prop.PropertyType.IsPrimitive || prop.PropertyType.IsEnum))
                 {
                     logProperties.Add(new LogEventProperty(prop.Name, new ScalarValue(RedactedValue)));
                 }

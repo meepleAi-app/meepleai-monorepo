@@ -43,8 +43,6 @@
     <PackageReference Include="System.Text.Json" Version="9.0.9" />
     <PackageReference Include="Tesseract" Version="5.2.0" />
     <PackageReference Include="Tesseract.Drawing" Version="5.2.0" />
-    <!-- AI-09: Language detection library -->
-    <PackageReference Include="LanguageDetection" Version="1.2.0" />
     <!-- OPS-02: OpenTelemetry packages -->
     <PackageReference Include="OpenTelemetry" Version="1.13.1" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.13.1" />

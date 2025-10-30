@@ -5,15 +5,26 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
-public class GameServiceTests
+public class GameServiceTests : IDisposable
 {
-    private static MeepleAiDbContext CreateInMemoryContext()
-    {
-        using var connection = new SqliteConnection("Filename=:memory:");
-        connection.Open();
+    private readonly SqliteConnection _connection;
 
+    public GameServiceTests()
+    {
+        // Keep connection open for the lifetime of the test class
+        _connection = new SqliteConnection("Filename=:memory:");
+        _connection.Open();
+    }
+
+    public void Dispose()
+    {
+        _connection?.Dispose();
+    }
+
+    private MeepleAiDbContext CreateInMemoryContext()
+    {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseSqlite(connection)
+            .UseSqlite(_connection)
             .Options;
 
         var context = new MeepleAiDbContext(options);

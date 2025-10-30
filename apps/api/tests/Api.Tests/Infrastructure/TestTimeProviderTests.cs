@@ -1,0 +1,362 @@
+using Api.Tests.Helpers;
+using Xunit;
+
+namespace Api.Tests.Infrastructure;
+
+/// <summary>
+/// Example tests demonstrating TestTimeProvider usage.
+/// These tests validate the time provider infrastructure itself.
+/// </summary>
+public class TestTimeProviderTests
+{
+    [Fact]
+    public void CreateTimeProvider_DefaultsTo2025Jan1()
+    {
+        // Arrange & Act
+        using var provider = new TestTimeProvider();
+
+        // Assert
+        var now = provider.GetUtcNow();
+        Assert.Equal(2025, now.Year);
+        Assert.Equal(1, now.Month);
+        Assert.Equal(1, now.Day);
+        Assert.Equal(0, now.Hour);
+        Assert.Equal(0, now.Minute);
+        Assert.Equal(0, now.Second);
+    }
+
+    [Fact]
+    public void CreateTimeProvider_CustomStartTime()
+    {
+        // Arrange & Act
+        var start = new DateTimeOffset(2025, 3, 15, 10, 30, 45, TimeSpan.Zero);
+        using var provider = new TestTimeProvider(start);
+
+        // Assert
+        var now = provider.GetUtcNow();
+        Assert.Equal(start, now);
+    }
+
+    [Fact]
+    public void AdvanceSeconds_IncreasesTime()
+    {
+        // Arrange
+        using var provider = new TestTimeProvider();
+        var before = provider.GetUtcNow();
+
+        // Act
+        provider.Advance(TimeSpan.FromSeconds(30));
+
+        // Assert
+        var after = provider.GetUtcNow();
+        Assert.Equal(30, (after - before).TotalSeconds);
+    }
+
+    [Fact]
+    public void AdvanceMinutes_IncreasesTime()
+    {
+        // Arrange
+        using var provider = new TestTimeProvider();
+        var before = provider.GetUtcNow();
+
+        // Act
+        provider.Advance(TimeSpan.FromMinutes(5));
+
+        // Assert
+        var after = provider.GetUtcNow();
+        Assert.Equal(5, (after - before).TotalMinutes);
+    }
+
+    [Fact]
+    public void AdvanceHours_IncreasesTime()
+    {
+        // Arrange
+        using var provider = new TestTimeProvider();
+        var before = provider.GetUtcNow();
+
+        // Act
+        provider.Advance(TimeSpan.FromHours(2));
+
+        // Assert
+        var after = provider.GetUtcNow();
+        Assert.Equal(2, (after - before).TotalHours);
+    }
+
+    [Fact]
+    public void AdvanceDays_IncreasesTime()
+    {
+        // Arrange
+        using var provider = new TestTimeProvider();
+        var before = provider.GetUtcNow();
+
+        // Act
+        provider.Advance(TimeSpan.FromDays(30));
+
+        // Assert
+        var after = provider.GetUtcNow();
+        Assert.Equal(30, (after - before).TotalDays);
+    }
+
+    [Fact]
+    public void SetTime_ChangesTimeAbsolutely()
+    {
+        // Arrange
+        using var provider = new TestTimeProvider();
+
+        // Act
+        var target = new DateTimeOffset(2025, 12, 25, 23, 59, 59, TimeSpan.Zero);
+        provider.SetTime(target);
+
+        // Assert
+        Assert.Equal(target, provider.GetUtcNow());
+    }
+
+    [Fact]
+    public void Reset_RestoresDefaultTime()
+    {
+        // Arrange
+        using var provider = new TestTimeProvider();
+        provider.Advance(TimeSpan.FromDays(100));
+
+        // Act
+        provider.Reset();
+
+        // Assert
+        var now = provider.GetUtcNow();
+        Assert.Equal(new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero), now);
+    }
+
+    [Fact]
+    public void Advance_NegativeDuration_ThrowsException()
+    {
+        // Arrange
+        using var provider = new TestTimeProvider();
+
+        // Act & Assert
+        Assert.Throws<ArgumentOutOfRangeException>(() => provider.Advance(TimeSpan.FromMinutes(-5)));
+    }
+
+    [Fact]
+    public void GetTimestamp_ReturnsConsistentValue()
+    {
+        // Arrange
+        using var provider = new TestTimeProvider();
+
+        // Act
+        var timestamp1 = provider.GetTimestamp();
+        var timestamp2 = provider.GetTimestamp();
+
+        // Assert (should be same since time hasn't advanced)
+        Assert.Equal(timestamp1, timestamp2);
+    }
+
+    [Fact]
+    public void GetTimestamp_ChangesAfterAdvance()
+    {
+        // Arrange
+        using var provider = new TestTimeProvider();
+        var timestamp1 = provider.GetTimestamp();
+
+        // Act
+        provider.Advance(TimeSpan.FromSeconds(10));
+        var timestamp2 = provider.GetTimestamp();
+
+        // Assert
+        Assert.True(timestamp2 > timestamp1);
+    }
+
+    [Fact]
+    public void GetElapsedTime_CalculatesCorrectly()
+    {
+        // Arrange
+        using var provider = new TestTimeProvider();
+        var start = provider.GetTimestamp();
+
+        // Act
+        provider.Advance(TimeSpan.FromSeconds(5));
+        var end = provider.GetTimestamp();
+        var elapsed = provider.GetElapsedTime(start, end);
+
+        // Assert
+        Assert.True(elapsed.TotalSeconds >= 4.9 && elapsed.TotalSeconds <= 5.1);
+    }
+
+    [Fact]
+    public void LocalTimeZone_ReturnsUtc()
+    {
+        // Arrange & Act
+        using var provider = new TestTimeProvider();
+
+        // Assert
+        Assert.Equal(TimeZoneInfo.Utc, provider.LocalTimeZone);
+    }
+
+    [Fact]
+    public void GetLocalNow_ReturnsSameAsUtcNow()
+    {
+        // Arrange
+        using var provider = new TestTimeProvider();
+
+        // Act
+        var utcNow = provider.GetUtcNow();
+        var localNow = provider.GetLocalNow();
+
+        // Assert (for testing, local = UTC)
+        Assert.Equal(utcNow, localNow);
+    }
+}
+
+/// <summary>
+/// Example tests demonstrating TimeTestHelpers usage patterns.
+/// </summary>
+public class TimeTestHelpersTests
+{
+    [Fact]
+    public void CreateTimeProvider_WithYear_CreatesCorrectTime()
+    {
+        // Act
+        using var provider = TimeTestHelpers.CreateTimeProvider(2025, 6, 15);
+
+        // Assert
+        var now = provider.GetUtcNow();
+        Assert.Equal(2025, now.Year);
+        Assert.Equal(6, now.Month);
+        Assert.Equal(15, now.Day);
+    }
+
+    [Fact]
+    public void AdvanceSeconds_Extension_WorksCorrectly()
+    {
+        // Arrange
+        using var provider = TimeTestHelpers.CreateTimeProvider();
+        var before = provider.GetUtcNow();
+
+        // Act
+        provider.AdvanceSeconds(45);
+
+        // Assert
+        var after = provider.GetUtcNow();
+        Assert.Equal(45, (after - before).TotalSeconds);
+    }
+
+    [Fact]
+    public void AdvanceMinutes_Extension_WorksCorrectly()
+    {
+        // Arrange
+        using var provider = TimeTestHelpers.CreateTimeProvider();
+        var before = provider.GetUtcNow();
+
+        // Act
+        provider.AdvanceMinutes(10);
+
+        // Assert
+        var after = provider.GetUtcNow();
+        Assert.Equal(10, (after - before).TotalMinutes);
+    }
+
+    [Fact]
+    public void AdvanceToSessionExpiration_DefaultIs30Days()
+    {
+        // Arrange
+        using var provider = TimeTestHelpers.CreateTimeProvider();
+        var before = provider.GetUtcNow();
+
+        // Act
+        provider.AdvanceToSessionExpiration();
+
+        // Assert
+        var after = provider.GetUtcNow();
+        Assert.Equal(30, (after - before).TotalDays);
+    }
+
+    [Fact]
+    public void AdvanceToTempSessionExpiration_DefaultIs5Minutes()
+    {
+        // Arrange
+        using var provider = TimeTestHelpers.CreateTimeProvider();
+        var before = provider.GetUtcNow();
+
+        // Act
+        provider.AdvanceToTempSessionExpiration();
+
+        // Assert
+        var after = provider.GetUtcNow();
+        Assert.Equal(5, (after - before).TotalMinutes);
+    }
+
+    [Fact]
+    public void ChainedOperations_WorkCorrectly()
+    {
+        // Arrange & Act
+        using var provider = TimeTestHelpers.CreateTimeProvider(2025, 1, 1)
+            .AdvanceHours(6)
+            .AdvanceMinutes(30)
+            .AdvanceSeconds(15);
+
+        // Assert
+        var now = provider.GetUtcNow();
+        Assert.Equal(new DateTimeOffset(2025, 1, 1, 6, 30, 15, TimeSpan.Zero), now);
+    }
+}
+
+/// <summary>
+/// Example tests demonstrating TimeAssertions helpers.
+/// </summary>
+public class TimeAssertionsTests
+{
+    [Fact]
+    public void AssertTimeNear_WithinTolerance_Passes()
+    {
+        // Arrange
+        var actual = new DateTimeOffset(2025, 1, 1, 12, 0, 0, TimeSpan.Zero);
+        var expected = new DateTimeOffset(2025, 1, 1, 12, 0, 0, 500, TimeSpan.Zero); // 500ms diff
+
+        // Act & Assert (should not throw)
+        TimeAssertions.AssertTimeNear(actual, expected, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public void AssertTimeNear_OutsideTolerance_Throws()
+    {
+        // Arrange
+        var actual = new DateTimeOffset(2025, 1, 1, 12, 0, 0, TimeSpan.Zero);
+        var expected = new DateTimeOffset(2025, 1, 1, 12, 0, 5, TimeSpan.Zero); // 5 seconds diff
+
+        // Act & Assert
+        Assert.Throws<Xunit.Sdk.XunitException>(() =>
+            TimeAssertions.AssertTimeNear(actual, expected, TimeSpan.FromSeconds(1)));
+    }
+
+    [Fact]
+    public void AssertElapsedTime_WithinTolerance_Passes()
+    {
+        // Arrange
+        var actual = TimeSpan.FromSeconds(5.05);
+        var expected = TimeSpan.FromSeconds(5);
+
+        // Act & Assert (should not throw)
+        TimeAssertions.AssertElapsedTime(actual, expected, TimeSpan.FromMilliseconds(100));
+    }
+
+    [Fact]
+    public void AssertTimeAfter_Correct_Passes()
+    {
+        // Arrange
+        var after = new DateTimeOffset(2025, 1, 2, 0, 0, 0, TimeSpan.Zero);
+        var before = new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+        // Act & Assert (should not throw)
+        TimeAssertions.AssertTimeAfter(after, before);
+    }
+
+    [Fact]
+    public void AssertTimeBefore_Correct_Passes()
+    {
+        // Arrange
+        var before = new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var after = new DateTimeOffset(2025, 1, 2, 0, 0, 0, TimeSpan.Zero);
+
+        // Act & Assert (should not throw)
+        TimeAssertions.AssertTimeBefore(before, after);
+    }
+}

@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -189,7 +190,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         // Mark key as inactive
         using (var scope = Factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<Infrastructure.MeepleAiDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var key = await db.ApiKeys.FindAsync(apiKeyEntity.Id);
             if (key != null)
             {

@@ -272,26 +272,22 @@ public class RagEvaluationServiceTests : IDisposable
             }
         };
 
-        // Mock perfect results for both queries
+        // Mock perfect results for both queries (doc-1 for query 1, doc-2 for query 2)
         SetupMockEmbedding();
-        int callCount = 0; // Closure variable to track call count
         _mockQdrantService
-            .Setup(x => x.SearchAsync(
+            .SetupSequence(x => x.SearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<float[]>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string gameId, float[] embedding, int limit, CancellationToken ct) =>
+            .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>
             {
-                // Alternate between doc-1 and doc-2 based on call count
-                callCount++;
-                var docId = callCount % 2 == 1 ? "doc-1" : "doc-2";
-
-                return SearchResult.CreateSuccess(new List<SearchResultItem>
-                {
-                    new SearchResultItem { PdfId = docId, Score = 0.95f, Text = "Result", Page = 1 }
-                });
-            });
+                new SearchResultItem { PdfId = "doc-1", Score = 0.95f, Text = "Result", Page = 1 }
+            }))
+            .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>
+            {
+                new SearchResultItem { PdfId = "doc-2", Score = 0.95f, Text = "Result", Page = 1 }
+            }));
 
         // Act
         var report = await _service.EvaluateAsync(dataset, topK: 10);

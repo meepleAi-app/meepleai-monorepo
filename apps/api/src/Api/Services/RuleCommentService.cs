@@ -14,6 +14,7 @@ public partial class RuleCommentService : IRuleCommentService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<RuleCommentService> _logger;
+    private readonly TimeProvider _timeProvider;
 
     private const int MaxCommentLength = 10000;
     private const int MaxThreadDepth = 5;
@@ -25,10 +26,12 @@ public partial class RuleCommentService : IRuleCommentService
 
     public RuleCommentService(
         MeepleAiDbContext dbContext,
-        ILogger<RuleCommentService> logger)
+        ILogger<RuleCommentService> logger,
+        TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task<RuleCommentDto> CreateCommentAsync(
@@ -52,7 +55,7 @@ public partial class RuleCommentService : IRuleCommentService
             CommentText = commentText,
             UserId = userId,
             MentionedUserIds = mentionedUserIds,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
         };
 
         _dbContext.RuleSpecComments.Add(comment);
@@ -101,7 +104,7 @@ public partial class RuleCommentService : IRuleCommentService
             CommentText = commentText,
             UserId = userId,
             MentionedUserIds = mentionedUserIds,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
         };
 
         _dbContext.RuleSpecComments.Add(reply);
@@ -180,8 +183,8 @@ public partial class RuleCommentService : IRuleCommentService
 
         comment.IsResolved = true;
         comment.ResolvedByUserId = resolvedByUserId;
-        comment.ResolvedAt = DateTime.UtcNow;
-        comment.UpdatedAt = DateTime.UtcNow;
+        comment.ResolvedAt = _timeProvider.GetUtcNow().UtcDateTime;
+        comment.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
 
         // Recursively resolve replies if requested
         if (resolveReplies && comment.Replies.Any())
@@ -212,7 +215,7 @@ public partial class RuleCommentService : IRuleCommentService
         comment.IsResolved = false;
         comment.ResolvedByUserId = null;
         comment.ResolvedAt = null;
-        comment.UpdatedAt = DateTime.UtcNow;
+        comment.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
 
         // Unresolve parent if requested and exists
         if (unresolveParent && comment.ParentCommentId.HasValue)
@@ -225,7 +228,7 @@ public partial class RuleCommentService : IRuleCommentService
                 parent.IsResolved = false;
                 parent.ResolvedByUserId = null;
                 parent.ResolvedAt = null;
-                parent.UpdatedAt = DateTime.UtcNow;
+                parent.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
 
                 _logger.LogInformation(
                     "Unresolved parent comment {ParentId} due to child {ChildId} unresolve",
@@ -341,8 +344,8 @@ public partial class RuleCommentService : IRuleCommentService
         {
             reply.IsResolved = true;
             reply.ResolvedByUserId = resolvedByUserId;
-            reply.ResolvedAt = DateTime.UtcNow;
-            reply.UpdatedAt = DateTime.UtcNow;
+            reply.ResolvedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            reply.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
 
             // Load child replies and recurse
             var childReplies = await _dbContext.RuleSpecComments

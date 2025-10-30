@@ -21,6 +21,7 @@ public class StreamingQaService : IStreamingQaService
     private readonly IAiResponseCacheService _cache;
     private readonly IPromptTemplateService _promptTemplateService;
     private readonly ILogger<StreamingQaService> _logger;
+    private readonly TimeProvider _timeProvider;
 
     public StreamingQaService(
         MeepleAiDbContext dbContext,
@@ -29,7 +30,8 @@ public class StreamingQaService : IStreamingQaService
         ILlmService llmService,
         IAiResponseCacheService cache,
         IPromptTemplateService promptTemplateService,
-        ILogger<StreamingQaService> logger)
+        ILogger<StreamingQaService> logger,
+        TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext;
         _embeddingService = embeddingService;
@@ -38,6 +40,7 @@ public class StreamingQaService : IStreamingQaService
         _cache = cache;
         _promptTemplateService = promptTemplateService;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async IAsyncEnumerable<RagStreamingEvent> AskStreamAsync(
@@ -82,7 +85,7 @@ public class StreamingQaService : IStreamingQaService
                 // Small delay to simulate streaming
                 if (i < words.Length - 1)
                 {
-                    await Task.Delay(10, cancellationToken);
+                    await Task.Delay(TimeSpan.FromMilliseconds(10), _timeProvider, cancellationToken);
                 }
             }
 
@@ -113,7 +116,7 @@ public class StreamingQaService : IStreamingQaService
         Guid? chatId,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var startTime = DateTime.UtcNow;
+        var startTime = _timeProvider.GetUtcNow();
 
         // Step 1: Generate embedding
         yield return CreateEvent(StreamingEventType.StateUpdate,
@@ -220,7 +223,7 @@ public class StreamingQaService : IStreamingQaService
                 confidence));
 
         // Record metrics
-        var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
+        var duration = (_timeProvider.GetUtcNow() - startTime).TotalMilliseconds;
         MeepleAiMetrics.RecordRagRequest(duration, gameId, true);
         MeepleAiMetrics.TokensUsed.Record(tokenCount, new System.Diagnostics.TagList { { "game.id", gameId }, { "operation", "qa-stream" } });
         if (confidence.HasValue)
@@ -231,6 +234,6 @@ public class StreamingQaService : IStreamingQaService
 
     private RagStreamingEvent CreateEvent(StreamingEventType type, object? data)
     {
-        return new RagStreamingEvent(type, data, DateTime.UtcNow);
+        return new RagStreamingEvent(type, data, _timeProvider.GetUtcNow().UtcDateTime);
     }
 }

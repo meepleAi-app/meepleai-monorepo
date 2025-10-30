@@ -1,6 +1,8 @@
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
+using Api.Tests.Helpers;
+using Api.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -17,6 +19,7 @@ public class TempSessionServiceTests : IDisposable
     private readonly MeepleAiDbContext _dbContext;
     private readonly TempSessionService _tempSessionService;
     private readonly Mock<ILogger<TempSessionService>> _loggerMock;
+    private readonly TestTimeProvider _timeProvider;
 
     public TempSessionServiceTests()
     {
@@ -28,9 +31,12 @@ public class TempSessionServiceTests : IDisposable
         _dbContext.Database.OpenConnection();
         _dbContext.Database.EnsureCreated();
 
+        // Setup time provider
+        _timeProvider = TimeTestHelpers.CreateTimeProvider(2025, 1, 1);
+
         // Setup temp session service
         _loggerMock = new Mock<ILogger<TempSessionService>>();
-        _tempSessionService = new TempSessionService(_dbContext, _loggerMock.Object);
+        _tempSessionService = new TempSessionService(_dbContext, _loggerMock.Object, _timeProvider);
     }
 
     [Fact]
@@ -44,7 +50,7 @@ public class TempSessionServiceTests : IDisposable
             Id = userId,
             Email = "test@example.com",
             PasswordHash = "dummy",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
         };
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync();
@@ -62,8 +68,9 @@ public class TempSessionServiceTests : IDisposable
         Assert.NotEqual(token, storedSession.TokenHash); // Should be hashed
         Assert.Equal(ipAddress, storedSession.IpAddress);
         Assert.False(storedSession.IsUsed);
-        Assert.True(storedSession.ExpiresAt > DateTime.UtcNow);
-        Assert.True(storedSession.ExpiresAt <= DateTime.UtcNow.AddMinutes(6)); // ~5 min TTL
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        Assert.True(storedSession.ExpiresAt > now);
+        Assert.True(storedSession.ExpiresAt <= now.AddMinutes(6)); // ~5 min TTL
     }
 
     [Fact]
@@ -76,7 +83,7 @@ public class TempSessionServiceTests : IDisposable
             Id = userId,
             Email = "test2@example.com",
             PasswordHash = "dummy",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
         };
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync();
@@ -105,7 +112,7 @@ public class TempSessionServiceTests : IDisposable
             Id = userId,
             Email = "test3@example.com",
             PasswordHash = "dummy",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
         };
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync();
@@ -131,19 +138,20 @@ public class TempSessionServiceTests : IDisposable
             Id = userId,
             Email = "test4@example.com",
             PasswordHash = "dummy",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
         };
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync();
 
         // Create expired session manually
+        var now = _timeProvider.GetUtcNow();
         var expiredSession = new TempSessionEntity
         {
             Id = Guid.NewGuid().ToString(),
             UserId = userId,
             TokenHash = "expired-hash",
-            CreatedAt = DateTime.UtcNow.AddMinutes(-10),
-            ExpiresAt = DateTime.UtcNow.AddMinutes(-5), // Expired 5 min ago
+            CreatedAt = now.AddMinutes(-10).UtcDateTime,
+            ExpiresAt = now.AddMinutes(-5).UtcDateTime, // Expired 5 min ago
             IsUsed = false
         };
         _dbContext.TempSessions.Add(expiredSession);
@@ -161,12 +169,13 @@ public class TempSessionServiceTests : IDisposable
     {
         // Arrange
         var userId = "test-user-5";
+        var now = _timeProvider.GetUtcNow();
         var user = new UserEntity
         {
             Id = userId,
             Email = "test5@example.com",
             PasswordHash = "dummy",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = now.UtcDateTime
         };
         _dbContext.Users.Add(user);
 
@@ -176,8 +185,8 @@ public class TempSessionServiceTests : IDisposable
             Id = Guid.NewGuid().ToString(),
             UserId = userId,
             TokenHash = "expired-hash",
-            CreatedAt = DateTime.UtcNow.AddHours(-2),
-            ExpiresAt = DateTime.UtcNow.AddHours(-1),
+            CreatedAt = now.AddHours(-2).UtcDateTime,
+            ExpiresAt = now.AddHours(-1).UtcDateTime,
             IsUsed = false
         };
 
@@ -187,10 +196,10 @@ public class TempSessionServiceTests : IDisposable
             Id = Guid.NewGuid().ToString(),
             UserId = userId,
             TokenHash = "old-used-hash",
-            CreatedAt = DateTime.UtcNow.AddHours(-3),
-            ExpiresAt = DateTime.UtcNow.AddHours(-2),
+            CreatedAt = now.AddHours(-3).UtcDateTime,
+            ExpiresAt = now.AddHours(-2).UtcDateTime,
             IsUsed = true,
-            UsedAt = DateTime.UtcNow.AddHours(-2)
+            UsedAt = now.AddHours(-2).UtcDateTime
         };
 
         // Create recent session (should NOT be deleted)
@@ -199,8 +208,8 @@ public class TempSessionServiceTests : IDisposable
             Id = Guid.NewGuid().ToString(),
             UserId = userId,
             TokenHash = "recent-hash",
-            CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(5),
+            CreatedAt = now.UtcDateTime,
+            ExpiresAt = now.AddMinutes(5).UtcDateTime,
             IsUsed = false
         };
 

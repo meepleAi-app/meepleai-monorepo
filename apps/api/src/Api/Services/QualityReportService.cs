@@ -31,6 +31,7 @@ public class QualityReportService : BackgroundService, IQualityReportService
     private readonly TimeSpan _interval;
     private readonly TimeSpan _initialDelay;
     private readonly int _reportWindowDays;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Creates a new instance of the quality report service.
@@ -41,10 +42,12 @@ public class QualityReportService : BackgroundService, IQualityReportService
     public QualityReportService(
         IServiceScopeFactory scopeFactory,
         ILogger<QualityReportService> logger,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        TimeProvider? timeProvider = null)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _timeProvider = timeProvider ?? TimeProvider.System;
 
         // Read configuration with defaults
         var intervalMinutes = configuration.GetValue<double>("QualityReporting:IntervalMinutes", 60);
@@ -80,11 +83,9 @@ public class QualityReportService : BackgroundService, IQualityReportService
             _reportWindowDays);
 
         // Wait before first run to allow application to fully start
-        await Task.Delay(_initialDelay, stoppingToken);
+        await Task.Delay(_initialDelay, _timeProvider, stoppingToken);
 
-        // Use PeriodicTimer for precise interval timing
-        using var timer = new PeriodicTimer(_interval);
-        while (await timer.WaitForNextTickAsync(stoppingToken))
+        while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
@@ -102,6 +103,9 @@ public class QualityReportService : BackgroundService, IQualityReportService
                 _logger.LogError(ex, "Error generating scheduled quality report");
                 // Continue to next iteration despite error
             }
+
+            // Wait for the configured interval before next run
+            await Task.Delay(_interval, _timeProvider, stoppingToken);
         }
 
         _logger.LogInformation("Quality report service stopped");
@@ -134,7 +138,7 @@ public class QualityReportService : BackgroundService, IQualityReportService
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         // Calculate date range (last N days)
-        var endDate = DateTime.UtcNow;
+        var endDate = _timeProvider.GetUtcNow().DateTime;
         var startDate = endDate.AddDays(-_reportWindowDays);
 
         var report = await GenerateReportInternalAsync(dbContext, startDate, endDate, cancellationToken);

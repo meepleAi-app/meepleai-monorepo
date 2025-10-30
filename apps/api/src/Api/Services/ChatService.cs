@@ -11,11 +11,14 @@ public class ChatService
     private readonly ILogger<ChatService> _logger;
     private readonly AuditService _auditService;
 
-    public ChatService(MeepleAiDbContext db, ILogger<ChatService> logger, AuditService auditService)
+    private readonly TimeProvider _timeProvider;
+
+    public ChatService(MeepleAiDbContext db, ILogger<ChatService> logger, AuditService auditService, TimeProvider? timeProvider = null)
     {
         _db = db;
         _logger = logger;
         _auditService = auditService;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task<ChatEntity?> GetChatByIdAsync(Guid chatId, string userId, CancellationToken ct = default)
@@ -90,7 +93,7 @@ public class ChatService
             UserId = userId,
             GameId = gameId,
             AgentId = agentId,
-            StartedAt = DateTime.UtcNow,
+            StartedAt = _timeProvider.GetUtcNow().UtcDateTime,
             LastMessageAt = null
         };
 
@@ -131,13 +134,13 @@ public class ChatService
             Level = level,
             Message = message,
             MetadataJson = metadata != null ? JsonSerializer.Serialize(metadata) : null,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
         };
 
         _db.ChatLogs.Add(chatLog);
 
         // Update LastMessageAt on the chat
-        chat.LastMessageAt = DateTime.UtcNow;
+        chat.LastMessageAt = _timeProvider.GetUtcNow().UtcDateTime;
 
         await _db.SaveChangesAsync(ct);
 
@@ -217,7 +220,7 @@ public class ChatService
             GameId = gameId,
             Name = agentName,
             Kind = agentKind,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
         };
 
         _db.Agents.Add(agent);
@@ -267,7 +270,7 @@ public class ChatService
 
         // Update message content and timestamp
         message.Message = newContent;
-        message.UpdatedAt = DateTime.UtcNow;
+        message.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
 
         // Invalidate subsequent AI responses
         await InvalidateSubsequentMessagesAsync(chatId, message.SequenceNumber, ct);
@@ -338,7 +341,7 @@ public class ChatService
 
         // Soft delete the message
         message.IsDeleted = true;
-        message.DeletedAt = DateTime.UtcNow;
+        message.DeletedAt = _timeProvider.GetUtcNow().UtcDateTime;
         message.DeletedByUserId = userId;
 
         // Invalidate subsequent AI responses

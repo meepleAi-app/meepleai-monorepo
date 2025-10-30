@@ -22,13 +22,15 @@ public class PromptEvaluationService : IPromptEvaluationService
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<PromptEvaluationService> _logger;
     private readonly string _allowedDatasetsDirectory;
+    private readonly TimeProvider _timeProvider;
 
     public PromptEvaluationService(
         IRagService ragService,
         IPromptTemplateService promptTemplateService,
         MeepleAiDbContext dbContext,
         ILogger<PromptEvaluationService> logger,
-        string? allowedDatasetsDirectory = null)
+        string? allowedDatasetsDirectory = null,
+        TimeProvider? timeProvider = null)
     {
         _ragService = ragService;
         _promptTemplateService = promptTemplateService;
@@ -36,6 +38,7 @@ public class PromptEvaluationService : IPromptEvaluationService
         _logger = logger;
         _allowedDatasetsDirectory = allowedDatasetsDirectory
             ?? Path.Combine(Directory.GetCurrentDirectory(), "datasets");
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     /// <summary>
@@ -249,7 +252,7 @@ public class PromptEvaluationService : IPromptEvaluationService
                 TemplateId = templateId,
                 VersionId = versionId,
                 DatasetId = dataset.DatasetId,
-                ExecutedAt = DateTime.UtcNow,
+                ExecutedAt = _timeProvider.GetUtcNow().UtcDateTime,
                 TotalQueries = totalQueries,
                 Metrics = metrics,
                 Passed = passed,
@@ -783,7 +786,7 @@ public class PromptEvaluationService : IPromptEvaluationService
                 Passed = result.Passed,
                 Summary = result.Summary,
                 QueryResultsJson = JsonSerializer.Serialize(result.QueryResults),
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
             };
 
             _dbContext.PromptEvaluationResults.Add(entity);

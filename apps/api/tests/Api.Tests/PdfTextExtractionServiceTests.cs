@@ -5,7 +5,9 @@ using Moq;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using System.Runtime.InteropServices;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -25,9 +27,12 @@ public class PdfTextExtractionServiceTests : IDisposable
     private readonly Mock<IConfiguration> _configurationMock;
     private readonly PdfTextExtractionService _service;
     private readonly List<string> _tempFiles = new();
+    private readonly ITestOutputHelper _output;
 
-    public PdfTextExtractionServiceTests()
+    public PdfTextExtractionServiceTests(ITestOutputHelper output)
     {
+        _output = output;
+
         // Configure QuestPDF for testing (community license)
         QuestPDF.Settings.License = LicenseType.Community;
 
@@ -144,9 +149,17 @@ public class PdfTextExtractionServiceTests : IDisposable
 
     // === Successful Extraction Tests ===
 
-    [Fact(Skip = "Requires native PDF libraries (libgdiplus on Linux). Passes in CI.")]
+    [Fact]
+    [Trait("Category", "RequiresNativeLibraries")]
     public async Task ExtractTextAsync_ExtractsTextSuccessfully_FromSimplePdf()
     {
+        // Skip on Windows if libgdiplus not available (Linux CI has it)
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            _output.WriteLine("Skipping on non-Linux platform (requires libgdiplus)");
+            return;
+        }
+
         // Arrange
         var pdfPath = CreateTempPdfPath();
         var expectedText = "This is a test PDF document with simple text.";
@@ -163,9 +176,16 @@ public class PdfTextExtractionServiceTests : IDisposable
         Assert.True(result.CharacterCount > 0);
     }
 
-    [Fact(Skip = "Requires native PDF libraries (libgdiplus on Linux). Passes in CI.")]
+    [Fact]
+    [Trait("Category", "RequiresNativeLibraries")]
     public async Task ExtractTextAsync_ExtractsTextFromMultiplePages()
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            _output.WriteLine("Skipping on non-Linux platform (requires libgdiplus)");
+            return;
+        }
+
         // Arrange
         var pdfPath = CreateTempPdfPath();
         CreateMultiPagePdf(pdfPath,
@@ -184,9 +204,16 @@ public class PdfTextExtractionServiceTests : IDisposable
         Assert.True(result.PageCount >= 1); // At least one page detected
     }
 
-    [Fact(Skip = "Requires native PDF libraries (libgdiplus on Linux). Passes in CI.")]
+    [Fact]
+    [Trait("Category", "RequiresNativeLibraries")]
     public async Task ExtractTextAsync_NormalizesWhitespace()
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            _output.WriteLine("Skipping on non-Linux platform (requires libgdiplus)");
+            return;
+        }
+
         // Arrange
         var pdfPath = CreateTempPdfPath();
         var contentWithExtraSpaces = "This  has   extra    spaces";
@@ -201,9 +228,16 @@ public class PdfTextExtractionServiceTests : IDisposable
         Assert.DoesNotContain("   ", result.ExtractedText);
     }
 
-    [Fact(Skip = "Requires native PDF libraries (libgdiplus on Linux). Passes in CI.")]
+    [Fact]
+    [Trait("Category", "RequiresNativeLibraries")]
     public async Task ExtractTextAsync_HandlesEmptyPdf()
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            _output.WriteLine("Skipping on non-Linux platform (requires libgdiplus)");
+            return;
+        }
+
         // Arrange
         var pdfPath = CreateTempPdfPath();
         CreateSimplePdf(pdfPath, ""); // Empty content
@@ -218,9 +252,16 @@ public class PdfTextExtractionServiceTests : IDisposable
         Assert.Equal(0, result.CharacterCount);
     }
 
-    [Fact(Skip = "Requires native PDF libraries (libgdiplus on Linux). Passes in CI.")]
+    [Fact]
+    [Trait("Category", "RequiresNativeLibraries")]
     public async Task ExtractTextAsync_HandlesWhitespaceOnlyPdf()
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            _output.WriteLine("Skipping on non-Linux platform (requires libgdiplus)");
+            return;
+        }
+
         // Arrange
         var pdfPath = CreateTempPdfPath();
         CreateSimplePdf(pdfPath, "   \n\n   \t  ");
@@ -234,9 +275,16 @@ public class PdfTextExtractionServiceTests : IDisposable
         Assert.True(string.IsNullOrWhiteSpace(result.ExtractedText));
     }
 
-    [Fact(Skip = "Requires native PDF libraries (libgdiplus on Linux). Passes in CI.")]
+    [Fact]
+    [Trait("Category", "RequiresNativeLibraries")]
     public async Task ExtractTextAsync_CalculatesCorrectCharacterCount()
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            _output.WriteLine("Skipping on non-Linux platform (requires libgdiplus)");
+            return;
+        }
+
         // Arrange
         var pdfPath = CreateTempPdfPath();
         var content = "Hello World";
@@ -251,9 +299,16 @@ public class PdfTextExtractionServiceTests : IDisposable
         Assert.Equal(result.ExtractedText.Length, result.CharacterCount);
     }
 
-    [Fact(Skip = "Requires native PDF libraries (libgdiplus on Linux). Passes in CI.")]
+    [Fact]
+    [Trait("Category", "RequiresNativeLibraries")]
     public async Task ExtractTextAsync_LogsWarning_WhenNoTextExtracted()
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            _output.WriteLine("Skipping on non-Linux platform (requires libgdiplus)");
+            return;
+        }
+
         // Arrange
         var pdfPath = CreateTempPdfPath();
         CreateSimplePdf(pdfPath, "");
@@ -274,9 +329,16 @@ public class PdfTextExtractionServiceTests : IDisposable
             Times.Once);
     }
 
-    [Fact(Skip = "Requires native PDF libraries (libgdiplus on Linux). Passes in CI.")]
+    [Fact]
+    [Trait("Category", "RequiresNativeLibraries")]
     public async Task ExtractTextAsync_LogsInformation_OnSuccessfulExtraction()
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            _output.WriteLine("Skipping on non-Linux platform (requires libgdiplus)");
+            return;
+        }
+
         // Arrange
         var pdfPath = CreateTempPdfPath();
         CreateSimplePdf(pdfPath, "Test content");

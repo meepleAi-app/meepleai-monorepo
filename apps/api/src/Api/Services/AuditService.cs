@@ -8,10 +8,13 @@ public class AuditService
 {
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<AuditService> _logger;
-    public AuditService(MeepleAiDbContext db, ILogger<AuditService> logger)
+    private readonly TimeProvider _timeProvider;
+
+    public AuditService(MeepleAiDbContext db, ILogger<AuditService> logger, TimeProvider? timeProvider = null)
     {
         _db = db;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task LogAsync(
@@ -37,7 +40,7 @@ public class AuditService
                 Details = details,
                 IpAddress = ipAddress,
                 UserAgent = userAgent,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
             };
 
             _db.AuditLogs.Add(auditLog);

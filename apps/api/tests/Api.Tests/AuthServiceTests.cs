@@ -6,20 +6,39 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
-public class AuthServiceTests
+public class AuthServiceTests : IDisposable
 {
+    private readonly SqliteConnection _connection;
+
+    public AuthServiceTests()
+    {
+        _connection = new SqliteConnection("Filename=:memory:");
+        _connection.Open();
+    }
+
+    public void Dispose()
+    {
+        _connection?.Dispose();
+    }
+
+    private MeepleAiDbContext CreateContext()
+    {
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseSqlite(_connection)
+            .Options;
+
+        return new MeepleAiDbContext(options);
+    }
+
     [Fact]
     public async Task RegisterLoginLogout_RoundTrip_Succeeds()
     {
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new AuthService(dbContext, sessionCache: null, timeProvider: timeProvider);
 
@@ -71,12 +90,12 @@ public class AuthServiceTests
         await using var connection = new SqliteConnection("Filename=:memory:");
         await connection.OpenAsync();
 
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new AuthService(dbContext, sessionCache: null, timeProvider: timeProvider);
 
@@ -97,15 +116,6 @@ public class AuthServiceTests
             UserAgent: "unit-tests")));
 
         Assert.Equal("Only administrators can assign elevated roles.", exception.Message);
-    }
-
-    private static MeepleAiDbContext CreateContext(SqliteConnection connection)
-    {
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseSqlite(connection)
-            .Options;
-
-        return new MeepleAiDbContext(options);
     }
 
     private sealed class FixedTimeProvider : TimeProvider

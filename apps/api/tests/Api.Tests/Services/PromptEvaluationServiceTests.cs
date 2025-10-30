@@ -22,7 +22,7 @@ namespace Api.Tests.Services;
 /// Unit tests for PromptEvaluationService
 /// ADMIN-01 Phase 4: Prompt Testing Framework
 /// </summary>
-public class PromptEvaluationServiceTests : IAsyncLifetime
+public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
 {
     private readonly Mock<IRagService> _ragServiceMock;
     private readonly Mock<IPromptTemplateService> _promptServiceMock;
@@ -165,6 +165,13 @@ public class PromptEvaluationServiceTests : IAsyncLifetime
 
         await _dbContext.DisposeAsync();
         await _connection.DisposeAsync();
+    }
+
+    public void Dispose()
+    {
+        // Synchronous disposal (calls async version)
+        DisposeAsync().GetAwaiter().GetResult();
+        GC.SuppressFinalize(this);
     }
 
     #region LoadDatasetAsync Tests

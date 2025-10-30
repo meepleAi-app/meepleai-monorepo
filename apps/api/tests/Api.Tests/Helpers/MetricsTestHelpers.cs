@@ -33,7 +33,7 @@ public class TestMeterFactory : IMeterFactory, IDisposable
 /// <summary>
 /// Collects measurements from a specific metric for testing.
 /// </summary>
-public class MetricCollector<T> where T : struct
+public class MetricCollector<T> : IDisposable where T : struct
 {
     private readonly List<Measurement<T>> _measurements = new();
     private readonly MeterListener _listener;
@@ -63,6 +63,12 @@ public class MetricCollector<T> where T : struct
     }
 
     public List<Measurement<T>> GetMeasurements() => _measurements.ToList();
+
+    public void Dispose()
+    {
+        _listener?.Dispose();
+        GC.SuppressFinalize(this);
+    }
 }
 
 /// <summary>

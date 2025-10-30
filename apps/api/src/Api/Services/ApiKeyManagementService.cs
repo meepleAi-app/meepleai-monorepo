@@ -327,7 +327,7 @@ public class ApiKeyManagementService
             MaxRequestsPerHour = quota.MaxRequestsPerHour,
             RequestsToday = 0,
             RequestsThisHour = 0,
-            ResetsAt = DateTime.UtcNow.Date.AddDays(1)
+            ResetsAt = _timeProvider.GetUtcNow().UtcDateTime.Date.AddDays(1)
         };
     }
 
@@ -356,7 +356,7 @@ public class ApiKeyManagementService
                     MaxRequestsPerHour = quota.MaxRequestsPerHour,
                     RequestsToday = 0,
                     RequestsThisHour = 0,
-                    ResetsAt = DateTime.UtcNow.Date.AddDays(1)
+                    ResetsAt = _timeProvider.GetUtcNow().UtcDateTime.Date.AddDays(1)
                 }
                 : null
         };

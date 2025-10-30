@@ -8,11 +8,13 @@ public class AgentFeedbackService
 {
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<AgentFeedbackService> _logger;
+    private readonly TimeProvider _timeProvider;
 
-    public AgentFeedbackService(MeepleAiDbContext db, ILogger<AgentFeedbackService> logger)
+    public AgentFeedbackService(MeepleAiDbContext db, ILogger<AgentFeedbackService> logger, TimeProvider? timeProvider = null)
     {
         _db = db;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task RecordFeedbackAsync(
@@ -63,8 +65,8 @@ public class AgentFeedbackService
                     GameId = gameId,
                     UserId = userId,
                     Outcome = outcome,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
+                    CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
+                    UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime
                 };
 
                 _db.AgentFeedbacks.Add(entity);
@@ -74,7 +76,7 @@ public class AgentFeedbackService
                 existing.Endpoint = endpoint;
                 existing.GameId = gameId;
                 existing.Outcome = outcome;
-                existing.UpdatedAt = DateTime.UtcNow;
+                existing.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
             }
 
             await _db.SaveChangesAsync(ct);

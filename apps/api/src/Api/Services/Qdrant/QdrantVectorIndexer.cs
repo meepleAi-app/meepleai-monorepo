@@ -11,13 +11,16 @@ public class QdrantVectorIndexer : IQdrantVectorIndexer
 {
     private readonly IQdrantClientAdapter _clientAdapter;
     private readonly ILogger<QdrantVectorIndexer> _logger;
+    private readonly TimeProvider _timeProvider;
 
     public QdrantVectorIndexer(
         IQdrantClientAdapter clientAdapter,
-        ILogger<QdrantVectorIndexer> logger)
+        ILogger<QdrantVectorIndexer> logger,
+        TimeProvider? timeProvider = null)
     {
         _clientAdapter = clientAdapter;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     /// <summary>
@@ -89,7 +92,7 @@ public class QdrantVectorIndexer : IQdrantVectorIndexer
                 ["page"] = chunk.Page,
                 ["char_start"] = chunk.CharStart,
                 ["char_end"] = chunk.CharEnd,
-                ["indexed_at"] = DateTime.UtcNow.ToString("o")
+                ["indexed_at"] = _timeProvider.GetUtcNow().UtcDateTime.ToString("o")
             };
 
             var point = new PointStruct

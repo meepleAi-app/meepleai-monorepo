@@ -29,11 +29,23 @@ namespace Api.Tests;
 /// - Session revocation on password reset
 /// - Strong password requirements
 /// </summary>
-public class PasswordResetServiceTests
+public class PasswordResetServiceTests : IDisposable
 {
+    private readonly SqliteConnection _connection;
     private const string ValidEmail = "user@example.com";
     private const string ValidPassword = "Password123";
     private static readonly DateTime FixedNow = DateTime.Parse("2024-01-15T12:00:00Z");
+
+    public PasswordResetServiceTests()
+    {
+        _connection = new SqliteConnection("Filename=:memory:");
+        _connection.Open();
+    }
+
+    public void Dispose()
+    {
+        _connection?.Dispose();
+    }
 
     #region RequestPasswordResetAsync Tests
 
@@ -50,9 +62,7 @@ public class PasswordResetServiceTests
     public async Task RequestPasswordResetAsync_WithValidEmail_CreatesTokenAndSendsEmail()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var user = new UserEntity
         {
@@ -106,9 +116,7 @@ public class PasswordResetServiceTests
     public async Task RequestPasswordResetAsync_WithNonExistentEmail_ReturnsTrue()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
@@ -153,9 +161,7 @@ public class PasswordResetServiceTests
     public async Task RequestPasswordResetAsync_WithNullEmail_ThrowsArgumentException()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
@@ -180,9 +186,7 @@ public class PasswordResetServiceTests
     public async Task RequestPasswordResetAsync_WithEmptyEmail_ThrowsArgumentException()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
@@ -209,9 +213,7 @@ public class PasswordResetServiceTests
     public async Task RequestPasswordResetAsync_WithRateLimitExceeded_ThrowsInvalidOperationException()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: false, retryAfter: 3600);
@@ -248,9 +250,7 @@ public class PasswordResetServiceTests
     public async Task RequestPasswordResetAsync_WithExistingUnusedToken_InvalidatesOldToken()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var user = new UserEntity
         {
@@ -316,9 +316,7 @@ public class PasswordResetServiceTests
     public async Task RequestPasswordResetAsync_WithEmailServiceFailure_ReturnsTrue()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var user = new UserEntity
         {
@@ -377,9 +375,7 @@ public class PasswordResetServiceTests
     public async Task RequestPasswordResetAsync_GeneratesUrlSafeToken()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var user = new UserEntity
         {
@@ -428,9 +424,7 @@ public class PasswordResetServiceTests
     public async Task RequestPasswordResetAsync_WithEmailCaseVariation_NormalizesEmail()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var user = new UserEntity
         {
@@ -471,9 +465,7 @@ public class PasswordResetServiceTests
     public async Task RequestPasswordResetAsync_WithWhitespaceInEmail_TrimsEmail()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var user = new UserEntity
         {
@@ -518,9 +510,7 @@ public class PasswordResetServiceTests
     public async Task ValidateResetTokenAsync_WithValidToken_ReturnsTrue()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var token = "valid-token-123";
         var tokenHash = HashToken(token);
@@ -572,9 +562,7 @@ public class PasswordResetServiceTests
     public async Task ValidateResetTokenAsync_WithNullToken_ReturnsFalse()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
@@ -599,9 +587,7 @@ public class PasswordResetServiceTests
     public async Task ValidateResetTokenAsync_WithEmptyToken_ReturnsFalse()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
@@ -626,9 +612,7 @@ public class PasswordResetServiceTests
     public async Task ValidateResetTokenAsync_WithInvalidToken_ReturnsFalse()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
@@ -654,9 +638,7 @@ public class PasswordResetServiceTests
     public async Task ValidateResetTokenAsync_WithUsedToken_ReturnsFalse()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var token = "used-token-123";
         var tokenHash = HashToken(token);
@@ -720,9 +702,7 @@ public class PasswordResetServiceTests
     public async Task ValidateResetTokenAsync_WithExpiredToken_ReturnsFalse()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var token = "expired-token-123";
         var tokenHash = HashToken(token);
@@ -791,9 +771,7 @@ public class PasswordResetServiceTests
     public async Task ResetPasswordAsync_WithValidTokenAndPassword_ResetsPassword()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var token = "valid-token-123";
         var tokenHash = HashToken(token);
@@ -855,9 +833,7 @@ public class PasswordResetServiceTests
     public async Task ResetPasswordAsync_WithValidReset_RevokesAllSessions()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var token = "valid-token-123";
         var tokenHash = HashToken(token);
@@ -937,9 +913,7 @@ public class PasswordResetServiceTests
     public async Task ResetPasswordAsync_WithNullToken_ThrowsArgumentException()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
@@ -964,9 +938,7 @@ public class PasswordResetServiceTests
     public async Task ResetPasswordAsync_WithEmptyToken_ThrowsArgumentException()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
@@ -991,9 +963,7 @@ public class PasswordResetServiceTests
     public async Task ResetPasswordAsync_WithNullPassword_ThrowsArgumentException()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
@@ -1018,9 +988,7 @@ public class PasswordResetServiceTests
     public async Task ResetPasswordAsync_WithShortPassword_ThrowsArgumentException()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
@@ -1049,9 +1017,7 @@ public class PasswordResetServiceTests
     public async Task ResetPasswordAsync_WithWeakPassword_ThrowsArgumentException(string weakPassword)
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
@@ -1080,9 +1046,7 @@ public class PasswordResetServiceTests
     public async Task ResetPasswordAsync_WithStrongPassword_PassesValidation(string strongPassword)
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
@@ -1109,9 +1073,7 @@ public class PasswordResetServiceTests
     public async Task ResetPasswordAsync_WithInvalidToken_ReturnsFalse()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
@@ -1149,9 +1111,7 @@ public class PasswordResetServiceTests
     public async Task ResetPasswordAsync_WithUsedToken_ReturnsFalse()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var token = "used-token-123";
         var tokenHash = HashToken(token);
@@ -1221,9 +1181,7 @@ public class PasswordResetServiceTests
     public async Task ResetPasswordAsync_WithExpiredToken_ReturnsFalse()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var token = "expired-token-123";
         var tokenHash = HashToken(token);
@@ -1290,9 +1248,7 @@ public class PasswordResetServiceTests
     public async Task ResetPasswordAsync_WithUnicodePassword_Succeeds()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateInMemoryContextAsync(connection);
+        await using var db = await CreateInMemoryContextAsync();
 
         var token = "valid-token-123";
         var tokenHash = HashToken(token);
@@ -1345,10 +1301,10 @@ public class PasswordResetServiceTests
     /// <summary>
     /// Creates an in-memory SQLite database context for testing.
     /// </summary>
-    private static async Task<MeepleAiDbContext> CreateInMemoryContextAsync(SqliteConnection connection)
+    private async Task<MeepleAiDbContext> CreateInMemoryContextAsync()
     {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseSqlite(connection)
+            .UseSqlite(_connection)
             .Options;
 
         var context = new MeepleAiDbContext(options);

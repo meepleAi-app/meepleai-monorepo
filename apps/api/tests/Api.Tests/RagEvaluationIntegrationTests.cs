@@ -23,7 +23,7 @@ namespace Api.Tests;
 /// AI-06: Integration tests for RAG evaluation with real Qdrant and database
 /// Uses Testcontainers for isolated testing environment
 /// </summary>
-public class RagEvaluationIntegrationTests : IAsyncLifetime
+public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
 {
     private PostgreSqlContainer? _postgresContainer;
     private QdrantContainer? _qdrantContainer;
@@ -135,6 +135,13 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime
         {
             File.Delete(_tempDatasetPath);
         }
+    }
+
+    public void Dispose()
+    {
+        // Synchronous disposal (calls async version)
+        DisposeAsync().GetAwaiter().GetResult();
+        GC.SuppressFinalize(this);
     }
 
     [Fact]

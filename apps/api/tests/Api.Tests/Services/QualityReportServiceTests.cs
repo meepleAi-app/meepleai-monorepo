@@ -17,8 +17,21 @@ namespace Api.Tests.Services;
 /// BDD tests for QualityReportService background service.
 /// These tests verify periodic quality report generation (TDD RED phase).
 /// </summary>
-public class QualityReportServiceTests
+public class QualityReportServiceTests : IDisposable
 {
+    private readonly SqliteConnection _connection;
+
+    public QualityReportServiceTests()
+    {
+        _connection = new SqliteConnection("Filename=:memory:");
+        _connection.Open();
+    }
+
+    public void Dispose()
+    {
+        _connection?.Dispose();
+    }
+
     /// <summary>
     /// Scenario: Report generated after configured interval
     /// Given service configured with 100ms interval
@@ -29,9 +42,7 @@ public class QualityReportServiceTests
     public async Task ExecuteAsync_AfterInterval_GeneratesReport()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
         var mockServiceScope = new Mock<IServiceScope>();
@@ -128,9 +139,7 @@ public class QualityReportServiceTests
     public async Task GenerateReportAsync_WithData_IncludesStatistics()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
         var mockServiceScope = new Mock<IServiceScope>();
@@ -205,9 +214,7 @@ public class QualityReportServiceTests
     public async Task GenerateReportAsync_EmptyPeriod_HandlesGracefully()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
         var mockServiceScope = new Mock<IServiceScope>();
@@ -258,9 +265,7 @@ public class QualityReportServiceTests
     public async Task ExecuteAsync_ServiceScope_CreatesAndDisposesCorrectly()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
         var mockServiceScope = new Mock<IServiceScope>();
@@ -412,9 +417,7 @@ public class QualityReportServiceTests
     public async Task GenerateReportAsync_WithTimePeriod_IncludesDates()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
         var mockServiceScope = new Mock<IServiceScope>();
@@ -461,9 +464,7 @@ public class QualityReportServiceTests
     public async Task GenerateReportAsync_CalculatesPercentage_ReturnsCorrectValue()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
         var mockServiceScope = new Mock<IServiceScope>();
@@ -520,10 +521,10 @@ public class QualityReportServiceTests
     /// <summary>
     /// Creates a SQLite in-memory database context for testing.
     /// </summary>
-    private static async Task<MeepleAiDbContext> CreateContextAsync(SqliteConnection connection)
+    private async Task<MeepleAiDbContext> CreateContextAsync()
     {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseSqlite(connection)
+            .UseSqlite(_connection)
             .Options;
 
         var context = new MeepleAiDbContext(options);

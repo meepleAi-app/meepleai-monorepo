@@ -11,15 +11,18 @@ public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
     private readonly MeepleAiDbContext _db;
     private readonly HybridCache _cache;
     private readonly ILogger<WorkflowErrorLoggingService> _logger;
+    private readonly TimeProvider _timeProvider;
 
     public WorkflowErrorLoggingService(
         MeepleAiDbContext db,
         HybridCache cache,
-        ILogger<WorkflowErrorLoggingService> logger)
+        ILogger<WorkflowErrorLoggingService> logger,
+        TimeProvider? timeProvider = null)
     {
         _db = db;
         _cache = cache;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task LogErrorAsync(LogWorkflowErrorRequest request, CancellationToken ct = default)
@@ -35,7 +38,7 @@ public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
                 NodeName = request.NodeName,
                 RetryCount = request.RetryCount,
                 StackTrace = request.StackTrace,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
             };
 
             _db.WorkflowErrorLogs.Add(entity);

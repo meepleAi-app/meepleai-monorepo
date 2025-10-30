@@ -25,6 +25,7 @@ public class PdfStorageService
     private readonly ITextChunkingService? _textChunkingServiceOverride;
     private readonly IEmbeddingService? _embeddingServiceOverride;
     private readonly IQdrantService? _qdrantServiceOverride;
+    private readonly TimeProvider _timeProvider;
     private const long MaxFileSizeBytes = 50 * 1024 * 1024; // 50 MB
     private static readonly HashSet<string> AllowedContentTypes = new()
     {
@@ -42,7 +43,8 @@ public class PdfStorageService
         IBlobStorageService blobStorageService,
         ITextChunkingService? textChunkingService = null,
         IEmbeddingService? embeddingService = null,
-        IQdrantService? qdrantService = null)
+        IQdrantService? qdrantService = null,
+        TimeProvider? timeProvider = null)
     {
         _db = db;
         _scopeFactory = scopeFactory;
@@ -55,6 +57,7 @@ public class PdfStorageService
         _textChunkingServiceOverride = textChunkingService;
         _embeddingServiceOverride = embeddingService;
         _qdrantServiceOverride = qdrantService;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task<PdfUploadResult> UploadPdfAsync(
@@ -123,7 +126,7 @@ public class PdfStorageService
                 FileSizeBytes = storageResult.FileSizeBytes,
                 ContentType = file.ContentType,
                 UploadedByUserId = userId,
-                UploadedAt = DateTime.UtcNow,
+                UploadedAt = _timeProvider.GetUtcNow().UtcDateTime,
                 ProcessingStatus = "pending"
             };
 
@@ -141,7 +144,7 @@ public class PdfStorageService
                 EstimatedTimeRemaining = null,
                 PagesProcessed = 0,
                 TotalPages = 0,
-                StartedAt = DateTime.UtcNow,
+                StartedAt = _timeProvider.GetUtcNow().UtcDateTime,
                 CompletedAt = null,
                 ErrorMessage = null
             };
@@ -313,7 +316,7 @@ public class PdfStorageService
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var startTime = DateTime.UtcNow;
+        var startTime = _timeProvider.GetUtcNow().UtcDateTime;
 
         try
         {
@@ -333,7 +336,7 @@ public class PdfStorageService
                 await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractResult.Error, ct);
                 pdfDoc.ProcessingStatus = "failed";
                 pdfDoc.ProcessingError = extractResult.Error;
-                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(ct);
                 return;
             }
@@ -430,7 +433,7 @@ public class PdfStorageService
                 await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, $"Embedding generation failed: {embeddingResult.ErrorMessage}", ct);
                 pdfDoc.ProcessingStatus = "failed";
                 pdfDoc.ProcessingError = embeddingResult.ErrorMessage;
-                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(ct);
                 return;
             }
@@ -446,7 +449,7 @@ public class PdfStorageService
                 await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, mismatchMessage, ct);
                 pdfDoc.ProcessingStatus = "failed";
                 pdfDoc.ProcessingError = mismatchMessage;
-                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(ct);
                 return;
             }
@@ -469,7 +472,7 @@ public class PdfStorageService
                 await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, error, ct);
                 pdfDoc.ProcessingStatus = "failed";
                 pdfDoc.ProcessingError = error;
-                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(ct);
                 return;
             }
@@ -499,7 +502,7 @@ public class PdfStorageService
                 await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, $"Qdrant indexing failed: {indexResult.ErrorMessage}", ct);
                 pdfDoc.ProcessingStatus = "failed";
                 pdfDoc.ProcessingError = indexResult.ErrorMessage;
-                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(ct);
                 return;
             }
@@ -516,7 +519,7 @@ public class PdfStorageService
                     IndexingStatus = "completed",
                     ChunkCount = indexResult.IndexedCount,
                     TotalCharacters = fullText.Length,
-                    IndexedAt = DateTime.UtcNow
+                    IndexedAt = _timeProvider.GetUtcNow().UtcDateTime
                 };
                 db.VectorDocuments.Add(vectorDoc);
             }
@@ -525,13 +528,13 @@ public class PdfStorageService
                 vectorDoc.IndexingStatus = "completed";
                 vectorDoc.ChunkCount = indexResult.IndexedCount;
                 vectorDoc.TotalCharacters = fullText.Length;
-                vectorDoc.IndexedAt = DateTime.UtcNow;
+                vectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
             }
 
             // Step 5: Complete (100%)
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Completed, totalPages, totalPages, startTime, null, ct);
             pdfDoc.ProcessingStatus = "completed";
-            pdfDoc.ProcessedAt = DateTime.UtcNow;
+            pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
             await db.SaveChangesAsync(ct);
 
             await InvalidateCacheSafelyAsync(pdfDoc.GameId, ct, "PDF processing");
@@ -548,7 +551,7 @@ public class PdfStorageService
             {
                 pdfDoc.ProcessingStatus = "failed";
                 pdfDoc.ProcessingError = "Processing cancelled by user";
-                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(CancellationToken.None);
             }
         }
@@ -562,7 +565,7 @@ public class PdfStorageService
             {
                 pdfDoc.ProcessingStatus = "failed";
                 pdfDoc.ProcessingError = $"Invalid operation: {ex.Message}";
-                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(CancellationToken.None);
             }
         }
@@ -576,7 +579,7 @@ public class PdfStorageService
             {
                 pdfDoc.ProcessingStatus = "failed";
                 pdfDoc.ProcessingError = "Database error occurred";
-                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(CancellationToken.None);
             }
         }
@@ -590,7 +593,7 @@ public class PdfStorageService
             {
                 pdfDoc.ProcessingStatus = "failed";
                 pdfDoc.ProcessingError = ex.Message;
-                pdfDoc.ProcessedAt = DateTime.UtcNow;
+                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(CancellationToken.None);
             }
         }
@@ -611,7 +614,7 @@ public class PdfStorageService
             var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfId }, ct);
             if (pdfDoc == null) return;
 
-            var elapsed = DateTime.UtcNow - startTime;
+            var elapsed = _timeProvider.GetUtcNow().UtcDateTime - startTime;
             var percentComplete = ProcessingProgress.CalculatePercentComplete(step, pagesProcessed, totalPages);
             var estimatedRemaining = ProcessingProgress.EstimateTimeRemaining(percentComplete, elapsed);
 
@@ -624,7 +627,7 @@ public class PdfStorageService
                 PagesProcessed = pagesProcessed,
                 TotalPages = totalPages,
                 StartedAt = startTime,
-                CompletedAt = step == ProcessingStep.Completed || step == ProcessingStep.Failed ? DateTime.UtcNow : null,
+                CompletedAt = step == ProcessingStep.Completed || step == ProcessingStep.Failed ? _timeProvider.GetUtcNow().UtcDateTime : null,
                 ErrorMessage = errorMessage
             };
 

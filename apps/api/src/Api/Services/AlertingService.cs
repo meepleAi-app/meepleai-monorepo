@@ -23,17 +23,20 @@ public class AlertingService : IAlertingService
     private readonly IEnumerable<IAlertChannel> _alertChannels;
     private readonly AlertingConfiguration _config;
     private readonly ILogger<AlertingService> _logger;
+    private readonly TimeProvider _timeProvider;
 
     public AlertingService(
         MeepleAiDbContext dbContext,
         IEnumerable<IAlertChannel> alertChannels,
         IOptions<AlertingConfiguration> config,
-        ILogger<AlertingService> logger)
+        ILogger<AlertingService> logger,
+        TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext;
         _alertChannels = alertChannels;
         _config = config.Value;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task<AlertDto> SendAlertAsync(
@@ -79,7 +82,7 @@ public class AlertingService : IAlertingService
             Severity = severity,
             Message = message,
             Metadata = metadata != null ? JsonSerializer.Serialize(metadata) : null,
-            TriggeredAt = DateTime.UtcNow,
+            TriggeredAt = _timeProvider.GetUtcNow().UtcDateTime,
             IsActive = true
         };
 
@@ -161,7 +164,7 @@ public class AlertingService : IAlertingService
         foreach (var alert in activeAlerts)
         {
             alert.IsActive = false;
-            alert.ResolvedAt = DateTime.UtcNow;
+            alert.ResolvedAt = _timeProvider.GetUtcNow().UtcDateTime;
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -204,7 +207,7 @@ public class AlertingService : IAlertingService
         string alertType,
         CancellationToken cancellationToken = default)
     {
-        var throttleWindow = DateTime.UtcNow.AddMinutes(-_config.ThrottleMinutes);
+        var throttleWindow = _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(-_config.ThrottleMinutes);
 
         var recentAlert = await _dbContext.Alerts
             .AsNoTracking()

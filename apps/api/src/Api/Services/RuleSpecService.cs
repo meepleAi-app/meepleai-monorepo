@@ -15,11 +15,13 @@ public class RuleSpecService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly IAiResponseCacheService _cache;
+    private readonly TimeProvider _timeProvider;
 
-    public RuleSpecService(MeepleAiDbContext dbContext, IAiResponseCacheService cache)
+    public RuleSpecService(MeepleAiDbContext dbContext, IAiResponseCacheService cache, TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext;
         _cache = cache;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task<RuleSpec> GenerateRuleSpecFromPdfAsync(string pdfId, CancellationToken cancellationToken = default)
@@ -52,7 +54,7 @@ public class RuleSpecService
             atoms.Add(CreateRuleAtom(rules[index], index + 1));
         }
 
-        var timestamp = DateTime.UtcNow;
+        var timestamp = _timeProvider.GetUtcNow().UtcDateTime;
         var version = $"ingest-{timestamp:yyyyMMddHHmmss}";
 
         return new RuleSpec(pdf.GameId, version, timestamp, atoms);
@@ -78,7 +80,7 @@ public class RuleSpecService
                 {
                     Id = gameId,
                     Name = gameId,
-                    CreatedAt = DateTime.UtcNow,
+                    CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
                 };
                 _dbContext.Games.Add(game);
             }
@@ -87,7 +89,7 @@ public class RuleSpecService
             {
                 GameId = gameId,
                 Version = "v0-demo",
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
             };
 
             specEntity.Atoms.Add(new RuleAtomEntity
@@ -183,7 +185,7 @@ public class RuleSpecService
         {
             GameId = gameId,
             Version = version,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
             CreatedByUserId = userId,
         };
 
@@ -232,7 +234,7 @@ public class RuleSpecService
 
         string candidate = nextNumeric.HasValue
             ? $"v{nextNumeric.Value}"
-            : $"v{DateTime.UtcNow:yyyyMMddHHmmss}";
+            : $"v{_timeProvider.GetUtcNow().UtcDateTime:yyyyMMddHHmmss}";
 
         while (await _dbContext.RuleSpecs
             .AnyAsync(r => r.GameId == gameId && r.Version == candidate, cancellationToken))
@@ -244,7 +246,7 @@ public class RuleSpecService
             }
             else
             {
-                candidate = $"v{DateTime.UtcNow:yyyyMMddHHmmssfff}";
+                candidate = $"v{_timeProvider.GetUtcNow().UtcDateTime:yyyyMMddHHmmssfff}";
             }
         }
 

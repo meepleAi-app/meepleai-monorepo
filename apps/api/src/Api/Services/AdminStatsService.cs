@@ -18,16 +18,19 @@ public class AdminStatsService : IAdminStatsService
     private readonly MeepleAiDbContext _dbContext;
     private readonly HybridCache _cache;
     private readonly ILogger<AdminStatsService> _logger;
+    private readonly TimeProvider _timeProvider;
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(5);
 
     public AdminStatsService(
         MeepleAiDbContext dbContext,
         HybridCache cache,
-        ILogger<AdminStatsService> logger)
+        ILogger<AdminStatsService> logger,
+        TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext;
         _cache = cache;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     /// <summary>
@@ -46,7 +49,7 @@ public class AdminStatsService : IAdminStatsService
             {
                 _logger.LogInformation("Cache miss for dashboard stats, generating fresh data");
 
-                var now = DateTime.UtcNow;
+                var now = _timeProvider.GetUtcNow().UtcDateTime;
                 var fromDate = queryParams.FromDate ?? now.AddDays(-queryParams.Days);
                 var toDate = queryParams.ToDate ?? now;
 
@@ -68,7 +71,7 @@ public class AdminStatsService : IAdminStatsService
                     ApiRequestTrend: await apiRequestTrendTask,
                     PdfUploadTrend: await pdfUploadTrendTask,
                     ChatMessageTrend: await chatMessageTrendTask,
-                    GeneratedAt: DateTime.UtcNow
+                    GeneratedAt: _timeProvider.GetUtcNow().UtcDateTime
                 );
             },
             new HybridCacheEntryOptions

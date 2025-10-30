@@ -16,6 +16,7 @@ public class ConfigurationService : IConfigurationService
     private readonly IHybridCacheService _cache;
     private readonly ILogger<ConfigurationService> _logger;
     private readonly IWebHostEnvironment _environment;
+    private readonly TimeProvider _timeProvider;
 
     private const string CacheKeyPrefix = "config:";
     private const string CacheCategoryTagPrefix = "config:category:";
@@ -25,12 +26,14 @@ public class ConfigurationService : IConfigurationService
         MeepleAiDbContext dbContext,
         IHybridCacheService cache,
         ILogger<ConfigurationService> logger,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext;
         _cache = cache;
         _logger = logger;
         _environment = environment;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task<PagedResult<SystemConfigurationDto>> GetConfigurationsAsync(
@@ -171,8 +174,8 @@ public class ConfigurationService : IConfigurationService
             RequiresRestart = request.RequiresRestart,
             Environment = request.Environment,
             Version = 1,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
+            UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime,
             CreatedByUserId = userId
         };
 
@@ -243,7 +246,7 @@ public class ConfigurationService : IConfigurationService
         if (request.IsActive.HasValue && request.IsActive.Value != entity.IsActive)
         {
             entity.IsActive = request.IsActive.Value;
-            entity.LastToggledAt = DateTime.UtcNow;
+            entity.LastToggledAt = _timeProvider.GetUtcNow().UtcDateTime;
         }
 
         if (request.RequiresRestart.HasValue)
@@ -258,7 +261,7 @@ public class ConfigurationService : IConfigurationService
 
         // Increment version and update metadata
         entity.Version++;
-        entity.UpdatedAt = DateTime.UtcNow;
+        entity.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
         entity.UpdatedByUserId = userId;
 
         await _dbContext.SaveChangesAsync();
@@ -312,8 +315,8 @@ public class ConfigurationService : IConfigurationService
         if (entity.IsActive != isActive)
         {
             entity.IsActive = isActive;
-            entity.LastToggledAt = DateTime.UtcNow;
-            entity.UpdatedAt = DateTime.UtcNow;
+            entity.LastToggledAt = _timeProvider.GetUtcNow().UtcDateTime;
+            entity.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
             entity.UpdatedByUserId = userId;
 
             await _dbContext.SaveChangesAsync();
@@ -363,7 +366,7 @@ public class ConfigurationService : IConfigurationService
                 entity.PreviousValue = entity.Value;
                 entity.Value = update.Value;
                 entity.Version++;
-                entity.UpdatedAt = DateTime.UtcNow;
+                entity.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 entity.UpdatedByUserId = userId;
 
                 updatedConfigs.Add(MapToDto(entity));
@@ -517,7 +520,7 @@ public class ConfigurationService : IConfigurationService
 
         return new ConfigurationExportDto(
             Configurations: configurations.Select(MapToDto).ToList(),
-            ExportedAt: DateTime.UtcNow,
+            ExportedAt: _timeProvider.GetUtcNow().UtcDateTime,
             Environment: environment
         );
     }
@@ -551,7 +554,7 @@ public class ConfigurationService : IConfigurationService
                         entity.IsActive = configRequest.IsActive;
                         entity.RequiresRestart = configRequest.RequiresRestart;
                         entity.Version++;
-                        entity.UpdatedAt = DateTime.UtcNow;
+                        entity.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
                         entity.UpdatedByUserId = userId;
 
                         importedCount++;
@@ -573,8 +576,8 @@ public class ConfigurationService : IConfigurationService
                         RequiresRestart = configRequest.RequiresRestart,
                         Environment = configRequest.Environment,
                         Version = 1,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
+                        CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
+                        UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime,
                         CreatedByUserId = userId
                     };
 
@@ -685,7 +688,7 @@ public class ConfigurationService : IConfigurationService
             entity.Value = entity.PreviousValue;
             entity.PreviousValue = currentValue;
             entity.Version++;
-            entity.UpdatedAt = DateTime.UtcNow;
+            entity.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
             entity.UpdatedByUserId = userId;
 
             await _dbContext.SaveChangesAsync();

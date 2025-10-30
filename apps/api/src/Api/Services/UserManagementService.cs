@@ -15,15 +15,18 @@ public class UserManagementService
     private readonly MeepleAiDbContext _dbContext;
     private readonly AuthService _authService;
     private readonly ILogger<UserManagementService> _logger;
+    private readonly TimeProvider _timeProvider;
 
     public UserManagementService(
         MeepleAiDbContext dbContext,
         AuthService authService,
-        ILogger<UserManagementService> logger)
+        ILogger<UserManagementService> logger,
+        TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext;
         _authService = authService;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     /// <summary>
@@ -113,7 +116,7 @@ public class UserManagementService
             DisplayName = request.DisplayName,
             PasswordHash = HashPassword(request.Password),
             Role = role,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
         };
 
         _dbContext.Users.Add(user);

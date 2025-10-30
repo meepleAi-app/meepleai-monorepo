@@ -15,6 +15,7 @@ public class StreamingRagService : IStreamingRagService
     private readonly IEmbeddingService _embeddingService;
     private readonly IQdrantService _qdrantService;
     private readonly ILogger<StreamingRagService> _logger;
+    private readonly TimeProvider _timeProvider;
 
     // Script chunk size for streaming (characters per chunk)
     private const int ScriptChunkSize = 500;
@@ -23,12 +24,14 @@ public class StreamingRagService : IStreamingRagService
         MeepleAiDbContext dbContext,
         IEmbeddingService embeddingService,
         IQdrantService qdrantService,
-        ILogger<StreamingRagService> logger)
+        ILogger<StreamingRagService> logger,
+        TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext;
         _embeddingService = embeddingService;
         _qdrantService = qdrantService;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async IAsyncEnumerable<RagStreamingEvent> ExplainStreamAsync(
@@ -154,7 +157,7 @@ public class StreamingRagService : IStreamingRagService
 
     private RagStreamingEvent CreateEvent(StreamingEventType type, object? data)
     {
-        return new RagStreamingEvent(type, data, DateTime.UtcNow);
+        return new RagStreamingEvent(type, data, _timeProvider.GetUtcNow().UtcDateTime);
     }
 
     private ExplainOutline BuildOutline(string topic, IReadOnlyList<SearchResultItem> results)

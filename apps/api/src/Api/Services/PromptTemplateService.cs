@@ -21,6 +21,7 @@ public class PromptTemplateService : IPromptTemplateService
     private readonly IConnectionMultiplexer _redis;
     private readonly RagPromptsConfiguration _config;
     private readonly ILogger<PromptTemplateService> _logger;
+    private readonly TimeProvider _timeProvider;
 
     // ADMIN-01: Cache configuration
     private const string CacheKeyPrefix = "prompt:";
@@ -52,12 +53,14 @@ ANSWER:",
         MeepleAiDbContext dbContext,
         IConnectionMultiplexer redis,
         IOptions<RagPromptsConfiguration> config,
-        ILogger<PromptTemplateService> logger)
+        ILogger<PromptTemplateService> logger,
+        TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _redis = redis ?? throw new ArgumentNullException(nameof(redis));
         _config = config?.Value ?? new RagPromptsConfiguration();
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     /// <summary>
@@ -437,7 +440,7 @@ ANSWER:",
                 VersionId = versionId,
                 Action = "version_activated",
                 ChangedByUserId = activatedByUserId,
-                ChangedAt = DateTime.UtcNow,
+                ChangedAt = _timeProvider.GetUtcNow().UtcDateTime,
                 Details = $"Activated version {versionToActivate.VersionNumber}",
                 Template = versionToActivate.Template,
                 ChangedBy = changedByUser // EF Core will handle FK relationship

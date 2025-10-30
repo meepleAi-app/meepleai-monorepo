@@ -8,22 +8,17 @@ namespace Api.Tests;
 
 public class EncryptionServiceTests
 {
-    private readonly Mock<IDataProtectionProvider> _mockDataProtectionProvider;
-    private readonly Mock<IDataProtector> _mockDataProtector;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly Mock<ILogger<EncryptionService>> _mockLogger;
     private readonly EncryptionService _service;
 
     public EncryptionServiceTests()
     {
-        _mockDataProtectionProvider = new Mock<IDataProtectionProvider>();
-        _mockDataProtector = new Mock<IDataProtector>();
+        // Use EphemeralDataProtectionProvider for testing (in-memory, no persistence)
+        _dataProtectionProvider = new EphemeralDataProtectionProvider();
         _mockLogger = new Mock<ILogger<EncryptionService>>();
 
-        _mockDataProtectionProvider
-            .Setup(p => p.CreateProtector(It.IsAny<string>()))
-            .Returns(_mockDataProtector.Object);
-
-        _service = new EncryptionService(_mockDataProtectionProvider.Object, _mockLogger.Object);
+        _service = new EncryptionService(_dataProtectionProvider, _mockLogger.Object);
     }
 
     [Fact]
@@ -31,30 +26,29 @@ public class EncryptionServiceTests
     {
         // Arrange
         var plaintext = "secret-token-12345";
-        var encrypted = "encrypted-data-xyz";
-        _mockDataProtector.Setup(p => p.Protect(plaintext)).Returns(encrypted);
 
         // Act
         var result = await _service.EncryptAsync(plaintext);
 
         // Assert
-        Assert.Equal(encrypted, result);
-        _mockDataProtector.Verify(p => p.Protect(plaintext), Times.Once);
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.NotEqual(plaintext, result); // Encrypted should be different from plaintext
     }
 
     [Fact]
-    public async Task EncryptAsync_WithCustomPurpose_UsesCorrectProtector()
+    public async Task EncryptAsync_WithCustomPurpose_CanDecrypt()
     {
         // Arrange
         var plaintext = "sensitive-data";
         var purpose = "CustomPurpose";
-        _mockDataProtector.Setup(p => p.Protect(It.IsAny<string>())).Returns("encrypted");
 
         // Act
-        await _service.EncryptAsync(plaintext, purpose);
+        var encrypted = await _service.EncryptAsync(plaintext, purpose);
+        var decrypted = await _service.DecryptAsync(encrypted, purpose);
 
         // Assert
-        _mockDataProtectionProvider.Verify(p => p.CreateProtector(purpose), Times.Once);
+        Assert.Equal(plaintext, decrypted); // Can decrypt with same purpose
     }
 
     [Theory]
@@ -70,31 +64,28 @@ public class EncryptionServiceTests
     public async Task DecryptAsync_ValidCiphertext_ReturnsDecrypted()
     {
         // Arrange
-        var ciphertext = "encrypted-data";
-        var decrypted = "original-secret";
-        _mockDataProtector.Setup(p => p.Unprotect(ciphertext)).Returns(decrypted);
+        var originalPlaintext = "original-secret";
+        var ciphertext = await _service.EncryptAsync(originalPlaintext);
 
         // Act
         var result = await _service.DecryptAsync(ciphertext);
 
         // Assert
-        Assert.Equal(decrypted, result);
-        _mockDataProtector.Verify(p => p.Unprotect(ciphertext), Times.Once);
+        Assert.Equal(originalPlaintext, result);
     }
 
     [Fact]
-    public async Task DecryptAsync_WithCustomPurpose_UsesCorrectProtector()
+    public async Task DecryptAsync_WithWrongPurpose_ThrowsException()
     {
         // Arrange
-        var ciphertext = "encrypted";
-        var purpose = "TestPurpose";
-        _mockDataProtector.Setup(p => p.Unprotect(It.IsAny<string>())).Returns("decrypted");
+        var plaintext = "sensitive-data";
+        var encryptPurpose = "EncryptPurpose";
+        var decryptPurpose = "WrongPurpose";
+        var ciphertext = await _service.EncryptAsync(plaintext, encryptPurpose);
 
-        // Act
-        await _service.DecryptAsync(ciphertext, purpose);
-
-        // Assert
-        _mockDataProtectionProvider.Verify(p => p.CreateProtector(purpose), Times.Once);
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _service.DecryptAsync(ciphertext, decryptPurpose));
     }
 
     [Theory]
@@ -110,9 +101,7 @@ public class EncryptionServiceTests
     public async Task DecryptAsync_InvalidCiphertext_ThrowsInvalidOperationException()
     {
         // Arrange
-        var ciphertext = "corrupted-data";
-        _mockDataProtector.Setup(p => p.Unprotect(ciphertext))
-            .Throws(new System.Security.Cryptography.CryptographicException("Decryption failed"));
+        var ciphertext = "corrupted-data-not-base64";
 
         // Act & Assert
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.DecryptAsync(ciphertext));
@@ -120,30 +109,33 @@ public class EncryptionServiceTests
     }
 
     [Fact]
-    public async Task EncryptAsync_DefaultPurpose_UsesDefaultString()
+    public async Task EncryptAsync_DefaultPurpose_CanDecryptWithDefaultPurpose()
     {
         // Arrange
-        var plaintext = "test";
-        _mockDataProtector.Setup(p => p.Protect(It.IsAny<string>())).Returns("encrypted");
+        var plaintext = "test-data";
 
-        // Act
-        await _service.EncryptAsync(plaintext); // No purpose parameter
+        // Act - Encrypt with default purpose (no parameter)
+        var encrypted = await _service.EncryptAsync(plaintext);
+
+        // Act - Decrypt with default purpose (no parameter)
+        var decrypted = await _service.DecryptAsync(encrypted);
 
         // Assert
-        _mockDataProtectionProvider.Verify(p => p.CreateProtector("default"), Times.Once);
+        Assert.Equal(plaintext, decrypted);
     }
 
     [Fact]
-    public async Task DecryptAsync_DefaultPurpose_UsesDefaultString()
+    public async Task EncryptDecrypt_RoundTrip_PreservesData()
     {
         // Arrange
-        var ciphertext = "encrypted";
-        _mockDataProtector.Setup(p => p.Unprotect(It.IsAny<string>())).Returns("decrypted");
+        var originalData = "This is a secret message with special chars: !@#$%^&*()";
 
         // Act
-        await _service.DecryptAsync(ciphertext); // No purpose parameter
+        var encrypted = await _service.EncryptAsync(originalData);
+        var decrypted = await _service.DecryptAsync(encrypted);
 
         // Assert
-        _mockDataProtectionProvider.Verify(p => p.CreateProtector("default"), Times.Once);
+        Assert.Equal(originalData, decrypted);
+        Assert.NotEqual(originalData, encrypted); // Verify it was actually encrypted
     }
 }

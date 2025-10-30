@@ -1,7 +1,14 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.Tests.Helpers;
+using Api.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -14,12 +21,14 @@ namespace Api.Tests;
 /// <summary>
 /// BDD-style unit tests for SessionAutoRevocationService background service.
 /// Tests configuration validation, periodic execution, error handling, and graceful shutdown.
+/// Uses TestTimeProvider for deterministic timing (eliminates Task.Delay).
 /// </summary>
 public class SessionAutoRevocationServiceTests : IDisposable
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<ILogger<SessionAutoRevocationService>> _loggerMock;
     private readonly ServiceCollection _serviceCollection;
+    private readonly TestTimeProvider _timeProvider;
     private ServiceProvider? _serviceProvider;
 
     public SessionAutoRevocationServiceTests()
@@ -34,6 +43,7 @@ public class SessionAutoRevocationServiceTests : IDisposable
 
         _loggerMock = new Mock<ILogger<SessionAutoRevocationService>>();
         _serviceCollection = new ServiceCollection();
+        _timeProvider = TimeTestHelpers.CreateTimeProvider(2025, 1, 1); // Start at 2025-01-01 00:00:00 UTC
     }
 
     public void Dispose()
@@ -41,6 +51,7 @@ public class SessionAutoRevocationServiceTests : IDisposable
         _serviceProvider?.Dispose();
         _dbContext.Database.CloseConnection();
         _dbContext.Dispose();
+        _timeProvider?.Dispose();
     }
 
     #region Configuration Validation Tests
@@ -61,7 +72,11 @@ public class SessionAutoRevocationServiceTests : IDisposable
 
         // When: Service starts
         await service.StartAsync(cts.Token);
-        await Task.Delay(100);
+        
+        // Advance time to allow service to process (replaces Task.Delay)
+        _timeProvider.AdvanceMilliseconds(100);
+        await Task.Yield(); // Minimal sync point
+        
         await service.StopAsync(CancellationToken.None);
 
         // Then: Warning is logged and service does not run
@@ -101,7 +116,11 @@ public class SessionAutoRevocationServiceTests : IDisposable
 
         // When: Service starts
         await service.StartAsync(cts.Token);
-        await Task.Delay(100);
+        
+        // Advance time (replaces Task.Delay)
+        _timeProvider.AdvanceMilliseconds(100);
+        await Task.Yield();
+        
         await service.StopAsync(CancellationToken.None);
 
         // Then: Warning is logged
@@ -131,7 +150,11 @@ public class SessionAutoRevocationServiceTests : IDisposable
 
         // When: Service starts
         await service.StartAsync(cts.Token);
-        await Task.Delay(100);
+        
+        // Advance time (replaces Task.Delay)
+        _timeProvider.AdvanceMilliseconds(100);
+        await Task.Yield();
+        
         await service.StopAsync(CancellationToken.None);
 
         // Then: Warning is logged about inactivity timeout
@@ -161,7 +184,11 @@ public class SessionAutoRevocationServiceTests : IDisposable
 
         // When: Service starts
         await service.StartAsync(cts.Token);
-        await Task.Delay(100);
+        
+        // Advance time (replaces Task.Delay)
+        _timeProvider.AdvanceMilliseconds(100);
+        await Task.Yield();
+        
         await service.StopAsync(CancellationToken.None);
 
         // Then: Warning is logged
@@ -191,7 +218,10 @@ public class SessionAutoRevocationServiceTests : IDisposable
 
         // When: Service starts
         await service.StartAsync(cts.Token);
-        await Task.Delay(100);
+        
+        // Advance time (replaces Task.Delay)
+        _timeProvider.AdvanceMilliseconds(100);
+        await Task.Yield();
 
         // Then: Startup information is logged
         _loggerMock.Verify(
@@ -221,12 +251,14 @@ public class SessionAutoRevocationServiceTests : IDisposable
         };
 
         var service = CreateService(config);
-        var startTime = DateTime.UtcNow;
         using var cts = new CancellationTokenSource();
 
-        // When: Service starts and runs for a short period (less than 1 minute)
+        // When: Service starts and we advance less than 1 minute
         await service.StartAsync(cts.Token);
-        await Task.Delay(TimeSpan.FromSeconds(2));
+        
+        // Advance only 30 seconds (not enough to trigger first run)
+        _timeProvider.AdvanceSeconds(30);
+        await Task.Yield();
 
         // Then: Auto-revocation check should NOT have been called yet
         _loggerMock.Verify(
@@ -237,7 +269,7 @@ public class SessionAutoRevocationServiceTests : IDisposable
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Never,
-            "First auto-revocation should not run within 2 seconds");
+            "First auto-revocation should not run within 30 seconds");
 
         cts.Cancel();
         await service.StopAsync(CancellationToken.None);
@@ -254,15 +286,15 @@ public class SessionAutoRevocationServiceTests : IDisposable
         };
 
         // Create an active session
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow();
         var user = CreateTestUser("user-no-inactive");
         await _dbContext.Users.AddAsync(user);
         await _dbContext.UserSessions.AddAsync(CreateSession(
             userId: user.Id,
             sessionId: "sess-active",
-            createdAt: now.AddHours(-1),
-            expiresAt: now.AddDays(30),
-            lastSeenAt: now.AddMinutes(-5),
+            createdAt: now.AddHours(-1).DateTime,
+            expiresAt: now.AddDays(30).DateTime,
+            lastSeenAt: now.AddMinutes(-5).DateTime,
             user: user
         ));
         await _dbContext.SaveChangesAsync();
@@ -270,8 +302,7 @@ public class SessionAutoRevocationServiceTests : IDisposable
         var service = CreateService(config);
 
         // When: Service performs auto-revocation check (simulated directly)
-        // Note: We can't easily wait 1 minute in a test, so we'll verify the service works correctly
-        // by checking that the SessionManagementService would handle this case
+        // Note: We use deterministic time now instead of waiting
         var sessionMgmt = CreateSessionManagementService(config);
         var revokedCount = await sessionMgmt.RevokeInactiveSessionsAsync();
 
@@ -312,11 +343,12 @@ public class SessionAutoRevocationServiceTests : IDisposable
 
         using var cts = new CancellationTokenSource();
 
-        // When: Service starts (will wait 1 minute before first execution in reality)
+        // When: Service starts
         await service.StartAsync(cts.Token);
 
-        // Simulate some wait time (in real scenario would be 1 minute + interval)
-        await Task.Delay(100);
+        // Advance time to allow processing (replaces Task.Delay)
+        _timeProvider.AdvanceMilliseconds(100);
+        await Task.Yield();
 
         cts.Cancel();
         await service.StopAsync(CancellationToken.None);
@@ -373,7 +405,11 @@ public class SessionAutoRevocationServiceTests : IDisposable
 
         // When: Service starts and is then cancelled
         await service.StartAsync(cts.Token);
-        await Task.Delay(100);
+        
+        // Advance time (replaces Task.Delay)
+        _timeProvider.AdvanceMilliseconds(100);
+        await Task.Yield();
+        
         cts.Cancel();
         await service.StopAsync(CancellationToken.None);
 
@@ -402,7 +438,10 @@ public class SessionAutoRevocationServiceTests : IDisposable
         using var cts = new CancellationTokenSource();
 
         await service.StartAsync(cts.Token);
-        await Task.Delay(100);
+        
+        // Advance time (replaces Task.Delay)
+        _timeProvider.AdvanceMilliseconds(100);
+        await Task.Yield();
 
         // When: StopAsync is called
         var stopTask = service.StopAsync(CancellationToken.None);
@@ -427,7 +466,7 @@ public class SessionAutoRevocationServiceTests : IDisposable
             AutoRevocationIntervalHours = 1
         };
 
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow();
         var user = CreateTestUser("user-inactive-sessions");
         await _dbContext.Users.AddAsync(user);
 
@@ -435,18 +474,18 @@ public class SessionAutoRevocationServiceTests : IDisposable
         var activeSession = CreateSession(
             userId: user.Id,
             sessionId: "sess-active",
-            createdAt: now.AddDays(-10),
-            expiresAt: now.AddDays(80),
-            lastSeenAt: now.AddDays(-5), // Active within 30 days
+            createdAt: now.AddDays(-10).DateTime,
+            expiresAt: now.AddDays(80).DateTime,
+            lastSeenAt: now.AddDays(-5).DateTime, // Active within 30 days
             user: user
         );
 
         var inactiveSession = CreateSession(
             userId: user.Id,
             sessionId: "sess-inactive",
-            createdAt: now.AddDays(-60),
-            expiresAt: now.AddDays(30),
-            lastSeenAt: now.AddDays(-35), // Inactive for > 30 days
+            createdAt: now.AddDays(-60).DateTime,
+            expiresAt: now.AddDays(30).DateTime,
+            lastSeenAt: now.AddDays(-35).DateTime, // Inactive for > 30 days
             user: user
         );
 
@@ -479,7 +518,7 @@ public class SessionAutoRevocationServiceTests : IDisposable
             AutoRevocationIntervalHours = 1
         };
 
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow();
 
         var user1 = CreateTestUser("user1-multi");
         var user2 = CreateTestUser("user2-multi");
@@ -487,10 +526,10 @@ public class SessionAutoRevocationServiceTests : IDisposable
 
         var sessions = new[]
         {
-            CreateSession(user1.Id, "u1-s1", now.AddDays(-10), now.AddDays(80), now.AddDays(-5), null, null, user1),  // Active
-            CreateSession(user1.Id, "u1-s2", now.AddDays(-50), now.AddDays(40), now.AddDays(-40), null, null, user1), // Inactive
-            CreateSession(user2.Id, "u2-s1", now.AddDays(-20), now.AddDays(70), now.AddDays(-2), null, null, user2),  // Active
-            CreateSession(user2.Id, "u2-s2", now.AddDays(-70), now.AddDays(20), now.AddDays(-45), null, null, user2), // Inactive
+            CreateSession(user1.Id, "u1-s1", now.AddDays(-10).DateTime, now.AddDays(80).DateTime, now.AddDays(-5).DateTime, null, null, user1),  // Active
+            CreateSession(user1.Id, "u1-s2", now.AddDays(-50).DateTime, now.AddDays(40).DateTime, now.AddDays(-40).DateTime, null, null, user1), // Inactive
+            CreateSession(user2.Id, "u2-s1", now.AddDays(-20).DateTime, now.AddDays(70).DateTime, now.AddDays(-2).DateTime, null, null, user2),  // Active
+            CreateSession(user2.Id, "u2-s2", now.AddDays(-70).DateTime, now.AddDays(20).DateTime, now.AddDays(-45).DateTime, null, null, user2), // Inactive
         };
 
         await _dbContext.UserSessions.AddRangeAsync(sessions);
@@ -521,7 +560,8 @@ public class SessionAutoRevocationServiceTests : IDisposable
         _serviceCollection.AddDbContext<MeepleAiDbContext>(options =>
             options.UseSqlite(_dbContext.Database.GetConnectionString()));
 
-        _serviceCollection.AddSingleton(TimeProvider.System);
+        // Inject TestTimeProvider instead of System
+        _serviceCollection.AddSingleton<TimeProvider>(_timeProvider);
         _serviceCollection.AddScoped<ISessionManagementService>(sp =>
         {
             var db = sp.GetRequiredService<MeepleAiDbContext>();
@@ -554,7 +594,7 @@ public class SessionAutoRevocationServiceTests : IDisposable
             Options.Create(config),
             logger,
             null,
-            TimeProvider.System
+            _timeProvider // Use TestTimeProvider instead of TimeProvider.System
         );
     }
 

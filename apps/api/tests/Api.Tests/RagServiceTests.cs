@@ -9,9 +9,33 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
-public class RagServiceTests
+public class RagServiceTests : IDisposable
 {
-    private readonly Mock<ILogger<RagService>> _mockLogger = new();
+    private readonly SqliteConnection _connection;
+
+    public RagServiceTests()
+    {
+        _connection = new SqliteConnection("Filename=:memory:");
+        _connection.Open();
+    }
+
+    public void Dispose()
+    {
+        _connection?.Dispose();
+    }
+
+    private MeepleAiDbContext CreateInMemoryContext()
+    {
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseSqlite(_connection)
+            .Options;
+
+        var context = new MeepleAiDbContext(options);
+        context.Database.EnsureCreated();
+        return context;
+    }
+
+    private static Mock<ILogger<RagService>> _mockLogger = new();
 
     /// <summary>
     /// AI-07.1: Creates a mock IPromptTemplateService with default fallback behavior
@@ -55,20 +79,6 @@ ANSWER:",
                 t.UserPromptTemplate.Replace("{context}", c).Replace("{query}", q));
 
         return mock;
-    }
-
-    private static MeepleAiDbContext CreateInMemoryContext()
-    {
-        using var connection = new SqliteConnection("Filename=:memory:");
-        connection.Open();
-
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseSqlite(connection)
-            .Options;
-
-        var context = new MeepleAiDbContext(options);
-        context.Database.EnsureCreated();
-        return context;
     }
 
     private static Mock<IAiResponseCacheService> CreateCacheMock()

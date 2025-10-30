@@ -5,7 +5,9 @@ using Moq;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using System.Runtime.InteropServices;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -19,9 +21,12 @@ public class PdfValidationServiceTests : IDisposable
     private readonly PdfProcessingConfiguration _config;
     private readonly PdfValidationService _service;
     private readonly List<string> _tempFiles = new();
+    private readonly ITestOutputHelper _output;
 
-    public PdfValidationServiceTests()
+    public PdfValidationServiceTests(ITestOutputHelper output)
     {
+        _output = output;
+
         // Configure QuestPDF for testing (community license)
         QuestPDF.Settings.License = LicenseType.Community;
 
@@ -248,9 +253,16 @@ public class PdfValidationServiceTests : IDisposable
         Assert.Contains("cannot be empty", result.Errors["fileName"]);
     }
 
-    [Fact(Skip = "Requires native PDF libraries (libgdiplus on Linux). Passes in CI.")]
+    [Fact]
+    [Trait("Category", "RequiresNativeLibraries")]
     public async Task ValidateAsync_ReturnsSuccess_ForValidPdf()
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            _output.WriteLine("Skipping on non-Linux platform (requires libgdiplus)");
+            return;
+        }
+
         // Arrange
         var pdfPath = CreateTempPdfPath();
         CreateSimplePdf(pdfPath, "Test content");
@@ -299,9 +311,16 @@ public class PdfValidationServiceTests : IDisposable
         Assert.Contains("pdfStructure", result.Errors);
     }
 
-    [Fact(Skip = "Requires native PDF libraries (libgdiplus on Linux). Passes in CI.")]
+    [Fact]
+    [Trait("Category", "RequiresNativeLibraries")]
     public async Task ValidateAsync_ReturnsFailure_WhenPageCountBelowMinimum()
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            _output.WriteLine("Skipping on non-Linux platform (requires libgdiplus)");
+            return;
+        }
+
         // Arrange - PDF with 0 pages should fail, but we can't easily create such a PDF
         // This test validates the configuration works
         var pdfPath = CreateTempPdfPath();
@@ -330,9 +349,16 @@ public class PdfValidationServiceTests : IDisposable
         Assert.Contains("must have at least 5 page(s)", result.Errors["pageCount"]);
     }
 
-    [Fact(Skip = "Requires native PDF libraries (libgdiplus on Linux). Passes in CI.")]
+    [Fact]
+    [Trait("Category", "RequiresNativeLibraries")]
     public async Task ValidateAsync_ReturnsFailure_WhenPageCountExceedsMaximum()
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            _output.WriteLine("Skipping on non-Linux platform (requires libgdiplus)");
+            return;
+        }
+
         // Arrange
         var customConfig = new PdfProcessingConfiguration
         {
@@ -359,9 +385,16 @@ public class PdfValidationServiceTests : IDisposable
         Assert.Contains("maximum allowed is 2", result.Errors["pageCount"]);
     }
 
-    [Fact(Skip = "Requires native PDF libraries (libgdiplus on Linux). Passes in CI.")]
+    [Fact]
+    [Trait("Category", "RequiresNativeLibraries")]
     public async Task ValidateAsync_ExtractsCorrectMetadata()
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            _output.WriteLine("Skipping on non-Linux platform (requires libgdiplus)");
+            return;
+        }
+
         // Arrange
         var pdfPath = CreateTempPdfPath();
         CreateMultiPagePdf(pdfPath, 3);
@@ -381,9 +414,16 @@ public class PdfValidationServiceTests : IDisposable
 
     // ===== PDF Version Validation Tests =====
 
-    [Fact(Skip = "Requires native PDF libraries (libgdiplus on Linux). Passes in CI.")]
+    [Fact]
+    [Trait("Category", "RequiresNativeLibraries")]
     public async Task ValidateAsync_ReturnsSuccess_ForSupportedPdfVersion()
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            _output.WriteLine("Skipping on non-Linux platform (requires libgdiplus)");
+            return;
+        }
+
         // Arrange - QuestPDF creates PDF 1.4+ by default
         var pdfPath = CreateTempPdfPath();
         CreateSimplePdf(pdfPath, "Test");
@@ -434,9 +474,16 @@ public class PdfValidationServiceTests : IDisposable
 
     // ===== Logging Tests =====
 
-    [Fact(Skip = "Requires native PDF libraries (libgdiplus on Linux). Passes in CI.")]
+    [Fact]
+    [Trait("Category", "RequiresNativeLibraries")]
     public async Task ValidateAsync_LogsSuccess_WhenValidationPasses()
     {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            _output.WriteLine("Skipping on non-Linux platform (requires libgdiplus)");
+            return;
+        }
+
         // Arrange
         var pdfPath = CreateTempPdfPath();
         CreateSimplePdf(pdfPath, "Test");

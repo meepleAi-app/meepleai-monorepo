@@ -10,16 +10,16 @@ using Moq;
 using Xunit;
 
 /// <summary>
-/// AI-04: BDD-style integration tests for Q&A with snippet and fallback behavior
+/// AI-04: BDD-style integration tests for snippet pipeline and fallback behavior
 ///
-/// These tests verify the complete Q&A flow including:
+/// These tests verify the complete Q&A snippet pipeline including:
 /// - RAG pipeline integration (embedding → search → LLM generation)
-/// - Anti-hallucination behavior
+/// - Anti-hallucination behavior ("Not specified" fallback)
 /// - Snippet extraction and formatting
 /// - Token tracking
 /// - Confidence scoring
 /// </summary>
-public class Ai04IntegrationTests
+public class SnippetPipelineIntegrationTests : IDisposable
 {
     private readonly Mock<ILogger<RagService>> _mockLogger = new();
     private static Mock<IPromptTemplateService> CreatePromptTemplateMock()
@@ -55,14 +55,23 @@ CRITICAL INSTRUCTIONS:
         return mock;
     }
 
+    private readonly SqliteConnection _connection;
 
-    private static MeepleAiDbContext CreateInMemoryContext()
+    public SnippetPipelineIntegrationTests()
     {
-        using var connection = new SqliteConnection("Filename=:memory:");
-        connection.Open();
+        _connection = new SqliteConnection("Filename=:memory:");
+        _connection.Open();
+    }
 
+    public void Dispose()
+    {
+        _connection?.Dispose();
+    }
+
+    private MeepleAiDbContext CreateInMemoryContext()
+    {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseSqlite(connection)
+            .UseSqlite(_connection)
             .Options;
 
         var context = new MeepleAiDbContext(options);

@@ -8,10 +8,13 @@ public class AiRequestLogService
 {
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<AiRequestLogService> _logger;
-    public AiRequestLogService(MeepleAiDbContext db, ILogger<AiRequestLogService> logger)
+    private readonly TimeProvider _timeProvider;
+
+    public AiRequestLogService(MeepleAiDbContext db, ILogger<AiRequestLogService> logger, TimeProvider? timeProvider = null)
     {
         _db = db;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task LogRequestAsync(
@@ -56,7 +59,7 @@ public class AiRequestLogService
                 UserAgent = userAgent,
                 Model = model,
                 FinishReason = finishReason,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
                 // AI-11: Store quality scores if provided
                 RagConfidence = qualityScores?.RagConfidence,
                 LlmConfidence = qualityScores?.LlmConfidence,

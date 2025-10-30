@@ -17,6 +17,7 @@ public class TotpService : ITotpService
     private readonly AuthService _authService;
     private readonly AuditService _auditService;
     private readonly ILogger<TotpService> _logger;
+    private readonly TimeProvider _timeProvider;
 
     private const int SecretSizeBytes = 20; // 160 bits (TOTP standard)
     private const int BackupCodeCount = 10;
@@ -31,13 +32,15 @@ public class TotpService : ITotpService
         IEncryptionService encryptionService,
         AuthService authService,
         AuditService auditService,
-        ILogger<TotpService> logger)
+        ILogger<TotpService> logger,
+        TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext;
         _encryptionService = encryptionService;
         _authService = authService;
         _auditService = auditService;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     /// <summary>
@@ -86,7 +89,7 @@ public class TotpService : ITotpService
                 UserId = userId,
                 CodeHash = codeHash,
                 IsUsed = false,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
             });
         }
         await _dbContext.SaveChangesAsync();
@@ -135,7 +138,7 @@ public class TotpService : ITotpService
 
         // Enable 2FA
         user.IsTwoFactorEnabled = true;
-        user.TwoFactorEnabledAt = DateTime.UtcNow;
+        user.TwoFactorEnabledAt = _timeProvider.GetUtcNow().UtcDateTime;
         await _dbContext.SaveChangesAsync();
 
         await _auditService.LogAsync(userId, "TwoFactorEnable", "TwoFactor", userId, "Success",
@@ -213,7 +216,7 @@ public class TotpService : ITotpService
                 {
                     // Mark as used (atomic with transaction commit)
                     storedCode.IsUsed = true;
-                    storedCode.UsedAt = DateTime.UtcNow;
+                    storedCode.UsedAt = _timeProvider.GetUtcNow().UtcDateTime;
                     await _dbContext.SaveChangesAsync();
                     await transaction.CommitAsync();
 

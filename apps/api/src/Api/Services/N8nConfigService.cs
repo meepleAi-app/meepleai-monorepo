@@ -13,16 +13,20 @@ public class N8nConfigService
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<N8nConfigService> _logger;
+    private readonly TimeProvider _timeProvider;
+
     public N8nConfigService(
         MeepleAiDbContext db,
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
-        ILogger<N8nConfigService> logger)
+        ILogger<N8nConfigService> logger,
+        TimeProvider? timeProvider = null)
     {
         _db = db;
         _httpClientFactory = httpClientFactory;
         _configuration = configuration;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task<List<N8nConfigDto>> GetConfigsAsync(CancellationToken ct)
@@ -89,8 +93,8 @@ public class N8nConfigService
             WebhookUrl = request.WebhookUrl?.TrimEnd('/'),
             IsActive = true,
             CreatedByUserId = userId,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
+            UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime
         };
 
         _db.N8nConfigs.Add(config);
@@ -155,7 +159,7 @@ public class N8nConfigService
             config.IsActive = request.IsActive.Value;
         }
 
-        config.UpdatedAt = DateTime.UtcNow;
+        config.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
 
         await _db.SaveChangesAsync(ct);
 
@@ -208,16 +212,16 @@ public class N8nConfigService
             using var request = new HttpRequestMessage(HttpMethod.Get, $"{config.BaseUrl}/api/v1/workflows");
             request.Headers.Add("X-N8N-API-KEY", apiKey);
 
-            var startTime = DateTime.UtcNow;
+            var startTime = _timeProvider.GetUtcNow().UtcDateTime;
             using var response = await httpClient.SendAsync(request, ct);
-            var latency = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+            var latency = (int)(_timeProvider.GetUtcNow().UtcDateTime - startTime).TotalMilliseconds;
 
             var success = response.IsSuccessStatusCode;
             var message = success
                 ? $"Connection successful ({latency}ms)"
                 : $"Connection failed: {response.StatusCode}";
 
-            config.LastTestedAt = DateTime.UtcNow;
+            config.LastTestedAt = _timeProvider.GetUtcNow().UtcDateTime;
             config.LastTestResult = message;
             await _db.SaveChangesAsync(ct);
 
@@ -230,7 +234,7 @@ public class N8nConfigService
             _logger.LogError(ex, "Failed to test n8n connection for config {ConfigId}", configId);
 
             var message = $"Connection failed: {ex.Message}";
-            config.LastTestedAt = DateTime.UtcNow;
+            config.LastTestedAt = _timeProvider.GetUtcNow().UtcDateTime;
             config.LastTestResult = message;
             await _db.SaveChangesAsync(ct);
 

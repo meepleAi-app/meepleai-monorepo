@@ -1,0 +1,119 @@
+```mermaid
+classDiagram
+  class GameEntity {
+    +string Id
+    +string Name
+    +DateTime CreatedAt
+    +int? BggId
+    +string? BggMetadata
+  }
+  class AgentEntity {
+    +string Id
+    +string GameId
+    +string Name
+    +string Kind
+    +DateTime CreatedAt
+  }
+  class ChatEntity {
+    +Guid Id
+    +string UserId
+    +string GameId
+    +string AgentId
+    +DateTime StartedAt
+    +DateTime? LastMessageAt
+  }
+  class ChatLogEntity {
+    +Guid Id
+    +Guid ChatId
+    +string? UserId
+    +string Level
+    +string Message
+    +string? MetadataJson
+    +int SequenceNumber
+    +DateTime CreatedAt
+    +DateTime? UpdatedAt
+    +bool IsDeleted
+    +DateTime? DeletedAt
+    +string? DeletedByUserId
+    +bool IsInvalidated
+  }
+  class RuleSpecEntity {
+    +Guid Id
+    +string GameId
+    +string Version
+    +DateTime CreatedAt
+    +string? CreatedByUserId
+    +Guid? ParentVersionId
+    +string? MergedFromVersionIds
+  }
+  class RuleAtomEntity {
+    +Guid Id
+    +Guid RuleSpecId
+    +string Key
+    +string Text
+    +string? Section
+    +int? PageNumber
+    +int? LineNumber
+    +int SortOrder
+  }
+  class PdfDocumentEntity {
+    +string Id
+    +string GameId
+    +string FileName
+    +string FilePath
+    +long FileSizeBytes
+    +string ContentType
+    +string UploadedByUserId
+    +DateTime UploadedAt
+    +string? Metadata
+    +string? ExtractedText
+    +string ProcessingStatus
+    +DateTime? ProcessedAt
+    +int? PageCount
+    +int? CharacterCount
+    +string? ProcessingError
+    +string? ExtractedTables
+    +string? ExtractedDiagrams
+    +string? AtomicRules
+    +int? TableCount
+    +int? DiagramCount
+    +int? AtomicRuleCount
+    +string? ProcessingProgressJson
+    +string Language
+    +string? SearchVector
+  }
+  class TextChunkEntity {
+    +string Id
+    +string GameId
+    +string PdfDocumentId
+    +string Content
+    +int ChunkIndex
+    +int? PageNumber
+    +int CharacterCount
+    +DateTime CreatedAt
+    +string? SearchVector
+  }
+  class UserEntity {
+    +string Id
+    +string Email
+    +string? DisplayName
+    +string PasswordHash
+    +UserRole Role
+    +DateTime CreatedAt
+    +string? TotpSecretEncrypted
+    +bool IsTwoFactorEnabled
+    +DateTime? TwoFactorEnabledAt
+  }
+
+  GameEntity o-- AgentEntity
+  GameEntity o-- ChatEntity
+  GameEntity o-- RuleSpecEntity
+  GameEntity o-- PdfDocumentEntity
+  GameEntity o-- TextChunkEntity
+  AgentEntity o-- ChatEntity
+  RuleSpecEntity o-- RuleAtomEntity
+  ChatEntity o-- ChatLogEntity
+  UserEntity o-- ChatEntity
+  UserEntity o-- ChatLogEntity
+  PdfDocumentEntity o-- TextChunkEntity
+```

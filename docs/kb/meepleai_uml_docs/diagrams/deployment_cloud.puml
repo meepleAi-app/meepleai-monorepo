@@ -1,0 +1,23 @@
+@startuml
+title Deployment (Logical)
+
+node "User Device" {
+  actor User
+  User --> "Web App (Next.js?)" : HTTPS [Inference]
+}
+
+node "MeepleAI Cluster" {
+  node "API (.NET)" as API
+  node "PostgreSQL" as PG
+  node "Qdrant" as VDB
+  node "Object Storage" as S3  ' [Inference]
+  node "MCP Containers" as MCP
+}
+
+User --> API : HTTPS
+API --> PG : EF Core / SQL
+API --> VDB : HTTP gRPC (Qdrant)
+API --> S3 : Files (PDF) [Inference]
+API ..> MCP : stdio/TCP [Inference]
+
+@enduml

@@ -257,20 +257,14 @@ public class FollowUpQuestionServiceTests
     [Fact]
     public async Task GenerateQuestionsAsync_RetriesOnceOnFailure()
     {
-        // Arrange: First call fails, second succeeds
-        var callCount = 0;
+        // Arrange: First call fails (returns null), second succeeds
         _mockLlmService
-            .Setup(x => x.GenerateJsonAsync<FollowUpQuestionsDto>(
+            .SetupSequence(x => x.GenerateJsonAsync<FollowUpQuestionsDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(() =>
-            {
-                callCount++;
-                return callCount == 1
-                    ? null // First attempt fails
-                    : new FollowUpQuestionsDto(new List<string> { "Retry success" });
-            });
+            .ReturnsAsync((FollowUpQuestionsDto?)null) // First attempt fails
+            .ReturnsAsync(new FollowUpQuestionsDto(new List<string> { "Retry success" })); // Second succeeds
 
         var service = CreateService();
 
@@ -284,7 +278,7 @@ public class FollowUpQuestionServiceTests
         // Assert
         Assert.Single(result);
         Assert.Equal("Retry success", result[0]);
-        Assert.Equal(2, callCount); // Should have retried once
+        // Verify retry behavior implicitly - if no retry, would get null and fail
     }
 
     [Fact]

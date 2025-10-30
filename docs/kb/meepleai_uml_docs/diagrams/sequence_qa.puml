@@ -1,0 +1,24 @@
+@startuml
+title QA flow (/agents/qa)
+
+actor User
+boundary Api as "AiEndpoints"
+control Rag as "IRagService"
+control Chat as "ChatService"
+control Q as "IResponseQualityService"
+control FU as "IFollowUpQuestionService"
+database Db as "MeepleAiDbContext"
+
+User -> Api : POST /agents/qa\n(gameId, query, chatId?)
+Api -> Api : validate session & gameId
+Api -> Chat : AddMessageAsync(chatId, userId, "user", query) [optional]
+Api -> Rag : AskWithHybridSearchAsync(gameId, query, searchMode?, language=null, bypassCache?)
+Rag --> Api : QaResponse(answer, snippets, tokens, confidence, metadata)
+Api -> FU : GenerateQuestionsAsync(...) [if enabled]
+FU --> Api : followUpQuestions
+Api -> Q : CalculateQualityScores(ragScores, citations, answer)
+Q --> Api : qualityScores
+Api -> Chat : AddMessageAsync(chatId, userId, "assistant", answer, meta) [optional]
+Api --> User : 200 OK (answer + snippets + followUps)
+
+@enduml

@@ -1,0 +1,129 @@
+@startuml
+' Class Diagram — Entities (verified from code)
+
+class GameEntity {
+  +Id: string
+  +Name: string
+  +CreatedAt: DateTime
+  +BggId: int?
+  +BggMetadata: string?
+}
+
+class AgentEntity {
+  +Id: string
+  +GameId: string
+  +Name: string
+  +Kind: string
+  +CreatedAt: DateTime
+}
+
+class ChatEntity {
+  +Id: Guid
+  +UserId: string
+  +GameId: string
+  +AgentId: string
+  +StartedAt: DateTime
+  +LastMessageAt: DateTime?
+}
+
+class ChatLogEntity {
+  +Id: Guid
+  +ChatId: Guid
+  +UserId: string?
+  +Level: string
+  +Message: string
+  +MetadataJson: string?
+  +SequenceNumber: int
+  +CreatedAt: DateTime
+  +UpdatedAt: DateTime?
+  +IsDeleted: bool
+  +DeletedAt: DateTime?
+  +DeletedByUserId: string?
+  +IsInvalidated: bool
+}
+
+class RuleSpecEntity {
+  +Id: Guid
+  +GameId: string
+  +Version: string
+  +CreatedAt: DateTime
+  +CreatedByUserId: string?
+  +ParentVersionId: Guid?
+  +MergedFromVersionIds: string?
+}
+
+class RuleAtomEntity {
+  +Id: Guid
+  +RuleSpecId: Guid
+  +Key: string
+  +Text: string
+  +Section: string?
+  +PageNumber: int?
+  +LineNumber: int?
+  +SortOrder: int
+}
+
+class PdfDocumentEntity {
+  +Id: string
+  +GameId: string
+  +FileName: string
+  +FilePath: string
+  +FileSizeBytes: long
+  +ContentType: string
+  +UploadedByUserId: string
+  +UploadedAt: DateTime
+  +Metadata: string?
+  +ExtractedText: string?
+  +ProcessingStatus: string
+  +ProcessedAt: DateTime?
+  +PageCount: int?
+  +CharacterCount: int?
+  +ProcessingError: string?
+  +ExtractedTables: string?
+  +ExtractedDiagrams: string?
+  +AtomicRules: string?
+  +TableCount: int?
+  +DiagramCount: int?
+  +AtomicRuleCount: int?
+  +ProcessingProgressJson: string?
+  +Language: string
+  +SearchVector: string?
+}
+
+class TextChunkEntity {
+  +Id: string
+  +GameId: string
+  +PdfDocumentId: string
+  +Content: string
+  +ChunkIndex: int
+  +PageNumber: int?
+  +CharacterCount: int
+  +CreatedAt: DateTime
+  +SearchVector: string?
+}
+
+class UserEntity {
+  +Id: string
+  +Email: string
+  +DisplayName: string?
+  +PasswordHash: string
+  +Role: UserRole
+  +CreatedAt: DateTime
+  +TotpSecretEncrypted: string?
+  +IsTwoFactorEnabled: bool
+  +TwoFactorEnabledAt: DateTime?
+}
+
+GameEntity "1" o-- "0..*" AgentEntity
+GameEntity "1" o-- "0..*" ChatEntity
+GameEntity "1" o-- "0..*" RuleSpecEntity
+GameEntity "1" o-- "0..*" PdfDocumentEntity
+GameEntity "1" o-- "0..*" TextChunkEntity
+AgentEntity "1" o-- "0..*" ChatEntity
+RuleSpecEntity "1" o-- "0..*" RuleAtomEntity
+ChatEntity "1" o-- "0..*" ChatLogEntity
+UserEntity "1" o-- "0..*" ChatEntity : User
+UserEntity "1" o-- "0..*" ChatLogEntity : Creator/Deleter
+PdfDocumentEntity "1" o-- "0..*" TextChunkEntity
+
+@enduml

@@ -1,0 +1,3 @@
+# MeepleAI — Org Chart (Umano + Agenti AI)
+> Path: `docs/org/org_chart.md`
+... (contenuto completo già fornito sopra) ...

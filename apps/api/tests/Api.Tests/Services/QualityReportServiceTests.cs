@@ -2,6 +2,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.Tests.Infrastructure;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -17,8 +18,23 @@ namespace Api.Tests.Services;
 /// BDD tests for QualityReportService background service.
 /// These tests verify periodic quality report generation (TDD RED phase).
 /// </summary>
-public class QualityReportServiceTests
+public class QualityReportServiceTests : IDisposable
 {
+    private readonly SqliteConnection _connection;
+    private readonly TestTimeProvider _timeProvider;
+
+    public QualityReportServiceTests()
+    {
+        _connection = new SqliteConnection("Filename=:memory:");
+        _connection.Open();
+        _timeProvider = new TestTimeProvider();
+    }
+
+    public void Dispose()
+    {
+        _connection?.Dispose();
+    }
+
     /// <summary>
     /// Scenario: Report generated after configured interval
     /// Given service configured with 100ms interval
@@ -29,9 +45,7 @@ public class QualityReportServiceTests
     public async Task ExecuteAsync_AfterInterval_GeneratesReport()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
         var mockServiceScope = new Mock<IServiceScope>();
@@ -55,13 +69,24 @@ public class QualityReportServiceTests
         var service = new QualityReportService(
             mockServiceScopeFactory.Object,
             mockLogger.Object,
-            mockConfiguration);
+            mockConfiguration,
+            _timeProvider);
 
         using var cts = new CancellationTokenSource();
 
         // Act
         var executeTask = service.StartAsync(cts.Token);
-        await Task.Delay(400); // Wait for initial delay (30ms) + 3+ intervals (300ms) with buffer
+
+        // Advance time past initial delay and trigger multiple intervals
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(50)); // Past initial delay (30ms)
+        await Task.Delay(10); // Give time for task to execute
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past first interval (100ms)
+        await Task.Delay(10);
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past second interval (100ms)
+        await Task.Delay(10);
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past third interval (100ms)
+        await Task.Delay(10);
+
         cts.Cancel();
         await executeTask;
 
@@ -100,14 +125,15 @@ public class QualityReportServiceTests
         var service = new QualityReportService(
             mockServiceScopeFactory.Object,
             mockLogger.Object,
-            mockConfiguration);
+            mockConfiguration,
+            _timeProvider);
 
         using var cts = new CancellationTokenSource();
 
         // Act
-        var startTime = DateTime.UtcNow;
         var executeTask = service.StartAsync(cts.Token);
-        await Task.Delay(200); // Wait 200ms (less than 500ms delay)
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(200)); // Wait 200ms (less than 500ms delay)
+        await Task.Yield(); // Allow background task to process
         cts.Cancel();
         await executeTask;
 
@@ -128,9 +154,7 @@ public class QualityReportServiceTests
     public async Task GenerateReportAsync_WithData_IncludesStatistics()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
         var mockServiceScope = new Mock<IServiceScope>();
@@ -177,7 +201,8 @@ public class QualityReportServiceTests
         var reportService = new QualityReportService(
             mockServiceScopeFactory.Object,
             mockLogger.Object,
-            mockConfiguration);
+            mockConfiguration,
+            _timeProvider);
 
         // Act
         var report = await reportService.GenerateReportAsync(startDate, endDate);
@@ -205,9 +230,7 @@ public class QualityReportServiceTests
     public async Task GenerateReportAsync_EmptyPeriod_HandlesGracefully()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
         var mockServiceScope = new Mock<IServiceScope>();
@@ -234,7 +257,8 @@ public class QualityReportServiceTests
         var reportService = new QualityReportService(
             mockServiceScopeFactory.Object,
             mockLogger.Object,
-            mockConfiguration);
+            mockConfiguration,
+            _timeProvider);
 
         // Act
         var report = await reportService.GenerateReportAsync(startDate, endDate);
@@ -258,9 +282,7 @@ public class QualityReportServiceTests
     public async Task ExecuteAsync_ServiceScope_CreatesAndDisposesCorrectly()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
         var mockServiceScope = new Mock<IServiceScope>();
@@ -289,13 +311,24 @@ public class QualityReportServiceTests
         var service = new QualityReportService(
             mockServiceScopeFactory.Object,
             mockLogger.Object,
-            mockConfiguration);
+            mockConfiguration,
+            _timeProvider);
 
         using var cts = new CancellationTokenSource();
 
         // Act
         var executeTask = service.StartAsync(cts.Token);
-        await Task.Delay(400); // Wait for initial delay (30ms) + 3+ intervals (300ms) with buffer
+
+        // Advance time past initial delay and trigger multiple intervals
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(50)); // Past initial delay (30ms)
+        await Task.Delay(10); // Give time for task to execute
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past first interval (100ms)
+        await Task.Delay(10);
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past second interval (100ms)
+        await Task.Delay(10);
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past third interval (100ms)
+        await Task.Delay(10);
+
         cts.Cancel();
         await executeTask;
 
@@ -336,13 +369,15 @@ public class QualityReportServiceTests
         var service = new QualityReportService(
             mockServiceScopeFactory.Object,
             mockLogger.Object,
-            mockConfiguration);
+            mockConfiguration,
+            _timeProvider);
 
         using var cts = new CancellationTokenSource();
 
         // Act
         var executeTask = service.StartAsync(cts.Token);
-        await Task.Delay(100); // Let service start
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(100)); // Let service start
+        await Task.Yield(); // Allow background task to process
         cts.Cancel();
 
         // Assert
@@ -380,13 +415,22 @@ public class QualityReportServiceTests
         var service = new QualityReportService(
             mockServiceScopeFactory.Object,
             mockLogger.Object,
-            mockConfiguration);
+            mockConfiguration,
+            _timeProvider);
 
         using var cts = new CancellationTokenSource();
 
         // Act
         var executeTask = service.StartAsync(cts.Token);
-        await Task.Delay(250); // Wait for initial delay (30ms) + 2+ intervals (200ms)
+
+        // Advance time past initial delay and trigger multiple intervals
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(50)); // Past initial delay (30ms)
+        await Task.Delay(10); // Give time for task to execute
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past first interval (100ms)
+        await Task.Delay(10);
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past second interval (100ms)
+        await Task.Delay(10);
+
         cts.Cancel();
 
         // Assert
@@ -412,9 +456,7 @@ public class QualityReportServiceTests
     public async Task GenerateReportAsync_WithTimePeriod_IncludesDates()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
         var mockServiceScope = new Mock<IServiceScope>();
@@ -441,7 +483,8 @@ public class QualityReportServiceTests
         var reportService = new QualityReportService(
             mockServiceScopeFactory.Object,
             mockLogger.Object,
-            mockConfiguration);
+            mockConfiguration,
+            _timeProvider);
 
         // Act
         var report = await reportService.GenerateReportAsync(startDate, endDate);
@@ -461,9 +504,7 @@ public class QualityReportServiceTests
     public async Task GenerateReportAsync_CalculatesPercentage_ReturnsCorrectValue()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var mockServiceScopeFactory = new Mock<IServiceScopeFactory>();
         var mockServiceScope = new Mock<IServiceScope>();
@@ -506,7 +547,8 @@ public class QualityReportServiceTests
         var reportService = new QualityReportService(
             mockServiceScopeFactory.Object,
             mockLogger.Object,
-            mockConfiguration);
+            mockConfiguration,
+            _timeProvider);
 
         // Act
         var report = await reportService.GenerateReportAsync(startDate, endDate);
@@ -520,10 +562,10 @@ public class QualityReportServiceTests
     /// <summary>
     /// Creates a SQLite in-memory database context for testing.
     /// </summary>
-    private static async Task<MeepleAiDbContext> CreateContextAsync(SqliteConnection connection)
+    private async Task<MeepleAiDbContext> CreateContextAsync()
     {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseSqlite(connection)
+            .UseSqlite(_connection)
             .Options;
 
         var context = new MeepleAiDbContext(options);

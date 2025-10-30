@@ -15,19 +15,22 @@ public class PdfIndexingService
     private readonly IEmbeddingService _embeddingService;
     private readonly IQdrantService _qdrantService;
     private readonly ILogger<PdfIndexingService> _logger;
+    private readonly TimeProvider _timeProvider;
 
     public PdfIndexingService(
         MeepleAiDbContext db,
         ITextChunkingService chunkingService,
         IEmbeddingService embeddingService,
         IQdrantService qdrantService,
-        ILogger<PdfIndexingService> logger)
+        ILogger<PdfIndexingService> logger,
+        TimeProvider? timeProvider = null)
     {
         _db = db;
         _chunkingService = chunkingService;
         _embeddingService = embeddingService;
         _qdrantService = qdrantService;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     /// <summary>
@@ -184,7 +187,7 @@ public class PdfIndexingService
             existingVectorDoc.IndexingStatus = "completed";
             existingVectorDoc.ChunkCount = documentChunks.Count;
             existingVectorDoc.TotalCharacters = pdf.ExtractedText.Length;
-            existingVectorDoc.IndexedAt = DateTime.UtcNow;
+            existingVectorDoc.IndexedAt = _timeProvider.GetUtcNow().UtcDateTime;
             existingVectorDoc.IndexingError = null;
 
             await _db.SaveChangesAsync(ct);

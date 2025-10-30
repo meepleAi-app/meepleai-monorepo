@@ -23,13 +23,25 @@ namespace Api.Tests;
 /// I want to manage user sessions and automatically revoke inactive ones
 /// So that system security is maintained and stale sessions are cleaned up
 /// </summary>
-public class SessionManagementServiceTests
+public class SessionManagementServiceTests : IDisposable
 {
+    private readonly SqliteConnection _connection;
     private readonly SessionManagementConfiguration _defaultConfig = new()
     {
         InactivityTimeoutDays = 30,
         AutoRevocationIntervalHours = 1
     };
+
+    public SessionManagementServiceTests()
+    {
+        _connection = new SqliteConnection("Filename=:memory:");
+        _connection.Open();
+    }
+
+    public void Dispose()
+    {
+        _connection?.Dispose();
+    }
 
     /// <summary>
     /// Scenario: Get active sessions for a user
@@ -42,9 +54,7 @@ public class SessionManagementServiceTests
     public async Task GetUserSessionsAsync_WithMultipleSessions_ReturnsOnlyActiveOnes()
     {
         // Given: A user with multiple sessions
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-15T12:00:00Z"));
         var service = CreateService(db, timeProvider);
@@ -89,9 +99,7 @@ public class SessionManagementServiceTests
     public async Task GetUserSessionsAsync_WithNullLastSeenAt_OrdersByCreatedAt()
     {
         // Given: Sessions without LastSeenAt
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-15T12:00:00Z"));
         var service = CreateService(db, timeProvider);
@@ -136,9 +144,7 @@ public class SessionManagementServiceTests
     public async Task GetUserSessionsAsync_WithNullOrEmptyUserId_ThrowsArgumentException(string? userId)
     {
         // Given: An invalid userId
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var service = CreateService(db);
 
@@ -157,9 +163,7 @@ public class SessionManagementServiceTests
     public async Task GetAllSessionsAsync_WithUserIdFilter_ReturnsFilteredResults()
     {
         // Given: Multiple users with sessions
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var service = CreateService(db);
 
@@ -196,9 +200,7 @@ public class SessionManagementServiceTests
     public async Task GetAllSessionsAsync_WithLimit_RespectsLimit()
     {
         // Given: Multiple sessions
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var service = CreateService(db);
 
@@ -232,9 +234,7 @@ public class SessionManagementServiceTests
     public async Task GetAllSessionsAsync_WithInvalidLimit_ThrowsArgumentException(int limit)
     {
         // Given: An invalid limit
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var service = CreateService(db);
 
@@ -256,9 +256,7 @@ public class SessionManagementServiceTests
     public async Task RevokeSessionAsync_WithActiveSession_RevokesAndInvalidatesCache()
     {
         // Given: An active session
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-15T12:00:00Z"));
         var mockCache = new Mock<ISessionCacheService>();
@@ -300,9 +298,7 @@ public class SessionManagementServiceTests
     public async Task RevokeSessionAsync_WithAlreadyRevokedSession_ReturnsFalse()
     {
         // Given: An already revoked session
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var service = CreateService(db);
 
@@ -335,9 +331,7 @@ public class SessionManagementServiceTests
     public async Task RevokeSessionAsync_WithNonExistentSession_ReturnsFalse()
     {
         // Given: No sessions in database
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var service = CreateService(db);
 
@@ -361,9 +355,7 @@ public class SessionManagementServiceTests
     public async Task RevokeSessionAsync_WithNullOrEmptyId_ThrowsArgumentException(string? sessionId)
     {
         // Given: An invalid session ID
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var service = CreateService(db);
 
@@ -383,9 +375,7 @@ public class SessionManagementServiceTests
     public async Task RevokeSessionAsync_WithCacheFailure_StillRevokesInDatabase()
     {
         // Given: Active session with failing cache
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var mockCache = new Mock<ISessionCacheService>();
         mockCache.Setup(c => c.InvalidateAsync(It.IsAny<string>(), default))
@@ -422,9 +412,7 @@ public class SessionManagementServiceTests
     public async Task RevokeAllUserSessionsAsync_WithMultipleSessions_RevokesAllActive()
     {
         // Given: User with multiple active sessions
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-15T12:00:00Z"));
         var mockCache = new Mock<ISessionCacheService>();
@@ -467,9 +455,7 @@ public class SessionManagementServiceTests
     public async Task RevokeAllUserSessionsAsync_WithNoActiveSessions_ReturnsZero()
     {
         // Given: User with no active sessions
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var service = CreateService(db);
 
@@ -501,9 +487,7 @@ public class SessionManagementServiceTests
     public async Task RevokeAllUserSessionsAsync_WithNullOrEmptyUserId_ThrowsArgumentException(string? userId)
     {
         // Given: An invalid userId
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var service = CreateService(db);
 
@@ -523,9 +507,7 @@ public class SessionManagementServiceTests
     public async Task RevokeInactiveSessionsAsync_RevokesOnlyInactiveSessions()
     {
         // Given: Sessions with varying activity
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var now = DateTimeOffset.Parse("2024-02-15T12:00:00Z");
         var timeProvider = new FixedTimeProvider(now);
@@ -584,9 +566,7 @@ public class SessionManagementServiceTests
     public async Task RevokeInactiveSessionsAsync_WithNullLastSeenAt_UsesCreatedAt()
     {
         // Given: Session without LastSeenAt
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var now = DateTimeOffset.Parse("2024-02-15T12:00:00Z");
         var timeProvider = new FixedTimeProvider(now);
@@ -632,9 +612,7 @@ public class SessionManagementServiceTests
     public async Task RevokeInactiveSessionsAsync_WithNoInactiveSessions_ReturnsZero()
     {
         // Given: Only active sessions
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using var db = await CreateContextAsync(connection);
+        await using var db = await CreateContextAsync();
 
         var now = DateTimeOffset.Parse("2024-02-15T12:00:00Z");
         var timeProvider = new FixedTimeProvider(now);
@@ -663,10 +641,10 @@ public class SessionManagementServiceTests
 
     // Helper methods
 
-    private static async Task<MeepleAiDbContext> CreateContextAsync(SqliteConnection connection)
+    private async Task<MeepleAiDbContext> CreateContextAsync()
     {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseSqlite(connection)
+            .UseSqlite(_connection)
             .Options;
 
         var context = new MeepleAiDbContext(options);

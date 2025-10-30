@@ -692,7 +692,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
 
     #region Helper Methods
 
-    private async Task<(string PlaintextKey, Infrastructure.Entities.ApiKeyEntity Entity)> CreateTestApiKeyAsync(
+    private async Task<(string PlaintextKey, ApiKeyEntity Entity)> CreateTestApiKeyAsync(
         string userId,
         string keyName,
         string[] scopes,

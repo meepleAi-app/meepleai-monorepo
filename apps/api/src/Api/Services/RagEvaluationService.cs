@@ -46,15 +46,18 @@ public class RagEvaluationService : IRagEvaluationService
     private readonly IQdrantService _qdrantService;
     private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<RagEvaluationService> _logger;
+    private readonly TimeProvider _timeProvider;
 
     public RagEvaluationService(
         IQdrantService qdrantService,
         IEmbeddingService embeddingService,
-        ILogger<RagEvaluationService> logger)
+        ILogger<RagEvaluationService> logger,
+        TimeProvider? timeProvider = null)
     {
         _qdrantService = qdrantService;
         _embeddingService = embeddingService;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     /// <inheritdoc/>
@@ -209,7 +212,7 @@ public class RagEvaluationService : IRagEvaluationService
         var report = new RagEvaluationReport
         {
             DatasetName = dataset.Name,
-            EvaluatedAt = DateTime.UtcNow,
+            EvaluatedAt = _timeProvider.GetUtcNow().UtcDateTime,
             TotalQueries = queryResults.Count,
             SuccessfulQueries = successfulQueries.Count,
             FailedQueries = failedQueries.Count,

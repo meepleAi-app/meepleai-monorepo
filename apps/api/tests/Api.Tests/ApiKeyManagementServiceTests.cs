@@ -17,22 +17,33 @@ namespace Api.Tests;
 /// Tests CRUD operations, rotation, and quota management for API keys.
 /// Related to Issue #259 - API-04: API Key Management and Quota System.
 /// </summary>
-public class ApiKeyManagementServiceTests
+public class ApiKeyManagementServiceTests : IDisposable
 {
+    private readonly SqliteConnection _connection;
+
+    public ApiKeyManagementServiceTests()
+    {
+        _connection = new SqliteConnection("Filename=:memory:");
+        _connection.Open();
+    }
+
+    public void Dispose()
+    {
+        _connection?.Dispose();
+    }
+
     #region ListApiKeysAsync Tests
 
     [Fact]
     public async Task ListApiKeysAsync_WithNoKeys_ReturnsEmptyList()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -54,14 +65,12 @@ public class ApiKeyManagementServiceTests
     public async Task ListApiKeysAsync_WithMultipleKeys_ReturnsPaginatedList()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -95,14 +104,12 @@ public class ApiKeyManagementServiceTests
     public async Task ListApiKeysAsync_ExcludesRevokedKeys_ByDefault()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -142,14 +149,12 @@ public class ApiKeyManagementServiceTests
     public async Task ListApiKeysAsync_IncludesRevokedKeys_WhenRequested()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -183,14 +188,12 @@ public class ApiKeyManagementServiceTests
     public async Task GetApiKeyAsync_WithValidKeyId_ReturnsKey()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -221,14 +224,12 @@ public class ApiKeyManagementServiceTests
     public async Task GetApiKeyAsync_WithInvalidKeyId_ReturnsNull()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -246,14 +247,12 @@ public class ApiKeyManagementServiceTests
     public async Task GetApiKeyAsync_WithWrongUserId_ReturnsNull()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -284,14 +283,12 @@ public class ApiKeyManagementServiceTests
     public async Task CreateApiKeyAsync_WithValidRequest_CreatesKey()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -325,14 +322,12 @@ public class ApiKeyManagementServiceTests
     public async Task CreateApiKeyAsync_WithQuota_StoresQuotaInMetadata()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -361,14 +356,12 @@ public class ApiKeyManagementServiceTests
     public async Task CreateApiKeyAsync_WithEmptyKeyName_ThrowsArgumentException()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -391,14 +384,12 @@ public class ApiKeyManagementServiceTests
     public async Task CreateApiKeyAsync_WithDifferentEnvironments_GeneratesCorrectPrefix(string environment)
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -427,14 +418,12 @@ public class ApiKeyManagementServiceTests
     public async Task UpdateApiKeyAsync_WithValidRequest_UpdatesKey()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -471,14 +460,12 @@ public class ApiKeyManagementServiceTests
     public async Task UpdateApiKeyAsync_UpdatesOnlyProvidedFields()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -513,14 +500,12 @@ public class ApiKeyManagementServiceTests
     public async Task UpdateApiKeyAsync_WithInvalidKeyId_ReturnsNull()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -543,14 +528,12 @@ public class ApiKeyManagementServiceTests
     public async Task UpdateApiKeyAsync_WithWrongUserId_ReturnsNull()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -582,14 +565,12 @@ public class ApiKeyManagementServiceTests
     public async Task UpdateApiKeyAsync_WithQuota_UpdatesQuotaMetadata()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -628,14 +609,12 @@ public class ApiKeyManagementServiceTests
     public async Task RevokeApiKeyAsync_WithValidKey_RevokesSuccessfully()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -667,14 +646,12 @@ public class ApiKeyManagementServiceTests
     public async Task RevokeApiKeyAsync_WithInvalidKeyId_ReturnsFalse()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -696,14 +673,12 @@ public class ApiKeyManagementServiceTests
     public async Task RotateApiKeyAsync_WithValidKey_CreatesNewKeyAndRevokesOld()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -751,14 +726,12 @@ public class ApiKeyManagementServiceTests
     public async Task RotateApiKeyAsync_WithInvalidKeyId_ReturnsNull()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -778,14 +751,12 @@ public class ApiKeyManagementServiceTests
     public async Task RotateApiKeyAsync_WithWrongUserId_ReturnsNull()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -818,14 +789,12 @@ public class ApiKeyManagementServiceTests
     public async Task DeleteApiKeyAsync_WithValidKey_DeletesSuccessfully()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -855,14 +824,12 @@ public class ApiKeyManagementServiceTests
     public async Task DeleteApiKeyAsync_WithInvalidKeyId_ReturnsFalse()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -884,14 +851,12 @@ public class ApiKeyManagementServiceTests
     public async Task GetApiKeyUsageAsync_WithValidKey_ReturnsUsageStats()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -922,14 +887,12 @@ public class ApiKeyManagementServiceTests
     public async Task GetApiKeyUsageAsync_WithInvalidKeyId_ReturnsNull()
     {
         // Arrange
-        await using var connection = new SqliteConnection("Filename=:memory:");
-        await connection.OpenAsync();
-        await using (var setupContext = CreateContext(connection))
+        await using (var setupContext = CreateContext())
         {
             await setupContext.Database.EnsureCreatedAsync();
         }
 
-        await using var dbContext = CreateContext(connection);
+        await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
         var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
@@ -947,10 +910,10 @@ public class ApiKeyManagementServiceTests
 
     #region Helper Methods
 
-    private static MeepleAiDbContext CreateContext(SqliteConnection connection)
+    private MeepleAiDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
-            .UseSqlite(connection)
+            .UseSqlite(_connection)
             .Options;
 
         return new MeepleAiDbContext(options);

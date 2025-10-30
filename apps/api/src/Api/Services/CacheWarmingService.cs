@@ -20,6 +20,7 @@ public class CacheWarmingService : BackgroundService
     private readonly IRagService _ragService;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly CacheOptimizationConfiguration _config;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the CacheWarmingService.
@@ -30,13 +31,15 @@ public class CacheWarmingService : BackgroundService
     /// <param name="ragService">RAG service for executing queries to populate cache</param>
     /// <param name="scopeFactory">Service scope factory for creating scoped DbContext</param>
     /// <param name="config">Cache optimization configuration</param>
+    /// <param name="timeProvider">Time provider for testable timing operations (null defaults to System)</param>
     public CacheWarmingService(
         ILogger<CacheWarmingService> logger,
         IRedisFrequencyTracker frequencyTracker,
         IAiResponseCacheService cacheService,
         IRagService ragService,
         IServiceScopeFactory scopeFactory,
-        IOptions<CacheOptimizationConfiguration> config)
+        IOptions<CacheOptimizationConfiguration> config,
+        TimeProvider? timeProvider = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _frequencyTracker = frequencyTracker ?? throw new ArgumentNullException(nameof(frequencyTracker));
@@ -44,6 +47,7 @@ public class CacheWarmingService : BackgroundService
         _ragService = ragService ?? throw new ArgumentNullException(nameof(ragService));
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     /// <inheritdoc />
@@ -65,6 +69,7 @@ public class CacheWarmingService : BackgroundService
             // Startup delay: Wait before first warming cycle to avoid interfering with application startup
             await Task.Delay(
                 TimeSpan.FromMinutes(_config.WarmingStartupDelayMinutes),
+                _timeProvider,
                 stoppingToken);
 
             // Periodic warming loop
@@ -81,6 +86,7 @@ public class CacheWarmingService : BackgroundService
                     // Wait for next warming interval
                     await Task.Delay(
                         TimeSpan.FromHours(_config.WarmingIntervalHours),
+                        _timeProvider,
                         stoppingToken);
                 }
                 catch (OperationCanceledException)
@@ -92,12 +98,12 @@ public class CacheWarmingService : BackgroundService
                 catch (InvalidOperationException ex)
                 {
                     _logger.LogError(ex, "Invalid operation during cache warming cycle. Will retry after interval.");
-                    await Task.Delay(TimeSpan.FromHours(_config.WarmingIntervalHours), stoppingToken);
+                    await Task.Delay(TimeSpan.FromHours(_config.WarmingIntervalHours), _timeProvider, stoppingToken);
                 }
                 catch (HttpRequestException ex)
                 {
                     _logger.LogError(ex, "HTTP error during cache warming cycle. Will retry after interval.");
-                    await Task.Delay(TimeSpan.FromHours(_config.WarmingIntervalHours), stoppingToken);
+                    await Task.Delay(TimeSpan.FromHours(_config.WarmingIntervalHours), _timeProvider, stoppingToken);
                 }
             }
         }

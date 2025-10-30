@@ -125,7 +125,8 @@ public class CacheWarmingServiceTests : IDisposable
             _mockCacheService.Object,
             _mockRagService.Object,
             _scopeFactory,
-            _mockConfig.Object
+            _mockConfig.Object,
+            _timeProvider
         );
 
         using var cts = new CancellationTokenSource();
@@ -173,7 +174,8 @@ public class CacheWarmingServiceTests : IDisposable
             _mockCacheService.Object,
             _mockRagService.Object,
             _scopeFactory,
-            delayConfig.Object
+            delayConfig.Object,
+            _timeProvider
         );
 
         using var cts = new CancellationTokenSource();
@@ -239,7 +241,8 @@ public class CacheWarmingServiceTests : IDisposable
             _mockCacheService.Object,
             _mockRagService.Object,
             _scopeFactory,
-            _mockConfig.Object
+            _mockConfig.Object,
+            _timeProvider
         );
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)); // Longer timeout for 50 queries
@@ -251,8 +254,8 @@ public class CacheWarmingServiceTests : IDisposable
         _timeProvider.AdvanceSeconds(1);
         await Task.Yield();
 
-        // Give more time for background service to process all 50 queries (including handling exception)
-        await Task.Delay(TimeSpan.FromSeconds(5)); // Allow real time for background processing
+        // Give time for background service to process queries (including handling exception)
+        await Task.Yield(); // Allow background processing to continue
 
         await service.StopAsync(cts.Token);
 
@@ -317,7 +320,8 @@ public class CacheWarmingServiceTests : IDisposable
             _mockCacheService.Object,
             _mockRagService.Object,
             _scopeFactory,
-            _mockConfig.Object
+            _mockConfig.Object,
+            _timeProvider
         );
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -400,7 +404,8 @@ public class CacheWarmingServiceTests : IDisposable
             _mockCacheService.Object,
             _mockRagService.Object,
             _scopeFactory,
-            _mockConfig.Object
+            _mockConfig.Object,
+            _timeProvider
         );
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -454,7 +459,8 @@ public class CacheWarmingServiceTests : IDisposable
             _mockCacheService.Object,
             _mockRagService.Object,
             _scopeFactory,
-            _mockConfig.Object
+            _mockConfig.Object,
+            _timeProvider
         );
 
         // Assert (Then): Service should validate config in constructor

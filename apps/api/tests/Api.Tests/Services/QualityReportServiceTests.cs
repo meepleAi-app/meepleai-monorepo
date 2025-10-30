@@ -2,6 +2,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.Tests.Infrastructure;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -20,11 +21,13 @@ namespace Api.Tests.Services;
 public class QualityReportServiceTests : IDisposable
 {
     private readonly SqliteConnection _connection;
+    private readonly TestTimeProvider _timeProvider;
 
     public QualityReportServiceTests()
     {
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();
+        _timeProvider = new TestTimeProvider();
     }
 
     public void Dispose()
@@ -66,13 +69,24 @@ public class QualityReportServiceTests : IDisposable
         var service = new QualityReportService(
             mockServiceScopeFactory.Object,
             mockLogger.Object,
-            mockConfiguration);
+            mockConfiguration,
+            _timeProvider);
 
         using var cts = new CancellationTokenSource();
 
         // Act
         var executeTask = service.StartAsync(cts.Token);
-        await Task.Delay(400); // Wait for initial delay (30ms) + 3+ intervals (300ms) with buffer
+
+        // Advance time past initial delay and trigger multiple intervals
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(50)); // Past initial delay (30ms)
+        await Task.Delay(10); // Give time for task to execute
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past first interval (100ms)
+        await Task.Delay(10);
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past second interval (100ms)
+        await Task.Delay(10);
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past third interval (100ms)
+        await Task.Delay(10);
+
         cts.Cancel();
         await executeTask;
 
@@ -111,14 +125,15 @@ public class QualityReportServiceTests : IDisposable
         var service = new QualityReportService(
             mockServiceScopeFactory.Object,
             mockLogger.Object,
-            mockConfiguration);
+            mockConfiguration,
+            _timeProvider);
 
         using var cts = new CancellationTokenSource();
 
         // Act
-        var startTime = DateTime.UtcNow;
         var executeTask = service.StartAsync(cts.Token);
-        await Task.Delay(200); // Wait 200ms (less than 500ms delay)
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(200)); // Wait 200ms (less than 500ms delay)
+        await Task.Yield(); // Allow background task to process
         cts.Cancel();
         await executeTask;
 
@@ -186,7 +201,8 @@ public class QualityReportServiceTests : IDisposable
         var reportService = new QualityReportService(
             mockServiceScopeFactory.Object,
             mockLogger.Object,
-            mockConfiguration);
+            mockConfiguration,
+            _timeProvider);
 
         // Act
         var report = await reportService.GenerateReportAsync(startDate, endDate);
@@ -241,7 +257,8 @@ public class QualityReportServiceTests : IDisposable
         var reportService = new QualityReportService(
             mockServiceScopeFactory.Object,
             mockLogger.Object,
-            mockConfiguration);
+            mockConfiguration,
+            _timeProvider);
 
         // Act
         var report = await reportService.GenerateReportAsync(startDate, endDate);
@@ -294,13 +311,24 @@ public class QualityReportServiceTests : IDisposable
         var service = new QualityReportService(
             mockServiceScopeFactory.Object,
             mockLogger.Object,
-            mockConfiguration);
+            mockConfiguration,
+            _timeProvider);
 
         using var cts = new CancellationTokenSource();
 
         // Act
         var executeTask = service.StartAsync(cts.Token);
-        await Task.Delay(400); // Wait for initial delay (30ms) + 3+ intervals (300ms) with buffer
+
+        // Advance time past initial delay and trigger multiple intervals
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(50)); // Past initial delay (30ms)
+        await Task.Delay(10); // Give time for task to execute
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past first interval (100ms)
+        await Task.Delay(10);
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past second interval (100ms)
+        await Task.Delay(10);
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past third interval (100ms)
+        await Task.Delay(10);
+
         cts.Cancel();
         await executeTask;
 
@@ -341,13 +369,15 @@ public class QualityReportServiceTests : IDisposable
         var service = new QualityReportService(
             mockServiceScopeFactory.Object,
             mockLogger.Object,
-            mockConfiguration);
+            mockConfiguration,
+            _timeProvider);
 
         using var cts = new CancellationTokenSource();
 
         // Act
         var executeTask = service.StartAsync(cts.Token);
-        await Task.Delay(100); // Let service start
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(100)); // Let service start
+        await Task.Yield(); // Allow background task to process
         cts.Cancel();
 
         // Assert
@@ -385,13 +415,22 @@ public class QualityReportServiceTests : IDisposable
         var service = new QualityReportService(
             mockServiceScopeFactory.Object,
             mockLogger.Object,
-            mockConfiguration);
+            mockConfiguration,
+            _timeProvider);
 
         using var cts = new CancellationTokenSource();
 
         // Act
         var executeTask = service.StartAsync(cts.Token);
-        await Task.Delay(250); // Wait for initial delay (30ms) + 2+ intervals (200ms)
+
+        // Advance time past initial delay and trigger multiple intervals
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(50)); // Past initial delay (30ms)
+        await Task.Delay(10); // Give time for task to execute
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past first interval (100ms)
+        await Task.Delay(10);
+        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past second interval (100ms)
+        await Task.Delay(10);
+
         cts.Cancel();
 
         // Assert
@@ -444,7 +483,8 @@ public class QualityReportServiceTests : IDisposable
         var reportService = new QualityReportService(
             mockServiceScopeFactory.Object,
             mockLogger.Object,
-            mockConfiguration);
+            mockConfiguration,
+            _timeProvider);
 
         // Act
         var report = await reportService.GenerateReportAsync(startDate, endDate);
@@ -507,7 +547,8 @@ public class QualityReportServiceTests : IDisposable
         var reportService = new QualityReportService(
             mockServiceScopeFactory.Object,
             mockLogger.Object,
-            mockConfiguration);
+            mockConfiguration,
+            _timeProvider);
 
         // Act
         var report = await reportService.GenerateReportAsync(startDate, endDate);

@@ -582,7 +582,8 @@ public class SessionAutoRevocationServiceTests : IDisposable
         return new SessionAutoRevocationService(
             scopeFactory,
             Options.Create(config),
-            _loggerMock.Object
+            _loggerMock.Object,
+            _timeProvider // Pass TestTimeProvider to SessionAutoRevocationService
         );
     }
 

@@ -13,14 +13,19 @@ public class TempSessionService : ITempSessionService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<TempSessionService> _logger;
+    private readonly TimeProvider _timeProvider;
 
     private const int TempSessionLifetimeMinutes = 5;
     private const int TokenSizeBytes = 32; // 256 bits
 
-    public TempSessionService(MeepleAiDbContext dbContext, ILogger<TempSessionService> logger)
+    public TempSessionService(
+        MeepleAiDbContext dbContext, 
+        ILogger<TempSessionService> logger,
+        TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     /// <summary>
@@ -32,14 +37,15 @@ public class TempSessionService : ITempSessionService
         var token = GenerateSecureToken();
         var tokenHash = HashToken(token);
 
+        var now = _timeProvider.GetUtcNow();
         var tempSession = new TempSessionEntity
         {
             Id = Guid.NewGuid().ToString(),
             UserId = userId,
             TokenHash = tokenHash,
             IpAddress = ipAddress,
-            CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(TempSessionLifetimeMinutes),
+            CreatedAt = now.UtcDateTime,
+            ExpiresAt = now.AddMinutes(TempSessionLifetimeMinutes).UtcDateTime,
             IsUsed = false
         };
 
@@ -58,7 +64,7 @@ public class TempSessionService : ITempSessionService
     public async Task<string?> ValidateAndConsumeTempSessionAsync(string token)
     {
         var tokenHash = HashToken(token);
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         // Find temp session with Serializable isolation (prevent concurrent use)
         using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
@@ -75,7 +81,7 @@ public class TempSessionService : ITempSessionService
 
             // Mark as used (single-use enforcement)
             tempSession.IsUsed = true;
-            tempSession.UsedAt = DateTime.UtcNow;
+            tempSession.UsedAt = _timeProvider.GetUtcNow().UtcDateTime;
             await _dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
 
@@ -101,11 +107,11 @@ public class TempSessionService : ITempSessionService
     /// </summary>
     public async Task CleanupExpiredSessionsAsync(CancellationToken ct = default)
     {
-        var now = DateTime.UtcNow;
+        var now = _timeProvider.GetUtcNow();
         var cutoff = now.AddHours(-1); // Keep used sessions for 1 hour (audit trail)
 
         var expiredSessions = await _dbContext.TempSessions
-            .Where(ts => ts.ExpiresAt < now || (ts.IsUsed && ts.UsedAt < cutoff))
+            .Where(ts => ts.ExpiresAt < now.UtcDateTime || (ts.IsUsed && ts.UsedAt < cutoff.UtcDateTime))
             .ToListAsync(ct);
 
         if (expiredSessions.Any())

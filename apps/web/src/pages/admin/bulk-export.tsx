@@ -35,6 +35,7 @@ export default function BulkExport() {
   useEffect(() => {
     void loadCurrentUser();
     void loadGames();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadCurrentUser = async () => {

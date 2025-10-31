@@ -146,8 +146,10 @@ export function ChatProvider({ children }: ChatProviderProps) {
 
   // Derived state for current game
   const currentGameState = selectedGameId ? chatStatesByGame.get(selectedGameId) : undefined;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const chats = currentGameState?.chats ?? [];
   const activeChatId = currentGameState?.activeChatId ?? null;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const messages = currentGameState?.messages ?? [];
 
   // UI State
@@ -313,6 +315,7 @@ export function ChatProvider({ children }: ChatProviderProps) {
       loadAgents(gameId),
       loadChats(gameId)
     ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const selectAgent = useCallback((agentId: string | null) => {

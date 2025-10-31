@@ -252,7 +252,7 @@ describe('CacheDashboard', () => {
     };
 
     // FIX 1: Use mockImplementation with state to handle filter changes
-    let filterGameId: string | null = null;
+    const filterGameId: string | null = null;
     // @ts-expect-error - Mock signature simplified for test readability
     fetchMock.mockImplementation((url: string) => {
       if (url.includes('/api/v1/games')) {

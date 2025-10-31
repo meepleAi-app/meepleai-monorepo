@@ -79,6 +79,18 @@ export interface SessionStatusResponse {
   remainingMinutes: number;
 }
 
+// AUTH-07: Two-Factor Authentication types
+export interface TotpSetupResponse {
+  secret: string;
+  qrCodeUri: string;
+  backupCodes: string[];
+}
+
+export interface TwoFactorStatusResponse {
+  isTwoFactorEnabled: boolean;
+  backupCodesCount: number;
+}
+
 // AI-13: BoardGameGeek API types
 export interface BggSearchResult {
   bggId: number;
@@ -767,6 +779,29 @@ export const api = {
       // Clean up
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+    }
+  },
+
+  // AUTH-07: Two-Factor Authentication API
+  twoFactor: {
+    async getStatus(): Promise<TwoFactorStatusResponse> {
+      return api.get<TwoFactorStatusResponse>('/api/v1/users/me/2fa/status') as Promise<TwoFactorStatusResponse>;
+    },
+
+    async setup(): Promise<TotpSetupResponse> {
+      return api.post<TotpSetupResponse>('/api/v1/auth/2fa/setup');
+    },
+
+    async enable(code: string): Promise<void> {
+      await api.post<void>('/api/v1/auth/2fa/enable', { code });
+    },
+
+    async verify(code: string): Promise<void> {
+      await api.post<void>('/api/v1/auth/2fa/verify', { code });
+    },
+
+    async disable(password: string, code: string): Promise<void> {
+      await api.post<void>('/api/v1/auth/2fa/disable', { password, code });
     }
   }
 };

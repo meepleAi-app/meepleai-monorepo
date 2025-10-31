@@ -4,7 +4,11 @@ import { api } from '../../lib/api';
 import { createMockDashboardStats } from '../fixtures/common-fixtures';
 
 jest.mock('../../lib/api');
-jest.mock('next/link', () => ({ children, href }: any) => <a href={href}>{children}</a>);
+jest.mock('next/link', () => {
+  const MockLink = ({ children, href }: any) => <a href={href}>{children}</a>;
+  MockLink.displayName = 'MockLink';
+  return MockLink;
+});
 
 jest.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: any) => <div>{children}</div>,

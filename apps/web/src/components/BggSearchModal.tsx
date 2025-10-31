@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { api, BggSearchResult, BggGameDetails } from "@/lib/api";
 import { useDebounce } from "@/hooks/useDebounce";
 
@@ -152,13 +153,13 @@ export function BggSearchModal({ isOpen, onClose, onSelect }: BggSearchModalProp
                 <div className="flex gap-4">
                   {/* Thumbnail */}
                   {result.thumbnailUrl && (
-                    <img
+                    <Image
                       src={result.thumbnailUrl}
                       alt={`${result.name} thumbnail`}
-                      className="w-20 h-20 object-cover rounded"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
+                      width={80}
+                      height={80}
+                      className="object-cover rounded"
+                      unoptimized
                     />
                   )}
 

@@ -65,11 +65,11 @@ public class StreamingRagServiceTests
             streamingService.ExplainStreamAsync("game1", "", CancellationToken.None));
 
         // Assert
-        Assert.Single(events);
-        Assert.Equal(StreamingEventType.Error, events[0].Type);
-        var errorData = Assert.IsType<StreamingError>(events[0].Data);
-        Assert.Equal("Please provide a topic to explain.", errorData.errorMessage);
-        Assert.Equal("EMPTY_TOPIC", errorData.errorCode);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be(StreamingEventType.Error);
+        var errorData = events[0].Data.Should().BeOfType<StreamingError>().Subject;
+        errorData.errorMessage.Should().Be("Please provide a topic to explain.");
+        errorData.errorCode.Should().Be("EMPTY_TOPIC");
     }
 
     [Fact]
@@ -90,10 +90,10 @@ public class StreamingRagServiceTests
             streamingService.ExplainStreamAsync("game1", "   ", CancellationToken.None));
 
         // Assert
-        Assert.Single(events);
-        Assert.Equal(StreamingEventType.Error, events[0].Type);
-        var errorData = Assert.IsType<StreamingError>(events[0].Data);
-        Assert.Equal("Please provide a topic to explain.", errorData.errorMessage);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be(StreamingEventType.Error);
+        var errorData = events[0].Data.Should().BeOfType<StreamingError>().Subject;
+        errorData.errorMessage.Should().Be("Please provide a topic to explain.");
     }
 
     [Fact]
@@ -118,16 +118,16 @@ public class StreamingRagServiceTests
             streamingService.ExplainStreamAsync("game1", "test topic", CancellationToken.None));
 
         // Assert
-        Assert.Equal(2, events.Count); // StateUpdate + Error
+        events.Count.Should().Be(2); // StateUpdate + Error
 
-        Assert.Equal(StreamingEventType.StateUpdate, events[0].Type);
-        var stateUpdate = Assert.IsType<StreamingStateUpdate>(events[0].Data);
-        Assert.Equal("Generating embeddings for topic...", stateUpdate.message);
+        events[0].Type.Should().Be(StreamingEventType.StateUpdate);
+        var stateUpdate = events[0].Data.Should().BeOfType<StreamingStateUpdate>().Subject;
+        stateUpdate.message.Should().Be("Generating embeddings for topic...");
 
-        Assert.Equal(StreamingEventType.Error, events[1].Type);
-        var errorData = Assert.IsType<StreamingError>(events[1].Data);
-        Assert.Equal("Unable to process topic.", errorData.errorMessage);
-        Assert.Equal("EMBEDDING_FAILED", errorData.errorCode);
+        events[1].Type.Should().Be(StreamingEventType.Error);
+        var errorData = events[1].Data.Should().BeOfType<StreamingError>().Subject;
+        errorData.errorMessage.Should().Be("Unable to process topic.");
+        errorData.errorCode.Should().Be("EMBEDDING_FAILED");
     }
 
     [Fact]
@@ -152,8 +152,8 @@ public class StreamingRagServiceTests
             streamingService.ExplainStreamAsync("game1", "test topic", CancellationToken.None));
 
         // Assert
-        Assert.Equal(2, events.Count);
-        Assert.Equal(StreamingEventType.Error, events[1].Type);
+        events.Count.Should().Be(2);
+        events[1].Type.Should().Be(StreamingEventType.Error);
     }
 
     [Fact]
@@ -187,15 +187,15 @@ public class StreamingRagServiceTests
             streamingService.ExplainStreamAsync("game1", "test topic", CancellationToken.None));
 
         // Assert
-        Assert.Equal(3, events.Count); // StateUpdate (embeddings) + StateUpdate (search) + Error
+        events.Count.Should().Be(3); // StateUpdate (embeddings) + StateUpdate (search) + Error
 
-        Assert.Equal(StreamingEventType.StateUpdate, events[0].Type);
-        Assert.Equal(StreamingEventType.StateUpdate, events[1].Type);
+        events[0].Type.Should().Be(StreamingEventType.StateUpdate);
+        events[1].Type.Should().Be(StreamingEventType.StateUpdate);
 
-        Assert.Equal(StreamingEventType.Error, events[2].Type);
-        var errorData = Assert.IsType<StreamingError>(events[2].Data);
-        Assert.Contains("No relevant information found", errorData.errorMessage);
-        Assert.Equal("NO_RESULTS", errorData.errorCode);
+        events[2].Type.Should().Be(StreamingEventType.Error);
+        var errorData = events[2].Data.Should().BeOfType<StreamingError>().Subject;
+        errorData.errorMessage.Should().Contain("No relevant information found");
+        errorData.errorCode.Should().Be("NO_RESULTS");
     }
 
     [Fact]
@@ -229,7 +229,7 @@ public class StreamingRagServiceTests
             streamingService.ExplainStreamAsync("game1", "test topic", CancellationToken.None));
 
         // Assert
-        Assert.Equal(StreamingEventType.Error, events[^1].Type);
+        events[^1].Type.Should().Be(StreamingEventType.Error);
     }
 
     [Fact]
@@ -274,12 +274,12 @@ public class StreamingRagServiceTests
         // Verify event order: StateUpdate(s) -> Citations -> Outline -> ScriptChunk(s) -> Complete
         var eventTypes = events.Select(e => e.Type).ToList();
 
-        Assert.Equal(StreamingEventType.StateUpdate, eventTypes[0]); // "Generating embeddings..."
-        Assert.Equal(StreamingEventType.StateUpdate, eventTypes[1]); // "Searching vector database..."
-        Assert.Equal(StreamingEventType.Citations, eventTypes[2]);
-        Assert.Equal(StreamingEventType.StateUpdate, eventTypes[3]); // "Building outline..."
-        Assert.Equal(StreamingEventType.Outline, eventTypes[4]);
-        Assert.Equal(StreamingEventType.StateUpdate, eventTypes[5]); // "Generating explanation script..."
+        eventTypes[0].Should().Be(StreamingEventType.StateUpdate); // "Generating embeddings..."
+        eventTypes[1].Should().Be(StreamingEventType.StateUpdate); // "Searching vector database..."
+        eventTypes[2].Should().Be(StreamingEventType.Citations);
+        eventTypes[3].Should().Be(StreamingEventType.StateUpdate); // "Building outline..."
+        eventTypes[4].Should().Be(StreamingEventType.Outline);
+        eventTypes[5].Should().Be(StreamingEventType.StateUpdate); // "Generating explanation script..."
 
         // One or more ScriptChunk events
         var scriptChunkStartIdx = 6;
@@ -291,10 +291,10 @@ public class StreamingRagServiceTests
                 scriptChunkCount++;
             }
         }
-        Assert.True(scriptChunkCount > 0);
+        scriptChunkCount > 0.Should().BeTrue();
 
         // Last event should be Complete
-        Assert.Equal(StreamingEventType.Complete, eventTypes[^1]);
+        eventTypes[^1].Should().Be(StreamingEventType.Complete);
     }
 
     [Fact]
@@ -331,15 +331,15 @@ public class StreamingRagServiceTests
 
         // Assert
         var citationsEvent = events.First(e => e.Type == StreamingEventType.Citations);
-        var citations = Assert.IsType<StreamingCitations>(citationsEvent.Data);
+        var citations = citationsEvent.Data.Should().BeOfType<StreamingCitations>().Subject;
 
-        Assert.Equal(2, citations.citations.Count);
-        Assert.Equal("Citation text 1", citations.citations[0].text);
-        Assert.Equal("PDF:pdf-123", citations.citations[0].source);
-        Assert.Equal(5, citations.citations[0].page);
-        Assert.Equal("Citation text 2", citations.citations[1].text);
-        Assert.Equal("PDF:pdf-456", citations.citations[1].source);
-        Assert.Equal(10, citations.citations[1].page);
+        citations.citations.Count.Should().Be(2);
+        citations.citations[0].text.Should().Be("Citation text 1");
+        citations.citations[0].source.Should().Be("PDF:pdf-123");
+        citations.citations[0].page.Should().Be(5);
+        citations.citations[1].text.Should().Be("Citation text 2");
+        citations.citations[1].source.Should().Be("PDF:pdf-456");
+        citations.citations[1].page.Should().Be(10);
     }
 
     [Fact]
@@ -376,12 +376,12 @@ public class StreamingRagServiceTests
 
         // Assert
         var outlineEvent = events.First(e => e.Type == StreamingEventType.Outline);
-        var outlineData = Assert.IsType<StreamingOutline>(outlineEvent.Data);
+        var outlineData = outlineEvent.Data.Should().BeOfType<StreamingOutline>().Subject;
 
-        Assert.Equal("movement rules", outlineData.outline.mainTopic);
-        Assert.Equal(2, outlineData.outline.sections.Count);
-        Assert.Equal("First section content", outlineData.outline.sections[0]);
-        Assert.Equal("Second section content", outlineData.outline.sections[1]);
+        outlineData.outline.mainTopic.Should().Be("movement rules");
+        outlineData.outline.sections.Count.Should().Be(2);
+        outlineData.outline.sections[0].Should().Be("First section content");
+        outlineData.outline.sections[1].Should().Be("Second section content");
     }
 
     [Fact]
@@ -419,13 +419,13 @@ public class StreamingRagServiceTests
 
         // Assert
         var scriptChunkEvents = events.Where(e => e.Type == StreamingEventType.ScriptChunk).ToList();
-        Assert.True(scriptChunkEvents.Count > 1); // Should have multiple chunks
+        scriptChunkEvents.Count > 1.Should().BeTrue(); // Should have multiple chunks
 
         for (int i = 0; i < scriptChunkEvents.Count; i++)
         {
-            var chunkData = Assert.IsType<StreamingScriptChunk>(scriptChunkEvents[i].Data);
-            Assert.Equal(i, chunkData.chunkIndex);
-            Assert.Equal(scriptChunkEvents.Count, chunkData.totalChunks);
+            var chunkData = scriptChunkEvents[i].Data.Should().BeOfType<StreamingScriptChunk>().Subject;
+            chunkData.chunkIndex.Should().Be(i);
+            chunkData.totalChunks.Should().Be(scriptChunkEvents.Count);
             chunkData.chunk.Should().NotBeEmpty();
         }
     }
@@ -463,14 +463,14 @@ public class StreamingRagServiceTests
 
         // Assert
         var completeEvent = events.First(e => e.Type == StreamingEventType.Complete);
-        var completeData = Assert.IsType<StreamingComplete>(completeEvent.Data);
+        var completeData = completeEvent.Data.Should().BeOfType<StreamingComplete>().Subject;
 
-        Assert.True(completeData.estimatedReadingTimeMinutes > 0);
-        Assert.Equal(0, completeData.promptTokens); // Non-LLM explain doesn't use tokens
-        Assert.Equal(0, completeData.completionTokens);
-        Assert.Equal(0, completeData.totalTokens);
+        completeData.estimatedReadingTimeMinutes > 0.Should().BeTrue();
+        completeData.promptTokens.Should().Be(0); // Non-LLM explain doesn't use tokens
+        completeData.completionTokens.Should().Be(0);
+        completeData.totalTokens.Should().Be(0);
         completeData.confidence.Should().NotBeNull();
-        Assert.Equal(0.92, completeData.confidence.Value, precision: 2); // Max score
+        completeData.confidence.Value, precision: 2.Should().Be(0.92); // Max score
     }
 
     [Fact]
@@ -497,9 +497,9 @@ public class StreamingRagServiceTests
 
         // Act & Assert
         // Exceptions now propagate to the caller (SSE endpoint handles them)
-        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
-            await CollectEventsAsync(
-                streamingService.ExplainStreamAsync("game1", "test topic", CancellationToken.None)));
+        var act = async () => await CollectEventsAsync(
+            streamingService.ExplainStreamAsync("game1", "test topic", CancellationToken.None));
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     [Fact]
@@ -521,9 +521,9 @@ public class StreamingRagServiceTests
 
         // Act & Assert
         // Exceptions now propagate to the caller (SSE endpoint handles them)
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await CollectEventsAsync(
-                streamingService.ExplainStreamAsync("game1", "test topic", CancellationToken.None)));
+        var act = async () => await CollectEventsAsync(
+            streamingService.ExplainStreamAsync("game1", "test topic", CancellationToken.None));
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -560,11 +560,11 @@ public class StreamingRagServiceTests
 
         // Assert
         var outlineEvent = events.First(e => e.Type == StreamingEventType.Outline);
-        var outlineData = Assert.IsType<StreamingOutline>(outlineEvent.Data);
+        var outlineData = outlineEvent.Data.Should().BeOfType<StreamingOutline>().Subject;
 
-        Assert.Single(outlineData.outline.sections);
-        Assert.EndsWith("...", outlineData.outline.sections[0]);
-        Assert.True(outlineData.outline.sections[0].Length <= 60);
+        outlineData.outline.sections.Should().ContainSingle();
+        outlineData.outline.sections[0].Should().EndWith("...");
+        outlineData.outline.sections[0].Length <= 60.Should().BeTrue();
     }
 
     [Fact]
@@ -599,11 +599,9 @@ public class StreamingRagServiceTests
             streamingService.ExplainStreamAsync("game1", "test topic", CancellationToken.None));
 
         // Assert
-        Assert.All(events, evt =>
-        {
-            Assert.NotEqual(default(DateTime), evt.Timestamp);
-            Assert.True(evt.Timestamp <= DateTime.UtcNow);
-        });
+        events.Should().OnlyContain(evt =>
+            evt.Timestamp != default(DateTime) &&
+            evt.Timestamp <= DateTime.UtcNow);
     }
 
     [Fact]
@@ -647,9 +645,9 @@ public class StreamingRagServiceTests
         scriptChunkEvents.Should().NotBeEmpty();
 
         // When script is empty, ChunkScript returns a single empty chunk
-        var firstChunk = Assert.IsType<StreamingScriptChunk>(scriptChunkEvents[0].Data);
-        Assert.Equal(0, firstChunk.chunkIndex);
-        Assert.Equal(scriptChunkEvents.Count, firstChunk.totalChunks);
+        var firstChunk = scriptChunkEvents[0].Data.Should().BeOfType<StreamingScriptChunk>().Subject;
+        firstChunk.chunkIndex.Should().Be(0);
+        firstChunk.totalChunks.Should().Be(scriptChunkEvents.Count);
 
         // Complete event should still be emitted
         var completeEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Complete);

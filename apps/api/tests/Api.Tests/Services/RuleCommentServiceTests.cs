@@ -345,8 +345,8 @@ public class RuleCommentServiceTests : IDisposable
         var level5 = await _service.ReplyToCommentAsync(level4.Id, "Level 5", TestUserId2);
 
         // Act & Assert - Attempt level 6 should fail
-        var ex = await Assert.ThrowsAsync<ValidationException>(
-            () => _service.ReplyToCommentAsync(level5.Id, "Level 6 - too deep", TestUserId1));
+        var act = async () => await _service.ReplyToCommentAsync(level5.Id, "Level 6 - too deep", TestUserId1);
+        var ex = await act.Should().ThrowAsync<ValidationException>();
 
         Assert.Contains("thread depth", ex.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("5", ex.Message);
@@ -386,8 +386,8 @@ public class RuleCommentServiceTests : IDisposable
             TestUserId1);
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ValidationException>(
-            () => _service.ReplyToCommentAsync(parent.Id, "", TestUserId1));
+        var act = async () => await _service.ReplyToCommentAsync(parent.Id, "", TestUserId1);
+        var ex = await act.Should().ThrowAsync<ValidationException>();
 
         Assert.Contains("cannot be empty", ex.Message);
     }
@@ -428,7 +428,7 @@ public class RuleCommentServiceTests : IDisposable
         Assert.Equal(2, result.Count); // Only top-level comments
         Assert.Contains(result, c => c.Id == comment1.Id);
         Assert.Contains(result, c => c.Id == comment2.Id);
-        Assert.DoesNotContain(result, c => c.Id == reply.Id); // Reply not at top level
+        result.Should().NotContain(c => c.Id == reply.Id); // Reply not at top level
     }
 
     [Fact]
@@ -469,7 +469,7 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         Assert.Single(result);
-        Assert.Equal(comment1.Id, result.First().Id);
+        result.First().Id.Should().Be(comment1.Id);
     }
 
     [Fact]
@@ -512,7 +512,7 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         Assert.Equal(2, result.Count);
-        Assert.All(result, c => Assert.Equal(5, c.LineNumber));
+        result.Should().OnlyContain(c => c.LineNumber == 5);
         Assert.Contains(result, c => c.Id == line5Comment1.Id);
         Assert.Contains(result, c => c.Id == line5Comment2.Id);
     }
@@ -534,8 +534,8 @@ public class RuleCommentServiceTests : IDisposable
     public async Task GetCommentsForLineAsync_NegativeLineNumber_ThrowsValidationException()
     {
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<ValidationException>(
-            () => _service.GetCommentsForLineAsync(TestGameId, TestVersion, -1));
+        var act = async () => await _service.GetCommentsForLineAsync(TestGameId, TestVersion, -1);
+        var ex = await act.Should().ThrowAsync<ValidationException>();
 
         Assert.Contains("positive", ex.Message);
     }
@@ -552,8 +552,8 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         Assert.Single(result);
-        Assert.Equal(parent.Id, result.First().Id);
-        Assert.Single(result.First().Replies);
+        result.First().Id.Should().Be(parent.Id);
+        result.First().Replies.Should().ContainSingle();
     }
 
     #endregion
@@ -583,8 +583,8 @@ public class RuleCommentServiceTests : IDisposable
         var fakeId = Guid.NewGuid();
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => _service.ResolveCommentAsync(fakeId, TestUserId1, resolveReplies: false));
+        var act = async () => await _service.ResolveCommentAsync(fakeId, TestUserId1, resolveReplies: false);
+        var ex = await act.Should().ThrowAsync<NotFoundException>();
 
         Assert.Contains(fakeId.ToString(), ex.Message);
     }
@@ -607,7 +607,7 @@ public class RuleCommentServiceTests : IDisposable
 
         Assert.True(parentComment.IsResolved);
         Assert.Equal(2, parentComment.Replies.Count);
-        Assert.All(parentComment.Replies, reply => Assert.True(reply.IsResolved));
+        parentComment.Replies.Should().OnlyContain(reply => reply.IsResolved);
 
         // Verify grandchild is also resolved by checking database directly
         var grandchildEntity = await _dbContext.RuleSpecComments.FindAsync(grandchild.Id);
@@ -631,7 +631,7 @@ public class RuleCommentServiceTests : IDisposable
         // Verify child is NOT resolved
         var comments = await _service.GetCommentsForRuleSpecAsync(TestGameId, TestVersion, includeResolved: true);
         var parentWithReplies = comments.First(c => c.Id == parent.Id);
-        Assert.False(parentWithReplies.Replies.First().IsResolved);
+        parentWithReplies.Replies.First().IsResolved.Should().BeFalse();
     }
 
     #endregion
@@ -662,8 +662,8 @@ public class RuleCommentServiceTests : IDisposable
         var fakeId = Guid.NewGuid();
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<NotFoundException>(
-            () => _service.UnresolveCommentAsync(fakeId, unresolveParent: false));
+        var act = async () => await _service.UnresolveCommentAsync(fakeId, unresolveParent: false);
+        var ex = await act.Should().ThrowAsync<NotFoundException>();
 
         Assert.Contains(fakeId.ToString(), ex.Message);
     }

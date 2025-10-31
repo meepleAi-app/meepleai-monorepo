@@ -2,7 +2,8 @@
 
 **Document Version:** 1.9
 **Last Updated:** 2025-10-31
-**Total Issues:** 37 (25 open, 12 completed: EDIT-04, EDIT-05, EDIT-06, ADMIN-02, AI-13, AI-14, N8N-04, N8N-05, AI-15-ALT, OPS-07, TEST-03/#601, TEST-05/#597)
+**Total Issues:** 37 (26 open, 11 completed: EDIT-04, EDIT-05, EDIT-06, ADMIN-02, AI-13, AI-14, N8N-04, N8N-05, AI-15-ALT, OPS-07, TEST-03/#601)
+**Framework Complete (require follow-up)**: #597 (TEST-05)
 
 ---
 
@@ -214,7 +215,7 @@ Our approach follows these principles:
 | # | Issue | Priority | Effort | Rationale |
 |---|-------|----------|--------|-----------|
 | 36 | #601 TEST-03: Concurrency tests | ✅ PHASE 1 COMPLETE | L (20h actual, 30h est) | **PHASE 1 COMPLETE + PHASE 2 SQLite LIMITS**: Phase 1 (100%): Comprehensive testing guide (500+ lines), ConfigurationConcurrencyTests (6 passing tests with Testcontainers + PostgreSQL), 4 test patterns documented. **Phase 2 Critical Finding**: SQLite unsuitable for true concurrency (nested transaction errors). Attempted RuleSpec + SessionManagement tests (~900 LOC) - removed due to SQLite limits. **Production path**: ALL concurrency tests must use WebApplicationFactory + Testcontainers (ConfigurationConcurrencyTests pattern). Framework complete, future implementation: 6-8h per service. Branch: `test-601-concurrency-tests`. PR #603. Completed: 2025-10-31 |
-| 37 | #597 TEST-05: BackgroundServiceTestHelper | ✅ COMPLETE | M (6h actual, 8h est) | **100% COMPLETE**: Implemented BackgroundServiceTestHelper pattern for timing coordination between TestTimeProvider and BackgroundService execution. Solves race conditions in background service tests. **Deliverables**: BackgroundServiceTestHelper class (~150 LOC), 8 tests refactored (CacheWarmingServiceTests 4, QualityReportServiceTests 4), comprehensive testing guide (~400 lines). **Solution**: Coordinates virtual time advancement with 50ms real delays for thread scheduler. **Impact**: Eliminates flaky tests, deterministic execution, 50-150ms per test. PR #605. Completed: 2025-10-31 |
+| 37 | #597 TEST-05: BackgroundServiceTestHelper | ✅ FRAMEWORK COMPLETE | M (6h actual, 8h est) | **FRAMEWORK COMPLETE + Tests Require Additional Work**: BackgroundServiceTestHelper class created (~150 LOC) with fluent API, comprehensive testing guide (~400 lines), full documentation. **Current Limitation**: Tests still fail - background service coordination more complex than anticipated. Helper provides foundation but tests need alternative approach (direct method testing, sync hooks, or integration tests). **Similar to #601 Phase 2**: Framework delivered, honest limitation documentation. **Deliverables**: Reusable helper pattern, complete guide, 3 solution options documented. Requires follow-up issue for test fixes. PR #605. Branch: `DegrassiAaron/issue597`. Updated: 2025-10-31 |
 | 38 | #604 TEST-04: Testcontainers concurrency tests | 🔴 High | XL (24-32h) | **FOLLOW-UP to #601**: Implement Testcontainers-based concurrency tests for 4 critical services (RuleSpec, SessionManagement, PromptTemplate, Chat). MUST use ConfigurationConcurrencyTests pattern (WebApplicationFactory + Testcontainers + PostgreSQL). 16-20 tests total covering all 4 patterns (Lost Update, Optimistic, TOCTOU, Cache). Effort: 6-8h per service. **NOT SQLite** - Phase 2 of #601 proved SQLite unsuitable. Production-ready pattern defined. |
 
 **Next Steps**: Follow ConfigurationConcurrencyTests pattern for all services (see #604).

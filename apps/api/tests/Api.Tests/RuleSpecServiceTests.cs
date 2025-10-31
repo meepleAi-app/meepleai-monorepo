@@ -61,34 +61,26 @@ public class RuleSpecServiceTests : IDisposable
 
         var result = await _service.GetOrCreateDemoAsync(gameId);
 
-        Assert.Equal(gameId, result.gameId);
-        Assert.Equal("v0-demo", result.version);
-        Assert.Equal(2, result.rules.Count);
-        Assert.Collection(
-            result.rules,
-            atom =>
-            {
-                Assert.Equal("r1", atom.id);
-                Assert.Equal("Two players.", atom.text);
-                Assert.Equal("Basics", atom.section);
-                Assert.Equal("1", atom.page);
-                Assert.Equal("1", atom.line);
-            },
-            atom =>
-            {
-                Assert.Equal("r2", atom.id);
-                Assert.Equal("White moves first.", atom.text);
-                Assert.Equal("Basics", atom.section);
-                Assert.Equal("1", atom.page);
-                Assert.Equal("2", atom.line);
-            });
+        result.gameId.Should().Be(gameId);
+        result.version.Should().Be("v0-demo");
+        result.rules.Should().HaveCount(2);
+        result.rules[0].id.Should().Be("r1");
+        result.rules[0].text.Should().Be("Two players.");
+        result.rules[0].section.Should().Be("Basics");
+        result.rules[0].page.Should().Be("1");
+        result.rules[0].line.Should().Be("1");
+        result.rules[1].id.Should().Be("r2");
+        result.rules[1].text.Should().Be("White moves first.");
+        result.rules[1].section.Should().Be("Basics");
+        result.rules[1].page.Should().Be("1");
+        result.rules[1].line.Should().Be("2");
 
         var savedGame = await _dbContext.Games.FirstOrDefaultAsync(g => g.Id == gameId);
         savedGame.Should().NotBeNull();
         var savedSpec = await _dbContext.RuleSpecs.Include(s => s.Atoms).SingleAsync();
-        Assert.Equal(gameId, savedSpec.GameId);
-        Assert.Equal("v0-demo", savedSpec.Version);
-        Assert.Equal(2, savedSpec.Atoms.Count);
+        savedSpec.GameId.Should().Be(gameId);
+        savedSpec.Version.Should().Be("v0-demo");
+        savedSpec.Atoms.Count.Should().Be(2);
     }
 
     [Fact]
@@ -121,10 +113,10 @@ public class RuleSpecServiceTests : IDisposable
 
         var result = await _service.GetOrCreateDemoAsync(game.Id);
 
-        Assert.Equal("v1", result.version);
-        Assert.Single(result.rules);
-        Assert.Equal("Existing rule.", result.rules[0].text);
-        Assert.Equal(1, await _dbContext.RuleSpecs.CountAsync());
+        result.version.Should().Be("v1");
+        result.rules.Should().ContainSingle();
+        result.rules[0].text.Should().Be("Existing rule.");
+        (await _dbContext.RuleSpecs.CountAsync()).Should().Be(1);
     }
 
     [Fact]
@@ -163,21 +155,21 @@ public class RuleSpecServiceTests : IDisposable
 
         var result = await _service.UpdateRuleSpecAsync(game.Id, model, user.Id);
 
-        Assert.Equal(game.Id, result.gameId);
-        Assert.Equal("v2", result.version);
-        Assert.Equal(2, result.rules.Count);
+        result.gameId.Should().Be(game.Id);
+        result.version.Should().Be("v2");
+        result.rules.Count.Should().Be(2);
 
         var entity = await _dbContext.RuleSpecs.Include(r => r.Atoms)
             .SingleAsync(r => r.GameId == game.Id && r.Version == "v2");
-        Assert.Equal(2, entity.Atoms.Count);
-        Assert.Contains(entity.Atoms, a => a.Key == "a1" && a.Text == "First rule");
-        Assert.Contains(entity.Atoms, a => a.Key == "a2" && a.Text == "Second rule");
+        entity.Atoms.Count.Should().Be(2);
+        a => a.Key == "a1" && a.Text == "First rule".Should().Contain(entity.Atoms);
+        a => a.Key == "a2" && a.Text == "Second rule".Should().Contain(entity.Atoms);
 
         _cacheMock.Verify(x => x.InvalidateGameAsync(game.Id, It.IsAny<CancellationToken>()), Times.Once);
-        Assert.Equal(user.Id, entity.CreatedByUserId);
+        entity.CreatedByUserId.Should().Be(user.Id);
 
         var history = await _service.GetVersionHistoryAsync(game.Id);
-        Assert.Equal("Author", history.Versions.First().CreatedBy);
+        history.Versions.First().CreatedBy.Should().Be("Author");
     }
 
     [Fact]
@@ -232,17 +224,17 @@ public class RuleSpecServiceTests : IDisposable
 
         var result = await _service.UpdateRuleSpecAsync(game.Id, model, user.Id);
 
-        Assert.Equal(game.Id, result.gameId);
-        Assert.Equal("v2", result.version);
+        result.gameId.Should().Be(game.Id);
+        result.version.Should().Be("v2");
 
         var saved = await _dbContext.RuleSpecs
             .SingleAsync(r => r.GameId == game.Id && r.Version == "v2");
-        Assert.Equal(user.Id, saved.CreatedByUserId);
+        saved.CreatedByUserId.Should().Be(user.Id);
 
         var history = await _service.GetVersionHistoryAsync(game.Id);
-        Assert.Equal(2, history.TotalVersions);
-        Assert.Equal("Second Author", history.Versions.First().CreatedBy);
-        Assert.Equal("v2", history.Versions.First().Version);
+        history.TotalVersions.Should().Be(2);
+        history.Versions.First().CreatedBy.Should().Be("Second Author");
+        history.Versions.First().Version.Should().Be("v2");
     }
 
     [Fact]
@@ -287,8 +279,8 @@ public class RuleSpecServiceTests : IDisposable
                 new RuleAtom("dup", "Duplicate", "Intro", "1", "1"),
             });
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.UpdateRuleSpecAsync(game.Id, model, user.Id));
+        var act = async () => await _service.UpdateRuleSpecAsync(game.Id, model, user.Id);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -351,22 +343,15 @@ public class RuleSpecServiceTests : IDisposable
 
         var history = await _service.GetVersionHistoryAsync(game.Id);
 
-        Assert.Equal(game.Id, history.GameId);
-        Assert.Equal(2, history.TotalVersions);
-        Assert.Collection(
-            history.Versions,
-            version =>
-            {
-                Assert.Equal("v2", version.Version);
-                Assert.Equal(1, version.RuleCount);
-                Assert.Equal("Test User", version.CreatedBy);
-            },
-            version =>
-            {
-                Assert.Equal("v1", version.Version);
-                Assert.Equal(1, version.RuleCount);
-                Assert.Equal("Test User", version.CreatedBy);
-            });
+        history.GameId.Should().Be(game.Id);
+        history.TotalVersions.Should().Be(2);
+        history.Versions.Should().HaveCount(2);
+        history.Versions[0].Version.Should().Be("v2");
+        history.Versions[0].RuleCount.Should().Be(1);
+        history.Versions[0].CreatedBy.Should().Be("Test User");
+        history.Versions[1].Version.Should().Be("v1");
+        history.Versions[1].RuleCount.Should().Be(1);
+        history.Versions[1].CreatedBy.Should().Be("Test User");
     }
 
     [Fact]
@@ -415,14 +400,14 @@ public class RuleSpecServiceTests : IDisposable
 
         var result = await _service.GenerateRuleSpecFromPdfAsync(pdf.Id);
 
-        Assert.Equal(game.Id, result.gameId);
-        Assert.StartsWith("ingest-", result.version, StringComparison.Ordinal);
-        Assert.Equal(2, result.rules.Count);
-        Assert.Equal("r1", result.rules[0].id);
-        Assert.Equal("Setup: Place pieces; Count: 16", result.rules[0].text);
-        Assert.Equal("3", result.rules[0].page);
-        Assert.Equal("r2", result.rules[1].id);
-        Assert.Equal("Victory condition: Highest score wins", result.rules[1].text);
+        result.gameId.Should().Be(game.Id);
+        result.version.Should().StartWith("ingest-");
+        result.rules.Count.Should().Be(2);
+        result.rules[0].id.Should().Be("r1");
+        result.rules[0].text.Should().Be("Setup: Place pieces; Count: 16");
+        result.rules[0].page.Should().Be("3");
+        result.rules[1].id.Should().Be("r2");
+        result.rules[1].text.Should().Be("Victory condition: Highest score wins");
     }
 
     [Fact]
@@ -469,12 +454,12 @@ public class RuleSpecServiceTests : IDisposable
 
         var spec = await _service.GenerateRuleSpecFromPdfAsync(pdf.Id);
 
-        Assert.Equal(game.Id, spec.gameId);
-        Assert.StartsWith("ingest-", spec.version, StringComparison.Ordinal);
-        Assert.Single(spec.rules);
-        Assert.Equal("r1", spec.rules[0].id);
-        Assert.Equal("Setup: Each player draws five cards", spec.rules[0].text);
-        Assert.Equal("3", spec.rules[0].page);
+        spec.gameId.Should().Be(game.Id);
+        spec.version.Should().StartWith("ingest-");
+        spec.rules.Should().ContainSingle();
+        spec.rules[0].id.Should().Be("r1");
+        spec.rules[0].text.Should().Be("Setup: Each player draws five cards");
+        spec.rules[0].page.Should().Be("3");
     }
 
     [Fact]
@@ -517,12 +502,12 @@ public class RuleSpecServiceTests : IDisposable
 
         var spec = await _service.GenerateRuleSpecFromPdfAsync(pdf.Id);
 
-        Assert.Equal(game.Id, spec.gameId);
-        Assert.StartsWith("ingest-", spec.version, StringComparison.Ordinal);
-        Assert.Equal(2, spec.rules.Count);
-        Assert.Equal("Rule one applies.", spec.rules[0].text);
-        Assert.Equal("Rule two applies.", spec.rules[1].text);
-        Assert.All(spec.rules, atom => Assert.Null(atom.page));
+        spec.gameId.Should().Be(game.Id);
+        spec.version.Should().StartWith("ingest-");
+        spec.rules.Count.Should().Be(2);
+        spec.rules[0].text.Should().Be("Rule one applies.");
+        spec.rules[1].text.Should().Be("Rule two applies.");
+        spec.rules.Should().OnlyContain(atom => atom.page == null);
     }
 
     [Fact]
@@ -566,17 +551,18 @@ public class RuleSpecServiceTests : IDisposable
 
         var result = await _service.GenerateRuleSpecFromPdfAsync(pdf.Id);
 
-        Assert.Equal(game.Id, result.gameId);
-        Assert.True(result.rules.Count >= 2);
-        Assert.Contains(result.rules, atom => atom.text.Contains("Rule one", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(result.rules, atom => atom.text.Contains("Rule two", StringComparison.OrdinalIgnoreCase));
-        Assert.All(result.rules, atom => Assert.Null(atom.section));
+        result.gameId.Should().Be(game.Id);
+        result.rules.Count >= 2.Should().BeTrue();
+        result.rules.Should().Contain(atom => atom.text.Contains("Rule one", StringComparison.OrdinalIgnoreCase));
+        result.rules.Should().Contain(atom => atom.text.Contains("Rule two", StringComparison.OrdinalIgnoreCase));
+        result.rules.Should().OnlyContain(atom => atom.section == null);
     }
 
     [Fact]
     public async Task GenerateRuleSpecFromPdfAsync_WhenPdfMissing_Throws()
     {
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _service.GenerateRuleSpecFromPdfAsync("missing"));
+        var act = async () => await _service.GenerateRuleSpecFromPdfAsync("missing");
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     // CreateZipArchiveAsync Tests
@@ -617,15 +603,15 @@ public class RuleSpecServiceTests : IDisposable
 
         // Assert
         zipBytes.Should().NotBeNull();
-        Assert.True(zipBytes.Length > 0);
+        zipBytes.Length > 0.Should().BeTrue();
 
         // Verify ZIP structure
         using var memoryStream = new MemoryStream(zipBytes);
         using var archive = new ZipArchive(memoryStream, ZipArchiveMode.Read);
 
-        Assert.Single(archive.Entries);
+        archive.Entries.Should().ContainSingle();
         var entry = archive.Entries[0];
-        Assert.Equal("chess_v1.json", entry.Name);
+        entry.Name.Should().Be("chess_v1.json");
 
         // Verify JSON content
         using var entryStream = entry.Open();
@@ -637,10 +623,10 @@ public class RuleSpecServiceTests : IDisposable
         });
 
         ruleSpec.Should().NotBeNull();
-        Assert.Equal("chess", ruleSpec.gameId);
-        Assert.Equal("v1", ruleSpec.version);
-        Assert.Single(ruleSpec.rules);
-        Assert.Equal("Two players", ruleSpec.rules[0].text);
+        ruleSpec.gameId.Should().Be("chess");
+        ruleSpec.version.Should().Be("v1");
+        ruleSpec.rules.Should().ContainSingle();
+        ruleSpec.rules[0].text.Should().Be("Two players");
     }
 
     [Fact]
@@ -689,23 +675,23 @@ public class RuleSpecServiceTests : IDisposable
         using var memoryStream = new MemoryStream(zipBytes);
         using var archive = new ZipArchive(memoryStream, ZipArchiveMode.Read);
 
-        Assert.Equal(2, archive.Entries.Count);
-        Assert.Contains(archive.Entries, e => e.Name == "chess_v1.json");
-        Assert.Contains(archive.Entries, e => e.Name == "checkers_v2.json");
+        archive.Entries.Count.Should().Be(2);
+        e => e.Name == "chess_v1.json".Should().Contain(archive.Entries);
+        e => e.Name == "checkers_v2.json".Should().Contain(archive.Entries);
     }
 
     [Fact]
     public async Task CreateZipArchiveAsync_WithEmptyGameIds_ThrowsArgumentException()
     {
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.CreateZipArchiveAsync(new List<string>()));
+        var act = async () => await _service.CreateZipArchiveAsync(new List<string>());
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
     public async Task CreateZipArchiveAsync_WithNullGameIds_ThrowsArgumentException()
     {
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.CreateZipArchiveAsync(null!));
+        var act = async () => await _service.CreateZipArchiveAsync(null!);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -713,17 +699,17 @@ public class RuleSpecServiceTests : IDisposable
     {
         var tooManyIds = Enumerable.Range(1, 101).Select(i => $"game{i}").ToList();
 
-        var ex = await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.CreateZipArchiveAsync(tooManyIds));
+        var act = async () => await _service.CreateZipArchiveAsync(tooManyIds);
+        var ex = await act.Should().ThrowAsync<ArgumentException>();
 
-        Assert.Contains("100", ex.Message);
+        ex.Which.Message.Should().Contain("100");
     }
 
     [Fact]
     public async Task CreateZipArchiveAsync_WithNonExistentGameIds_ThrowsInvalidOperationException()
     {
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.CreateZipArchiveAsync(new List<string> { "non-existent-game" }));
+        var act = async () => await _service.CreateZipArchiveAsync(new List<string> { "non-existent-game" });
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -761,8 +747,8 @@ public class RuleSpecServiceTests : IDisposable
         using var memoryStream = new MemoryStream(zipBytes);
         using var archive = new ZipArchive(memoryStream, ZipArchiveMode.Read);
 
-        Assert.Single(archive.Entries);
-        Assert.Equal("chess_v1.json", archive.Entries[0].Name);
+        archive.Entries.Should().ContainSingle();
+        archive.Entries[0].Name.Should().Be("chess_v1.json");
     }
 
     [Fact]
@@ -800,12 +786,12 @@ public class RuleSpecServiceTests : IDisposable
         using var memoryStream = new MemoryStream(zipBytes);
         using var archive = new ZipArchive(memoryStream, ZipArchiveMode.Read);
 
-        Assert.Single(archive.Entries);
+        archive.Entries.Should().ContainSingle();
         var entry = archive.Entries[0];
 
         // Filename should not contain invalid characters
-        Assert.DoesNotContain("/", entry.Name);
-        Assert.DoesNotContain(":", entry.Name);
-        Assert.DoesNotContain("*", entry.Name);
+        entry.Name.Should().NotContain("/");
+        entry.Name.Should().NotContain(":");
+        entry.Name.Should().NotContain("*");
     }
 }

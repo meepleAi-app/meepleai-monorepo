@@ -209,6 +209,14 @@ Our approach follows these principles:
 
 **Parallel**: #420 (BGG) can run independently. #422 and #406 are related (both search enhancements). #424 is ongoing research.
 
+### Phase 10: Quality & Testing Infrastructure (Weeks 15-18)
+
+| # | Issue | Priority | Effort | Rationale |
+|---|-------|----------|--------|-----------|
+| 36 | #601 TEST-03: Concurrency tests | 🔄 IN PROGRESS | L (30h est) | **PARTIAL - Documentation Complete (40%)**: Comprehensive concurrency testing guide (500+ lines), implementation summary with patterns and best practices. Reference implementation exists (ConfigurationConcurrencyTests). Additional service tests require API discovery. PR #602. Status: Documentation phase complete, test implementation requires incremental approach per service. |
+
+**Next Steps**: Follow incremental approach in implementation summary (API discovery → 2-3 tests → verify → next service).
+
 ---
 
 ## Parallelization Opportunities

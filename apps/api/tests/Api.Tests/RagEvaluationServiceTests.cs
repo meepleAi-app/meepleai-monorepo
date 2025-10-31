@@ -81,10 +81,10 @@ public class RagEvaluationServiceTests : IDisposable
 
         // Assert
         loaded.Should().NotBeNull();
-        Assert.Equal("Test Dataset", loaded.Name);
-        Assert.Equal("1.0", loaded.Version);
-        Assert.Single(loaded.Queries);
-        Assert.Equal("test-001", loaded.Queries[0].Id);
+        loaded.Name.Should().Be("Test Dataset");
+        loaded.Version.Should().Be("1.0");
+        loaded.Queries.Should().ContainSingle();
+        loaded.Queries[0].Id.Should().Be("test-001");
     }
 
     [Fact]
@@ -94,8 +94,8 @@ public class RagEvaluationServiceTests : IDisposable
         var nonExistentPath = Path.Combine(Path.GetTempPath(), "non-existent-file.json");
 
         // Act & Assert
-        await Assert.ThrowsAsync<FileNotFoundException>(
-            () => _service.LoadDatasetAsync(nonExistentPath));
+        var act = async () => await _service.LoadDatasetAsync(nonExistentPath);
+        await act.Should().ThrowAsync<FileNotFoundException>();
     }
 
     [Fact]
@@ -105,18 +105,18 @@ public class RagEvaluationServiceTests : IDisposable
         await File.WriteAllTextAsync(_tempDatasetPath, "{ invalid json }");
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.LoadDatasetAsync(_tempDatasetPath));
+        var act = async () => await _service.LoadDatasetAsync(_tempDatasetPath);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
     public async Task LoadDatasetAsync_NullOrEmptyPath_ThrowsException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.LoadDatasetAsync(""));
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.LoadDatasetAsync(null!));
+        var act1 = async () => await _service.LoadDatasetAsync("");
+        await act1.Should().ThrowAsync<ArgumentException>();
+        var act2 = async () => await _service.LoadDatasetAsync(null!);
+        await act2.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -137,20 +137,20 @@ public class RagEvaluationServiceTests : IDisposable
         var report = await _service.EvaluateAsync(dataset, topK: 10);
 
         // Assert
-        Assert.Equal(1, report.TotalQueries);
-        Assert.Equal(1, report.SuccessfulQueries);
-        Assert.Equal(0, report.FailedQueries);
+        report.TotalQueries.Should().Be(1);
+        report.SuccessfulQueries.Should().Be(1);
+        report.FailedQueries.Should().Be(0);
 
         // Perfect precision at all K values
-        Assert.Equal(1.0, report.AvgPrecisionAt1);
-        Assert.Equal(1.0, report.AvgPrecisionAt3);
-        Assert.Equal(1.0, report.AvgPrecisionAt5);
+        report.AvgPrecisionAt1.Should().Be(1.0);
+        report.AvgPrecisionAt3.Should().Be(1.0);
+        report.AvgPrecisionAt5.Should().Be(1.0);
 
         // Perfect recall
-        Assert.Equal(1.0, report.AvgRecallAtK);
+        report.AvgRecallAtK.Should().Be(1.0);
 
         // Perfect MRR (first result is relevant)
-        Assert.Equal(1.0, report.MeanReciprocalRank);
+        report.MeanReciprocalRank.Should().Be(1.0);
     }
 
     [Fact]
@@ -171,11 +171,11 @@ public class RagEvaluationServiceTests : IDisposable
         var report = await _service.EvaluateAsync(dataset, topK: 10);
 
         // Assert
-        Assert.Equal(1, report.SuccessfulQueries);
-        Assert.Equal(0.0, report.AvgPrecisionAt1);
-        Assert.Equal(0.0, report.AvgPrecisionAt5);
-        Assert.Equal(0.0, report.AvgRecallAtK);
-        Assert.Equal(0.0, report.MeanReciprocalRank);
+        report.SuccessfulQueries.Should().Be(1);
+        report.AvgPrecisionAt1.Should().Be(0.0);
+        report.AvgPrecisionAt5.Should().Be(0.0);
+        report.AvgRecallAtK.Should().Be(0.0);
+        report.MeanReciprocalRank.Should().Be(0.0);
     }
 
     [Fact]
@@ -198,16 +198,16 @@ public class RagEvaluationServiceTests : IDisposable
 
         // Assert
         // MRR = 1/3 = 0.3333...
-        Assert.Equal(1.0 / 3.0, report.MeanReciprocalRank, precision: 4);
+        report.MeanReciprocalRank, precision: 4.Should().Be(1.0 / 3.0);
 
         // Precision@1 = 0 (first result not relevant)
-        Assert.Equal(0.0, report.AvgPrecisionAt1);
+        report.AvgPrecisionAt1.Should().Be(0.0);
 
         // Precision@3 = 1/3 (1 relevant in top 3)
-        Assert.Equal(1.0 / 3.0, report.AvgPrecisionAt3, precision: 4);
+        report.AvgPrecisionAt3, precision: 4.Should().Be(1.0 / 3.0);
 
         // Precision@5 = 1/3 (only 3 results total, 1 relevant)
-        Assert.Equal(1.0 / 3.0, report.AvgPrecisionAt5, precision: 4);
+        report.AvgPrecisionAt5, precision: 4.Should().Be(1.0 / 3.0);
     }
 
     [Fact]
@@ -243,12 +243,12 @@ public class RagEvaluationServiceTests : IDisposable
 
         // Assert
         var result = report.QueryResults[0];
-        Assert.Equal(4, result.RelevantCount); // 4 relevant docs in ground truth
-        Assert.Equal(2, result.RelevantRetrievedCount); // 2 relevant docs retrieved
+        result.RelevantCount.Should().Be(4); // 4 relevant docs in ground truth
+        result.RelevantRetrievedCount.Should().Be(2); // 2 relevant docs retrieved
 
         // Recall = 2/4 = 0.5
-        Assert.Equal(0.5, result.RecallAtK);
-        Assert.Equal(0.5, report.AvgRecallAtK);
+        result.RecallAtK.Should().Be(0.5);
+        report.AvgRecallAtK.Should().Be(0.5);
     }
 
     [Fact]
@@ -298,10 +298,10 @@ public class RagEvaluationServiceTests : IDisposable
         var report = await _service.EvaluateAsync(dataset, topK: 10);
 
         // Assert
-        Assert.Equal(2, report.TotalQueries);
-        Assert.Equal(2, report.SuccessfulQueries);
-        Assert.Equal(1.0, report.MeanReciprocalRank); // Both queries have perfect MRR
-        Assert.Equal(1.0, report.AvgPrecisionAt1);
+        report.TotalQueries.Should().Be(2);
+        report.SuccessfulQueries.Should().Be(2);
+        report.MeanReciprocalRank.Should().Be(1.0); // Both queries have perfect MRR
+        report.AvgPrecisionAt1.Should().Be(1.0);
     }
 
     [Fact]
@@ -319,11 +319,11 @@ public class RagEvaluationServiceTests : IDisposable
         var report = await _service.EvaluateAsync(dataset, topK: 10);
 
         // Assert
-        Assert.Equal(1, report.TotalQueries);
-        Assert.Equal(0, report.SuccessfulQueries);
-        Assert.Equal(1, report.FailedQueries);
-        Assert.False(report.QueryResults[0].Success);
-        Assert.Contains("Embedding generation failed", report.QueryResults[0].ErrorMessage);
+        report.TotalQueries.Should().Be(1);
+        report.SuccessfulQueries.Should().Be(0);
+        report.FailedQueries.Should().Be(1);
+        report.QueryResults[0].Success.Should().BeFalse();
+        report.QueryResults[0].ErrorMessage.Should().Contain("Embedding generation failed");
     }
 
     [Fact]
@@ -343,9 +343,9 @@ public class RagEvaluationServiceTests : IDisposable
         var report = await _service.EvaluateAsync(dataset, topK: 10);
 
         // Assert
-        Assert.Equal(1, report.FailedQueries);
-        Assert.False(report.QueryResults[0].Success);
-        Assert.Contains("Search failed", report.QueryResults[0].ErrorMessage);
+        report.FailedQueries.Should().Be(1);
+        report.QueryResults[0].Success.Should().BeFalse();
+        report.QueryResults[0].ErrorMessage.Should().Contain("Search failed");
     }
 
     [Fact]
@@ -389,9 +389,9 @@ public class RagEvaluationServiceTests : IDisposable
         var report = await _service.EvaluateAsync(dataset, topK: 10);
 
         // Assert
-        Assert.True(report.LatencyP50 > 0);
-        Assert.True(report.LatencyP95 > report.LatencyP50); // p95 should be higher than median
-        Assert.True(report.LatencyP99 > report.LatencyP95); // p99 should be higher than p95
+        report.LatencyP50 > 0.Should().BeTrue();
+        report.LatencyP95 > report.LatencyP50.Should().BeTrue(); // p95 should be higher than median
+        report.LatencyP99 > report.LatencyP95.Should().BeTrue(); // p99 should be higher than p95
     }
 
     [Fact]
@@ -417,7 +417,7 @@ public class RagEvaluationServiceTests : IDisposable
         var report = await _service.EvaluateAsync(dataset, topK: 10, thresholds);
 
         // Assert
-        Assert.True(report.PassedQualityGates);
+        report.PassedQualityGates.Should().BeTrue();
         report.QualityGateFailures.Should().BeEmpty();
     }
 
@@ -446,24 +446,24 @@ public class RagEvaluationServiceTests : IDisposable
         var report = await _service.EvaluateAsync(dataset, topK: 10, thresholds);
 
         // Assert
-        Assert.False(report.PassedQualityGates);
+        report.PassedQualityGates.Should().BeFalse();
         report.QualityGateFailures.Should().NotBeEmpty();
-        Assert.Contains(report.QualityGateFailures, f => f.Contains("Precision@5"));
-        Assert.Contains(report.QualityGateFailures, f => f.Contains("MRR"));
+        report.QualityGateFailures.Should().Contain(f => f.Contains("Precision@5"));
+        report.QualityGateFailures.Should().Contain(f => f.Contains("MRR"));
     }
 
     [Fact]
     public async Task EvaluateAsync_InvalidArguments_ThrowsException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(
-            () => _service.EvaluateAsync(null!));
+        var act1 = async () => await _service.EvaluateAsync(null!);
+        await act1.Should().ThrowAsync<ArgumentNullException>();
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.EvaluateAsync(new RagEvaluationDataset { Name = "Empty", Queries = Array.Empty<RagEvaluationQuery>() }));
+        var act2 = async () => await _service.EvaluateAsync(new RagEvaluationDataset { Name = "Empty", Queries = Array.Empty<RagEvaluationQuery>() });
+        await act2.Should().ThrowAsync<ArgumentException>();
 
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.EvaluateAsync(CreateSimpleDataset(), topK: 0));
+        var act3 = async () => await _service.EvaluateAsync(CreateSimpleDataset(), topK: 0);
+        await act3.Should().ThrowAsync<ArgumentException>();
     }
 
     // Note: Markdown formatting test - needs investigation of exact format
@@ -499,12 +499,12 @@ public class RagEvaluationServiceTests : IDisposable
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("# RAG Evaluation Report", markdown);
-        Assert.Contains("Test Report", markdown);
-        Assert.Contains("✅ PASSED", markdown);
-        Assert.Contains("Mean Reciprocal Rank", markdown);
-        Assert.Contains("0.85", markdown); // MRR value (flexible format matching)
-        Assert.Contains("Latency p95", markdown);
+        markdown.Should().Contain("# RAG Evaluation Report");
+        markdown.Should().Contain("Test Report");
+        markdown.Should().Contain("✅ PASSED");
+        markdown.Should().Contain("Mean Reciprocal Rank");
+        markdown.Should().Contain("0.85"); // MRR value (flexible format matching)
+        markdown.Should().Contain("Latency p95");
     }
 
     [Fact]
@@ -529,10 +529,10 @@ public class RagEvaluationServiceTests : IDisposable
         var markdown = _service.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.Contains("❌ FAILED", markdown);
-        Assert.Contains("Quality Gate Failures", markdown);
-        Assert.Contains("Precision@5 (0.6000) below threshold", markdown);
-        Assert.Contains("MRR (0.5000) below threshold", markdown);
+        markdown.Should().Contain("❌ FAILED");
+        markdown.Should().Contain("Quality Gate Failures");
+        markdown.Should().Contain("Precision@5 (0.6000) below threshold");
+        markdown.Should().Contain("MRR (0.5000) below threshold");
     }
 
     [Fact]
@@ -566,24 +566,24 @@ public class RagEvaluationServiceTests : IDisposable
             PropertyNameCaseInsensitive = true
         });
         deserialized.Should().NotBeNull();
-        Assert.Equal("JSON Test", deserialized.DatasetName);
-        Assert.Equal(0.9, deserialized.MeanReciprocalRank);
+        deserialized.DatasetName.Should().Be("JSON Test");
+        deserialized.MeanReciprocalRank.Should().Be(0.9);
     }
 
     [Fact]
     public void GenerateMarkdownReport_NullReport_ThrowsException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(
-            () => _service.GenerateMarkdownReport(null!));
+        var act = () => _service.GenerateMarkdownReport(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void GenerateJsonReport_NullReport_ThrowsException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(
-            () => _service.GenerateJsonReport(null!));
+        var act = () => _service.GenerateJsonReport(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     // Helper methods

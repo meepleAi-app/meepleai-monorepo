@@ -66,29 +66,29 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: System creates config successfully
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var dto = await response.Content.ReadFromJsonAsync<N8nConfigDto>(JsonOptions);
         dto.Should().NotBeNull();
-        Assert.Equal("Primary Workflow", dto!.Name);
-        Assert.Equal("https://n8n.local", dto.BaseUrl);
-        Assert.Equal("https://n8n.local/webhook", dto.WebhookUrl);
+        dto!.Name.Should().Be("Primary Workflow");
+        dto.BaseUrl.Should().Be("https://n8n.local");
+        dto.WebhookUrl.Should().Be("https://n8n.local/webhook");
 
         // And: API key is encrypted in database
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var entity = await db.N8nConfigs.SingleAsync(c => c.Id == dto.Id);
-        Assert.Equal(adminUserId, entity.CreatedByUserId);
-        Assert.Equal("https://n8n.local", entity.BaseUrl);
+        entity.CreatedByUserId.Should().Be(adminUserId);
+        entity.BaseUrl.Should().Be("https://n8n.local");
         Assert.False(string.IsNullOrWhiteSpace(entity.ApiKeyEncrypted));
-        Assert.NotEqual("test-api-key", entity.ApiKeyEncrypted);
+        entity.ApiKeyEncrypted.Should().NotBe("test-api-key");
 
         // And: Config appears in list endpoint
         var listRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/n8n");
         AddCookies(listRequest, cookies);
         var listResponse = await adminClient.SendAsync(listRequest);
 
-        Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+        listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         using var listDocument = JsonDocument.Parse(await listResponse.Content.ReadAsStringAsync());
         var configs = listDocument.RootElement.GetProperty("configs");
         Assert.Contains(configs.EnumerateArray(), element => element.GetProperty("id").GetString() == dto.Id);
@@ -123,12 +123,12 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: System returns config successfully
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var dto = await response.Content.ReadFromJsonAsync<N8nConfigDto>(JsonOptions);
         dto.Should().NotBeNull();
-        Assert.Equal(config.Id, dto!.Id);
-        Assert.Equal(config.Name, dto.Name);
+        dto!.Id.Should().Be(config.Id);
+        dto.Name.Should().Be(config.Name);
     }
 
     /// <summary>
@@ -177,26 +177,26 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(updateRequest);
 
         // Then: System updates config successfully
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var dto = await response.Content.ReadFromJsonAsync<N8nConfigDto>(JsonOptions);
         dto.Should().NotBeNull();
-        Assert.Equal("Updated Workflow", dto!.Name);
-        Assert.Equal("https://n8n.updated", dto.BaseUrl);
-        Assert.Equal("https://n8n.updated/webhook", dto.WebhookUrl);
-        Assert.False(dto.IsActive);
+        dto!.Name.Should().Be("Updated Workflow");
+        dto.BaseUrl.Should().Be("https://n8n.updated");
+        dto.WebhookUrl.Should().Be("https://n8n.updated/webhook");
+        dto.IsActive.Should().BeFalse();
 
         // And: API key is rotated and re-encrypted
         await using (var verifyScope = Factory.Services.CreateAsyncScope())
         {
             var db = verifyScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var entity = await db.N8nConfigs.SingleAsync(c => c.Id == existing.Id);
-            Assert.Equal("Updated Workflow", entity.Name);
-            Assert.Equal("https://n8n.updated", entity.BaseUrl);
-            Assert.Equal("https://n8n.updated/webhook", entity.WebhookUrl);
-            Assert.False(entity.IsActive);
-            Assert.NotEqual(originalEncryptedKey, entity.ApiKeyEncrypted);
-            Assert.True(entity.UpdatedAt > entity.CreatedAt);
+            entity.Name.Should().Be("Updated Workflow");
+            entity.BaseUrl.Should().Be("https://n8n.updated");
+            entity.WebhookUrl.Should().Be("https://n8n.updated/webhook");
+            entity.IsActive.Should().BeFalse();
+            entity.ApiKeyEncrypted.Should().NotBe(originalEncryptedKey);
+            entity.UpdatedAt > entity.CreatedAt.Should().BeTrue();
         }
     }
 
@@ -223,7 +223,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: System returns 404 with error message
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal("Configuration not found", document.RootElement.GetProperty("error").GetString());
     }
@@ -259,13 +259,13 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: System returns successful test result
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<N8nTestResult>(JsonOptions);
         result.Should().NotBeNull();
-        Assert.True(result!.Success);
+        result!.Success.Should().BeTrue();
         Assert.StartsWith("Connection successful", result.Message, StringComparison.Ordinal);
-        Assert.True(result.LatencyMs.HasValue);
+        result.LatencyMs.HasValue.Should().BeTrue();
 
         // And: Test metadata is persisted
         await using (var scope = Factory.Services.CreateAsyncScope())
@@ -304,6 +304,6 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         var response = await nonAdminClient.SendAsync(request);
 
         // Then: System denies access
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 }

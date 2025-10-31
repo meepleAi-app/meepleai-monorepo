@@ -37,7 +37,7 @@ public class RateLimitingTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Rate limit headers are present
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         Assert.True(response.Headers.Contains("X-RateLimit-Limit"));
         Assert.True(response.Headers.Contains("X-RateLimit-Remaining"));
 
@@ -48,8 +48,8 @@ public class RateLimitingTests : IntegrationTestBase
         remaining.Should().NotBeNull();
         Assert.True(int.TryParse(limit, out var limitValue));
         Assert.True(int.TryParse(remaining, out var remainingValue));
-        Assert.True(limitValue > 0);
-        Assert.True(remainingValue >= 0);
+        limitValue > 0.Should().BeTrue();
+        remainingValue >= 0.Should().BeTrue();
     }
 
     [Fact]
@@ -62,13 +62,13 @@ public class RateLimitingTests : IntegrationTestBase
         var response = await client.GetAsync("/");
 
         // Then: Rate limit headers are present
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         Assert.True(response.Headers.Contains("X-RateLimit-Limit"));
         Assert.True(response.Headers.Contains("X-RateLimit-Remaining"));
 
         // And: Anonymous limit is applied (60 burst, 1/sec)
         var limit = response.Headers.GetValues("X-RateLimit-Limit").FirstOrDefault();
-        Assert.Equal("60", limit); // Default anonymous limit
+        limit.Should().Be("60"); // Default anonymous limit
     }
 
     #endregion
@@ -89,9 +89,9 @@ public class RateLimitingTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Admin rate limit is applied (1000 burst)
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var limit = response.Headers.GetValues("X-RateLimit-Limit").FirstOrDefault();
-        Assert.Equal("1000", limit); // Admin limit
+        limit.Should().Be("1000"); // Admin limit
     }
 
     [Fact]
@@ -108,9 +108,9 @@ public class RateLimitingTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Editor rate limit is applied (500 burst)
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var limit = response.Headers.GetValues("X-RateLimit-Limit").FirstOrDefault();
-        Assert.Equal("500", limit); // Editor limit
+        limit.Should().Be("500"); // Editor limit
     }
 
     [Fact]
@@ -127,9 +127,9 @@ public class RateLimitingTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: User rate limit is applied (100 burst)
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var limit = response.Headers.GetValues("X-RateLimit-Limit").FirstOrDefault();
-        Assert.Equal("100", limit); // User limit
+        limit.Should().Be("100"); // User limit
     }
 
     #endregion
@@ -199,13 +199,13 @@ public class RateLimitingTests : IntegrationTestBase
         // Then: If rate limited, Retry-After header is present
         if (rateLimitedResponse != null)
         {
-            Assert.Equal(HttpStatusCode.TooManyRequests, rateLimitedResponse.StatusCode);
+            rateLimitedResponse.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
             Assert.True(rateLimitedResponse.Headers.Contains("Retry-After"));
 
             var retryAfter = rateLimitedResponse.Headers.GetValues("Retry-After").FirstOrDefault();
             retryAfter.Should().NotBeNull();
             Assert.True(int.TryParse(retryAfter, out var seconds));
-            Assert.True(seconds > 0);
+            seconds > 0.Should().BeTrue();
         }
         // NOTE: If not rate limited, rate limiting is disabled/high in test environment
     }
@@ -236,11 +236,11 @@ public class RateLimitingTests : IntegrationTestBase
         // Then: If rate limited, response contains JSON error with message
         if (rateLimitedResponse != null)
         {
-            Assert.Equal(HttpStatusCode.TooManyRequests, rateLimitedResponse.StatusCode);
+            rateLimitedResponse.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
             var content = await rateLimitedResponse.Content.ReadAsStringAsync();
             content.Should().NotBeNull();
-            Assert.Contains("error", content);
-            Assert.Contains("Rate limit exceeded", content);
+            content.Should().Contain("error");
+            content.Should().Contain("Rate limit exceeded");
         }
     }
 
@@ -259,16 +259,16 @@ public class RateLimitingTests : IntegrationTestBase
         var secondResponse = await client.GetAsync("/");
 
         // Then: Both succeed (within anonymous limit of 60 burst)
-        Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, secondResponse.StatusCode);
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        secondResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: Rate limit headers show decreasing remaining tokens
         var firstRemaining = int.Parse(firstResponse.Headers.GetValues("X-RateLimit-Remaining").First());
         var secondRemaining = int.Parse(secondResponse.Headers.GetValues("X-RateLimit-Remaining").First());
 
         // NOTE: Remaining should decrease or stay same (if rate limiting disabled)
-        Assert.True(secondRemaining <= firstRemaining,
-            $"Expected remaining to decrease or stay same. First: {firstRemaining}, Second: {secondRemaining}");
+        secondRemaining <= firstRemaining,
+            $"Expected remaining to decrease or stay same. First: {firstRemaining}, Second: {secondRemaining}".Should().BeTrue();
     }
 
     [Fact]
@@ -291,16 +291,16 @@ public class RateLimitingTests : IntegrationTestBase
         var response2 = await client.SendAsync(request2);
 
         // Then: Both succeed (separate rate limit buckets)
-        Assert.Equal(HttpStatusCode.OK, response1.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, response2.StatusCode);
+        response1.StatusCode.Should().Be(HttpStatusCode.OK);
+        response2.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: Each has their own token bucket (both should have high remaining counts)
         var remaining1 = int.Parse(response1.Headers.GetValues("X-RateLimit-Remaining").First());
         var remaining2 = int.Parse(response2.Headers.GetValues("X-RateLimit-Remaining").First());
 
         // Both should have nearly full buckets (99 out of 100 for User role)
-        Assert.True(remaining1 > 90, $"User1 remaining: {remaining1}");
-        Assert.True(remaining2 > 90, $"User2 remaining: {remaining2}");
+        remaining1 > 90, $"User1 remaining: {remaining1}".Should().BeTrue();
+        remaining2 > 90, $"User2 remaining: {remaining2}".Should().BeTrue();
     }
 
     #endregion
@@ -319,12 +319,12 @@ public class RateLimitingTests : IntegrationTestBase
         var anonymousLimit = anonymousResponse.Headers.GetValues("X-RateLimit-Limit").FirstOrDefault();
 
         // Then: Anonymous limit is applied (60)
-        Assert.Equal("60", anonymousLimit);
+        anonymousLimit.Should().Be("60");
 
         // When: User logs in
         var loginResponse = await client.PostAsJsonAsync("/api/v1/auth/login",
             new { email = user.Email, password = "Password123!" });
-        Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var cookies = GetCookiesFromResponse(loginResponse);
         var authenticatedRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
@@ -333,7 +333,7 @@ public class RateLimitingTests : IntegrationTestBase
 
         // Then: User-based limit is now applied (100)
         var userLimit = authenticatedResponse.Headers.GetValues("X-RateLimit-Limit").FirstOrDefault();
-        Assert.Equal("100", userLimit);
+        userLimit.Should().Be("100");
     }
 
     #endregion

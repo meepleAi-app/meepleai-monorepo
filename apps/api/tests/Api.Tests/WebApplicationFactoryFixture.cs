@@ -1,9 +1,10 @@
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
-using System;
 using Api.Infrastructure;
 using Api.Models;
 using Api.Services;
@@ -82,9 +83,13 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
                 options.EnableServiceProviderCaching(false);
             });
 
-            // Mock Redis with proper script evaluation support
+            // Mock Redis with proper script evaluation support and tag-based caching
             var mockRedis = new Mock<IConnectionMultiplexer>();
             var mockDatabase = new Mock<IDatabase>();
+            var mockServer = new Mock<IServer>();
+
+            // In-memory storage for Redis Sets (for tag tracking)
+            var redisSetStorage = new ConcurrentDictionary<string, HashSet<string>>();
 
             // Mock ScriptEvaluateAsync to return valid rate limit results: [allowed=1, tokens_remaining=100, retry_after=0]
             var rateLimitResult = RedisResult.Create(new[] {
@@ -100,7 +105,77 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
                 It.IsAny<CommandFlags>()))
                 .ReturnsAsync(rateLimitResult);
 
+            // Mock SetAdd for tag tracking (store cache key in tag set)
+            mockDatabase.Setup(x => x.SetAdd(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<CommandFlags>()))
+                .Returns((RedisKey key, RedisValue value, CommandFlags flags) =>
+                {
+                    var setKey = key.ToString();
+                    var set = redisSetStorage.GetOrAdd(setKey, _ => new HashSet<string>());
+                    lock (set)
+                    {
+                        return set.Add(value.ToString());
+                    }
+                });
+
+            // Mock SetRemove for tag untracking (remove cache key from tag set)
+            mockDatabase.Setup(x => x.SetRemove(
+                It.IsAny<RedisKey>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<CommandFlags>()))
+                .Returns((RedisKey key, RedisValue value, CommandFlags flags) =>
+                {
+                    var setKey = key.ToString();
+                    if (redisSetStorage.TryGetValue(setKey, out var set))
+                    {
+                        lock (set)
+                        {
+                            return set.Remove(value.ToString());
+                        }
+                    }
+                    return false;
+                });
+
+            // Mock SetMembers for tag-based cache retrieval
+            mockDatabase.Setup(x => x.SetMembers(
+                It.IsAny<RedisKey>(),
+                It.IsAny<CommandFlags>()))
+                .Returns((RedisKey key, CommandFlags flags) =>
+                {
+                    var setKey = key.ToString();
+                    if (redisSetStorage.TryGetValue(setKey, out var set))
+                    {
+                        lock (set)
+                        {
+                            return set.Select(s => (RedisValue)s).ToArray();
+                        }
+                    }
+                    return Array.Empty<RedisValue>();
+                });
+
+            // Mock KeyExpire for tag set expiration
+            mockDatabase.Setup(x => x.KeyExpire(
+                It.IsAny<RedisKey>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CommandFlags>()))
+                .Returns(true);
+
+            // Mock server for pattern-based key scanning (used in UntrackKey)
+            mockServer.Setup(x => x.Keys(
+                It.IsAny<int>(),
+                It.IsAny<RedisValue>(),
+                It.IsAny<int>(),
+                It.IsAny<long>(),
+                It.IsAny<int>(),
+                It.IsAny<CommandFlags>()))
+                .Returns(() => redisSetStorage.Keys.Select(k => (RedisKey)k));
+
             mockRedis.Setup(x => x.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(mockDatabase.Object);
+            mockRedis.Setup(x => x.GetEndPoints(It.IsAny<bool>())).Returns(new[] { new System.Net.IPEndPoint(System.Net.IPAddress.Loopback, 6379) });
+            mockRedis.Setup(x => x.GetServer(It.IsAny<System.Net.EndPoint>(), It.IsAny<object>())).Returns(mockServer.Object);
+
             services.AddSingleton(mockRedis.Object);
 
             // Mock Qdrant client adapter to avoid network calls in tests
@@ -265,17 +340,10 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
                 new QdrantVectorSearcher(
                     mockQdrantAdapter.Object,
                     NullLogger<QdrantVectorSearcher>.Instance));
-            services.AddSingleton<IQdrantService>(sp => new QdrantService(
-                sp.GetRequiredService<IQdrantCollectionManager>(),
-                sp.GetRequiredService<IQdrantVectorIndexer>(),
-                sp.GetRequiredService<IQdrantVectorSearcher>(),
-                sp.GetRequiredService<IConfiguration>(),
-                sp.GetRequiredService<ILogger<QdrantService>>()
-            ));
-            services.AddSingleton<ILlmService, TestLlmService>();
 
             // Mock embedding service to return dummy embeddings (1536 dimensions for text-embedding-3-small)
             var mockEmbeddingService = new Mock<IEmbeddingService>();
+            mockEmbeddingService.Setup(x => x.GetEmbeddingDimensions()).Returns(1536);
             mockEmbeddingService
                 .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((List<string> texts, CancellationToken ct) =>
@@ -302,6 +370,16 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
                 });
 
             services.AddSingleton(mockEmbeddingService.Object);
+
+            services.AddSingleton<IQdrantService>(sp => new QdrantService(
+                sp.GetRequiredService<IQdrantCollectionManager>(),
+                sp.GetRequiredService<IQdrantVectorIndexer>(),
+                sp.GetRequiredService<IQdrantVectorSearcher>(),
+                mockEmbeddingService.Object,
+                sp.GetRequiredService<IConfiguration>(),
+                sp.GetRequiredService<ILogger<QdrantService>>()
+            ));
+            services.AddSingleton<ILlmService, TestLlmService>();
 
             // EDIT-05: Re-register RuleCommentService for integration tests
             // Must use interface registration to match GetRequiredService<IRuleCommentService>() calls in endpoints

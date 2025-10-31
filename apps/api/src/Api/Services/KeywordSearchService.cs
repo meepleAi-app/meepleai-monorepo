@@ -69,16 +69,16 @@ public class KeywordSearchService : IKeywordSearchService
             // Using FromSqlRaw for complex tsvector queries (EF Core limitation with tsvector operators)
             var sql = @"
                 SELECT
-                    id,
-                    content,
-                    pdf_document_id,
-                    game_id,
-                    chunk_index,
-                    page_number,
+                    ""Id"",
+                    ""Content"",
+                    ""PdfDocumentId"",
+                    ""GameId"",
+                    ""ChunkIndex"",
+                    ""PageNumber"",
                     ts_rank_cd(search_vector, to_tsquery(@textSearchConfig, @tsQuery), @normalization) AS relevance_score
                 FROM text_chunks
                 WHERE
-                    game_id = @gameId
+                    ""GameId"" = @gameId
                     AND search_vector @@ to_tsquery(@textSearchConfig, @tsQuery)
                 ORDER BY relevance_score DESC
                 LIMIT @limit";
@@ -163,14 +163,14 @@ public class KeywordSearchService : IKeywordSearchService
 
             var sql = @"
                 SELECT
-                    id,
-                    file_name,
-                    game_id,
-                    page_count,
+                    ""Id"",
+                    ""FileName"",
+                    ""GameId"",
+                    ""PageCount"",
                     ts_rank_cd(search_vector, to_tsquery(@textSearchConfig, @tsQuery), @normalization) AS relevance_score
                 FROM pdf_documents
                 WHERE
-                    game_id = @gameId
+                    ""GameId"" = @gameId
                     AND search_vector @@ to_tsquery(@textSearchConfig, @tsQuery)
                 ORDER BY relevance_score DESC
                 LIMIT @limit";

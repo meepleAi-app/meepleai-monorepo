@@ -5,6 +5,11 @@ public interface IEmbeddingService
     Task<EmbeddingResult> GenerateEmbeddingsAsync(List<string> texts, CancellationToken ct = default);
     Task<EmbeddingResult> GenerateEmbeddingAsync(string text, CancellationToken ct = default);
 
+    /// <summary>
+    /// Get the configured embedding dimensions for the current model
+    /// </summary>
+    int GetEmbeddingDimensions();
+
     // AI-09: Multi-language support
     /// <summary>
     /// Generate embeddings for texts with language-specific model selection

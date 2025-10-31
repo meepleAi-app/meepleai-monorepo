@@ -347,6 +347,8 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
             new float[] { 0.3f, 0.4f }
         };
 
+        public int GetEmbeddingDimensions() => 2; // Matches test embedding dimensions
+
         public Task<EmbeddingResult> GenerateEmbeddingsAsync(List<string> texts, CancellationToken ct = default)
         {
             GenerateEmbeddingsCallCount++;

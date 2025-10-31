@@ -97,16 +97,17 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
         var vectorSearcherLogger = loggerFactory.CreateLogger<QdrantVectorSearcher>();
         var vectorSearcher = new QdrantVectorSearcher(qdrantClientAdapter, vectorSearcherLogger);
 
+        // Use mock embedding service for predictable tests
+        _embeddingService = new MockEmbeddingService(embeddingLogger);
+
         _qdrantService = new QdrantService(
             collectionManager,
             vectorIndexer,
             vectorSearcher,
+            _embeddingService,
             config,
             qdrantLogger);
         await _qdrantService.EnsureCollectionExistsAsync();
-
-        // Use mock embedding service for predictable tests
-        _embeddingService = new MockEmbeddingService(embeddingLogger);
 
         _evaluationService = new RagEvaluationService(
             _qdrantService,
@@ -458,6 +459,8 @@ public class MockEmbeddingService : IEmbeddingService
     {
         _logger = logger;
     }
+
+    public int GetEmbeddingDimensions() => 768;
 
     public Task<EmbeddingResult> GenerateEmbeddingAsync(string text, CancellationToken cancellationToken = default)
     {

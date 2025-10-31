@@ -17,6 +17,21 @@ public static class AuthenticationServiceExtensions
         services.AddRateLimitServices();
         services.AddAlertingServices(configuration);
 
+        // Add ASP.NET Core Authentication services (required for UseAuthentication middleware)
+        // This registers IAuthenticationSchemeProvider and other authentication services
+        // Note: We use a default authentication scheme but session authentication is handled
+        // by custom SessionAuthenticationMiddleware which populates HttpContext.Items
+        services.AddAuthentication(options =>
+        {
+            // No default scheme - authentication is handled by SessionAuthenticationMiddleware
+            // and ApiKeyAuthenticationMiddleware via custom middleware, not ASP.NET Core schemes
+            options.DefaultScheme = null;
+            options.DefaultChallengeScheme = null;
+        });
+
+        // Add ASP.NET Core Authorization services (required for UseAuthorization middleware)
+        services.AddAuthorization();
+
         return services;
     }
 

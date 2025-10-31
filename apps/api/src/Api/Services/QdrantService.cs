@@ -14,28 +14,33 @@ public class QdrantService : IQdrantService
     private readonly IQdrantCollectionManager _collectionManager;
     private readonly IQdrantVectorIndexer _vectorIndexer;
     private readonly IQdrantVectorSearcher _vectorSearcher;
+    private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<QdrantService> _logger;
     private const string CollectionName = "meepleai_documents";
-    // Vector size depends on embedding provider:
-    // - OpenAI text-embedding-3-small: 1536
-    // - Ollama nomic-embed-text: 768
+    // Vector size is determined by the embedding model configured in EmbeddingService
     private readonly uint _vectorSize;
     public QdrantService(
         IQdrantCollectionManager collectionManager,
         IQdrantVectorIndexer vectorIndexer,
         IQdrantVectorSearcher vectorSearcher,
+        IEmbeddingService embeddingService,
         IConfiguration configuration,
         ILogger<QdrantService> logger)
     {
         _collectionManager = collectionManager;
         _vectorIndexer = vectorIndexer;
         _vectorSearcher = vectorSearcher;
+        _embeddingService = embeddingService;
         _logger = logger;
-        // Determine vector size based on embedding provider
+
+        // Get vector size from embedding service to ensure consistency
+        _vectorSize = (uint)_embeddingService.GetEmbeddingDimensions();
+
         var provider = configuration["EMBEDDING_PROVIDER"]?.ToLowerInvariant() ?? "ollama";
-        _vectorSize = provider == "ollama" ? 768u : 1536u;
-        _logger.LogInformation("QdrantService initialized with vector size {VectorSize} for provider {Provider}",
-            _vectorSize, provider);
+        var model = configuration["EMBEDDING_MODEL"] ?? "unknown";
+
+        _logger.LogInformation("QdrantService initialized with vector size {VectorSize} for provider {Provider}, model {Model}",
+            _vectorSize, provider, model);
     }
     /// <summary>
     /// Check if collection exists

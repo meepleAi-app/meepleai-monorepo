@@ -9,19 +9,22 @@ namespace Api.Services;
 
 /// <summary>
 /// PERF-05: HybridCache service implementation with L1 (in-memory) + L2 (Redis) support.
+/// Tag tracking is now Redis-based for cross-instance synchronization and test reliability.
 /// </summary>
 public class HybridCacheService : IHybridCacheService
 {
     private readonly HybridCache _hybridCache;
     private readonly HybridCacheConfiguration _config;
     private readonly ILogger<HybridCacheService> _logger;
+    private readonly IConnectionMultiplexer? _redis;
+    private readonly IDatabase? _redisDb;
 
-    // Tag tracking for invalidation (in-memory only, not persisted to Redis)
-    private readonly ConcurrentDictionary<string, HashSet<string>> _tagToKeys = new();
-    private readonly ConcurrentDictionary<string, HashSet<string>> _keyToTags = new();
-    private readonly object _tagLock = new();
+    // Tag tracking - now Redis-based for persistence across service instances
+    // Format: Redis Set at key "cache:tag:{tagName}" contains all cache keys with that tag
+    private const string TagKeyPrefix = "cache:tag:";
+    private readonly TimeSpan _tagExpiration = TimeSpan.FromDays(7); // Tags expire after 7 days
 
-    // Statistics tracking
+    // Statistics tracking (in-memory per instance)
     private long _totalHits = 0;
     private long _totalMisses = 0;
     private long _stampedePreventions = 0;
@@ -29,11 +32,14 @@ public class HybridCacheService : IHybridCacheService
     public HybridCacheService(
         HybridCache hybridCache,
         IOptions<HybridCacheConfiguration> config,
-        ILogger<HybridCacheService> logger)
+        ILogger<HybridCacheService> logger,
+        IConnectionMultiplexer? redis = null)
     {
         _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
         _config = config?.Value ?? throw new ArgumentNullException(nameof(config));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _redis = redis;
+        _redisDb = redis?.GetDatabase();
     }
 
     /// <inheritdoc />
@@ -278,108 +284,181 @@ public class HybridCacheService : IHybridCacheService
             StampedePreventions = Interlocked.Read(ref _stampedePreventions),
             // Note: L1EntryCount and L1MemoryBytes require access to MemoryCache internals
             // These would need to be tracked separately or extracted via reflection
-            L1EntryCount = _keyToTags.Count, // Approximate using tag tracking
+            L1EntryCount = 0, // Not available with Redis-based tag tracking
             L1MemoryBytes = 0 // Not easily accessible without MemoryCache introspection
         };
 
         return Task.FromResult(stats);
     }
 
-    #region Tag Tracking
+    #region Tag Tracking (Redis-Based)
 
     private void TrackTags(string cacheKey, string[] tags)
     {
-        lock (_tagLock)
+        if (_redisDb == null)
         {
-            // Track key → tags mapping
-            if (!_keyToTags.TryGetValue(cacheKey, out var existingTags))
-            {
-                existingTags = new HashSet<string>();
-                _keyToTags[cacheKey] = existingTags;
-            }
+            _logger.LogWarning("Redis not available for tag tracking. Tags will not be persisted: {CacheKey}", cacheKey);
+            return;
+        }
 
+        try
+        {
+            // Store tag → keys mapping in Redis Sets
+            // Each tag has a Set of cache keys: "cache:tag:{tagName}" → {key1, key2, ...}
             foreach (var tag in tags)
             {
-                existingTags.Add(tag);
+                var redisKey = TagKeyPrefix + tag;
+                _redisDb.SetAdd(redisKey, cacheKey, CommandFlags.FireAndForget);
 
-                // Track tag → keys mapping
-                if (!_tagToKeys.TryGetValue(tag, out var keys))
-                {
-                    keys = new HashSet<string>();
-                    _tagToKeys[tag] = keys;
-                }
-
-                keys.Add(cacheKey);
+                // Set expiration on the tag set to prevent orphaned tags
+                _redisDb.KeyExpire(redisKey, _tagExpiration, CommandFlags.FireAndForget);
             }
+
+            _logger.LogDebug("Tracked {TagCount} tags for cache key: {CacheKey}", tags.Length, cacheKey);
+        }
+        catch (RedisConnectionException ex)
+        {
+            _logger.LogWarning(ex, "Redis connection failed while tracking tags for key {CacheKey}", cacheKey);
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Redis timeout while tracking tags for key {CacheKey}", cacheKey);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Unexpected error tracking tags for key {CacheKey}", cacheKey);
         }
     }
 
     private void UntrackKey(string cacheKey)
     {
-        lock (_tagLock)
+        if (_redisDb == null)
         {
-            // Remove key → tags mapping
-            if (_keyToTags.TryRemove(cacheKey, out var tags))
-            {
-                // Remove this key from all tag → keys mappings
-                foreach (var tag in tags)
-                {
-                    if (_tagToKeys.TryGetValue(tag, out var keys))
-                    {
-                        keys.Remove(cacheKey);
+            _logger.LogDebug("Redis not available for untracking key: {CacheKey}", cacheKey);
+            return;
+        }
 
-                        // Clean up empty tag entries
-                        if (keys.Count == 0)
-                        {
-                            _tagToKeys.TryRemove(tag, out _);
-                        }
-                    }
-                }
+        try
+        {
+            // We don't know which tags this key had, so we need to scan all tag keys
+            // This is inefficient but necessary without maintaining a reverse index
+            // Alternative: Store key → tags mapping separately in Redis (future optimization)
+            var server = _redis!.GetServer(_redis.GetEndPoints().First());
+            var pattern = TagKeyPrefix + "*";
+
+            foreach (var redisKey in server.Keys(pattern: pattern))
+            {
+                _redisDb.SetRemove(redisKey, cacheKey, CommandFlags.FireAndForget);
             }
+
+            _logger.LogDebug("Untracked cache key from all tags: {CacheKey}", cacheKey);
+        }
+        catch (RedisConnectionException ex)
+        {
+            _logger.LogWarning(ex, "Redis connection failed while untracking key {CacheKey}", cacheKey);
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Redis timeout while untracking key {CacheKey}", cacheKey);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Unexpected error untracking key {CacheKey}", cacheKey);
         }
     }
 
     private HashSet<string> GetKeysByTag(string tag)
     {
-        lock (_tagLock)
+        if (_redisDb == null)
         {
-            if (_tagToKeys.TryGetValue(tag, out var keys))
-            {
-                return new HashSet<string>(keys); // Return copy to avoid concurrent modification
-            }
+            _logger.LogWarning("Redis not available for GetKeysByTag: {Tag}", tag);
+            return new HashSet<string>();
+        }
 
+        try
+        {
+            var redisKey = TagKeyPrefix + tag;
+            var members = _redisDb.SetMembers(redisKey);
+
+            var keys = new HashSet<string>(members.Select(m => m.ToString()));
+            _logger.LogDebug("Retrieved {Count} keys for tag: {Tag}", keys.Count, tag);
+            return keys;
+        }
+        catch (RedisConnectionException ex)
+        {
+            _logger.LogWarning(ex, "Redis connection failed while getting keys for tag {Tag}", tag);
+            return new HashSet<string>();
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Redis timeout while getting keys for tag {Tag}", tag);
+            return new HashSet<string>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Unexpected error getting keys for tag {Tag}", tag);
             return new HashSet<string>();
         }
     }
 
     private HashSet<string> GetKeysByTags(string[] tags)
     {
-        lock (_tagLock)
+        if (_redisDb == null)
         {
+            _logger.LogWarning("Redis not available for GetKeysByTags");
+            return new HashSet<string>();
+        }
+
+        if (tags.Length == 0)
+        {
+            return new HashSet<string>();
+        }
+
+        try
+        {
+            // Get keys for the first tag
             HashSet<string>? result = null;
 
             foreach (var tag in tags)
             {
-                if (_tagToKeys.TryGetValue(tag, out var keys))
+                var redisKey = TagKeyPrefix + tag;
+                var members = _redisDb.SetMembers(redisKey);
+                var keys = new HashSet<string>(members.Select(m => m.ToString()));
+
+                if (result == null)
                 {
-                    if (result == null)
-                    {
-                        result = new HashSet<string>(keys);
-                    }
-                    else
-                    {
-                        // Intersect with existing results (AND logic)
-                        result.IntersectWith(keys);
-                    }
+                    result = keys;
                 }
                 else
                 {
-                    // Tag not found, no keys can match all tags
-                    return new HashSet<string>();
+                    // Intersect with existing results (AND logic)
+                    result.IntersectWith(keys);
+                }
+
+                // Early exit if no keys match
+                if (result.Count == 0)
+                {
+                    break;
                 }
             }
 
+            _logger.LogDebug("Retrieved {Count} keys matching all tags: {Tags}", result?.Count ?? 0, string.Join(", ", tags));
             return result ?? new HashSet<string>();
+        }
+        catch (RedisConnectionException ex)
+        {
+            _logger.LogWarning(ex, "Redis connection failed while getting keys for multiple tags");
+            return new HashSet<string>();
+        }
+        catch (RedisTimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Redis timeout while getting keys for multiple tags");
+            return new HashSet<string>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Unexpected error getting keys for multiple tags");
+            return new HashSet<string>();
         }
     }
 

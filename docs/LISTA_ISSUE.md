@@ -1,8 +1,8 @@
 # MeepleAI Issue Resolution Roadmap
 
-**Document Version:** 1.7
+**Document Version:** 1.8
 **Last Updated:** 2025-10-31
-**Total Issues:** 35 (24 open, 11 completed: EDIT-04, EDIT-05, EDIT-06, ADMIN-02, AI-13, AI-14, N8N-04, N8N-05, AI-15-ALT, OPS-07, TEST-03/#601)
+**Total Issues:** 36 (25 open, 11 completed: EDIT-04, EDIT-05, EDIT-06, ADMIN-02, AI-13, AI-14, N8N-04, N8N-05, AI-15-ALT, OPS-07, TEST-03/#601)
 
 ---
 
@@ -214,8 +214,9 @@ Our approach follows these principles:
 | # | Issue | Priority | Effort | Rationale |
 |---|-------|----------|--------|-----------|
 | 36 | #601 TEST-03: Concurrency tests | ✅ PHASE 1 COMPLETE | L (20h actual, 30h est) | **PHASE 1 COMPLETE + PHASE 2 SQLite LIMITS**: Phase 1 (100%): Comprehensive testing guide (500+ lines), ConfigurationConcurrencyTests (6 passing tests with Testcontainers + PostgreSQL), 4 test patterns documented. **Phase 2 Critical Finding**: SQLite unsuitable for true concurrency (nested transaction errors). Attempted RuleSpec + SessionManagement tests (~900 LOC) - removed due to SQLite limits. **Production path**: ALL concurrency tests must use WebApplicationFactory + Testcontainers (ConfigurationConcurrencyTests pattern). Framework complete, future implementation: 6-8h per service. Branch: `test-601-concurrency-tests`. PR #603. Completed: 2025-10-31 |
+| 37 | #604 TEST-04: Testcontainers concurrency tests | 🔴 High | XL (24-32h) | **FOLLOW-UP to #601**: Implement Testcontainers-based concurrency tests for 4 critical services (RuleSpec, SessionManagement, PromptTemplate, Chat). MUST use ConfigurationConcurrencyTests pattern (WebApplicationFactory + Testcontainers + PostgreSQL). 16-20 tests total covering all 4 patterns (Lost Update, Optimistic, TOCTOU, Cache). Effort: 6-8h per service. **NOT SQLite** - Phase 2 of #601 proved SQLite unsuitable. Production-ready pattern defined. |
 
-**Next Steps**: Follow incremental approach in implementation summary (API discovery → 2-3 tests → verify → next service).
+**Next Steps**: Follow ConfigurationConcurrencyTests pattern for all services (see #604).
 
 ---
 

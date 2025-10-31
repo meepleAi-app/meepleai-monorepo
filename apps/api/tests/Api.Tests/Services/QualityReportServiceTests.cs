@@ -2,6 +2,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.Tests.Helpers;
 using Api.Tests.Infrastructure;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -76,23 +77,22 @@ public class QualityReportServiceTests : IDisposable
             mockConfiguration,
             _timeProvider);
 
-        using var cts = new CancellationTokenSource();
+        // Act: Using BackgroundServiceTestHelper for proper coordination
+        using var helper = new BackgroundServiceTestHelper<QualityReportService>(
+            service,
+            _timeProvider,
+            timeout: TimeSpan.FromSeconds(5)
+        );
 
-        // Act
-        var executeTask = service.StartAsync(cts.Token);
+        await helper.StartAsync();
 
         // Advance time past initial delay and trigger multiple intervals
-        _timeProvider.Advance(TimeSpan.FromMilliseconds(50)); // Past initial delay (30ms)
-        await Task.Delay(10); // Give time for task to execute
-        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past first interval (100ms)
-        await Task.Delay(10);
-        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past second interval (100ms)
-        await Task.Delay(10);
-        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past third interval (100ms)
-        await Task.Delay(10);
+        await helper.AdvanceAndWaitAsync(TimeSpan.FromMilliseconds(50)); // Past initial delay (30ms)
+        await helper.AdvanceAndWaitAsync(TimeSpan.FromMilliseconds(120)); // Past first interval (100ms)
+        await helper.AdvanceAndWaitAsync(TimeSpan.FromMilliseconds(120)); // Past second interval (100ms)
+        await helper.AdvanceAndWaitAsync(TimeSpan.FromMilliseconds(120)); // Past third interval (100ms)
 
-        cts.Cancel();
-        await executeTask;
+        await helper.StopAsync();
 
         // Assert
         Assert.True(reportGenerationCount >= 2,
@@ -132,14 +132,19 @@ public class QualityReportServiceTests : IDisposable
             mockConfiguration,
             _timeProvider);
 
-        using var cts = new CancellationTokenSource();
+        // Act: Using BackgroundServiceTestHelper for proper coordination
+        using var helper = new BackgroundServiceTestHelper<QualityReportService>(
+            service,
+            _timeProvider,
+            timeout: TimeSpan.FromSeconds(5)
+        );
 
-        // Act
-        var executeTask = service.StartAsync(cts.Token);
-        _timeProvider.Advance(TimeSpan.FromMilliseconds(200)); // Wait 200ms (less than 500ms delay)
-        await Task.Yield(); // Allow background task to process
-        cts.Cancel();
-        await executeTask;
+        await helper.StartAsync();
+
+        // Wait 200ms (less than 500ms delay)
+        await helper.AdvanceAndWaitAsync(TimeSpan.FromMilliseconds(200));
+
+        await helper.StopAsync();
 
         // Assert
         mockReportService.Verify(
@@ -318,23 +323,22 @@ public class QualityReportServiceTests : IDisposable
             mockConfiguration,
             _timeProvider);
 
-        using var cts = new CancellationTokenSource();
+        // Act: Using BackgroundServiceTestHelper for proper coordination
+        using var helper = new BackgroundServiceTestHelper<QualityReportService>(
+            service,
+            _timeProvider,
+            timeout: TimeSpan.FromSeconds(5)
+        );
 
-        // Act
-        var executeTask = service.StartAsync(cts.Token);
+        await helper.StartAsync();
 
         // Advance time past initial delay and trigger multiple intervals
-        _timeProvider.Advance(TimeSpan.FromMilliseconds(50)); // Past initial delay (30ms)
-        await Task.Delay(10); // Give time for task to execute
-        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past first interval (100ms)
-        await Task.Delay(10);
-        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past second interval (100ms)
-        await Task.Delay(10);
-        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past third interval (100ms)
-        await Task.Delay(10);
+        await helper.AdvanceAndWaitAsync(TimeSpan.FromMilliseconds(50)); // Past initial delay (30ms)
+        await helper.AdvanceAndWaitAsync(TimeSpan.FromMilliseconds(120)); // Past first interval (100ms)
+        await helper.AdvanceAndWaitAsync(TimeSpan.FromMilliseconds(120)); // Past second interval (100ms)
+        await helper.AdvanceAndWaitAsync(TimeSpan.FromMilliseconds(120)); // Past third interval (100ms)
 
-        cts.Cancel();
-        await executeTask;
+        await helper.StopAsync();
 
         // Assert
         Assert.True(scopeCreatedCount >= 2,
@@ -376,17 +380,20 @@ public class QualityReportServiceTests : IDisposable
             mockConfiguration,
             _timeProvider);
 
-        using var cts = new CancellationTokenSource();
+        // Act: Using BackgroundServiceTestHelper for proper coordination
+        using var helper = new BackgroundServiceTestHelper<QualityReportService>(
+            service,
+            _timeProvider,
+            timeout: TimeSpan.FromSeconds(5)
+        );
 
-        // Act
-        var executeTask = service.StartAsync(cts.Token);
-        _timeProvider.Advance(TimeSpan.FromMilliseconds(100)); // Let service start
-        await Task.Yield(); // Allow background task to process
-        cts.Cancel();
+        await helper.StartAsync();
 
-        // Assert
-        await executeTask; // Should complete without exception
-        Assert.True(executeTask.IsCompleted);
+        // Let service start
+        await helper.AdvanceAndWaitAsync(TimeSpan.FromMilliseconds(100));
+
+        // Assert: Stop should complete without exception
+        await helper.StopAsync();
     }
 
     /// <summary>
@@ -422,23 +429,23 @@ public class QualityReportServiceTests : IDisposable
             mockConfiguration,
             _timeProvider);
 
-        using var cts = new CancellationTokenSource();
+        // Act: Using BackgroundServiceTestHelper for proper coordination
+        using var helper = new BackgroundServiceTestHelper<QualityReportService>(
+            service,
+            _timeProvider,
+            timeout: TimeSpan.FromSeconds(5)
+        );
 
-        // Act
-        var executeTask = service.StartAsync(cts.Token);
+        await helper.StartAsync();
 
         // Advance time past initial delay and trigger multiple intervals
-        _timeProvider.Advance(TimeSpan.FromMilliseconds(50)); // Past initial delay (30ms)
-        await Task.Delay(10); // Give time for task to execute
-        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past first interval (100ms)
-        await Task.Delay(10);
-        _timeProvider.Advance(TimeSpan.FromMilliseconds(120)); // Past second interval (100ms)
-        await Task.Delay(10);
+        await helper.AdvanceAndWaitAsync(TimeSpan.FromMilliseconds(50)); // Past initial delay (30ms)
+        await helper.AdvanceAndWaitAsync(TimeSpan.FromMilliseconds(120)); // Past first interval (100ms)
+        await helper.AdvanceAndWaitAsync(TimeSpan.FromMilliseconds(120)); // Past second interval (100ms)
 
-        cts.Cancel();
+        await helper.StopAsync();
 
-        // Assert
-        await executeTask; // Should complete without propagating exception
+        // Assert: Exception should be logged
         mockLogger.Verify(
             logger => logger.Log(
                 LogLevel.Error,

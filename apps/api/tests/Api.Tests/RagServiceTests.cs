@@ -161,7 +161,7 @@ ANSWER:",
         var result = await ragService.AskAsync("game1", "");
 
         // Assert
-        Assert.Equal("Please provide a question.", result.answer);
+        result.answer.Should().Be("Please provide a question.");
         result.snippets.Should().BeEmpty();
     }
 
@@ -181,7 +181,7 @@ ANSWER:",
         var result = await ragService.AskAsync("game1", "   ");
 
         // Assert
-        Assert.Equal("Please provide a question.", result.answer);
+        result.answer.Should().Be("Please provide a question.");
         result.snippets.Should().BeEmpty();
     }
 
@@ -204,7 +204,7 @@ ANSWER:",
         var result = await ragService.AskAsync("game1", "test query");
 
         // Assert
-        Assert.Equal("Unable to process query.", result.answer);
+        result.answer.Should().Be("Unable to process query.");
         result.snippets.Should().BeEmpty();
     }
 
@@ -227,7 +227,7 @@ ANSWER:",
         var result = await ragService.AskAsync("game1", "test query");
 
         // Assert
-        Assert.Equal("Unable to process query.", result.answer);
+        result.answer.Should().Be("Unable to process query.");
         result.snippets.Should().BeEmpty();
     }
 
@@ -259,7 +259,7 @@ ANSWER:",
         var result = await ragService.AskAsync("game1", "test query");
 
         // Assert
-        Assert.Equal("Not specified", result.answer);
+        result.answer.Should().Be("Not specified");
         result.snippets.Should().BeEmpty();
     }
 
@@ -305,14 +305,14 @@ ANSWER:",
         var result = await ragService.AskAsync("game1", "How many players?");
 
         // Assert
-        Assert.Equal("This game supports 2-4 players.", result.answer);
-        Assert.Equal(3, result.snippets.Count);
-        Assert.Equal("This game supports 2-4 players.", result.snippets[0].text);
-        Assert.Equal("PDF:pdf-1", result.snippets[0].source);
-        Assert.Equal(1, result.snippets[0].page);
-        Assert.Equal(12, result.promptTokens);
-        Assert.Equal(8, result.completionTokens);
-        Assert.Equal(20, result.totalTokens);
+        result.answer.Should().Be("This game supports 2-4 players.");
+        result.snippets.Count.Should().Be(3);
+        result.snippets[0].text.Should().Be("This game supports 2-4 players.");
+        result.snippets[0].source.Should().Be("PDF:pdf-1");
+        result.snippets[0].page.Should().Be(1);
+        result.promptTokens.Should().Be(12);
+        result.completionTokens.Should().Be(8);
+        result.totalTokens.Should().Be(20);
         result.confidence.Should().NotBeNull();
     }
 
@@ -355,8 +355,8 @@ ANSWER:",
         var result = await ragService.AskAsync("game1", "What is the recommended age for this game?");
 
         // Assert
-        Assert.Equal("Not specified", result.answer);
-        Assert.Equal(2, result.snippets.Count); // Snippets are still returned
+        result.answer.Should().Be("Not specified");
+        result.snippets.Count.Should().Be(2); // Snippets are still returned
     }
 
     [Fact]
@@ -403,7 +403,7 @@ ANSWER:",
         var result = await ragService.AskAsync(gameId, query);
 
         // Assert
-        Assert.Same(cachedResponse, result);
+        result.Should().BeSameAs(cachedResponse);
 
         mockCache.Verify(x => x.GenerateQaCacheKey(gameId, query), Times.Once);
         mockCache.Verify(x => x.GetAsync<QaResponse>(cacheKey, It.IsAny<CancellationToken>()), Times.Once);
@@ -441,10 +441,10 @@ ANSWER:",
         var result = await ragService.ExplainAsync("game1", "");
 
         // Assert
-        Assert.Equal("Please provide a topic to explain.", result.script);
+        result.script.Should().Be("Please provide a topic to explain.");
         result.outline.sections.Should().BeEmpty();
         result.citations.Should().BeEmpty();
-        Assert.Equal(0, result.estimatedReadingTimeMinutes);
+        result.estimatedReadingTimeMinutes.Should().Be(0);
     }
 
     [Fact]
@@ -482,11 +482,11 @@ ANSWER:",
 
         // Assert
         result.outline.Should().NotBeNull();
-        Assert.Equal("game setup", result.outline.mainTopic);
-        Assert.Equal(2, result.outline.sections.Count);
-        Assert.Contains("# Explanation: game setup", result.script);
-        Assert.Equal(2, result.citations.Count);
-        Assert.True(result.estimatedReadingTimeMinutes > 0);
+        result.outline.mainTopic.Should().Be("game setup");
+        result.outline.sections.Count.Should().Be(2);
+        result.script.Should().Contain("# Explanation: game setup");
+        result.citations.Count.Should().Be(2);
+        result.estimatedReadingTimeMinutes.Should().BeGreaterThan(0);
     }
 
     [Fact]
@@ -547,11 +547,10 @@ ANSWER:",
         var result = await ragService.ExplainAsync(gameId, topic);
 
         // Assert
-        Assert.Equal(topic, result.outline.mainTopic);
-        Assert.Collection(
-            result.citations,
-            snippet => Assert.Equal("Move your token up to 3 spaces.", snippet.text),
-            snippet => Assert.Equal("You may not move through walls.", snippet.text));
+        result.outline.mainTopic.Should().Be(topic);
+        result.citations.Should().HaveCount(2);
+        result.citations[0].text.Should().Be("Move your token up to 3 spaces.");
+        result.citations[1].text.Should().Be("You may not move through walls.");
 
         mockCache.Verify(x => x.GenerateExplainCacheKey(gameId, topic), Times.Once);
         mockCache.Verify(x => x.GetAsync<ExplainResponse>(cacheKey, It.IsAny<CancellationToken>()), Times.Once);
@@ -603,10 +602,10 @@ ANSWER:",
         var result = await ragService.ExplainAsync("game1", "   ");
 
         // Assert
-        Assert.Equal("Please provide a topic to explain.", result.script);
+        result.script.Should().Be("Please provide a topic to explain.");
         result.outline.sections.Should().BeEmpty();
         result.citations.Should().BeEmpty();
-        Assert.Equal(0, result.estimatedReadingTimeMinutes);
+        result.estimatedReadingTimeMinutes.Should().Be(0);
     }
 
     [Fact]
@@ -628,7 +627,7 @@ ANSWER:",
         var result = await ragService.ExplainAsync("game1", "test topic");
 
         // Assert
-        Assert.Equal("Unable to process topic.", result.script);
+        result.script.Should().Be("Unable to process topic.");
         result.outline.sections.Should().BeEmpty();
         result.citations.Should().BeEmpty();
     }
@@ -652,7 +651,7 @@ ANSWER:",
         var result = await ragService.ExplainAsync("game1", "test topic");
 
         // Assert
-        Assert.Equal("Unable to process topic.", result.script);
+        result.script.Should().Be("Unable to process topic.");
         result.outline.sections.Should().BeEmpty();
     }
 
@@ -684,7 +683,7 @@ ANSWER:",
         var result = await ragService.ExplainAsync("game1", "test topic");
 
         // Assert
-        Assert.Equal("No relevant information found about 'test topic' in the rulebook.", result.script);
+        result.script.Should().Be("No relevant information found about 'test topic' in the rulebook.");
         result.citations.Should().BeEmpty();
     }
 
@@ -716,7 +715,7 @@ ANSWER:",
         var result = await ragService.ExplainAsync("game1", "test topic");
 
         // Assert
-        Assert.Equal("No relevant information found about 'test topic' in the rulebook.", result.script);
+        result.script.Should().Be("No relevant information found about 'test topic' in the rulebook.");
         result.citations.Should().BeEmpty();
     }
 
@@ -748,7 +747,7 @@ ANSWER:",
         var result = await ragService.AskAsync("game1", "test query");
 
         // Assert
-        Assert.Equal("Not specified", result.answer);
+        result.answer.Should().Be("Not specified");
         result.snippets.Should().BeEmpty();
     }
 
@@ -786,9 +785,9 @@ ANSWER:",
         var result = await ragService.ExplainAsync("game1", "test topic");
 
         // Assert
-        Assert.Single(result.outline.sections);
-        Assert.EndsWith("...", result.outline.sections[0]);
-        Assert.True(result.outline.sections[0].Length <= 60);
+        result.outline.sections.Should().ContainSingle()
+            .Which.Should().EndWith("...")
+            .And.Subject.Length.Should().BeLessThanOrEqualTo(60);
     }
 
     [Fact]
@@ -830,8 +829,8 @@ ANSWER:",
         var result = await ragService.ExplainAsync("game1", "test topic");
 
         // Assert
-        Assert.Equal(5, result.outline.sections.Count); // Max 5 sections
-        Assert.Equal(7, result.citations.Count); // All citations included
+        result.outline.sections.Count.Should().Be(5); // Max 5 sections
+        result.citations.Count.Should().Be(7); // All citations included
     }
 
     [Fact]
@@ -853,7 +852,7 @@ ANSWER:",
         var result = await ragService.AskAsync("game1", "test query");
 
         // Assert
-        Assert.Equal("An error occurred while processing your question.", result.answer);
+        result.answer.Should().Be("An error occurred while processing your question.");
         result.snippets.Should().BeEmpty();
     }
 
@@ -876,7 +875,7 @@ ANSWER:",
         var result = await ragService.ExplainAsync("game1", "test topic");
 
         // Assert
-        Assert.Equal("An error occurred while generating the explanation.", result.script);
+        result.script.Should().Be("An error occurred while generating the explanation.");
         result.citations.Should().BeEmpty();
     }
 
@@ -915,9 +914,9 @@ ANSWER:",
         var result = await ragService.AskAsync("game1", "test query");
 
         // Assert
-        Assert.Equal("Unable to generate answer.", result.answer);
-        Assert.Single(result.snippets); // Snippets are still returned even when LLM fails
-        Assert.Equal("Sample rule text.", result.snippets[0].text);
+        result.answer.Should().Be("Unable to generate answer.");
+        result.snippets.Should().ContainSingle(); // Snippets are still returned even when LLM fails
+        result.snippets[0].text.Should().Be("Sample rule text.");
     }
 
     [Fact]
@@ -953,8 +952,8 @@ ANSWER:",
         var result = await ragService.AskAsync("game1", "test query");
 
         // Assert
-        Assert.Equal("Unable to generate answer.", result.answer);
-        Assert.Single(result.snippets);
+        result.answer.Should().Be("Unable to generate answer.");
+        result.snippets.Should().ContainSingle();
     }
 
     [Fact]
@@ -1001,10 +1000,10 @@ ANSWER:",
 
         // Assert
         result.metadata.Should().NotBeNull();
-        Assert.Equal(3, result.metadata.Count);
-        Assert.Equal("anthropic/claude-3.5-sonnet", result.metadata["model"]);
-        Assert.Equal("stop", result.metadata["finish_reason"]);
-        Assert.Equal("fp_abc123", result.metadata["system_fingerprint"]);
+        result.metadata.Should().HaveCount(3);
+        result.metadata["model"].Should().Be("anthropic/claude-3.5-sonnet");
+        result.metadata["finish_reason"].Should().Be("stop");
+        result.metadata["system_fingerprint"].Should().Be("fp_abc123");
     }
 
     [Fact]
@@ -1090,7 +1089,7 @@ ANSWER:",
         var result = await ragService.AskAsync(gameId, query);
 
         // Assert
-        Assert.Equal("Answer.", result.answer);
+        result.answer.Should().Be("Answer.");
 
         // Verify cache write was called with 24-hour TTL
         mockCache.Verify(
@@ -1137,10 +1136,10 @@ ANSWER:",
         var result = await ragService.ExplainAsync(gameId, topic);
 
         // Assert
-        Assert.Same(cachedResponse, result);
-        Assert.Equal("Cached script content", result.script);
-        Assert.Equal("scoring", result.outline.mainTopic);
-        Assert.Single(result.citations);
+        result.Should().BeSameAs(cachedResponse);
+        result.script.Should().Be("Cached script content");
+        result.outline.mainTopic.Should().Be("scoring");
+        result.citations.Should().ContainSingle();
 
         // Verify no embedding/search/LLM calls were made
         mockEmbedding.VerifyNoOtherCalls();
@@ -1184,7 +1183,7 @@ ANSWER:",
 
         // Assert
         result.confidence.Should().NotBeNull();
-        Assert.Equal(0.98, result.confidence.Value, precision: 2); // Should be max score
+        result.confidence.Value.Should().BeApproximately(0.98, 0.01); // Should be max score
     }
 
     [Fact]
@@ -1221,8 +1220,7 @@ ANSWER:",
         // Assert
         // Script contains 2 chunks with ~200 words each = ~400 words total
         // At 200 words/minute, should be ~2 minutes
-        Assert.True(result.estimatedReadingTimeMinutes >= 1);
-        Assert.True(result.estimatedReadingTimeMinutes <= 3); // Allow some variance for header text
+        result.estimatedReadingTimeMinutes.Should().BeInRange(1, 3); // Allow some variance for header text
     }
 
     [Fact]
@@ -1260,7 +1258,7 @@ ANSWER:",
         var result = await ragService.AskAsync("game1", "test query");
 
         // Assert
-        Assert.Equal("This is the answer.", result.answer); // Whitespace trimmed
+        result.answer.Should().Be("This is the answer."); // Whitespace trimmed
     }
 
     /// <summary>
@@ -1324,9 +1322,9 @@ ANSWER:",
         var result = await ragService.AskAsync(gameId, query, bypassCache: true);
 
         // Assert
-        Assert.Equal("Fresh LLM answer.", result.answer); // Should be fresh, not cached
-        Assert.Single(result.snippets);
-        Assert.Equal("Fresh rule text.", result.snippets[0].text);
+        result.answer.Should().Be("Fresh LLM answer."); // Should be fresh, not cached
+        result.snippets.Should().ContainSingle();
+        result.snippets[0].text.Should().Be("Fresh rule text.");
 
         // Verify cache GET was never called (bypassed)
         mockCache.Verify(

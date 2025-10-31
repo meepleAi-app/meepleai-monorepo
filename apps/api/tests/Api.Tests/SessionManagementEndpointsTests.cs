@@ -68,13 +68,13 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200 with sessions list
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.ValueKind == JsonValueKind.Array);
+        result.ValueKind == JsonValueKind.Array.Should().BeTrue();
 
         var sessions = result.EnumerateArray().ToList();
-        Assert.True(sessions.Count >= 3); // At least admin + 2 users
+        sessions.Count >= 3.Should().BeTrue(); // At least admin + 2 users
 
         // Verify session structure
         var firstSession = sessions[0];
@@ -112,12 +112,12 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200 with filtered sessions
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         var sessions = result.EnumerateArray().ToList();
 
-        Assert.True(sessions.Count >= 2); // At least 2 sessions for this user
+        sessions.Count >= 2.Should().BeTrue(); // At least 2 sessions for this user
         Assert.All(sessions, session =>
         {
             session.TryGetProperty("userId", out var userId);
@@ -148,12 +148,12 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200 with limited results
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         var sessions = result.EnumerateArray().ToList();
 
-        Assert.True(sessions.Count <= 5);
+        sessions.Count <= 5.Should().BeTrue();
     }
 
     /// <summary>
@@ -177,7 +177,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 403 Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -196,7 +196,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var response = await client.GetAsync("/api/v1/admin/sessions");
 
         // Then: HTTP 401 Unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -240,21 +240,21 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: Session is revoked in database
         using (var scope = Factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var session = await db.UserSessions.FindAsync(sessionId);
-            Assert.NotNull(session!.RevokedAt);
+            session!.RevokedAt.Should().NotBeNull();
         }
 
         // And: User can no longer use that session
         var userRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/sessions");
         AddCookies(userRequest, userCookies);
         var userResponse = await client.SendAsync(userRequest);
-        Assert.Equal(HttpStatusCode.Unauthorized, userResponse.StatusCode);
+        userResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -279,7 +279,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 404 Not Found
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     /// <summary>
@@ -303,7 +303,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 403 Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -338,7 +338,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
                 .CountAsync();
         }
 
-        Assert.True(sessionCountBefore >= 2);
+        sessionCountBefore >= 2.Should().BeTrue();
 
         // When: Admin revokes all user sessions
         var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/users/{user.Id}/sessions");
@@ -347,7 +347,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("revokedCount", out var revokedCount));
@@ -360,14 +360,14 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
             var activeSessions = await db.UserSessions
                 .Where(s => s.UserId == user.Id && s.RevokedAt == null)
                 .CountAsync();
-            Assert.Equal(0, activeSessions);
+            activeSessions.Should().Be(0);
         }
 
         // And: User cannot use previous sessions
         var userRequest1 = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/sessions");
         AddCookies(userRequest1, cookies1);
         var userResponse1 = await client.SendAsync(userRequest1);
-        Assert.Equal(HttpStatusCode.Unauthorized, userResponse1.StatusCode);
+        userResponse1.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -396,7 +396,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200 with zero count
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("revokedCount", out var revokedCount));
@@ -425,7 +425,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 403 Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -451,13 +451,13 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200 with sessions list
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.ValueKind == JsonValueKind.Array);
+        result.ValueKind == JsonValueKind.Array.Should().BeTrue();
 
         var sessions = result.EnumerateArray().ToList();
-        Assert.True(sessions.Count >= 2); // At least 2 sessions
+        sessions.Count >= 2.Should().BeTrue(); // At least 2 sessions
 
         // Verify all sessions belong to the user
         Assert.All(sessions, session =>
@@ -490,6 +490,6 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var response = await client.GetAsync("/api/v1/users/me/sessions");
 
         // Then: HTTP 401 Unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 }

@@ -64,15 +64,15 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: System returns HTTP 200 OK
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: Response includes paginated list
         var result = await response.Content.ReadFromJsonAsync<PagedResult<UserDto>>(JsonOptions);
         result.Should().NotBeNull();
-        Assert.True(result.Total >= 3); // At least admin + 2 users
+        result.Total >= 3.Should().BeTrue(); // At least admin + 2 users
         result.Items.Should().NotBeEmpty();
-        Assert.Equal(1, result.Page);
-        Assert.Equal(20, result.PageSize);
+        result.Page.Should().Be(1);
+        result.PageSize.Should().Be(20);
     }
 
     /// <summary>
@@ -103,7 +103,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: Returns filtered results
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<PagedResult<UserDto>>(JsonOptions);
         result.Should().NotBeNull();
         Assert.True(result.Items.Any(u => u.Email.Contains(uniqueIdentifier)));
@@ -136,10 +136,10 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: Returns only Editors
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<PagedResult<UserDto>>(JsonOptions);
         result.Should().NotBeNull();
-        Assert.All(result.Items, user => Assert.Equal("Editor", user.Role));
+        result.Items.Should().OnlyContain(user => user.Role == "Editor");
     }
 
     /// <summary>
@@ -165,12 +165,12 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: Returns exactly 2 users
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<PagedResult<UserDto>>(JsonOptions);
         result.Should().NotBeNull();
-        Assert.True(result.Items.Count <= 2);
-        Assert.Equal(1, result.Page);
-        Assert.Equal(2, result.PageSize);
+        result.Items.Count <= 2.Should().BeTrue();
+        result.Page.Should().Be(1);
+        result.PageSize.Should().Be(2);
     }
 
     /// <summary>
@@ -195,7 +195,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await userClient.SendAsync(request);
 
         // Then: System returns 403 Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -214,7 +214,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await client.GetAsync("/api/v1/admin/users");
 
         // Then: System returns 401 Unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     #endregion
@@ -254,14 +254,14 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: Returns 201 Created
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         // And: Response includes user details
         var createdUser = await response.Content.ReadFromJsonAsync<UserDto>(JsonOptions);
         createdUser.Should().NotBeNull();
-        Assert.Equal(newUserEmail, createdUser.Email);
-        Assert.Equal("New Test User", createdUser.DisplayName);
-        Assert.Equal("User", createdUser.Role);
+        createdUser.Email.Should().Be(newUserEmail);
+        createdUser.DisplayName.Should().Be("New Test User");
+        createdUser.Role.Should().Be("User");
 
         // And: User exists in database
         var userId = await GetUserIdByEmailAsync(newUserEmail);
@@ -299,9 +299,9 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: User created with Admin role
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
         var createdUser = await response.Content.ReadFromJsonAsync<UserDto>(JsonOptions);
-        Assert.Equal("Admin", createdUser!.Role);
+        createdUser!.Role.Should().Be("Admin");
     }
 
     /// <summary>
@@ -340,11 +340,11 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: Returns 400 Bad Request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         // And: Error message mentions duplicate
         var errorContent = await response.Content.ReadAsStringAsync();
-        Assert.Contains("already exists", errorContent, StringComparison.OrdinalIgnoreCase);
+        errorContent, StringComparison.OrdinalIgnoreCase.Should().Contain("already exists");
     }
 
     /// <summary>
@@ -377,7 +377,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await editorClient.SendAsync(request);
 
         // Then: Returns 403 Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     #endregion
@@ -421,13 +421,13 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: Returns 200 OK
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: User is updated
         var updatedUser = await response.Content.ReadFromJsonAsync<UserDto>(JsonOptions);
-        Assert.Equal(newEmail, updatedUser!.Email);
-        Assert.Equal("Updated Name", updatedUser.DisplayName);
-        Assert.Equal("Editor", updatedUser.Role);
+        updatedUser!.Email.Should().Be(newEmail);
+        updatedUser.DisplayName.Should().Be("Updated Name");
+        updatedUser.Role.Should().Be("Editor");
     }
 
     /// <summary>
@@ -464,11 +464,11 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: Only display name changed
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var updatedUser = await response.Content.ReadFromJsonAsync<UserDto>(JsonOptions);
-        Assert.Equal(originalEmail, updatedUser!.Email); // Unchanged
-        Assert.Equal("Only Name Changed", updatedUser.DisplayName); // Changed
-        Assert.Equal("User", updatedUser.Role); // Unchanged
+        updatedUser!.Email.Should().Be(originalEmail); // Unchanged
+        updatedUser.DisplayName.Should().Be("Only Name Changed"); // Changed
+        updatedUser.Role.Should().Be("User"); // Unchanged
     }
 
     /// <summary>
@@ -508,9 +508,9 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: Returns 400 Bad Request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var errorContent = await response.Content.ReadAsStringAsync();
-        Assert.Contains("already in use", errorContent, StringComparison.OrdinalIgnoreCase);
+        errorContent, StringComparison.OrdinalIgnoreCase.Should().Contain("already in use");
     }
 
     /// <summary>
@@ -543,7 +543,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: Returns 404 Not Found
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     /// <summary>
@@ -576,7 +576,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await userClient.SendAsync(request);
 
         // Then: Returns 403 Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     #endregion
@@ -610,7 +610,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: Returns 204 No Content
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // And: User no longer exists (verify by trying to fetch - should return null/not found)
         // Note: GetUserIdByEmailAsync will throw if user doesn't exist, so we skip this check
@@ -639,9 +639,9 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: Returns 400 Bad Request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var errorContent = await response.Content.ReadAsStringAsync();
-        Assert.Contains("own account", errorContent, StringComparison.OrdinalIgnoreCase);
+        errorContent, StringComparison.OrdinalIgnoreCase.Should().Contain("own account");
     }
 
     /// <summary>
@@ -687,7 +687,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: Returns 404 Not Found
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     /// <summary>
@@ -716,7 +716,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var response = await editorClient.SendAsync(request);
 
         // Then: Returns 403 Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     #endregion

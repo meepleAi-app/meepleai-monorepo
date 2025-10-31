@@ -213,7 +213,7 @@ Our approach follows these principles:
 
 | # | Issue | Priority | Effort | Rationale |
 |---|-------|----------|--------|-----------|
-| 36 | #601 TEST-03: Concurrency tests | ✅ COMPLETE | L (20h actual, 30h est) | **100% COMPLETE**: Comprehensive concurrency testing framework with 3 test suites (ConfigurationConcurrencyTests 6 tests, RuleSpecConcurrencyTests 4 tests, SessionManagementConcurrencyTests 5 tests). **Total: 15 tests** covering all 4 concurrency patterns (Lost Update, Optimistic Concurrency, TOCTOU, Cache Coherence). Validated critical services: Configuration, RuleSpec version conflicts, SessionManagement auth-critical operations. Complete documentation (500+ line guide, implementation summary). API-discovery approach proven effective. Production-ready framework. Branch: `test-601-concurrency-tests`. Completed: 2025-10-31 |
+| 36 | #601 TEST-03: Concurrency tests | ✅ PHASE 1 COMPLETE | L (20h actual, 30h est) | **PHASE 1 COMPLETE + PHASE 2 SQLite LIMITS**: Phase 1 (100%): Comprehensive testing guide (500+ lines), ConfigurationConcurrencyTests (6 passing tests with Testcontainers + PostgreSQL), 4 test patterns documented. **Phase 2 Critical Finding**: SQLite unsuitable for true concurrency (nested transaction errors). Attempted RuleSpec + SessionManagement tests (~900 LOC) - removed due to SQLite limits. **Production path**: ALL concurrency tests must use WebApplicationFactory + Testcontainers (ConfigurationConcurrencyTests pattern). Framework complete, future implementation: 6-8h per service. Branch: `test-601-concurrency-tests`. PR #603. Completed: 2025-10-31 |
 
 **Next Steps**: Follow incremental approach in implementation summary (API discovery → 2-3 tests → verify → next service).
 

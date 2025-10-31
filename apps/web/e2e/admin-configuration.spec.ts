@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/auth';
 
 /**
  * CONFIG-07: E2E tests for admin configuration UI
@@ -6,22 +6,13 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Admin Configuration Management', () => {
-  test.beforeEach(async ({ page }) => {
-    // Login as admin (assumes demo data seeded)
-    await page.goto('http://localhost:3000/login');
-    await page.fill('input[name="email"]', 'admin@meepleai.dev');
-    await page.fill('input[name="password"]', 'Demo123!');
-    await page.click('button[type="submit"]');
-
-    // Wait for redirect to home
-    await expect(page).toHaveURL(/.*\/(chat|home|$)/);
-
-    // Navigate to configuration page
-    await page.goto('http://localhost:3000/admin/configuration');
+  test.beforeEach(async ({ adminPage: page }) => {
+    // Navigate to configuration page (already authenticated)
+    await page.goto('/admin/configuration');
     await expect(page).toHaveURL('/admin/configuration');
   });
 
-  test('admin can view configuration management page', async ({ page }) => {
+  test('admin can view configuration management page', async ({ adminPage: page }) => {
     // Assert: Configuration page loads with tabs
     await expect(page.locator('h1')).toContainText(/configuration/i);
 
@@ -32,7 +23,7 @@ test.describe('Admin Configuration Management', () => {
     await expect(page.locator('text=RAG')).toBeVisible();
   });
 
-  test('admin can create new feature flag configuration', async ({ page }) => {
+  test('admin can create new feature flag configuration', async ({ adminPage: page }) => {
     // Navigate to Feature Flags tab
     await page.click('text=Feature Flags');
 
@@ -58,7 +49,7 @@ test.describe('Admin Configuration Management', () => {
     }
   });
 
-  test('admin can toggle feature flag', async ({ page }) => {
+  test('admin can toggle feature flag', async ({ adminPage: page }) => {
     // Navigate to Feature Flags tab
     await page.click('text=Feature Flags');
 
@@ -87,7 +78,7 @@ test.describe('Admin Configuration Management', () => {
     }
   });
 
-  test('admin can view different configuration categories', async ({ page }) => {
+  test('admin can view different configuration categories', async ({ adminPage: page }) => {
     // Test tab navigation
     const tabs = ['Feature Flags', 'Rate Limiting', 'AI', 'RAG'];
 
@@ -105,7 +96,7 @@ test.describe('Admin Configuration Management', () => {
     }
   });
 
-  test('non-admin cannot access configuration page', async ({ page, context }) => {
+  test('non-admin cannot access configuration page', async ({ page }) => {
     // Logout
     await page.goto('http://localhost:3000/logout').catch(() => {});
 

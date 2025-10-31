@@ -108,9 +108,9 @@ public class PdfValidationServiceTests : IDisposable
         var result = _service.ValidateFileSize(0);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("fileSize", result.Errors);
-        Assert.Contains("must be greater than 0", result.Errors["fileSize"]);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain("fileSize");
+        result.Errors["fileSize"].Should().Contain("must be greater than 0");
     }
 
     [Fact]
@@ -120,8 +120,8 @@ public class PdfValidationServiceTests : IDisposable
         var result = _service.ValidateFileSize(-100);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("fileSize", result.Errors);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain("fileSize");
     }
 
     [Fact]
@@ -134,9 +134,9 @@ public class PdfValidationServiceTests : IDisposable
         var result = _service.ValidateFileSize(oversizedFile);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("fileSize", result.Errors);
-        Assert.Contains("exceeds maximum", result.Errors["fileSize"]);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain("fileSize");
+        result.Errors["fileSize"].Should().Contain("exceeds maximum");
     }
 
     [Fact]
@@ -149,10 +149,10 @@ public class PdfValidationServiceTests : IDisposable
         var result = _service.ValidateFileSize(validSize);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
         result.Metadata.Should().NotBeNull();
-        Assert.Equal(validSize, result.Metadata.FileSizeBytes);
+        result.Metadata.FileSizeBytes.Should().Be(validSize);
     }
 
     [Fact]
@@ -162,7 +162,7 @@ public class PdfValidationServiceTests : IDisposable
         var result = _service.ValidateFileSize(_config.MaxFileSizeBytes);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
     }
 
@@ -175,9 +175,9 @@ public class PdfValidationServiceTests : IDisposable
         var result = _service.ValidateMimeType(string.Empty);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("fileType", result.Errors);
-        Assert.Contains("cannot be empty", result.Errors["fileType"]);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain("fileType");
+        result.Errors["fileType"].Should().Contain("cannot be empty");
     }
 
     [Fact]
@@ -187,8 +187,8 @@ public class PdfValidationServiceTests : IDisposable
         var result = _service.ValidateMimeType(null!);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("fileType", result.Errors);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain("fileType");
     }
 
     [Fact]
@@ -198,9 +198,9 @@ public class PdfValidationServiceTests : IDisposable
         var result = _service.ValidateMimeType("application/msword");
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("fileType", result.Errors);
-        Assert.Contains("not allowed", result.Errors["fileType"]);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain("fileType");
+        result.Errors["fileType"].Should().Contain("not allowed");
     }
 
     [Fact]
@@ -210,7 +210,7 @@ public class PdfValidationServiceTests : IDisposable
         var result = _service.ValidateMimeType("application/pdf");
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
     }
 
@@ -221,7 +221,7 @@ public class PdfValidationServiceTests : IDisposable
         var result = _service.ValidateMimeType("Application/PDF");
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
     }
 
@@ -234,9 +234,9 @@ public class PdfValidationServiceTests : IDisposable
         var result = await _service.ValidateAsync(null!, "test.pdf");
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("stream", result.Errors);
-        Assert.Contains("cannot be null", result.Errors["stream"]);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain("stream");
+        result.Errors["stream"].Should().Contain("cannot be null");
     }
 
     [Fact]
@@ -249,9 +249,9 @@ public class PdfValidationServiceTests : IDisposable
         var result = await _service.ValidateAsync(stream, string.Empty);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("fileName", result.Errors);
-        Assert.Contains("cannot be empty", result.Errors["fileName"]);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain("fileName");
+        result.Errors["fileName"].Should().Contain("cannot be empty");
     }
 
     [Fact]
@@ -274,10 +274,10 @@ public class PdfValidationServiceTests : IDisposable
         var result = await _service.ValidateAsync(stream, "test.pdf");
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
         result.Metadata.Should().NotBeNull();
-        Assert.True(result.Metadata.PageCount >= 1);
+        result.Metadata.PageCount >= 1.Should().BeTrue();
         result.Metadata.PdfVersion.Should().NotBeEmpty();
     }
 
@@ -292,9 +292,9 @@ public class PdfValidationServiceTests : IDisposable
         var result = await _service.ValidateAsync(stream, "test.pdf");
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("fileFormat", result.Errors);
-        Assert.Contains("Invalid PDF file format", result.Errors["fileFormat"]);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain("fileFormat");
+        result.Errors["fileFormat"].Should().Contain("Invalid PDF file format");
     }
 
     [Fact]
@@ -308,8 +308,8 @@ public class PdfValidationServiceTests : IDisposable
         var result = await _service.ValidateAsync(stream, "corrupted.pdf");
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("pdfStructure", result.Errors);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain("pdfStructure");
     }
 
     [Fact]
@@ -345,9 +345,9 @@ public class PdfValidationServiceTests : IDisposable
         var result = await customService.ValidateAsync(stream, "test.pdf");
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("pageCount", result.Errors);
-        Assert.Contains("must have at least 5 page(s)", result.Errors["pageCount"]);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain("pageCount");
+        result.Errors["pageCount"].Should().Contain("must have at least 5 page(s)");
     }
 
     [Fact]
@@ -381,9 +381,9 @@ public class PdfValidationServiceTests : IDisposable
         var result = await customService.ValidateAsync(stream, "test.pdf");
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("pageCount", result.Errors);
-        Assert.Contains("maximum allowed is 2", result.Errors["pageCount"]);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain("pageCount");
+        result.Errors["pageCount"].Should().Contain("maximum allowed is 2");
     }
 
     [Fact]
@@ -406,11 +406,11 @@ public class PdfValidationServiceTests : IDisposable
         var result = await _service.ValidateAsync(stream, "test.pdf");
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.Metadata.Should().NotBeNull();
-        Assert.Equal(3, result.Metadata.PageCount);
+        result.Metadata.PageCount.Should().Be(3);
         result.Metadata.PdfVersion.Should().NotBeEmpty();
-        Assert.True(result.Metadata.FileSizeBytes > 0);
+        result.Metadata.FileSizeBytes > 0.Should().BeTrue();
     }
 
     // ===== PDF Version Validation Tests =====
@@ -435,7 +435,7 @@ public class PdfValidationServiceTests : IDisposable
         var result = await _service.ValidateAsync(stream, "test.pdf");
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.Metadata.Should().NotBeNull();
         result.Metadata.PdfVersion.Should().NotBeEmpty();
     }
@@ -453,8 +453,8 @@ public class PdfValidationServiceTests : IDisposable
         var result = await _service.ValidateAsync(stream, "test.pdf");
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.True(result.Errors.Count > 0);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Count > 0.Should().BeTrue();
     }
 
     // ===== Configuration Tests =====
@@ -466,11 +466,11 @@ public class PdfValidationServiceTests : IDisposable
         var config = new PdfProcessingConfiguration();
 
         // Assert
-        Assert.Equal(104857600, config.MaxFileSizeBytes); // 100 MB
-        Assert.Equal(500, config.MaxPageCount);
-        Assert.Equal(1, config.MinPageCount);
-        Assert.Equal("1.4", config.MinPdfVersion);
-        Assert.Contains("application/pdf", config.AllowedContentTypes);
+        config.MaxFileSizeBytes.Should().Be(104857600); // 100 MB
+        config.MaxPageCount.Should().Be(500);
+        config.MinPageCount.Should().Be(1);
+        config.MinPdfVersion.Should().Be("1.4");
+        config.AllowedContentTypes.Should().Contain("application/pdf");
     }
 
     // ===== Logging Tests =====
@@ -543,9 +543,9 @@ public class PdfValidationServiceTests : IDisposable
         var result = PdfValidationResult.CreateSuccess(metadata);
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
-        Assert.Equal(metadata, result.Metadata);
+        result.Metadata.Should().Be(metadata);
     }
 
     [Fact]
@@ -562,8 +562,8 @@ public class PdfValidationServiceTests : IDisposable
         var result = PdfValidationResult.CreateFailure(errors);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal(errors, result.Errors);
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Be(errors);
         result.Metadata.Should().BeNull();
     }
 }

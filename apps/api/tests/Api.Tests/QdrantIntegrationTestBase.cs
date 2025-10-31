@@ -123,11 +123,16 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
         var vectorSearcherLogger = new Mock<ILogger<QdrantVectorSearcher>>();
         var vectorSearcher = new QdrantVectorSearcher(clientAdapter, vectorSearcherLogger.Object);
 
+        // Create mock embedding service for tests
+        var mockEmbeddingService = new Mock<IEmbeddingService>();
+        mockEmbeddingService.Setup(m => m.GetEmbeddingDimensions()).Returns(1536); // OpenAI dimensions
+
         var loggerMock = new Mock<ILogger<QdrantService>>();
         QdrantService = new QdrantService(
             collectionManager,
             vectorIndexer,
             vectorSearcher,
+            mockEmbeddingService.Object,
             configuration,
             loggerMock.Object);
 

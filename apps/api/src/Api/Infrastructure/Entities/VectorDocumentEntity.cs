@@ -16,8 +16,9 @@ public class VectorDocumentEntity
     public string? IndexingError { get; set; }
 
     // Embeddings metadata
-    public string EmbeddingModel { get; set; } = "openai/text-embedding-3-small";
-    public int EmbeddingDimensions { get; set; } = 1536;
+    // NOTE: These defaults will be overridden by PdfIndexingService with actual values from EmbeddingService
+    public string EmbeddingModel { get; set; } = "nomic-embed-text";
+    public int EmbeddingDimensions { get; set; } = 768;
 
     // Navigation properties
     public GameEntity Game { get; set; } = default!;

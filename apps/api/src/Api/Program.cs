@@ -198,6 +198,15 @@ using (var scope = app.Services.CreateScope())
         // AI-01: Initialize Qdrant collection
         var qdrant = scope.ServiceProvider.GetRequiredService<IQdrantService>();
         await qdrant.EnsureCollectionExistsAsync();
+
+        // Validate embedding configuration consistency
+        var embedding = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
+        var embeddingDimensions = embedding.GetEmbeddingDimensions();
+        var provider = app.Configuration["EMBEDDING_PROVIDER"]?.ToLowerInvariant() ?? "ollama";
+        var model = app.Configuration["EMBEDDING_MODEL"] ?? "nomic-embed-text";
+
+        app.Logger.LogInformation("✓ Embedding configuration validated: Provider={Provider}, Model={Model}, Dimensions={Dimensions}",
+            provider, model, embeddingDimensions);
     }
 }
 

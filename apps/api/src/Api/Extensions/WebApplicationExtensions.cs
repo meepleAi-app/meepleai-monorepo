@@ -74,11 +74,18 @@ public static class WebApplicationExtensions
             await next();
         });
 
-        // API-01: API key authentication middleware (must be before authorization)
+        // AUTH-03: Session cookie authentication (must be before API key and authorization)
+        // This middleware reads session cookies and populates HttpContext.Items["ActiveSession"]
+        app.UseSessionAuthentication();
+
+        // AUTH-03: Standard authentication middleware for ClaimsPrincipal
+        app.UseAuthentication();
+
+        // API-01: API key authentication middleware (must be after UseAuthentication)
         app.UseApiKeyAuthentication();
 
-        // Note: Additional authentication, authorization, and rate limiting middleware
-        // should be configured after calling this method but before MapEndpoints.
+        // AUTH-03: Authorization middleware (must be after all authentication middleware)
+        app.UseAuthorization();
 
         return app;
     }

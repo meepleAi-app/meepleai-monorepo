@@ -17,7 +17,7 @@ public class EmbeddingService : IEmbeddingService
     private readonly string _provider;
     private readonly string? _localEmbeddingUrl; // AI-09: Local embedding service URL
     private readonly bool _embeddingFallbackEnabled; // AI-09: Enable fallback chain
-    private const int EmbeddingDimensions = 768; // nomic-embed-text default
+    private readonly int _embeddingDimensions; // Configured based on model
 
     public EmbeddingService(IHttpClientFactory httpClientFactory, IConfiguration config, ILogger<EmbeddingService> logger)
     {
@@ -42,7 +42,10 @@ public class EmbeddingService : IEmbeddingService
         }
 
         // Check for embedding provider configuration (default: ollama)
-        _provider = config["EMBEDDING_PROVIDER"]?.ToLowerInvariant() ?? "ollama";
+        // Support both nested (Embedding:Provider) and flat (EMBEDDING_PROVIDER) configuration keys
+        _provider = config["Embedding:Provider"]?.ToLowerInvariant()
+                    ?? config["EMBEDDING_PROVIDER"]?.ToLowerInvariant()
+                    ?? "ollama";
 
         if (_provider == "ollama")
         {
@@ -50,9 +53,16 @@ public class EmbeddingService : IEmbeddingService
             _httpClient = httpClientFactory.CreateClient("Ollama");
             var ollamaUrl = config["OLLAMA_URL"] ?? "http://localhost:11434";
             _httpClient.BaseAddress = new Uri(ollamaUrl);
-            _embeddingModel = config["EMBEDDING_MODEL"] ?? "nomic-embed-text";
+
+            // Support both nested (Embedding:Model) and flat (EMBEDDING_MODEL) configuration keys
+            _embeddingModel = config["Embedding:Model"] ?? config["EMBEDDING_MODEL"] ?? "nomic-embed-text";
             _httpClient.Timeout = TimeSpan.FromSeconds(60);
-            _logger.LogInformation("Using Ollama for embeddings at {Url} with model {Model}", ollamaUrl, _embeddingModel);
+
+            // Determine dimensions based on model
+            _embeddingDimensions = DetermineEmbeddingDimensions(_embeddingModel, config);
+
+            _logger.LogInformation("Using Ollama for embeddings at {Url} with model {Model} ({Dimensions} dimensions)",
+                ollamaUrl, _embeddingModel, _embeddingDimensions);
         }
         else if (_provider == "openai")
         {
@@ -61,14 +71,63 @@ public class EmbeddingService : IEmbeddingService
             _httpClient.BaseAddress = new Uri("https://openrouter.ai/api/v1/");
             _apiKey = config["OPENAI_API_KEY"] ?? throw new InvalidOperationException("OPENAI_API_KEY not configured for OpenAI provider");
             _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
-            _embeddingModel = config["EMBEDDING_MODEL"] ?? "text-embedding-3-small";
+
+            // Support both nested (Embedding:Model) and flat (EMBEDDING_MODEL) configuration keys
+            _embeddingModel = config["Embedding:Model"] ?? config["EMBEDDING_MODEL"] ?? "text-embedding-3-small";
             _httpClient.Timeout = TimeSpan.FromSeconds(30);
-            _logger.LogInformation("Using OpenRouter for embeddings with model {Model}", _embeddingModel);
+
+            // Determine dimensions based on model
+            _embeddingDimensions = DetermineEmbeddingDimensions(_embeddingModel, config);
+
+            _logger.LogInformation("Using OpenRouter for embeddings with model {Model} ({Dimensions} dimensions)",
+                _embeddingModel, _embeddingDimensions);
         }
         else
         {
             throw new InvalidOperationException($"Unsupported embedding provider: {_provider}. Use 'ollama' or 'openai'");
         }
+    }
+
+    /// <summary>
+    /// Get the configured embedding dimensions
+    /// </summary>
+    public int GetEmbeddingDimensions() => _embeddingDimensions;
+
+    /// <summary>
+    /// Determine embedding dimensions based on model name and configuration
+    /// </summary>
+    private static int DetermineEmbeddingDimensions(string modelName, IConfiguration config)
+    {
+        // Try nested config first (Embedding:Dimensions) - matches appsettings.json structure
+        if (int.TryParse(config["Embedding:Dimensions"], out var nestedDimensions) && nestedDimensions > 0)
+        {
+            return nestedDimensions;
+        }
+
+        // Try flat config for backward compatibility (EMBEDDING_DIMENSIONS environment variable)
+        // IMPORTANT: Only accept positive values to prevent 0 or negative dimensions bug
+        if (int.TryParse(config["EMBEDDING_DIMENSIONS"], out var flatDimensions) && flatDimensions > 0)
+        {
+            return flatDimensions;
+        }
+
+        // Infer from model name as fallback
+        return modelName.ToLowerInvariant() switch
+        {
+            // OpenAI models
+            "text-embedding-ada-002" => 1536,
+            "text-embedding-3-small" => 1536,
+            "text-embedding-3-large" => 3072,
+            // Ollama models
+            "nomic-embed-text" => 768,
+            "all-minilm" => 384,
+            "mxbai-embed-large" => 1024,
+            // Sentence transformers
+            "all-minilm-l6-v2" => 384,
+            "all-mpnet-base-v2" => 768,
+            // Default to 768 for unknown models (Ollama default)
+            _ => 768
+        };
     }
 
     /// <summary>

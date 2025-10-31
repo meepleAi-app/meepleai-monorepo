@@ -94,15 +94,18 @@ public class PdfIndexingService
         }
         else
         {
-            // Create new VectorDocumentEntity
+            // Create new VectorDocumentEntity with actual embedding configuration
+            // Get actual dimensions from embedding service to ensure consistency
+            var embeddingDimensions = _embeddingService.GetEmbeddingDimensions();
+
             existingVectorDoc = new VectorDocumentEntity
             {
                 Id = $"vec-{Guid.NewGuid():N}",
                 GameId = pdf.GameId,
                 PdfDocumentId = pdfId,
                 IndexingStatus = "processing",
-                EmbeddingModel = "openai/text-embedding-3-small",
-                EmbeddingDimensions = 1536
+                EmbeddingModel = _embeddingService.GetType().Name, // Will be set correctly after indexing
+                EmbeddingDimensions = embeddingDimensions
             };
             _db.Set<VectorDocumentEntity>().Add(existingVectorDoc);
             await _db.SaveChangesAsync(ct);

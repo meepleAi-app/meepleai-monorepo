@@ -85,21 +85,27 @@ public class AiResponseCacheService : IAiResponseCacheService
     /// PERF-05: This method is now a thin wrapper around HybridCache.
     /// For new code, prefer using IHybridCacheService.GetOrCreateAsync directly
     /// with a factory function to get cache stampede protection.
+    /// Tags are automatically extracted from cache key for tag-based invalidation.
     /// </remarks>
     public async Task SetAsync<T>(string cacheKey, T response, int ttlSeconds = 86400, CancellationToken ct = default) where T : class
     {
         try
         {
-            // Use GetOrCreateAsync to ensure value is cached
+            // Extract tags from cache key for tag-based invalidation
+            // Cache key format: "meepleai:{endpoint}:{gameId}:{hash}"
+            var tags = ExtractTagsFromCacheKey(cacheKey);
+
+            // Use GetOrCreateAsync to ensure value is cached with tags
             await _hybridCache.GetOrCreateAsync(
                 cacheKey: cacheKey,
                 factory: async _ => response,
-                tags: null,
+                tags: tags,
                 expiration: TimeSpan.FromSeconds(ttlSeconds),
                 ct: ct
             );
 
-            _logger.LogInformation("Cached response for key: {CacheKey} (TTL: {TTL}s)", cacheKey, ttlSeconds);
+            _logger.LogInformation("Cached response for key: {CacheKey} with tags: {Tags} (TTL: {TTL}s)",
+                cacheKey, tags != null ? string.Join(", ", tags) : "none", ttlSeconds);
         }
         catch (RedisConnectionException ex)
         {
@@ -117,6 +123,39 @@ public class AiResponseCacheService : IAiResponseCacheService
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning(ex, "Invalid cache operation for key {CacheKey}. Proceeding without cache.", cacheKey);
+        }
+    }
+
+    /// <summary>
+    /// Extract tags from cache key for tag-based invalidation.
+    /// Cache key format: "meepleai:{endpoint}:{gameId}:{hash}"
+    /// Returns tags: ["game:{gameId}", "endpoint:{endpoint}"]
+    /// </summary>
+    private static string[]? ExtractTagsFromCacheKey(string cacheKey)
+    {
+        try
+        {
+            // Expected format: "meepleai:{endpoint}:{gameId}:{hash}"
+            var parts = cacheKey.Split(':');
+
+            if (parts.Length < 3)
+            {
+                return null; // Invalid cache key format
+            }
+
+            var endpoint = parts[1]; // "qa", "explain", "setup"
+            var gameId = parts[2];
+
+            return new[]
+            {
+                $"game:{gameId}",
+                $"endpoint:{endpoint}"
+            };
+        }
+        catch
+        {
+            // If tag extraction fails, cache without tags (degraded but functional)
+            return null;
         }
     }
 

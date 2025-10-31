@@ -152,8 +152,8 @@ public class ChatExportServiceTests : IDisposable
         var result = await _service.ExportChatAsync(nonExistentChatId, "user-123", "pdf");
 
         // Then: NotFound result is returned
-        Assert.False(result.Success);
-        Assert.Equal("not_found", result.Error);
+        result.Success.Should().BeFalse();
+        result.Error.Should().Be("not_found");
         result.Stream.Should().BeNull();
 
         // And: No formatter is called
@@ -179,14 +179,14 @@ public class ChatExportServiceTests : IDisposable
         var result = await _service.ExportChatAsync(chat.Id, "user-123", "xml");
 
         // Then: UnsupportedFormat result is returned
-        Assert.False(result.Success);
-        Assert.Equal("unsupported_format", result.Error);
+        result.Success.Should().BeFalse();
+        result.Error.Should().Be("unsupported_format");
         result.Stream.Should().BeNull();
 
         // And: Error message lists supported formats
-        Assert.Contains("pdf", result.ErrorDetails ?? "");
-        Assert.Contains("txt", result.ErrorDetails ?? "");
-        Assert.Contains("md", result.ErrorDetails ?? "");
+        result.ErrorDetails ?? "".Should().Contain("pdf");
+        result.ErrorDetails ?? "".Should().Contain("txt");
+        result.ErrorDetails ?? "".Should().Contain("md");
     }
 
     /// <summary>
@@ -231,9 +231,9 @@ public class ChatExportServiceTests : IDisposable
             Times.Once);
 
         // And: Success result with stream is returned
-        Assert.True(result.Success);
-        Assert.Equal(exportStream, result.Stream);
-        Assert.Equal("text/plain", result.ContentType);
+        result.Success.Should().BeTrue();
+        result.Stream.Should().Be(exportStream);
+        result.ContentType.Should().Be("text/plain");
     }
 
     /// <summary>
@@ -253,8 +253,8 @@ public class ChatExportServiceTests : IDisposable
         var result = await _service.ExportChatAsync(chat.Id, "attacker-789", "pdf");
 
         // Then: NotFound result is returned (not Forbidden for security)
-        Assert.False(result.Success);
-        Assert.Equal("not_found", result.Error);
+        result.Success.Should().BeFalse();
+        result.Error.Should().Be("not_found");
 
         // And: No formatter is called
         _pdfFormatterMock.Verify(
@@ -314,7 +314,7 @@ public class ChatExportServiceTests : IDisposable
                 It.Is<DateTime?>(d => d.HasValue && (d.Value - endDate).TotalSeconds < 1)),
             Times.Once);
 
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
     }
 
     /// <summary>
@@ -338,11 +338,11 @@ public class ChatExportServiceTests : IDisposable
         var result = await _service.ExportChatAsync(chat.Id, "user-123", "pdf");
 
         // Then: GenerationFailed result is returned
-        Assert.False(result.Success);
-        Assert.Equal("generation_failed", result.Error);
+        result.Success.Should().BeFalse();
+        result.Error.Should().Be("generation_failed");
 
         // And: Error message includes exception details
-        Assert.Contains("PDF generation failed", result.ErrorDetails ?? "");
+        result.ErrorDetails ?? "".Should().Contain("PDF generation failed");
     }
 
     /// <summary>
@@ -372,16 +372,16 @@ public class ChatExportServiceTests : IDisposable
         var result = await _service.ExportChatAsync(chat.Id, "user-123", "txt");
 
         // Then: Filename is sanitized and follows pattern
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.Filename.Should().NotBeNull();
-        Assert.Contains(expectedSanitized, result.Filename);
-        Assert.StartsWith("chat-", result.Filename);
-        Assert.EndsWith(".txt", result.Filename);
+        result.Filename.Should().Contain(expectedSanitized);
+        result.Filename.Should().StartWith("chat-");
+        result.Filename.Should().EndWith(".txt");
 
         // And: Path traversal attempts are blocked
-        Assert.DoesNotContain("..", result.Filename);
-        Assert.DoesNotContain("/", result.Filename);
-        Assert.DoesNotContain("\\", result.Filename);
+        result.Filename.Should().NotContain("..");
+        result.Filename.Should().NotContain("/");
+        result.Filename.Should().NotContain("\\");
     }
 
     /// <summary>
@@ -409,11 +409,11 @@ public class ChatExportServiceTests : IDisposable
         var result = await _service.ExportChatAsync(chat.Id, "user-123", "pdf", startDate, endDate);
 
         // Then: Filename includes date range
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.Filename.Should().NotBeNull();
-        Assert.Contains("2025-10-01", result.Filename);
-        Assert.Contains("2025-10-15", result.Filename);
-        Assert.Contains("to", result.Filename);
+        result.Filename.Should().Contain("2025-10-01");
+        result.Filename.Should().Contain("2025-10-15");
+        result.Filename.Should().Contain("to");
     }
 
     /// <summary>
@@ -446,8 +446,8 @@ public class ChatExportServiceTests : IDisposable
             Times.Once);
 
         // And: Export succeeds
-        Assert.True(result.Success);
-        Assert.Equal("text/markdown", result.ContentType);
+        result.Success.Should().BeTrue();
+        result.ContentType.Should().Be("text/markdown");
     }
 
     /// <summary>
@@ -512,7 +512,7 @@ public class ChatExportServiceTests : IDisposable
                 null),
             Times.Once);
 
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
     }
 
     /// <summary>
@@ -564,8 +564,8 @@ public class ChatExportServiceTests : IDisposable
             Times.Once);
 
         // And: Export succeeds with correct content type
-        Assert.True(result.Success);
-        Assert.Equal(expectedContentType, result.ContentType);
+        result.Success.Should().BeTrue();
+        result.ContentType.Should().Be(expectedContentType);
     }
 
     /// <summary>
@@ -586,8 +586,8 @@ public class ChatExportServiceTests : IDisposable
         cts.Cancel();
 
         // Then: OperationCanceledException is thrown
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
-            await _service.ExportChatAsync(chat.Id, "user-123", "pdf", ct: cts.Token));
+        var act = async () => await _service.ExportChatAsync(chat.Id, "user-123", "pdf", ct: cts.Token);
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     /// <summary>
@@ -617,10 +617,10 @@ public class ChatExportServiceTests : IDisposable
         var result = await _service.ExportChatAsync(chat.Id, "user-123", "txt");
 
         // Then: Filename uses "chat" as fallback
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.Filename.Should().NotBeNull();
-        Assert.StartsWith("chat-chat-", result.Filename);
-        Assert.EndsWith(".txt", result.Filename);
+        result.Filename.Should().StartWith("chat-chat-");
+        result.Filename.Should().EndWith(".txt");
     }
 
     /// <summary>
@@ -650,12 +650,12 @@ public class ChatExportServiceTests : IDisposable
         var result = await _service.ExportChatAsync(chat.Id, "user-123", "pdf");
 
         // Then: Control characters are removed
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.Filename.Should().NotBeNull();
-        Assert.Contains(expectedSanitized, result.Filename);
+        result.Filename.Should().Contain(expectedSanitized);
 
         // And: Filename starts with sanitized game name
-        Assert.StartsWith(expectedSanitized, result.Filename.Split("-chat-")[0]);
+        result.Filename.Split("-chat-")[0].Should().StartWith(expectedSanitized);
     }
 
     /// <summary>
@@ -682,16 +682,16 @@ public class ChatExportServiceTests : IDisposable
         var result = await _service.ExportChatAsync(chat.Id, "user-123", "md");
 
         // Then: Game name is truncated
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.Filename.Should().NotBeNull();
 
         // And: Filename contains truncated portion (max 50 chars of game name)
         // Format: {gameName(<=50)}-chat-{id(8)}.{ext}
         var gameNamePart = result.Filename.Split("-chat-")[0];
-        Assert.True(gameNamePart.Length <= 50, $"Game name part '{gameNamePart}' exceeds 50 chars: {gameNamePart.Length}");
+        gameNamePart.Length <= 50, $"Game name part '{gameNamePart}' exceeds 50 chars: {gameNamePart.Length}".Should().BeTrue();
 
         // And: Filename is reasonable length (truncated game name + "-chat-" + 8-char ID + ".md")
-        Assert.True(result.Filename.Length < 80, $"Filename too long: {result.Filename.Length} chars");
+        result.Filename.Length < 80, $"Filename too long: {result.Filename.Length} chars".Should().BeTrue();
     }
 
     /// <summary>
@@ -720,11 +720,11 @@ public class ChatExportServiceTests : IDisposable
         var result = await _service.ExportChatAsync(chat.Id, "user-123", "txt");
 
         // Then: Newlines are removed
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.Filename.Should().NotBeNull();
-        Assert.Contains(expectedSanitized, result.Filename);
-        Assert.DoesNotContain("\n", result.Filename);
-        Assert.DoesNotContain("\r", result.Filename);
+        result.Filename.Should().Contain(expectedSanitized);
+        result.Filename.Should().NotContain("\n");
+        result.Filename.Should().NotContain("\r");
     }
 
     /// <summary>
@@ -765,10 +765,10 @@ public class ChatExportServiceTests : IDisposable
         var results = await Task.WhenAll(tasks);
 
         // Then: All exports succeed
-        Assert.All(results, result => Assert.True(result.Success));
+        results.Should().OnlyContain(result => result.Success);
 
         // And: Each has a valid stream
-        Assert.All(results, result => Assert.NotNull(result.Stream));
+        results.Should().OnlyContain(result => result.Stream != null);
 
         // And: Formatter was called 5 times (once per request)
         _pdfFormatterMock.Verify(
@@ -811,7 +811,7 @@ public class ChatExportServiceTests : IDisposable
         var result = await _service.ExportChatAsync(chat.Id, "user-123", "pdf");
 
         // Then: Export completes successfully
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // And: All 150 messages are loaded and passed to formatter
         _pdfFormatterMock.Verify(

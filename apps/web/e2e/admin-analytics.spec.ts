@@ -1,19 +1,9 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures/auth";
 
 test.describe("Analytics Dashboard E2E", () => {
-  test.beforeEach(async ({ page }) => {
-    // Login as admin
-    await page.goto("http://localhost:3000");
-    await page.getByRole("button", { name: /login/i }).click();
-    await page.fill('input[type="email"]', "admin@meepleai.dev");
-    await page.fill('input[type="password"]', "Demo123!");
-    await page.getByRole("button", { name: /sign in/i }).click();
-    await page.waitForURL("http://localhost:3000/");
-  });
-
-  test("should display analytics dashboard with metrics", async ({ page }) => {
+  test("should display analytics dashboard with metrics", async ({ adminPage: page }) => {
     // Navigate to analytics
-    await page.goto("http://localhost:3000/admin/analytics");
+    await page.goto("/admin/analytics");
 
     // Wait for page to load
     await expect(page.getByText("Analytics Dashboard")).toBeVisible();
@@ -29,8 +19,8 @@ test.describe("Analytics Dashboard E2E", () => {
     await expect(page.getByText("Total Tokens Used")).toBeVisible();
   });
 
-  test("should display charts", async ({ page }) => {
-    await page.goto("http://localhost:3000/admin/analytics");
+  test("should display charts", async ({ adminPage: page }) => {
+    await page.goto("/admin/analytics");
 
     // Wait for dashboard to load
     await expect(page.getByText("Analytics Dashboard")).toBeVisible();
@@ -43,8 +33,8 @@ test.describe("Analytics Dashboard E2E", () => {
     await expect(page.getByText("Chat Messages")).toBeVisible();
   });
 
-  test("should allow changing time period filter", async ({ page }) => {
-    await page.goto("http://localhost:3000/admin/analytics");
+  test("should allow changing time period filter", async ({ adminPage: page }) => {
+    await page.goto("/admin/analytics");
 
     // Wait for initial load
     await expect(page.getByText("Analytics Dashboard")).toBeVisible();
@@ -57,8 +47,8 @@ test.describe("Analytics Dashboard E2E", () => {
     await expect(page.getByText("Analytics Dashboard")).toBeVisible();
   });
 
-  test("should toggle auto-refresh", async ({ page }) => {
-    await page.goto("http://localhost:3000/admin/analytics");
+  test("should toggle auto-refresh", async ({ adminPage: page }) => {
+    await page.goto("/admin/analytics");
 
     // Wait for dashboard
     await expect(page.getByText("Analytics Dashboard")).toBeVisible();
@@ -75,8 +65,8 @@ test.describe("Analytics Dashboard E2E", () => {
     await expect(page.getByRole("button", { name: /Auto-refresh ON/i })).toBeVisible();
   });
 
-  test("should refresh data when refresh button clicked", async ({ page }) => {
-    await page.goto("http://localhost:3000/admin/analytics");
+  test("should refresh data when refresh button clicked", async ({ adminPage: page }) => {
+    await page.goto("/admin/analytics");
 
     // Wait for initial load
     await expect(page.getByText("Analytics Dashboard")).toBeVisible();
@@ -98,8 +88,8 @@ test.describe("Analytics Dashboard E2E", () => {
     expect(newUpdateText).not.toBe(initialUpdateText);
   });
 
-  test("should export CSV", async ({ page }) => {
-    await page.goto("http://localhost:3000/admin/analytics");
+  test("should export CSV", async ({ adminPage: page }) => {
+    await page.goto("/admin/analytics");
 
     // Wait for dashboard
     await expect(page.getByText("Analytics Dashboard")).toBeVisible();
@@ -116,8 +106,8 @@ test.describe("Analytics Dashboard E2E", () => {
     await expect(page.getByText("Analytics exported as CSV")).toBeVisible();
   });
 
-  test("should export JSON", async ({ page }) => {
-    await page.goto("http://localhost:3000/admin/analytics");
+  test("should export JSON", async ({ adminPage: page }) => {
+    await page.goto("/admin/analytics");
 
     // Wait for dashboard
     await expect(page.getByText("Analytics Dashboard")).toBeVisible();
@@ -134,8 +124,8 @@ test.describe("Analytics Dashboard E2E", () => {
     await expect(page.getByText("Analytics exported as JSON")).toBeVisible();
   });
 
-  test("should have back to users link", async ({ page }) => {
-    await page.goto("http://localhost:3000/admin/analytics");
+  test("should have back to users link", async ({ adminPage: page }) => {
+    await page.goto("/admin/analytics");
 
     // Check back link exists
     const backLink = page.getByRole("link", { name: /Back to Users/i });

@@ -135,7 +135,7 @@ export default function Home() {
                 </button>
               </>
             ) : (
-              <button onClick={() => setShowAuthModal(true)} className="btn-primary">
+              <button onClick={() => setShowAuthModal(true)} className="btn-primary" data-testid="nav-get-started">
                 Get Started
               </button>
             )}
@@ -167,6 +167,7 @@ export default function Home() {
               <motion.button
                 onClick={() => authUser ? router.push("/chat") : setShowAuthModal(true)}
                 className="btn-primary text-lg"
+                data-testid="hero-get-started"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -316,6 +317,7 @@ export default function Home() {
           <motion.button
             onClick={() => authUser ? router.push("/chat") : setShowAuthModal(true)}
             className="btn-primary text-lg bg-white text-primary-600 hover:bg-slate-100"
+            data-testid="cta-get-started"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >

@@ -14,8 +14,8 @@ module.exports = {
           200: '#bfdbfe',
           300: '#93c5fd',
           400: '#60a5fa',
-          500: '#0070f3',
-          600: '#0052cc',
+          500: '#0056b3', // WCAG fix: 4.52:1 on dark bg (was #0070f3 = 4.42:1)
+          600: '#004494', // Darker for better contrast
           700: '#1e40af',
           800: '#1e3a8a',
           900: '#1e3a8a',

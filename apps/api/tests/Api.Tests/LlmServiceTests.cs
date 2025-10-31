@@ -43,8 +43,8 @@ public class LlmServiceTests
         var result = await service.GenerateCompletionAsync("system", "   ");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("No user prompt provided", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("No user prompt provided");
         handler.Requests.Should().BeEmpty();
     }
 
@@ -89,26 +89,26 @@ public class LlmServiceTests
         var result = await service.GenerateCompletionAsync("system prompt", "user prompt");
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal("Generated response", result.Response);
-        Assert.Equal(12, result.Usage.PromptTokens);
-        Assert.Equal(8, result.Usage.CompletionTokens);
-        Assert.Equal(20, result.Usage.TotalTokens);
-        Assert.Equal("anthropic/claude-3.5-sonnet", result.Metadata["model"]);
-        Assert.Equal("stop", result.Metadata["finish_reason"]);
-        Assert.Equal("resp_123", result.Metadata["response_id"]);
+        result.Success.Should().BeTrue();
+        result.Response.Should().Be("Generated response");
+        result.Usage.PromptTokens.Should().Be(12);
+        result.Usage.CompletionTokens.Should().Be(8);
+        result.Usage.TotalTokens.Should().Be(20);
+        result.Metadata["model"].Should().Be("anthropic/claude-3.5-sonnet");
+        result.Metadata["finish_reason"].Should().Be("stop");
+        result.Metadata["response_id"].Should().Be("resp_123");
 
-        var request = Assert.Single(handler.Requests);
+        var request = handler.Requests.Should().ContainSingle().Subject;
         AssertRequestHeaders(request);
-        Assert.Equal("https://openrouter.ai/api/v1/chat/completions", request.RequestUri!.ToString());
+        request.RequestUri!.ToString().Should().Be("https://openrouter.ai/api/v1/chat/completions");
 
         var body = handler.RequestBodies.Single();
         body.Should().NotBeNull();
 
         using var document = JsonDocument.Parse(body!);
         var root = document.RootElement;
-        Assert.Equal("deepseek/deepseek-chat-v3.1", root.GetProperty("model").GetString());
-        Assert.Equal(0.3, root.GetProperty("temperature").GetDouble());
+        root.GetProperty("model").GetString().Should().Be("deepseek/deepseek-chat-v3.1");
+        root.GetProperty("temperature").GetDouble().Should().Be(0.3);
     }
 
     [Fact]
@@ -127,8 +127,8 @@ public class LlmServiceTests
         var result = await service.GenerateCompletionAsync("system", "user prompt");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("API error: InternalServerError", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("API error: InternalServerError");
 
         _loggerMock.Verify(
             x => x.Log(
@@ -139,7 +139,7 @@ public class LlmServiceTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
 
-        var request = Assert.Single(handler.Requests);
+        var request = handler.Requests.Should().ContainSingle().Subject;
         AssertRequestHeaders(request);
     }
 
@@ -159,10 +159,10 @@ public class LlmServiceTests
         var result = await service.GenerateCompletionAsync("system", "user prompt");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("No response returned from API", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("No response returned from API");
 
-        var request = Assert.Single(handler.Requests);
+        var request = handler.Requests.Should().ContainSingle().Subject;
         AssertRequestHeaders(request);
     }
 
@@ -182,10 +182,10 @@ public class LlmServiceTests
         var result = await service.GenerateCompletionAsync("system", "user prompt");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("Request timed out", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("Request timed out");
 
-        var request = Assert.Single(handler.Requests);
+        var request = handler.Requests.Should().ContainSingle().Subject;
         AssertRequestHeaders(request);
     }
 
@@ -199,11 +199,11 @@ public class LlmServiceTests
 
     private void AssertRequestHeaders(HttpRequestMessage request)
     {
-        Assert.True(request.Headers.TryGetValues("Authorization", out var authorizationValues));
-        Assert.Equal("Bearer test-api-key", Assert.Single(authorizationValues));
+        request.Headers.TryGetValues("Authorization", out var authorizationValues).Should().BeTrue();
+        authorizationValues.Should().ContainSingle().Which.Should().Be("Bearer test-api-key");
 
-        Assert.True(request.Headers.TryGetValues("HTTP-Referer", out var refererValues));
-        Assert.Equal("https://meepleai.app", Assert.Single(refererValues));
+        request.Headers.TryGetValues("HTTP-Referer", out var refererValues).Should().BeTrue();
+        refererValues.Should().ContainSingle().Which.Should().Be("https://meepleai.app");
     }
 
     /// <summary>
@@ -263,7 +263,7 @@ public class LlmServiceTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
 
-        var request = Assert.Single(handler.Requests);
+        var request = handler.Requests.Should().ContainSingle().Subject;
         AssertRequestHeaders(request);
     }
 
@@ -299,8 +299,8 @@ public class LlmServiceTests
         var result = await service.GenerateCompletionAsync("system prompt", "user prompt with very long context...");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("API error: BadRequest", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("API error: BadRequest");
 
         // Verify error was logged
         _loggerMock.Verify(
@@ -312,7 +312,7 @@ public class LlmServiceTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
 
-        var request = Assert.Single(handler.Requests);
+        var request = handler.Requests.Should().ContainSingle().Subject;
         AssertRequestHeaders(request);
     }
 
@@ -341,14 +341,14 @@ public class LlmServiceTests
         // Assert
         tokens.Should().BeEmpty();
 
-        var request = Assert.Single(handler.Requests);
+        var request = handler.Requests.Should().ContainSingle().Subject;
         AssertRequestHeaders(request);
 
         // Verify streaming was initiated
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
         var root = document.RootElement;
-        Assert.True(root.GetProperty("stream").GetBoolean());
+        root.GetProperty("stream").GetBoolean().Should().BeTrue();
     }
 
     /// <summary>
@@ -417,9 +417,9 @@ data: [DONE]
         // Assert
         // Should have at least one token before cancellation, but not all 4
         tokens.Should().NotBeEmpty();
-        Assert.True(tokens.Count < 4, $"Expected partial tokens (< 4), got {tokens.Count}");
+        tokens.Count.Should().BeLessThan(4, "Expected partial tokens (< 4), got {0}", tokens.Count);
 
-        var request = Assert.Single(handler.Requests);
+        var request = handler.Requests.Should().ContainSingle().Subject;
         AssertRequestHeaders(request);
     }
 
@@ -482,11 +482,11 @@ data: [DONE]
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Test Game", result.Name);
-        Assert.Equal(2, result.Players);
-        Assert.Equal("Medium", result.Complexity);
+        result.Name.Should().Be("Test Game");
+        result.Players.Should().Be(2);
+        result.Complexity.Should().Be("Medium");
 
-        var request = Assert.Single(handler.Requests);
+        var request = handler.Requests.Should().ContainSingle().Subject;
         AssertRequestHeaders(request);
     }
 
@@ -527,8 +527,8 @@ data: [DONE]
         var result = await service.GenerateCompletionAsync(null!, "user prompt");
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal("Response without system prompt", result.Response);
+        result.Success.Should().BeTrue();
+        result.Response.Should().Be("Response without system prompt");
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
@@ -536,9 +536,9 @@ data: [DONE]
         var messages = root.GetProperty("messages");
 
         // Should only have user message, no system message
-        Assert.Equal(1, messages.GetArrayLength());
-        Assert.Equal("user", messages[0].GetProperty("role").GetString());
-        Assert.Equal("user prompt", messages[0].GetProperty("content").GetString());
+        messages.GetArrayLength().Should().Be(1);
+        messages[0].GetProperty("role").GetString().Should().Be("user");
+        messages[0].GetProperty("content").GetString().Should().Be("user prompt");
     }
 
     /// <summary>
@@ -577,10 +577,10 @@ data: [DONE]
 
         // Assert
         // Should only yield valid tokens, skipping malformed chunks
-        Assert.Equal(3, tokens.Count);
-        Assert.Equal("Token1", tokens[0]);
-        Assert.Equal("Token2", tokens[1]);
-        Assert.Equal("Token3", tokens[2]);
+        tokens.Count.Should().Be(3);
+        tokens[0].Should().Be("Token1");
+        tokens[1].Should().Be("Token2");
+        tokens[2].Should().Be("Token3");
 
         // Verify warning was logged for malformed chunks (2 times)
         _loggerMock.Verify(
@@ -717,9 +717,9 @@ data: [DONE]
 
         // Assert
         result.Should().NotBeNull(); // Deserializer creates object with default values
-        Assert.Equal(string.Empty, result.Name);
-        Assert.Equal(0, result.Players);
-        Assert.Equal(string.Empty, result.Complexity);
+        result.Name.Should().Be(string.Empty);
+        result.Players.Should().Be(0);
+        result.Complexity.Should().Be(string.Empty);
     }
 
     /// <summary>
@@ -767,12 +767,12 @@ data: [DONE]
         var result = await service.GenerateCompletionAsync("system", "user prompt");
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
         var root = document.RootElement;
-        Assert.Equal("deepseek/deepseek-chat-v3.1", root.GetProperty("model").GetString());
+        root.GetProperty("model").GetString().Should().Be("deepseek/deepseek-chat-v3.1");
     }
 
     /// <summary>
@@ -821,12 +821,12 @@ data: [DONE]
         var result = await service.GenerateCompletionAsync("system", "user prompt");
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
         var root = document.RootElement;
-        Assert.Equal("openai/gpt-4o-mini", root.GetProperty("model").GetString());
+        root.GetProperty("model").GetString().Should().Be("openai/gpt-4o-mini");
     }
 
     /// <summary>
@@ -889,9 +889,9 @@ data: [DONE]
         var defaultCount = requestedModels.Count(m => m == "deepseek/deepseek-chat-v3.1");
 
         // With 50% traffic and 100 requests, expect 40-60 alternative model requests (allowing variance)
-        Assert.InRange(alternativeCount, 30, 70);
-        Assert.InRange(defaultCount, 30, 70);
-        Assert.Equal(100, requestedModels.Count);
+        alternativeCount.Should().BeInRange(30, 70);
+        defaultCount.Should().BeInRange(30, 70);
+        requestedModels.Count.Should().Be(100);
     }
 
     /// <summary>
@@ -949,8 +949,8 @@ data: [DONE]
         }
 
         // Assert
-        Assert.All(requestedModels, model => Assert.Equal("deepseek/deepseek-chat-v3.1", model));
-        Assert.Equal(50, requestedModels.Count);
+        requestedModels.Should().OnlyContain(model => model == "deepseek/deepseek-chat-v3.1");
+        requestedModels.Count.Should().Be(50);
     }
 
     /// <summary>
@@ -1008,8 +1008,8 @@ data: [DONE]
         }
 
         // Assert
-        Assert.All(requestedModels, model => Assert.Equal("openai/gpt-4o-mini", model));
-        Assert.Equal(50, requestedModels.Count);
+        requestedModels.Should().OnlyContain(model => model == "openai/gpt-4o-mini");
+        requestedModels.Count.Should().Be(50);
     }
 
     /// <summary>
@@ -1068,8 +1068,8 @@ data: [DONE]
         }
 
         // Assert - Feature flag should ALWAYS override A/B test, using alternative 100% of the time
-        Assert.All(requestedModels, model => Assert.Equal("openai/gpt-4o-mini", model));
-        Assert.Equal(20, requestedModels.Count);
+        requestedModels.Should().OnlyContain(model => model == "openai/gpt-4o-mini");
+        requestedModels.Count.Should().Be(20);
     }
 
     /// <summary>
@@ -1108,14 +1108,14 @@ data: [DONE]
             service.GenerateCompletionStreamAsync("system", "user prompt"));
 
         // Assert
-        Assert.Single(tokens);
-        Assert.Equal("Token", tokens[0]);
+        tokens.Should().ContainSingle();
+        tokens[0].Should().Be("Token");
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
         var root = document.RootElement;
-        Assert.Equal("openai/gpt-4o-mini", root.GetProperty("model").GetString());
-        Assert.True(root.GetProperty("stream").GetBoolean());
+        root.GetProperty("model").GetString().Should().Be("openai/gpt-4o-mini");
+        root.GetProperty("stream").GetBoolean().Should().BeTrue();
     }
 
     private LlmService CreateServiceWithConfig(TestHttpMessageHandler handler, IConfiguration config)

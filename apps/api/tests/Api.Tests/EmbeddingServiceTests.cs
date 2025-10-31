@@ -6,16 +6,20 @@ using Moq.Protected;
 using System.Net;
 using System.Text.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
 public class EmbeddingServiceTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<ILogger<EmbeddingService>> _loggerMock;
     private readonly Mock<IConfiguration> _configMock;
 
-    public EmbeddingServiceTests()
+    public EmbeddingServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         _loggerMock = new Mock<ILogger<EmbeddingService>>();
         _configMock = new Mock<IConfiguration>();
         // Configure OpenAI provider for existing tests (they use OpenAI-compatible API)

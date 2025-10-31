@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -18,21 +19,24 @@ namespace Api.Tests;
 /// </summary>
 public class PromptTemplateServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<ILogger<PromptTemplateService>> _mockLogger;
-    private readonly Mock<IConnectionMultiplexer> _mockRedis;
-    private readonly Mock<IDatabase> _mockRedisDb;
+    private readonly Mock<IConnectionMultiplexer> _redisMock;
+    private readonly Mock<IDatabase> _redisDbMock;
     private readonly SqliteConnection _connection;
     private readonly MeepleAiDbContext _dbContext;
 
-    public PromptTemplateServiceTests()
+    public PromptTemplateServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         _mockLogger = new Mock<ILogger<PromptTemplateService>>();
 
         // ADMIN-01: Mock Redis
-        _mockRedis = new Mock<IConnectionMultiplexer>();
-        _mockRedisDb = new Mock<IDatabase>();
-        _mockRedis.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
-            .Returns(_mockRedisDb.Object);
+        _redisMock = new Mock<IConnectionMultiplexer>();
+        _redisDbMock = new Mock<IDatabase>();
+        _redisMock.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
+            .Returns(_redisDbMock.Object);
 
         // ADMIN-01: Setup SQLite in-memory database for testing
         _connection = new SqliteConnection("DataSource=:memory:");
@@ -434,7 +438,7 @@ public class PromptTemplateServiceTests : IDisposable
         var cachedContent = "Cached prompt content";
         var cacheKey = $"prompt:{templateName}:active";
 
-        _mockRedisDb.Setup(db => db.StringGetAsync(cacheKey, It.IsAny<CommandFlags>()))
+        _redisDbMock.Setup(db => db.StringGetAsync(cacheKey, It.IsAny<CommandFlags>()))
             .ReturnsAsync((RedisValue)cachedContent);
 
         var service = CreateService(null);
@@ -444,7 +448,7 @@ public class PromptTemplateServiceTests : IDisposable
 
         // Assert
         Assert.Equal(cachedContent, result);
-        _mockRedisDb.Verify(db => db.StringGetAsync(cacheKey, It.IsAny<CommandFlags>()), Times.Once);
+        _redisDbMock.Verify(db => db.StringGetAsync(cacheKey, It.IsAny<CommandFlags>()), Times.Once);
         // Should NOT query database on cache hit
     }
 
@@ -457,11 +461,11 @@ public class PromptTemplateServiceTests : IDisposable
         var cacheKey = $"prompt:{templateName}:active";
 
         // Setup cache miss
-        _mockRedisDb.Setup(db => db.StringGetAsync(cacheKey, It.IsAny<CommandFlags>()))
+        _redisDbMock.Setup(db => db.StringGetAsync(cacheKey, It.IsAny<CommandFlags>()))
             .ReturnsAsync(RedisValue.Null);
 
         // Setup cache write
-        _mockRedisDb.Setup(db => db.StringSetAsync(
+        _redisDbMock.Setup(db => db.StringSetAsync(
                 It.IsAny<RedisKey>(),
                 It.IsAny<RedisValue>(),
                 It.IsAny<TimeSpan?>(),
@@ -480,8 +484,8 @@ public class PromptTemplateServiceTests : IDisposable
 
         // Assert
         Assert.Equal(promptContent, result);
-        _mockRedisDb.Verify(db => db.StringGetAsync(cacheKey, It.IsAny<CommandFlags>()), Times.Once);
-        _mockRedisDb.Verify(db => db.StringSetAsync(
+        _redisDbMock.Verify(db => db.StringGetAsync(cacheKey, It.IsAny<CommandFlags>()), Times.Once);
+        _redisDbMock.Verify(db => db.StringSetAsync(
             It.IsAny<RedisKey>(),
             It.Is<RedisValue>(v => v.ToString() == promptContent),
             It.Is<TimeSpan?>(ttl => ttl != null),
@@ -498,7 +502,7 @@ public class PromptTemplateServiceTests : IDisposable
         var promptContent = "Database prompt content";
 
         // Setup Redis failure
-        _mockRedisDb.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+        _redisDbMock.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
             .ThrowsAsync(new RedisException("Redis connection failed"));
 
         // Seed database
@@ -520,7 +524,7 @@ public class PromptTemplateServiceTests : IDisposable
         // Arrange
         var templateName = "nonexistent-prompt";
 
-        _mockRedisDb.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+        _redisDbMock.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
             .ReturnsAsync(RedisValue.Null);
 
         var service = CreateService(null);
@@ -540,7 +544,7 @@ public class PromptTemplateServiceTests : IDisposable
         var userId = await SeedUser("admin@test.com");
 
         // Setup Redis cache invalidation
-        _mockRedisDb.Setup(db => db.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+        _redisDbMock.Setup(db => db.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
             .ReturnsAsync(true);
 
         var service = CreateService(null);
@@ -560,7 +564,7 @@ public class PromptTemplateServiceTests : IDisposable
         Assert.Equal(versionId, allVersions.First(v => v.IsActive).Id);
 
         // Verify cache invalidation
-        _mockRedisDb.Verify(db => db.KeyDeleteAsync(
+        _redisDbMock.Verify(db => db.KeyDeleteAsync(
             It.Is<RedisKey>(k => k.ToString().Contains(templateName)),
             It.IsAny<CommandFlags>()), Times.Once);
 
@@ -597,7 +601,7 @@ public class PromptTemplateServiceTests : IDisposable
         var templateName = "qa-system-prompt";
         var cacheKey = $"prompt:{templateName}:active";
 
-        _mockRedisDb.Setup(db => db.KeyDeleteAsync(cacheKey, It.IsAny<CommandFlags>()))
+        _redisDbMock.Setup(db => db.KeyDeleteAsync(cacheKey, It.IsAny<CommandFlags>()))
             .ReturnsAsync(true);
 
         var service = CreateService(null);
@@ -606,7 +610,7 @@ public class PromptTemplateServiceTests : IDisposable
         await service.InvalidateCacheAsync(templateName);
 
         // Assert
-        _mockRedisDb.Verify(db => db.KeyDeleteAsync(cacheKey, It.IsAny<CommandFlags>()), Times.Once);
+        _redisDbMock.Verify(db => db.KeyDeleteAsync(cacheKey, It.IsAny<CommandFlags>()), Times.Once);
     }
 
     #endregion
@@ -616,7 +620,7 @@ public class PromptTemplateServiceTests : IDisposable
     private PromptTemplateService CreateService(RagPromptsConfiguration? config)
     {
         var options = Options.Create(config ?? new RagPromptsConfiguration());
-        return new PromptTemplateService(_dbContext, _mockRedis.Object, options, _mockLogger.Object);
+        return new PromptTemplateService(_dbContext, _redisMock.Object, options, _mockLogger.Object);
     }
 
     private RagPromptsConfiguration CreateMinimalConfiguration()

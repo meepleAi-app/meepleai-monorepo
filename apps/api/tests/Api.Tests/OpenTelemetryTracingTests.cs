@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using Api.Observability;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -10,6 +11,8 @@ namespace Api.Tests;
 /// </summary>
 public class OpenTelemetryTracingTests
 {
+    private readonly ITestOutputHelper _output;
+
     [Fact]
     public void ActivitySources_AllSourceNamesAreDefined()
     {

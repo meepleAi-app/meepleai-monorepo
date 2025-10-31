@@ -18,20 +18,24 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
 
 public class N8nTemplateServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly MeepleAiDbContext _db;
-    private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
-    private readonly Mock<IConfiguration> _mockConfiguration;
+    private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;
+    private readonly Mock<IConfiguration> _configurationMock;
     private readonly Mock<ILogger<N8nTemplateService>> _mockLogger;
     private readonly N8nTemplateService _service;
     private readonly string _tempTemplatesPath;
 
-    public N8nTemplateServiceTests()
+    public N8nTemplateServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseSqlite("DataSource=:memory:")
             .Options;
@@ -40,18 +44,18 @@ public class N8nTemplateServiceTests : IDisposable
         _db.Database.OpenConnection();
         _db.Database.EnsureCreated();
 
-        _mockHttpClientFactory = new Mock<IHttpClientFactory>();
-        _mockConfiguration = new Mock<IConfiguration>();
+        _httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        _configurationMock = new Mock<IConfiguration>();
         _mockLogger = new Mock<ILogger<N8nTemplateService>>();
 
         // Set up encryption key configuration
-        _mockConfiguration.Setup(c => c["N8N_ENCRYPTION_KEY"])
+        _configurationMock.Setup(c => c["N8N_ENCRYPTION_KEY"])
             .Returns("test-encryption-key-for-unit-tests-32bytes");
 
         _service = new N8nTemplateService(
             _db,
-            _mockHttpClientFactory.Object,
-            _mockConfiguration.Object,
+            _httpClientFactoryMock.Object,
+            _configurationMock.Object,
             _mockLogger.Object
         );
 
@@ -277,7 +281,7 @@ public class N8nTemplateServiceTests : IDisposable
             });
 
         var httpClient = new HttpClient(mockHandler.Object);
-        _mockHttpClientFactory.Setup(f => f.CreateClient(It.IsAny<string>()))
+        _httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>()))
             .Returns(httpClient);
 
         // Act
@@ -336,7 +340,7 @@ public class N8nTemplateServiceTests : IDisposable
             });
 
         var httpClient = new HttpClient(mockHandler.Object);
-        _mockHttpClientFactory.Setup(f => f.CreateClient(It.IsAny<string>()))
+        _httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>()))
             .Returns(httpClient);
 
         // Act
@@ -373,7 +377,7 @@ public class N8nTemplateServiceTests : IDisposable
             });
 
         using var httpClient = new HttpClient(mockHandler.Object);
-        _mockHttpClientFactory.Setup(f => f.CreateClient(It.IsAny<string>()))
+        _httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>()))
             .Returns(httpClient);
 
         // Act & Assert

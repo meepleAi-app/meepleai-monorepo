@@ -4,13 +4,17 @@ using Api.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using Xunit.Abstractions;
 
 public class GameServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
 
-    public GameServiceTests()
+    public GameServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         // Keep connection open for the lifetime of the test class
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();

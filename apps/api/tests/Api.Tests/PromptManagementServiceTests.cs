@@ -7,6 +7,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -16,14 +17,17 @@ namespace Api.Tests;
 /// </summary>
 public class PromptManagementServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
     private readonly PromptManagementService _service;
     private readonly string _testUserId = "test-user-123";
 
-    public PromptManagementServiceTests()
+    public PromptManagementServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         // Create in-memory SQLite database
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();

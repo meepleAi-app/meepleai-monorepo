@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -21,6 +22,8 @@ namespace Api.Tests;
 /// </summary>
 public class StreamingQaServiceTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<ILogger<StreamingQaService>> _mockLogger = new();
 
     /// <summary>

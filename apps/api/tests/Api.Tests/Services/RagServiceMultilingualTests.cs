@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
 
@@ -17,6 +18,8 @@ namespace Api.Tests.Services;
 /// </summary>
 public class RagServiceMultilingualTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<IQdrantService> _qdrantMock;
     private readonly Mock<IEmbeddingService> _embeddingMock;
     private readonly Mock<IHybridSearchService> _hybridSearchMock;
@@ -26,8 +29,9 @@ public class RagServiceMultilingualTests : IDisposable
     private readonly MeepleAiDbContext _dbContext;
     private readonly RagService _service;
 
-    public RagServiceMultilingualTests()
+    public RagServiceMultilingualTests(ITestOutputHelper output)
     {
+        _output = output;
         _qdrantMock = new Mock<IQdrantService>();
         _embeddingMock = new Mock<IEmbeddingService>();
         _hybridSearchMock = CreateHybridSearchMock();

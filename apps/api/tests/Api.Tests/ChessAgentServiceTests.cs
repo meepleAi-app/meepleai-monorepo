@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -14,36 +15,39 @@ namespace Api.Tests;
 /// </summary>
 public class ChessAgentServiceTests
 {
-    private readonly Mock<IChessKnowledgeService> _mockChessKnowledge;
-    private readonly Mock<ILlmService> _mockLlmService;
-    private readonly Mock<IAiResponseCacheService> _mockCache;
-    private readonly Mock<IPromptTemplateService> _mockPromptTemplate;
-    private readonly Mock<IConfiguration> _mockConfiguration;
-    private readonly Mock<ILogger<ChessAgentService>> _mockLogger;
+    private readonly ITestOutputHelper _output;
+
+    private readonly Mock<IChessKnowledgeService> _chessKnowledgeMock;
+    private readonly Mock<ILlmService> _llmServiceMock;
+    private readonly Mock<IAiResponseCacheService> _cacheMock;
+    private readonly Mock<IPromptTemplateService> _promptTemplateMock;
+    private readonly Mock<IConfiguration> _configurationMock;
+    private readonly Mock<ILogger<ChessAgentService>> _loggerMock;
     private readonly ChessAgentService _service;
 
-    public ChessAgentServiceTests()
+    public ChessAgentServiceTests(ITestOutputHelper output)
     {
-        _mockChessKnowledge = new Mock<IChessKnowledgeService>();
-        _mockLlmService = new Mock<ILlmService>();
-        _mockCache = new Mock<IAiResponseCacheService>();
-        _mockPromptTemplate = new Mock<IPromptTemplateService>();
-        _mockConfiguration = new Mock<IConfiguration>();
-        _mockLogger = new Mock<ILogger<ChessAgentService>>();
+        _output = output;
+        _chessKnowledgeMock = new Mock<IChessKnowledgeService>();
+        _llmServiceMock = new Mock<ILlmService>();
+        _cacheMock = new Mock<IAiResponseCacheService>();
+        _promptTemplateMock = new Mock<IPromptTemplateService>();
+        _configurationMock = new Mock<IConfiguration>();
+        _loggerMock = new Mock<ILogger<ChessAgentService>>();
 
         // ADMIN-01 Phase 3: Setup feature flag to use fallback (default behavior)
         // Mock IConfigurationSection for GetValue<bool> to work correctly
         var mockSection = new Mock<IConfigurationSection>();
         mockSection.Setup(s => s.Value).Returns("false");
-        _mockConfiguration.Setup(c => c.GetSection("Features:PromptDatabase")).Returns(mockSection.Object);
+        _configurationMock.Setup(c => c.GetSection("Features:PromptDatabase")).Returns(mockSection.Object);
 
         _service = new ChessAgentService(
-            _mockChessKnowledge.Object,
-            _mockLlmService.Object,
-            _mockCache.Object,
-            _mockPromptTemplate.Object,
-            _mockConfiguration.Object,
-            _mockLogger.Object
+            _chessKnowledgeMock.Object,
+            _llmServiceMock.Object,
+            _cacheMock.Object,
+            _promptTemplateMock.Object,
+            _configurationMock.Object,
+            _loggerMock.Object
         );
     }
 
@@ -99,11 +103,11 @@ public class ChessAgentServiceTests
             15
         );
 
-        _mockCache
+        _cacheMock
             .Setup(c => c.GenerateQaCacheKey("chess", "How does the knight move?|"))
             .Returns("cache_key_123");
 
-        _mockCache
+        _cacheMock
             .Setup(c => c.GetAsync<ChessAgentResponse>("cache_key_123", It.IsAny<CancellationToken>()))
             .ReturnsAsync(cachedResponse);
 
@@ -117,10 +121,10 @@ public class ChessAgentServiceTests
         Assert.Equal(15, result.totalTokens);
 
         // Should not call knowledge or LLM services
-        _mockChessKnowledge.Verify(
+        _chessKnowledgeMock.Verify(
             k => k.SearchChessKnowledgeAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
             Times.Never);
-        _mockLlmService.Verify(
+        _llmServiceMock.Verify(
             l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -132,11 +136,11 @@ public class ChessAgentServiceTests
         var request = new ChessAgentRequest("What is castling?");
         SetupSuccessfulChessAgentFlow("Castling is a special move...", "What is castling?");
 
-        _mockCache
+        _cacheMock
             .Setup(c => c.GenerateQaCacheKey("chess", "What is castling?|"))
             .Returns("cache_key_456");
 
-        _mockCache
+        _cacheMock
             .Setup(c => c.GetAsync<ChessAgentResponse>("cache_key_456", It.IsAny<CancellationToken>()))
             .ReturnsAsync((ChessAgentResponse?)null);
 
@@ -148,7 +152,7 @@ public class ChessAgentServiceTests
         Assert.Contains("Castling", result.answer);
 
         // Should cache the response with 24h TTL
-        _mockCache.Verify(
+        _cacheMock.Verify(
             c => c.SetAsync("cache_key_456", It.IsAny<ChessAgentResponse>(), 86400, It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -167,7 +171,7 @@ public class ChessAgentServiceTests
         var request = new ChessAgentRequest("Analyze this position", fenPosition);
         SetupSuccessfulChessAgentFlow("Position is balanced", "Analyze this position", fenPosition);
 
-        _mockCache
+        _cacheMock
             .Setup(c => c.GetAsync<ChessAgentResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ChessAgentResponse?)null);
 
@@ -178,7 +182,7 @@ public class ChessAgentServiceTests
         Assert.NotNull(result);
         Assert.NotEmpty(result.answer);
         // Should not log validation errors
-        _mockLogger.Verify(
+        _loggerMock.Verify(
             x => x.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
@@ -200,7 +204,7 @@ public class ChessAgentServiceTests
         var request = new ChessAgentRequest("What's the best move?", fenPosition);
         SetupSuccessfulChessAgentFlow("Cannot analyze invalid position", "What's the best move?", fenPosition);
 
-        _mockCache
+        _cacheMock
             .Setup(c => c.GetAsync<ChessAgentResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ChessAgentResponse?)null);
 
@@ -210,7 +214,7 @@ public class ChessAgentServiceTests
         // Assert
         Assert.NotNull(result);
         // Should log warning about invalid FEN
-        _mockLogger.Verify(
+        _loggerMock.Verify(
             x => x.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
@@ -230,11 +234,11 @@ public class ChessAgentServiceTests
         // Arrange
         var request = new ChessAgentRequest("Unknown chess topic");
 
-        _mockCache
+        _cacheMock
             .Setup(c => c.GetAsync<ChessAgentResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ChessAgentResponse?)null);
 
-        _mockChessKnowledge
+        _chessKnowledgeMock
             .Setup(k => k.SearchChessKnowledgeAsync("Unknown chess topic", 5, It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateFailure("No results found"));
 
@@ -247,7 +251,7 @@ public class ChessAgentServiceTests
         Assert.Empty(result.suggestedMoves);
 
         // Should not call LLM service
-        _mockLlmService.Verify(
+        _llmServiceMock.Verify(
             l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -258,11 +262,11 @@ public class ChessAgentServiceTests
         // Arrange
         var request = new ChessAgentRequest("Obscure chess rule");
 
-        _mockCache
+        _cacheMock
             .Setup(c => c.GetAsync<ChessAgentResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ChessAgentResponse?)null);
 
-        _mockChessKnowledge
+        _chessKnowledgeMock
             .Setup(k => k.SearchChessKnowledgeAsync("Obscure chess rule", 5, It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>()));
 
@@ -284,7 +288,7 @@ public class ChessAgentServiceTests
         );
         SetupSuccessfulChessAgentFlow("1. d5: Controls center", "What's the best move?", request.fenPosition);
 
-        _mockCache
+        _cacheMock
             .Setup(c => c.GetAsync<ChessAgentResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ChessAgentResponse?)null);
 
@@ -293,7 +297,7 @@ public class ChessAgentServiceTests
 
         // Assert
         // Should search with enhanced query including position-related keywords
-        _mockChessKnowledge.Verify(
+        _chessKnowledgeMock.Verify(
             k => k.SearchChessKnowledgeAsync(
                 "What's the best move? position analysis tactics strategy",
                 5,
@@ -317,7 +321,7 @@ public class ChessAgentServiceTests
 
         SetupSuccessfulChessAgentFlow(llmResponse, "Suggest a move");
 
-        _mockCache
+        _cacheMock
             .Setup(c => c.GetAsync<ChessAgentResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ChessAgentResponse?)null);
 
@@ -343,7 +347,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
 
         SetupSuccessfulChessAgentFlow(llmResponse, "Analyze this position", fenPosition);
 
-        _mockCache
+        _cacheMock
             .Setup(c => c.GetAsync<ChessAgentResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ChessAgentResponse?)null);
 
@@ -369,7 +373,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
 
         SetupSuccessfulChessAgentFlow(llmResponse, "What is the Italian Game?");
 
-        _mockCache
+        _cacheMock
             .Setup(c => c.GetAsync<ChessAgentResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ChessAgentResponse?)null);
 
@@ -399,7 +403,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
 
         SetupChessAgentFlowWithCustomResults("Castling is a special move...", searchResults);
 
-        _mockCache
+        _cacheMock
             .Setup(c => c.GetAsync<ChessAgentResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ChessAgentResponse?)null);
 
@@ -428,7 +432,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
 
         SetupChessAgentFlowWithCustomResults("En passant is...", searchResults);
 
-        _mockCache
+        _cacheMock
             .Setup(c => c.GetAsync<ChessAgentResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ChessAgentResponse?)null);
 
@@ -450,18 +454,18 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
         // Arrange
         var request = new ChessAgentRequest("What is a fork?");
 
-        _mockCache
+        _cacheMock
             .Setup(c => c.GetAsync<ChessAgentResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ChessAgentResponse?)null);
 
-        _mockChessKnowledge
+        _chessKnowledgeMock
             .Setup(k => k.SearchChessKnowledgeAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>
             {
                 new() { Text = "Fork is a tactic", Score = 0.9f, Page = 10, ChunkIndex = 1 }
             }));
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateFailure("LLM service unavailable"));
 
@@ -474,7 +478,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
         Assert.Equal("Fork is a tactic", result.sources[0].text);
 
         // Should log error
-        _mockLogger.Verify(
+        _loggerMock.Verify(
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
@@ -490,7 +494,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
         // Arrange
         var request = new ChessAgentRequest("Test exception");
 
-        _mockCache
+        _cacheMock
             .Setup(c => c.GetAsync<ChessAgentResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Cache service error"));
 
@@ -503,7 +507,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
         Assert.Empty(result.suggestedMoves);
 
         // Should log exception
-        _mockLogger.Verify(
+        _loggerMock.Verify(
             x => x.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
@@ -529,7 +533,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
             totalTokens: 230
         );
 
-        _mockCache
+        _cacheMock
             .Setup(c => c.GetAsync<ChessAgentResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ChessAgentResponse?)null);
 
@@ -556,7 +560,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
 
         SetupSuccessfulChessAgentFlowWithMetadata("Checkmate occurs when...", metadata);
 
-        _mockCache
+        _cacheMock
             .Setup(c => c.GetAsync<ChessAgentResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ChessAgentResponse?)null);
 
@@ -586,11 +590,11 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
 
     private void SetupChessAgentFlowWithCustomResults(string llmResponse, List<SearchResultItem> searchResults)
     {
-        _mockChessKnowledge
+        _chessKnowledgeMock
             .Setup(k => k.SearchChessKnowledgeAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
                 llmResponse,
@@ -614,11 +618,11 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
             new() { Text = "Chess knowledge", Score = 0.9f, Page = 1, ChunkIndex = 0 }
         };
 
-        _mockChessKnowledge
+        _chessKnowledgeMock
             .Setup(k => k.SearchChessKnowledgeAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
                 llmResponse,
@@ -636,11 +640,11 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
             new() { Text = "Chess knowledge", Score = 0.9f, Page = 1, ChunkIndex = 0 }
         };
 
-        _mockChessKnowledge
+        _chessKnowledgeMock
             .Setup(k => k.SearchChessKnowledgeAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
                 llmResponse,

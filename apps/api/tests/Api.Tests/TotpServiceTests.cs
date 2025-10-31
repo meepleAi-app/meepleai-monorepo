@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -17,6 +18,8 @@ namespace Api.Tests;
 /// </summary>
 public class TotpServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly MeepleAiDbContext _dbContext;
     private readonly TotpService _totpService;
     private readonly Mock<ILogger<TotpService>> _loggerMock;
@@ -25,8 +28,9 @@ public class TotpServiceTests : IDisposable
     private readonly AuthService _authService;
     private readonly AuditService _auditService;
 
-    public TotpServiceTests()
+    public TotpServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         // Setup SQLite in-memory database (consistent with other tests)
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseSqlite($"DataSource=:memory:")

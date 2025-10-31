@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -14,6 +15,8 @@ namespace Api.Tests;
 /// </summary>
 public class EmailServiceTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<ILogger<EmailService>> _mockLogger = new();
 
     /// <summary>

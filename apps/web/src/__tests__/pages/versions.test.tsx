@@ -28,8 +28,8 @@ jest.mock('next/router', () => ({
 }));
 
 // Mock components
-jest.mock('../../components/DiffViewer', () => ({
-  DiffViewer: ({ diff, showOnlyChanges }: any) => {
+jest.mock('../../components/DiffViewerEnhanced', () => ({
+  DiffViewerEnhanced: ({ diff, showOnlyChanges }: any) => {
     if (!diff) return null;
     return (
       <div data-testid="diff-viewer">
@@ -57,6 +57,14 @@ jest.mock('../../components/CommentThread', () => ({
   ),
 }));
 
+jest.mock('../../components/VersionTimeline', () => ({
+  VersionTimeline: () => <div data-testid="version-timeline">Timeline</div>
+}));
+
+jest.mock('../../components/VersionTimelineFilters', () => ({
+  VersionTimelineFilters: () => <div data-testid="version-timeline-filters">Filters</div>
+}));
+
 const mockApi = api as jest.Mocked<typeof api>;
 const mockUseRouter = useRouter as jest.MockedFunction<typeof useRouter>;
 
@@ -65,7 +73,7 @@ const createRouter = (gameId?: string, overrides: Partial<NextRouter> = {}): Nex
   ({
     route: '/versions',
     pathname: '/versions',
-    query: gameId ? { gameId } : {},
+    query: gameId ? { gameId } : {}, // Always provide query object (may be empty)
     asPath: gameId ? `/versions?gameId=${gameId}` : '/versions',
     basePath: '',
     push: jest.fn(),
@@ -136,12 +144,14 @@ const mockDiffData = {
   },
   changes: [
     {
-      type: 'Added',
+      type: 'Added' as const,
       newAtom: 'rule-1',
-      newValue: { id: 'rule-1', text: 'New rule', section: 'Setup', page: '1', line: '1' }
+      newValue: { id: 'rule-1', text: 'New rule', section: 'Setup', page: '1', line: '1' },
+      oldValue: null, // Ensure oldValue is explicitly defined
+      oldAtom: null
     },
     {
-      type: 'Modified',
+      type: 'Modified' as const,
       oldAtom: 'rule-2',
       newAtom: 'rule-2',
       oldValue: { id: 'rule-2', text: 'Old text', section: 'Gameplay', page: '2', line: '5' },
@@ -149,9 +159,11 @@ const mockDiffData = {
       fieldChanges: [{ fieldName: 'text', oldValue: 'Old text', newValue: 'New text' }]
     },
     {
-      type: 'Deleted',
+      type: 'Deleted' as const,
       oldAtom: 'rule-3',
-      oldValue: { id: 'rule-3', text: 'Deleted rule', section: 'Scoring', page: '3', line: '10' }
+      oldValue: { id: 'rule-3', text: 'Deleted rule', section: 'Scoring', page: '3', line: '10' },
+      newValue: null, // Ensure newValue is explicitly defined
+      newAtom: null
     }
   ]
 };
@@ -370,6 +382,7 @@ describe('VersionHistory Page', () => {
     it('auto-selects latest two versions on load', async () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
@@ -388,6 +401,7 @@ describe('VersionHistory Page', () => {
       const user = userEvent.setup();
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockResolvedValueOnce(mockDiffData); // Initial auto-load
       mockApi.get.mockResolvedValueOnce(mockDiffData); // After manual selection
 
@@ -411,6 +425,7 @@ describe('VersionHistory Page', () => {
       const user = userEvent.setup();
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockResolvedValueOnce(mockDiffData); // Initial auto-load
       mockApi.get.mockResolvedValueOnce(mockDiffData); // After manual selection
 
@@ -433,6 +448,7 @@ describe('VersionHistory Page', () => {
     it('fetches diff when both versions selected', async () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
@@ -444,6 +460,7 @@ describe('VersionHistory Page', () => {
     it('displays selected version info (version number, date)', async () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
@@ -481,6 +498,7 @@ describe('VersionHistory Page', () => {
       const user = userEvent.setup();
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
@@ -524,6 +542,7 @@ describe('VersionHistory Page', () => {
     it('renders DiffViewer component when both versions loaded', async () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
@@ -537,6 +556,7 @@ describe('VersionHistory Page', () => {
     it('passes diff data to DiffViewer', async () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
@@ -551,6 +571,7 @@ describe('VersionHistory Page', () => {
     it('displays change summary: "X added, Y modified, Z deleted"', async () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
@@ -565,6 +586,7 @@ describe('VersionHistory Page', () => {
       const user = userEvent.setup();
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
@@ -586,6 +608,7 @@ describe('VersionHistory Page', () => {
     it('passes showOnlyChanges prop to DiffViewer', async () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
@@ -600,6 +623,7 @@ describe('VersionHistory Page', () => {
       const user = userEvent.setup();
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
@@ -626,6 +650,7 @@ describe('VersionHistory Page', () => {
     it('renders CommentThread component', async () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
@@ -639,6 +664,7 @@ describe('VersionHistory Page', () => {
     it('passes gameId to CommentThread', async () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
@@ -652,6 +678,7 @@ describe('VersionHistory Page', () => {
     it('passes version identifier to CommentThread', async () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
@@ -665,6 +692,7 @@ describe('VersionHistory Page', () => {
     it('passes currentUserId to CommentThread', async () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
@@ -678,6 +706,7 @@ describe('VersionHistory Page', () => {
     it('passes currentUserRole to CommentThread', async () => {
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockResolvedValueOnce(mockDiffData);
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
@@ -866,6 +895,7 @@ describe('VersionHistory Page', () => {
 
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
       render(<VersionHistory />);
@@ -881,8 +911,8 @@ describe('VersionHistory Page', () => {
         expect(confirmSpy).toHaveBeenCalled();
       });
 
-      // Should not call API
-      expect(mockApi.get).not.toHaveBeenCalledWith(expect.stringContaining('/versions/'));
+      // Should not call restore API (but timeline API is OK)
+      expect(mockApi.get).not.toHaveBeenCalledWith(expect.stringMatching(/\/versions\/\d/));
       expect(mockApi.put).not.toHaveBeenCalled();
     });
   });
@@ -896,6 +926,7 @@ describe('VersionHistory Page', () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockRejectedValueOnce({ message: 'Diff calculation failed' });
 
       mockUseRouter.mockReturnValue(createRouter('demo-chess'));
@@ -949,6 +980,7 @@ describe('VersionHistory Page', () => {
 
       mockApi.get.mockResolvedValueOnce(authResponse);
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);
+      mockApi.get.mockResolvedValueOnce({ authors: [] }); // Timeline authors
       mockApi.get.mockResolvedValueOnce(mockRuleSpec);
       mockApi.put.mockResolvedValueOnce({ ...mockRuleSpec, version: '4.0.0' });
       mockApi.get.mockResolvedValueOnce(mockVersionHistory);

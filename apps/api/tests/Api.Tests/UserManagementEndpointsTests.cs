@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -23,8 +24,11 @@ namespace Api.Tests;
 [Collection("Admin Endpoints")]
 public class UserManagementEndpointsTests : AdminTestFixture
 {
-    public UserManagementEndpointsTests(WebApplicationFactoryFixture factory) : base(factory)
+    private readonly ITestOutputHelper _output;
+
+    public UserManagementEndpointsTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     #region GET /api/v1/admin/users Tests

@@ -5,6 +5,7 @@ using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Integration;
 
@@ -15,8 +16,11 @@ namespace Api.Tests.Integration;
 [Collection("Admin Endpoints")]
 public class ConfigurationMigrationTests : AdminTestFixture
 {
-    public ConfigurationMigrationTests(WebApplicationFactoryFixture factory) : base(factory)
+    private readonly ITestOutputHelper _output;
+
+    public ConfigurationMigrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     [Fact]

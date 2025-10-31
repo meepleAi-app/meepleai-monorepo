@@ -533,6 +533,13 @@ export function ChatProvider({ children }: ChatProviderProps) {
   // ============================================================================
 
   // Track previous selected game for message updates
+  // Initialize: Load games and auth user on mount
+  useEffect(() => {
+    void loadCurrentUser();
+    void loadGames();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Track previous game selection for state management
   useEffect(() => {
     previousSelectedGameRef.current = selectedGameId;
   }, [selectedGameId]);

@@ -4,15 +4,19 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
 public class CorsConfigurationTests : IClassFixture<WebApplicationFactoryFixture>
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly WebApplicationFactoryFixture _factory;
 
-    public CorsConfigurationTests(WebApplicationFactoryFixture factory)
+    public CorsConfigurationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output)
     {
+        _output = output;
         _factory = factory;
     }
 

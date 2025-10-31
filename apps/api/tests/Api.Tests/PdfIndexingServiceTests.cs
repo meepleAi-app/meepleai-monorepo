@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -15,15 +16,18 @@ namespace Api.Tests;
 /// </summary>
 public class PdfIndexingServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
     private readonly MeepleAiDbContext _db;
-    private readonly Mock<ITextChunkingService> _mockChunkingService;
-    private readonly Mock<IEmbeddingService> _mockEmbeddingService;
-    private readonly Mock<IQdrantService> _mockQdrantService;
+    private readonly Mock<ITextChunkingService> _chunkingServiceMock;
+    private readonly Mock<IEmbeddingService> _embeddingServiceMock;
+    private readonly Mock<IQdrantService> _qdrantServiceMock;
     private readonly PdfIndexingService _service;
 
-    public PdfIndexingServiceTests()
+    public PdfIndexingServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();
 
@@ -34,15 +38,15 @@ public class PdfIndexingServiceTests : IDisposable
         _db = new MeepleAiDbContext(options);
         _db.Database.EnsureCreated();
 
-        _mockChunkingService = new Mock<ITextChunkingService>();
-        _mockEmbeddingService = new Mock<IEmbeddingService>();
-        _mockQdrantService = new Mock<IQdrantService>();
+        _chunkingServiceMock = new Mock<ITextChunkingService>();
+        _embeddingServiceMock = new Mock<IEmbeddingService>();
+        _qdrantServiceMock = new Mock<IQdrantService>();
 
         _service = new PdfIndexingService(
             _db,
-            _mockChunkingService.Object,
-            _mockEmbeddingService.Object,
-            _mockQdrantService.Object,
+            _chunkingServiceMock.Object,
+            _embeddingServiceMock.Object,
+            _qdrantServiceMock.Object,
             NullLogger<PdfIndexingService>.Instance);
     }
 
@@ -97,7 +101,7 @@ public class PdfIndexingServiceTests : IDisposable
             new() { Text = "Players alternate marking X or O.", Index = 0, Page = 1, CharStart = 0, CharEnd = 33 },
             new() { Text = "Three in a row wins.", Index = 1, Page = 1, CharStart = 34, CharEnd = 54 }
         };
-        _mockChunkingService.Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+        _chunkingServiceMock.Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
             .Returns(textChunks);
 
         // Mock embedding generation
@@ -106,11 +110,11 @@ public class PdfIndexingServiceTests : IDisposable
             new float[1536], // Embedding for chunk 1
             new float[1536]  // Embedding for chunk 2
         };
-        _mockEmbeddingService.Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+        _embeddingServiceMock.Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(embeddings));
 
         // Mock Qdrant indexing
-        _mockQdrantService.Setup(x => x.IndexDocumentChunksAsync(
+        _qdrantServiceMock.Setup(x => x.IndexDocumentChunksAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<DocumentChunk>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(IndexResult.CreateSuccess(2));
 
@@ -254,16 +258,16 @@ public class PdfIndexingServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         // Mock services
-        _mockChunkingService.Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+        _chunkingServiceMock.Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
             .Returns(new List<TextChunk> { new() { Text = "Test content", Index = 0, Page = 1, CharStart = 0, CharEnd = 12 } });
 
-        _mockEmbeddingService.Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+        _embeddingServiceMock.Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { new float[1536] }));
 
-        _mockQdrantService.Setup(x => x.DeleteDocumentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _qdrantServiceMock.Setup(x => x.DeleteDocumentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        _mockQdrantService.Setup(x => x.IndexDocumentChunksAsync(
+        _qdrantServiceMock.Setup(x => x.IndexDocumentChunksAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<List<DocumentChunk>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(IndexResult.CreateSuccess(1));
 
@@ -275,7 +279,7 @@ public class PdfIndexingServiceTests : IDisposable
         Assert.NotNull(result.VectorDocumentId);
 
         // Verify Qdrant delete was called (idempotency cleanup)
-        _mockQdrantService.Verify(x => x.DeleteDocumentAsync("pdf-3", It.IsAny<CancellationToken>()), Times.Once);
+        _qdrantServiceMock.Verify(x => x.DeleteDocumentAsync("pdf-3", It.IsAny<CancellationToken>()), Times.Once);
 
         // Should have only ONE VectorDocumentEntity for this PDF
         var vectorDocCount = await _db.Set<VectorDocumentEntity>()
@@ -322,11 +326,11 @@ public class PdfIndexingServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         // Mock chunking succeeds
-        _mockChunkingService.Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+        _chunkingServiceMock.Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
             .Returns(new List<TextChunk> { new() { Text = "Test content", Index = 0, Page = 1, CharStart = 0, CharEnd = 12 } });
 
         // Mock embedding FAILS
-        _mockEmbeddingService.Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+        _embeddingServiceMock.Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateFailure("API error: rate limit exceeded"));
 
         // WHEN: I trigger indexing

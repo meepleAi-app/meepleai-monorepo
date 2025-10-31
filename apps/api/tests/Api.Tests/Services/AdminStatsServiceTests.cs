@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
 
@@ -24,6 +25,8 @@ namespace Api.Tests.Services;
 /// </summary>
 public class AdminStatsServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
     private readonly MeepleAiDbContext _dbContext;
     private readonly HybridCache _cache;
@@ -32,8 +35,9 @@ public class AdminStatsServiceTests : IDisposable
     private readonly ServiceProvider _serviceProvider;
 
     #pragma warning disable EXTEXP0018 // HybridCache is experimental
-    public AdminStatsServiceTests()
+    public AdminStatsServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         // Setup in-memory SQLite
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();

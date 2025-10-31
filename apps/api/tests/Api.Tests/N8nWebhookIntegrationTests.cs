@@ -9,6 +9,7 @@ using Api.Infrastructure.Entities;
 using Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -22,13 +23,16 @@ namespace Api.Tests;
 /// </summary>
 public class N8nWebhookIntegrationTests : IntegrationTestBase
 {
+    private readonly ITestOutputHelper _output;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    public N8nWebhookIntegrationTests(WebApplicationFactoryFixture factory) : base(factory)
+    public N8nWebhookIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     /// <summary>

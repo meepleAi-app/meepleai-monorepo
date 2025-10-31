@@ -1,6 +1,7 @@
 using Api.Models;
 using Api.Services;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
 
@@ -10,6 +11,8 @@ namespace Api.Tests.Services;
 /// </summary>
 public class ResponseQualityServiceTests
 {
+    private readonly ITestOutputHelper _output;
+
     /// <summary>
     /// Scenario: High-quality response with strong RAG confidence and complete citations
     /// Given a RAG confidence of 0.85, 4 citations for 4 paragraphs, and 300-word response

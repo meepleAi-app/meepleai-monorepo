@@ -7,6 +7,7 @@ using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -17,6 +18,8 @@ namespace Api.Tests;
 [Collection("IntegrationTests")]
 public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFixture>, IAsyncLifetime
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly WebApplicationFactoryFixture _factory;
     private readonly HttpClient _client;
     private MeepleAiDbContext? _db;
@@ -24,8 +27,9 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
     private string? _editorSessionToken;
     private string? _userSessionToken;
 
-    public PdfIndexingIntegrationTests(WebApplicationFactoryFixture factory)
+    public PdfIndexingIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output)
     {
+        _output = output;
         _factory = factory;
         _client = factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
         {

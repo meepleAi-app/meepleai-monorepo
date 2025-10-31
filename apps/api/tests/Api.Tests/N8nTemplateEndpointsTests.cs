@@ -8,15 +8,19 @@ using System.Threading.Tasks;
 using Api.Models;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
 public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Program>>
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly WebApplicationFactory<Program> _factory;
 
-    public N8nTemplateEndpointsTests(WebApplicationFactory<Program> factory)
+    public N8nTemplateEndpointsTests(WebApplicationFactory<Program> factory, ITestOutputHelper output)
     {
+        _output = output;
         _factory = factory;
     }
 

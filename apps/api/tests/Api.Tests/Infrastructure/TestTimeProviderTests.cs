@@ -1,5 +1,6 @@
 using Api.Tests.Helpers;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Infrastructure;
 
@@ -9,6 +10,8 @@ namespace Api.Tests.Infrastructure;
 /// </summary>
 public class TestTimeProviderTests
 {
+    private readonly ITestOutputHelper _output;
+
     [Fact]
     public void CreateTimeProvider_DefaultsTo2025Jan1()
     {

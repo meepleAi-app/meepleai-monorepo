@@ -1,13 +1,19 @@
 /**
  * ProcessingProgress Component Tests (PDF-08)
  * Comprehensive unit tests for PDF processing progress tracking component
+ *
+ * Key patterns for async testing:
+ * 1. Use waitFor for ALL assertions that depend on async state
+ * 2. Flush promises after advancing timers: await advanceTimersAndFlush(ms)
+ * 3. Don't wrap render() in act() - RTL handles this automatically
+ * 4. Ensure all async operations complete before test ends
  */
 
 import { render, screen, waitFor, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { ProcessingProgress } from '../ProcessingProgress';
 import { ProcessingStep } from '../../types/pdf';
 import { api } from '../../lib/api';
+import { advanceTimersAndFlush, setupUserEvent, flushAllPending } from '../../__tests__/utils/async-test-helpers';
 
 // Mock the API
 jest.mock('../../lib/api', () => ({
@@ -32,8 +38,9 @@ describe('ProcessingProgress', () => {
     jest.useFakeTimers();
   });
 
-  afterEach(() => {
-    jest.runOnlyPendingTimers();
+  afterEach(async () => {
+    // Ensure all async operations complete
+    await flushAllPending();
     jest.useRealTimers();
   });
 
@@ -43,8 +50,15 @@ describe('ProcessingProgress', () => {
 
       render(<ProcessingProgress pdfId="test-pdf-id" />);
 
-      const skeleton = screen.getByLabelText(/Loading processing progress/i);
-      expect(skeleton).toBeInTheDocument();
+      // Wait for the initial fetch to complete and state to settle
+      await waitFor(() => {
+        expect(mockGetProgress).toHaveBeenCalledTimes(1);
+      });
+
+      await waitFor(() => {
+        const skeleton = screen.getByLabelText(/Loading processing progress/i);
+        expect(skeleton).toBeInTheDocument();
+      });
     });
 
     it('should render progress bar with correct percentage', async () => {
@@ -188,18 +202,14 @@ describe('ProcessingProgress', () => {
       });
 
       // Advance timer by 2 seconds
-      act(() => {
-        jest.advanceTimersByTime(2000);
-      });
+      await advanceTimersAndFlush(2000);
 
       await waitFor(() => {
         expect(mockGetProgress).toHaveBeenCalledTimes(2);
       });
 
       // Advance another 2 seconds
-      act(() => {
-        jest.advanceTimersByTime(2000);
-      });
+      await advanceTimersAndFlush(2000);
 
       await waitFor(() => {
         expect(mockGetProgress).toHaveBeenCalledTimes(3);
@@ -220,16 +230,14 @@ describe('ProcessingProgress', () => {
         });
 
       const onComplete = jest.fn();
+
       render(<ProcessingProgress pdfId="test-pdf-id" onComplete={onComplete} />);
 
       await waitFor(() => {
         expect(mockGetProgress).toHaveBeenCalledTimes(1);
       });
 
-      await act(async () => {
-        jest.advanceTimersByTime(2000);
-        await Promise.resolve();
-      });
+      await advanceTimersAndFlush(2000);
 
       await waitFor(() => {
         expect(mockGetProgress).toHaveBeenCalledTimes(2);
@@ -237,10 +245,7 @@ describe('ProcessingProgress', () => {
       });
 
       // Should not poll again after completion
-      await act(async () => {
-        jest.advanceTimersByTime(2000);
-        await Promise.resolve();
-      });
+      await advanceTimersAndFlush(2000);
 
       // Still should be 2 calls
       expect(mockGetProgress).toHaveBeenCalledTimes(2);
@@ -255,6 +260,7 @@ describe('ProcessingProgress', () => {
       });
 
       const onError = jest.fn();
+
       render(<ProcessingProgress pdfId="test-pdf-id" onError={onError} />);
 
       await waitFor(() => {
@@ -263,10 +269,7 @@ describe('ProcessingProgress', () => {
       });
 
       // Should not poll again after failure
-      await act(async () => {
-        jest.advanceTimersByTime(2000);
-        await Promise.resolve();
-      });
+      await advanceTimersAndFlush(2000);
 
       // Still should be 1 call
       expect(mockGetProgress).toHaveBeenCalledTimes(1);
@@ -288,9 +291,7 @@ describe('ProcessingProgress', () => {
       unmount();
 
       // Advance timer after unmount
-      act(() => {
-        jest.advanceTimersByTime(2000);
-      });
+      await advanceTimersAndFlush(2000);
 
       // Should not make additional calls after unmount
       expect(mockGetProgress).toHaveBeenCalledTimes(1);
@@ -313,42 +314,23 @@ describe('ProcessingProgress', () => {
       });
     });
 
-    it.skip('should display network error when API call fails', async () => {
-      // SKIPPED: Even jest.runAllTimersAsync() doesn't resolve this issue
-      // Attempted fix from research: Use runAllTimersAsync() to flush promise rejections
-      // Result: Still timing out - networkError state never set
-      //
-      // Root cause analysis:
-      // Component uses setInterval (2000ms) + immediate fetch on mount
-      // When promise rejects, catch block SHOULD set networkError
-      // But component's isMountedRef check (line 111) might be returning early
-      //
-      // Possible issues:
-      // 1. Component unmounts before error state can be set
-      // 2. setInterval cleanup happens before error handling
-      // 3. Test environment differences vs real browser behavior
-      //
-      // Recommended fix: Component refactoring
-      // - Separate polling logic from error handling
-      // - Use AbortController for fetch cancellation
-      // - Simplify state management for network errors
-      //
-      // Alternative: Accept that mockRejectedValue tests are not feasible
-      // The passing test (line 301) uses mockResolvedValue with Failed status
-      // This adequately tests error display functionality
+    it('should display network error when API call fails', async () => {
       mockGetProgress.mockRejectedValue(new Error('Network timeout'));
 
       render(<ProcessingProgress pdfId="test-pdf-id" />);
 
-      await act(async () => {
-        await jest.runAllTimersAsync();
-      });
+      // Wait for the error to propagate and render
+      await waitFor(
+        () => {
+          // Look for the "Network Error:" prefix specifically
+          expect(screen.getByText(/Network Error:/i)).toBeInTheDocument();
+        },
+        { timeout: 5000 }
+      );
 
-      await waitFor(() => {
-        expect(screen.getByRole('alert')).toBeInTheDocument();
-      });
-
-      expect(screen.getByRole('alert')).toHaveTextContent(/network timeout/i);
+      // Verify it's in an alert role
+      const alert = screen.getByRole('alert');
+      expect(alert).toHaveTextContent(/network timeout/i);
     });
 
     it('should call onError callback when processing fails', async () => {
@@ -413,7 +395,7 @@ describe('ProcessingProgress', () => {
     });
 
     it('should show confirmation dialog when cancel is clicked', async () => {
-      const user = userEvent.setup({ delay: null });
+      const user = setupUserEvent();
       mockGetProgress.mockResolvedValue({
         currentStep: ProcessingStep.Embedding,
         percentComplete: 60,
@@ -435,7 +417,7 @@ describe('ProcessingProgress', () => {
     });
 
     it('should close dialog when "No, Continue Processing" is clicked', async () => {
-      const user = userEvent.setup({ delay: null });
+      const user = setupUserEvent();
       mockGetProgress.mockResolvedValue({
         currentStep: ProcessingStep.Chunking,
         percentComplete: 50,
@@ -459,7 +441,7 @@ describe('ProcessingProgress', () => {
     });
 
     it('should call cancel API when "Yes, Cancel" is clicked', async () => {
-      const user = userEvent.setup({ delay: null });
+      const user = setupUserEvent();
       mockGetProgress.mockResolvedValue({
         currentStep: ProcessingStep.Indexing,
         percentComplete: 80,
@@ -483,7 +465,7 @@ describe('ProcessingProgress', () => {
     });
 
     it('should fetch updated progress after cancel', async () => {
-      const user = userEvent.setup({ delay: null });
+      const user = setupUserEvent();
       mockGetProgress
         .mockResolvedValueOnce({
           currentStep: ProcessingStep.Extracting,
@@ -505,10 +487,7 @@ describe('ProcessingProgress', () => {
       });
 
       await user.click(screen.getByText(/cancel processing/i));
-
-      await act(async () => {
-        await user.click(screen.getByText(/yes, cancel/i));
-      });
+      await user.click(screen.getByText(/yes, cancel/i));
 
       await waitFor(() => {
         expect(mockCancelProcessing).toHaveBeenCalled();
@@ -517,7 +496,7 @@ describe('ProcessingProgress', () => {
     });
 
     it('should handle cancel API failure gracefully', async () => {
-      const user = userEvent.setup({ delay: null });
+      const user = setupUserEvent();
       mockGetProgress.mockResolvedValue({
         currentStep: ProcessingStep.Chunking,
         percentComplete: 55,
@@ -613,7 +592,7 @@ describe('ProcessingProgress', () => {
     });
 
     it('should have proper ARIA attributes on dialog', async () => {
-      const user = userEvent.setup({ delay: null });
+      const user = setupUserEvent();
       mockGetProgress.mockResolvedValue({
         currentStep: ProcessingStep.Embedding,
         percentComplete: 60,

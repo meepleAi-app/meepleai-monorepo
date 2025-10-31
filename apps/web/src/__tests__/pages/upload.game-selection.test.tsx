@@ -8,7 +8,8 @@
  * - Authorization checks
  */
 
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import UploadPage from '../../pages/upload';
 import {
   setupUploadMocks,
@@ -34,6 +35,7 @@ describe('UploadPage - Game Selection', () => {
   describe('Given user has existing games', () => {
     describe('When user selects game but does not confirm', () => {
       it('Then upload button remains disabled', async () => {
+        const user = userEvent.setup();
         const mockFetch = setupUploadMocks({
           auth: createAuthMock({ userId: 'user-1', role: 'Admin' }),
           games: [createGameMock({ id: 'game-1', name: 'Terraforming Mars' })],
@@ -50,13 +52,14 @@ describe('UploadPage - Game Selection', () => {
         const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
         const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
 
-        fireEvent.change(fileInput, { target: { files: [file] } });
+        await user.upload(fileInput, file);
         expect(uploadButton).toBeDisabled();
       });
     });
 
     describe('When user confirms game selection', () => {
       it('Then upload button becomes enabled with file selected', async () => {
+        const user = userEvent.setup();
         const mockFetch = setupUploadMocks({
           auth: createAuthMock({ userId: 'user-1', role: 'Admin' }),
           games: [createGameMock({ id: 'game-1', name: 'Terraforming Mars' })],
@@ -69,13 +72,13 @@ describe('UploadPage - Game Selection', () => {
 
         await waitFor(() => expect(screen.getByLabelText(/Existing games/i)).toBeInTheDocument());
 
-        fireEvent.click(screen.getByRole('button', { name: /Confirm selection/i }));
+        await user.click(screen.getByRole('button', { name: /Confirm selection/i }));
 
         const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
         const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
         const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
 
-        fireEvent.change(fileInput, { target: { files: [file] } });
+        await user.upload(fileInput, file);
 
         await waitFor(() => expect(uploadButton).not.toBeDisabled());
       });
@@ -109,6 +112,7 @@ describe('UploadPage - Game Selection', () => {
   describe('Given user has no existing games', () => {
     describe('When user creates a new game successfully', () => {
       it('Then new game appears in selection and upload is enabled', async () => {
+        const user = userEvent.setup();
         const mockFetch = setupUploadMocks({
           auth: createAuthMock({ userId: 'user-2', role: 'Admin' }),
           games: [],
@@ -122,15 +126,15 @@ describe('UploadPage - Game Selection', () => {
 
         await waitFor(() => expect(screen.getByText(/Create one to get started/i)).toBeInTheDocument());
 
-        fireEvent.change(screen.getByLabelText(/New game name/i), { target: { value: 'New Game' } });
-        fireEvent.click(screen.getByRole('button', { name: /Create first game/i }));
+        await user.type(screen.getByLabelText(/New game name/i), 'New Game');
+        await user.click(screen.getByRole('button', { name: /Create first game/i }));
 
         await waitFor(() => expect(screen.getByRole('option', { name: 'New Game' })).toBeInTheDocument());
 
         const uploadButton = screen.getByRole('button', { name: /Upload & Continue/i });
         const fileInput = screen.getByLabelText(/PDF File/i) as HTMLInputElement;
         const file = new File(['pdf'], 'rules.pdf', { type: 'application/pdf' });
-        fireEvent.change(fileInput, { target: { files: [file] } });
+        await user.upload(fileInput, file);
 
         await waitFor(() => expect(uploadButton).not.toBeDisabled());
       });
@@ -138,6 +142,7 @@ describe('UploadPage - Game Selection', () => {
 
     describe('When game creation fails', () => {
       it('Then error message is displayed', async () => {
+        const user = userEvent.setup();
         const mockFetch = setupUploadMocks({
           auth: createAuthMock({ userId: 'user-16', role: 'Admin' }),
           games: [],
@@ -150,8 +155,8 @@ describe('UploadPage - Game Selection', () => {
 
         await waitFor(() => expect(screen.getByText(/Create one to get started/i)).toBeInTheDocument());
 
-        fireEvent.change(screen.getByLabelText(/New game name/i), { target: { value: 'New Game' } });
-        fireEvent.click(screen.getByRole('button', { name: /Create first game/i }));
+        await user.type(screen.getByLabelText(/New game name/i), 'New Game');
+        await user.click(screen.getByRole('button', { name: /Create first game/i }));
 
         await waitFor(() =>
           expect(screen.getByText(/Failed to create game: API \/api\/v1\/games 500/i)).toBeInTheDocument()
@@ -161,6 +166,7 @@ describe('UploadPage - Game Selection', () => {
 
     describe('When user tries to create game without name', () => {
       it('Then validation error is displayed', async () => {
+        const user = userEvent.setup();
         const mockFetch = setupUploadMocks({
           auth: createAuthMock({ userId: 'user-1', role: 'Admin' }),
           games: []
@@ -176,8 +182,8 @@ describe('UploadPage - Game Selection', () => {
 
         // Try to create game without name
         const createGameInput = screen.getByLabelText(/New game name/i);
-        fireEvent.change(createGameInput, { target: { value: '   ' } });
-        fireEvent.click(screen.getByRole('button', { name: /Create first game/i }));
+        await user.type(createGameInput, '   ');
+        await user.click(screen.getByRole('button', { name: /Create first game/i }));
 
         await waitFor(() => {
           expect(screen.getByText(/Please enter a game name/i)).toBeInTheDocument();

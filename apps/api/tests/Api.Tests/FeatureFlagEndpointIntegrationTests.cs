@@ -9,6 +9,7 @@ using Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -24,8 +25,11 @@ namespace Api.Tests;
 [Collection("Admin Endpoints")]
 public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
 {
-    public FeatureFlagEndpointIntegrationTests(WebApplicationFactoryFixture factory) : base(factory)
+    private readonly ITestOutputHelper _output;
+
+    public FeatureFlagEndpointIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     #region Admin Endpoints Tests

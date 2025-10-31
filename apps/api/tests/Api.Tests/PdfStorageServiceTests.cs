@@ -15,9 +15,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 public class PdfStorageServiceTests
 {
+    private readonly ITestOutputHelper _output;
+
     private static MeepleAiDbContext CreateInMemoryContext()
     {
         var dbPath = Path.Combine(Path.GetTempPath(), $"pdf-storage-tests-{Guid.NewGuid():N}.db");

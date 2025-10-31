@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Api.Infrastructure.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -12,8 +13,11 @@ namespace Api.Tests;
 /// </summary>
 public class GameEndpointsErrorTests : IntegrationTestBase
 {
-    public GameEndpointsErrorTests(WebApplicationFactoryFixture fixture) : base(fixture)
+    private readonly ITestOutputHelper _output;
+
+    public GameEndpointsErrorTests(WebApplicationFactoryFixture fixture, ITestOutputHelper output) : base(fixture)
     {
+        _output = output;
     }
 
     #region GET /games Error Cases

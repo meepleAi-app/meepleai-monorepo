@@ -181,7 +181,8 @@ describe('CommentThread', () => {
         'v1',
         {
           atomId: null,
-          commentText: 'New comment'
+          commentText: 'New comment',
+          lineNumber: null
         }
       );
     });

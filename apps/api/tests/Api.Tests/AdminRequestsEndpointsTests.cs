@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -19,8 +20,11 @@ namespace Api.Tests;
 [Collection("Admin Endpoints")]
 public class AdminRequestsEndpointsTests : AdminTestFixture
 {
-    public AdminRequestsEndpointsTests(WebApplicationFactoryFixture factory) : base(factory)
+    private readonly ITestOutputHelper _output;
+
+    public AdminRequestsEndpointsTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     /// <summary>

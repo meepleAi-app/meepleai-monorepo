@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
 
@@ -17,17 +18,20 @@ namespace Api.Tests.Services;
 /// </summary>
 public class AlertingServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
     private readonly MeepleAiDbContext _dbContext;
-    private readonly Mock<IAlertChannel> _mockEmailChannel;
-    private readonly Mock<IAlertChannel> _mockSlackChannel;
-    private readonly Mock<IAlertChannel> _mockPagerDutyChannel;
+    private readonly Mock<IAlertChannel> _emailChannelMock;
+    private readonly Mock<IAlertChannel> _slackChannelMock;
+    private readonly Mock<IAlertChannel> _pagerDutyChannelMock;
     private readonly Mock<ILogger<AlertingService>> _mockLogger;
     private readonly AlertingConfiguration _config;
     private readonly AlertingService _service;
 
-    public AlertingServiceTests()
+    public AlertingServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         // Setup in-memory SQLite database
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
@@ -40,27 +44,27 @@ public class AlertingServiceTests : IDisposable
         _dbContext.Database.EnsureCreated();
 
         // Setup mocks
-        _mockEmailChannel = new Mock<IAlertChannel>();
-        _mockEmailChannel.Setup(c => c.ChannelName).Returns("Email");
-        _mockEmailChannel.Setup(c => c.SendAsync(
+        _emailChannelMock = new Mock<IAlertChannel>();
+        _emailChannelMock.Setup(c => c.ChannelName).Returns("Email");
+        _emailChannelMock.Setup(c => c.SendAsync(
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<Dictionary<string, object>>(),
             It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
-        _mockSlackChannel = new Mock<IAlertChannel>();
-        _mockSlackChannel.Setup(c => c.ChannelName).Returns("Slack");
-        _mockSlackChannel.Setup(c => c.SendAsync(
+        _slackChannelMock = new Mock<IAlertChannel>();
+        _slackChannelMock.Setup(c => c.ChannelName).Returns("Slack");
+        _slackChannelMock.Setup(c => c.SendAsync(
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<Dictionary<string, object>>(),
             It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
-        _mockPagerDutyChannel = new Mock<IAlertChannel>();
-        _mockPagerDutyChannel.Setup(c => c.ChannelName).Returns("PagerDuty");
-        _mockPagerDutyChannel.Setup(c => c.SendAsync(
+        _pagerDutyChannelMock = new Mock<IAlertChannel>();
+        _pagerDutyChannelMock.Setup(c => c.ChannelName).Returns("PagerDuty");
+        _pagerDutyChannelMock.Setup(c => c.SendAsync(
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<string>(),
@@ -77,9 +81,9 @@ public class AlertingServiceTests : IDisposable
 
         var channels = new List<IAlertChannel>
         {
-            _mockEmailChannel.Object,
-            _mockSlackChannel.Object,
-            _mockPagerDutyChannel.Object
+            _emailChannelMock.Object,
+            _slackChannelMock.Object,
+            _pagerDutyChannelMock.Object
         };
 
         _service = new AlertingService(
@@ -132,21 +136,21 @@ public class AlertingServiceTests : IDisposable
         await _service.SendAlertAsync(alertType, severity, message);
 
         // Assert
-        _mockEmailChannel.Verify(c => c.SendAsync(
+        _emailChannelMock.Verify(c => c.SendAsync(
             alertType,
             severity,
             message,
             It.IsAny<Dictionary<string, object>>(),
             It.IsAny<CancellationToken>()), Times.Once);
 
-        _mockSlackChannel.Verify(c => c.SendAsync(
+        _slackChannelMock.Verify(c => c.SendAsync(
             alertType,
             severity,
             message,
             It.IsAny<Dictionary<string, object>>(),
             It.IsAny<CancellationToken>()), Times.Once);
 
-        _mockPagerDutyChannel.Verify(c => c.SendAsync(
+        _pagerDutyChannelMock.Verify(c => c.SendAsync(
             alertType,
             severity,
             message,
@@ -162,7 +166,7 @@ public class AlertingServiceTests : IDisposable
         var severity = "critical";
 
         // Make Slack fail
-        _mockSlackChannel.Setup(c => c.SendAsync(
+        _slackChannelMock.Setup(c => c.SendAsync(
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<string>(),
@@ -197,7 +201,7 @@ public class AlertingServiceTests : IDisposable
         Assert.Equal(firstAlert.Message, secondResult.Message);
 
         // Verify channels were called only once (for first alert)
-        _mockEmailChannel.Verify(c => c.SendAsync(
+        _emailChannelMock.Verify(c => c.SendAsync(
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<string>(),

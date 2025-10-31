@@ -8,6 +8,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Integration;
 
@@ -24,6 +25,8 @@ namespace Api.Tests.Integration;
 /// </summary>
 public class ChatContextSwitchingIntegrationTests
 {
+    private readonly ITestOutputHelper _output;
+
     private static MeepleAiDbContext CreateInMemoryContext()
     {
         var connection = new SqliteConnection("Filename=:memory:");

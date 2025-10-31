@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Api.Infrastructure.Entities;
 using Api.Services;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
 
@@ -25,10 +26,13 @@ namespace Api.Tests.Services;
 /// </summary>
 public class TxtExportFormatterTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly TxtExportFormatter _formatter;
 
-    public TxtExportFormatterTests()
+    public TxtExportFormatterTests(ITestOutputHelper output)
     {
+        _output = output;
         _formatter = new TxtExportFormatter();
     }
 

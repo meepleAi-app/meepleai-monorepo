@@ -1,11 +1,14 @@
 using System;
 using Api.Infrastructure.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
 public class EntityTests
 {
+    private readonly ITestOutputHelper _output;
+
     [Fact]
     public void AgentEntity_HasEmptyChatsCollectionByDefault()
     {

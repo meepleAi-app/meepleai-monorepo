@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -15,6 +16,8 @@ namespace Api.Tests;
 /// </summary>
 public class StreamingRagServiceTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<ILogger<StreamingRagService>> _mockLogger = new();
 
     private static MeepleAiDbContext CreateInMemoryContext()

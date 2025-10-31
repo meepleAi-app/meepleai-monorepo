@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -25,14 +26,17 @@ namespace Api.Tests;
 /// </summary>
 public class SessionAutoRevocationServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<ILogger<SessionAutoRevocationService>> _loggerMock;
     private readonly ServiceCollection _serviceCollection;
     private readonly TestTimeProvider _timeProvider;
     private ServiceProvider? _serviceProvider;
 
-    public SessionAutoRevocationServiceTests()
+    public SessionAutoRevocationServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseSqlite("DataSource=:memory:")
             .Options;

@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -16,13 +17,16 @@ namespace Api.Tests;
 /// </summary>
 public class TempSessionServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly MeepleAiDbContext _dbContext;
     private readonly TempSessionService _tempSessionService;
     private readonly Mock<ILogger<TempSessionService>> _loggerMock;
     private readonly TestTimeProvider _timeProvider;
 
-    public TempSessionServiceTests()
+    public TempSessionServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         // Setup SQLite in-memory database
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseSqlite("DataSource=:memory:")

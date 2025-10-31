@@ -7,6 +7,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -21,8 +22,11 @@ namespace Api.Tests;
 [Collection("Admin Endpoints")]
 public class AdminStatsEndpointsTests : AdminTestFixture
 {
-    public AdminStatsEndpointsTests(WebApplicationFactoryFixture factory) : base(factory)
+    private readonly ITestOutputHelper _output;
+
+    public AdminStatsEndpointsTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     /// <summary>

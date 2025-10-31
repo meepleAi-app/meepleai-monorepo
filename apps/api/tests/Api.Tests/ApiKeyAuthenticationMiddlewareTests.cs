@@ -13,9 +13,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using Xunit.Abstractions;
 
 public class ApiKeyAuthenticationMiddlewareTests
 {
+    private readonly ITestOutputHelper _output;
+
     [Fact]
     public async Task InvokeAsync_WithValidApiKey_LogsSanitizedPath()
     {

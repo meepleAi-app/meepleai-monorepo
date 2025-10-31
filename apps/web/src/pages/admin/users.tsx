@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, startTransition } from "react";
 import Link from "next/link";
 import { api } from "../../lib/api";
 
@@ -232,17 +232,19 @@ export default function UserManagement() {
   }, [users, selectedUsers.size]);
 
   // Handle sort
-  const handleSort = useCallback(
-    (field: string) => {
-      if (sortBy === field) {
-        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+  const handleSort = useCallback((field: string) => {
+    setSortBy(prevSortBy => {
+      if (prevSortBy === field) {
+        // Toggling same column - toggle order and keep same field
+        setSortOrder(prevOrder => prevOrder === "asc" ? "desc" : "asc");
+        return prevSortBy;
       } else {
-        setSortBy(field);
+        // New column - reset to ascending
         setSortOrder("asc");
+        return field;
       }
-    },
-    [sortBy, sortOrder]
-  );
+    });
+  }, []);
 
   // Format date
   const formatDate = (dateString: string | null) => {

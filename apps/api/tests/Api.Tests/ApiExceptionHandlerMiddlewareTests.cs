@@ -16,6 +16,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -29,6 +30,8 @@ namespace Api.Tests;
 /// </summary>
 public class ApiExceptionHandlerMiddlewareTests
 {
+    private readonly ITestOutputHelper _output;
+
     [Fact]
     public async Task InvokeAsync_WithArgumentException_Returns400BadRequest()
     {

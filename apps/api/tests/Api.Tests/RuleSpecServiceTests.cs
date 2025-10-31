@@ -11,18 +11,22 @@ using Microsoft.EntityFrameworkCore;
 using Moq;
 using System.Text.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
 public class RuleSpecServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
     private readonly MeepleAiDbContext _dbContext;
     private readonly RuleSpecService _service;
     private readonly Mock<IAiResponseCacheService> _cacheMock = new();
 
-    public RuleSpecServiceTests()
+    public RuleSpecServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();
 

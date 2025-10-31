@@ -17,6 +17,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace MeepleAI.Api.Tests.Services;
 
@@ -27,21 +28,24 @@ namespace MeepleAI.Api.Tests.Services;
 /// </summary>
 public class CacheWarmingServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<ILogger<CacheWarmingService>> _mockLogger;
-    private readonly Mock<IRedisFrequencyTracker> _mockFrequencyTracker;
-    private readonly Mock<IAiResponseCacheService> _mockCacheService;
-    private readonly Mock<IRagService> _mockRagService;
+    private readonly Mock<IRedisFrequencyTracker> _frequencyTrackerMock;
+    private readonly Mock<IAiResponseCacheService> _cacheServiceMock;
+    private readonly Mock<IRagService> _ragServiceMock;
     private readonly Mock<IOptions<CacheOptimizationConfiguration>> _mockConfig;
     private readonly TestTimeProvider _timeProvider;
     private SqliteConnection? _connection;
     private IServiceScopeFactory? _scopeFactory;
 
-    public CacheWarmingServiceTests()
+    public CacheWarmingServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         _mockLogger = new Mock<ILogger<CacheWarmingService>>();
-        _mockFrequencyTracker = new Mock<IRedisFrequencyTracker>();
-        _mockCacheService = new Mock<IAiResponseCacheService>();
-        _mockRagService = new Mock<IRagService>();
+        _frequencyTrackerMock = new Mock<IRedisFrequencyTracker>();
+        _cacheServiceMock = new Mock<IAiResponseCacheService>();
+        _ragServiceMock = new Mock<IRagService>();
         _mockConfig = new Mock<IOptions<CacheOptimizationConfiguration>>();
         _timeProvider = TimeTestHelpers.CreateTimeProvider(2025, 1, 1); // Start at 2025-01-01 00:00:00 UTC
 
@@ -100,13 +104,13 @@ public class CacheWarmingServiceTests : IDisposable
             })
             .ToList();
 
-        _mockFrequencyTracker.Setup(ft => ft.GetTopQueriesAsync(gameId, 50))
+        _frequencyTrackerMock.Setup(ft => ft.GetTopQueriesAsync(gameId, 50))
             .ReturnsAsync(topQueries.Take(50).ToList());
 
-        _mockCacheService.Setup(cs => cs.GetAsync<object>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _cacheServiceMock.Setup(cs => cs.GetAsync<object>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((object?)null); // Not cached
 
-        _mockRagService.Setup(rag => rag.AskAsync(
+        _ragServiceMock.Setup(rag => rag.AskAsync(
             gameId.ToString(),
             It.IsAny<string>(),
             It.IsAny<string?>(),
@@ -121,9 +125,9 @@ public class CacheWarmingServiceTests : IDisposable
 
         var service = new CacheWarmingService(
             _mockLogger.Object,
-            _mockFrequencyTracker.Object,
-            _mockCacheService.Object,
-            _mockRagService.Object,
+            _frequencyTrackerMock.Object,
+            _cacheServiceMock.Object,
+            _ragServiceMock.Object,
             _scopeFactory,
             _mockConfig.Object,
             _timeProvider
@@ -142,7 +146,7 @@ public class CacheWarmingServiceTests : IDisposable
         await service.StopAsync(cts.Token);
 
         // Assert (Then): Top 50 queries pre-cached
-        _mockRagService.Verify(
+        _ragServiceMock.Verify(
             rag => rag.AskAsync(
                 gameId.ToString(),
                 It.IsAny<string>(),
@@ -170,9 +174,9 @@ public class CacheWarmingServiceTests : IDisposable
 
         var service = new CacheWarmingService(
             _mockLogger.Object,
-            _mockFrequencyTracker.Object,
-            _mockCacheService.Object,
-            _mockRagService.Object,
+            _frequencyTrackerMock.Object,
+            _cacheServiceMock.Object,
+            _ragServiceMock.Object,
             _scopeFactory,
             delayConfig.Object,
             _timeProvider
@@ -189,7 +193,7 @@ public class CacheWarmingServiceTests : IDisposable
         await Task.Yield();
 
         // Assert (Then): Delays 2 minutes before first warming call
-        _mockFrequencyTracker.Verify(
+        _frequencyTrackerMock.Verify(
             ft => ft.GetTopQueriesAsync(It.IsAny<Guid>(), It.IsAny<int>()),
             Times.Never // Should not call after only 1 minute (needs 2)
         );
@@ -214,14 +218,14 @@ public class CacheWarmingServiceTests : IDisposable
             })
             .ToList();
 
-        _mockFrequencyTracker.Setup(ft => ft.GetTopQueriesAsync(gameId, 50))
+        _frequencyTrackerMock.Setup(ft => ft.GetTopQueriesAsync(gameId, 50))
             .ReturnsAsync(topQueries);
 
-        _mockCacheService.Setup(cs => cs.GetAsync<object>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _cacheServiceMock.Setup(cs => cs.GetAsync<object>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((object?)null);
 
         var callCount = 0;
-        _mockRagService.Setup(rag => rag.AskAsync(
+        _ragServiceMock.Setup(rag => rag.AskAsync(
             gameId.ToString(),
             It.IsAny<string>(),
             It.IsAny<string?>(),
@@ -237,9 +241,9 @@ public class CacheWarmingServiceTests : IDisposable
 
         var service = new CacheWarmingService(
             _mockLogger.Object,
-            _mockFrequencyTracker.Object,
-            _mockCacheService.Object,
-            _mockRagService.Object,
+            _frequencyTrackerMock.Object,
+            _cacheServiceMock.Object,
+            _ragServiceMock.Object,
             _scopeFactory,
             _mockConfig.Object,
             _timeProvider
@@ -262,7 +266,7 @@ public class CacheWarmingServiceTests : IDisposable
         // Assert (Then): Queries 1-25 attempted (service stops after exception on #25)
         // NOTE: Test revealed that CacheWarmingService stops processing after exception
         // This may be intentional behavior or could be improved to continue with remaining queries
-        _mockRagService.Verify(
+        _ragServiceMock.Verify(
             rag => rag.AskAsync(
                 gameId.ToString(),
                 It.IsAny<string>(),
@@ -299,26 +303,26 @@ public class CacheWarmingServiceTests : IDisposable
             new() { GameId = gameId, Query = "Other query", AccessCount = 30 }
         };
 
-        _mockFrequencyTracker.Setup(ft => ft.GetTopQueriesAsync(gameId, 50))
+        _frequencyTrackerMock.Setup(ft => ft.GetTopQueriesAsync(gameId, 50))
             .ReturnsAsync(topQueries);
 
         // Use GenerateQaCacheKey to match the service's cache key format
-        _mockCacheService.Setup(cs => cs.GenerateQaCacheKey(gameId.ToString(), cachedQuery))
+        _cacheServiceMock.Setup(cs => cs.GenerateQaCacheKey(gameId.ToString(), cachedQuery))
             .Returns($"game:{gameId}:query:hash");
-        _mockCacheService.Setup(cs => cs.GenerateQaCacheKey(gameId.ToString(), "Other query"))
+        _cacheServiceMock.Setup(cs => cs.GenerateQaCacheKey(gameId.ToString(), "Other query"))
             .Returns($"game:{gameId}:query:hash2");
 
-        _mockCacheService.Setup(cs => cs.GetAsync<object>($"game:{gameId}:query:hash", It.IsAny<CancellationToken>()))
+        _cacheServiceMock.Setup(cs => cs.GetAsync<object>($"game:{gameId}:query:hash", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new QaResponse("Cached answer", new List<Snippet>(), 0, 0, 0, 0.9));
 
-        _mockCacheService.Setup(cs => cs.GetAsync<object>($"game:{gameId}:query:hash2", It.IsAny<CancellationToken>()))
+        _cacheServiceMock.Setup(cs => cs.GetAsync<object>($"game:{gameId}:query:hash2", It.IsAny<CancellationToken>()))
             .ReturnsAsync((object?)null);
 
         var service = new CacheWarmingService(
             _mockLogger.Object,
-            _mockFrequencyTracker.Object,
-            _mockCacheService.Object,
-            _mockRagService.Object,
+            _frequencyTrackerMock.Object,
+            _cacheServiceMock.Object,
+            _ragServiceMock.Object,
             _scopeFactory,
             _mockConfig.Object,
             _timeProvider
@@ -336,7 +340,7 @@ public class CacheWarmingServiceTests : IDisposable
         await service.StopAsync(cts.Token);
 
         // Assert (Then): Skips re-caching first query, logs "Skipped"
-        _mockRagService.Verify(
+        _ragServiceMock.Verify(
             rag => rag.AskAsync(
                 gameId.ToString(),
                 cachedQuery,
@@ -346,7 +350,7 @@ public class CacheWarmingServiceTests : IDisposable
             Times.Never // Skipped
         );
 
-        _mockRagService.Verify(
+        _ragServiceMock.Verify(
             rag => rag.AskAsync(
                 gameId.ToString(),
                 "Other query",
@@ -389,20 +393,20 @@ public class CacheWarmingServiceTests : IDisposable
             new() { GameId = tttGameId, Query = "TTT query 1", AccessCount = 30 }
         };
 
-        _mockFrequencyTracker.Setup(ft => ft.GetTopQueriesAsync(chessGameId, 50))
+        _frequencyTrackerMock.Setup(ft => ft.GetTopQueriesAsync(chessGameId, 50))
             .ReturnsAsync(chessQueries);
 
-        _mockFrequencyTracker.Setup(ft => ft.GetTopQueriesAsync(tttGameId, 50))
+        _frequencyTrackerMock.Setup(ft => ft.GetTopQueriesAsync(tttGameId, 50))
             .ReturnsAsync(tttQueries);
 
-        _mockCacheService.Setup(cs => cs.GetAsync<object>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _cacheServiceMock.Setup(cs => cs.GetAsync<object>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((object?)null);
 
         var service = new CacheWarmingService(
             _mockLogger.Object,
-            _mockFrequencyTracker.Object,
-            _mockCacheService.Object,
-            _mockRagService.Object,
+            _frequencyTrackerMock.Object,
+            _cacheServiceMock.Object,
+            _ragServiceMock.Object,
             _scopeFactory,
             _mockConfig.Object,
             _timeProvider
@@ -420,7 +424,7 @@ public class CacheWarmingServiceTests : IDisposable
         await service.StopAsync(cts.Token);
 
         // Assert (Then): Cache keys include game ID
-        _mockRagService.Verify(
+        _ragServiceMock.Verify(
             rag => rag.AskAsync(
                 chessGameId.ToString(),
                 "Chess query 1",
@@ -430,7 +434,7 @@ public class CacheWarmingServiceTests : IDisposable
             Times.Once
         );
 
-        _mockRagService.Verify(
+        _ragServiceMock.Verify(
             rag => rag.AskAsync(
                 tttGameId.ToString(),
                 "TTT query 1",
@@ -455,9 +459,9 @@ public class CacheWarmingServiceTests : IDisposable
         // Act (When): Attempt to create service
         Func<CacheWarmingService> act = () => new CacheWarmingService(
             _mockLogger.Object,
-            _mockFrequencyTracker.Object,
-            _mockCacheService.Object,
-            _mockRagService.Object,
+            _frequencyTrackerMock.Object,
+            _cacheServiceMock.Object,
+            _ragServiceMock.Object,
             _scopeFactory,
             _mockConfig.Object,
             _timeProvider

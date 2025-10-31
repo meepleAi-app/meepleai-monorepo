@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 /// <summary>
 /// AI-04: Comprehensive tests for Q&A snippet handling and fallback behavior
@@ -19,11 +20,14 @@ using Xunit;
 /// </summary>
 public class SnippetHandlingTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<ILogger<RagService>> _mockLogger = new();
     private readonly SqliteConnection _connection;
 
-    public SnippetHandlingTests()
+    public SnippetHandlingTests(ITestOutputHelper output)
     {
+        _output = output;
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();
     }

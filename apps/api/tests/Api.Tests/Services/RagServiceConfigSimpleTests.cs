@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
 
@@ -18,17 +19,20 @@ namespace Api.Tests.Services;
 /// </summary>
 public class RagServiceConfigSimpleTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
     private readonly MeepleAiDbContext _dbContext;
-    private readonly Mock<IEmbeddingService> _mockEmbedding;
-    private readonly Mock<IQdrantService> _mockQdrant;
-    private readonly Mock<ILlmService> _mockLlm;
-    private readonly Mock<IAiResponseCacheService> _mockCache;
-    private readonly Mock<IPromptTemplateService> _mockPromptTemplate;
-    private readonly Mock<ILogger<RagService>> _mockLogger;
+    private readonly Mock<IEmbeddingService> _embeddingMock;
+    private readonly Mock<IQdrantService> _qdrantMock;
+    private readonly Mock<ILlmService> _llmMock;
+    private readonly Mock<IAiResponseCacheService> _cacheMock;
+    private readonly Mock<IPromptTemplateService> _promptTemplateMock;
+    private readonly Mock<ILogger<RagService>> _loggerMock;
 
-    public RagServiceConfigSimpleTests()
+    public RagServiceConfigSimpleTests(ITestOutputHelper output)
     {
+        _output = output;
         // Setup in-memory SQLite database (minimal, no complex schema)
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
@@ -41,12 +45,12 @@ public class RagServiceConfigSimpleTests : IDisposable
         _dbContext.Database.EnsureCreated();
 
         // Setup mocks
-        _mockEmbedding = new Mock<IEmbeddingService>();
-        _mockQdrant = new Mock<IQdrantService>();
-        _mockLlm = new Mock<ILlmService>();
-        _mockCache = new Mock<IAiResponseCacheService>();
-        _mockPromptTemplate = new Mock<IPromptTemplateService>();
-        _mockLogger = new Mock<ILogger<RagService>>();
+        _embeddingMock = new Mock<IEmbeddingService>();
+        _qdrantMock = new Mock<IQdrantService>();
+        _llmMock = new Mock<ILlmService>();
+        _cacheMock = new Mock<IAiResponseCacheService>();
+        _promptTemplateMock = new Mock<IPromptTemplateService>();
+        _loggerMock = new Mock<ILogger<RagService>>();
     }
 
     public void Dispose()
@@ -77,7 +81,7 @@ public class RagServiceConfigSimpleTests : IDisposable
         var result = await ragService.AskAsync("test-game", "test query");
 
         // Assert
-        _mockQdrant.Verify(q => q.SearchAsync(
+        _qdrantMock.Verify(q => q.SearchAsync(
             It.IsAny<string>(),
             It.IsAny<float[]>(),
             It.IsAny<string>(),
@@ -106,7 +110,7 @@ public class RagServiceConfigSimpleTests : IDisposable
         var result = await ragService.AskAsync("test-game", "test query");
 
         // Assert: Should clamp to valid range
-        _mockQdrant.Verify(q => q.SearchAsync(
+        _qdrantMock.Verify(q => q.SearchAsync(
             It.IsAny<string>(),
             It.IsAny<float[]>(),
             It.IsAny<string>(),
@@ -131,7 +135,7 @@ public class RagServiceConfigSimpleTests : IDisposable
         var result = await ragService.AskAsync("test-game", "how to win");
 
         // Assert: Should generate max 2 query variations
-        _mockEmbedding.Verify(e => e.GenerateEmbeddingAsync(
+        _embeddingMock.Verify(e => e.GenerateEmbeddingAsync(
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<CancellationToken>()
@@ -153,7 +157,7 @@ public class RagServiceConfigSimpleTests : IDisposable
         var result = await ragService.AskAsync("test-game", "test query");
 
         // Assert: Should use hardcoded default TopK=5
-        _mockQdrant.Verify(q => q.SearchAsync(
+        _qdrantMock.Verify(q => q.SearchAsync(
             It.IsAny<string>(),
             It.IsAny<float[]>(),
             It.IsAny<string>(),
@@ -173,7 +177,7 @@ public class RagServiceConfigSimpleTests : IDisposable
         var result = await ragService.AskAsync("test-game", "how to win the game");
 
         // Assert: Should use default MaxQueryVariations=4
-        _mockEmbedding.Verify(e => e.GenerateEmbeddingAsync(
+        _embeddingMock.Verify(e => e.GenerateEmbeddingAsync(
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<CancellationToken>()
@@ -196,16 +200,16 @@ public class RagServiceConfigSimpleTests : IDisposable
         var ragService = CreateRagService(configuration: configuration);
 
         // Setup mocks for ExplainAsync
-        _mockEmbedding.Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _embeddingMock.Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new float[] { 0.1f } } });
 
-        _mockQdrant.Setup(q => q.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        _qdrantMock.Setup(q => q.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>
             {
                 new SearchResultItem { Text = "Context", PdfId = "pdf", Page = 1, ChunkIndex = 0, Score = 0.9f }
             }));
 
-        _mockLlm.Setup(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _llmMock.Setup(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new LlmCompletionResult
             {
                 Success = true,
@@ -213,17 +217,17 @@ public class RagServiceConfigSimpleTests : IDisposable
                 Usage = new LlmUsage(10, 20, 30)
             });
 
-        _mockCache.Setup(c => c.GetAsync<ExplainResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _cacheMock.Setup(c => c.GetAsync<ExplainResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((ExplainResponse?)null);
 
-        _mockPromptTemplate.Setup(p => p.GetTemplateAsync(It.IsAny<Guid?>(), It.IsAny<QuestionType>()))
+        _promptTemplateMock.Setup(p => p.GetTemplateAsync(It.IsAny<Guid?>(), It.IsAny<QuestionType>()))
             .ReturnsAsync(new PromptTemplate { SystemPrompt = "System", UserPromptTemplate = "User: {query}" });
 
         // Act
         var result = await ragService.ExplainAsync("test-game", "test topic");
 
         // Assert: SearchAsync should be called with limit=7
-        _mockQdrant.Verify(q => q.SearchAsync(
+        _qdrantMock.Verify(q => q.SearchAsync(
             It.IsAny<string>(),
             It.IsAny<float[]>(),
             It.IsAny<string>(),
@@ -253,13 +257,13 @@ public class RagServiceConfigSimpleTests : IDisposable
 
         var ragService = new RagService(
             _dbContext,
-            _mockEmbedding.Object,
-            _mockQdrant.Object,
+            _embeddingMock.Object,
+            _qdrantMock.Object,
             mockHybridSearch.Object,
-            _mockLlm.Object,
-            _mockCache.Object,
-            _mockPromptTemplate.Object,
-            _mockLogger.Object,
+            _llmMock.Object,
+            _cacheMock.Object,
+            _promptTemplateMock.Object,
+            _loggerMock.Object,
             CreateQueryExpansionMock().Object,
             CreateRerankerMock().Object,
             CreateCitationExtractorMock().Object
@@ -273,7 +277,7 @@ public class RagServiceConfigSimpleTests : IDisposable
 
         // Assert: Should work with hardcoded defaults
         Assert.NotNull(result);
-        _mockQdrant.Verify(q => q.SearchAsync(
+        _qdrantMock.Verify(q => q.SearchAsync(
             It.IsAny<string>(),
             It.IsAny<float[]>(),
             It.IsAny<string>(),
@@ -332,13 +336,13 @@ public class RagServiceConfigSimpleTests : IDisposable
 
         return new RagService(
             _dbContext,
-            _mockEmbedding.Object,
-            _mockQdrant.Object,
+            _embeddingMock.Object,
+            _qdrantMock.Object,
             mockHybridSearch.Object,
-            _mockLlm.Object,
-            _mockCache.Object,
-            _mockPromptTemplate.Object,
-            _mockLogger.Object,
+            _llmMock.Object,
+            _cacheMock.Object,
+            _promptTemplateMock.Object,
+            _loggerMock.Object,
             CreateQueryExpansionMock().Object,
             CreateRerankerMock().Object,
             CreateCitationExtractorMock().Object,
@@ -350,7 +354,7 @@ public class RagServiceConfigSimpleTests : IDisposable
     private void SetupBasicMocks()
     {
         // Setup embedding service
-        _mockEmbedding.Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _embeddingMock.Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult
             {
                 Success = true,
@@ -358,7 +362,7 @@ public class RagServiceConfigSimpleTests : IDisposable
             });
 
         // Setup Qdrant service (accept any limit)
-        _mockQdrant.Setup(q => q.SearchAsync(
+        _qdrantMock.Setup(q => q.SearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<float[]>(),
                 It.IsAny<string>(),
@@ -370,7 +374,7 @@ public class RagServiceConfigSimpleTests : IDisposable
             }));
 
         // Setup LLM service
-        _mockLlm.Setup(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _llmMock.Setup(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new LlmCompletionResult
             {
                 Success = true,
@@ -379,23 +383,23 @@ public class RagServiceConfigSimpleTests : IDisposable
             });
 
         // Setup cache (miss)
-        _mockCache.Setup(c => c.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _cacheMock.Setup(c => c.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((QaResponse?)null);
 
-        _mockCache.Setup(c => c.SetAsync(It.IsAny<string>(), It.IsAny<QaResponse>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        _cacheMock.Setup(c => c.SetAsync(It.IsAny<string>(), It.IsAny<QaResponse>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Setup prompt template
-        _mockPromptTemplate.Setup(p => p.GetTemplateAsync(It.IsAny<Guid?>(), It.IsAny<QuestionType>()))
+        _promptTemplateMock.Setup(p => p.GetTemplateAsync(It.IsAny<Guid?>(), It.IsAny<QuestionType>()))
             .ReturnsAsync(new PromptTemplate { SystemPrompt = "System", UserPromptTemplate = "User: {query}" });
 
-        _mockPromptTemplate.Setup(p => p.RenderSystemPrompt(It.IsAny<PromptTemplate>()))
+        _promptTemplateMock.Setup(p => p.RenderSystemPrompt(It.IsAny<PromptTemplate>()))
             .Returns("System prompt");
 
-        _mockPromptTemplate.Setup(p => p.RenderUserPrompt(It.IsAny<PromptTemplate>(), It.IsAny<string>(), It.IsAny<string>()))
+        _promptTemplateMock.Setup(p => p.RenderUserPrompt(It.IsAny<PromptTemplate>(), It.IsAny<string>(), It.IsAny<string>()))
             .Returns("User prompt");
 
-        _mockPromptTemplate.Setup(p => p.ClassifyQuestion(It.IsAny<string>()))
+        _promptTemplateMock.Setup(p => p.ClassifyQuestion(It.IsAny<string>()))
             .Returns(QuestionType.Gameplay);
     }
 

@@ -16,6 +16,7 @@ using Moq;
 using Testcontainers.PostgreSql;
 using Testcontainers.Qdrant;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -25,6 +26,8 @@ namespace Api.Tests;
 /// </summary>
 public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private PostgreSqlContainer? _postgresContainer;
     private QdrantContainer? _qdrantContainer;
     private MeepleAiDbContext? _dbContext;
@@ -220,7 +223,8 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
         Assert.Equal(report.TotalQueries, deserialized.TotalQueries);
     }
 
-    [Fact(Skip = "Mock embeddings may not produce sufficient vector similarity for retrieval - needs investigation")]
+    // Note: Mock embeddings may not produce sufficient vector similarity for retrieval - ensure Qdrant running
+    [Fact]
     public async Task Evaluation_WithIndexedDocuments_RetrievesRelevantResults()
     {
         // Arrange: Create dataset matching indexed documents

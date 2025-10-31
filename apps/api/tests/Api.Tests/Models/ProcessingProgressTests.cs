@@ -1,10 +1,13 @@
 using Api.Models;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Models;
 
 public class ProcessingProgressTests
 {
+    private readonly ITestOutputHelper _output;
+
     [Theory]
     [InlineData(ProcessingStep.Uploading, 0, 0, 10)]
     [InlineData(ProcessingStep.Extracting, 0, 10, 20)]

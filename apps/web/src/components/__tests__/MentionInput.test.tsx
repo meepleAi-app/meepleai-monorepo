@@ -346,12 +346,17 @@ describe('MentionInput', () => {
 
   describe('User Selection', () => {
     it('inserts mention when clicking on user', async () => {
-      render(<MentionInput value="Hello @al" onChange={mockOnChange} />);
+      // Use rerender to properly update the component with new value
+      const { rerender } = render(<MentionInput value="" onChange={mockOnChange} />);
       const textarea = screen.getByRole('combobox');
 
+      // Start fresh and type the mention to trigger dropdown
       fireEvent.change(textarea, {
         target: { value: 'Hello @al', selectionStart: 9 },
       });
+
+      // Simulate parent component updating the value
+      rerender(<MentionInput value="Hello @al" onChange={mockOnChange} />);
 
       await waitFor(
         () => {
@@ -372,10 +377,14 @@ describe('MentionInput', () => {
     });
 
     it('replaces @query with @DisplayName followed by space', async () => {
-      render(<MentionInput value="@bob" onChange={mockOnChange} />);
+      const { rerender } = render(<MentionInput value="" onChange={mockOnChange} />);
       const textarea = screen.getByRole('combobox');
 
+      // Start fresh and type the mention to trigger dropdown
       fireEvent.change(textarea, { target: { value: '@bob', selectionStart: 4 } });
+
+      // Simulate parent component updating the value
+      rerender(<MentionInput value="@bob" onChange={mockOnChange} />);
 
       await waitFor(
         () => {
@@ -394,12 +403,19 @@ describe('MentionInput', () => {
     });
 
     it('preserves text before and after mention', async () => {
-      render(<MentionInput value="Hello @al world" onChange={mockOnChange} />);
-      const textarea = screen.getByRole('combobox');
+      const { rerender } = render(<MentionInput value="" onChange={mockOnChange} />);
+      const textarea = screen.getByRole('combobox') as HTMLTextAreaElement;
 
+      // Start fresh and type the mention to trigger dropdown
       fireEvent.change(textarea, {
         target: { value: 'Hello @al world', selectionStart: 9 },
       });
+
+      // Simulate parent component updating the value
+      rerender(<MentionInput value="Hello @al world" onChange={mockOnChange} />);
+
+      // Ensure cursor position is maintained after rerender
+      textarea.setSelectionRange(9, 9);
 
       await waitFor(
         () => {
@@ -500,7 +516,8 @@ describe('MentionInput', () => {
       // For this test, we want to verify the debounce hook is called with correct params
       // Since we mocked useDebounce to return immediately, all queries will trigger
       // This test verifies that each distinct query triggers a search
-      render(<MentionInput value="" onChange={mockOnChange} />);
+      // Use minLength=1 to allow single-char queries for this test
+      render(<MentionInput value="" onChange={mockOnChange} minLength={1} />);
       const textarea = screen.getByRole('combobox');
 
       // Simulate rapid typing - each change will trigger due to mock

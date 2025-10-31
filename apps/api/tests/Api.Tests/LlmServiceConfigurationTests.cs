@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -15,12 +16,15 @@ namespace Api.Tests;
 /// </summary>
 public class LlmServiceConfigurationTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<ILogger<LlmService>> _loggerMock;
     private readonly Mock<IConfigurationService> _configServiceMock;
     private readonly IConfiguration _configuration;
 
-    public LlmServiceConfigurationTests()
+    public LlmServiceConfigurationTests(ITestOutputHelper output)
     {
+        _output = output;
         _loggerMock = new Mock<ILogger<LlmService>>();
         _configServiceMock = new Mock<IConfigurationService>();
 

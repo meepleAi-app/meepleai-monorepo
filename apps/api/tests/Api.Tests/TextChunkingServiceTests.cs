@@ -5,6 +5,7 @@ using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -21,11 +22,14 @@ namespace Api.Tests;
 /// </summary>
 public class TextChunkingServiceTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly TextChunkingService _service;
     private readonly Mock<ILogger<TextChunkingService>> _mockLogger;
 
-    public TextChunkingServiceTests()
+    public TextChunkingServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         _mockLogger = new Mock<ILogger<TextChunkingService>>();
         _service = new TextChunkingService(_mockLogger.Object);
     }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Serilog.Events;
 using System.Security.Claims;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Logging;
 
@@ -11,6 +12,8 @@ namespace Api.Tests.Logging;
 /// </summary>
 public class LoggingEnrichersTests
 {
+    private readonly ITestOutputHelper _output;
+
     [Fact]
     public void CorrelationIdEnricher_WithHttpContext_AddsCorrelationId()
     {

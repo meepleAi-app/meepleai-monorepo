@@ -2,6 +2,7 @@ using Api.Logging;
 using Serilog.Core;
 using Serilog.Events;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Logging;
 
@@ -11,11 +12,14 @@ namespace Api.Tests.Logging;
 /// </summary>
 public class SensitiveDataDestructuringPolicyTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SensitiveDataDestructuringPolicy _policy;
     private readonly LogEventPropertyValueFactory _propertyFactory;
 
-    public SensitiveDataDestructuringPolicyTests()
+    public SensitiveDataDestructuringPolicyTests(ITestOutputHelper output)
     {
+        _output = output;
         _policy = new SensitiveDataDestructuringPolicy();
         _propertyFactory = new LogEventPropertyValueFactory();
     }

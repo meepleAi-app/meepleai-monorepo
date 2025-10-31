@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
+using Xunit.Abstractions;
 using System.Diagnostics;
 using Api.Observability;
 
@@ -13,11 +14,14 @@ namespace Api.Tests;
 /// </summary>
 public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactoryFixture>
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly WebApplicationFactoryFixture _factory;
     private readonly HttpClient _client;
 
-    public OpenTelemetryIntegrationTests(WebApplicationFactoryFixture factory)
+    public OpenTelemetryIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output)
     {
+        _output = output;
         _factory = factory;
         _client = _factory.CreateClient(new WebApplicationFactoryClientOptions
         {

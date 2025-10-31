@@ -7,16 +7,20 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
 public class LlmServiceTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly IConfiguration _configuration;
     private readonly Mock<ILogger<LlmService>> _loggerMock;
 
-    public LlmServiceTests()
+    public LlmServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         _configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {

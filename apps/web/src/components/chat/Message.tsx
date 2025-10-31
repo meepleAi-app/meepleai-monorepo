@@ -14,6 +14,7 @@ import { Message as MessageType } from '@/types';
 import { useChatContext } from './ChatProvider';
 import { MessageActions } from './MessageActions';
 import { MessageEditForm } from './MessageEditForm';
+import { FollowUpQuestions } from '../FollowUpQuestions';
 
 interface MessageProps {
   message: MessageType;
@@ -26,7 +27,8 @@ export function Message({ message, isUser }: MessageProps) {
     startEditMessage,
     deleteMessage,
     setMessageFeedback,
-    loading
+    loading,
+    setInputValue
   } = useChatContext();
 
   const isEditing = editingMessageId === message.id;
@@ -35,6 +37,16 @@ export function Message({ message, isUser }: MessageProps) {
 
   // Don't show actions for deleted messages
   const showActions = !isDeleted && !isEditing;
+
+  // CHAT-02: Handle follow-up question click
+  const handleFollowUpClick = (question: string) => {
+    setInputValue(question);
+    // Focus the input field
+    const inputElement = document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="Fai una domanda"]');
+    if (inputElement) {
+      inputElement.focus();
+    }
+  };
 
   return (
     <li
@@ -104,6 +116,17 @@ export function Message({ message, isUser }: MessageProps) {
           isUser={isUser}
           onFeedback={setMessageFeedback}
         />
+      )}
+
+      {/* CHAT-02: Follow-up questions for assistant messages */}
+      {!isUser && !isDeleted && message.followUpQuestions && message.followUpQuestions.length > 0 && (
+        <div style={{ maxWidth: '75%' }} data-testid="follow-up-questions">
+          <FollowUpQuestions
+            questions={message.followUpQuestions}
+            onQuestionClick={handleFollowUpClick}
+            disabled={loading.sending}
+          />
+        </div>
       )}
 
       {/* Timestamp */}

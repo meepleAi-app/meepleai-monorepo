@@ -35,7 +35,7 @@ const customJestConfig = {
     },
   },
   testMatch: [
-    '**/__tests__/**/*.[jt]s?(x)',
+    '**/__tests__/**/*.{test,spec}.[jt]s?(x)',
     '**/?(*.)+(spec|test).[jt]s?(x)',
   ],
   testPathIgnorePatterns: [

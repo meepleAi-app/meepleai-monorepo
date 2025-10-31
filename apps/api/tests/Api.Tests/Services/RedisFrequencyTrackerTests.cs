@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace MeepleAI.Api.Tests.Services;
 
@@ -18,20 +19,23 @@ namespace MeepleAI.Api.Tests.Services;
 /// </summary>
 public class RedisFrequencyTrackerTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<ILogger<RedisFrequencyTracker>> _mockLogger;
-    private readonly Mock<IConnectionMultiplexer> _mockRedis;
-    private readonly Mock<IDatabase> _mockDatabase;
+    private readonly Mock<IConnectionMultiplexer> _redisMock;
+    private readonly Mock<IDatabase> _databaseMock;
     private readonly Mock<IOptions<CacheOptimizationConfiguration>> _mockConfig;
 
-    public RedisFrequencyTrackerTests()
+    public RedisFrequencyTrackerTests(ITestOutputHelper output)
     {
+        _output = output;
         _mockLogger = new Mock<ILogger<RedisFrequencyTracker>>();
-        _mockRedis = new Mock<IConnectionMultiplexer>();
-        _mockDatabase = new Mock<IDatabase>();
+        _redisMock = new Mock<IConnectionMultiplexer>();
+        _databaseMock = new Mock<IDatabase>();
         _mockConfig = new Mock<IOptions<CacheOptimizationConfiguration>>();
 
-        _mockRedis.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
-            .Returns(_mockDatabase.Object);
+        _redisMock.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
+            .Returns(_databaseMock.Object);
 
         _mockConfig.Setup(c => c.Value).Returns(new CacheOptimizationConfiguration
         {
@@ -47,14 +51,14 @@ public class RedisFrequencyTrackerTests
         // Arrange (Given): Query "How to win?" accessed once
         var tracker = new RedisFrequencyTracker(
             _mockLogger.Object,
-            _mockRedis.Object,
+            _redisMock.Object,
             _mockConfig.Object
         );
         var gameId = Guid.NewGuid();
         var query = "How to win?";
         var redisKey = $"meepleai:freq:{gameId}";
 
-        _mockDatabase.Setup(db => db.SortedSetIncrementAsync(
+        _databaseMock.Setup(db => db.SortedSetIncrementAsync(
             redisKey,
             query,
             1.0,
@@ -65,7 +69,7 @@ public class RedisFrequencyTrackerTests
         await tracker.TrackAccessAsync(gameId, query);
 
         // Assert (Then): Redis ZINCRBY increments score by 1
-        _mockDatabase.Verify(
+        _databaseMock.Verify(
             db => db.SortedSetIncrementAsync(
                 redisKey,
                 query,
@@ -82,7 +86,7 @@ public class RedisFrequencyTrackerTests
         // Arrange (Given): 100 queries with varying access counts
         var tracker = new RedisFrequencyTracker(
             _mockLogger.Object,
-            _mockRedis.Object,
+            _redisMock.Object,
             _mockConfig.Object
         );
         var gameId = Guid.NewGuid();
@@ -92,7 +96,7 @@ public class RedisFrequencyTrackerTests
             .Select(i => new SortedSetEntry($"Query {i}", 100 - i + 1)) // Scores 100 -> 1
             .ToArray();
 
-        _mockDatabase.Setup(db => db.SortedSetRangeByRankWithScoresAsync(
+        _databaseMock.Setup(db => db.SortedSetRangeByRankWithScoresAsync(
             redisKey,
             0,
             9, // Top 10
@@ -117,14 +121,14 @@ public class RedisFrequencyTrackerTests
         // Arrange (Given): Query with 15 accesses
         var tracker = new RedisFrequencyTracker(
             _mockLogger.Object,
-            _mockRedis.Object,
+            _redisMock.Object,
             _mockConfig.Object
         );
         var gameId = Guid.NewGuid();
         var query = "How to win?";
         var redisKey = $"meepleai:freq:{gameId}";
 
-        _mockDatabase.Setup(db => db.SortedSetScoreAsync(
+        _databaseMock.Setup(db => db.SortedSetScoreAsync(
             redisKey,
             query,
             CommandFlags.None
@@ -143,14 +147,14 @@ public class RedisFrequencyTrackerTests
         // Arrange (Given): Query with 15 hits (hot threshold = 10)
         var tracker = new RedisFrequencyTracker(
             _mockLogger.Object,
-            _mockRedis.Object,
+            _redisMock.Object,
             _mockConfig.Object
         );
         var gameId = Guid.NewGuid();
         var query = "How to win?";
         var redisKey = $"meepleai:freq:{gameId}";
 
-        _mockDatabase.Setup(db => db.SortedSetScoreAsync(
+        _databaseMock.Setup(db => db.SortedSetScoreAsync(
             redisKey,
             query,
             CommandFlags.None
@@ -176,14 +180,14 @@ public class RedisFrequencyTrackerTests
         // Arrange (Given): Query with specific frequency
         var tracker = new RedisFrequencyTracker(
             _mockLogger.Object,
-            _mockRedis.Object,
+            _redisMock.Object,
             _mockConfig.Object
         );
         var gameId = Guid.NewGuid();
         var query = "Test query";
         var redisKey = $"meepleai:freq:{gameId}";
 
-        _mockDatabase.Setup(db => db.SortedSetScoreAsync(
+        _databaseMock.Setup(db => db.SortedSetScoreAsync(
             redisKey,
             query,
             CommandFlags.None
@@ -202,7 +206,7 @@ public class RedisFrequencyTrackerTests
         // Arrange (Given): 10 threads access same query simultaneously
         var tracker = new RedisFrequencyTracker(
             _mockLogger.Object,
-            _mockRedis.Object,
+            _redisMock.Object,
             _mockConfig.Object
         );
         var gameId = Guid.NewGuid();
@@ -210,7 +214,7 @@ public class RedisFrequencyTrackerTests
         var redisKey = $"meepleai:freq:{gameId}";
 
         var currentScore = 0.0;
-        _mockDatabase.Setup(db => db.SortedSetIncrementAsync(
+        _databaseMock.Setup(db => db.SortedSetIncrementAsync(
             redisKey,
             query,
             1.0,
@@ -224,7 +228,7 @@ public class RedisFrequencyTrackerTests
         await Task.WhenAll(tasks);
 
         // Assert (Then): Final count = 10 (no race condition)
-        _mockDatabase.Verify(
+        _databaseMock.Verify(
             db => db.SortedSetIncrementAsync(
                 redisKey,
                 query,
@@ -242,13 +246,13 @@ public class RedisFrequencyTrackerTests
         // Arrange (Given): No queries tracked
         var tracker = new RedisFrequencyTracker(
             _mockLogger.Object,
-            _mockRedis.Object,
+            _redisMock.Object,
             _mockConfig.Object
         );
         var gameId = Guid.NewGuid();
         var redisKey = $"meepleai:freq:{gameId}";
 
-        _mockDatabase.Setup(db => db.SortedSetRangeByRankWithScoresAsync(
+        _databaseMock.Setup(db => db.SortedSetRangeByRankWithScoresAsync(
             redisKey,
             0,
             9,
@@ -269,14 +273,14 @@ public class RedisFrequencyTrackerTests
         // Arrange (Given): Query never accessed
         var tracker = new RedisFrequencyTracker(
             _mockLogger.Object,
-            _mockRedis.Object,
+            _redisMock.Object,
             _mockConfig.Object
         );
         var gameId = Guid.NewGuid();
         var query = "Unknown query";
         var redisKey = $"meepleai:freq:{gameId}";
 
-        _mockDatabase.Setup(db => db.SortedSetScoreAsync(
+        _databaseMock.Setup(db => db.SortedSetScoreAsync(
             redisKey,
             query,
             CommandFlags.None

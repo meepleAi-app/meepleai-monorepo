@@ -10,6 +10,7 @@ using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -19,20 +20,23 @@ namespace Api.Tests;
 /// </summary>
 public class RagEvaluationServiceTests : IDisposable
 {
-    private readonly Mock<IQdrantService> _mockQdrantService;
-    private readonly Mock<IEmbeddingService> _mockEmbeddingService;
+    private readonly ITestOutputHelper _output;
+
+    private readonly Mock<IQdrantService> _qdrantServiceMock;
+    private readonly Mock<IEmbeddingService> _embeddingServiceMock;
     private readonly Mock<ILogger<RagEvaluationService>> _mockLogger;
     private readonly RagEvaluationService _service;
     private readonly string _tempDatasetPath;
 
-    public RagEvaluationServiceTests()
+    public RagEvaluationServiceTests(ITestOutputHelper output)
     {
-        _mockQdrantService = new Mock<IQdrantService>();
-        _mockEmbeddingService = new Mock<IEmbeddingService>();
+        _output = output;
+        _qdrantServiceMock = new Mock<IQdrantService>();
+        _embeddingServiceMock = new Mock<IEmbeddingService>();
         _mockLogger = new Mock<ILogger<RagEvaluationService>>();
         _service = new RagEvaluationService(
-            _mockQdrantService.Object,
-            _mockEmbeddingService.Object,
+            _qdrantServiceMock.Object,
+            _embeddingServiceMock.Object,
             _mockLogger.Object);
 
         // Create temporary dataset file for testing
@@ -274,7 +278,7 @@ public class RagEvaluationServiceTests : IDisposable
 
         // Mock perfect results for both queries (doc-1 for query 1, doc-2 for query 2)
         SetupMockEmbedding();
-        _mockQdrantService
+        _qdrantServiceMock
             .SetupSequence(x => x.SearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<float[]>(),
@@ -306,7 +310,7 @@ public class RagEvaluationServiceTests : IDisposable
         var dataset = CreateSimpleDataset();
 
         // Mock embedding failure
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateFailure("Embedding service unavailable"));
 
@@ -330,7 +334,7 @@ public class RagEvaluationServiceTests : IDisposable
         SetupMockEmbedding();
 
         // Mock search failure
-        _mockQdrantService
+        _qdrantServiceMock
             .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateFailure("Qdrant connection failed"));
 
@@ -365,7 +369,7 @@ public class RagEvaluationServiceTests : IDisposable
 
         // Mock search with deterministic latency simulation (using delays)
         var callIndex = 0;
-        _mockQdrantService
+        _qdrantServiceMock
             .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .Returns(async (string gameId, float[] embedding, int limit, CancellationToken ct) =>
             {
@@ -461,7 +465,8 @@ public class RagEvaluationServiceTests : IDisposable
             () => _service.EvaluateAsync(CreateSimpleDataset(), topK: 0));
     }
 
-    [Fact(Skip = "Markdown formatting test - needs investigation of exact format")]
+    // Note: Markdown formatting test - needs investigation of exact format
+    [Fact]
     public void GenerateMarkdownReport_ValidReport_GeneratesCorrectFormat()
     {
         // Arrange
@@ -603,14 +608,14 @@ public class RagEvaluationServiceTests : IDisposable
     private void SetupMockEmbedding()
     {
         var mockEmbedding = Enumerable.Repeat(0.1f, 768).ToArray(); // 768-dim embedding
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { mockEmbedding }));
     }
 
     private void SetupMockSearch(List<SearchResultItem> results)
     {
-        _mockQdrantService
+        _qdrantServiceMock
             .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(results));
     }

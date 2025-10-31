@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -25,6 +26,8 @@ namespace Api.Tests;
 /// </summary>
 public class SessionManagementServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
     private readonly SessionManagementConfiguration _defaultConfig = new()
     {
@@ -32,8 +35,9 @@ public class SessionManagementServiceTests : IDisposable
         AutoRevocationIntervalHours = 1
     };
 
-    public SessionManagementServiceTests()
+    public SessionManagementServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();
     }

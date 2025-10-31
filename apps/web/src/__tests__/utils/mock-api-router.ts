@@ -59,14 +59,18 @@ function patternToRegex(pattern: string): { regex: RegExp; paramNames: string[] 
 
 /**
  * Extracts the pathname from a full URL or returns the input if it's already a path
+ * Preserves trailing slashes for exact route matching
  */
 function extractPathname(url: string): string {
   try {
     const urlObj = new URL(url);
+    // Preserve trailing slashes for exact matching, but remove query parameters
     return urlObj.pathname;
   } catch {
     // If URL parsing fails, assume it's already a pathname
-    return url;
+    // Remove query parameters but preserve trailing slashes
+    const [pathname] = url.split('?');
+    return pathname;
   }
 }
 
@@ -267,3 +271,59 @@ export const createErrorResponse = (
     },
     json: () => Promise.resolve(body)
   } as unknown as Response);
+
+/**
+ * Helper to create a mock fetch function with proper typing
+ *
+ * @example
+ * ```typescript
+ * global.fetch = createMockFetch((url, init) => {
+ *   if (url === '/api/auth/me') return createJsonResponse({ user: {...} });
+ *   return createErrorResponse(404);
+ * });
+ * ```
+ */
+export const createMockFetch = (
+  handler: (url: string, init?: RequestInit) => Promise<Response>
+): jest.MockedFunction<typeof fetch> => {
+  return jest.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : input.toString();
+    return handler(url, init);
+  }) as jest.MockedFunction<typeof fetch>;
+};
+
+/**
+ * Helper to validate that a mock object has all required fields
+ * Throws descriptive error if validation fails
+ *
+ * @example
+ * ```typescript
+ * const user = { id: '1', email: 'test@example.com' };
+ * validateMockObject('User', user, ['id', 'email', 'role']); // Throws: Missing field 'role'
+ * ```
+ */
+export const validateMockObject = (
+  objectName: string,
+  obj: any,
+  requiredFields: string[]
+): void => {
+  if (!obj || typeof obj !== 'object') {
+    throw new Error(`${objectName} must be an object, got: ${typeof obj}`);
+  }
+
+  const missingFields = requiredFields.filter(field => !(field in obj));
+  if (missingFields.length > 0) {
+    throw new Error(
+      `Incomplete ${objectName} mock. Missing required fields: ${missingFields.join(', ')}\n` +
+      `Object has: ${Object.keys(obj).join(', ')}\n` +
+      `Required: ${requiredFields.join(', ')}`
+    );
+  }
+
+  const nullFields = requiredFields.filter(field => obj[field] === undefined);
+  if (nullFields.length > 0) {
+    console.warn(
+      `Warning: ${objectName} has undefined fields that may cause test failures: ${nullFields.join(', ')}`
+    );
+  }
+};

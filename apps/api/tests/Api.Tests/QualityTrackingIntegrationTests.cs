@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Testcontainers.PostgreSql;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -23,14 +24,17 @@ namespace Api.Tests;
 /// </summary>
 public class QualityTrackingIntegrationTests : IAsyncLifetime
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly PostgreSqlContainer? _postgresContainer;
     private readonly bool _isRunningInCi;
     private string _connectionString;
     private WebApplicationFactory<Program> _factory = null!;
     private int _userCounter = 0;
 
-    public QualityTrackingIntegrationTests()
+    public QualityTrackingIntegrationTests(ITestOutputHelper output)
     {
+        _output = output;
         // Detect CI environment
         _isRunningInCi = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")) ||
                          !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GITHUB_ACTIONS"));

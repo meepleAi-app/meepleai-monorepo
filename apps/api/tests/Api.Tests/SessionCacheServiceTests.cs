@@ -5,11 +5,14 @@ using Api.Services;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
 public class SessionCacheServiceTests
 {
+    private readonly ITestOutputHelper _output;
+
     [Fact]
     public async Task GetAsync_WhenCached_ReturnsSession()
     {

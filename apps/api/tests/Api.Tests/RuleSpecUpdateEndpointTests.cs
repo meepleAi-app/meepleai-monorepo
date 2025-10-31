@@ -12,6 +12,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -25,13 +26,16 @@ namespace Api.Tests;
 /// </summary>
 public class RuleSpecUpdateEndpointTests : IntegrationTestBase
 {
+    private readonly ITestOutputHelper _output;
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         PropertyNameCaseInsensitive = true
     };
 
-    public RuleSpecUpdateEndpointTests(WebApplicationFactoryFixture factory) : base(factory)
+    public RuleSpecUpdateEndpointTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     #region Authorization Tests

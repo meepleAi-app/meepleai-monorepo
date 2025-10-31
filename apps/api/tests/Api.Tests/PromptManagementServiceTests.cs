@@ -84,25 +84,25 @@ public class PromptManagementServiceTests : IDisposable
         response.Should().NotBeNull();
         response.Template.Should().NotBeNull();
         response.InitialVersion.Should().NotBeNull();
-        Assert.Equal("test-template", response.Template.Name);
-        Assert.Equal("Test description", response.Template.Description);
-        Assert.Equal("test", response.Template.Category);
-        Assert.Equal(1, response.Template.VersionCount);
-        Assert.Equal(1, response.Template.ActiveVersionNumber);
-        Assert.Equal(1, response.InitialVersion.VersionNumber);
-        Assert.Equal("Initial prompt content", response.InitialVersion.Content);
-        Assert.True(response.InitialVersion.IsActive);
+        response.Template.Name.Should().Be("test-template");
+        response.Template.Description.Should().Be("Test description");
+        response.Template.Category.Should().Be("test");
+        response.Template.VersionCount.Should().Be(1);
+        response.Template.ActiveVersionNumber.Should().Be(1);
+        response.InitialVersion.VersionNumber.Should().Be(1);
+        response.InitialVersion.Content.Should().Be("Initial prompt content");
+        response.InitialVersion.IsActive.Should().BeTrue();
 
         // Verify database state
         var template = await _db.PromptTemplates.Include(t => t.Versions).FirstAsync(t => t.Id == response.Template.Id);
-        Assert.Single(template.Versions);
-        Assert.True(template.Versions.First().IsActive);
+        template.Versions.Should().ContainSingle();
+        template.Versions.First().IsActive.Should().BeTrue();
 
         // Verify audit logs
         var auditLogs = await _db.PromptAuditLogs.Where(a => a.TemplateId == response.Template.Id).ToListAsync();
-        Assert.Equal(2, auditLogs.Count); // template_created + version_created
-        Assert.Contains(auditLogs, a => a.Action == "template_created");
-        Assert.Contains(auditLogs, a => a.Action == "version_created");
+        auditLogs.Count.Should().Be(2); // template_created + version_created
+        a => a.Action == "template_created".Should().Contain(auditLogs);
+        a => a.Action == "version_created".Should().Contain(auditLogs);
     }
 
     [Fact]
@@ -124,10 +124,10 @@ public class PromptManagementServiceTests : IDisposable
         await _service.CreatePromptTemplateAsync(request1, _testUserId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.CreatePromptTemplateAsync(request2, _testUserId));
+        var act = async () => await _service.CreatePromptTemplateAsync(request2, _testUserId);
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
-        Assert.Contains("already exists", exception.Message);
+        exception.Message.Should().Contain("already exists");
     }
 
     [Theory]
@@ -147,8 +147,8 @@ public class PromptManagementServiceTests : IDisposable
         };
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.CreatePromptTemplateAsync(request, _testUserId));
+        var act = async () => await _service.CreatePromptTemplateAsync(request, _testUserId);
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -181,21 +181,21 @@ public class PromptManagementServiceTests : IDisposable
 
         // Assert
         version.Should().NotBeNull();
-        Assert.Equal(2, version.VersionNumber);
-        Assert.Equal("Version 2 content", version.Content);
-        Assert.False(version.IsActive); // Not activated immediately
+        version.VersionNumber.Should().Be(2);
+        version.Content.Should().Be("Version 2 content");
+        version.IsActive.Should().BeFalse(); // Not activated immediately
         version.Metadata.Should().NotBeNull();
 
         // Verify version 1 is still active
         var version1 = await _service.GetVersionAsync(templateResponse.Template.Id, 1);
         version1.Should().NotBeNull();
-        Assert.True(version1.IsActive);
+        version1.IsActive.Should().BeTrue();
 
         // Verify audit log
         var auditLogs = await _db.PromptAuditLogs
             .Where(a => a.VersionId == version.Id && a.Action == "version_created")
             .ToListAsync();
-        Assert.Single(auditLogs);
+        auditLogs.Should().ContainSingle();
     }
 
     [Fact]
@@ -223,12 +223,12 @@ public class PromptManagementServiceTests : IDisposable
             _testUserId);
 
         // Assert
-        Assert.True(version2.IsActive);
+        version2.IsActive.Should().BeTrue();
 
         // Verify version 1 is now inactive
         var version1 = await _service.GetVersionAsync(templateResponse.Template.Id, 1);
         version1.Should().NotBeNull();
-        Assert.False(version1.IsActive);
+        version1.IsActive.Should().BeFalse();
 
         // Verify audit logs include activation and deactivation
         var auditLogs = await _db.PromptAuditLogs
@@ -236,8 +236,8 @@ public class PromptManagementServiceTests : IDisposable
             .OrderBy(a => a.ChangedAt)
             .ToListAsync();
 
-        Assert.Contains(auditLogs, a => a.Action == "version_deactivated" && a.VersionId == templateResponse.InitialVersion.Id);
-        Assert.Contains(auditLogs, a => a.Action == "version_activated" && a.VersionId == version2.Id);
+        a => a.Action == "version_deactivated" && a.VersionId == templateResponse.InitialVersion.Id.Should().Contain(auditLogs);
+        a => a.Action == "version_activated" && a.VersionId == version2.Id.Should().Contain(auditLogs);
     }
 
     [Fact]
@@ -250,10 +250,10 @@ public class PromptManagementServiceTests : IDisposable
         };
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.CreatePromptVersionAsync("non-existent-id", request, _testUserId));
+        var act = async () => await _service.CreatePromptVersionAsync("non-existent-id", request, _testUserId);
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
-        Assert.Contains("not found", exception.Message);
+        exception.Message.Should().Contain("not found");
     }
 
     [Fact]
@@ -273,9 +273,9 @@ public class PromptManagementServiceTests : IDisposable
 
         // Assert
         activeVersion.Should().NotBeNull();
-        Assert.Equal(templateResponse.InitialVersion.Id, activeVersion.Id);
-        Assert.Equal(1, activeVersion.VersionNumber);
-        Assert.True(activeVersion.IsActive);
+        activeVersion.Id.Should().Be(templateResponse.InitialVersion.Id);
+        activeVersion.VersionNumber.Should().Be(1);
+        activeVersion.IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -360,13 +360,13 @@ public class PromptManagementServiceTests : IDisposable
 
         // Assert
         activatedVersion.Should().NotBeNull();
-        Assert.Equal(2, activatedVersion.VersionNumber);
-        Assert.True(activatedVersion.IsActive);
+        activatedVersion.VersionNumber.Should().Be(2);
+        activatedVersion.IsActive.Should().BeTrue();
 
         // Verify version 3 is now inactive
         var inactiveVersion3 = await _service.GetVersionAsync(templateResponse.Template.Id, 3);
         inactiveVersion3.Should().NotBeNull();
-        Assert.False(inactiveVersion3.IsActive);
+        inactiveVersion3.IsActive.Should().BeFalse();
 
         // Verify audit log for rollback
         var rollbackAuditLog = await _db.PromptAuditLogs
@@ -374,7 +374,7 @@ public class PromptManagementServiceTests : IDisposable
             .OrderByDescending(a => a.ChangedAt)
             .FirstAsync();
 
-        Assert.Contains("Rollback", rollbackAuditLog.Details!);
+        rollbackAuditLog.Details!.Should().Contain("Rollback");
     }
 
     [Fact]
@@ -399,11 +399,11 @@ public class PromptManagementServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.True(result.IsActive);
+        result.IsActive.Should().BeTrue();
 
         // No new audit logs should be created
         var finalAuditLogCount = await _db.PromptAuditLogs.CountAsync();
-        Assert.Equal(initialAuditLogCount, finalAuditLogCount);
+        finalAuditLogCount.Should().Be(initialAuditLogCount);
     }
 
     [Fact]
@@ -419,10 +419,10 @@ public class PromptManagementServiceTests : IDisposable
         var templateResponse = await _service.CreatePromptTemplateAsync(createTemplateRequest, _testUserId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.ActivateVersionAsync(templateResponse.Template.Id, "non-existent-version-id", _testUserId));
+        var act = async () => await _service.ActivateVersionAsync(templateResponse.Template.Id, "non-existent-version-id", _testUserId);
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
-        Assert.Contains("not found", exception.Message);
+        exception.Message.Should().Contain("not found");
     }
 
     [Fact]
@@ -453,22 +453,22 @@ public class PromptManagementServiceTests : IDisposable
 
         // Assert
         history.Should().NotBeNull();
-        Assert.Equal("history-test-template", history.Template.Name);
-        Assert.Equal(3, history.TotalCount);
-        Assert.Equal(3, history.Versions.Count);
+        history.Template.Name.Should().Be("history-test-template");
+        history.TotalCount.Should().Be(3);
+        history.Versions.Count.Should().Be(3);
 
         // Verify descending order
-        Assert.Equal(3, history.Versions[0].VersionNumber);
-        Assert.Equal(2, history.Versions[1].VersionNumber);
-        Assert.Equal(1, history.Versions[2].VersionNumber);
+        history.Versions[0].VersionNumber.Should().Be(3);
+        history.Versions[1].VersionNumber.Should().Be(2);
+        history.Versions[2].VersionNumber.Should().Be(1);
     }
 
     [Fact]
     public async Task GetVersionHistoryAsync_NonExistentTemplate_ThrowsInvalidOperationException()
     {
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.GetVersionHistoryAsync("non-existent-id"));
+        var act = async () => await _service.GetVersionHistoryAsync("non-existent-id");
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -494,22 +494,22 @@ public class PromptManagementServiceTests : IDisposable
 
         // Assert
         auditLog.Should().NotBeNull();
-        Assert.Equal("audit-test-template", auditLog.Template.Name);
-        Assert.True(auditLog.TotalCount >= 5); // template_created, version_created (v1), version_created (v2), version_deactivated (v1), version_activated (v2)
-        Assert.True(auditLog.Logs.Count >= 5);
+        auditLog.Template.Name.Should().Be("audit-test-template");
+        auditLog.TotalCount >= 5.Should().BeTrue(); // template_created, version_created (v1), version_created (v2), version_deactivated (v1), version_activated (v2)
+        auditLog.Logs.Count >= 5.Should().BeTrue();
 
         // Verify logs are ordered by timestamp descending (most recent first)
         for (int i = 0; i < auditLog.Logs.Count - 1; i++)
         {
-            Assert.True(auditLog.Logs[i].ChangedAt >= auditLog.Logs[i + 1].ChangedAt);
+            auditLog.Logs[i].ChangedAt >= auditLog.Logs[i + 1].ChangedAt.Should().BeTrue();
         }
 
         // Verify action types
         var actions = auditLog.Logs.Select(l => l.Action).ToList();
-        Assert.Contains("template_created", actions);
-        Assert.Contains("version_created", actions);
-        Assert.Contains("version_activated", actions);
-        Assert.Contains("version_deactivated", actions);
+        actions.Should().Contain("template_created");
+        actions.Should().Contain("version_created");
+        actions.Should().Contain("version_activated");
+        actions.Should().Contain("version_deactivated");
     }
 
     [Fact]
@@ -537,8 +537,8 @@ public class PromptManagementServiceTests : IDisposable
         var auditLog = await _service.GetAuditLogAsync(templateResponse.Template.Id, limit: 5);
 
         // Assert
-        Assert.Equal(5, auditLog.Logs.Count);
-        Assert.True(auditLog.TotalCount > 5); // Total is more than limit
+        auditLog.Logs.Count.Should().Be(5);
+        auditLog.TotalCount > 5.Should().BeTrue(); // Total is more than limit
     }
 
     [Fact]
@@ -557,8 +557,8 @@ public class PromptManagementServiceTests : IDisposable
         var result = await _service.ListTemplatesAsync();
 
         // Assert
-        Assert.Equal(2, result.TotalCount);
-        Assert.Equal(2, result.Templates.Count);
+        result.TotalCount.Should().Be(2);
+        result.Templates.Count.Should().Be(2);
     }
 
     [Fact]
@@ -581,9 +581,9 @@ public class PromptManagementServiceTests : IDisposable
         var result = await _service.ListTemplatesAsync(category: "qa");
 
         // Assert
-        Assert.Equal(2, result.TotalCount);
-        Assert.Equal(2, result.Templates.Count);
-        Assert.All(result.Templates, t => Assert.Equal("qa", t.Category));
+        result.TotalCount.Should().Be(2);
+        result.Templates.Count.Should().Be(2);
+        result.Templates.Should().OnlyContain(t => t.Category == "qa");
     }
 
     [Fact]
@@ -604,9 +604,9 @@ public class PromptManagementServiceTests : IDisposable
 
         // Assert
         template.Should().NotBeNull();
-        Assert.Equal(created.Template.Id, template.Id);
-        Assert.Equal("get-template-test", template.Name);
-        Assert.Equal("Test description", template.Description);
+        template.Id.Should().Be(created.Template.Id);
+        template.Name.Should().Be("get-template-test");
+        template.Description.Should().Be("Test description");
     }
 
     [Fact]
@@ -651,8 +651,8 @@ public class PromptManagementServiceTests : IDisposable
             .ToListAsync();
 
         var activeVersions = allVersions.Where(v => v.IsActive).ToList();
-        Assert.Single(activeVersions);
-        Assert.Equal(3, activeVersions[0].VersionNumber);
+        activeVersions.Should().ContainSingle();
+        activeVersions[0].VersionNumber.Should().Be(3);
     }
 
     [Fact]
@@ -679,10 +679,10 @@ public class PromptManagementServiceTests : IDisposable
         }
 
         // Assert
-        Assert.Equal(5, versions.Count);
+        versions.Count.Should().Be(5);
         for (int i = 0; i < versions.Count; i++)
         {
-            Assert.Equal(i + 1, versions[i].VersionNumber);
+            versions[i].VersionNumber.Should().Be(i + 1);
         }
     }
 
@@ -702,11 +702,9 @@ public class PromptManagementServiceTests : IDisposable
         var auditLog = await _service.GetAuditLogAsync(templateResponse.Template.Id);
 
         // Assert
-        Assert.All(auditLog.Logs, log =>
-        {
-            Assert.Equal(_testUserId, log.ChangedByUserId);
-            Assert.Equal("test@example.com", log.ChangedByEmail);
-        });
+        auditLog.Logs.Should().OnlyContain(log =>
+            log.ChangedByUserId == _testUserId &&
+            log.ChangedByEmail == "test@example.com");
     }
 
     [Fact]
@@ -736,11 +734,11 @@ public class PromptManagementServiceTests : IDisposable
         // Assert
         version.Should().NotBeNull();
         version.Metadata.Should().NotBeNull();
-        Assert.Equal(metadata, version.Metadata);
+        version.Metadata.Should().Be(metadata);
 
         // Verify deserialization works
         var deserializedMetadata = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(version.Metadata);
         deserializedMetadata.Should().NotBeNull();
-        Assert.Equal("gpt-4-turbo", deserializedMetadata["model"].GetString());
+        deserializedMetadata["model"].GetString().Should().Be("gpt-4-turbo");
     }
 }

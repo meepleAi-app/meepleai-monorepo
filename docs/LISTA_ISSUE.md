@@ -213,7 +213,7 @@ Our approach follows these principles:
 
 | # | Issue | Priority | Effort | Rationale |
 |---|-------|----------|--------|-----------|
-| 36 | #601 TEST-03: Concurrency tests | ✅ PHASE 1 COMPLETE | L (12h actual) | **PHASE 1 - Framework & Documentation (Complete)**: Comprehensive concurrency testing guide (500+ lines), implementation summary, 4 test patterns documented. Reference implementation (ConfigurationConcurrencyTests, 6 passing tests). Framework ready for incremental service-by-service expansion. PR #602. Phase 2 (additional services) requires API-discovery-driven approach per implementation summary. Completed: 2025-10-31 |
+| 36 | #601 TEST-03: Concurrency tests | ✅ PHASE 2 IN PROGRESS | L (16h actual) | **PHASE 1 COMPLETE + PHASE 2 PARTIAL**: Phase 1 (100%): Concurrency testing guide (500+ lines), implementation summary, 4 test patterns, ConfigurationConcurrencyTests (6 tests). **Phase 2 (50%)**: RuleSpecConcurrencyTests (4 tests covering version conflicts, TOCTOU, cache invalidation). API-discovery approach validated. Remaining: SessionManagementService, PromptTemplateService tests. Branch: `test-601-concurrency-tests`. Updated: 2025-10-31 |
 
 **Next Steps**: Follow incremental approach in implementation summary (API discovery → 2-3 tests → verify → next service).
 

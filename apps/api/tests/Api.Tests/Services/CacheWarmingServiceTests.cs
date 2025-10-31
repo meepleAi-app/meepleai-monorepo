@@ -133,17 +133,19 @@ public class CacheWarmingServiceTests : IDisposable
             _timeProvider
         );
 
-        using var cts = new CancellationTokenSource();
-        cts.CancelAfter(TimeSpan.FromSeconds(5)); // Prevent infinite loop
+        // Act (When): Using BackgroundServiceTestHelper for proper coordination
+        using var helper = new BackgroundServiceTestHelper<CacheWarmingService>(
+            service,
+            _timeProvider,
+            timeout: TimeSpan.FromSeconds(5)
+        );
 
-        // Act (When): Warming service starts
-        await service.StartAsync(cts.Token);
-        
-        // Advance past startup delay (600ms) and allow warming to complete
-        _timeProvider.AdvanceSeconds(1); // Advance 1 second (> 600ms startup delay)
-        await Task.Yield(); // Allow service to process
-        
-        await service.StopAsync(cts.Token);
+        await helper.StartAsync();
+
+        // Advance past startup delay (600ms) and wait for warming to complete
+        await helper.AdvanceSecondsAsync(1); // Advance 1 second (> 600ms startup delay)
+
+        await helper.StopAsync();
 
         // Assert (Then): Top 50 queries pre-cached
         _ragServiceMock.Verify(
@@ -182,15 +184,17 @@ public class CacheWarmingServiceTests : IDisposable
             _timeProvider
         );
 
-        using var cts = new CancellationTokenSource();
-        cts.CancelAfter(TimeSpan.FromSeconds(10));
+        // Act (When): Using BackgroundServiceTestHelper for proper coordination
+        using var helper = new BackgroundServiceTestHelper<CacheWarmingService>(
+            service,
+            _timeProvider,
+            timeout: TimeSpan.FromSeconds(10)
+        );
 
-        // Act (When): Service starts
-        await service.StartAsync(cts.Token);
-        
+        await helper.StartAsync();
+
         // Advance less than 2 minutes (only 1 minute)
-        _timeProvider.AdvanceMinutes(1);
-        await Task.Yield();
+        await helper.AdvanceMinutesAsync(1);
 
         // Assert (Then): Delays 2 minutes before first warming call
         _frequencyTrackerMock.Verify(
@@ -198,7 +202,7 @@ public class CacheWarmingServiceTests : IDisposable
             Times.Never // Should not call after only 1 minute (needs 2)
         );
 
-        await service.StopAsync(cts.Token);
+        await helper.StopAsync();
     }
 
     [Fact]
@@ -249,19 +253,22 @@ public class CacheWarmingServiceTests : IDisposable
             _timeProvider
         );
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)); // Longer timeout for 50 queries
+        // Act (When): Using BackgroundServiceTestHelper for proper coordination
+        using var helper = new BackgroundServiceTestHelper<CacheWarmingService>(
+            service,
+            _timeProvider,
+            timeout: TimeSpan.FromSeconds(10)
+        );
 
-        // Act (When): Warming runs
-        await service.StartAsync(cts.Token);
+        await helper.StartAsync();
 
         // Advance past startup delay to trigger warming
-        _timeProvider.AdvanceSeconds(1);
-        await Task.Yield();
+        await helper.AdvanceSecondsAsync(1);
 
         // Give time for background service to process queries (including handling exception)
-        await Task.Yield(); // Allow background processing to continue
+        await helper.WaitForProcessingAsync();
 
-        await service.StopAsync(cts.Token);
+        await helper.StopAsync();
 
         // Assert (Then): Queries 1-25 attempted (service stops after exception on #25)
         // NOTE: Test revealed that CacheWarmingService stops processing after exception
@@ -328,16 +335,19 @@ public class CacheWarmingServiceTests : IDisposable
             _timeProvider
         );
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        // Act (When): Using BackgroundServiceTestHelper for proper coordination
+        using var helper = new BackgroundServiceTestHelper<CacheWarmingService>(
+            service,
+            _timeProvider,
+            timeout: TimeSpan.FromSeconds(5)
+        );
 
-        // Act (When): Warming runs
-        await service.StartAsync(cts.Token);
-        
+        await helper.StartAsync();
+
         // Advance past startup delay
-        _timeProvider.AdvanceSeconds(1);
-        await Task.Yield();
-        
-        await service.StopAsync(cts.Token);
+        await helper.AdvanceSecondsAsync(1);
+
+        await helper.StopAsync();
 
         // Assert (Then): Skips re-caching first query, logs "Skipped"
         _ragServiceMock.Verify(
@@ -412,16 +422,19 @@ public class CacheWarmingServiceTests : IDisposable
             _timeProvider
         );
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        // Act (When): Using BackgroundServiceTestHelper for proper coordination
+        using var helper = new BackgroundServiceTestHelper<CacheWarmingService>(
+            service,
+            _timeProvider,
+            timeout: TimeSpan.FromSeconds(5)
+        );
 
-        // Act (When): Warming runs
-        await service.StartAsync(cts.Token);
-        
+        await helper.StartAsync();
+
         // Advance past startup delay
-        _timeProvider.AdvanceSeconds(1);
-        await Task.Yield();
-        
-        await service.StopAsync(cts.Token);
+        await helper.AdvanceSecondsAsync(1);
+
+        await helper.StopAsync();
 
         // Assert (Then): Cache keys include game ID
         _ragServiceMock.Verify(

@@ -10,6 +10,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -60,7 +61,7 @@ public class GameEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var game = await response.Content.ReadFromJsonAsync<GameResponse>();
-        Assert.NotNull(game);
+        game.Should().NotBeNull();
         Assert.Equal("Terraforming Mars", game!.Name);
         Assert.False(string.IsNullOrWhiteSpace(game.Id));
 
@@ -68,7 +69,7 @@ public class GameEndpointsTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var entity = await db.Games.FirstOrDefaultAsync(g => g.Id == game.Id);
-        Assert.NotNull(entity);
+        entity.Should().NotBeNull();
         Assert.Equal("terraforming-mars", entity!.Id);
         Assert.Equal("Terraforming Mars", entity.Name);
 

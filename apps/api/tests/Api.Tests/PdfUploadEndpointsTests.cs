@@ -15,6 +15,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -157,7 +158,7 @@ startxref
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var pdf = await db.PdfDocuments.FirstOrDefaultAsync(p => p.Id == docId.GetString());
-        Assert.NotNull(pdf);
+        pdf.Should().NotBeNull();
         Assert.Equal(game.Id, pdf!.GameId);
         Assert.Equal(admin.Id, pdf.UploadedByUserId);
         Assert.Equal("pending", pdf.ProcessingStatus);
@@ -424,7 +425,7 @@ startxref
         Assert.True(result.TryGetProperty("pdfs", out var pdfsElement));
 
         var pdfs = pdfsElement.EnumerateArray().ToList();
-        Assert.Empty(pdfs);
+        pdfs.Should().BeEmpty();
     }
 
     /// <summary>

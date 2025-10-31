@@ -1,6 +1,7 @@
 using System;
 using Api.Infrastructure.Entities;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -14,8 +15,8 @@ public class EntityTests
     {
         var agent = new AgentEntity();
 
-        Assert.NotNull(agent.Chats);
-        Assert.Empty(agent.Chats);
+        agent.Chats.Should().NotBeNull();
+        agent.Chats.Should().BeEmpty();
     }
 
     [Fact]
@@ -27,9 +28,9 @@ public class EntityTests
             Name = "Test Game"
         };
 
-        Assert.NotNull(game.RuleSpecs);
-        Assert.NotNull(game.Agents);
-        Assert.NotNull(game.Chats);
+        game.RuleSpecs.Should().NotBeNull();
+        game.Agents.Should().NotBeNull();
+        game.Chats.Should().NotBeNull();
         Assert.Equal("game-1", game.Id);
         Assert.Equal("Test Game", game.Name);
         Assert.True(game.CreatedAt <= DateTime.UtcNow);
@@ -48,8 +49,8 @@ public class EntityTests
         Assert.Equal("agent-1", chat.AgentId);
         Assert.Equal("game-1", chat.GameId);
         Assert.True(chat.StartedAt <= DateTime.UtcNow);
-        Assert.NotNull(chat.Logs);
-        Assert.Empty(chat.Logs);
+        chat.Logs.Should().NotBeNull();
+        chat.Logs.Should().BeEmpty();
     }
 
     [Fact]
@@ -67,9 +68,9 @@ public class EntityTests
 
         Assert.Equal("application/pdf", document.ContentType);
         Assert.Equal("pending", document.ProcessingStatus);
-        Assert.Null(document.ExtractedText);
-        Assert.Null(document.ExtractedTables);
-        Assert.Null(document.Metadata);
+        document.ExtractedText.Should().BeNull();
+        document.ExtractedTables.Should().BeNull();
+        document.Metadata.Should().BeNull();
     }
 
     [Fact]
@@ -93,7 +94,7 @@ public class EntityTests
         Assert.Equal("Success", log.Result);
         Assert.Equal("Performed action", log.Details);
         Assert.True(log.CreatedAt <= DateTime.UtcNow);
-        Assert.Null(log.IpAddress);
-        Assert.Null(log.UserAgent);
+        log.IpAddress.Should().BeNull();
+        log.UserAgent.Should().BeNull();
     }
 }

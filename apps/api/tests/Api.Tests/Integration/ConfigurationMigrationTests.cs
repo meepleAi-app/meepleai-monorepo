@@ -5,6 +5,7 @@ using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Integration;
@@ -79,7 +80,7 @@ public class ConfigurationMigrationTests : AdminTestFixture
 
         // Assert: All operations succeeded - table structure is valid
         var saved = await dbContext.SystemConfigurations.FirstOrDefaultAsync(c => c.Key == "Migration:Test");
-        Assert.NotNull(saved);
+        saved.Should().NotBeNull();
         Assert.Equal("test", saved.Value);
         Assert.Equal(userId, saved.CreatedByUserId);
     }

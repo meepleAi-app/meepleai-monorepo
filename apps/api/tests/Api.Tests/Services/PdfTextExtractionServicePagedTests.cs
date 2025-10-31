@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
@@ -71,7 +72,7 @@ public class PdfTextExtractionServicePagedTests
         Assert.Equal(3, result.PageChunks[2].PageNumber);
         Assert.Contains("Three in a row", result.PageChunks[2].Text);
 
-        Assert.Null(result.Error);
+        result.Error.Should().BeNull();
     }
 
     /// <summary>
@@ -134,9 +135,9 @@ public class PdfTextExtractionServicePagedTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.NotNull(result.Error);
+        result.Error.Should().NotBeNull();
         Assert.Contains("PDF extraction failed", result.Error, StringComparison.OrdinalIgnoreCase);
-        Assert.Empty(result.PageChunks);
+        result.PageChunks.Should().BeEmpty();
         Assert.Equal(0, result.TotalPageCount);
     }
 
@@ -161,8 +162,8 @@ public class PdfTextExtractionServicePagedTests
         // Assert
         Assert.True(result.Success);
         Assert.Equal(0, result.TotalPageCount);
-        Assert.Empty(result.PageChunks);
-        Assert.Null(result.Error);
+        result.PageChunks.Should().BeEmpty();
+        result.Error.Should().BeNull();
     }
 
     /// <summary>
@@ -235,7 +236,7 @@ public class PdfTextExtractionServicePagedTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.NotNull(result.Error);
+        result.Error.Should().NotBeNull();
         Assert.Contains("file path", result.Error, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -257,7 +258,7 @@ public class PdfTextExtractionServicePagedTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.NotNull(result.Error);
+        result.Error.Should().NotBeNull();
         Assert.Contains("not found", result.Error, StringComparison.OrdinalIgnoreCase);
     }
 

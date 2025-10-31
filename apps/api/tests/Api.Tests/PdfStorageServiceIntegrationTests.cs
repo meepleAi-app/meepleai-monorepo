@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -348,6 +349,8 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
         };
 
         public int GetEmbeddingDimensions() => 2; // Matches test embedding dimensions
+
+        public string GetModelName() => "openai/text-embedding-3-small";
 
         public Task<EmbeddingResult> GenerateEmbeddingsAsync(List<string> texts, CancellationToken ct = default)
         {

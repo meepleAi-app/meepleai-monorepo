@@ -4,6 +4,7 @@ using Api.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 public class GameServiceTests : IDisposable

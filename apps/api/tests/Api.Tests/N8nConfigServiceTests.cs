@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 public class N8nConfigServiceTests : IDisposable
@@ -205,7 +206,7 @@ public class N8nConfigServiceTests : IDisposable
         var deleted = await service.DeleteConfigAsync(created.Id, CancellationToken.None);
 
         Assert.True(deleted);
-        Assert.Empty(dbContext.N8nConfigs);
+        dbContext.N8nConfigs.Should().BeEmpty();
     }
 
     [Fact]

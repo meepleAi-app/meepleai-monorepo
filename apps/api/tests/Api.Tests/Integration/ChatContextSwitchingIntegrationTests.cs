@@ -8,6 +8,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Integration;
@@ -302,8 +303,8 @@ public class ChatContextSwitchingIntegrationTests
         var checkersChat = await service.CreateChatAsync(user.Id, checkers.Id, checkersAgent.Id);
 
         // Initial state: both have null LastMessageAt
-        Assert.Null(chessChat.LastMessageAt);
-        Assert.Null(checkersChat.LastMessageAt);
+        chessChat.LastMessageAt.Should().BeNull();
+        checkersChat.LastMessageAt.Should().BeNull();
 
         // Act: Add message to Chess chat only
         await Task.Delay(10); // Ensure timestamp difference
@@ -379,7 +380,7 @@ public class ChatContextSwitchingIntegrationTests
         var checkersChats = await service.GetUserChatsByGameAsync(user.Id, checkers.Id);
 
         // Assert: Empty list returned
-        Assert.Empty(checkersChats);
+        checkersChats.Should().BeEmpty();
     }
 
     /// <summary>
@@ -406,7 +407,7 @@ public class ChatContextSwitchingIntegrationTests
         // Assert: Chess chat deleted
         Assert.True(deleted);
         var chessChats = await service.GetUserChatsByGameAsync(user.Id, chess.Id);
-        Assert.Empty(chessChats);
+        chessChats.Should().BeEmpty();
 
         // Assert: Checkers chat still exists
         var checkersChats = await service.GetUserChatsByGameAsync(user.Id, checkers.Id);

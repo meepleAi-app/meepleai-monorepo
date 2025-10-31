@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Api.Infrastructure.Entities;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -33,7 +34,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/agents/qa", payload);
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -51,7 +52,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -69,7 +70,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -89,11 +90,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
 
         // Then: System should handle gracefully (400 or proceed with empty response)
         // This is a service-level validation, might not be enforced at API level
-        Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest ||
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected BadRequest or OK, got {response.StatusCode}"
-        );
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.OK);
     }
 
     #endregion
@@ -111,7 +108,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/agents/explain", payload);
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -129,7 +126,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -147,7 +144,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -166,11 +163,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System should handle gracefully
-        Assert.True(
-            response.StatusCode == HttpStatusCode.BadRequest ||
-            response.StatusCode == HttpStatusCode.OK,
-            $"Expected BadRequest or OK, got {response.StatusCode}"
-        );
+        response.StatusCode.Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.OK);
     }
 
     #endregion
@@ -188,7 +181,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/agents/setup", payload);
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -206,7 +199,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -224,7 +217,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     #endregion
@@ -242,7 +235,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/agents/feedback", payload);
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -266,7 +259,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -290,7 +283,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -314,7 +307,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     #endregion

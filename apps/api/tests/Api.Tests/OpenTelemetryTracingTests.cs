@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using Api.Observability;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -20,8 +21,8 @@ public class OpenTelemetryTracingTests
         var sourceNames = MeepleAiActivitySources.GetAllSourceNames();
 
         // Assert
-        Assert.NotNull(sourceNames);
-        Assert.NotEmpty(sourceNames);
+        sourceNames.Should().NotBeNull();
+        sourceNames.Should().NotBeEmpty();
         Assert.Equal(5, sourceNames.Length);
     }
 
@@ -95,7 +96,7 @@ public class OpenTelemetryTracingTests
         using var activity = MeepleAiActivitySources.Api.StartActivity("TestActivity");
 
         // Assert
-        Assert.NotNull(activity);
+        activity.Should().NotBeNull();
         Assert.Equal("TestActivity", activity.DisplayName);
         Assert.Equal(MeepleAiActivitySources.ApiSourceName, activity.Source.Name);
     }
@@ -115,7 +116,7 @@ public class OpenTelemetryTracingTests
         using var activity = MeepleAiActivitySources.Rag.StartActivity("RagTestActivity");
 
         // Assert
-        Assert.NotNull(activity);
+        activity.Should().NotBeNull();
         Assert.Equal("RagTestActivity", activity.DisplayName);
         Assert.Equal(MeepleAiActivitySources.RagSourceName, activity.Source.Name);
     }
@@ -135,7 +136,7 @@ public class OpenTelemetryTracingTests
         using var activity = MeepleAiActivitySources.VectorSearch.StartActivity("VectorSearchTest");
 
         // Assert
-        Assert.NotNull(activity);
+        activity.Should().NotBeNull();
         Assert.Equal("VectorSearchTest", activity.DisplayName);
         Assert.Equal(MeepleAiActivitySources.VectorSearchSourceName, activity.Source.Name);
     }
@@ -155,7 +156,7 @@ public class OpenTelemetryTracingTests
         using var activity = MeepleAiActivitySources.PdfProcessing.StartActivity("PdfTest");
 
         // Assert
-        Assert.NotNull(activity);
+        activity.Should().NotBeNull();
         Assert.Equal("PdfTest", activity.DisplayName);
         Assert.Equal(MeepleAiActivitySources.PdfProcessingSourceName, activity.Source.Name);
     }
@@ -175,7 +176,7 @@ public class OpenTelemetryTracingTests
         using var activity = MeepleAiActivitySources.Cache.StartActivity("CacheTest");
 
         // Assert
-        Assert.NotNull(activity);
+        activity.Should().NotBeNull();
         Assert.Equal("CacheTest", activity.DisplayName);
         Assert.Equal(MeepleAiActivitySources.CacheSourceName, activity.Source.Name);
     }
@@ -198,7 +199,7 @@ public class OpenTelemetryTracingTests
         activity?.SetTag("query.length", 42);
 
         // Assert
-        Assert.NotNull(activity);
+        activity.Should().NotBeNull();
         Assert.Equal("test-game-123", activity.GetTagItem("game.id"));
         Assert.Equal("qa", activity.GetTagItem("operation"));
         Assert.Equal(42, activity.GetTagItem("query.length"));
@@ -225,7 +226,7 @@ public class OpenTelemetryTracingTests
         activity?.SetStatus(ActivityStatusCode.Error, testException.Message);
 
         // Assert
-        Assert.NotNull(activity);
+        activity.Should().NotBeNull();
         Assert.Equal(false, activity.GetTagItem("success"));
         Assert.Equal("InvalidOperationException", activity.GetTagItem("error.type"));
         Assert.Equal("Test exception message", activity.GetTagItem("error.message"));
@@ -253,8 +254,8 @@ public class OpenTelemetryTracingTests
         var childParentId = childActivity?.ParentId;
 
         // Assert
-        Assert.NotNull(parentActivity);
-        Assert.NotNull(childActivity);
+        parentActivity.Should().NotBeNull();
+        childActivity.Should().NotBeNull();
         Assert.Equal(parentId, childParentId);
     }
 
@@ -269,15 +270,15 @@ public class OpenTelemetryTracingTests
         var meterName = MeepleAiMetrics.MeterName;
 
         // Assert
-        Assert.NotEmpty(activitySourceNames);
+        activitySourceNames.Should().NotBeEmpty();
         Assert.Equal("MeepleAI.Api", meterName);
 
         // Activity sources should be distinct operations, not the same as the meter name
         // (though they can share the same base namespace)
         foreach (var sourceName in activitySourceNames)
         {
-            Assert.NotNull(sourceName);
-            Assert.NotEmpty(sourceName);
+            sourceName.Should().NotBeNull();
+            sourceName.Should().NotBeEmpty();
             Assert.StartsWith("MeepleAI.", sourceName);
         }
     }

@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -356,7 +357,7 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
         }
 
         // Then: All database values are used in the streaming request
-        Assert.NotEmpty(tokens);
+        tokens.Should().NotBeEmpty();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
@@ -394,8 +395,8 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
 
         // Then: Default AI/LLM configurations exist for Production and Development
         // Note: May include seeded configs from migration plus any test configs
-        Assert.NotEmpty(prodConfigs);
-        Assert.NotEmpty(devConfigs);
+        prodConfigs.Should().NotBeEmpty();
+        devConfigs.Should().NotBeEmpty();
 
         // Verify expected keys exist (from migration seed data)
         var expectedKeys = new[] { "AI.Model", "AI.Temperature", "AI.MaxTokens", "AI.TimeoutSeconds" };

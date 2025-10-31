@@ -1,5 +1,6 @@
 using Api.Models;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Models;
@@ -73,7 +74,7 @@ public class ProcessingProgressTests
         var estimate = ProcessingProgress.EstimateTimeRemaining(percentComplete, elapsed);
 
         // Assert
-        Assert.Null(estimate);
+        estimate.Should().BeNull();
     }
 
     [Fact]
@@ -86,7 +87,7 @@ public class ProcessingProgressTests
         var estimate = ProcessingProgress.EstimateTimeRemaining(50, elapsed);
 
         // Assert
-        Assert.NotNull(estimate);
+        estimate.Should().NotBeNull();
         Assert.Equal(60, estimate.Value.TotalSeconds, 0.1);
     }
 
@@ -100,7 +101,7 @@ public class ProcessingProgressTests
         var estimate = ProcessingProgress.EstimateTimeRemaining(25, elapsed);
 
         // Assert
-        Assert.NotNull(estimate);
+        estimate.Should().NotBeNull();
         Assert.Equal(90, estimate.Value.TotalSeconds, 0.1);
     }
 
@@ -114,7 +115,7 @@ public class ProcessingProgressTests
         var estimate = ProcessingProgress.EstimateTimeRemaining(75, elapsed);
 
         // Assert
-        Assert.NotNull(estimate);
+        estimate.Should().NotBeNull();
         Assert.Equal(30, estimate.Value.TotalSeconds, 0.1);
     }
 
@@ -128,7 +129,7 @@ public class ProcessingProgressTests
         var estimate = ProcessingProgress.EstimateTimeRemaining(95, elapsed);
 
         // Assert
-        Assert.NotNull(estimate);
+        estimate.Should().NotBeNull();
         Assert.True(estimate.Value.TotalSeconds > 0);
         Assert.True(estimate.Value.TotalSeconds < 15);
     }
@@ -143,7 +144,7 @@ public class ProcessingProgressTests
         var estimate = ProcessingProgress.EstimateTimeRemaining(10, elapsed);
 
         // Assert
-        Assert.NotNull(estimate);
+        estimate.Should().NotBeNull();
         Assert.Equal(9, estimate.Value.TotalSeconds, 0.1);
     }
 
@@ -173,8 +174,8 @@ public class ProcessingProgressTests
         Assert.Equal(7, progress.PagesProcessed);
         Assert.Equal(20, progress.TotalPages);
         Assert.Equal(startTime, progress.StartedAt);
-        Assert.Null(progress.CompletedAt);
-        Assert.Null(progress.ErrorMessage);
+        progress.CompletedAt.Should().BeNull();
+        progress.ErrorMessage.Should().BeNull();
     }
 
     [Fact]

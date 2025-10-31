@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -76,9 +77,9 @@ public class TotpServiceTests : IDisposable
         var result = await _totpService.GenerateSetupAsync(userId, userEmail);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.Secret);
-        Assert.NotEmpty(result.QrCodeUrl);
+        result.Should().NotBeNull();
+        result.Secret.Should().NotBeEmpty();
+        result.QrCodeUrl.Should().NotBeEmpty();
         Assert.Equal(10, result.BackupCodes.Count);
 
         // Verify QR code URL format
@@ -191,8 +192,8 @@ public class TotpServiceTests : IDisposable
             .Where(bc => bc.UserId == userId)
             .ToListAsync();
         var usedCode = storedCodes.FirstOrDefault(bc => bc.IsUsed);
-        Assert.NotNull(usedCode);
-        Assert.NotNull(usedCode.UsedAt);
+        usedCode.Should().NotBeNull();
+        usedCode.UsedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -226,7 +227,7 @@ public class TotpServiceTests : IDisposable
 
         // Verify all backup codes deleted
         var backupCodes = await _dbContext.UserBackupCodes.Where(bc => bc.UserId == userId).ToListAsync();
-        Assert.Empty(backupCodes);
+        backupCodes.Should().BeEmpty();
     }
 
     [Fact]
@@ -257,7 +258,7 @@ public class TotpServiceTests : IDisposable
 
         // Assert
         Assert.True(status.IsEnabled);
-        Assert.NotNull(status.EnabledAt);
+        status.EnabledAt.Should().NotBeNull();
         Assert.Equal(8, status.UnusedBackupCodesCount); // 10 - 2 used
     }
 

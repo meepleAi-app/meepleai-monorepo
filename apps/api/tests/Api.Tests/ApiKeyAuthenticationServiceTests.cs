@@ -7,6 +7,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 public class ApiKeyAuthenticationServiceTests : IDisposable
@@ -77,7 +78,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         Assert.Equal(2, result.Scopes.Length);
         Assert.Contains("read", result.Scopes);
         Assert.Contains("write", result.Scopes);
-        Assert.Null(result.InvalidReason);
+        result.InvalidReason.Should().BeNull();
     }
 
     [Fact]
@@ -99,8 +100,8 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         // Assert
         Assert.False(result.IsValid);
         Assert.Equal("API key is required", result.InvalidReason);
-        Assert.Null(result.ApiKeyId);
-        Assert.Null(result.UserId);
+        result.ApiKeyId.Should().BeNull();
+        result.UserId.Should().BeNull();
     }
 
     [Fact]
@@ -143,8 +144,8 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         // Assert
         Assert.False(result.IsValid);
         Assert.Equal("Invalid, expired, or revoked API key", result.InvalidReason);
-        Assert.Null(result.ApiKeyId);
-        Assert.Null(result.UserId);
+        result.ApiKeyId.Should().BeNull();
+        result.UserId.Should().BeNull();
     }
 
     [Fact]
@@ -357,24 +358,24 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
             environment: environment);
 
         // Assert
-        Assert.NotNull(plaintextKey);
+        plaintextKey.Should().NotBeNull();
         Assert.StartsWith($"mpl_{environment}_", plaintextKey);
         Assert.True(plaintextKey.Length > 20);
 
-        Assert.NotNull(entity);
+        entity.Should().NotBeNull();
         Assert.Equal(user.Id, entity.UserId);
         Assert.Equal("Test Key", entity.KeyName);
-        Assert.NotNull(entity.KeyHash);
+        entity.KeyHash.Should().NotBeNull();
         Assert.StartsWith("mpl_", entity.KeyPrefix);
         Assert.Equal(2, entity.Scopes.Length);
         Assert.Contains("read", entity.Scopes);
         Assert.Contains("write", entity.Scopes);
         Assert.True(entity.IsActive);
         Assert.Equal(timeProvider.GetUtcNow().UtcDateTime, entity.CreatedAt);
-        Assert.Null(entity.LastUsedAt);
-        Assert.Null(entity.ExpiresAt);
-        Assert.Null(entity.RevokedAt);
-        Assert.Null(entity.RevokedBy);
+        entity.LastUsedAt.Should().BeNull();
+        entity.ExpiresAt.Should().BeNull();
+        entity.RevokedAt.Should().BeNull();
+        entity.RevokedBy.Should().BeNull();
     }
 
     [Fact]
@@ -569,7 +570,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         // Assert
         Assert.True(result);
         var revokedKey = await dbContext.ApiKeys.FindAsync(apiKeyEntity.Id);
-        Assert.NotNull(revokedKey);
+        revokedKey.Should().NotBeNull();
         Assert.Equal(timeProvider.GetUtcNow().UtcDateTime, revokedKey!.RevokedAt);
         Assert.Equal(user.Id, revokedKey.RevokedBy);
     }

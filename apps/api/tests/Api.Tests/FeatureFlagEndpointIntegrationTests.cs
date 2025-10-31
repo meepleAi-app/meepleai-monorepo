@@ -9,6 +9,7 @@ using Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -56,9 +57,9 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<FeatureFlagsListResponse>();
-        Assert.NotNull(result);
-        Assert.NotNull(result.Features);
-        Assert.NotEmpty(result.Features); // Should have seeded flags from migration
+        result.Should().NotBeNull();
+        result.Features.Should().NotBeNull();
+        result.Features.Should().NotBeEmpty(); // Should have seeded flags from migration
     }
 
     /// <summary>
@@ -109,7 +110,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<FeatureFlagUpdateResponse>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(featureName, result.FeatureName);
         Assert.True(result.Enabled);
 
@@ -191,7 +192,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
         var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-        Assert.NotNull(error);
+        error.Should().NotBeNull();
         Assert.Equal("feature_disabled", error.Error);
         Assert.Equal("Features.StreamingResponses", error.FeatureName);
 
@@ -221,7 +222,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var environment = featureScope.ServiceProvider.GetRequiredService<IHostEnvironment>().EnvironmentName;
         await SetFeatureFlagAsync(configurationService, "Features.PdfUpload", false, adminUserId, environment);
         var configuration = await configurationService.GetConfigurationByKeyAsync("Features.PdfUpload", environment);
-        Assert.NotNull(configuration);
+        configuration.Should().NotBeNull();
         Assert.True(new[] { environment, "All" }.Contains(configuration!.Environment));
         Assert.False(bool.Parse(configuration.Value));
         Assert.False(await featureFlags.IsEnabledAsync("Features.PdfUpload"));
@@ -247,7 +248,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
             Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
 
             var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-            Assert.NotNull(error);
+            error.Should().NotBeNull();
             Assert.Equal("feature_disabled", error.Error);
         }
         finally
@@ -407,7 +408,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         Assert.Equal(HttpStatusCode.Forbidden, exportResponse.StatusCode);
 
         var error = await exportResponse.Content.ReadFromJsonAsync<FeatureDisabledError>();
-        Assert.NotNull(error);
+        error.Should().NotBeNull();
         Assert.Equal("feature_disabled", error.Error);
         Assert.Contains("export", error.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Equal("Features.ChatExport", error.FeatureName);
@@ -459,7 +460,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
                 f.FeatureName == name &&
                 f.RoleRestriction == expectedRole);
 
-            Assert.NotNull(flag);
+            flag.Should().NotBeNull();
             Assert.Equal(expectedEnabled, flag.IsEnabled);
         }
     }

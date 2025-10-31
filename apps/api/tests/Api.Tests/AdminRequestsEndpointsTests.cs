@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -66,48 +67,48 @@ public class AdminRequestsEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: System returns HTTP 200 OK
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.True(document.RootElement.TryGetProperty("requests", out var requestsElement));
-        Assert.Equal(JsonValueKind.Array, requestsElement.ValueKind);
+        document.RootElement.TryGetProperty("requests", out var requestsElement).Should().BeTrue();
+        requestsElement.ValueKind.Should().Be(JsonValueKind.Array);
 
         // And: Response includes totalCount
-        Assert.True(document.RootElement.TryGetProperty("totalCount", out var totalCountElement));
-        Assert.Equal(2, totalCountElement.GetInt32());
+        document.RootElement.TryGetProperty("totalCount", out var totalCountElement).Should().BeTrue();
+        totalCountElement.GetInt32().Should().Be(2);
 
         // And: Response includes exactly 2 filtered logs (admin's logs for game-1)
-        Assert.Equal(2, requestsElement.GetArrayLength());
+        requestsElement.GetArrayLength().Should().Be(2);
 
         var endpoints = requestsElement
             .EnumerateArray()
             .Select(element => element.GetProperty("endpoint").GetString())
             .ToList();
 
-        Assert.Contains("qa", endpoints);
-        Assert.Contains("setup", endpoints);
+        endpoints.Should().Contain("qa");
+        endpoints.Should().Contain("setup");
 
         // And: Successful request includes complete metadata
         var qaLog = requestsElement
             .EnumerateArray()
             .Single(element => element.GetProperty("endpoint").GetString() == "qa");
 
-        Assert.Equal("integration-test/1.0", qaLog.GetProperty("userAgent").GetString());
-        Assert.Equal("127.0.0.1", qaLog.GetProperty("ipAddress").GetString());
-        Assert.Equal("gpt-4", qaLog.GetProperty("model").GetString());
-        Assert.Equal("stop", qaLog.GetProperty("finishReason").GetString());
-        Assert.Equal("Success", qaLog.GetProperty("status").GetString());
-        Assert.Equal(50, qaLog.GetProperty("tokenCount").GetInt32());
-        Assert.Equal(30, qaLog.GetProperty("promptTokens").GetInt32());
-        Assert.Equal(20, qaLog.GetProperty("completionTokens").GetInt32());
+        qaLog.GetProperty("userAgent").GetString().Should().Be("integration-test/1.0");
+        qaLog.GetProperty("ipAddress").GetString().Should().Be("127.0.0.1");
+        qaLog.GetProperty("model").GetString().Should().Be("gpt-4");
+        qaLog.GetProperty("finishReason").GetString().Should().Be("stop");
+        qaLog.GetProperty("status").GetString().Should().Be("Success");
+        qaLog.GetProperty("tokenCount").GetInt32().Should().Be(50);
+        qaLog.GetProperty("promptTokens").GetInt32().Should().Be(30);
+        qaLog.GetProperty("completionTokens").GetInt32().Should().Be(20);
 
         // And: Failed request includes error details
         var setupLog = requestsElement
             .EnumerateArray()
             .Single(element => element.GetProperty("endpoint").GetString() == "setup");
 
-        Assert.Equal("Error", setupLog.GetProperty("status").GetString());
-        Assert.Equal("timeout", setupLog.GetProperty("errorMessage").GetString());
+        setupLog.GetProperty("status").GetString().Should().Be("Error");
+        setupLog.GetProperty("errorMessage").GetString().Should().Be("timeout");
     }
 
     /// <summary>
@@ -133,7 +134,7 @@ public class AdminRequestsEndpointsTests : AdminTestFixture
         var response = await nonAdminClient.SendAsync(request);
 
         // Then: System denies access
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -152,6 +153,6 @@ public class AdminRequestsEndpointsTests : AdminTestFixture
         var response = await client.GetAsync("/api/v1/admin/requests");
 
         // Then: System requires authentication
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 }

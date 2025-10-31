@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace MeepleAI.Api.Tests.Services;
@@ -264,7 +265,7 @@ public class RedisFrequencyTrackerTests
         var topQueries = await tracker.GetTopQueriesAsync(gameId, 10);
 
         // Assert (Then): Returns empty list
-        Assert.Empty(topQueries);
+        topQueries.Should().BeEmpty();
     }
 
     [Fact]

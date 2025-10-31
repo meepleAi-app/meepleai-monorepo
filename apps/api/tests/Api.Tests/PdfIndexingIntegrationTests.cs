@@ -7,6 +7,7 @@ using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -82,24 +83,24 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<PdfIndexingResponse>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.True(result.Success);
-        Assert.NotNull(result.VectorDocumentId);
+        result.VectorDocumentId.Should().NotBeNull();
         Assert.True(result.ChunkCount > 0, "Should have created at least 1 chunk");
-        Assert.NotNull(result.IndexedAt);
+        result.IndexedAt.Should().NotBeNull();
 
         // AND: The VectorDocumentEntity should be persisted with status "completed"
         var vectorDoc = await _db!.Set<VectorDocumentEntity>()
             .FirstOrDefaultAsync(v => v.Id == result.VectorDocumentId);
 
-        Assert.NotNull(vectorDoc);
+        vectorDoc.Should().NotBeNull();
         Assert.Equal("completed", vectorDoc.IndexingStatus);
         Assert.Equal(gameId, vectorDoc.GameId);
         Assert.Equal(pdfId, vectorDoc.PdfDocumentId);
         Assert.True(vectorDoc.ChunkCount > 0);
         Assert.True(vectorDoc.TotalCharacters > 0);
-        Assert.NotNull(vectorDoc.IndexedAt);
-        Assert.Null(vectorDoc.IndexingError);
+        vectorDoc.IndexedAt.Should().NotBeNull();
+        vectorDoc.IndexingError.Should().BeNull();
         Assert.Equal("openai/text-embedding-3-small", vectorDoc.EmbeddingModel);
         Assert.Equal(1536, vectorDoc.EmbeddingDimensions);
     }
@@ -168,7 +169,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<PdfIndexingResponse>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(1, result.ChunkCount);
         Assert.True(result.Success);
     }
@@ -196,7 +197,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<PdfIndexingResponse>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.True(result.ChunkCount >= 90, $"Expected at least 90 chunks, got {result.ChunkCount}");
         Assert.True(result.ChunkCount <= 130, $"Expected at most 130 chunks, got {result.ChunkCount}");
     }
@@ -216,7 +217,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
         var vectorDoc1 = await _db!.Set<VectorDocumentEntity>()
             .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId);
-        Assert.NotNull(vectorDoc1);
+        vectorDoc1.Should().NotBeNull();
         var firstChunkCount = vectorDoc1.ChunkCount;
 
         // WHEN: I trigger indexing again
@@ -228,7 +229,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<PdfIndexingResponse>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.True(result.Success);
 
         // Should have only ONE VectorDocumentEntity for this PDF
@@ -262,7 +263,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
         var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-        Assert.NotNull(errorResponse);
+        errorResponse.Should().NotBeNull();
         Assert.Contains("text extraction", errorResponse.Error, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -383,7 +384,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         loginResponse.EnsureSuccessStatusCode();
 
         var setCookieHeader = loginResponse.Headers.GetValues("Set-Cookie").FirstOrDefault();
-        Assert.NotNull(setCookieHeader);
+        setCookieHeader.Should().NotBeNull();
 
         // Return the full cookie string (name=value), not just the value
         var sessionCookie = setCookieHeader.Split(';')[0];

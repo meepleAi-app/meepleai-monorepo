@@ -11,6 +11,7 @@ using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Integration;
@@ -61,13 +62,13 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
         var createResponse = await PostAsJsonAuthenticatedAsync(client, _adminCookies, "/api/v1/admin/configurations", configDto);
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         var createdConfig = await createResponse.Content.ReadFromJsonAsync<SystemConfigurationDto>();
-        Assert.NotNull(createdConfig);
+        createdConfig.Should().NotBeNull();
 
         // Act 2: Verify saved in database
         using var scope = Factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var dbConfig = await dbContext.SystemConfigurations.FirstOrDefaultAsync(c => c.Key == "Test:MaxValue");
-        Assert.NotNull(dbConfig);
+        dbConfig.Should().NotBeNull();
         Assert.Equal("999", dbConfig.Value);
 
         // Act 3: Service reads config and uses it
@@ -196,7 +197,7 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
         using var scope1 = Factory.Services.CreateScope();
         var dbContext1 = scope1.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var enabledConfig = await dbContext1.SystemConfigurations.FirstOrDefaultAsync(c => c.Key == "FeatureFlags:ChatStreaming");
-        Assert.NotNull(enabledConfig);
+        enabledConfig.Should().NotBeNull();
         Assert.Equal("true", enabledConfig.Value);
         Assert.True(enabledConfig.IsActive);
 
@@ -251,8 +252,8 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var dbConfig = await dbContext.SystemConfigurations.FirstAsync(c => c.Id == created.Id);
 
-        Assert.NotNull(dbConfig.CreatedByUserId);
-        Assert.NotNull(dbConfig.UpdatedByUserId);
+        dbConfig.CreatedByUserId.Should().NotBeNull();
+        dbConfig.UpdatedByUserId.Should().NotBeNull();
         Assert.NotEqual(dbConfig.CreatedAt, dbConfig.UpdatedAt);
         Assert.Equal("initial", dbConfig.PreviousValue); // Previous value stored for rollback
     }
@@ -279,7 +280,7 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
 
         var prodConfig = await dbContext.SystemConfigurations
             .FirstOrDefaultAsync(c => c.Environment == "Production");
-        Assert.NotNull(prodConfig);
+        prodConfig.Should().NotBeNull();
         Assert.Equal("prod-value", prodConfig.Value);
     }
 

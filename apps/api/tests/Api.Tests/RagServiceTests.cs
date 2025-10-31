@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 public class RagServiceTests : IDisposable
@@ -161,7 +162,7 @@ ANSWER:",
 
         // Assert
         Assert.Equal("Please provide a question.", result.answer);
-        Assert.Empty(result.snippets);
+        result.snippets.Should().BeEmpty();
     }
 
     [Fact]
@@ -181,7 +182,7 @@ ANSWER:",
 
         // Assert
         Assert.Equal("Please provide a question.", result.answer);
-        Assert.Empty(result.snippets);
+        result.snippets.Should().BeEmpty();
     }
 
     [Fact]
@@ -204,7 +205,7 @@ ANSWER:",
 
         // Assert
         Assert.Equal("Unable to process query.", result.answer);
-        Assert.Empty(result.snippets);
+        result.snippets.Should().BeEmpty();
     }
 
     [Fact]
@@ -227,7 +228,7 @@ ANSWER:",
 
         // Assert
         Assert.Equal("Unable to process query.", result.answer);
-        Assert.Empty(result.snippets);
+        result.snippets.Should().BeEmpty();
     }
 
     [Fact]
@@ -259,7 +260,7 @@ ANSWER:",
 
         // Assert
         Assert.Equal("Not specified", result.answer);
-        Assert.Empty(result.snippets);
+        result.snippets.Should().BeEmpty();
     }
 
     [Fact]
@@ -312,7 +313,7 @@ ANSWER:",
         Assert.Equal(12, result.promptTokens);
         Assert.Equal(8, result.completionTokens);
         Assert.Equal(20, result.totalTokens);
-        Assert.NotNull(result.confidence);
+        result.confidence.Should().NotBeNull();
     }
 
     [Fact]
@@ -441,8 +442,8 @@ ANSWER:",
 
         // Assert
         Assert.Equal("Please provide a topic to explain.", result.script);
-        Assert.Empty(result.outline.sections);
-        Assert.Empty(result.citations);
+        result.outline.sections.Should().BeEmpty();
+        result.citations.Should().BeEmpty();
         Assert.Equal(0, result.estimatedReadingTimeMinutes);
     }
 
@@ -480,7 +481,7 @@ ANSWER:",
         var result = await ragService.ExplainAsync("game1", "game setup");
 
         // Assert
-        Assert.NotNull(result.outline);
+        result.outline.Should().NotBeNull();
         Assert.Equal("game setup", result.outline.mainTopic);
         Assert.Equal(2, result.outline.sections.Count);
         Assert.Contains("# Explanation: game setup", result.script);
@@ -603,8 +604,8 @@ ANSWER:",
 
         // Assert
         Assert.Equal("Please provide a topic to explain.", result.script);
-        Assert.Empty(result.outline.sections);
-        Assert.Empty(result.citations);
+        result.outline.sections.Should().BeEmpty();
+        result.citations.Should().BeEmpty();
         Assert.Equal(0, result.estimatedReadingTimeMinutes);
     }
 
@@ -628,8 +629,8 @@ ANSWER:",
 
         // Assert
         Assert.Equal("Unable to process topic.", result.script);
-        Assert.Empty(result.outline.sections);
-        Assert.Empty(result.citations);
+        result.outline.sections.Should().BeEmpty();
+        result.citations.Should().BeEmpty();
     }
 
     [Fact]
@@ -652,7 +653,7 @@ ANSWER:",
 
         // Assert
         Assert.Equal("Unable to process topic.", result.script);
-        Assert.Empty(result.outline.sections);
+        result.outline.sections.Should().BeEmpty();
     }
 
     [Fact]
@@ -684,7 +685,7 @@ ANSWER:",
 
         // Assert
         Assert.Equal("No relevant information found about 'test topic' in the rulebook.", result.script);
-        Assert.Empty(result.citations);
+        result.citations.Should().BeEmpty();
     }
 
     [Fact]
@@ -716,7 +717,7 @@ ANSWER:",
 
         // Assert
         Assert.Equal("No relevant information found about 'test topic' in the rulebook.", result.script);
-        Assert.Empty(result.citations);
+        result.citations.Should().BeEmpty();
     }
 
     [Fact]
@@ -748,7 +749,7 @@ ANSWER:",
 
         // Assert
         Assert.Equal("Not specified", result.answer);
-        Assert.Empty(result.snippets);
+        result.snippets.Should().BeEmpty();
     }
 
     [Fact]
@@ -853,7 +854,7 @@ ANSWER:",
 
         // Assert
         Assert.Equal("An error occurred while processing your question.", result.answer);
-        Assert.Empty(result.snippets);
+        result.snippets.Should().BeEmpty();
     }
 
     [Fact]
@@ -876,7 +877,7 @@ ANSWER:",
 
         // Assert
         Assert.Equal("An error occurred while generating the explanation.", result.script);
-        Assert.Empty(result.citations);
+        result.citations.Should().BeEmpty();
     }
 
     #region Phase 3: Additional Coverage Tests
@@ -999,7 +1000,7 @@ ANSWER:",
         var result = await ragService.AskAsync("game1", "Who goes first?");
 
         // Assert
-        Assert.NotNull(result.metadata);
+        result.metadata.Should().NotBeNull();
         Assert.Equal(3, result.metadata.Count);
         Assert.Equal("anthropic/claude-3.5-sonnet", result.metadata["model"]);
         Assert.Equal("stop", result.metadata["finish_reason"]);
@@ -1042,7 +1043,7 @@ ANSWER:",
         var result = await ragService.AskAsync("game1", "test query");
 
         // Assert
-        Assert.Null(result.metadata); // Should be null when metadata dict is empty
+        result.metadata.Should().BeNull(); // Should be null when metadata dict is empty
     }
 
     [Fact]
@@ -1182,7 +1183,7 @@ ANSWER:",
         var result = await ragService.AskAsync("game1", "test query");
 
         // Assert
-        Assert.NotNull(result.confidence);
+        result.confidence.Should().NotBeNull();
         Assert.Equal(0.98, result.confidence.Value, precision: 2); // Should be max score
     }
 

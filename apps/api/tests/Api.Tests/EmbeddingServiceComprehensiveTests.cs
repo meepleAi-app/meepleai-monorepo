@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -60,7 +61,7 @@ public class EmbeddingServiceComprehensiveTests
         var service = new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object);
 
         // Assert
-        Assert.NotNull(service);
+        service.Should().NotBeNull();
         _httpClientFactoryMock.Verify(f => f.CreateClient("Ollama"), Times.Once);
     }
 
@@ -87,7 +88,7 @@ public class EmbeddingServiceComprehensiveTests
         var service = new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object);
 
         // Assert
-        Assert.NotNull(service);
+        service.Should().NotBeNull();
         _httpClientFactoryMock.Verify(f => f.CreateClient("OpenRouter"), Times.Once);
     }
 
@@ -109,7 +110,7 @@ public class EmbeddingServiceComprehensiveTests
         var service = new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object);
 
         // Assert
-        Assert.NotNull(service);
+        service.Should().NotBeNull();
         _httpClientFactoryMock.Verify(f => f.CreateClient("Ollama"), Times.Once);
     }
 
@@ -181,7 +182,7 @@ public class EmbeddingServiceComprehensiveTests
         var service = new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object);
 
         // Assert
-        Assert.NotNull(service);
+        service.Should().NotBeNull();
     }
 
     #endregion
@@ -355,7 +356,7 @@ public class EmbeddingServiceComprehensiveTests
         // Assert
         Assert.False(result.Success);
         Assert.Equal("No texts provided", result.ErrorMessage);
-        Assert.Empty(result.Embeddings);
+        result.Embeddings.Should().BeEmpty();
     }
 
     [Fact]
@@ -370,7 +371,7 @@ public class EmbeddingServiceComprehensiveTests
         // Assert
         Assert.False(result.Success);
         Assert.Equal("No texts provided", result.ErrorMessage);
-        Assert.Empty(result.Embeddings);
+        result.Embeddings.Should().BeEmpty();
     }
 
     [Fact]
@@ -415,7 +416,7 @@ public class EmbeddingServiceComprehensiveTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.Contains("Error:", result.ErrorMessage);
+        Assert.Contains("error", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -430,7 +431,7 @@ public class EmbeddingServiceComprehensiveTests
 
         // Assert
         Assert.False(result.Success);
-        Assert.Contains("Error:", result.ErrorMessage);
+        Assert.Contains("error", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

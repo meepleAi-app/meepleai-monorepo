@@ -3,6 +3,7 @@ using Api.Infrastructure;
 using Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -52,13 +53,13 @@ public class SeedDataPasswordTest : IClassFixture<WebApplicationFactoryFixture>
         ));
 
         // Assert
-        Assert.NotNull(adminLogin);
+        adminLogin.Should().NotBeNull();
         Assert.Equal("admin@meepleai.dev", adminLogin.User.Email);
 
-        Assert.NotNull(editorLogin);
+        editorLogin.Should().NotBeNull();
         Assert.Equal("editor@meepleai.dev", editorLogin.User.Email);
 
-        Assert.NotNull(userLogin);
+        userLogin.Should().NotBeNull();
         Assert.Equal("user@meepleai.dev", userLogin.User.Email);
 
         _output.WriteLine("✓ All seed users can login successfully");

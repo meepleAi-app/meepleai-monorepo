@@ -1,4 +1,5 @@
 using Api.Services;
+using FluentAssertions;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -35,9 +36,9 @@ public class EncryptionServiceTests
         var result = await _service.EncryptAsync(plaintext);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.NotEqual(plaintext, result); // Encrypted should be different from plaintext
+        result.Should().NotBeNull();
+        result.Should().NotBeEmpty();
+        result.Should().NotBe(plaintext); // Encrypted should be different from plaintext
     }
 
     [Fact]
@@ -52,7 +53,7 @@ public class EncryptionServiceTests
         var decrypted = await _service.DecryptAsync(encrypted, purpose);
 
         // Assert
-        Assert.Equal(plaintext, decrypted); // Can decrypt with same purpose
+        decrypted.Should().Be(plaintext); // Can decrypt with same purpose
     }
 
     [Theory]
@@ -61,7 +62,8 @@ public class EncryptionServiceTests
     public async Task EncryptAsync_NullOrEmptyPlaintext_ThrowsArgumentException(string? plaintext)
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.EncryptAsync(plaintext!));
+        await FluentActions.Invoking(() => _service.EncryptAsync(plaintext!))
+            .Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -75,7 +77,7 @@ public class EncryptionServiceTests
         var result = await _service.DecryptAsync(ciphertext);
 
         // Assert
-        Assert.Equal(originalPlaintext, result);
+        result.Should().Be(originalPlaintext);
     }
 
     [Fact]
@@ -88,8 +90,8 @@ public class EncryptionServiceTests
         var ciphertext = await _service.EncryptAsync(plaintext, encryptPurpose);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _service.DecryptAsync(ciphertext, decryptPurpose));
+        await FluentActions.Invoking(() => _service.DecryptAsync(ciphertext, decryptPurpose))
+            .Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Theory]
@@ -98,7 +100,8 @@ public class EncryptionServiceTests
     public async Task DecryptAsync_NullOrEmptyCiphertext_ThrowsArgumentException(string? ciphertext)
     {
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.DecryptAsync(ciphertext!));
+        await FluentActions.Invoking(() => _service.DecryptAsync(ciphertext!))
+            .Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -108,8 +111,9 @@ public class EncryptionServiceTests
         var ciphertext = "corrupted-data-not-base64";
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.DecryptAsync(ciphertext));
-        Assert.Contains("Decryption operation failed", ex.Message);
+        var ex = await FluentActions.Invoking(() => _service.DecryptAsync(ciphertext))
+            .Should().ThrowAsync<InvalidOperationException>();
+        ex.Which.Message.Should().Contain("Decryption operation failed");
     }
 
     [Fact]
@@ -125,7 +129,7 @@ public class EncryptionServiceTests
         var decrypted = await _service.DecryptAsync(encrypted);
 
         // Assert
-        Assert.Equal(plaintext, decrypted);
+        decrypted.Should().Be(plaintext);
     }
 
     [Fact]
@@ -139,7 +143,7 @@ public class EncryptionServiceTests
         var decrypted = await _service.DecryptAsync(encrypted);
 
         // Assert
-        Assert.Equal(originalData, decrypted);
-        Assert.NotEqual(originalData, encrypted); // Verify it was actually encrypted
+        decrypted.Should().Be(originalData);
+        encrypted.Should().NotBe(originalData); // Verify it was actually encrypted
     }
 }

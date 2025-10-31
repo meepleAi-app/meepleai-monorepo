@@ -1,6 +1,7 @@
 using Api.Models;
 using Api.Services;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Services;

@@ -12,6 +12,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -230,7 +231,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
                 .FirstOrDefaultAsync();
         }
 
-        Assert.NotNull(sessionId);
+        sessionId.Should().NotBeNull();
 
         // When: Admin revokes the session
         var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/sessions/{sessionId}");

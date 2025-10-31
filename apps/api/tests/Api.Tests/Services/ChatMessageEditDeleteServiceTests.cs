@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.Sqlite;
@@ -145,14 +146,14 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         var updatedMessage = await _chatService.UpdateMessageAsync(chatId, messageId, newContent, userId);
 
         // Then: Message content is updated, UpdatedAt is set
-        Assert.NotNull(updatedMessage);
+        updatedMessage.Should().NotBeNull();
         Assert.Equal(newContent, updatedMessage.Message);
         Assert.NotNull(updatedMessage.UpdatedAt);
         Assert.True(updatedMessage.UpdatedAt > updatedMessage.CreatedAt);
 
         // Verify persistence
         var storedMessage = await _context.ChatLogs.FindAsync(messageId);
-        Assert.NotNull(storedMessage);
+        storedMessage.Should().NotBeNull();
         Assert.Equal(newContent, storedMessage!.Message);
         Assert.NotNull(storedMessage.UpdatedAt);
     }
@@ -271,7 +272,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(m => m.Id == messageId);
 
-        Assert.NotNull(deletedMessage);
+        deletedMessage.Should().NotBeNull();
         Assert.True(deletedMessage!.IsDeleted);
         Assert.NotNull(deletedMessage.DeletedAt);
         Assert.Equal(userId, deletedMessage.DeletedByUserId);
@@ -334,7 +335,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(m => m.Id == messageId);
 
-        Assert.NotNull(deletedMessage);
+        deletedMessage.Should().NotBeNull();
         Assert.True(deletedMessage!.IsDeleted);
         Assert.Equal(adminUser.Id, deletedMessage.DeletedByUserId); // Admin's ID, not original owner
     }
@@ -429,7 +430,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         Assert.Equal(1, invalidatedCount);
 
         var invalidatedMessage = await _context.ChatLogs.FindAsync(aiMessage.Id);
-        Assert.NotNull(invalidatedMessage);
+        invalidatedMessage.Should().NotBeNull();
         Assert.True(invalidatedMessage!.IsInvalidated);
     }
 

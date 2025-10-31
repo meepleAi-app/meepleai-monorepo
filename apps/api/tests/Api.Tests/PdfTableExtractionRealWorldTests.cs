@@ -7,6 +7,7 @@ using Api.Services.Pdf;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -321,8 +322,8 @@ public class PdfTableExtractionRealWorldTests
 
                 // Validate diagram metadata
                 Assert.True(diagram.PageNumber > 0, "Page number should be positive");
-                Assert.NotEmpty(diagram.DiagramType);
-                Assert.NotEmpty(diagram.Description);
+                diagram.DiagramType.Should().NotBeEmpty();
+                diagram.Description.Should().NotBeEmpty();
                 Assert.True(diagram.Width >= 0, "Width should be non-negative");
                 Assert.True(diagram.Height >= 0, "Height should be non-negative");
             }

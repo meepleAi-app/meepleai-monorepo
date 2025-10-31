@@ -9,6 +9,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -58,8 +59,8 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.ListApiKeysAsync(user.Id);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result.Keys);
+        result.Should().NotBeNull();
+        result.Keys.Should().BeEmpty();
         Assert.Equal(0, result.TotalCount);
         Assert.Equal(1, result.Page);
         Assert.Equal(20, result.PageSize);
@@ -97,7 +98,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.ListApiKeysAsync(user.Id, page: 1, pageSize: 2);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(2, result.Keys.Count);
         Assert.Equal(3, result.TotalCount);
         Assert.Equal(1, result.Page);
@@ -143,7 +144,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.ListApiKeysAsync(user.Id, includeRevoked: false);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Single(result.Keys);
         Assert.Equal("Active Key", result.Keys[0].KeyName);
         Assert.Null(result.Keys[0].RevokedAt);
@@ -179,7 +180,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.ListApiKeysAsync(user.Id, includeRevoked: true);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Single(result.Keys);
         Assert.NotNull(result.Keys[0].RevokedAt);
     }
@@ -216,7 +217,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.GetApiKeyAsync(createResponse.ApiKey.Id, user.Id);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(createResponse.ApiKey.Id, result.Id);
         Assert.Equal("Test Key", result.KeyName);
         Assert.Equal(2, result.Scopes.Length);
@@ -244,7 +245,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.GetApiKeyAsync("non-existent-id", user.Id);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -276,7 +277,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.GetApiKeyAsync(response.ApiKey.Id, user2.Id);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     #endregion
@@ -311,10 +312,10 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.CreateApiKeyAsync(user.Id, request);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.PlaintextKey);
+        result.Should().NotBeNull();
+        result.PlaintextKey.Should().NotBeNull();
         Assert.StartsWith("mpl_live_", result.PlaintextKey);
-        Assert.NotNull(result.ApiKey);
+        result.ApiKey.Should().NotBeNull();
         Assert.Equal("Production Key", result.ApiKey.KeyName);
         Assert.Equal(3, result.ApiKey.Scopes.Length);
         Assert.True(result.ApiKey.IsActive);
@@ -351,7 +352,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.CreateApiKeyAsync(user.Id, request);
 
         // Assert
-        Assert.NotNull(result.ApiKey.Quota);
+        result.ApiKey.Quota.Should().NotBeNull();
         Assert.Equal(1000, result.ApiKey.Quota.MaxRequestsPerDay);
         Assert.Equal(100, result.ApiKey.Quota.MaxRequestsPerHour);
     }
@@ -453,7 +454,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.UpdateApiKeyAsync(createResponse.ApiKey.Id, user.Id, updateRequest);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Updated Name", result.KeyName);
         Assert.Equal(3, result.Scopes.Length);
         Assert.Contains("admin", result.Scopes);
@@ -494,7 +495,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.UpdateApiKeyAsync(createResponse.ApiKey.Id, user.Id, updateRequest);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Updated Name", result.KeyName);
         Assert.Equal(2, result.Scopes.Length); // Original scopes preserved
         Assert.True(result.IsActive); // Original active state preserved
@@ -525,7 +526,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.UpdateApiKeyAsync("non-existent-id", user.Id, updateRequest);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -562,7 +563,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.UpdateApiKeyAsync(createResponse.ApiKey.Id, user2.Id, updateRequest);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -599,8 +600,8 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.UpdateApiKeyAsync(createResponse.ApiKey.Id, user.Id, updateRequest);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.Quota);
+        result.Should().NotBeNull();
+        result.Quota.Should().NotBeNull();
         Assert.Equal(5000, result.Quota.MaxRequestsPerDay);
         Assert.Equal(500, result.Quota.MaxRequestsPerHour);
     }
@@ -641,7 +642,7 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         // Verify key is revoked
         var revokedKey = await service.GetApiKeyAsync(createResponse.ApiKey.Id, user.Id);
-        Assert.NotNull(revokedKey);
+        revokedKey.Should().NotBeNull();
         Assert.NotNull(revokedKey.RevokedAt);
         Assert.Equal(user.Id, revokedKey.RevokedBy);
     }
@@ -709,7 +710,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.RotateApiKeyAsync(oldKeyId, user.Id, rotateRequest);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.NotEqual(oldPlaintextKey, result.PlaintextKey);
         Assert.Equal(oldKeyId, result.RevokedKeyId);
         Assert.Equal("Original Key (Rotated)", result.NewApiKey.KeyName);
@@ -718,11 +719,11 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         // Verify old key is revoked
         var oldKey = await service.GetApiKeyAsync(oldKeyId, user.Id);
-        Assert.NotNull(oldKey);
+        oldKey.Should().NotBeNull();
         Assert.NotNull(oldKey.RevokedAt);
 
         // Verify new key inherits quota
-        Assert.NotNull(result.NewApiKey.Quota);
+        result.NewApiKey.Quota.Should().NotBeNull();
         Assert.Equal(1000, result.NewApiKey.Quota.MaxRequestsPerDay);
     }
 
@@ -748,7 +749,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.RotateApiKeyAsync("non-existent-id", user.Id, rotateRequest);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -782,7 +783,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.RotateApiKeyAsync(createResponse.ApiKey.Id, user2.Id, rotateRequest);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     #endregion
@@ -821,7 +822,7 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         // Verify key is deleted
         var deletedKey = await service.GetApiKeyAsync(createResponse.ApiKey.Id, user.Id);
-        Assert.Null(deletedKey);
+        deletedKey.Should().BeNull();
     }
 
     [Fact]
@@ -881,7 +882,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.GetApiKeyUsageAsync(createResponse.ApiKey.Id, user.Id);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(1000, result.MaxRequestsPerDay);
         Assert.Equal(100, result.MaxRequestsPerHour);
         Assert.NotNull(result.ResetsAt);
@@ -907,7 +908,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var result = await service.GetApiKeyUsageAsync("non-existent-id", user.Id);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     #endregion

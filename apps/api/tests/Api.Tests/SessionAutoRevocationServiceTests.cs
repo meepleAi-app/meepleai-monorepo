@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -508,7 +509,7 @@ public class SessionAutoRevocationServiceTests : IDisposable
         var active = sessions.First(s => s.Id == "sess-active");
         var inactive = sessions.First(s => s.Id == "sess-inactive");
 
-        Assert.Null(active.RevokedAt);
+        active.RevokedAt.Should().BeNull();
         Assert.NotNull(inactive.RevokedAt);
     }
 

@@ -10,6 +10,7 @@ using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Integration;
@@ -120,9 +121,9 @@ public class ConfigurationCrossServiceTests : ConfigIntegrationTestBase
         var maxTokensConfig = await dbContext.SystemConfigurations.FirstOrDefaultAsync(c => c.Key == "RateLimit:MaxTokens:admin");
         var refillRateConfig = await dbContext.SystemConfigurations.FirstOrDefaultAsync(c => c.Key == "RateLimit:RefillRate:admin");
 
-        Assert.NotNull(maxTokensConfig);
+        maxTokensConfig.Should().NotBeNull();
         Assert.Equal("5", maxTokensConfig.Value);
-        Assert.NotNull(refillRateConfig);
+        refillRateConfig.Should().NotBeNull();
         Assert.Equal("10.0", refillRateConfig.Value);
     }
 
@@ -167,7 +168,7 @@ public class ConfigurationCrossServiceTests : ConfigIntegrationTestBase
         using var scope1 = Factory.Services.CreateScope();
         var dbContext1 = scope1.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var enabledConfig = await dbContext1.SystemConfigurations.FirstOrDefaultAsync(c => c.Key == "FeatureFlags:ChatStreaming");
-        Assert.NotNull(enabledConfig);
+        enabledConfig.Should().NotBeNull();
         Assert.Equal("true", enabledConfig.Value);
 
         // Arrange: Disable feature

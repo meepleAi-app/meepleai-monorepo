@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Hosting;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -125,8 +126,8 @@ public class ChessKnowledgeServiceTests
             // This test documents the 10 sample questions for manual/integration testing
             // The actual precision validation requires a real vector database and embeddings
 
-            Assert.NotNull(question);
-            Assert.NotEmpty(expectedTopicKeyword);
+            question.Should().NotBeNull();
+            expectedTopicKeyword.Should().NotBeEmpty();
 
             // When tested with real chess knowledge indexed:
             // 1. Each question should return at least one result

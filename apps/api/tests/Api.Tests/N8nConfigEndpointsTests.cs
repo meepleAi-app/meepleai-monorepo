@@ -9,6 +9,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -68,7 +69,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var dto = await response.Content.ReadFromJsonAsync<N8nConfigDto>(JsonOptions);
-        Assert.NotNull(dto);
+        dto.Should().NotBeNull();
         Assert.Equal("Primary Workflow", dto!.Name);
         Assert.Equal("https://n8n.local", dto.BaseUrl);
         Assert.Equal("https://n8n.local/webhook", dto.WebhookUrl);
@@ -125,7 +126,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var dto = await response.Content.ReadFromJsonAsync<N8nConfigDto>(JsonOptions);
-        Assert.NotNull(dto);
+        dto.Should().NotBeNull();
         Assert.Equal(config.Id, dto!.Id);
         Assert.Equal(config.Name, dto.Name);
     }
@@ -179,7 +180,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var dto = await response.Content.ReadFromJsonAsync<N8nConfigDto>(JsonOptions);
-        Assert.NotNull(dto);
+        dto.Should().NotBeNull();
         Assert.Equal("Updated Workflow", dto!.Name);
         Assert.Equal("https://n8n.updated", dto.BaseUrl);
         Assert.Equal("https://n8n.updated/webhook", dto.WebhookUrl);
@@ -261,7 +262,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<N8nTestResult>(JsonOptions);
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.True(result!.Success);
         Assert.StartsWith("Connection successful", result.Message, StringComparison.Ordinal);
         Assert.True(result.LatencyMs.HasValue);
@@ -271,7 +272,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         {
             var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var entity = await db.N8nConfigs.SingleAsync(c => c.Id == config.Id);
-            Assert.NotNull(entity.LastTestedAt);
+            entity.LastTestedAt.Should().NotBeNull();
             Assert.False(string.IsNullOrWhiteSpace(entity.LastTestResult));
             Assert.StartsWith("Connection successful", entity.LastTestResult, StringComparison.Ordinal);
         }

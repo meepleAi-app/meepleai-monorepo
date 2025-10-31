@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -72,7 +73,7 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
 
         // Assert
         var logged = await _dbContext.WorkflowErrorLogs.FirstOrDefaultAsync();
-        Assert.NotNull(logged);
+        logged.Should().NotBeNull();
         Assert.Equal("test-workflow", logged.WorkflowId);
         Assert.Equal("exec-123", logged.ExecutionId);
         Assert.Equal("Test error message", logged.ErrorMessage);
@@ -98,7 +99,7 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
 
         // Assert
         var logged = await _dbContext.WorkflowErrorLogs.FirstOrDefaultAsync();
-        Assert.NotNull(logged);
+        logged.Should().NotBeNull();
         Assert.Contains("***REDACTED***", logged.ErrorMessage);
         Assert.DoesNotContain("sk-1234567890abcdef", logged.ErrorMessage);
         Assert.DoesNotContain("bearer-xyz", logged.ErrorMessage);
@@ -123,7 +124,7 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
 
         // Assert
         var logged = await _dbContext.WorkflowErrorLogs.FirstOrDefaultAsync();
-        Assert.NotNull(logged);
+        logged.Should().NotBeNull();
         Assert.True(logged.ErrorMessage.Length <= 5000 + 20); // +20 for "... [truncated]"
         Assert.EndsWith("... [truncated]", logged.ErrorMessage);
     }
@@ -146,7 +147,7 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
 
         // Assert
         var logged = await _dbContext.WorkflowErrorLogs.FirstOrDefaultAsync();
-        Assert.NotNull(logged);
+        logged.Should().NotBeNull();
         Assert.Contains("at SomeFunction()", logged.StackTrace);
     }
 
@@ -302,7 +303,7 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
         var result = await service.GetErrorByIdAsync(errorId);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(errorId, result.Id);
         Assert.Equal("workflow-1", result.WorkflowId);
     }
@@ -317,7 +318,7 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
         var result = await service.GetErrorByIdAsync(Guid.NewGuid());
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -341,8 +342,8 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
         var result2 = await service.GetErrorByIdAsync(errorId);
 
         // Assert - Should return cached result (not null)
-        Assert.NotNull(result1);
-        Assert.NotNull(result2); // Cached, even though deleted from DB
+        result1.Should().NotBeNull();
+        result2.Should().NotBeNull(); // Cached, even though deleted from DB
     }
 
     [Fact]

@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 /// <summary>
@@ -214,7 +215,7 @@ CRITICAL INSTRUCTIONS:
 
         // Then: Returns "Not specified" with no snippets
         Assert.Equal("Not specified", result.answer);
-        Assert.Empty(result.snippets);
+        result.snippets.Should().BeEmpty();
         mockLlm.Verify(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -243,7 +244,7 @@ CRITICAL INSTRUCTIONS:
 
         // Then: Returns "Not specified" gracefully
         Assert.Equal("Not specified", result.answer);
-        Assert.Empty(result.snippets);
+        result.snippets.Should().BeEmpty();
     }
 
     [Fact]
@@ -539,7 +540,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "test");
 
         // Then: Confidence score is the maximum from search results
-        Assert.NotNull(result.confidence);
+        result.confidence.Should().NotBeNull();
         Assert.Equal(0.92, result.confidence.Value, precision: 2);
     }
 
@@ -584,7 +585,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "test");
 
         // Then: Metadata is included in response
-        Assert.NotNull(result.metadata);
+        result.metadata.Should().NotBeNull();
         Assert.Equal("anthropic/claude-3-5-sonnet-20241022", result.metadata["model"]);
         Assert.Equal("end_turn", result.metadata["finish_reason"]);
         Assert.Equal("fp_123abc", result.metadata["system_fingerprint"]);
@@ -619,7 +620,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", longQuery);
 
         // Then: Handles without error
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Not specified", result.answer); // No results found
     }
 
@@ -656,7 +657,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "What about <special> & \"quoted\" chars?");
 
         // Then: Handles correctly without escaping issues
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Contains("special", result.answer);
     }
 
@@ -694,7 +695,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "test");
 
         // Then: Answer is preserved (no artificial truncation at service level)
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.True(result.answer.Length > 1000); // Long answer preserved
     }
 
@@ -719,7 +720,7 @@ CRITICAL INSTRUCTIONS:
 
         // Note: Current implementation catches all exceptions and returns error message
         // In a real-world scenario, you might want to check for OperationCanceledException
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
     }
 
     #endregion
@@ -767,14 +768,14 @@ CRITICAL INSTRUCTIONS:
         await ragService.AskAsync("game1", "Test question?");
 
         // Then: System prompt contains anti-hallucination instructions
-        Assert.NotNull(capturedSystemPrompt);
+        capturedSystemPrompt.Should().NotBeNull();
         Assert.Contains("board game rules assistant", capturedSystemPrompt, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("NOT in the provided context", capturedSystemPrompt, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Not specified", capturedSystemPrompt);
         Assert.Contains("Do NOT hallucinate", capturedSystemPrompt, StringComparison.OrdinalIgnoreCase);
 
         // User prompt contains context with page numbers
-        Assert.NotNull(capturedUserPrompt);
+        capturedUserPrompt.Should().NotBeNull();
         Assert.Contains("CONTEXT FROM RULEBOOK", capturedUserPrompt, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("[Page 5]", capturedUserPrompt);
         Assert.Contains("Rule text from page 5.", capturedUserPrompt);
@@ -819,7 +820,7 @@ CRITICAL INSTRUCTIONS:
         await ragService.AskAsync("game1", "How to play?");
 
         // Then: Context includes page numbers for each chunk
-        Assert.NotNull(capturedUserPrompt);
+        capturedUserPrompt.Should().NotBeNull();
         Assert.Contains("[Page 2]", capturedUserPrompt);
         Assert.Contains("[Page 8]", capturedUserPrompt);
         Assert.Contains("[Page 15]", capturedUserPrompt);

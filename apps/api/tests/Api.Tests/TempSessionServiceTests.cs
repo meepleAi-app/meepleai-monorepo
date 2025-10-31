@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -63,12 +64,12 @@ public class TempSessionServiceTests : IDisposable
         var token = await _tempSessionService.CreateTempSessionAsync(userId, ipAddress);
 
         // Assert
-        Assert.NotNull(token);
-        Assert.NotEmpty(token);
+        token.Should().NotBeNull();
+        token.Should().NotBeEmpty();
 
         // Verify token is stored hashed (not plaintext)
         var storedSession = await _dbContext.TempSessions.FirstOrDefaultAsync(ts => ts.UserId == userId);
-        Assert.NotNull(storedSession);
+        storedSession.Should().NotBeNull();
         Assert.NotEqual(token, storedSession.TokenHash); // Should be hashed
         Assert.Equal(ipAddress, storedSession.IpAddress);
         Assert.False(storedSession.IsUsed);
@@ -129,7 +130,7 @@ public class TempSessionServiceTests : IDisposable
 
         // Act - Second use should fail (single-use enforcement)
         var result2 = await _tempSessionService.ValidateAndConsumeTempSessionAsync(token);
-        Assert.Null(result2);
+        result2.Should().BeNull();
     }
 
     [Fact]
@@ -165,7 +166,7 @@ public class TempSessionServiceTests : IDisposable
         var result = await _tempSessionService.ValidateAndConsumeTempSessionAsync("dummy-token");
 
         // Assert
-        Assert.Null(result); // Should fail for expired session
+        result.Should().BeNull(); // Should fail for expired session
     }
 
     [Fact]

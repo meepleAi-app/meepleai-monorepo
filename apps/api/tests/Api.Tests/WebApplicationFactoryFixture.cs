@@ -344,6 +344,7 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
             // Mock embedding service to return dummy embeddings (1536 dimensions for text-embedding-3-small)
             var mockEmbeddingService = new Mock<IEmbeddingService>();
             mockEmbeddingService.Setup(x => x.GetEmbeddingDimensions()).Returns(1536);
+            mockEmbeddingService.Setup(x => x.GetModelName()).Returns("openai/text-embedding-3-small");
             mockEmbeddingService
                 .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((List<string> texts, CancellationToken ct) =>

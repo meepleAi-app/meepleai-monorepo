@@ -1,5 +1,6 @@
 using Api.Services;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -43,7 +44,7 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase, IAsyncLi
         await QdrantService.EnsureCollectionExistsAsync();
 
         // Assert - no exception thrown
-        Assert.NotNull(QdrantService);
+        QdrantService.Should().NotBeNull();
     }
 
     [Fact]
@@ -83,9 +84,9 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase, IAsyncLi
             chunks: chunks);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Null(result.ErrorMessage);
-        Assert.Equal(2, result.IndexedCount);
+        result.Success.Should().BeTrue();
+        result.ErrorMessage.Should().BeNull();
+        result.IndexedCount.Should().Be(2);
     }
 
     [Fact]
@@ -120,12 +121,12 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase, IAsyncLi
             limit: 5);
 
         // Assert
-        Assert.True(searchResult.Success);
-        Assert.Null(searchResult.ErrorMessage);
-        Assert.NotEmpty(searchResult.Results);
-        Assert.Contains(searchResult.Results, r => r.Text.Contains("victory points"));
-        Assert.Equal(5, searchResult.Results[0].Page);
-        Assert.Equal(pdfId, searchResult.Results[0].PdfId);
+        searchResult.Success.Should().BeTrue();
+        searchResult.ErrorMessage.Should().BeNull();
+        searchResult.Results.Should().NotBeEmpty();
+        searchResult.Results.Should().Contain(r => r.Text.Contains("victory points"));
+        searchResult.Results[0].Page.Should().Be(5);
+        searchResult.Results[0].PdfId.Should().Be(pdfId);
     }
 
     [Fact]
@@ -160,8 +161,8 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase, IAsyncLi
             limit: 5);
 
         // Assert - Results are returned regardless of global context
-        Assert.True(searchResult.Success);
-        Assert.NotEmpty(searchResult.Results);
+        searchResult.Success.Should().BeTrue();
+        searchResult.Results.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -196,8 +197,8 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase, IAsyncLi
             limit: 5);
 
         // Assert - Should find no results due to game isolation
-        Assert.True(searchResult.Success);
-        Assert.Empty(searchResult.Results);
+        searchResult.Success.Should().BeTrue();
+        searchResult.Results.Should().BeEmpty();
     }
 
     [Fact]
@@ -230,20 +231,20 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase, IAsyncLi
             gameId: "game-delete",
             queryEmbedding: embedding,
             limit: 5);
-        Assert.NotEmpty(searchBefore.Results);
+        searchBefore.Results.Should().NotBeEmpty();
 
         // Act - Delete the document
         var deleteResult = await QdrantService.DeleteDocumentAsync(pdfId);
 
         // Assert
-        Assert.True(deleteResult);
+        deleteResult.Should().BeTrue();
 
         // Verify it was deleted
         var searchAfter = await QdrantService.SearchAsync(
             gameId: "game-delete",
             queryEmbedding: embedding,
             limit: 5);
-        Assert.Empty(searchAfter.Results);
+        searchAfter.Results.Should().BeEmpty();
     }
 
     [Fact]
@@ -276,8 +277,8 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase, IAsyncLi
             chunks: chunks);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(6, result.IndexedCount);
+        result.Success.Should().BeTrue();
+        result.IndexedCount.Should().Be(6);
 
         // Verify we can search and get results from different pages
         var searchResult = await QdrantService.SearchAsync(
@@ -285,8 +286,8 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase, IAsyncLi
             queryEmbedding: chunks[0].Embedding,
             limit: 10);
 
-        Assert.True(searchResult.Success);
-        Assert.NotEmpty(searchResult.Results);
+        searchResult.Success.Should().BeTrue();
+        searchResult.Results.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -323,8 +324,8 @@ public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase, IAsyncLi
             limit: 3);
 
         // Assert
-        Assert.True(searchResult.Success);
-        Assert.Equal(3, searchResult.Results.Count);
+        searchResult.Success.Should().BeTrue();
+        searchResult.Results.Count.Should().Be(3);
     }
 
     /// <summary>

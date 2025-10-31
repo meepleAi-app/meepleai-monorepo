@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -126,7 +127,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.CreateConfigurationAsync(request, _testUserId);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Test:Setting", result.Key);
         Assert.Equal("100", result.Value);
         Assert.Equal("int", result.ValueType);
@@ -135,7 +136,7 @@ public class ConfigurationServiceTests : IDisposable
 
         // Verify in database
         var dbEntity = await _dbContext.SystemConfigurations.FirstOrDefaultAsync(c => c.Id == result.Id);
-        Assert.NotNull(dbEntity);
+        dbEntity.Should().NotBeNull();
         Assert.Equal("Test:Setting", dbEntity.Key);
     }
 
@@ -188,7 +189,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.GetConfigurationByIdAsync(config.Id);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(config.Id, result.Id);
         Assert.Equal("Test:Key", result.Key);
     }
@@ -200,7 +201,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.GetConfigurationByIdAsync("non-existent-id");
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -213,7 +214,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.GetConfigurationByKeyAsync("Test:Key", "Development");
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Test:Key", result.Key);
         Assert.Equal("value", result.Value);
     }
@@ -229,7 +230,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.GetConfigurationByKeyAsync("Priority:Test", "Production");
 
         // Assert - Should return Production-specific value, not "All"
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("prod-value", result.Value);
         Assert.Equal("Production", result.Environment);
     }
@@ -299,7 +300,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.UpdateConfigurationAsync(config.Id, updateRequest, _testUserId);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("new-value", result.Value);
         Assert.Equal(2, result.Version); // Incremented from 1 to 2
         Assert.Equal("original-value", result.PreviousValue);
@@ -316,7 +317,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.UpdateConfigurationAsync("non-existent-id", updateRequest, _testUserId);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -349,7 +350,7 @@ public class ConfigurationServiceTests : IDisposable
         // Assert
         Assert.True(result);
         var dbEntity = await _dbContext.SystemConfigurations.FindAsync(config.Id);
-        Assert.Null(dbEntity);
+        dbEntity.Should().BeNull();
     }
 
     [Fact]
@@ -376,9 +377,9 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.ToggleConfigurationAsync(config.Id, false, _testUserId);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.False(result.IsActive);
-        Assert.NotNull(result.LastToggledAt);
+        result.LastToggledAt.Should().NotBeNull();
         Assert.Equal(_testUserId, result.UpdatedByUserId);
     }
 
@@ -393,7 +394,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.ToggleConfigurationAsync(config.Id, true, _testUserId);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.True(result.IsActive);
         // UpdatedAt should remain the same since no actual change
     }
@@ -489,7 +490,7 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.Empty(result.Errors);
+        result.Errors.Should().BeEmpty();
     }
 
     [Fact]
@@ -500,7 +501,7 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.NotEmpty(result.Errors);
+        result.Errors.Should().NotBeEmpty();
         Assert.Contains("not a valid integer", result.Errors.First());
     }
 
@@ -512,7 +513,7 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.Empty(result.Errors);
+        result.Errors.Should().BeEmpty();
     }
 
     [Fact]
@@ -523,7 +524,7 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.NotEmpty(result.Errors);
+        result.Errors.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -534,7 +535,7 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.Empty(result.Errors);
+        result.Errors.Should().BeEmpty();
     }
 
     [Fact]
@@ -545,7 +546,7 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.NotEmpty(result.Errors);
+        result.Errors.Should().NotBeEmpty();
         Assert.Contains("not valid JSON", result.Errors.First());
     }
 
@@ -610,7 +611,7 @@ public class ConfigurationServiceTests : IDisposable
 
         // Verify first config was NOT updated (transaction rolled back)
         var dbEntity = await _dbContext.SystemConfigurations.AsNoTracking().FirstOrDefaultAsync(c => c.Id == config1.Id);
-        Assert.NotNull(dbEntity);
+        dbEntity.Should().NotBeNull();
         Assert.Equal("original", dbEntity.Value);
         Assert.Equal(1, dbEntity.Version); // Version not incremented
     }
@@ -639,8 +640,8 @@ public class ConfigurationServiceTests : IDisposable
         // Verify neither config was updated (transaction rolled back)
         var db1 = await _dbContext.SystemConfigurations.AsNoTracking().FirstOrDefaultAsync(c => c.Id == config1.Id);
         var db2 = await _dbContext.SystemConfigurations.AsNoTracking().FirstOrDefaultAsync(c => c.Id == config2.Id);
-        Assert.NotNull(db1);
-        Assert.NotNull(db2);
+        db1.Should().NotBeNull();
+        db2.Should().NotBeNull();
         Assert.Equal("100", db1.Value);
         Assert.Equal("200", db2.Value);
     }
@@ -686,8 +687,8 @@ public class ConfigurationServiceTests : IDisposable
         Assert.Equal(2, importedCount);
         var config1 = await _dbContext.SystemConfigurations.FirstOrDefaultAsync(c => c.Key == "Import:Key1");
         var config2 = await _dbContext.SystemConfigurations.FirstOrDefaultAsync(c => c.Key == "Import:Key2");
-        Assert.NotNull(config1);
-        Assert.NotNull(config2);
+        config1.Should().NotBeNull();
+        config2.Should().NotBeNull();
     }
 
     [Fact]
@@ -756,7 +757,7 @@ public class ConfigurationServiceTests : IDisposable
         var history = await _service.GetConfigurationHistoryAsync(config.Id);
 
         // Assert
-        Assert.NotEmpty(history);
+        history.Should().NotBeEmpty();
         Assert.Equal("updated", history.First().NewValue);
         Assert.Equal("original", history.First().OldValue);
     }
@@ -777,7 +778,7 @@ public class ConfigurationServiceTests : IDisposable
         var rolledBack = await _service.RollbackConfigurationAsync(config.Id, 1, _testUserId);
 
         // Assert
-        Assert.NotNull(rolledBack);
+        rolledBack.Should().NotBeNull();
         Assert.Equal("v1", rolledBack.Value); // Value restored
         Assert.Equal(3, rolledBack.Version); // Version incremented (1 → 2 → 3)
         Assert.Equal("v2", rolledBack.PreviousValue); // Previous value is v2

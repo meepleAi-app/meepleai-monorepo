@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Moq;
 using System.Text.Json;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -83,7 +84,7 @@ public class RuleSpecServiceTests : IDisposable
             });
 
         var savedGame = await _dbContext.Games.FirstOrDefaultAsync(g => g.Id == gameId);
-        Assert.NotNull(savedGame);
+        savedGame.Should().NotBeNull();
         var savedSpec = await _dbContext.RuleSpecs.Include(s => s.Atoms).SingleAsync();
         Assert.Equal(gameId, savedSpec.GameId);
         Assert.Equal("v0-demo", savedSpec.Version);
@@ -615,7 +616,7 @@ public class RuleSpecServiceTests : IDisposable
         var zipBytes = await _service.CreateZipArchiveAsync(new List<string> { "chess" });
 
         // Assert
-        Assert.NotNull(zipBytes);
+        zipBytes.Should().NotBeNull();
         Assert.True(zipBytes.Length > 0);
 
         // Verify ZIP structure
@@ -635,7 +636,7 @@ public class RuleSpecServiceTests : IDisposable
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
 
-        Assert.NotNull(ruleSpec);
+        ruleSpec.Should().NotBeNull();
         Assert.Equal("chess", ruleSpec.gameId);
         Assert.Equal("v1", ruleSpec.version);
         Assert.Single(ruleSpec.rules);

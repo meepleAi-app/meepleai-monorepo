@@ -4,6 +4,7 @@ using System.Linq;
 using Api.Models;
 using Api.Services;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -102,9 +103,9 @@ public class RuleSpecDiffServiceTests
 
         // Find the added atom
         var addedChange = diff.Changes.FirstOrDefault(c => c.Type == ChangeType.Added);
-        Assert.NotNull(addedChange);
+        addedChange.Should().NotBeNull();
         Assert.Equal("atom3", addedChange!.NewAtom);
-        Assert.Null(addedChange.OldAtom);
+        addedChange.OldAtom.Should().BeNull();
         Assert.Equal("New rule text", addedChange.NewValue?.text);
     }
 
@@ -146,9 +147,9 @@ public class RuleSpecDiffServiceTests
 
         // Find the deleted atom
         var deletedChange = diff.Changes.FirstOrDefault(c => c.Type == ChangeType.Deleted);
-        Assert.NotNull(deletedChange);
+        deletedChange.Should().NotBeNull();
         Assert.Equal("atom3", deletedChange!.OldAtom);
-        Assert.Null(deletedChange.NewAtom);
+        deletedChange.NewAtom.Should().BeNull();
         Assert.Equal("Deleted rule", deletedChange.OldValue?.text);
     }
 
@@ -187,7 +188,7 @@ public class RuleSpecDiffServiceTests
 
         // Verify field change details
         var modifiedChange = diff.Changes.First(c => c.Type == ChangeType.Modified);
-        Assert.NotNull(modifiedChange.FieldChanges);
+        modifiedChange.FieldChanges.Should().NotBeNull();
         Assert.Single(modifiedChange.FieldChanges!);
 
         var fieldChange = modifiedChange.FieldChanges.First();
@@ -389,7 +390,7 @@ public class RuleSpecDiffServiceTests
 
         // Assert: No changes
         Assert.Equal(0, diff.Summary.TotalChanges);
-        Assert.Empty(diff.Changes);
+        diff.Changes.Should().BeEmpty();
     }
 
     /// <summary>

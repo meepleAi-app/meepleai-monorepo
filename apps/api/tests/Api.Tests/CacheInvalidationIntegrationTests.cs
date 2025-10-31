@@ -10,6 +10,7 @@ using Api.Models;
 using Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -59,7 +60,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
 
         // Verify cache exists
         var cached = await cacheService.GetAsync<QaResponse>(cacheKey);
-        Assert.NotNull(cached);
+        cached.Should().NotBeNull();
         Assert.Equal("Cached answer", cached.answer);
 
         // When: Upload PDF for the game
@@ -92,7 +93,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         using var newScope = Factory.Services.CreateScope();
         var newCacheService = newScope.ServiceProvider.GetRequiredService<IAiResponseCacheService>();
         var cachedAfter = await newCacheService.GetAsync<QaResponse>(cacheKey);
-        Assert.Null(cachedAfter);
+        cachedAfter.Should().BeNull();
     }
 
     /// <summary>
@@ -272,7 +273,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         using var newScope = Factory.Services.CreateScope();
         var newCacheService = newScope.ServiceProvider.GetRequiredService<IAiResponseCacheService>();
         var cachedAfter = await newCacheService.GetAsync<QaResponse>(cacheKey);
-        Assert.Null(cachedAfter);
+        cachedAfter.Should().BeNull();
     }
 
     #endregion

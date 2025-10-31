@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -69,7 +70,7 @@ public class PromptTemplateServiceTests : IDisposable
         var template = await service.GetTemplateAsync(null, QuestionType.General);
 
         // Assert
-        Assert.NotNull(template);
+        template.Should().NotBeNull();
         Assert.Equal(QuestionType.General, template.QuestionType);
         Assert.False(string.IsNullOrWhiteSpace(template.SystemPrompt));
         Assert.False(string.IsNullOrWhiteSpace(template.UserPromptTemplate));
@@ -87,8 +88,8 @@ public class PromptTemplateServiceTests : IDisposable
         var gameplayTemplate = await service.GetTemplateAsync(null, QuestionType.Gameplay);
 
         // Assert
-        Assert.NotNull(setupTemplate);
-        Assert.NotNull(gameplayTemplate);
+        setupTemplate.Should().NotBeNull();
+        gameplayTemplate.Should().NotBeNull();
         Assert.Equal(QuestionType.Setup, setupTemplate.QuestionType);
         Assert.Equal(QuestionType.Gameplay, gameplayTemplate.QuestionType);
         Assert.NotEqual(setupTemplate.SystemPrompt, gameplayTemplate.SystemPrompt);
@@ -106,7 +107,7 @@ public class PromptTemplateServiceTests : IDisposable
         var template = await service.GetTemplateAsync(gameId, QuestionType.General);
 
         // Assert
-        Assert.NotNull(template);
+        template.Should().NotBeNull();
         Assert.Equal(gameId, template.GameId);
         Assert.Contains("Chess", template.SystemPrompt); // Game-specific content
     }
@@ -123,8 +124,8 @@ public class PromptTemplateServiceTests : IDisposable
         var template = await service.GetTemplateAsync(nonExistentGameId, QuestionType.General);
 
         // Assert
-        Assert.NotNull(template);
-        Assert.Null(template.GameId); // Falls back to default
+        template.Should().NotBeNull();
+        template.GameId.Should().BeNull(); // Falls back to default
     }
 
     [Fact]
@@ -138,7 +139,7 @@ public class PromptTemplateServiceTests : IDisposable
         var template = await service.GetTemplateAsync(null, QuestionType.EdgeCases);
 
         // Assert
-        Assert.NotNull(template);
+        template.Should().NotBeNull();
         Assert.Equal(QuestionType.General, template.QuestionType); // Falls back to General
     }
 
@@ -157,8 +158,8 @@ public class PromptTemplateServiceTests : IDisposable
         var template = await service.GetTemplateAsync(null, QuestionType.Setup);
 
         // Assert
-        Assert.NotNull(template);
-        Assert.NotEmpty(template.FewShotExamples);
+        template.Should().NotBeNull();
+        template.FewShotExamples.Should().NotBeEmpty();
         Assert.All(template.FewShotExamples, example =>
         {
             Assert.False(string.IsNullOrWhiteSpace(example.Question));
@@ -178,8 +179,8 @@ public class PromptTemplateServiceTests : IDisposable
         var template = await service.GetTemplateAsync(null, QuestionType.General);
 
         // Assert
-        Assert.NotNull(template);
-        Assert.Empty(template.FewShotExamples);
+        template.Should().NotBeNull();
+        template.FewShotExamples.Should().BeEmpty();
     }
 
     #endregion
@@ -404,7 +405,7 @@ public class PromptTemplateServiceTests : IDisposable
         var template = await service.GetTemplateAsync(null, QuestionType.General);
 
         // Assert
-        Assert.NotNull(template);
+        template.Should().NotBeNull();
         Assert.Contains("board game rules assistant", template.SystemPrompt);
         Assert.Contains("{context}", template.UserPromptTemplate);
         Assert.Contains("{query}", template.UserPromptTemplate);
@@ -421,7 +422,7 @@ public class PromptTemplateServiceTests : IDisposable
         var template = await service.GetTemplateAsync(null, QuestionType.General);
 
         // Assert
-        Assert.NotNull(template);
+        template.Should().NotBeNull();
         Assert.False(string.IsNullOrWhiteSpace(template.SystemPrompt));
         Assert.False(string.IsNullOrWhiteSpace(template.UserPromptTemplate));
     }
@@ -533,7 +534,7 @@ public class PromptTemplateServiceTests : IDisposable
         var result = await service.GetActivePromptAsync(templateName);
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]

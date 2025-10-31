@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Api.Models;
+using FluentAssertions;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -146,7 +147,7 @@ public class AdminAuthorizationTests : AdminTestFixture
         var response = await nonAdminClient.SendAsync(request);
 
         // Then: System denies access
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -172,7 +173,7 @@ public class AdminAuthorizationTests : AdminTestFixture
         var response = await client.SendAsync(request);
 
         // Then: System requires authentication
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>

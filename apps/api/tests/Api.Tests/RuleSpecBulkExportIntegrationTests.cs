@@ -12,6 +12,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -100,7 +101,7 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
         Assert.Equal("application/zip", response.Content.Headers.ContentType?.MediaType);
 
         var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"');
-        Assert.NotNull(fileName);
+        fileName.Should().NotBeNull();
         Assert.Contains("meepleai-rulespecs-", fileName);
         Assert.EndsWith(".zip", fileName);
 
@@ -122,7 +123,7 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
         var json = await reader.ReadToEndAsync();
         var exportedSpec = JsonSerializer.Deserialize<RuleSpec>(json, JsonOptions);
 
-        Assert.NotNull(exportedSpec);
+        exportedSpec.Should().NotBeNull();
         Assert.Equal(game.Id, exportedSpec!.gameId);
         Assert.Equal("v1", exportedSpec.version);
         Assert.Equal(2, exportedSpec.rules.Count);

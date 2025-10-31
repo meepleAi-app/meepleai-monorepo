@@ -6,6 +6,7 @@ using Api.Models;
 using Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -58,7 +59,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         // Then: First request succeeds
         Assert.Equal(HttpStatusCode.OK, response1.StatusCode);
         var qaResponse1 = await response1.Content.ReadFromJsonAsync<QaResponse>();
-        Assert.NotNull(qaResponse1);
+        qaResponse1.Should().NotBeNull();
 
         // When: Second identical request (cache hit)
         var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
@@ -70,7 +71,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         // Then: Second request returns same cached response
         Assert.Equal(HttpStatusCode.OK, response2.StatusCode);
         var qaResponse2 = await response2.Content.ReadFromJsonAsync<QaResponse>();
-        Assert.NotNull(qaResponse2);
+        qaResponse2.Should().NotBeNull();
 
         // And: Responses are identical (cached)
         Assert.Equal(qaResponse1.answer, qaResponse2.answer);
@@ -108,8 +109,8 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var qaResponse2 = await response2.Content.ReadFromJsonAsync<QaResponse>();
 
         // Then: Both users get the same cached response
-        Assert.NotNull(qaResponse1);
-        Assert.NotNull(qaResponse2);
+        qaResponse1.Should().NotBeNull();
+        qaResponse2.Should().NotBeNull();
         Assert.Equal(qaResponse1.answer, qaResponse2.answer);
     }
 
@@ -188,8 +189,8 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var explainResponse2 = await response2.Content.ReadFromJsonAsync<ExplainResponse>();
 
         // Then: Both responses are identical (cached)
-        Assert.NotNull(explainResponse1);
-        Assert.NotNull(explainResponse2);
+        explainResponse1.Should().NotBeNull();
+        explainResponse2.Should().NotBeNull();
         Assert.Equal(explainResponse1.script, explainResponse2.script);
         Assert.Equal(explainResponse1.outline.mainTopic, explainResponse2.outline.mainTopic);
     }
@@ -227,8 +228,8 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var setupResponse2 = await response2.Content.ReadFromJsonAsync<SetupGuideResponse>();
 
         // Then: Both responses are identical (cached)
-        Assert.NotNull(setupResponse1);
-        Assert.NotNull(setupResponse2);
+        setupResponse1.Should().NotBeNull();
+        setupResponse2.Should().NotBeNull();
         Assert.Equal(setupResponse1.gameTitle, setupResponse2.gameTitle);
         Assert.Equal(setupResponse1.steps.Count, setupResponse2.steps.Count);
 
@@ -263,7 +264,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
 
         var response1 = await client.SendAsync(request1);
         var qaResponse1 = await response1.Content.ReadFromJsonAsync<QaResponse>();
-        Assert.NotNull(qaResponse1);
+        qaResponse1.Should().NotBeNull();
 
         // When: Manually invalidating cache for the game
         using (var scope = Factory.Services.CreateScope())

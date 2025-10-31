@@ -7,6 +7,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -80,9 +81,9 @@ public class PromptManagementServiceTests : IDisposable
         var response = await _service.CreatePromptTemplateAsync(request, _testUserId);
 
         // Assert
-        Assert.NotNull(response);
-        Assert.NotNull(response.Template);
-        Assert.NotNull(response.InitialVersion);
+        response.Should().NotBeNull();
+        response.Template.Should().NotBeNull();
+        response.InitialVersion.Should().NotBeNull();
         Assert.Equal("test-template", response.Template.Name);
         Assert.Equal("Test description", response.Template.Description);
         Assert.Equal("test", response.Template.Category);
@@ -179,15 +180,15 @@ public class PromptManagementServiceTests : IDisposable
             _testUserId);
 
         // Assert
-        Assert.NotNull(version);
+        version.Should().NotBeNull();
         Assert.Equal(2, version.VersionNumber);
         Assert.Equal("Version 2 content", version.Content);
         Assert.False(version.IsActive); // Not activated immediately
-        Assert.NotNull(version.Metadata);
+        version.Metadata.Should().NotBeNull();
 
         // Verify version 1 is still active
         var version1 = await _service.GetVersionAsync(templateResponse.Template.Id, 1);
-        Assert.NotNull(version1);
+        version1.Should().NotBeNull();
         Assert.True(version1.IsActive);
 
         // Verify audit log
@@ -226,7 +227,7 @@ public class PromptManagementServiceTests : IDisposable
 
         // Verify version 1 is now inactive
         var version1 = await _service.GetVersionAsync(templateResponse.Template.Id, 1);
-        Assert.NotNull(version1);
+        version1.Should().NotBeNull();
         Assert.False(version1.IsActive);
 
         // Verify audit logs include activation and deactivation
@@ -271,7 +272,7 @@ public class PromptManagementServiceTests : IDisposable
         var activeVersion = await _service.GetActiveVersionAsync("active-version-test");
 
         // Assert
-        Assert.NotNull(activeVersion);
+        activeVersion.Should().NotBeNull();
         Assert.Equal(templateResponse.InitialVersion.Id, activeVersion.Id);
         Assert.Equal(1, activeVersion.VersionNumber);
         Assert.True(activeVersion.IsActive);
@@ -298,7 +299,7 @@ public class PromptManagementServiceTests : IDisposable
         var activeVersion = await _service.GetActiveVersionAsync("no-active-version-test");
 
         // Assert
-        Assert.Null(activeVersion);
+        activeVersion.Should().BeNull();
     }
 
     [Fact]
@@ -308,7 +309,7 @@ public class PromptManagementServiceTests : IDisposable
         var activeVersion = await _service.GetActiveVersionAsync("non-existent-template");
 
         // Assert
-        Assert.Null(activeVersion);
+        activeVersion.Should().BeNull();
     }
 
     [Fact]
@@ -358,13 +359,13 @@ public class PromptManagementServiceTests : IDisposable
             "Rollback due to issues with version 3");
 
         // Assert
-        Assert.NotNull(activatedVersion);
+        activatedVersion.Should().NotBeNull();
         Assert.Equal(2, activatedVersion.VersionNumber);
         Assert.True(activatedVersion.IsActive);
 
         // Verify version 3 is now inactive
         var inactiveVersion3 = await _service.GetVersionAsync(templateResponse.Template.Id, 3);
-        Assert.NotNull(inactiveVersion3);
+        inactiveVersion3.Should().NotBeNull();
         Assert.False(inactiveVersion3.IsActive);
 
         // Verify audit log for rollback
@@ -397,7 +398,7 @@ public class PromptManagementServiceTests : IDisposable
             _testUserId);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.True(result.IsActive);
 
         // No new audit logs should be created
@@ -451,7 +452,7 @@ public class PromptManagementServiceTests : IDisposable
         var history = await _service.GetVersionHistoryAsync(templateResponse.Template.Id);
 
         // Assert
-        Assert.NotNull(history);
+        history.Should().NotBeNull();
         Assert.Equal("history-test-template", history.Template.Name);
         Assert.Equal(3, history.TotalCount);
         Assert.Equal(3, history.Versions.Count);
@@ -492,7 +493,7 @@ public class PromptManagementServiceTests : IDisposable
         var auditLog = await _service.GetAuditLogAsync(templateResponse.Template.Id);
 
         // Assert
-        Assert.NotNull(auditLog);
+        auditLog.Should().NotBeNull();
         Assert.Equal("audit-test-template", auditLog.Template.Name);
         Assert.True(auditLog.TotalCount >= 5); // template_created, version_created (v1), version_created (v2), version_deactivated (v1), version_activated (v2)
         Assert.True(auditLog.Logs.Count >= 5);
@@ -602,7 +603,7 @@ public class PromptManagementServiceTests : IDisposable
         var template = await _service.GetTemplateAsync(created.Template.Id);
 
         // Assert
-        Assert.NotNull(template);
+        template.Should().NotBeNull();
         Assert.Equal(created.Template.Id, template.Id);
         Assert.Equal("get-template-test", template.Name);
         Assert.Equal("Test description", template.Description);
@@ -615,7 +616,7 @@ public class PromptManagementServiceTests : IDisposable
         var template = await _service.GetTemplateAsync("non-existent-id");
 
         // Assert
-        Assert.Null(template);
+        template.Should().BeNull();
     }
 
     [Fact]
@@ -733,13 +734,13 @@ public class PromptManagementServiceTests : IDisposable
         var version = await _service.GetVersionAsync(templateResponse.Template.Id, 1);
 
         // Assert
-        Assert.NotNull(version);
-        Assert.NotNull(version.Metadata);
+        version.Should().NotBeNull();
+        version.Metadata.Should().NotBeNull();
         Assert.Equal(metadata, version.Metadata);
 
         // Verify deserialization works
         var deserializedMetadata = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(version.Metadata);
-        Assert.NotNull(deserializedMetadata);
+        deserializedMetadata.Should().NotBeNull();
         Assert.Equal("gpt-4-turbo", deserializedMetadata["model"].GetString());
     }
 }

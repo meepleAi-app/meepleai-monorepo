@@ -1,5 +1,6 @@
 using Api.Tests.Helpers;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Infrastructure;

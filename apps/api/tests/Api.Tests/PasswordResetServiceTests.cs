@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -94,7 +95,7 @@ public class PasswordResetServiceTests : IDisposable
         Assert.True(result);
 
         var token = await db.PasswordResetTokens.FirstOrDefaultAsync();
-        Assert.NotNull(token);
+        token.Should().NotBeNull();
         Assert.Equal("user1", token.UserId);
         Assert.False(token.IsUsed);
         Assert.Equal(FixedNow, token.CreatedAt);
@@ -355,7 +356,7 @@ public class PasswordResetServiceTests : IDisposable
         Assert.True(result);
 
         var token = await db.PasswordResetTokens.FirstOrDefaultAsync();
-        Assert.NotNull(token);
+        token.Should().NotBeNull();
 
         // Verify error was logged
         mockLogger.Verify(
@@ -412,7 +413,7 @@ public class PasswordResetServiceTests : IDisposable
         await service.RequestPasswordResetAsync(ValidEmail);
 
         // Assert
-        Assert.NotNull(capturedToken);
+        capturedToken.Should().NotBeNull();
         Assert.DoesNotContain("+", capturedToken);
         Assert.DoesNotContain("/", capturedToken);
         Assert.DoesNotContain("=", capturedToken);
@@ -455,7 +456,7 @@ public class PasswordResetServiceTests : IDisposable
         Assert.True(result);
 
         var token = await db.PasswordResetTokens.FirstOrDefaultAsync();
-        Assert.NotNull(token);
+        token.Should().NotBeNull();
         Assert.Equal("user1", token.UserId);
     }
 
@@ -496,7 +497,7 @@ public class PasswordResetServiceTests : IDisposable
         Assert.True(result);
 
         var token = await db.PasswordResetTokens.FirstOrDefaultAsync();
-        Assert.NotNull(token);
+        token.Should().NotBeNull();
         Assert.Equal("user1", token.UserId);
     }
 
@@ -1063,7 +1064,7 @@ public class PasswordResetServiceTests : IDisposable
 
         // Assert - Should fail because token is invalid, not because password is weak
         Assert.False(result.Success);
-        Assert.Null(result.UserId);
+        result.UserId.Should().BeNull();
     }
 
     /// <summary>
@@ -1090,7 +1091,7 @@ public class PasswordResetServiceTests : IDisposable
 
         // Assert
         Assert.False(result.Success);
-        Assert.Null(result.UserId);
+        result.UserId.Should().BeNull();
 
         // Verify warning log was written
         mockLogger.Verify(
@@ -1157,7 +1158,7 @@ public class PasswordResetServiceTests : IDisposable
 
         // Assert
         Assert.False(result.Success);
-        Assert.Null(result.UserId);
+        result.UserId.Should().BeNull();
 
         var updatedUser = await db.Users.FindAsync("user1");
         Assert.Equal(originalPasswordHash, updatedUser!.PasswordHash); // Password unchanged
@@ -1226,7 +1227,7 @@ public class PasswordResetServiceTests : IDisposable
 
         // Assert
         Assert.False(result.Success);
-        Assert.Null(result.UserId);
+        result.UserId.Should().BeNull();
 
         var updatedUser = await db.Users.FindAsync("user1");
         Assert.Equal(originalPasswordHash, updatedUser!.PasswordHash); // Password unchanged

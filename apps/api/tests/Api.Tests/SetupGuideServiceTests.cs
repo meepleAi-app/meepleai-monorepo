@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -80,9 +81,9 @@ public class SetupGuideServiceTests : IDisposable
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Unknown Game", result.gameTitle);
-        Assert.NotEmpty(result.steps);
+        result.steps.Should().NotBeEmpty();
         Assert.True(result.estimatedSetupTimeMinutes > 0);
     }
 
@@ -115,15 +116,15 @@ public class SetupGuideServiceTests : IDisposable
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Test Board Game", result.gameTitle);
-        Assert.NotEmpty(result.steps);
+        result.steps.Should().NotBeEmpty();
         Assert.All(result.steps, step =>
         {
             Assert.True(step.stepNumber > 0);
             Assert.False(string.IsNullOrEmpty(step.title));
             Assert.False(string.IsNullOrEmpty(step.instruction));
-            Assert.NotNull(step.references);
+            step.references.Should().NotBeNull();
         });
     }
 
@@ -184,16 +185,16 @@ Each player takes a player board and starting components.";
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Advanced Strategy Game", result.gameTitle);
-        Assert.NotEmpty(result.steps);
-        Assert.NotNull(result.confidence);
+        result.steps.Should().NotBeEmpty();
+        result.confidence.Should().NotBeNull();
         Assert.Equal(180, result.totalTokens); // LLM was used
         Assert.Equal(2, result.steps.Count); // LLM generated 2 steps
 
         // Verify steps have references from RAG
         var stepsWithReferences = result.steps.Where(s => s.references.Count > 0).ToList();
-        Assert.NotEmpty(stepsWithReferences);
+        stepsWithReferences.Should().NotBeEmpty();
 
         // Verify step structure
         var firstStep = result.steps.First();

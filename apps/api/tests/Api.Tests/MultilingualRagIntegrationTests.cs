@@ -1,5 +1,6 @@
 using Api.Services;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -80,7 +81,7 @@ public class MultilingualRagIntegrationTests : QdrantIntegrationTestBase, IAsync
 
         // Assert
         Assert.True(result.Success);
-        Assert.Null(result.ErrorMessage);
+        result.ErrorMessage.Should().BeNull();
         Assert.Equal(2, result.IndexedCount);
 
         // Verify we can search and retrieve with language filter
@@ -91,11 +92,11 @@ public class MultilingualRagIntegrationTests : QdrantIntegrationTestBase, IAsync
             limit: 5);
 
         Assert.True(searchResult.Success);
-        Assert.NotEmpty(searchResult.Results);
+        searchResult.Results.Should().NotBeEmpty();
 
         // Verify returned chunks match what we indexed
         var retrievedChunk = searchResult.Results.FirstOrDefault(r => r.PdfId == pdfId);
-        Assert.NotNull(retrievedChunk);
+        retrievedChunk.Should().NotBeNull();
         Assert.Equal(pdfId, retrievedChunk.PdfId);
     }
 
@@ -165,11 +166,11 @@ public class MultilingualRagIntegrationTests : QdrantIntegrationTestBase, IAsync
             limit: 10);
 
         Assert.True(searchItalian.Success);
-        Assert.NotEmpty(searchItalian.Results);
+        searchItalian.Results.Should().NotBeEmpty();
 
         // Verify we get Italian PDF (might get both due to embedding similarity, but filter ensures language matches)
         var italianResults = searchItalian.Results.Where(r => r.PdfId == pdfIdItalian).ToList();
-        Assert.NotEmpty(italianResults);
+        italianResults.Should().NotBeEmpty();
 
         // Assert - Search with English filter returns only English results
         var searchEnglish = await QdrantService.SearchAsync(
@@ -179,10 +180,10 @@ public class MultilingualRagIntegrationTests : QdrantIntegrationTestBase, IAsync
             limit: 10);
 
         Assert.True(searchEnglish.Success);
-        Assert.NotEmpty(searchEnglish.Results);
+        searchEnglish.Results.Should().NotBeEmpty();
 
         var englishResults = searchEnglish.Results.Where(r => r.PdfId == pdfIdEnglish).ToList();
-        Assert.NotEmpty(englishResults);
+        englishResults.Should().NotBeEmpty();
     }
 
     /// <summary>
@@ -235,11 +236,11 @@ public class MultilingualRagIntegrationTests : QdrantIntegrationTestBase, IAsync
             limit: 5);
 
         Assert.True(searchResult.Success);
-        Assert.NotEmpty(searchResult.Results);
+        searchResult.Results.Should().NotBeEmpty();
 
         // Verify we can retrieve the indexed chunk
         var retrievedChunk = searchResult.Results.FirstOrDefault(r => r.PdfId == pdfId);
-        Assert.NotNull(retrievedChunk);
+        retrievedChunk.Should().NotBeNull();
         Assert.Equal(text, retrievedChunk.Text);
     }
 
@@ -302,14 +303,14 @@ public class MultilingualRagIntegrationTests : QdrantIntegrationTestBase, IAsync
 
         // Assert
         Assert.True(searchResult.Success);
-        Assert.NotEmpty(searchResult.Results);
+        searchResult.Results.Should().NotBeEmpty();
 
         // Verify only Italian results returned (no German results)
         var italianResults = searchResult.Results.Where(r => r.PdfId == pdfIdItalian).ToList();
         var germanResults = searchResult.Results.Where(r => r.PdfId == pdfIdGerman).ToList();
 
-        Assert.NotEmpty(italianResults);
-        Assert.Empty(germanResults); // German should be filtered out
+        italianResults.Should().NotBeEmpty();
+        germanResults.Should().BeEmpty(); // German should be filtered out
     }
 
     /// <summary>
@@ -396,7 +397,7 @@ public class MultilingualRagIntegrationTests : QdrantIntegrationTestBase, IAsync
 
         // Assert
         Assert.True(result.Success);
-        Assert.Empty(result.Results);
+        result.Results.Should().BeEmpty();
     }
 
     #endregion

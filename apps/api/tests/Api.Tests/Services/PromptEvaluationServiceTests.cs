@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
@@ -676,14 +677,14 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         var report = _service.GenerateReport(evalResult, ReportFormat.Json);
 
         // Assert: Verify it's valid JSON (don't deserialize back due to camelCase vs PascalCase)
-        Assert.NotNull(report);
+        report.Should().NotBeNull();
         Assert.Contains("evaluationId", report); // camelCase from JsonNamingPolicy
         Assert.Contains("metrics", report);
         Assert.Contains("accuracy", report);
 
         // Verify it's valid JSON syntax
         var jsonDoc = JsonDocument.Parse(report);
-        Assert.NotNull(jsonDoc);
+        jsonDoc.Should().NotBeNull();
     }
 
     #endregion
@@ -703,7 +704,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         var stored = await _dbContext.PromptEvaluationResults
             .FirstOrDefaultAsync(e => e.Id == evalResult.EvaluationId);
 
-        Assert.NotNull(stored);
+        stored.Should().NotBeNull();
         Assert.Equal(evalResult.TemplateId, stored.TemplateId);
         Assert.Equal(evalResult.VersionId, stored.VersionId);
         Assert.Equal(evalResult.Metrics.Accuracy, stored.Accuracy);

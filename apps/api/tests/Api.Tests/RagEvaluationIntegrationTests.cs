@@ -16,6 +16,7 @@ using Moq;
 using Testcontainers.PostgreSql;
 using Testcontainers.Qdrant;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -163,7 +164,7 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
         var loadedDataset = await _evaluationService!.LoadDatasetAsync(_tempDatasetPath!);
 
         // Assert: Dataset loaded correctly
-        Assert.NotNull(loadedDataset);
+        loadedDataset.Should().NotBeNull();
         Assert.Equal(dataset.Name, loadedDataset.Name);
         Assert.Equal(dataset.Queries.Count, loadedDataset.Queries.Count);
 
@@ -171,7 +172,7 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
         var report = await _evaluationService.EvaluateAsync(loadedDataset, topK: 5);
 
         // Assert: Report generated with valid metrics
-        Assert.NotNull(report);
+        report.Should().NotBeNull();
         Assert.Equal(loadedDataset.Queries.Count, report.TotalQueries);
         Assert.True(report.SuccessfulQueries > 0);
         Assert.True(report.MeanReciprocalRank >= 0.0 && report.MeanReciprocalRank <= 1.0);
@@ -191,7 +192,7 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
         var markdown = _evaluationService.GenerateMarkdownReport(report);
 
         // Assert
-        Assert.NotNull(markdown);
+        markdown.Should().NotBeNull();
         Assert.Contains("# RAG Evaluation Report", markdown);
         Assert.Contains("Summary", markdown);
         Assert.Contains("Information Retrieval Metrics", markdown);
@@ -211,7 +212,7 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
         var jsonReport = _evaluationService.GenerateJsonReport(report);
 
         // Assert
-        Assert.NotNull(jsonReport);
+        jsonReport.Should().NotBeNull();
 
         // Deserialize to verify it's valid JSON
         var deserialized = JsonSerializer.Deserialize<RagEvaluationReport>(jsonReport, new JsonSerializerOptions
@@ -219,7 +220,7 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
             PropertyNameCaseInsensitive = true
         });
 
-        Assert.NotNull(deserialized);
+        deserialized.Should().NotBeNull();
         Assert.Equal(report.DatasetName, deserialized.DatasetName);
         Assert.Equal(report.TotalQueries, deserialized.TotalQueries);
     }
@@ -282,7 +283,7 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
 
         // Assert: Should fail quality gates
         Assert.False(report.PassedQualityGates);
-        Assert.NotEmpty(report.QualityGateFailures);
+        report.QualityGateFailures.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -461,6 +462,8 @@ public class MockEmbeddingService : IEmbeddingService
     }
 
     public int GetEmbeddingDimensions() => 768;
+
+    public string GetModelName() => "openai/text-embedding-3-small";
 
     public Task<EmbeddingResult> GenerateEmbeddingAsync(string text, CancellationToken cancellationToken = default)
     {

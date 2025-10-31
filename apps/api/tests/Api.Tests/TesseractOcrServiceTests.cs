@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -60,7 +61,7 @@ public class TesseractOcrServiceTests : IDisposable
 
         // Assert
         // Service should be created without throwing
-        Assert.NotNull(service);
+        service.Should().NotBeNull();
 
         // Verify logger was called with initialization message
         _mockLogger.Verify(
@@ -107,7 +108,7 @@ public class TesseractOcrServiceTests : IDisposable
         using var service = CreateService();
 
         // Assert - Service should initialize with configured concurrency limit
-        Assert.NotNull(service);
+        service.Should().NotBeNull();
     }
 
     [Fact]

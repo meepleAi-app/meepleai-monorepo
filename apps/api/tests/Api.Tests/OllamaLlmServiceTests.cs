@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -68,11 +69,11 @@ public class OllamaLlmServiceTests
         // Assert
         Assert.True(result.Success);
         Assert.Equal("The answer is 4.", result.Response);
-        Assert.NotNull(result.Usage);
+        result.Usage.Should().NotBeNull();
         Assert.Equal(10, result.Usage.PromptTokens);
         Assert.Equal(5, result.Usage.CompletionTokens);
         Assert.Equal(15, result.Usage.TotalTokens);
-        Assert.NotNull(result.Metadata);
+        result.Metadata.Should().NotBeNull();
         Assert.Equal("llama3.2:3b", result.Metadata["model"]);
         Assert.Equal("stop", result.Metadata["done_reason"]);
         Assert.Equal("150", result.Metadata["total_duration_ms"]);
@@ -90,7 +91,7 @@ public class OllamaLlmServiceTests
         // Assert
         Assert.False(result.Success);
         Assert.Equal("No user prompt provided", result.ErrorMessage);
-        Assert.Empty(result.Response);
+        result.Response.Should().BeEmpty();
     }
 
     [Fact]
@@ -287,7 +288,7 @@ public class OllamaLlmServiceTests
 
         // Assert
         Assert.True(result.Success);
-        Assert.NotNull(result.Usage);
+        result.Usage.Should().NotBeNull();
         // Estimated tokens should be > 0 (roughly length/4)
         Assert.True(result.Usage.PromptTokens > 0);
         Assert.True(result.Usage.CompletionTokens > 0);
@@ -325,7 +326,7 @@ public class OllamaLlmServiceTests
         await service.GenerateCompletionAsync("System", "User");
 
         // Assert
-        Assert.NotNull(capturedRequest);
+        capturedRequest.Should().NotBeNull();
         Assert.Equal("http://custom-ollama:9999/api/chat", capturedRequest.RequestUri?.ToString());
     }
 
@@ -360,7 +361,7 @@ public class OllamaLlmServiceTests
         await service.GenerateCompletionAsync("System", "User");
 
         // Assert
-        Assert.NotNull(capturedRequest);
+        capturedRequest.Should().NotBeNull();
         Assert.Equal("http://ollama:11434/api/chat", capturedRequest.RequestUri?.ToString());
     }
 
@@ -399,7 +400,7 @@ public class OllamaLlmServiceTests
         await service.GenerateCompletionAsync(systemPrompt, userPrompt);
 
         // Assert
-        Assert.NotNull(capturedRequestBody);
+        capturedRequestBody.Should().NotBeNull();
 
         using var doc = JsonDocument.Parse(capturedRequestBody);
         var root = doc.RootElement;
@@ -493,7 +494,7 @@ public class OllamaLlmServiceTests
 
         // Assert
         Assert.True(result.Success);
-        Assert.NotNull(result.Response);
+        result.Response.Should().NotBeNull();
     }
 
     /// <summary>

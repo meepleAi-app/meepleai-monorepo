@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -74,21 +75,21 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var setupGuide = JsonSerializer.Deserialize<SetupGuideResponse>(json, JsonOptions);
 
         // And: The guide contains numbered steps
-        Assert.NotNull(setupGuide);
-        Assert.NotEmpty(setupGuide!.steps);
+        setupGuide.Should().NotBeNull();
+        setupGuide!.steps.Should().NotBeEmpty();
         Assert.All(setupGuide.steps, step =>
         {
             Assert.True(step.stepNumber > 0);
             Assert.False(string.IsNullOrWhiteSpace(step.title));
             Assert.False(string.IsNullOrWhiteSpace(step.instruction));
-            Assert.NotNull(step.references);
+            step.references.Should().NotBeNull();
         });
 
         // And: Each step has title, instruction, and references
         var firstStep = setupGuide.steps[0];
         Assert.Equal(1, firstStep.stepNumber);
-        Assert.NotNull(firstStep.title);
-        Assert.NotNull(firstStep.instruction);
+        firstStep.title.Should().NotBeNull();
+        firstStep.instruction.Should().NotBeNull();
     }
 
     /// <summary>
@@ -168,9 +169,9 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var setupGuide = JsonSerializer.Deserialize<SetupGuideResponse>(json, JsonOptions);
 
         // And: The game title is "Unknown Game"
-        Assert.NotNull(setupGuide);
+        setupGuide.Should().NotBeNull();
         Assert.Equal("Unknown Game", setupGuide!.gameTitle);
-        Assert.NotEmpty(setupGuide.steps);
+        setupGuide.steps.Should().NotBeEmpty();
     }
 
     /// <summary>
@@ -238,7 +239,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
             .OrderBy(log => log.CreatedAt)
             .ToListAsync();
 
-        Assert.NotEmpty(chatLogs);
+        chatLogs.Should().NotBeEmpty();
         Assert.Contains(chatLogs, log => log.Level == "user" && log.Message.Contains("Generate setup guide"));
         Assert.Contains(chatLogs, log => log.Level == "assistant" && log.Message.Contains("Setup guide"));
     }
@@ -277,7 +278,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var json = await response.Content.ReadAsStringAsync();
         var setupGuide = JsonSerializer.Deserialize<SetupGuideResponse>(json, JsonOptions);
 
-        Assert.NotNull(setupGuide);
+        setupGuide.Should().NotBeNull();
         Assert.True(setupGuide!.estimatedSetupTimeMinutes > 0);
 
         // And: The estimated time is reasonable (between 5 and 30 minutes)
@@ -318,7 +319,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var json = await response.Content.ReadAsStringAsync();
         var setupGuide = JsonSerializer.Deserialize<SetupGuideResponse>(json, JsonOptions);
 
-        Assert.NotNull(setupGuide);
+        setupGuide.Should().NotBeNull();
 
         // And: Total tokens equals prompt tokens plus completion tokens (if LLM was used)
         if (setupGuide!.totalTokens > 0)
@@ -365,7 +366,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
             .ToListAsync();
 
         // And: The log includes user ID, game ID, endpoint, and latency
-        Assert.NotEmpty(logs);
+        logs.Should().NotBeEmpty();
         var log = logs.First();
         Assert.Equal(user.Id, log.UserId);
         Assert.Equal(game.Id, log.GameId);
@@ -436,8 +437,8 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         {
             var json = await response.Content.ReadAsStringAsync();
             var setupGuide = JsonSerializer.Deserialize<SetupGuideResponse>(json, JsonOptions);
-            Assert.NotNull(setupGuide);
-            Assert.NotEmpty(setupGuide!.steps);
+            setupGuide.Should().NotBeNull();
+            setupGuide!.steps.Should().NotBeEmpty();
         }
     }
 
@@ -473,7 +474,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var json = await response.Content.ReadAsStringAsync();
         var setupGuide = JsonSerializer.Deserialize<SetupGuideResponse>(json, JsonOptions);
 
-        Assert.NotNull(setupGuide);
+        setupGuide.Should().NotBeNull();
 
         // Then: The response includes a confidence score (if RAG data was found)
         // And: The confidence score is between 0 and 1 (if present)

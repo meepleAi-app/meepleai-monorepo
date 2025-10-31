@@ -93,6 +93,12 @@ public class EmbeddingService : IEmbeddingService
     /// </summary>
     public int GetEmbeddingDimensions() => _embeddingDimensions;
 
+    public string GetModelName()
+    {
+        // Return provider/model format (e.g., "openai/text-embedding-3-small")
+        return $"{_provider}/{_embeddingModel}";
+    }
+
     /// <summary>
     /// Determine embedding dimensions based on model name and configuration
     /// </summary>

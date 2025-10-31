@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
@@ -276,7 +277,7 @@ public class RagServiceConfigSimpleTests : IDisposable
         var result = await ragService.AskAsync("test-game", "test query");
 
         // Assert: Should work with hardcoded defaults
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         _qdrantMock.Verify(q => q.SearchAsync(
             It.IsAny<string>(),
             It.IsAny<float[]>(),

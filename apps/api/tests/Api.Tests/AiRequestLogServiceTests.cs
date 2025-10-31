@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 public class AiRequestLogServiceTests : IDisposable
@@ -100,7 +101,7 @@ public class AiRequestLogServiceTests : IDisposable
         var errorInvocation = loggerMock.Invocations
             .FirstOrDefault(invocation => invocation.Arguments.FirstOrDefault() is LogLevel level && level == LogLevel.Error);
 
-        Assert.NotNull(errorInvocation);
+        errorInvocation.Should().NotBeNull();
         var state = errorInvocation!.Arguments[2];
         Assert.Contains("Failed to log AI request", state.ToString());
     }
@@ -222,7 +223,7 @@ public class AiRequestLogServiceTests : IDisposable
         Assert.Equal(0, stats.AvgLatencyMs);
         Assert.Equal(0, stats.TotalTokens);
         Assert.Equal(0, stats.SuccessRate);
-        Assert.Empty(stats.EndpointCounts);
+        stats.EndpointCounts.Should().BeEmpty();
     }
 
     [Fact]
@@ -456,7 +457,7 @@ public class AiRequestLogServiceTests : IDisposable
 
         var result = await service.GetRequestsAsync(offset: 10, ct: CancellationToken.None);
 
-        Assert.Empty(result.Requests);
+        result.Requests.Should().BeEmpty();
         Assert.Equal(1, result.TotalCount); // Total count still correct
     }
 
@@ -491,10 +492,10 @@ public class AiRequestLogServiceTests : IDisposable
         Assert.Single(logs);
 
         var log = logs[0];
-        Assert.Null(log.UserId);
-        Assert.Null(log.GameId);
-        Assert.Null(log.Query);
-        Assert.Null(log.Confidence);
+        log.UserId.Should().BeNull();
+        log.GameId.Should().BeNull();
+        log.Query.Should().BeNull();
+        log.Confidence.Should().BeNull();
         Assert.Equal(0, log.TokenCount); // Default value
         Assert.Equal(0, log.PromptTokens);
         Assert.Equal(0, log.CompletionTokens);

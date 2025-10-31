@@ -7,6 +7,7 @@ using Api.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -91,7 +92,7 @@ public class RuleSpecCommentServiceTests : IDisposable
         Assert.Equal("User One", result.UserDisplayName);
         Assert.Equal("This is a test comment", result.CommentText);
         Assert.True(result.CreatedAt <= DateTime.UtcNow);
-        Assert.Null(result.UpdatedAt);
+        result.UpdatedAt.Should().BeNull();
 
         var savedComment = await _dbContext.RuleSpecComments.FirstAsync();
         Assert.Equal(result.Id, savedComment.Id);
@@ -140,7 +141,7 @@ public class RuleSpecCommentServiceTests : IDisposable
             "Version-level comment");
 
         // Assert
-        Assert.Null(result.AtomId);
+        result.AtomId.Should().BeNull();
         Assert.Equal("Version-level comment", result.CommentText);
     }
 
@@ -345,7 +346,7 @@ public class RuleSpecCommentServiceTests : IDisposable
             {
                 Assert.Equal("Second comment", c.CommentText);
                 Assert.Equal("User Two", c.UserDisplayName);
-                Assert.Null(c.AtomId);
+                c.AtomId.Should().BeNull();
             },
             c =>
             {
@@ -383,7 +384,7 @@ public class RuleSpecCommentServiceTests : IDisposable
         // Assert
         Assert.Equal(game.Id, result.GameId);
         Assert.Equal("v1", result.Version);
-        Assert.Empty(result.Comments);
+        result.Comments.Should().BeEmpty();
         Assert.Equal(0, result.TotalComments);
     }
 
@@ -574,7 +575,7 @@ public class RuleSpecCommentServiceTests : IDisposable
 
         // Assert
         Assert.True(result);
-        Assert.Empty(_dbContext.RuleSpecComments);
+        _dbContext.RuleSpecComments.Should().BeEmpty();
     }
 
     [Fact]
@@ -636,7 +637,7 @@ public class RuleSpecCommentServiceTests : IDisposable
 
         // Assert
         Assert.True(result);
-        Assert.Empty(_dbContext.RuleSpecComments);
+        _dbContext.RuleSpecComments.Should().BeEmpty();
     }
 
     [Fact]

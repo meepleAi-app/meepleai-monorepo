@@ -104,7 +104,7 @@ public class PdfIndexingService
                 GameId = pdf.GameId,
                 PdfDocumentId = pdfId,
                 IndexingStatus = "processing",
-                EmbeddingModel = _embeddingService.GetType().Name, // Will be set correctly after indexing
+                EmbeddingModel = _embeddingService.GetModelName(),
                 EmbeddingDimensions = embeddingDimensions
             };
             _db.Set<VectorDocumentEntity>().Add(existingVectorDoc);

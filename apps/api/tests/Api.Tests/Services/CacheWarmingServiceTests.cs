@@ -9,6 +9,7 @@ using Api.Models;
 using Api.Services;
 using Api.Tests.Helpers;
 using Api.Tests.Infrastructure;
+using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -484,7 +485,7 @@ public class CacheWarmingServiceTests : IDisposable
         // Note: Actual DI registration check happens in Program.cs, not constructor
         // This test validates config is read correctly
         var service = act();
-        Assert.NotNull(service);
+        service.Should().NotBeNull();
         _mockConfig.Verify(c => c.Value, Times.Once);
     }
 }

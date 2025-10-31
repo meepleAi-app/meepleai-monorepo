@@ -7,6 +7,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -100,7 +101,7 @@ public class OcrFallbackTests : IDisposable
 
         Assert.True(result.Success, "Extraction should succeed");
         Assert.True(result.UsedOcr, "OCR fallback should be triggered for scanned PDF");
-        Assert.NotNull(result.OcrConfidence);
+        result.OcrConfidence.Should().NotBeNull();
         Assert.True(result.OcrConfidence > 0, "OCR confidence should be > 0");
         Assert.True(result.CharacterCount > 0, "Should extract some text via OCR");
 
@@ -144,7 +145,7 @@ public class OcrFallbackTests : IDisposable
 
         Assert.True(result.Success, "Extraction should succeed");
         Assert.False(result.UsedOcr, "OCR should NOT be used when service is null");
-        Assert.Null(result.OcrConfidence);
+        result.OcrConfidence.Should().BeNull();
     }
 
     [Fact]

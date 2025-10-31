@@ -11,6 +11,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -92,7 +93,7 @@ public class PdfIngestEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var spec = await response.Content.ReadFromJsonAsync<RuleSpec>(JsonOptions);
-        Assert.NotNull(spec);
+        spec.Should().NotBeNull();
         Assert.Equal(game.Id, spec!.gameId);
         Assert.Single(spec.rules);
         Assert.Equal("Setup: Distribute four cards to each player", spec.rules[0].text);

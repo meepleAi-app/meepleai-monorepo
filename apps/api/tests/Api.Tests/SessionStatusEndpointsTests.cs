@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 // TODO: Add Microsoft.Extensions.TimeProvider.Testing package
 // using Microsoft.Extensions.Time.Testing;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -95,11 +96,11 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var status = await response.Content.ReadFromJsonAsync<SessionStatusResponse>();
-        Assert.NotNull(status);
+        status.Should().NotBeNull();
 
         // Session was just created, should have ~30 days (43200 minutes) remaining
         Assert.InRange(status.RemainingMinutes, 43000, 43300); // Allow some tolerance
-        Assert.NotNull(status.LastSeenAt);
+        status.LastSeenAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -132,7 +133,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var status = await response.Content.ReadFromJsonAsync<SessionStatusResponse>();
-        Assert.NotNull(status);
+        status.Should().NotBeNull();
 
         // Should have ~30 minutes remaining
         Assert.InRange(status.RemainingMinutes, 0, 35);
@@ -155,7 +156,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var status = await response.Content.ReadFromJsonAsync<SessionStatusResponse>();
-        Assert.NotNull(status);
+        status.Should().NotBeNull();
 
         // Session expired, should show 0 minutes
         Assert.Equal(0, status.RemainingMinutes);
@@ -182,10 +183,10 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         // Assert
         Assert.Equal(HttpStatusCode.OK, extendResponse.StatusCode);
         var extendedStatus = await extendResponse.Content.ReadFromJsonAsync<SessionStatusResponse>();
-        Assert.NotNull(extendedStatus);
+        extendedStatus.Should().NotBeNull();
 
         // LastSeenAt should be updated to current time
-        Assert.NotNull(extendedStatus.LastSeenAt);
+        extendedStatus.LastSeenAt.Should().NotBeNull();
         Assert.True(extendedStatus.LastSeenAt > initialStatus!.LastSeenAt);
 
         // Remaining minutes should be reset to ~30 days
@@ -209,8 +210,8 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         // Verify session status reflects updated LastSeenAt
         var statusResponse = await client.GetAsync("/api/v1/auth/session/status");
         var status = await statusResponse.Content.ReadFromJsonAsync<SessionStatusResponse>();
-        Assert.NotNull(status);
-        Assert.NotNull(status.LastSeenAt);
+        status.Should().NotBeNull();
+        status.LastSeenAt.Should().NotBeNull();
 
         // LastSeenAt should match the extend time (within 1 second tolerance)
         var expectedTime = _timeProvider.GetUtcNow().UtcDateTime;
@@ -251,7 +252,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
             // Verify session still has plenty of time remaining
             var statusResponse = await client.GetAsync("/api/v1/auth/session/status");
             var status = await statusResponse.Content.ReadFromJsonAsync<SessionStatusResponse>();
-            Assert.NotNull(status);
+            status.Should().NotBeNull();
 
             // After extending, should have ~30 days remaining
             Assert.InRange(status.RemainingMinutes, 42000, 43300);
@@ -275,13 +276,13 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
 
         // Extract session cookie
         var setCookieHeader = response.Headers.GetValues("Set-Cookie").FirstOrDefault();
-        Assert.NotNull(setCookieHeader);
+        setCookieHeader.Should().NotBeNull();
 
         var sessionToken = ExtractSessionTokenFromCookie(setCookieHeader);
-        Assert.NotNull(sessionToken);
+        sessionToken.Should().NotBeNull();
 
         var authResult = await response.Content.ReadFromJsonAsync<AuthResponse>();
-        Assert.NotNull(authResult);
+        authResult.Should().NotBeNull();
 
         return (sessionToken, authResult.User.Id);
     }

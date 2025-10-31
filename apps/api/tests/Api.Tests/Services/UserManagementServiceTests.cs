@@ -10,6 +10,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
@@ -206,7 +207,7 @@ public class UserManagementServiceTests : IDisposable
         Assert.Equal(3, result.Total);
         Assert.Equal(3, result.Items.Count);
         // Verify items are actually sorted (basic check)
-        Assert.NotNull(result.Items);
+        result.Items.Should().NotBeNull();
     }
 
     [Fact]
@@ -242,7 +243,7 @@ public class UserManagementServiceTests : IDisposable
 
         // Assert
         var userDto = result.Items.First();
-        Assert.NotNull(userDto.LastSeenAt);
+        userDto.LastSeenAt.Should().NotBeNull();
         Assert.True(userDto.LastSeenAt.Value > DateTime.UtcNow.AddHours(-3));
     }
 
@@ -265,14 +266,14 @@ public class UserManagementServiceTests : IDisposable
         var result = await _service.CreateUserAsync(request);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(request.Email, result.Email);
         Assert.Equal(request.DisplayName, result.DisplayName);
         Assert.Equal("User", result.Role);
 
         // Verify user exists in database
         var dbUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-        Assert.NotNull(dbUser);
+        dbUser.Should().NotBeNull();
         Assert.Equal(UserRole.User, dbUser.Role);
     }
 
@@ -291,12 +292,12 @@ public class UserManagementServiceTests : IDisposable
         var result = await _service.CreateUserAsync(request);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Admin", result.Role);
 
         // Verify database
         var dbUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-        Assert.NotNull(dbUser);
+        dbUser.Should().NotBeNull();
         Assert.Equal(UserRole.Admin, dbUser.Role);
     }
 
@@ -334,14 +335,14 @@ public class UserManagementServiceTests : IDisposable
         var result = await _service.CreateUserAsync(request);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(request.Email, result.Email);
         Assert.Equal(request.DisplayName, result.DisplayName);
         Assert.Equal("Editor", result.Role);
 
         // Verify database
         var dbUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-        Assert.NotNull(dbUser);
+        dbUser.Should().NotBeNull();
         Assert.Equal(UserRole.Editor, dbUser.Role);
     }
 
@@ -464,7 +465,7 @@ public class UserManagementServiceTests : IDisposable
 
         // Assert
         var deletedUser = await _dbContext.Users.FindAsync(userId);
-        Assert.Null(deletedUser);
+        deletedUser.Should().BeNull();
     }
 
     [Fact]
@@ -504,10 +505,10 @@ public class UserManagementServiceTests : IDisposable
 
         // Assert
         var deletedAdmin = await _dbContext.Users.FindAsync(admin1Id);
-        Assert.Null(deletedAdmin);
+        deletedAdmin.Should().BeNull();
 
         var remainingAdmin = await _dbContext.Users.FindAsync(admin2Id);
-        Assert.NotNull(remainingAdmin);
+        remainingAdmin.Should().NotBeNull();
     }
 
     [Fact]
@@ -534,7 +535,7 @@ public class UserManagementServiceTests : IDisposable
 
         // Assert
         var deletedUser = await _dbContext.Users.FindAsync(userId);
-        Assert.Null(deletedUser);
+        deletedUser.Should().BeNull();
     }
 
     #endregion

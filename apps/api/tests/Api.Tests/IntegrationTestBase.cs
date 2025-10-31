@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 
 namespace Api.Tests;
 
@@ -42,7 +43,7 @@ namespace Api.Tests;
 ///         var game = await CreateTestGameAsync("Catan", user.Id);
 ///
 ///         // Then: Game is created
-///         Assert.NotNull(game);
+///         game.Should().NotBeNull();
 ///         // Cleanup happens automatically via DisposeAsync
 ///     }
 /// }

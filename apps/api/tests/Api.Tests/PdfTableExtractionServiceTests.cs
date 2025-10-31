@@ -12,6 +12,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 using QuestPdfDocument = QuestPDF.Fluent.Document;
@@ -126,7 +127,7 @@ public class PdfTableExtractionServiceTests : IDisposable
 
         // Assert
         Assert.True(result.Success);
-        Assert.NotEmpty(result.Tables);
+        result.Tables.Should().NotBeEmpty();
 
         var table = result.Tables.First();
         Assert.Equal(new[] { "Phase", "Task", "Count" }, table.Headers);
@@ -135,7 +136,7 @@ public class PdfTableExtractionServiceTests : IDisposable
         Assert.True(result.AtomicRules.Count >= table.RowCount);
         Assert.Contains(result.AtomicRules, rule => rule.Contains("Setup", StringComparison.OrdinalIgnoreCase));
 
-        Assert.NotEmpty(result.Diagrams);
+        result.Diagrams.Should().NotBeEmpty();
         Assert.Contains(result.Diagrams, diagram => diagram.Width > 0 && diagram.Height > 0);
     }
 
@@ -213,7 +214,7 @@ Row A1          Row A2
 
             // Assert
             Assert.False(result.Success);
-            Assert.NotNull(result.ErrorMessage);
+            result.ErrorMessage.Should().NotBeNull();
             Assert.Contains("Extraction failed", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
 
             _mockLogger.Verify(
@@ -321,7 +322,7 @@ Row A1          Row A2
 
         // Assert
         Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        result.ErrorMessage.Should().NotBeNull();
         Assert.Contains("path is required", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -333,7 +334,7 @@ Row A1          Row A2
 
         // Assert
         Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        result.ErrorMessage.Should().NotBeNull();
     }
 
     [Fact]
@@ -347,7 +348,7 @@ Row A1          Row A2
 
         // Assert
         Assert.False(result.Success);
-        Assert.NotNull(result.ErrorMessage);
+        result.ErrorMessage.Should().NotBeNull();
         Assert.Contains("not found", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -384,7 +385,7 @@ Row A1          Row A2
 
         // Assert
         Assert.True(result.Success);
-        Assert.Null(result.ErrorMessage);
+        result.ErrorMessage.Should().BeNull();
         Assert.Single(result.Tables);
         Assert.Single(result.Diagrams);
         Assert.Equal(2, result.AtomicRules.Count);
@@ -405,9 +406,9 @@ Row A1          Row A2
         // Assert
         Assert.False(result.Success);
         Assert.Equal(errorMessage, result.ErrorMessage);
-        Assert.Empty(result.Tables);
-        Assert.Empty(result.Diagrams);
-        Assert.Empty(result.AtomicRules);
+        result.Tables.Should().BeEmpty();
+        result.Diagrams.Should().BeEmpty();
+        result.AtomicRules.Should().BeEmpty();
     }
 
     [Fact]
@@ -417,10 +418,10 @@ Row A1          Row A2
         var table = new PdfTable();
 
         // Assert
-        Assert.NotNull(table.Headers);
-        Assert.NotNull(table.Rows);
-        Assert.Empty(table.Headers);
-        Assert.Empty(table.Rows);
+        table.Headers.Should().NotBeNull();
+        table.Rows.Should().NotBeNull();
+        table.Headers.Should().BeEmpty();
+        table.Rows.Should().BeEmpty();
         Assert.Equal(0, table.ColumnCount);
         Assert.Equal(0, table.RowCount);
     }
@@ -436,7 +437,7 @@ Row A1          Row A2
         Assert.Equal(string.Empty, diagram.Description);
         Assert.Equal(0, diagram.Width);
         Assert.Equal(0, diagram.Height);
-        Assert.Null(diagram.ImageData);
+        diagram.ImageData.Should().BeNull();
     }
 
     [Fact]
@@ -457,7 +458,7 @@ Row A1          Row A2
         Assert.Equal(3, table.RowCount);
         Assert.Equal(3, result.AtomicRuleCount);
         Assert.Contains(result.AtomicRules, rule => rule.Contains("Name: Alpha", StringComparison.OrdinalIgnoreCase));
-        Assert.NotEmpty(result.Diagrams);
+        result.Diagrams.Should().NotBeEmpty();
         Assert.Equal(result.Diagrams.Count, result.DiagramCount);
         Assert.All(result.Diagrams, diagram => Assert.Equal("Image", diagram.DiagramType));
     }
@@ -474,7 +475,7 @@ Row A1          Row A2
 
         // Assert
         Assert.True(result.Success);
-        Assert.NotEmpty(result.Tables);
+        result.Tables.Should().NotBeEmpty();
 
         var table = result.Tables.First();
         Assert.Equal(new[] { "Phase", "Task", "Count" }, table.Headers);
@@ -486,11 +487,11 @@ Row A1          Row A2
             row.Any(value => string.IsNullOrWhiteSpace(value)) &&
             row.Any(value => !string.IsNullOrWhiteSpace(value)));
 
-        Assert.NotEmpty(result.AtomicRules);
+        result.AtomicRules.Should().NotBeEmpty();
         Assert.Contains(result.AtomicRules, rule => rule.Contains("Setup", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(result.AtomicRules, rule => rule.Contains("Round Start", StringComparison.OrdinalIgnoreCase));
 
-        Assert.NotEmpty(result.Diagrams);
+        result.Diagrams.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -547,7 +548,7 @@ Row A1          Row A2
         var rules = InvokeConvertTableToAtomicRules(table);
 
         // Assert
-        Assert.Empty(rules);
+        rules.Should().BeEmpty();
     }
 
     [Fact]
@@ -566,7 +567,7 @@ Row A1          Row A2
         var rules = InvokeConvertTableToAtomicRules(table);
 
         // Assert
-        Assert.Empty(rules);
+        rules.Should().BeEmpty();
     }
 
     [Fact]

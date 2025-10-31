@@ -40,10 +40,10 @@ public class EmbeddingServiceTests
         var result = await service.GenerateEmbeddingAsync("test text");
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.ErrorMessage.Should().BeNull();
-        Assert.Single(result.Embeddings);
-        Assert.Equal(1536, result.Embeddings[0].Length);
+        result.Embeddings.Should().ContainSingle();
+        result.Embeddings[0].Length.Should().Be(1536);
     }
 
     [Fact]
@@ -59,10 +59,10 @@ public class EmbeddingServiceTests
         var result = await service.GenerateEmbeddingsAsync(texts);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.ErrorMessage.Should().BeNull();
-        Assert.Equal(3, result.Embeddings.Count);
-        Assert.All(result.Embeddings, embedding => Assert.Equal(1536, embedding.Length));
+        result.Embeddings.Count.Should().Be(3);
+        result.Embeddings.Should().OnlyContain(embedding => embedding.Length == 1536);
     }
 
     [Fact]
@@ -76,8 +76,8 @@ public class EmbeddingServiceTests
         var result = await service.GenerateEmbeddingsAsync(new List<string>());
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("No texts provided", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("No texts provided");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -92,8 +92,8 @@ public class EmbeddingServiceTests
         var result = await service.GenerateEmbeddingsAsync(null!);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("No texts provided", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("No texts provided");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -108,8 +108,8 @@ public class EmbeddingServiceTests
         var result = await service.GenerateEmbeddingAsync("test text");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("API error", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("API error");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -139,8 +139,8 @@ public class EmbeddingServiceTests
         var result = await service.GenerateEmbeddingAsync("test text");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Network error", result.ErrorMessage!);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage!.Should().Contain("Network error");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -170,8 +170,8 @@ public class EmbeddingServiceTests
         var result = await service.GenerateEmbeddingAsync("test text");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("Request timed out", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("Request timed out");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -192,8 +192,8 @@ public class EmbeddingServiceTests
         var result = await service.GenerateEmbeddingAsync("test text");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("No embeddings returned from OpenAI", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("No embeddings returned from OpenAI");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -212,7 +212,7 @@ public class EmbeddingServiceTests
         var result = await service.GenerateEmbeddingsAsync(new List<string> { "test" }, cts.Token);
 
         // The service should handle cancellation gracefully
-        Assert.False(result.Success);
+        result.Success.Should().BeFalse();
     }
 
     [Fact]
@@ -228,8 +228,8 @@ public class EmbeddingServiceTests
         httpClientFactoryMock.Setup(f => f.CreateClient("OpenRouter")).Returns(httpClient);
 
         // Act & Assert
-        Assert.Throws<InvalidOperationException>(() =>
-            new EmbeddingService(httpClientFactoryMock.Object, configWithoutKey.Object, _loggerMock.Object));
+        var act = () => new EmbeddingService(httpClientFactoryMock.Object, configWithoutKey.Object, _loggerMock.Object);
+        act.Should().Throw<InvalidOperationException>();
     }
 
     // Helper methods
@@ -338,11 +338,11 @@ public class EmbeddingServiceTests
         var result = await service.GenerateEmbeddingsAsync(texts);
 
         // Assert - Ollama processes one text at a time
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.ErrorMessage.Should().BeNull();
-        Assert.Equal(3, result.Embeddings.Count);
-        Assert.Equal(3, callCount); // Verify 3 separate API calls
-        Assert.All(result.Embeddings, embedding => Assert.Equal(768, embedding.Length));
+        result.Embeddings.Count.Should().Be(3);
+        callCount.Should().Be(3); // Verify 3 separate API calls
+        result.Embeddings.Should().OnlyContain(embedding => embedding.Length == 768);
     }
 
     /// <summary>
@@ -387,9 +387,9 @@ public class EmbeddingServiceTests
         var result = await service.GenerateEmbeddingAsync("test text");
 
         // Assert - Failure result
-        Assert.False(result.Success);
-        Assert.Contains("API error", result.ErrorMessage);
-        Assert.Contains("500", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("API error");
+        result.ErrorMessage.Should().Contain("500");
         result.Embeddings.Should().BeEmpty();
 
         // Assert - Error was logged
@@ -451,8 +451,8 @@ public class EmbeddingServiceTests
         var result = await service.GenerateEmbeddingAsync("test text");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("No embedding returned from Ollama", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("No embedding returned from Ollama");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -501,8 +501,8 @@ public class EmbeddingServiceTests
         var result = await service.GenerateEmbeddingAsync("test text");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("No embedding returned from Ollama", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("No embedding returned from Ollama");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -522,11 +522,11 @@ public class EmbeddingServiceTests
         var httpClientFactoryMock = new Mock<IHttpClientFactory>();
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            new EmbeddingService(httpClientFactoryMock.Object, configWithUnsupportedProvider.Object, _loggerMock.Object));
+        var act = () => new EmbeddingService(httpClientFactoryMock.Object, configWithUnsupportedProvider.Object, _loggerMock.Object);
+        var exception = act.Should().Throw<InvalidOperationException>();
 
-        Assert.Contains("Unsupported embedding provider: azure", exception.Message);
-        Assert.Contains("Use 'ollama' or 'openai'", exception.Message);
+        exception.Which.Message.Should().Contain("Unsupported embedding provider: azure");
+        exception.Which.Message.Should().Contain("Use 'ollama' or 'openai'");
     }
 
     /// <summary>
@@ -548,10 +548,10 @@ public class EmbeddingServiceTests
         httpClientFactoryMock.Setup(f => f.CreateClient("OpenRouter")).Returns(httpClient);
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            new EmbeddingService(httpClientFactoryMock.Object, configWithoutApiKey.Object, _loggerMock.Object));
+        var act = () => new EmbeddingService(httpClientFactoryMock.Object, configWithoutApiKey.Object, _loggerMock.Object);
+        var exception = act.Should().Throw<InvalidOperationException>();
 
-        Assert.Contains("OPENAI_API_KEY not configured", exception.Message);
+        exception.Which.Message.Should().Contain("OPENAI_API_KEY not configured");
     }
 
     /// <summary>
@@ -600,8 +600,8 @@ public class EmbeddingServiceTests
         var result = await service.GenerateEmbeddingAsync("test text");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("No embeddings returned from OpenAI", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("No embeddings returned from OpenAI");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -657,12 +657,12 @@ public class EmbeddingServiceTests
         var result = await service.GenerateEmbeddingsAsync(new List<string> { "text 0", "text 1", "text 2" });
 
         // Assert - Embeddings should be sorted by index
-        Assert.True(result.Success);
-        Assert.Equal(3, result.Embeddings.Count);
+        result.Success.Should().BeTrue();
+        result.Embeddings.Count.Should().Be(3);
         // Verify order by checking first element value (should be 0.1f for index 0, then 0.2f for index 1, then 0.3f for index 2)
-        Assert.Equal(0.1f, result.Embeddings[0][0]);
-        Assert.Equal(0.2f, result.Embeddings[1][0]);
-        Assert.Equal(0.3f, result.Embeddings[2][0]);
+        result.Embeddings[0][0].Should().Be(0.1f);
+        result.Embeddings[1][0].Should().Be(0.2f);
+        result.Embeddings[2][0].Should().Be(0.3f);
     }
 
     /// <summary>
@@ -741,8 +741,8 @@ public class EmbeddingServiceTests
         var result = await service.GenerateEmbeddingsAsync(new List<string> { "text 1", "text 2" });
 
         // Assert - Success result
-        Assert.True(result.Success);
-        Assert.Equal(2, result.Embeddings.Count);
+        result.Success.Should().BeTrue();
+        result.Embeddings.Count.Should().Be(2);
 
         // Assert - Info log with count was written
         mockLogger.Verify(

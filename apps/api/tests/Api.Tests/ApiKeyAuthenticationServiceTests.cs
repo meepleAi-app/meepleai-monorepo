@@ -69,15 +69,15 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var result = await service.ValidateApiKeyAsync(plaintextKey);
 
         // Assert
-        Assert.True(result.IsValid);
-        Assert.Equal(apiKeyEntity.Id, result.ApiKeyId);
-        Assert.Equal(user.Id, result.UserId);
-        Assert.Equal(user.Email, result.UserEmail);
-        Assert.Equal(user.DisplayName, result.UserDisplayName);
-        Assert.Equal("User", result.UserRole);
-        Assert.Equal(2, result.Scopes.Length);
-        Assert.Contains("read", result.Scopes);
-        Assert.Contains("write", result.Scopes);
+        result.IsValid.Should().BeTrue();
+        result.ApiKeyId.Should().Be(apiKeyEntity.Id);
+        result.UserId.Should().Be(user.Id);
+        result.UserEmail.Should().Be(user.Email);
+        result.UserDisplayName.Should().Be(user.DisplayName);
+        result.UserRole.Should().Be("User");
+        result.Scopes.Length.Should().Be(2);
+        result.Scopes.Should().Contain("read");
+        result.Scopes.Should().Contain("write");
         result.InvalidReason.Should().BeNull();
     }
 
@@ -98,8 +98,8 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var result = await service.ValidateApiKeyAsync("");
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal("API key is required", result.InvalidReason);
+        result.IsValid.Should().BeFalse();
+        result.InvalidReason.Should().Be("API key is required");
         result.ApiKeyId.Should().BeNull();
         result.UserId.Should().BeNull();
     }
@@ -121,8 +121,8 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var result = await service.ValidateApiKeyAsync(null!);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal("API key is required", result.InvalidReason);
+        result.IsValid.Should().BeFalse();
+        result.InvalidReason.Should().Be("API key is required");
     }
 
     [Fact]
@@ -142,8 +142,8 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var result = await service.ValidateApiKeyAsync("mpl_live_invalid_key_does_not_exist");
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal("Invalid, expired, or revoked API key", result.InvalidReason);
+        result.IsValid.Should().BeFalse();
+        expired, or revoked API key", result.InvalidReason.Should().Be("Invalid);
         result.ApiKeyId.Should().BeNull();
         result.UserId.Should().BeNull();
     }
@@ -184,8 +184,8 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var result = await service.ValidateApiKeyAsync(plaintextKey);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal("Invalid, expired, or revoked API key", result.InvalidReason);
+        result.IsValid.Should().BeFalse();
+        expired, or revoked API key", result.InvalidReason.Should().Be("Invalid);
     }
 
     [Fact]
@@ -228,8 +228,8 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var result = await service.ValidateApiKeyAsync(plaintextKey);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal("Invalid, expired, or revoked API key", result.InvalidReason);
+        result.IsValid.Should().BeFalse();
+        expired, or revoked API key", result.InvalidReason.Should().Be("Invalid);
     }
 
     [Fact]
@@ -269,8 +269,8 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var result = await service.ValidateApiKeyAsync(plaintextKey);
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Equal("Invalid, expired, or revoked API key", result.InvalidReason);
+        result.IsValid.Should().BeFalse();
+        expired, or revoked API key", result.InvalidReason.Should().Be("Invalid);
     }
 
     [Fact]
@@ -313,8 +313,8 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var result = await service.ValidateApiKeyAsync(plaintextKey);
 
         // Assert
-        Assert.True(result.IsValid);
-        Assert.Equal(user.Id, result.UserId);
+        result.IsValid.Should().BeTrue();
+        result.UserId.Should().Be(user.Id);
     }
 
     #endregion
@@ -359,19 +359,19 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Assert
         plaintextKey.Should().NotBeNull();
-        Assert.StartsWith($"mpl_{environment}_", plaintextKey);
-        Assert.True(plaintextKey.Length > 20);
+        plaintextKey.Should().StartWith($"mpl_{environment}_");
+        plaintextKey.Length > 20.Should().BeTrue();
 
         entity.Should().NotBeNull();
-        Assert.Equal(user.Id, entity.UserId);
-        Assert.Equal("Test Key", entity.KeyName);
+        entity.UserId.Should().Be(user.Id);
+        entity.KeyName.Should().Be("Test Key");
         entity.KeyHash.Should().NotBeNull();
-        Assert.StartsWith("mpl_", entity.KeyPrefix);
-        Assert.Equal(2, entity.Scopes.Length);
-        Assert.Contains("read", entity.Scopes);
-        Assert.Contains("write", entity.Scopes);
-        Assert.True(entity.IsActive);
-        Assert.Equal(timeProvider.GetUtcNow().UtcDateTime, entity.CreatedAt);
+        entity.KeyPrefix.Should().StartWith("mpl_");
+        entity.Scopes.Length.Should().Be(2);
+        entity.Scopes.Should().Contain("read");
+        entity.Scopes.Should().Contain("write");
+        entity.IsActive.Should().BeTrue();
+        entity.CreatedAt.Should().Be(timeProvider.GetUtcNow().UtcDateTime);
         entity.LastUsedAt.Should().BeNull();
         entity.ExpiresAt.Should().BeNull();
         entity.RevokedAt.Should().BeNull();
@@ -414,7 +414,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
             expiresAt: expiresAt);
 
         // Assert
-        Assert.Equal(expiresAt, entity.ExpiresAt);
+        entity.ExpiresAt.Should().Be(expiresAt);
     }
 
     [Fact]
@@ -431,9 +431,9 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var service = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            service.GenerateApiKeyAsync("", "Test Key", new[] { "read" }));
-        Assert.Equal("User ID is required (Parameter 'userId')", exception.Message);
+        var act = async () => await service.GenerateApiKeyAsync("", "Test Key", new[] { "read" });
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
+        exception.Which.Message.Should().Be("User ID is required (Parameter 'userId')");
     }
 
     [Fact]
@@ -450,9 +450,9 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var service = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            service.GenerateApiKeyAsync("user-id", "", new[] { "read" }));
-        Assert.Equal("Key name is required (Parameter 'keyName')", exception.Message);
+        var act = async () => await service.GenerateApiKeyAsync("user-id", "", new[] { "read" });
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
+        exception.Which.Message.Should().Be("Key name is required (Parameter 'keyName')");
     }
 
     [Fact]
@@ -469,9 +469,9 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var service = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            service.GenerateApiKeyAsync("user-id", "Test Key", new[] { "read" }, environment: "production"));
-        Assert.Equal("Environment must be 'live' or 'test' (Parameter 'environment')", exception.Message);
+        var act = async () => await service.GenerateApiKeyAsync("user-id", "Test Key", new[] { "read" }, environment: "production");
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
+        exception.Which.Message.Should().Be("Environment must be 'live' or 'test' (Parameter 'environment')");
     }
 
     [Fact]
@@ -488,9 +488,9 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var service = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.GenerateApiKeyAsync("non-existent-user-id", "Test Key", new[] { "read" }));
-        Assert.StartsWith("User not found:", exception.Message);
+        var act = async () => await service.GenerateApiKeyAsync("non-existent-user-id", "Test Key", new[] { "read" });
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
+        exception.Which.Message.Should().StartWith("User not found:");
     }
 
     [Fact]
@@ -524,9 +524,9 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var (key2, entity2) = await service.GenerateApiKeyAsync(user.Id, "Key 2", new[] { "write" });
 
         // Assert
-        Assert.NotEqual(key1, key2);
-        Assert.NotEqual(entity1.KeyHash, entity2.KeyHash);
-        Assert.NotEqual(entity1.Id, entity2.Id);
+        key2.Should().NotBe(key1);
+        entity2.KeyHash.Should().NotBe(entity1.KeyHash);
+        entity2.Id.Should().NotBe(entity1.Id);
     }
 
     #endregion
@@ -568,11 +568,11 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var result = await service.RevokeApiKeyAsync(apiKeyEntity.Id, user.Id);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         var revokedKey = await dbContext.ApiKeys.FindAsync(apiKeyEntity.Id);
         revokedKey.Should().NotBeNull();
-        Assert.Equal(timeProvider.GetUtcNow().UtcDateTime, revokedKey!.RevokedAt);
-        Assert.Equal(user.Id, revokedKey.RevokedBy);
+        revokedKey!.RevokedAt.Should().Be(timeProvider.GetUtcNow().UtcDateTime);
+        revokedKey.RevokedBy.Should().Be(user.Id);
     }
 
     [Fact]
@@ -592,7 +592,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var result = await service.RevokeApiKeyAsync("non-existent-key-id", "user-id");
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -632,7 +632,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var result = await service.RevokeApiKeyAsync(apiKeyEntity.Id, user.Id);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     #endregion
@@ -677,18 +677,18 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Act - Validate (should succeed)
         var validationResult1 = await service.ValidateApiKeyAsync(plaintextKey);
-        Assert.True(validationResult1.IsValid);
-        Assert.Equal("Editor", validationResult1.UserRole);
-        Assert.Equal(3, validationResult1.Scopes.Length);
+        validationResult1.IsValid.Should().BeTrue();
+        validationResult1.UserRole.Should().Be("Editor");
+        validationResult1.Scopes.Length.Should().Be(3);
 
         // Act - Revoke
         var revokeResult = await service.RevokeApiKeyAsync(apiKeyEntity.Id, user.Id);
-        Assert.True(revokeResult);
+        revokeResult.Should().BeTrue();
 
         // Act - Validate (should fail)
         var validationResult2 = await service.ValidateApiKeyAsync(plaintextKey);
-        Assert.False(validationResult2.IsValid);
-        Assert.Equal("Invalid, expired, or revoked API key", validationResult2.InvalidReason);
+        validationResult2.IsValid.Should().BeFalse();
+        expired, or revoked API key", validationResult2.InvalidReason.Should().Be("Invalid);
     }
 
     [Fact]
@@ -727,9 +727,9 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var result2 = await service.ValidateApiKeyAsync(plaintextKey);
 
         // Assert - Both validations should succeed
-        Assert.True(result1.IsValid);
-        Assert.True(result2.IsValid);
-        Assert.Equal(result1.ApiKeyId, result2.ApiKeyId);
+        result1.IsValid.Should().BeTrue();
+        result2.IsValid.Should().BeTrue();
+        result2.ApiKeyId.Should().Be(result1.ApiKeyId);
     }
 
     #endregion

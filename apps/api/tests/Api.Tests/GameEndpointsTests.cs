@@ -58,20 +58,20 @@ public class GameEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Game is created with HTTP 201
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var game = await response.Content.ReadFromJsonAsync<GameResponse>();
         game.Should().NotBeNull();
-        Assert.Equal("Terraforming Mars", game!.Name);
-        Assert.False(string.IsNullOrWhiteSpace(game.Id));
+        game!.Name.Should().Be("Terraforming Mars");
+        string.IsNullOrWhiteSpace(game.Id).Should().BeFalse();
 
         // And: Game is persisted in database
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var entity = await db.Games.FirstOrDefaultAsync(g => g.Id == game.Id);
         entity.Should().NotBeNull();
-        Assert.Equal("terraforming-mars", entity!.Id);
-        Assert.Equal("Terraforming Mars", entity.Name);
+        entity!.Id.Should().Be("terraforming-mars");
+        entity.Name.Should().Be("Terraforming Mars");
 
         // And: Game is automatically tracked for cleanup
         TrackGameId(game.Id);
@@ -103,7 +103,7 @@ public class GameEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Game is created successfully
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var game = await response.Content.ReadFromJsonAsync<GameResponse>();
         if (game?.Id != null)
@@ -137,7 +137,7 @@ public class GameEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Request is forbidden (HTTP 403)
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         // And: no game is created (no TrackGameId needed)
     }
 }

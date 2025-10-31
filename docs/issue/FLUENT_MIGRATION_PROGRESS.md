@@ -106,6 +106,10 @@
 ### Automated Conversion Tools
 1. **convert-rag-tests.py** (Phase 2): 96 lines, handles RAG-specific patterns
 2. **convert-llm-tests.py** (Phase 3): 114 lines, handles LLM service patterns
+3. **convert-configuration-tests.py** (Phase 4): 103 lines, handles configuration patterns
+4. **convert-rulecomment-tests.py** (Phase 5A): 96 lines, handles comment patterns
+5. **convert-rulecomment-manual.py** (Phase 5A): 122 lines, complex pattern handler
+6. **convert-rulespec-tests.py** (Phase 5B): 96 lines, handles rule spec patterns
 
 ### Reusable Patterns Library
 - Basic assertions (True, False, Equal, NotEqual, Null)
@@ -118,6 +122,9 @@
 - **Phase 1**: 1,251 assertions, ~6 hours = 3.5 assertions/minute
 - **Phase 2**: 62 assertions, ~45 minutes = 1.4 assertions/minute
 - **Phase 3**: 68 assertions, ~50 minutes = 1.36 assertions/minute
+- **Phase 4**: 83 assertions, ~43 minutes = 1.93 assertions/minute
+- **Phase 5A**: ~12 assertions, ~45 minutes = 0.27 assertions/minute (complex, pivoted)
+- **Phase 5B**: 92 assertions, ~48 minutes = 1.92 assertions/minute
 
 ### Quality Metrics
 - **Test Pass Rate**: 100% across all phases
@@ -157,6 +164,9 @@
 - **2025-10-30**: Phase 1 complete (20.6%)
 - **2025-10-31**: Phase 2 complete (21.6%)
 - **2025-10-31**: Phase 3 complete (27.5%)
+- **2025-10-31**: Phase 4 complete (29.1%)
+- **2025-10-31**: Phase 5A partial (29.3%) - Strategic pivot
+- **2025-10-31**: Phase 5B complete (31.2%)
 
 ### Projected (Aggressive)
 - **2025-11-01**: Phase 4 (34%)
@@ -176,7 +186,10 @@
 - **Main Issue**: #599 - Migrate test suite to FluentAssertions
 - **Phase 1 PR**: #607
 - **Phase 2 PR**: #608
-- **Phase 3 PR**: #609 (pending)
+- **Phase 3 Commit**: 0ea61223 (#609)
+- **Phase 4 Commit**: 49f8d45d (#610)
+- **Phase 5A Commit**: fee7f972 (partial migration)
+- **Phase 5B Commit**: e1c48635 (#611)
 
 ## References
 - FluentAssertions Documentation: https://fluentassertions.com

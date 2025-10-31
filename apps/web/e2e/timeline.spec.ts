@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/auth';
 
 test.describe('Timeline RAG Feature', () => {
   test('should require authentication', async ({ page }) => {
@@ -13,28 +13,15 @@ test.describe('Timeline RAG Feature', () => {
   });
 
   test.describe('Authenticated User Flow', () => {
-    test.beforeEach(async ({ page }) => {
-      // Login as demo user
-      await page.goto('/');
-
-      // Fill login form
-      await page.fill('input[type="email"]', 'user@meepleai.dev');
-      await page.fill('input[type="password"]', 'Demo123!');
-
-      // Submit login
-      await page.click('button[type="submit"]');
-
-      // Wait for successful login
-      await page.waitForURL('/', { timeout: 5000 });
-
-      // Navigate to chat page
+    test.beforeEach(async ({ userPage: page }) => {
+      // Navigate to chat page (already authenticated as user)
       await page.goto('/chat');
 
       // Wait for page to be fully loaded
       await page.waitForLoadState('networkidle');
     });
 
-    test('should display Timeline component on chat page', async ({ page }) => {
+    test('should display Timeline component on chat page', async ({ userPage: page }) => {
       // Check that Timeline heading is present
       await expect(page.getByRole('heading', { name: 'Timeline Eventi RAG' })).toBeVisible();
 
@@ -45,7 +32,7 @@ test.describe('Timeline RAG Feature', () => {
       await expect(page.getByText('Eventi')).toBeVisible();
     });
 
-    test('should show empty state when no events', async ({ page }) => {
+    test('should show empty state when no events', async ({ userPage: page }) => {
       // Timeline should show "Nessun evento" message initially
       const noEventsMessage = page.locator('text=/Nessun evento da visualizzare/i');
 
@@ -57,7 +44,7 @@ test.describe('Timeline RAG Feature', () => {
       }
     });
 
-    test('should show filter controls', async ({ page }) => {
+    test('should show filter controls', async ({ userPage: page }) => {
       // Check for filter type checkboxes
       await expect(page.getByText('Tipo Evento')).toBeVisible();
 
@@ -79,7 +66,7 @@ test.describe('Timeline RAG Feature', () => {
       await expect(searchInput).toBeVisible();
     });
 
-    test('should toggle filters panel', async ({ page }) => {
+    test('should toggle filters panel', async ({ userPage: page }) => {
       // Find the filters toggle button
       const filtersButton = page.locator('button').filter({ hasText: 'Filtri' }).first();
 
@@ -100,7 +87,7 @@ test.describe('Timeline RAG Feature', () => {
       }
     });
 
-    test('should track message events when sending a message', async ({ page }) => {
+    test('should track message events when sending a message', async ({ userPage: page }) => {
       // Select a game first
       const gameSelect = page.locator('select').first();
       await gameSelect.waitFor({ state: 'visible', timeout: 5000 });
@@ -139,7 +126,7 @@ test.describe('Timeline RAG Feature', () => {
       expect(hasEvents || true).toBeTruthy(); // Always pass for now, as backend may be mocked
     });
 
-    test('should filter events by type', async ({ page }) => {
+    test('should filter events by type', async ({ userPage: page }) => {
       // Try to find and click a filter checkbox
       const messageCheckbox = page.locator('input[type="checkbox"]').filter({ has: page.locator('text=Message') }).first();
 
@@ -163,7 +150,7 @@ test.describe('Timeline RAG Feature', () => {
       }
     });
 
-    test('should search events by text', async ({ page }) => {
+    test('should search events by text', async ({ userPage: page }) => {
       // Find search input
       const searchInput = page.locator('input[placeholder*="Cerca"]').or(page.locator('input[type="text"]')).first();
 
@@ -181,7 +168,7 @@ test.describe('Timeline RAG Feature', () => {
       await expect(searchInput).toHaveValue('');
     });
 
-    test('should reset filters', async ({ page }) => {
+    test('should reset filters', async ({ userPage: page }) => {
       // Find reset button
       const resetButton = page.getByRole('button', { name: /reset/i }).or(page.locator('button').filter({ hasText: 'Reset' }));
 
@@ -198,7 +185,7 @@ test.describe('Timeline RAG Feature', () => {
       }
     });
 
-    test('should display event details when clicking an event', async ({ page }) => {
+    test('should display event details when clicking an event', async ({ userPage: page }) => {
       // Check if details panel heading exists
       const detailsHeading = page.getByText('Dettagli Evento').or(page.getByText('Details'));
 
@@ -208,7 +195,7 @@ test.describe('Timeline RAG Feature', () => {
       expect(headingVisible || true).toBeTruthy();
     });
 
-    test('should toggle details panel', async ({ page }) => {
+    test('should toggle details panel', async ({ userPage: page }) => {
       // Find the details toggle button
       const detailsButton = page.locator('button').filter({ hasText: /dettagli/i }).first();
 
@@ -225,7 +212,7 @@ test.describe('Timeline RAG Feature', () => {
       }
     });
 
-    test('should show stats bar with metrics', async ({ page }) => {
+    test('should show stats bar with metrics', async ({ userPage: page }) => {
       // Check for stats elements
       const statsBar = page.locator('[class*="stats"]').or(page.locator('text=/Totale|Eventi|Completati/i')).first();
 
@@ -235,7 +222,7 @@ test.describe('Timeline RAG Feature', () => {
       expect(statsVisible || true).toBeTruthy();
     });
 
-    test('should display citation references when available', async ({ page }) => {
+    test('should display citation references when available', async ({ userPage: page }) => {
       // This test verifies the UI is ready to display citations
       // Actual citations will appear when real RAG events occur
 
@@ -248,7 +235,7 @@ test.describe('Timeline RAG Feature', () => {
       expect(panelExists || true).toBeTruthy();
     });
 
-    test('should handle responsive layout', async ({ page }) => {
+    test('should handle responsive layout', async ({ userPage: page }) => {
       // Test mobile viewport
       await page.setViewportSize({ width: 375, height: 667 });
       await page.waitForTimeout(500);
@@ -265,7 +252,7 @@ test.describe('Timeline RAG Feature', () => {
       await expect(timeline).toBeVisible();
     });
 
-    test('should persist through chat interactions', async ({ page }) => {
+    test('should persist through chat interactions', async ({ userPage: page }) => {
       // Timeline should remain visible throughout chat session
       const timelineHeading = page.getByRole('heading', { name: 'Timeline Eventi RAG' });
       await expect(timelineHeading).toBeVisible();
@@ -284,7 +271,7 @@ test.describe('Timeline RAG Feature', () => {
       await expect(timelineHeading).toBeVisible();
     });
 
-    test('should have accessibility features', async ({ page }) => {
+    test('should have accessibility features', async ({ userPage: page }) => {
       // Check for proper heading structure
       const heading = page.getByRole('heading', { name: 'Timeline Eventi RAG' });
       await expect(heading).toBeVisible();
@@ -299,7 +286,7 @@ test.describe('Timeline RAG Feature', () => {
       expect(buttonCount).toBeGreaterThan(0);
     });
 
-    test('should display loading states appropriately', async ({ page }) => {
+    test('should display loading states appropriately', async ({ userPage: page }) => {
       // This test verifies loading indicators are present in the UI
       // Actual loading states will appear during real API calls
 
@@ -313,7 +300,7 @@ test.describe('Timeline RAG Feature', () => {
       expect(isVisible || true).toBeTruthy();
     });
 
-    test('should handle empty states gracefully', async ({ page }) => {
+    test('should handle empty states gracefully', async ({ userPage: page }) => {
       // When no events exist, should show appropriate message
       const emptyState = page.locator('text=/Nessun evento/i').or(page.locator('text=/No events/i'));
 
@@ -325,7 +312,7 @@ test.describe('Timeline RAG Feature', () => {
       expect(hasEmptyState || hasEvents || true).toBeTruthy();
     });
 
-    test('should support keyboard navigation', async ({ page }) => {
+    test('should support keyboard navigation', async ({ userPage: page }) => {
       // Test tab navigation
       await page.keyboard.press('Tab');
       await page.waitForTimeout(200);
@@ -335,7 +322,7 @@ test.describe('Timeline RAG Feature', () => {
       expect(focusedElement).toBeTruthy();
     });
 
-    test('should show event timestamps', async ({ page }) => {
+    test('should show event timestamps', async ({ userPage: page }) => {
       // Timestamps should be displayed when events exist
       // This test verifies the UI is ready to display timestamps
 
@@ -353,7 +340,7 @@ test.describe('Timeline RAG Feature', () => {
       }
     });
 
-    test('should handle concurrent events', async ({ page }) => {
+    test('should handle concurrent events', async ({ userPage: page }) => {
       // Timeline should handle multiple rapid events
       // This test verifies the UI structure is robust
 
@@ -371,7 +358,7 @@ test.describe('Timeline RAG Feature', () => {
       await expect(timeline).toBeVisible();
     });
 
-    test('should maintain filter state during session', async ({ page }) => {
+    test('should maintain filter state during session', async ({ userPage: page }) => {
       // Apply a filter
       const searchInput = page.locator('input[placeholder*="Cerca"]').first();
       await searchInput.fill('persistent test');

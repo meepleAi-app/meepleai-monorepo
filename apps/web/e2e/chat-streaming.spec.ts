@@ -1,25 +1,13 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/auth';
 
 test.describe('Chat Streaming (CHAT-01)', () => {
-  test.beforeEach(async ({ page }) => {
-    // Login as test user
-    await page.goto('/');
-
-    // Fill login form
-    await page.fill('input[type="email"]', 'user@meepleai.dev');
-    await page.fill('input[type="password"]', 'Demo123!');
-    await page.click('button[type="submit"]');
-
-    // Wait for redirect to home
-    await expect(page).toHaveURL('/');
-    await expect(page.getByText('Benvenuto in MeepleAI')).toBeVisible();
-
-    // Navigate to chat
+  test.beforeEach(async ({ userPage: page }) => {
+    // Navigate to chat (already authenticated as user)
     await page.goto('/chat');
     await page.waitForLoadState('networkidle');
   });
 
-  test('should display streaming UI elements', async ({ page }) => {
+  test('should display streaming UI elements', async ({ userPage: page }) => {
     // Game and agent should auto-select
     await expect(page.locator('#gameSelect')).toHaveValue(/.+/);
     await expect(page.locator('#agentSelect')).toHaveValue(/.+/);
@@ -32,7 +20,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await expect(page.locator('button[type="submit"]')).toBeEnabled();
   });
 
-  test('should show streaming state when message is sent', async ({ page }) => {
+  test('should show streaming state when message is sent', async ({ userPage: page }) => {
     // Fill and submit message
     await page.fill('#message-input', 'How many players can play?');
     await page.click('button[type="submit"]');
@@ -48,7 +36,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     expect(hasInvioText || hasStreamingBubble).toBe(true);
   });
 
-  test('should display stop button during streaming', async ({ page }) => {
+  test('should display stop button during streaming', async ({ userPage: page }) => {
     // Intercept streaming endpoint to make it slow
     await page.route('**/api/v1/agents/qa/stream', async (route) => {
       // Simulate slow streaming
@@ -75,7 +63,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     }
   });
 
-  test('should stop streaming when stop button is clicked', async ({ page }) => {
+  test('should stop streaming when stop button is clicked', async ({ userPage: page }) => {
     // Intercept to create a slow stream
     let streamingStopped = false;
 
@@ -116,7 +104,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     }
   });
 
-  test('should accumulate tokens in real-time', async ({ page }) => {
+  test('should accumulate tokens in real-time', async ({ userPage: page }) => {
     // Intercept to simulate token-by-token streaming
     await page.route('**/api/v1/agents/qa/stream', async (route) => {
       const sseData = [
@@ -148,7 +136,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await expect(page.getByText(/The game is fun/i)).toBeVisible({ timeout: 5000 });
   });
 
-  test('should display citations when received', async ({ page }) => {
+  test('should display citations when received', async ({ userPage: page }) => {
     // Intercept to include citations
     await page.route('**/api/v1/agents/qa/stream', async (route) => {
       const sseData = [
@@ -180,7 +168,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await expect(page.getByText(/rules\.pdf/i)).toBeVisible();
   });
 
-  test('should display error message on failure', async ({ page }) => {
+  test('should display error message on failure', async ({ userPage: page }) => {
     // Intercept to return error
     await page.route('**/api/v1/agents/qa/stream', async (route) => {
       const sseData = 'event: error\ndata: {"message":"Failed to process request","code":"INTERNAL_ERROR"}\n\n';
@@ -201,7 +189,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await expect(page.getByRole('alert')).toBeVisible({ timeout: 5000 });
   });
 
-  test('should handle authentication error (401)', async ({ page }) => {
+  test('should handle authentication error (401)', async ({ userPage: page }) => {
     // Intercept to return 401
     await page.route('**/api/v1/agents/qa/stream', async (route) => {
       await route.fulfill({
@@ -217,7 +205,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await expect(page.getByRole('alert')).toBeVisible({ timeout: 5000 });
   });
 
-  test('should disable input during streaming', async ({ page }) => {
+  test('should disable input during streaming', async ({ userPage: page }) => {
     // Intercept to create slow stream
     await page.route('**/api/v1/agents/qa/stream', async (route) => {
       // Don't fulfill immediately - simulate long stream
@@ -245,7 +233,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await expect(page.locator('#message-input')).toBeEnabled({ timeout: 1000 });
   });
 
-  test('should preserve chat history after streaming', async ({ page }) => {
+  test('should preserve chat history after streaming', async ({ userPage: page }) => {
     // Intercept streaming
     await page.route('**/api/v1/agents/qa/stream', async (route) => {
       const sseData = [
@@ -282,7 +270,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await expect(page.getByText('Second question')).toBeVisible();
   });
 
-  test('should show state updates during streaming', async ({ page }) => {
+  test('should show state updates during streaming', async ({ userPage: page }) => {
     // Intercept with state updates
     await page.route('**/api/v1/agents/qa/stream', async (route) => {
       const sseData = [
@@ -315,7 +303,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     expect(hasStateUpdate || hasFinalAnswer).toBe(true);
   });
 
-  test('should handle rapid consecutive messages', async ({ page }) => {
+  test('should handle rapid consecutive messages', async ({ userPage: page }) => {
     let requestCount = 0;
 
     await page.route('**/api/v1/agents/qa/stream', async (route) => {

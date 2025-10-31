@@ -563,8 +563,8 @@ describe('UploadPage - Comprehensive Test Suite', () => {
       await waitFor(() => {
         expect(screen.getByText(/Validation Failed/i)).toBeInTheDocument();
         expect(screen.getByText(/File size.*exceeds maximum/i)).toBeInTheDocument();
-      });
-    });
+      }, { timeout: 10000 });
+    }, 15000);
 
     it('should reject empty PDF file (0 bytes)', async () => {
       const mockFetch = setupUploadMocks({

@@ -199,9 +199,7 @@ export default function UploadPage({
   const [showProcessingProgress, setShowProcessingProgress] = useState(enableProcessingProgress);
 
   useEffect(() => {
-    if (message) {
-      console.log('upload message', message);
-    }
+    // Message updates handled by UI
   }, [message]);
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
@@ -278,7 +276,6 @@ export default function UploadPage({
   }, [confirmedGameId, loadPdfs]);
 
   useEffect(() => {
-    console.log('pollStatus effect check', currentStep, documentId);
     if (currentStep !== 'parse' || !documentId) {
       return;
     }
@@ -288,7 +285,6 @@ export default function UploadPage({
 
     const pollStatus = async () => {
       try {
-        console.log('pollStatus fetch start', documentId, currentStep);
         const response = await fetch(`${API_BASE}/api/v1/pdfs/${documentId}/text`, {
           credentials: 'include'
         });
@@ -296,7 +292,6 @@ export default function UploadPage({
         if (!response.ok) {
           const errorBody = await response.json().catch(() => null);
           if (!cancelled) {
-            console.log('polling error set', errorBody?.error ?? response.statusText);
             setPollingError(errorBody?.error ?? response.statusText);
             timeout = setTimeout(pollStatus, POLL_RETRY_MS);
           }
@@ -414,7 +409,6 @@ export default function UploadPage({
         // Reset file input
         event.target.value = '';
       } else {
-        console.log('handleFileChange accepted file', selectedFile.name);
         setFile(selectedFile);
         setValidationErrors({});
       }
@@ -441,7 +435,6 @@ export default function UploadPage({
       return;
     }
 
-    console.log('handleUpload invoked', { confirmedGameId, filePresent: Boolean(file) });
     setUploading(true);
     setMessage('');
     setUploadError(null);
@@ -600,7 +593,6 @@ export default function UploadPage({
       return;
     }
 
-    console.log('confirmSelectedGame called', selectedGameId);
     setConfirmedGameId(selectedGameId);
     setMessage('');
   };

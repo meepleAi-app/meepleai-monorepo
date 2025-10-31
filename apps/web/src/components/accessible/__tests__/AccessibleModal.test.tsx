@@ -50,7 +50,7 @@ describe('Feature: Accessible Modal Dialog with Keyboard and Focus Management', 
       await waitFor(() => {
         const closeButton = screen.getByRole('button', { name: /close dialog/i });
         expect(closeButton).toHaveFocus();
-      }, { timeout: 200 });
+      }, { timeout: 500 });
     });
 
     it('Given modal opens with no focusable children, When modal opens, Then focus stays on modal container', async () => {

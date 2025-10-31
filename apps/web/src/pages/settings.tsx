@@ -126,7 +126,7 @@ export default function SettingsPage() {
           <section className="mb-8">
             <h2 className="text-xl font-semibold mb-4">Two-Factor Authentication</h2>
 
-            {status?.isEnabled ? (
+            {status?.isTwoFactorEnabled ? (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                 <div className="flex items-center mb-2">
                   <svg className="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -134,17 +134,14 @@ export default function SettingsPage() {
                   </svg>
                   <p className="text-green-800 font-medium">Two-factor authentication is enabled</p>
                 </div>
-                <p className="text-sm text-green-700 mb-1">
-                  Enabled on {status.enabledAt ? new Date(status.enabledAt).toLocaleDateString() : "Unknown"}
-                </p>
                 <p className="text-sm text-green-700 mb-4">
-                  Unused backup codes: {status.unusedBackupCodesCount}
+                  Backup codes remaining: {status.backupCodesCount}
                 </p>
 
-                {status.unusedBackupCodesCount < 3 && (
+                {status.backupCodesCount < 3 && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
                     <p className="text-sm text-yellow-800">
-                      ⚠️ Warning: You have only {status.unusedBackupCodesCount} backup codes remaining.
+                      ⚠️ Warning: You have only {status.backupCodesCount} backup codes remaining.
                       Consider disabling and re-enabling 2FA to generate new backup codes.
                     </p>
                   </div>
@@ -211,7 +208,7 @@ export default function SettingsPage() {
                         Scan this QR code with your authenticator app (Google Authenticator, Authy, Microsoft Authenticator, etc.)
                       </p>
                       <div className="flex justify-center bg-white p-4 rounded border border-gray-300">
-                        <QRCodeSVG value={setup.qrCodeUrl} size={256} />
+                        <QRCodeSVG value={setup.qrCodeUri} size={256} />
                       </div>
                       <details className="mt-4">
                         <summary className="text-sm text-gray-600 cursor-pointer hover:text-gray-900">

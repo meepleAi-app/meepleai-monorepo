@@ -2,7 +2,7 @@
  * Toast notification component with animations and accessibility
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -22,6 +22,11 @@ export function Toast({ id, type, title, message, duration = 5000, onDismiss }: 
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
 
+  const handleDismiss = useCallback(() => {
+    setIsExiting(true);
+    setTimeout(() => onDismiss(id), 300); // Match animation duration
+  }, [id, onDismiss]);
+
   useEffect(() => {
     // Trigger entrance animation
     const timer = setTimeout(() => setIsVisible(true), 10);
@@ -36,12 +41,7 @@ export function Toast({ id, type, title, message, duration = 5000, onDismiss }: 
       clearTimeout(timer);
       if (dismissTimer) clearTimeout(dismissTimer);
     };
-  }, [duration]);
-
-  const handleDismiss = () => {
-    setIsExiting(true);
-    setTimeout(() => onDismiss(id), 300); // Match animation duration
-  };
+  }, [duration, handleDismiss]);
 
   const getStyles = () => {
     const baseStyles = 'border-l-4 shadow-lg';

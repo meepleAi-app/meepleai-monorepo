@@ -38,7 +38,7 @@ jest.mock('../../../components/chat/ChatSidebar', () => ({
 
     React.useEffect(() => {
       setIsCollapsed(mockSidebarProps.isCollapsed);
-    }, [mockSidebarProps.isCollapsed]);
+    }, []);
 
     return (
       <div data-testid="chat-sidebar">

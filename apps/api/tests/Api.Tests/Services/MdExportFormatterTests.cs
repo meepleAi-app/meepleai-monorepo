@@ -98,19 +98,19 @@ public class MdExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // And: Output includes level 2 header for title
-        Assert.Contains("## Chat Export", content);
-        Assert.Contains("Catan", content);
+        content.Should().Contain("## Chat Export");
+        content.Should().Contain("Catan");
 
         // And: Messages have level 3 headers
         Assert.True(content.Contains("### User", StringComparison.OrdinalIgnoreCase));
         Assert.True(content.Contains("### Assistant", StringComparison.OrdinalIgnoreCase));
 
         // And: Messages are separated by horizontal rules
-        Assert.Contains("---", content);
+        content.Should().Contain("---");
 
         // And: Message content is present
-        Assert.Contains("How do I setup the game?", content);
-        Assert.Contains("Place the board and distribute resources.", content);
+        content.Should().Contain("How do I setup the game?");
+        content.Should().Contain("Place the board and distribute resources.");
     }
 
     /// <summary>
@@ -158,9 +158,9 @@ public class MdExportFormatterTests
         // Then: Citations are formatted as bullet list
         Assert.True(content.Contains("**Citations:**") || content.Contains("Citations:"));
         Assert.True(content.Contains("- **Page 12:**") || content.Contains("- Page 12:"));
-        Assert.Contains("Setup instructions for beginners", content);
+        content.Should().Contain("Setup instructions for beginners");
         Assert.True(content.Contains("- **Page 15:**") || content.Contains("- Page 15:"));
-        Assert.Contains("Advanced setup variants", content);
+        content.Should().Contain("Advanced setup variants");
     }
 
     /// <summary>
@@ -200,7 +200,7 @@ public class MdExportFormatterTests
         content.Should().NotBeNull();
 
         // And: Message content is still included
-        Assert.Contains("Answer with metadata", content);
+        content.Should().Contain("Answer with metadata");
     }
 
     /// <summary>
@@ -226,8 +226,8 @@ public class MdExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // Then: Output includes header
-        Assert.Contains("## Chat Export", content);
-        Assert.Contains("Empty Game", content);
+        content.Should().Contain("## Chat Export");
+        content.Should().Contain("Empty Game");
 
         // And: Output indicates no messages
         Assert.True(content.Contains("No messages") || content.Contains("0 messages"));
@@ -266,8 +266,8 @@ public class MdExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // Then: Code blocks are preserved
-        Assert.Contains("```", content);
-        Assert.Contains("var game = new Game();", content);
+        content.Should().Contain("```");
+        content.Should().Contain("var game = new Game();");
     }
 
     /// <summary>
@@ -316,8 +316,8 @@ public class MdExportFormatterTests
         Assert.True(content.Contains("2025-10-10") || content.Contains("Oct"));
 
         // And: Only filtered message is included
-        Assert.Contains("Recent message", content);
-        Assert.DoesNotContain("Old message", content);
+        content.Should().Contain("Recent message");
+        content.Should().NotContain("Old message");
     }
 
     /// <summary>
@@ -334,10 +334,10 @@ public class MdExportFormatterTests
         var contentType = _formatter.ContentType;
 
         // Then: Format is "md"
-        Assert.Equal("md", format);
+        format.Should().Be("md");
 
         // And: ContentType is "text/markdown"
-        Assert.Equal("text/markdown", contentType);
+        contentType.Should().Be("text/markdown");
     }
 
     /// <summary>
@@ -381,11 +381,11 @@ public class MdExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // Then: Message content is preserved (may be escaped or in code blocks)
-        Assert.Contains("asterisks", content);
-        Assert.Contains("underscores", content);
-        Assert.Contains("hashtags", content);
-        Assert.Contains("Item 1", content);
-        Assert.Contains("Item 2", content);
+        content.Should().Contain("asterisks");
+        content.Should().Contain("underscores");
+        content.Should().Contain("hashtags");
+        content.Should().Contain("Item 1");
+        content.Should().Contain("Item 2");
     }
 
     /// <summary>
@@ -421,16 +421,16 @@ public class MdExportFormatterTests
         // Then: Each message is present
         for (int i = 1; i <= 5; i++)
         {
-            Assert.Contains($"Message {i}", content);
+            content.Should().Contain($"Message {i}");
         }
 
         // And: Messages have proper headings (###)
         var headingCount = content.Split("###").Length - 1;
-        Assert.True(headingCount >= 5, $"Expected at least 5 headings, found {headingCount}");
+        headingCount >= 5, $"Expected at least 5 headings, found {headingCount}".Should().BeTrue();
 
         // And: Messages are separated by horizontal rules
         var separatorCount = content.Split("---").Length - 1;
-        Assert.True(separatorCount >= 4, $"Expected at least 4 separators, found {separatorCount}");
+        separatorCount >= 4, $"Expected at least 4 separators, found {separatorCount}".Should().BeTrue();
     }
 
     /// <summary>
@@ -482,14 +482,14 @@ public class MdExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // Then: All message types have headings
-        Assert.Contains("User", content, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Assistant", content, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("System", content, StringComparison.OrdinalIgnoreCase);
+        content, StringComparison.OrdinalIgnoreCase.Should().Contain("User");
+        content, StringComparison.OrdinalIgnoreCase.Should().Contain("Assistant");
+        content, StringComparison.OrdinalIgnoreCase.Should().Contain("System");
 
         // And: Message content is present
-        Assert.Contains("User message", content);
-        Assert.Contains("Assistant message", content);
-        Assert.Contains("System message", content);
+        content.Should().Contain("User message");
+        content.Should().Contain("Assistant message");
+        content.Should().Contain("System message");
     }
 
     /// <summary>
@@ -524,7 +524,7 @@ public class MdExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // Then: Metadata uses blockquote
-        Assert.Contains(">", content);
+        content.Should().Contain(">");
 
         // And: Includes timestamp information
         Assert.True(content.Contains("Exported") || content.Contains("Generated"));

@@ -128,16 +128,16 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Test:Setting", result.Key);
-        Assert.Equal("100", result.Value);
-        Assert.Equal("int", result.ValueType);
-        Assert.Equal(1, result.Version);
-        Assert.Equal(_testUserId, result.CreatedByUserId);
+        result.Key.Should().Be("Test:Setting");
+        result.Value.Should().Be("100");
+        result.ValueType.Should().Be("int");
+        result.Version.Should().Be(1);
+        result.CreatedByUserId.Should().Be(_testUserId);
 
         // Verify in database
         var dbEntity = await _dbContext.SystemConfigurations.FirstOrDefaultAsync(c => c.Id == result.Id);
         dbEntity.Should().NotBeNull();
-        Assert.Equal("Test:Setting", dbEntity.Key);
+        dbEntity.Key.Should().Be("Test:Setting");
     }
 
     [Fact]
@@ -153,10 +153,10 @@ public class ConfigurationServiceTests : IDisposable
         await _service.CreateConfigurationAsync(request, _testUserId);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.CreateConfigurationAsync(request, _testUserId));
+        var act = async () => await _service.CreateConfigurationAsync(request, _testUserId);
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
-        Assert.Contains("already exists", exception.Message);
+        exception.Which.Message.Should().Contain("already exists");
     }
 
     [Fact]
@@ -169,10 +169,10 @@ public class ConfigurationServiceTests : IDisposable
             ValueType: "int");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.CreateConfigurationAsync(request, _testUserId));
+        var act = async () => await _service.CreateConfigurationAsync(request, _testUserId);
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
-        Assert.Contains("validation failed", exception.Message);
+        exception.Which.Message.Should().Contain("validation failed");
     }
 
     #endregion
@@ -190,8 +190,8 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal(config.Id, result.Id);
-        Assert.Equal("Test:Key", result.Key);
+        result.Id.Should().Be(config.Id);
+        result.Key.Should().Be("Test:Key");
     }
 
     [Fact]
@@ -215,8 +215,8 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Test:Key", result.Key);
-        Assert.Equal("value", result.Value);
+        result.Key.Should().Be("Test:Key");
+        result.Value.Should().Be("value");
     }
 
     [Fact]
@@ -231,8 +231,8 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert - Should return Production-specific value, not "All"
         result.Should().NotBeNull();
-        Assert.Equal("prod-value", result.Value);
-        Assert.Equal("Production", result.Environment);
+        result.Value.Should().Be("prod-value");
+        result.Environment.Should().Be("Production");
     }
 
     [Fact]
@@ -247,8 +247,8 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.GetConfigurationsAsync(category: "Category1");
 
         // Assert
-        Assert.Equal(2, result.Total);
-        Assert.All(result.Items, item => Assert.Equal("Category1", item.Category));
+        result.Total.Should().Be(2);
+        result.Items.Should().OnlyContain(item => item.Category == "Category1");
     }
 
     [Fact]
@@ -262,8 +262,8 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.GetConfigurationsAsync(activeOnly: true);
 
         // Assert
-        Assert.Equal(1, result.Total);
-        Assert.True(result.Items.First().IsActive);
+        result.Total.Should().Be(1);
+        result.Items.First().IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -279,10 +279,10 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.GetConfigurationsAsync(page: 2, pageSize: 2);
 
         // Assert
-        Assert.Equal(5, result.Total);
-        Assert.Equal(2, result.Items.Count);
-        Assert.Equal(2, result.Page);
-        Assert.Equal(2, result.PageSize);
+        result.Total.Should().Be(5);
+        result.Items.Count.Should().Be(2);
+        result.Page.Should().Be(2);
+        result.PageSize.Should().Be(2);
     }
 
     #endregion
@@ -301,10 +301,10 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("new-value", result.Value);
-        Assert.Equal(2, result.Version); // Incremented from 1 to 2
-        Assert.Equal("original-value", result.PreviousValue);
-        Assert.Equal(_testUserId, result.UpdatedByUserId);
+        result.Value.Should().Be("new-value");
+        result.Version.Should().Be(2); // Incremented from 1 to 2
+        result.PreviousValue.Should().Be("original-value");
+        result.UpdatedByUserId.Should().Be(_testUserId);
     }
 
     [Fact]
@@ -328,10 +328,10 @@ public class ConfigurationServiceTests : IDisposable
         var updateRequest = new UpdateConfigurationRequest(Value: "not-a-number");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.UpdateConfigurationAsync(config.Id, updateRequest, _testUserId));
+        var act = async () => await _service.UpdateConfigurationAsync(config.Id, updateRequest, _testUserId);
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
-        Assert.Contains("validation failed", exception.Message);
+        exception.Which.Message.Should().Contain("validation failed");
     }
 
     #endregion
@@ -348,7 +348,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.DeleteConfigurationAsync(config.Id);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         var dbEntity = await _dbContext.SystemConfigurations.FindAsync(config.Id);
         dbEntity.Should().BeNull();
     }
@@ -360,7 +360,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.DeleteConfigurationAsync("non-existent-id");
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     #endregion
@@ -378,9 +378,9 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.False(result.IsActive);
+        result.IsActive.Should().BeFalse();
         result.LastToggledAt.Should().NotBeNull();
-        Assert.Equal(_testUserId, result.UpdatedByUserId);
+        result.UpdatedByUserId.Should().Be(_testUserId);
     }
 
     [Fact]
@@ -395,7 +395,7 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.True(result.IsActive);
+        result.IsActive.Should().BeTrue();
         // UpdatedAt should remain the same since no actual change
     }
 
@@ -413,7 +413,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.GetValueAsync<int>("TypedInt");
 
         // Assert
-        Assert.Equal(42, result);
+        result.Should().Be(42);
     }
 
     [Fact]
@@ -426,7 +426,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.GetValueAsync<bool>("TypedBool");
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -439,7 +439,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.GetValueAsync<double>("TypedDouble");
 
         // Assert
-        Assert.Equal(3.14, result);
+        result.Should().Be(3.14);
     }
 
     [Fact]
@@ -452,7 +452,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.GetValueAsync<string>("TypedString");
 
         // Assert
-        Assert.Equal("hello world", result);
+        result.Should().Be("hello world");
     }
 
     [Fact]
@@ -462,7 +462,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.GetValueAsync<int>("NonExistent:Key", defaultValue: 999);
 
         // Assert
-        Assert.Equal(999, result);
+        result.Should().Be(999);
     }
 
     [Fact]
@@ -475,7 +475,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.GetValueAsync<int>("InvalidConversion", defaultValue: 0);
 
         // Assert
-        Assert.Equal(0, result); // Should return default on conversion failure
+        result.Should().Be(0); // Should return default on conversion failure
     }
 
     #endregion
@@ -489,7 +489,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.ValidateConfigurationAsync("Test:Key", "123", "int");
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
     }
 
@@ -500,9 +500,9 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.ValidateConfigurationAsync("Test:Key", "not-a-number", "int");
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
-        Assert.Contains("not a valid integer", result.Errors.First());
+        result.Errors.First().Should().Contain("not a valid integer");
     }
 
     [Fact]
@@ -512,7 +512,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.ValidateConfigurationAsync("Test:Key", "true", "bool");
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
     }
 
@@ -523,7 +523,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.ValidateConfigurationAsync("Test:Key", "maybe", "bool");
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
     }
 
@@ -534,7 +534,7 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.ValidateConfigurationAsync("Test:Key", "{\"key\":\"value\"}", "json");
 
         // Assert
-        Assert.True(result.IsValid);
+        result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
     }
 
@@ -545,9 +545,9 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.ValidateConfigurationAsync("Test:Key", "{invalid json", "json");
 
         // Assert
-        Assert.False(result.IsValid);
+        result.IsValid.Should().BeFalse();
         result.Errors.Should().NotBeEmpty();
-        Assert.Contains("not valid JSON", result.Errors.First());
+        result.Errors.First().Should().Contain("not valid JSON");
     }
 
     [Fact]
@@ -557,8 +557,8 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.ValidateConfigurationAsync("RateLimit:Admin:MaxTokens", "-100", "int");
 
         // Assert
-        Assert.False(result.IsValid);
-        Assert.Contains("non-negative", result.Errors.First());
+        result.IsValid.Should().BeFalse();
+        result.Errors.First().Should().Contain("non-negative");
     }
 
     #endregion
@@ -583,10 +583,10 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.BulkUpdateConfigurationsAsync(request, _testUserId);
 
         // Assert
-        Assert.Equal(2, result.Count);
-        Assert.Equal("new-value1", result[0].Value);
-        Assert.Equal("new-value2", result[1].Value);
-        Assert.All(result, r => Assert.Equal(2, r.Version)); // Version incremented
+        result.Count.Should().Be(2);
+        result[0].Value.Should().Be("new-value1");
+        result[1].Value.Should().Be("new-value2");
+        result.Should().OnlyContain(r => r.Version == 2); // Version incremented
     }
 
     [Fact]
@@ -603,8 +603,8 @@ public class ConfigurationServiceTests : IDisposable
             });
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.BulkUpdateConfigurationsAsync(request, _testUserId));
+        var act = async () => await _service.BulkUpdateConfigurationsAsync(request, _testUserId);
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Clear change tracker and reload from database
         _dbContext.ChangeTracker.Clear();
@@ -612,8 +612,8 @@ public class ConfigurationServiceTests : IDisposable
         // Verify first config was NOT updated (transaction rolled back)
         var dbEntity = await _dbContext.SystemConfigurations.AsNoTracking().FirstOrDefaultAsync(c => c.Id == config1.Id);
         dbEntity.Should().NotBeNull();
-        Assert.Equal("original", dbEntity.Value);
-        Assert.Equal(1, dbEntity.Version); // Version not incremented
+        dbEntity.Value.Should().Be("original");
+        dbEntity.Version.Should().Be(1); // Version not incremented
     }
 
     [Fact]
@@ -631,8 +631,8 @@ public class ConfigurationServiceTests : IDisposable
             });
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.BulkUpdateConfigurationsAsync(request, _testUserId));
+        var act = async () => await _service.BulkUpdateConfigurationsAsync(request, _testUserId);
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Clear change tracker and reload from database
         _dbContext.ChangeTracker.Clear();
@@ -642,8 +642,8 @@ public class ConfigurationServiceTests : IDisposable
         var db2 = await _dbContext.SystemConfigurations.AsNoTracking().FirstOrDefaultAsync(c => c.Id == config2.Id);
         db1.Should().NotBeNull();
         db2.Should().NotBeNull();
-        Assert.Equal("100", db1.Value);
-        Assert.Equal("200", db2.Value);
+        db1.Value.Should().Be("100");
+        db2.Value.Should().Be("200");
     }
 
     #endregion
@@ -662,10 +662,10 @@ public class ConfigurationServiceTests : IDisposable
         var result = await _service.ExportConfigurationsAsync("Production", activeOnly: true);
 
         // Assert
-        Assert.Equal(2, result.Configurations.Count);
-        Assert.All(result.Configurations, c =>
-            Assert.True(c.Environment == "Production" || c.Environment == "All"));
-        Assert.Equal("Production", result.Environment);
+        result.Configurations.Count.Should().Be(2);
+        result.Configurations.Should().OnlyContain(c =>
+            c.Environment == "Production" || c.Environment == "All");
+        result.Environment.Should().Be("Production");
     }
 
     [Fact]
@@ -684,7 +684,7 @@ public class ConfigurationServiceTests : IDisposable
         var importedCount = await _service.ImportConfigurationsAsync(request, _testUserId);
 
         // Assert
-        Assert.Equal(2, importedCount);
+        importedCount.Should().Be(2);
         var config1 = await _dbContext.SystemConfigurations.FirstOrDefaultAsync(c => c.Key == "Import:Key1");
         var config2 = await _dbContext.SystemConfigurations.FirstOrDefaultAsync(c => c.Key == "Import:Key2");
         config1.Should().NotBeNull();
@@ -708,10 +708,10 @@ public class ConfigurationServiceTests : IDisposable
         var importedCount = await _service.ImportConfigurationsAsync(request, _testUserId);
 
         // Assert
-        Assert.Equal(1, importedCount);
+        importedCount.Should().Be(1);
         var config = await _dbContext.SystemConfigurations.FirstAsync(c => c.Key == "Overwrite:Key");
-        Assert.Equal("new-value", config.Value);
-        Assert.Equal(2, config.Version); // Version incremented
+        config.Value.Should().Be("new-value");
+        config.Version.Should().Be(2); // Version incremented
     }
 
     [Fact]
@@ -731,10 +731,10 @@ public class ConfigurationServiceTests : IDisposable
         var importedCount = await _service.ImportConfigurationsAsync(request, _testUserId);
 
         // Assert
-        Assert.Equal(0, importedCount); // Skipped existing
+        importedCount.Should().Be(0); // Skipped existing
         var config = await _dbContext.SystemConfigurations.FirstAsync(c => c.Key == "Skip:Key");
-        Assert.Equal("original-value", config.Value); // Value unchanged
-        Assert.Equal(1, config.Version); // Version not incremented
+        config.Value.Should().Be("original-value"); // Value unchanged
+        config.Version.Should().Be(1); // Version not incremented
     }
 
     #endregion
@@ -758,8 +758,8 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert
         history.Should().NotBeEmpty();
-        Assert.Equal("updated", history.First().NewValue);
-        Assert.Equal("original", history.First().OldValue);
+        history.First().NewValue.Should().Be("updated");
+        history.First().OldValue.Should().Be("original");
     }
 
     [Fact]
@@ -779,9 +779,9 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert
         rolledBack.Should().NotBeNull();
-        Assert.Equal("v1", rolledBack.Value); // Value restored
-        Assert.Equal(3, rolledBack.Version); // Version incremented (1 → 2 → 3)
-        Assert.Equal("v2", rolledBack.PreviousValue); // Previous value is v2
+        rolledBack.Value.Should().Be("v1"); // Value restored
+        rolledBack.Version.Should().Be(3); // Version incremented (1 → 2 → 3)
+        rolledBack.PreviousValue.Should().Be("v2"); // Previous value is v2
     }
 
     [Fact]
@@ -791,10 +791,10 @@ public class ConfigurationServiceTests : IDisposable
         var config = await CreateTestConfiguration("Rollback:NoPrevious", "only-value");
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.RollbackConfigurationAsync(config.Id, 0, _testUserId));
+        var act = async () => await _service.RollbackConfigurationAsync(config.Id, 0, _testUserId);
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
-        Assert.Contains("No previous value", exception.Message);
+        exception.Which.Message.Should().Contain("No previous value");
     }
 
     #endregion
@@ -813,10 +813,10 @@ public class ConfigurationServiceTests : IDisposable
         var categories = await _service.GetCategoriesAsync();
 
         // Assert
-        Assert.Equal(2, categories.Count);
-        Assert.Contains("Category1", categories);
-        Assert.Contains("Category2", categories);
-        Assert.Equal(categories.OrderBy(c => c).ToList(), categories); // Verify sorted
+        categories.Count.Should().Be(2);
+        categories.Should().Contain("Category1");
+        categories.Should().Contain("Category2");
+        categories.Should().Be(categories.OrderBy(c => c).ToList()); // Verify sorted
     }
 
     #endregion

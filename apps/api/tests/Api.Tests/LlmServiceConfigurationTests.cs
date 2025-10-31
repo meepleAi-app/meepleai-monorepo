@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -99,7 +100,7 @@ public class LlmServiceConfigurationTests
         }
 
         // Assert
-        Assert.NotEmpty(tokens);
+        tokens.Should().NotBeEmpty();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
@@ -222,7 +223,7 @@ public class LlmServiceConfigurationTests
         }
 
         // Assert
-        Assert.NotEmpty(tokens);
+        tokens.Should().NotBeEmpty();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);

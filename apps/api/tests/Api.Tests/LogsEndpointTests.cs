@@ -10,6 +10,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -94,7 +95,7 @@ public class LogsEndpointTests : IntegrationTestBase
 
         var entries = await response.Content.ReadFromJsonAsync<List<LogEntryResponse>>();
 
-        Assert.NotNull(entries);
+        entries.Should().NotBeNull();
         Assert.Equal(2, entries!.Count);
 
         var newest = entries[0];

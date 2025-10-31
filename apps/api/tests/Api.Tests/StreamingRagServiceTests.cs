@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -268,7 +269,7 @@ public class StreamingRagServiceTests
             streamingService.ExplainStreamAsync("game1", "game setup", CancellationToken.None));
 
         // Assert
-        Assert.NotEmpty(events);
+        events.Should().NotBeEmpty();
 
         // Verify event order: StateUpdate(s) -> Citations -> Outline -> ScriptChunk(s) -> Complete
         var eventTypes = events.Select(e => e.Type).ToList();
@@ -425,7 +426,7 @@ public class StreamingRagServiceTests
             var chunkData = Assert.IsType<StreamingScriptChunk>(scriptChunkEvents[i].Data);
             Assert.Equal(i, chunkData.chunkIndex);
             Assert.Equal(scriptChunkEvents.Count, chunkData.totalChunks);
-            Assert.NotEmpty(chunkData.chunk);
+            chunkData.chunk.Should().NotBeEmpty();
         }
     }
 
@@ -468,7 +469,7 @@ public class StreamingRagServiceTests
         Assert.Equal(0, completeData.promptTokens); // Non-LLM explain doesn't use tokens
         Assert.Equal(0, completeData.completionTokens);
         Assert.Equal(0, completeData.totalTokens);
-        Assert.NotNull(completeData.confidence);
+        completeData.confidence.Should().NotBeNull();
         Assert.Equal(0.92, completeData.confidence.Value, precision: 2); // Max score
     }
 
@@ -639,11 +640,11 @@ public class StreamingRagServiceTests
             streamingService.ExplainStreamAsync("game1", "test topic", CancellationToken.None));
 
         // Assert
-        Assert.NotEmpty(events);
+        events.Should().NotBeEmpty();
 
         // Should still emit all event types including at least one ScriptChunk (even if empty)
         var scriptChunkEvents = events.Where(e => e.Type == StreamingEventType.ScriptChunk).ToList();
-        Assert.NotEmpty(scriptChunkEvents);
+        scriptChunkEvents.Should().NotBeEmpty();
 
         // When script is empty, ChunkScript returns a single empty chunk
         var firstChunk = Assert.IsType<StreamingScriptChunk>(scriptChunkEvents[0].Data);
@@ -652,6 +653,6 @@ public class StreamingRagServiceTests
 
         // Complete event should still be emitted
         var completeEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
+        completeEvent.Should().NotBeNull();
     }
 }

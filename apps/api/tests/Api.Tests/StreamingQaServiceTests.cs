@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -131,7 +132,7 @@ ANSWER:",
         Assert.Equal(StreamingEventType.Error, events[0].Type);
 
         var errorData = events[0].Data as StreamingError;
-        Assert.NotNull(errorData);
+        errorData.Should().NotBeNull();
         Assert.Equal("Please provide a question.", errorData!.errorMessage);
         Assert.Equal("EMPTY_QUERY", errorData.errorCode);
     }
@@ -228,7 +229,7 @@ ANSWER:",
         }
 
         // Assert
-        Assert.NotEmpty(events);
+        events.Should().NotBeEmpty();
 
         // Verify event sequence
         var eventTypes = events.Select(e => e.Type).ToList();
@@ -239,12 +240,12 @@ ANSWER:",
 
         // Verify StateUpdate
         var stateUpdate = events[0].Data as StreamingStateUpdate;
-        Assert.NotNull(stateUpdate);
+        stateUpdate.Should().NotBeNull();
         Assert.Contains("cache", stateUpdate!.message, StringComparison.OrdinalIgnoreCase);
 
         // Verify Citations
         var citations = events[1].Data as StreamingCitations;
-        Assert.NotNull(citations);
+        citations.Should().NotBeNull();
         Assert.Single(citations!.citations);
         Assert.Equal("Cached snippet", citations.citations[0].text);
 
@@ -254,7 +255,7 @@ ANSWER:",
 
         // Verify Complete
         var complete = events[^1].Data as StreamingComplete;
-        Assert.NotNull(complete);
+        complete.Should().NotBeNull();
         Assert.Equal(10, complete!.promptTokens);
         Assert.Equal(8, complete.completionTokens);
         Assert.Equal(18, complete.totalTokens);
@@ -345,7 +346,7 @@ ANSWER:",
         }
 
         // Assert
-        Assert.NotEmpty(events);
+        events.Should().NotBeEmpty();
 
         // Verify event types in order
         var eventTypes = events.Select(e => e.Type).ToList();
@@ -358,7 +359,7 @@ ANSWER:",
 
         // Verify Citations
         var citations = events[2].Data as StreamingCitations;
-        Assert.NotNull(citations);
+        citations.Should().NotBeNull();
         Assert.Equal(3, citations!.citations.Count);
         Assert.Equal("This game supports 2-4 players.", citations.citations[0].text);
         Assert.Equal("PDF:pdf-1", citations.citations[0].source);
@@ -372,7 +373,7 @@ ANSWER:",
 
         // Verify Complete
         var complete = events[^1].Data as StreamingComplete;
-        Assert.NotNull(complete);
+        complete.Should().NotBeNull();
         Assert.Equal(5, complete!.completionTokens); // 5 tokens
         Assert.Equal(5, complete.totalTokens);
         Assert.Equal(0.95, complete.confidence!.Value, precision: 2); // Max score from search results (with floating point tolerance)
@@ -439,7 +440,7 @@ ANSWER:",
         Assert.Equal(StreamingEventType.Error, events[1].Type);
 
         var error = events[1].Data as StreamingError;
-        Assert.NotNull(error);
+        error.Should().NotBeNull();
         Assert.Equal("Unable to process query.", error!.errorMessage);
         Assert.Equal("EMBEDDING_FAILED", error.errorCode);
     }
@@ -491,7 +492,7 @@ ANSWER:",
         Assert.Contains(events, e => e.Type == StreamingEventType.Error);
         var errorEvent = events.First(e => e.Type == StreamingEventType.Error);
         var error = errorEvent.Data as StreamingError;
-        Assert.NotNull(error);
+        error.Should().NotBeNull();
         Assert.Equal("EMBEDDING_FAILED", error!.errorCode);
     }
 
@@ -549,9 +550,9 @@ ANSWER:",
 
         // Assert
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
-        Assert.NotNull(errorEvent);
+        errorEvent.Should().NotBeNull();
         var error = errorEvent!.Data as StreamingError;
-        Assert.NotNull(error);
+        error.Should().NotBeNull();
         Assert.Contains("No relevant information found", error!.errorMessage);
         Assert.Equal("NO_RESULTS", error.errorCode);
     }
@@ -610,9 +611,9 @@ ANSWER:",
 
         // Assert
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
-        Assert.NotNull(errorEvent);
+        errorEvent.Should().NotBeNull();
         var error = errorEvent!.Data as StreamingError;
-        Assert.NotNull(error);
+        error.Should().NotBeNull();
         Assert.Equal("NO_RESULTS", error!.errorCode);
     }
 
@@ -691,7 +692,7 @@ ANSWER:",
         // Assert
         var completeEvent = events.First(e => e.Type == StreamingEventType.Complete);
         var complete = completeEvent.Data as StreamingComplete;
-        Assert.NotNull(complete);
+        complete.Should().NotBeNull();
         Assert.Equal(0.98, complete!.confidence!.Value, precision: 2); // Max score (with floating point tolerance)
     }
 
@@ -772,7 +773,7 @@ ANSWER:",
 
         var completeEvent = events.First(e => e.Type == StreamingEventType.Complete);
         var complete = completeEvent.Data as StreamingComplete;
-        Assert.NotNull(complete);
+        complete.Should().NotBeNull();
         Assert.Equal(5, complete!.completionTokens);
         Assert.Equal(5, complete.totalTokens);
     }

@@ -18,6 +18,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -69,7 +70,7 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.TooManyRequests, limitedResponse.StatusCode);
 
         var payload = await limitedResponse.Content.ReadFromJsonAsync<RateLimitErrorResponse>();
-        Assert.NotNull(payload);
+        payload.Should().NotBeNull();
         Assert.Equal("Rate limit exceeded", payload!.error);
         Assert.Equal(15, payload.retryAfter);
         Assert.Contains("Too many requests", payload.message, StringComparison.OrdinalIgnoreCase);

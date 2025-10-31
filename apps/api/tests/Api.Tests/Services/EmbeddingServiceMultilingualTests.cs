@@ -6,6 +6,7 @@ using Moq.Protected;
 using System.Net;
 using System.Text.Json;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
@@ -51,10 +52,10 @@ public class EmbeddingServiceMultilingualTests
         var result = await service.GenerateEmbeddingsAsync(new List<string> { text }, language);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Null(result.ErrorMessage);
-        Assert.Single(result.Embeddings);
-        Assert.Equal(768, result.Embeddings[0].Length); // Ollama nomic-embed-text dimension
+        result.Success.Should().BeTrue();
+        result.ErrorMessage.Should().BeNull();
+        result.Embeddings.Should().ContainSingle()
+            .Which.Length.Should().Be(768); // Ollama nomic-embed-text dimension
     }
 
     /// <summary>
@@ -75,9 +76,9 @@ public class EmbeddingServiceMultilingualTests
         var result = await service.GenerateEmbeddingAsync("Testo italiano", "it");
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Single(result.Embeddings);
-        Assert.Equal(768, result.Embeddings[0].Length);
+        result.Success.Should().BeTrue();
+        result.Embeddings.Should().ContainSingle()
+            .Which.Length.Should().Be(768);
     }
 
     /// <summary>
@@ -105,8 +106,8 @@ public class EmbeddingServiceMultilingualTests
         var result = await service.GenerateEmbeddingsAsync(new List<string> { "test" }, language!);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Single(result.Embeddings);
+        result.Success.Should().BeTrue();
+        result.Embeddings.Should().ContainSingle();
 
         // Verify warning was logged for non-empty/non-null unsupported languages
         if (!string.IsNullOrWhiteSpace(language))
@@ -151,9 +152,9 @@ public class EmbeddingServiceMultilingualTests
         var result = await service.GenerateEmbeddingsAsync(new List<string> { "text 1", "text 2" }, "it");
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(2, result.Embeddings.Count);
-        Assert.All(result.Embeddings, emb => Assert.Equal(1024, emb.Length)); // Local service dimension
+        result.Success.Should().BeTrue();
+        result.Embeddings.Count.Should().Be(2);
+        result.Embeddings.Should().OnlyContain(emb => emb.Length == 1024); // Local service dimension
 
         // Verify success log
         mockLogger.Verify(
@@ -211,10 +212,10 @@ public class EmbeddingServiceMultilingualTests
         await service.GenerateEmbeddingsAsync(new List<string> { "German text" }, "de");
 
         // Assert
-        Assert.NotNull(capturedRequestBody);
+        capturedRequestBody.Should().NotBeNull();
         var requestData = JsonSerializer.Deserialize<JsonElement>(capturedRequestBody);
-        Assert.Equal("de", requestData.GetProperty("language").GetString());
-        Assert.Equal(1, requestData.GetProperty("texts").GetArrayLength());
+        requestData.GetProperty("language").GetString().Should().Be("de");
+        requestData.GetProperty("texts").GetArrayLength().Should().Be(1);
     }
 
     #endregion
@@ -243,9 +244,9 @@ public class EmbeddingServiceMultilingualTests
         var result = await service.GenerateEmbeddingsAsync(new List<string> { "test" }, "it");
 
         // Assert - Fallback succeeded
-        Assert.True(result.Success);
-        Assert.Single(result.Embeddings);
-        Assert.Equal(768, result.Embeddings[0].Length); // Ollama dimension, not local (1024)
+        result.Success.Should().BeTrue();
+        result.Embeddings.Should().ContainSingle()
+            .Which.Length.Should().Be(768); // Ollama dimension, not local (1024)
 
         // Verify warning logged about local service failure
         mockLogger.Verify(
@@ -295,8 +296,8 @@ public class EmbeddingServiceMultilingualTests
         var result = await service.GenerateEmbeddingsAsync(new List<string> { "test" }, "fr");
 
         // Assert - Fallback to Ollama succeeded
-        Assert.True(result.Success);
-        Assert.Equal(768, result.Embeddings[0].Length); // Ollama dimension
+        result.Success.Should().BeTrue();
+        result.Embeddings[0].Length.Should().Be(768); // Ollama dimension
 
         // Verify warning logged
         mockLogger.Verify(
@@ -339,8 +340,8 @@ public class EmbeddingServiceMultilingualTests
         var result = await service.GenerateEmbeddingsAsync(new List<string> { "test" }, "es");
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(768, result.Embeddings[0].Length); // Ollama fallback
+        result.Success.Should().BeTrue();
+        result.Embeddings[0].Length.Should().Be(768); // Ollama fallback
     }
 
     #endregion
@@ -368,9 +369,9 @@ public class EmbeddingServiceMultilingualTests
         var result = await service.GenerateEmbeddingsAsync(new List<string> { "test" }, "it");
 
         // Assert
-        Assert.True(result.Success, $"Expected success but got failure. Error: {result.ErrorMessage}");
-        Assert.Single(result.Embeddings);
-        Assert.Equal(1536, result.Embeddings[0].Length); // OpenRouter dimension
+        result.Success.Should().BeTrue($"Expected success but got failure. Error: {result.ErrorMessage}");
+        result.Embeddings.Should().ContainSingle()
+            .Which.Length.Should().Be(1536); // OpenRouter dimension
     }
 
     /// <summary>
@@ -407,8 +408,8 @@ public class EmbeddingServiceMultilingualTests
         var result = await service.GenerateEmbeddingsAsync(new List<string> { "test" }, "de");
 
         // Assert - Should use Ollama directly, not attempt local service
-        Assert.True(result.Success);
-        Assert.Equal(768, result.Embeddings[0].Length); // Ollama dimension
+        result.Success.Should().BeTrue();
+        result.Embeddings[0].Length.Should().Be(768); // Ollama dimension
     }
 
     #endregion
@@ -432,9 +433,9 @@ public class EmbeddingServiceMultilingualTests
         var result = await service.GenerateEmbeddingsAsync(new List<string>(), "it");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("No texts provided", result.ErrorMessage);
-        Assert.Empty(result.Embeddings);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("No texts provided");
+        result.Embeddings.Should().BeEmpty();
     }
 
     /// <summary>
@@ -454,8 +455,8 @@ public class EmbeddingServiceMultilingualTests
         var result = await service.GenerateEmbeddingsAsync(null!, "fr");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("No texts provided", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("No texts provided");
     }
 
     /// <summary>
@@ -478,8 +479,8 @@ public class EmbeddingServiceMultilingualTests
         var result = await service.GenerateEmbeddingsAsync(new List<string> { "test" }, "en", cts.Token);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("Request timed out", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("Request timed out");
     }
 
     #endregion

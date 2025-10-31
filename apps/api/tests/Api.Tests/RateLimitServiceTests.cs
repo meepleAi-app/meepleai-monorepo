@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;

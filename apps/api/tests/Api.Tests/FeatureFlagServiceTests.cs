@@ -4,6 +4,7 @@ using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -405,7 +406,7 @@ public class FeatureFlagServiceTests
 
         // Role-specific flag
         var adminFlag = result.FirstOrDefault(f => f.RoleRestriction == "Admin");
-        Assert.NotNull(adminFlag);
+        adminFlag.Should().NotBeNull();
         Assert.Equal("Features.AdminFeature", adminFlag.FeatureName);
         Assert.True(adminFlag.IsEnabled);
     }
@@ -580,7 +581,7 @@ public class FeatureFlagServiceTests
         var result = await _service.GetAllFeatureFlagsAsync();
 
         // Assert
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     #endregion

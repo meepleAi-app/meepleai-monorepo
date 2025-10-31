@@ -2150,17 +2150,6 @@ group.MapPost("/admin/configurations/cache/invalidate", async (
 .WithTags("Admin", "Configuration")
 .Produces<object>();
 
-group.MapGet("/users/me/sessions", async (HttpContext context, ISessionManagementService sessionManagement, CancellationToken ct = default) =>
-{
-    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-    {
-        return Results.Unauthorized();
-    }
-
-    var sessions = await sessionManagement.GetUserSessionsAsync(session.User.Id, ct);
-    return Results.Json(sessions);
-});
-
 // PERF-03: Cache management endpoints
 group.MapGet("/admin/cache/stats", async (HttpContext context, IAiResponseCacheService cacheService, string? gameId = null, CancellationToken ct = default) =>
 {

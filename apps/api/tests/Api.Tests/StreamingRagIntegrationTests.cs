@@ -12,6 +12,7 @@ using Api.Models;
 using Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -127,7 +128,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var events = await ParseSseEventsAsync(response);
 
         // Then: Events are emitted in correct order
-        Assert.NotEmpty(events);
+        events.Should().NotBeEmpty();
 
         var eventTypes = events.Select(e => e.Type).ToList();
 
@@ -193,16 +194,16 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
 
         // Then: Citations event contains valid snippets
         var citationsEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Citations);
-        Assert.NotNull(citationsEvent);
+        citationsEvent.Should().NotBeNull();
 
         var citationsData = JsonSerializer.Deserialize<StreamingCitations>(
             ((JsonElement)citationsEvent.Data!).GetRawText(), JsonOptions);
 
-        Assert.NotNull(citationsData);
-        Assert.NotEmpty(citationsData!.citations);
+        citationsData.Should().NotBeNull();
+        citationsData!.citations.Should().NotBeEmpty();
         Assert.All(citationsData.citations, citation =>
         {
-            Assert.NotEmpty(citation.text);
+            citation.text.Should().NotBeEmpty();
             Assert.StartsWith("PDF:", citation.source);
             Assert.True(citation.page > 0);
         });
@@ -230,14 +231,14 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
 
         // Then: Outline event contains main topic
         var outlineEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Outline);
-        Assert.NotNull(outlineEvent);
+        outlineEvent.Should().NotBeNull();
 
         var outlineData = JsonSerializer.Deserialize<StreamingOutline>(
             ((JsonElement)outlineEvent.Data!).GetRawText(), JsonOptions);
 
-        Assert.NotNull(outlineData);
+        outlineData.Should().NotBeNull();
         Assert.Equal("game setup", outlineData!.outline.mainTopic);
-        Assert.NotEmpty(outlineData.outline.sections);
+        outlineData.outline.sections.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -262,17 +263,17 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
 
         // Then: Script chunks have correct index and total
         var scriptChunkEvents = events.Where(e => e.Type == StreamingEventType.ScriptChunk).ToList();
-        Assert.NotEmpty(scriptChunkEvents);
+        scriptChunkEvents.Should().NotBeEmpty();
 
         for (int i = 0; i < scriptChunkEvents.Count; i++)
         {
             var chunkData = JsonSerializer.Deserialize<StreamingScriptChunk>(
                 ((JsonElement)scriptChunkEvents[i].Data!).GetRawText(), JsonOptions);
 
-            Assert.NotNull(chunkData);
+            chunkData.Should().NotBeNull();
             Assert.Equal(i, chunkData!.chunkIndex);
             Assert.Equal(scriptChunkEvents.Count, chunkData.totalChunks);
-            Assert.NotEmpty(chunkData.chunk);
+            chunkData.chunk.Should().NotBeEmpty();
         }
     }
 
@@ -298,12 +299,12 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
 
         // Then: Complete event contains metadata
         var completeEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Complete);
-        Assert.NotNull(completeEvent);
+        completeEvent.Should().NotBeNull();
 
         var completeData = JsonSerializer.Deserialize<StreamingComplete>(
             ((JsonElement)completeEvent.Data!).GetRawText(), JsonOptions);
 
-        Assert.NotNull(completeData);
+        completeData.Should().NotBeNull();
         Assert.True(completeData!.estimatedReadingTimeMinutes > 0);
         Assert.True(completeData.confidence >= 0 && completeData.confidence <= 1);
     }
@@ -356,11 +357,11 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
 
         // Then: Error event is emitted (no vector data found)
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
-        Assert.NotNull(errorEvent);
+        errorEvent.Should().NotBeNull();
 
         var errorData = JsonSerializer.Deserialize<StreamingError>(
             ((JsonElement)errorEvent.Data!).GetRawText(), JsonOptions);
-        Assert.NotNull(errorData);
+        errorData.Should().NotBeNull();
         Assert.Contains("NO_RESULTS", errorData!.errorCode ?? "");
     }
 

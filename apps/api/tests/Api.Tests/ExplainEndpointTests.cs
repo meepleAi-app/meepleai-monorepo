@@ -13,6 +13,7 @@ using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -304,7 +305,7 @@ public class ExplainEndpointTests : IntegrationTestBase
         Assert.Contains("game setup", userMessage.Message);
 
         var assistantMessage = chatLogs.First(l => l.Level == "assistant");
-        Assert.NotNull(assistantMessage.Message);
+        assistantMessage.Message.Should().NotBeNull();
     }
 
     /// <summary>
@@ -352,7 +353,7 @@ public class ExplainEndpointTests : IntegrationTestBase
             .OrderByDescending(l => l.CreatedAt)
             .FirstOrDefaultAsync();
 
-        Assert.NotNull(aiLog);
+        aiLog.Should().NotBeNull();
         Assert.Equal(game.Id, aiLog.GameId);
         Assert.Equal("scoring", aiLog.Query);
         Assert.Equal("Success", aiLog.Status);

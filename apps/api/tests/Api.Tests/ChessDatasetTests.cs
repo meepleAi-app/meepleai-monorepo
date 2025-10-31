@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Api.Models;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -27,9 +28,9 @@ public class ChessDatasetTests
         var ruleSpec = await LoadChessRuleSpec();
 
         // Then: It should contain complete FIDE rules
-        Assert.NotNull(ruleSpec);
+        ruleSpec.Should().NotBeNull();
         Assert.Equal("chess", ruleSpec.gameId);
-        Assert.NotNull(ruleSpec.metadata);
+        ruleSpec.metadata.Should().NotBeNull();
         Assert.Equal("Chess", ruleSpec.metadata.name);
     }
 
@@ -40,7 +41,7 @@ public class ChessDatasetTests
         var ruleSpec = await LoadChessRuleSpec();
 
         // Then: It should have exactly 13 actions including all piece movements
-        Assert.NotNull(ruleSpec.actions);
+        ruleSpec.actions.Should().NotBeNull();
         Assert.True(ruleSpec.actions.Count >= 13, $"Expected at least 13 actions, found {ruleSpec.actions.Count}");
 
         var actionIds = ruleSpec.actions.Select(a => a.id).ToList();
@@ -63,7 +64,7 @@ public class ChessDatasetTests
         var ruleSpec = await LoadChessRuleSpec();
 
         // Then: It should have 3 phases: opening, middlegame, endgame
-        Assert.NotNull(ruleSpec.phases);
+        ruleSpec.phases.Should().NotBeNull();
         Assert.Equal(3, ruleSpec.phases.Count);
 
         var phaseIds = ruleSpec.phases.Select(p => p.id).ToList();
@@ -82,7 +83,7 @@ public class ChessDatasetTests
         // Given & When: I try to load the openings dataset
         // Then: It should exist and load without error
         var openings = await LoadOpeningsDataset();
-        Assert.NotNull(openings);
+        openings.Should().NotBeNull();
     }
 
     [Fact]
@@ -92,7 +93,7 @@ public class ChessDatasetTests
         var openings = await LoadOpeningsDataset();
 
         // Then: It should contain at least 20 openings (acceptance criteria)
-        Assert.NotNull(openings);
+        openings.Should().NotBeNull();
         Assert.True(openings.Count >= 20,
             $"Expected at least 20 openings, found {openings.Count}. Add more openings to meet acceptance criteria.");
     }
@@ -171,7 +172,7 @@ public class ChessDatasetTests
             o.name.Contains("Italian", StringComparison.OrdinalIgnoreCase));
 
         // Then: It should have the correct move sequence
-        Assert.NotNull(italianGame);
+        italianGame.Should().NotBeNull();
         Assert.Contains("e4", italianGame.pgn);
         Assert.Contains("e5", italianGame.pgn);
         Assert.Contains("Nf3", italianGame.pgn);
@@ -190,7 +191,7 @@ public class ChessDatasetTests
             o.name.Contains("Sicilian", StringComparison.OrdinalIgnoreCase));
 
         // Then: It should exist and have correct first moves
-        Assert.NotNull(sicilian);
+        sicilian.Should().NotBeNull();
         Assert.Contains("e4", sicilian.pgn);
         Assert.Contains("c5", sicilian.pgn);
     }
@@ -205,7 +206,7 @@ public class ChessDatasetTests
         // Given & When: I try to load the tactics dataset
         // Then: It should exist and load without error
         var tactics = await LoadTacticsDataset();
-        Assert.NotNull(tactics);
+        tactics.Should().NotBeNull();
     }
 
     [Fact]
@@ -215,7 +216,7 @@ public class ChessDatasetTests
         var tactics = await LoadTacticsDataset();
 
         // Then: It should contain at least 15 tactics (acceptance criteria)
-        Assert.NotNull(tactics);
+        tactics.Should().NotBeNull();
         Assert.True(tactics.Count >= 15,
             $"Expected at least 15 tactics, found {tactics.Count}. Add more tactics to meet acceptance criteria.");
     }
@@ -249,8 +250,8 @@ public class ChessDatasetTests
             $"Tactic (id: {tactic.id}) missing name");
         Assert.False(string.IsNullOrWhiteSpace(tactic.description),
             $"Tactic '{tactic.name}' (id: {tactic.id}) missing description");
-        Assert.NotNull(tactic.examples);
-        Assert.NotEmpty(tactic.examples);
+        tactic.examples.Should().NotBeNull();
+        tactic.examples.Should().NotBeEmpty();
     }
 
     /// <summary>
@@ -297,7 +298,7 @@ public class ChessDatasetTests
             t.name.Contains("forchetta", StringComparison.OrdinalIgnoreCase));
 
         // Then: It should have at least 2 examples
-        Assert.NotNull(fork);
+        fork.Should().NotBeNull();
         Assert.True(fork.examples.Count >= 2,
             $"Fork tactic should have at least 2 examples, found {fork.examples.Count}");
     }

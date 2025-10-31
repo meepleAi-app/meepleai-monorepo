@@ -10,6 +10,7 @@ using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -79,7 +80,7 @@ public class RagEvaluationServiceTests : IDisposable
         var loaded = await _service.LoadDatasetAsync(_tempDatasetPath);
 
         // Assert
-        Assert.NotNull(loaded);
+        loaded.Should().NotBeNull();
         Assert.Equal("Test Dataset", loaded.Name);
         Assert.Equal("1.0", loaded.Version);
         Assert.Single(loaded.Queries);
@@ -417,7 +418,7 @@ public class RagEvaluationServiceTests : IDisposable
 
         // Assert
         Assert.True(report.PassedQualityGates);
-        Assert.Empty(report.QualityGateFailures);
+        report.QualityGateFailures.Should().BeEmpty();
     }
 
     [Fact]
@@ -446,7 +447,7 @@ public class RagEvaluationServiceTests : IDisposable
 
         // Assert
         Assert.False(report.PassedQualityGates);
-        Assert.NotEmpty(report.QualityGateFailures);
+        report.QualityGateFailures.Should().NotBeEmpty();
         Assert.Contains(report.QualityGateFailures, f => f.Contains("Precision@5"));
         Assert.Contains(report.QualityGateFailures, f => f.Contains("MRR"));
     }
@@ -559,12 +560,12 @@ public class RagEvaluationServiceTests : IDisposable
         var json = _service.GenerateJsonReport(report);
 
         // Assert
-        Assert.NotNull(json);
+        json.Should().NotBeNull();
         var deserialized = JsonSerializer.Deserialize<RagEvaluationReport>(json, new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true
         });
-        Assert.NotNull(deserialized);
+        deserialized.Should().NotBeNull();
         Assert.Equal("JSON Test", deserialized.DatasetName);
         Assert.Equal(0.9, deserialized.MeanReciprocalRank);
     }

@@ -7,6 +7,7 @@ using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using System.Runtime.InteropServices;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -170,7 +171,7 @@ public class PdfTextExtractionServiceTests : IDisposable
 
         // Assert
         Assert.True(result.Success);
-        Assert.Null(result.ErrorMessage);
+        result.ErrorMessage.Should().BeNull();
         Assert.Contains("test PDF document", result.ExtractedText);
         Assert.True(result.PageCount > 0);
         Assert.True(result.CharacterCount > 0);
@@ -409,7 +410,7 @@ public class PdfTextExtractionServiceTests : IDisposable
 
         // Assert
         Assert.True(result.Success);
-        Assert.Null(result.ErrorMessage);
+        result.ErrorMessage.Should().BeNull();
         Assert.Equal("test text", result.ExtractedText);
         Assert.Equal(5, result.PageCount);
         Assert.Equal(100, result.CharacterCount);
@@ -437,7 +438,7 @@ public class PdfTextExtractionServiceTests : IDisposable
 
         // Assert
         Assert.True(result.Success);
-        Assert.Null(result.ErrorMessage);
+        result.ErrorMessage.Should().BeNull();
     }
 
     [Fact]

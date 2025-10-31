@@ -7,6 +7,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -72,9 +73,9 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var json = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<CreatePromptTemplateResponse>(json, JsonOptions);
 
-        Assert.NotNull(result);
-        Assert.NotNull(result.Template);
-        Assert.NotNull(result.InitialVersion);
+        result.Should().NotBeNull();
+        result.Template.Should().NotBeNull();
+        result.InitialVersion.Should().NotBeNull();
         Assert.Equal(request.Name, result.Template.Name);
         Assert.Equal(request.Description, result.Template.Description);
         Assert.Equal(request.Category, result.Template.Category);
@@ -218,11 +219,11 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var json = await response.Content.ReadAsStringAsync();
         var version = JsonSerializer.Deserialize<PromptVersionDto>(json, JsonOptions);
 
-        Assert.NotNull(version);
+        version.Should().NotBeNull();
         Assert.Equal(2, version.VersionNumber);
         Assert.Equal(versionRequest.Content, version.Content);
         Assert.False(version.IsActive); // Not activated immediately
-        Assert.NotNull(version.Metadata);
+        version.Metadata.Should().NotBeNull();
     }
 
     /// <summary>
@@ -264,7 +265,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var json = await response.Content.ReadAsStringAsync();
         var version2 = JsonSerializer.Deserialize<PromptVersionDto>(json, JsonOptions);
 
-        Assert.NotNull(version2);
+        version2.Should().NotBeNull();
         Assert.Equal(2, version2.VersionNumber);
         Assert.True(version2.IsActive);
 
@@ -325,7 +326,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var json = await response.Content.ReadAsStringAsync();
         var activatedVersion = JsonSerializer.Deserialize<PromptVersionDto>(json, JsonOptions);
 
-        Assert.NotNull(activatedVersion);
+        activatedVersion.Should().NotBeNull();
         Assert.Equal(2, activatedVersion.VersionNumber);
         Assert.True(activatedVersion.IsActive);
 
@@ -374,7 +375,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var json = await response.Content.ReadAsStringAsync();
         var history = JsonSerializer.Deserialize<PromptVersionHistoryResponse>(json, JsonOptions);
 
-        Assert.NotNull(history);
+        history.Should().NotBeNull();
         Assert.Equal(3, history.TotalCount);
         Assert.Equal(3, history.Versions.Count);
         Assert.Equal(3, history.Versions[0].VersionNumber);
@@ -411,7 +412,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var json = await response.Content.ReadAsStringAsync();
         var activeVersion = JsonSerializer.Deserialize<PromptVersionDto>(json, JsonOptions);
 
-        Assert.NotNull(activeVersion);
+        activeVersion.Should().NotBeNull();
         Assert.Equal(1, activeVersion.VersionNumber);
         Assert.True(activeVersion.IsActive);
     }
@@ -444,11 +445,11 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var json = await response.Content.ReadAsStringAsync();
         var auditLog = JsonSerializer.Deserialize<PromptAuditLogResponse>(json, JsonOptions);
 
-        Assert.NotNull(auditLog);
+        auditLog.Should().NotBeNull();
         // Helper method creates template directly, so we don't get audit logs
         // Let's just verify the structure is correct
-        Assert.NotNull(auditLog.Logs);
-        Assert.NotNull(auditLog.Template);
+        auditLog.Logs.Should().NotBeNull();
+        auditLog.Template.Should().NotBeNull();
         Assert.Equal(template.Id, auditLog.Template.Id);
     }
 
@@ -481,7 +482,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var json = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<PromptTemplateListResponse>(json, JsonOptions);
 
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.True(result.TotalCount >= 2);
         Assert.True(result.Templates.Count >= 2);
     }
@@ -515,7 +516,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var json = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<PromptTemplateListResponse>(json, JsonOptions);
 
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.True(result.Templates.Count >= 1);
         Assert.All(result.Templates, t => Assert.Equal("qa", t.Category));
     }
@@ -548,7 +549,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var json = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<PromptTemplateDto>(json, JsonOptions);
 
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(template.Id, result.Id);
         Assert.Equal(template.Name, result.Name);
         Assert.Equal("Test description", result.Description);

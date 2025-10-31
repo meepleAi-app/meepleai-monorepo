@@ -5,6 +5,7 @@ using Api.Services;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -46,7 +47,7 @@ public class SessionCacheServiceTests
         var result = await service.GetAsync(tokenHash);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(user.Id, result!.User.Id);
         Assert.Equal(user.Email, result.User.Email);
         Assert.Equal(expiresAt.ToString("O"), result.ExpiresAt.ToString("O"));
@@ -74,7 +75,7 @@ public class SessionCacheServiceTests
         var result = await service.GetAsync("not-cached-hash");
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -124,7 +125,7 @@ public class SessionCacheServiceTests
         await service.SetAsync(tokenHash, session, expiresAt);
 
         // Assert
-        Assert.NotNull(capturedTtl);
+        capturedTtl.Should().NotBeNull();
         // TTL should be close to 7 days (within 1 second tolerance)
         var expectedTtl = expiresAt - DateTime.UtcNow;
         Assert.InRange(capturedTtl!.Value.TotalSeconds, expectedTtl.TotalSeconds - 1, expectedTtl.TotalSeconds + 1);
@@ -183,6 +184,6 @@ public class SessionCacheServiceTests
         var result = await service.GetAsync("test-hash");
 
         // Assert
-        Assert.Null(result); // Should fail gracefully
+        result.Should().BeNull(); // Should fail gracefully
     }
 }

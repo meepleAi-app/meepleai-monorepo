@@ -10,6 +10,7 @@ using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Integration;
@@ -177,7 +178,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
         Assert.Equal("application/pdf", response.Content.Headers.ContentType?.MediaType);
 
         // And: Content-Disposition header includes filename
-        Assert.NotNull(response.Content.Headers.ContentDisposition);
+        response.Content.Headers.ContentDisposition.Should().NotBeNull();
         Assert.Equal("attachment", response.Content.Headers.ContentDisposition.DispositionType);
         Assert.Contains(".pdf", response.Content.Headers.ContentDisposition.FileName);
         Assert.Contains("chat-", response.Content.Headers.ContentDisposition.FileName);
@@ -256,7 +257,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
         Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
 
         // And: Content-Disposition includes .txt filename
-        Assert.NotNull(response.Content.Headers.ContentDisposition);
+        response.Content.Headers.ContentDisposition.Should().NotBeNull();
         Assert.Contains(".txt", response.Content.Headers.ContentDisposition.FileName);
 
         // And: Response body contains readable text
@@ -331,7 +332,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
         Assert.Equal("text/markdown", response.Content.Headers.ContentType?.MediaType);
 
         // And: Content-Disposition includes .md filename
-        Assert.NotNull(response.Content.Headers.ContentDisposition);
+        response.Content.Headers.ContentDisposition.Should().NotBeNull();
         Assert.Contains(".md", response.Content.Headers.ContentDisposition.FileName);
 
         // And: Response body contains Markdown syntax
@@ -481,7 +482,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
 
         // And: Filename includes date range
         var filename = response.Content.Headers.ContentDisposition?.FileName;
-        Assert.NotNull(filename);
+        filename.Should().NotBeNull();
         // Date should be in filename (implementation-specific format)
     }
 
@@ -568,7 +569,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var filename = response.Content.Headers.ContentDisposition?.FileName;
-        Assert.NotNull(filename);
+        filename.Should().NotBeNull();
 
         // And: No path separators in filename
         Assert.DoesNotContain("..", filename);

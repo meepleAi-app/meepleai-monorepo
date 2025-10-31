@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Api.Infrastructure.Entities;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -43,8 +44,8 @@ public class RateLimitingTests : IntegrationTestBase
         // And: Headers have valid values
         var limit = response.Headers.GetValues("X-RateLimit-Limit").FirstOrDefault();
         var remaining = response.Headers.GetValues("X-RateLimit-Remaining").FirstOrDefault();
-        Assert.NotNull(limit);
-        Assert.NotNull(remaining);
+        limit.Should().NotBeNull();
+        remaining.Should().NotBeNull();
         Assert.True(int.TryParse(limit, out var limitValue));
         Assert.True(int.TryParse(remaining, out var remainingValue));
         Assert.True(limitValue > 0);
@@ -202,7 +203,7 @@ public class RateLimitingTests : IntegrationTestBase
             Assert.True(rateLimitedResponse.Headers.Contains("Retry-After"));
 
             var retryAfter = rateLimitedResponse.Headers.GetValues("Retry-After").FirstOrDefault();
-            Assert.NotNull(retryAfter);
+            retryAfter.Should().NotBeNull();
             Assert.True(int.TryParse(retryAfter, out var seconds));
             Assert.True(seconds > 0);
         }
@@ -237,7 +238,7 @@ public class RateLimitingTests : IntegrationTestBase
         {
             Assert.Equal(HttpStatusCode.TooManyRequests, rateLimitedResponse.StatusCode);
             var content = await rateLimitedResponse.Content.ReadAsStringAsync();
-            Assert.NotNull(content);
+            content.Should().NotBeNull();
             Assert.Contains("error", content);
             Assert.Contains("Rate limit exceeded", content);
         }

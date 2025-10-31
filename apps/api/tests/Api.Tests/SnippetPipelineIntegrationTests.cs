@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 /// <summary>
@@ -191,7 +192,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("monopoly", "How many players can play Monopoly?");
 
         // Then: System returns a grounded answer with citations
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.NotEqual("Not specified", result.answer);
         Assert.Contains("2-8 players", result.answer);
 
@@ -207,11 +208,11 @@ CRITICAL INSTRUCTIONS:
         Assert.Equal(330, result.totalTokens);
 
         // And: Confidence score reflects search quality
-        Assert.NotNull(result.confidence);
+        result.confidence.Should().NotBeNull();
         Assert.Equal(0.94, result.confidence.Value, precision: 2);
 
         // And: Metadata is preserved
-        Assert.NotNull(result.metadata);
+        result.metadata.Should().NotBeNull();
         Assert.Equal("anthropic/claude-3-5-sonnet-20241022", result.metadata["model"]);
         Assert.Equal("end_turn", result.metadata["finish_reason"]);
     }
@@ -245,7 +246,7 @@ CRITICAL INSTRUCTIONS:
 
         // Then: System returns "Not specified" instead of hallucinating
         Assert.Equal("Not specified", result.answer);
-        Assert.Empty(result.snippets);
+        result.snippets.Should().BeEmpty();
 
         // And: LLM is never called (no context to process)
         mockLlm.Verify(
@@ -378,7 +379,7 @@ CRITICAL INSTRUCTIONS:
 
         // Then: System returns a user-friendly error message
         Assert.Equal("Unable to process query.", result.answer);
-        Assert.Empty(result.snippets);
+        result.snippets.Should().BeEmpty();
     }
 
     [Fact]
@@ -406,7 +407,7 @@ CRITICAL INSTRUCTIONS:
 
         // Then: System returns "Not specified" to avoid unreliable answers
         Assert.Equal("Not specified", result.answer);
-        Assert.Empty(result.snippets);
+        result.snippets.Should().BeEmpty();
     }
 
     [Fact]

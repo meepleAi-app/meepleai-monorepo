@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
@@ -80,8 +81,8 @@ public class AdminStatsServiceTests : IDisposable
         var result = await _service.GetDashboardStatsAsync(queryParams, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.Metrics);
+        result.Should().NotBeNull();
+        result.Metrics.Should().NotBeNull();
         Assert.Equal(3, result.Metrics.TotalUsers);
         Assert.Equal(2, result.Metrics.ActiveSessions); // Only non-revoked sessions
         Assert.Equal(5, result.Metrics.TotalPdfDocuments);
@@ -189,12 +190,12 @@ public class AdminStatsServiceTests : IDisposable
 
         // Check that missing dates have zero counts
         var dayMinus6 = result.UserTrend.FirstOrDefault(d => d.Date.Date == now.AddDays(-6).Date);
-        Assert.NotNull(dayMinus6);
+        dayMinus6.Should().NotBeNull();
         Assert.Equal(0, dayMinus6.Count);
 
         // Check that dates with data have correct counts
         var dayMinus5 = result.UserTrend.FirstOrDefault(d => d.Date.Date == now.AddDays(-5).Date);
-        Assert.NotNull(dayMinus5);
+        dayMinus5.Should().NotBeNull();
         Assert.Equal(1, dayMinus5.Count);
     }
 
@@ -254,7 +255,7 @@ public class AdminStatsServiceTests : IDisposable
 
         // Assert
         var todayPdfs = result.PdfUploadTrend.FirstOrDefault(d => d.Date.Date == now.Date);
-        Assert.NotNull(todayPdfs);
+        todayPdfs.Should().NotBeNull();
         Assert.Equal(1, todayPdfs.Count); // Only game1 PDF
     }
 
@@ -299,7 +300,7 @@ public class AdminStatsServiceTests : IDisposable
         var result = await _service.ExportDashboardDataAsync(request, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Contains("Metric,Value", result);
         Assert.Contains("Total Users,", result);
         Assert.Contains("Active Sessions,", result);
@@ -317,13 +318,13 @@ public class AdminStatsServiceTests : IDisposable
         var result = await _service.ExportDashboardDataAsync(request, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Contains("\"metrics\"", result);
         Assert.Contains("\"userTrend\"", result);
         Assert.Contains("\"totalUsers\"", result);
         // Verify it's valid JSON
         var deserialized = System.Text.Json.JsonSerializer.Deserialize<DashboardStatsDto>(result);
-        Assert.NotNull(deserialized);
+        deserialized.Should().NotBeNull();
     }
 
     [Fact]
@@ -487,7 +488,7 @@ public class AdminStatsServiceTests : IDisposable
         var result = await _service.GetDashboardStatsAsync(queryParams, CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(0, result.Metrics.TotalUsers);
         Assert.Equal(0, result.Metrics.ActiveSessions);
         Assert.Equal(0, result.Metrics.TotalPdfDocuments);

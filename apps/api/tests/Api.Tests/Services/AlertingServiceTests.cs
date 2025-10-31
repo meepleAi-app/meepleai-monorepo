@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
@@ -111,16 +112,16 @@ public class AlertingServiceTests : IDisposable
         var result = await _service.SendAlertAsync(alertType, severity, message);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(alertType, result.AlertType);
         Assert.Equal(severity, result.Severity);
         Assert.Equal(message, result.Message);
         Assert.True(result.IsActive);
-        Assert.Null(result.ResolvedAt);
+        result.ResolvedAt.Should().BeNull();
 
         // Verify alert was saved to database
         var savedAlert = await _dbContext.Alerts.FirstOrDefaultAsync(a => a.AlertType == alertType);
-        Assert.NotNull(savedAlert);
+        savedAlert.Should().NotBeNull();
         Assert.True(savedAlert.IsActive);
     }
 
@@ -177,7 +178,7 @@ public class AlertingServiceTests : IDisposable
         var result = await _service.SendAlertAsync(alertType, severity, "Qdrant is down");
 
         // Assert
-        Assert.NotNull(result.ChannelSent);
+        result.ChannelSent.Should().NotBeNull();
         Assert.True(result.ChannelSent["Email"]);
         Assert.False(result.ChannelSent["Slack"]);
         Assert.True(result.ChannelSent["PagerDuty"]);
@@ -250,9 +251,9 @@ public class AlertingServiceTests : IDisposable
         Assert.True(resolved);
 
         var alert = await _dbContext.Alerts.FirstOrDefaultAsync(a => a.AlertType == alertType);
-        Assert.NotNull(alert);
+        alert.Should().NotBeNull();
         Assert.False(alert.IsActive);
-        Assert.NotNull(alert.ResolvedAt);
+        alert.ResolvedAt.Should().NotBeNull();
     }
 
     [Fact]

@@ -10,6 +10,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -70,7 +71,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         var logged = await context.WorkflowErrorLogs
             .FirstOrDefaultAsync(e => e.ExecutionId == request.ExecutionId);
 
-        Assert.NotNull(logged);
+        logged.Should().NotBeNull();
         Assert.Equal("chess-agent-workflow", logged.WorkflowId);
         Assert.Equal("HTTP Request failed: Connection timeout", logged.ErrorMessage);
         Assert.Equal("API Call Node", logged.NodeName);
@@ -421,7 +422,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         var logged = await context.WorkflowErrorLogs
             .FirstOrDefaultAsync(e => e.ExecutionId == request.ExecutionId);
 
-        Assert.NotNull(logged);
+        logged.Should().NotBeNull();
         Assert.Contains("***REDACTED***", logged.ErrorMessage);
         Assert.DoesNotContain("sk-1234567890", logged.ErrorMessage);
         Assert.DoesNotContain("bearer-secret", logged.ErrorMessage);

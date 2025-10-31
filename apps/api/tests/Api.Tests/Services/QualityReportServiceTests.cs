@@ -12,6 +12,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
@@ -219,13 +220,13 @@ public class QualityReportServiceTests : IDisposable
         // Assert
         Assert.Equal(10, report.TotalResponses);
         Assert.Equal(3, report.LowQualityCount);
-        Assert.NotNull(report.AverageRagConfidence);
+        report.AverageRagConfidence.Should().NotBeNull();
         Assert.InRange(report.AverageRagConfidence.Value, 0.70, 0.80);
-        Assert.NotNull(report.AverageLlmConfidence);
+        report.AverageLlmConfidence.Should().NotBeNull();
         Assert.InRange(report.AverageLlmConfidence.Value, 0.65, 0.75);
-        Assert.NotNull(report.AverageCitationQuality);
+        report.AverageCitationQuality.Should().NotBeNull();
         Assert.InRange(report.AverageCitationQuality.Value, 0.75, 0.85);
-        Assert.NotNull(report.AverageOverallConfidence);
+        report.AverageOverallConfidence.Should().NotBeNull();
         Assert.InRange(report.AverageOverallConfidence.Value, 0.70, 0.80);
     }
 
@@ -275,10 +276,10 @@ public class QualityReportServiceTests : IDisposable
         // Assert
         Assert.Equal(0, report.TotalResponses);
         Assert.Equal(0, report.LowQualityCount);
-        Assert.Null(report.AverageRagConfidence);
-        Assert.Null(report.AverageLlmConfidence);
-        Assert.Null(report.AverageCitationQuality);
-        Assert.Null(report.AverageOverallConfidence);
+        report.AverageRagConfidence.Should().BeNull();
+        report.AverageLlmConfidence.Should().BeNull();
+        report.AverageCitationQuality.Should().BeNull();
+        report.AverageOverallConfidence.Should().BeNull();
     }
 
     /// <summary>

@@ -10,6 +10,7 @@ using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Integration;
@@ -81,8 +82,8 @@ public class ConfigurationConcurrencyTests : ConfigIntegrationTestBase
         var config1 = await dbContext.SystemConfigurations.FirstOrDefaultAsync(c => c.Key == "Concurrent:Config1");
         var config2 = await dbContext.SystemConfigurations.FirstOrDefaultAsync(c => c.Key == "Concurrent:Config2");
 
-        Assert.NotNull(config1);
-        Assert.NotNull(config2);
+        config1.Should().NotBeNull();
+        config2.Should().NotBeNull();
         Assert.Equal("value1", config1.Value);
         Assert.Equal("value2", config2.Value);
     }

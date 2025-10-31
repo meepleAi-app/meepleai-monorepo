@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 using System.Diagnostics;
 using Api.Observability;
@@ -39,7 +40,7 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var content = await response.Content.ReadAsStringAsync();
-        Assert.NotEmpty(content);
+        content.Should().NotBeEmpty();
 
         // Verify it's Prometheus format (starts with # HELP or metric name)
         Assert.True(
@@ -179,8 +180,8 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
         var sourceNames = MeepleAiActivitySources.GetAllSourceNames();
 
         // Assert
-        Assert.NotNull(sourceNames);
-        Assert.NotEmpty(sourceNames);
+        sourceNames.Should().NotBeNull();
+        sourceNames.Should().NotBeEmpty();
 
         // Verify all expected sources are present
         Assert.Contains("MeepleAI.Api", sourceNames);
@@ -205,7 +206,7 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
         using var activity = MeepleAiActivitySources.Rag.StartActivity("TestTrace");
 
         // Assert - Activity should be created
-        Assert.NotNull(activity);
+        activity.Should().NotBeNull();
         Assert.Equal("TestTrace", activity.DisplayName);
     }
 

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Api.Infrastructure.Entities;
 using Api.Services;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
@@ -88,7 +89,7 @@ public class PdfExportFormatterTests
         var stream = await _formatter.FormatAsync(chat, null, null);
 
         // Then: Valid PDF stream is returned
-        Assert.NotNull(stream);
+        stream.Should().NotBeNull();
         Assert.True(stream.Length > 0);
 
         // And: Stream starts with PDF magic bytes
@@ -127,7 +128,7 @@ public class PdfExportFormatterTests
         var stream = await _formatter.FormatAsync(chat, null, null);
 
         // Then: PDF is generated without exception
-        Assert.NotNull(stream);
+        stream.Should().NotBeNull();
 
         // And: PDF size is reasonable (should be several KB for 150 messages)
         Assert.True(stream.Length > 5000, $"Expected PDF > 5KB, got {stream.Length} bytes");
@@ -177,7 +178,7 @@ public class PdfExportFormatterTests
         var stream = await _formatter.FormatAsync(chat, null, null);
 
         // Then: PDF is generated successfully
-        Assert.NotNull(stream);
+        stream.Should().NotBeNull();
         Assert.True(stream.Length > 0);
 
         // And: Verify it's a valid PDF with content
@@ -209,7 +210,7 @@ public class PdfExportFormatterTests
         var stream = await _formatter.FormatAsync(chat, null, null);
 
         // Then: Valid PDF stream is returned
-        Assert.NotNull(stream);
+        stream.Should().NotBeNull();
         Assert.True(stream.Length > 0);
 
         // And: PDF is valid (starts with magic bytes)
@@ -258,7 +259,7 @@ public class PdfExportFormatterTests
         var stream = await _formatter.FormatAsync(chat, startDate, endDate);
 
         // Then: PDF is generated
-        Assert.NotNull(stream);
+        stream.Should().NotBeNull();
         Assert.True(stream.Length > 0);
 
         // And: Valid PDF structure
@@ -328,7 +329,7 @@ public class PdfExportFormatterTests
         var stream = await _formatter.FormatAsync(chat, null, null);
 
         // Then: PDF is generated without errors
-        Assert.NotNull(stream);
+        stream.Should().NotBeNull();
         Assert.True(stream.Length > 0);
 
         // And: Valid PDF structure
@@ -368,7 +369,7 @@ public class PdfExportFormatterTests
         var stream = await _formatter.FormatAsync(chat, null, null);
 
         // Then: PDF generation does not crash
-        Assert.NotNull(stream);
+        stream.Should().NotBeNull();
         Assert.True(stream.Length > 0);
 
         // And: Valid PDF is generated
@@ -411,7 +412,7 @@ public class PdfExportFormatterTests
         var stream = await _formatter.FormatAsync(chat, null, null);
 
         // Then: PDF handles long content
-        Assert.NotNull(stream);
+        stream.Should().NotBeNull();
         Assert.True(stream.Length > 0);
 
         // And: PDF is valid
@@ -469,7 +470,7 @@ public class PdfExportFormatterTests
         var stream = await _formatter.FormatAsync(chat, null, null);
 
         // Then: PDF is generated
-        Assert.NotNull(stream);
+        stream.Should().NotBeNull();
         Assert.True(stream.Length > 0);
 
         // And: Valid PDF structure

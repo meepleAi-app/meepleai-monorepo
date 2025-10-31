@@ -6,6 +6,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -46,7 +47,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         // Then: User info is returned
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var authResponse = await response.Content.ReadFromJsonAsync<Api.Models.AuthResponse>();
-        Assert.NotNull(authResponse);
+        authResponse.Should().NotBeNull();
         Assert.Equal(user.Email, authResponse.User.Email);
         Assert.Equal(user.DisplayName, authResponse.User.DisplayName);
         Assert.Equal("Editor", authResponse.User.Role);
@@ -258,7 +259,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         // Then: API key takes precedence (returns API key user, not cookie user)
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var authResponse = await response.Content.ReadFromJsonAsync<Api.Models.AuthResponse>();
-        Assert.NotNull(authResponse);
+        authResponse.Should().NotBeNull();
         Assert.Equal(apiKeyUser.Email, authResponse.User.Email);
         Assert.Equal("Admin", authResponse.User.Role); // API key user is Admin
     }
@@ -280,7 +281,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         // Then: Cookie authentication works
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var authResponse = await response.Content.ReadFromJsonAsync<Api.Models.AuthResponse>();
-        Assert.NotNull(authResponse);
+        authResponse.Should().NotBeNull();
         Assert.Equal(user.Email, authResponse.User.Email);
         Assert.Equal("Editor", authResponse.User.Role);
     }
@@ -396,10 +397,10 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
 
         var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-        Assert.NotNull(errorResponse);
+        errorResponse.Should().NotBeNull();
         Assert.Equal("invalid_api_key", errorResponse.error);
-        Assert.NotNull(errorResponse.message);
-        Assert.NotNull(errorResponse.correlationId);
+        errorResponse.message.Should().NotBeNull();
+        errorResponse.correlationId.Should().NotBeNull();
     }
 
     #endregion

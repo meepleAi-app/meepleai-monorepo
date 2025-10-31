@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -44,7 +45,7 @@ public class LlmServiceTests
         // Assert
         Assert.False(result.Success);
         Assert.Equal("No user prompt provided", result.ErrorMessage);
-        Assert.Empty(handler.Requests);
+        handler.Requests.Should().BeEmpty();
     }
 
     [Fact]
@@ -102,7 +103,7 @@ public class LlmServiceTests
         Assert.Equal("https://openrouter.ai/api/v1/chat/completions", request.RequestUri!.ToString());
 
         var body = handler.RequestBodies.Single();
-        Assert.NotNull(body);
+        body.Should().NotBeNull();
 
         using var document = JsonDocument.Parse(body!);
         var root = document.RootElement;
@@ -250,7 +251,7 @@ public class LlmServiceTests
         var result = await service.GenerateJsonAsync<TestJsonModel>("system", "user prompt");
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
 
         // Verify warning was logged for JSON parsing failure
         _loggerMock.Verify(
@@ -338,7 +339,7 @@ public class LlmServiceTests
             service.GenerateCompletionStreamAsync("system", "user prompt"));
 
         // Assert
-        Assert.Empty(tokens);
+        tokens.Should().BeEmpty();
 
         var request = Assert.Single(handler.Requests);
         AssertRequestHeaders(request);
@@ -415,7 +416,7 @@ data: [DONE]
 
         // Assert
         // Should have at least one token before cancellation, but not all 4
-        Assert.NotEmpty(tokens);
+        tokens.Should().NotBeEmpty();
         Assert.True(tokens.Count < 4, $"Expected partial tokens (< 4), got {tokens.Count}");
 
         var request = Assert.Single(handler.Requests);
@@ -480,7 +481,7 @@ data: [DONE]
         var result = await service.GenerateJsonAsync<TestJsonModel>("system", "user prompt");
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Test Game", result.Name);
         Assert.Equal(2, result.Players);
         Assert.Equal("Medium", result.Complexity);
@@ -613,7 +614,7 @@ data: [DONE]
             service.GenerateCompletionStreamAsync("system", "user prompt"));
 
         // Assert
-        Assert.Empty(tokens);
+        tokens.Should().BeEmpty();
 
         // Verify error was logged
         _loggerMock.Verify(
@@ -663,7 +664,7 @@ data: [DONE]
         var result = await service.GenerateJsonAsync<TestJsonModel>("system", "user prompt");
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
 
         // Verify warning was logged
         _loggerMock.Verify(
@@ -715,7 +716,7 @@ data: [DONE]
         var result = await service.GenerateJsonAsync<TestJsonModel>("system", "user prompt");
 
         // Assert
-        Assert.NotNull(result); // Deserializer creates object with default values
+        result.Should().NotBeNull(); // Deserializer creates object with default values
         Assert.Equal(string.Empty, result.Name);
         Assert.Equal(0, result.Players);
         Assert.Equal(string.Empty, result.Complexity);

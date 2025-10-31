@@ -5,6 +5,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -41,12 +42,12 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
 
         // And: Session cookie is returned
         var cookies = GetCookiesFromResponse(response);
-        Assert.NotNull(cookies);
+        cookies.Should().NotBeNull();
         Assert.Contains("meeple_session", cookies.Keys);
 
         // And: Cookie has correct attributes (HttpOnly, Secure, SameSite)
         var sessionCookie = cookies["meeple_session"];
-        Assert.NotNull(sessionCookie);
+        sessionCookie.Should().NotBeNull();
     }
 
     [Fact]
@@ -61,7 +62,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
 
         // Load user in current scope to avoid EF tracking issues
         var userInScope = await db.Users.FindAsync(user.Id);
-        Assert.NotNull(userInScope);
+        userInScope.Should().NotBeNull();
 
         var tokenHash = Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes("expired-token")));
         var expiredSession = new UserSessionEntity
@@ -397,7 +398,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
-        Assert.NotNull(authResponse);
+        authResponse.Should().NotBeNull();
         Assert.Equal(user.Email, authResponse.User.Email);
         Assert.Equal(user.DisplayName, authResponse.User.DisplayName);
         Assert.Equal(UserRole.User.ToString(), authResponse.User.Role);

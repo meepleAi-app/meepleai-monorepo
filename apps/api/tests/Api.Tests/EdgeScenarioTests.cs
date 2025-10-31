@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text;
 using Api.Infrastructure.Entities;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;

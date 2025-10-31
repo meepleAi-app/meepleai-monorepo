@@ -1,5 +1,6 @@
 using Api.Models;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -119,7 +120,7 @@ public class RuleSpecV0ModelTests
         Assert.Equal("card-1", component.Id);
         Assert.Equal("Action Card", component.Name);
         Assert.Equal(50, component.Quantity);
-        Assert.Null(component.Description);
+        component.Description.Should().BeNull();
     }
 
     [Fact]
@@ -161,8 +162,8 @@ public class RuleSpecV0ModelTests
         // Assert
         Assert.Equal("step-1", step.Id);
         Assert.Equal("Shuffle the deck", step.Text);
-        Assert.Null(step.Order);
-        Assert.Null(step.Components);
+        step.Order.Should().BeNull();
+        step.Components.Should().BeNull();
     }
 
     [Fact]
@@ -200,8 +201,8 @@ public class RuleSpecV0ModelTests
 
         // Assert
         Assert.Equal(2, setup.Steps.Count);
-        Assert.Null(setup.Description);
-        Assert.Null(setup.Components);
+        setup.Description.Should().BeNull();
+        setup.Components.Should().BeNull();
     }
 
     [Fact]
@@ -217,7 +218,7 @@ public class RuleSpecV0ModelTests
         // Assert
         Assert.Single(setup.Steps);
         Assert.Equal("Game setup instructions", setup.Description);
-        Assert.NotNull(setup.Components);
+        setup.Components.Should().NotBeNull();
         Assert.Single(setup.Components);
     }
 
@@ -234,7 +235,7 @@ public class RuleSpecV0ModelTests
         // Assert
         Assert.Equal("ps-1", step.Id);
         Assert.Equal("Draw a card", step.Text);
-        Assert.Null(step.Order);
+        step.Order.Should().BeNull();
         Assert.False(step.Optional);
     }
 
@@ -264,10 +265,10 @@ public class RuleSpecV0ModelTests
         // Assert
         Assert.Equal("phase-1", phase.Id);
         Assert.Equal("Draw Phase", phase.Name);
-        Assert.Null(phase.Description);
-        Assert.Null(phase.Order);
-        Assert.Null(phase.Steps);
-        Assert.Null(phase.AllowedActions);
+        phase.Description.Should().BeNull();
+        phase.Order.Should().BeNull();
+        phase.Steps.Should().BeNull();
+        phase.AllowedActions.Should().BeNull();
     }
 
     [Fact]
@@ -285,9 +286,9 @@ public class RuleSpecV0ModelTests
         Assert.Equal("Main Phase", phase.Name);
         Assert.Equal("Main game phase", phase.Description);
         Assert.Equal(1, phase.Order);
-        Assert.NotNull(phase.Steps);
+        phase.Steps.Should().NotBeNull();
         Assert.Single(phase.Steps);
-        Assert.NotNull(phase.AllowedActions);
+        phase.AllowedActions.Should().NotBeNull();
         Assert.Equal(2, phase.AllowedActions.Count);
     }
 
@@ -302,8 +303,8 @@ public class RuleSpecV0ModelTests
         var cost = new ActionCost();
 
         // Assert
-        Assert.Null(cost.Resources);
-        Assert.Null(cost.Description);
+        cost.Resources.Should().BeNull();
+        cost.Description.Should().BeNull();
     }
 
     [Fact]
@@ -320,7 +321,7 @@ public class RuleSpecV0ModelTests
         var cost = new ActionCost(resources, "Resource cost");
 
         // Assert
-        Assert.NotNull(cost.Resources);
+        cost.Resources.Should().NotBeNull();
         Assert.Equal(2, cost.Resources.Count);
         Assert.Equal(3, cost.Resources["gold"]);
         Assert.Equal("Resource cost", cost.Description);
@@ -340,10 +341,10 @@ public class RuleSpecV0ModelTests
         Assert.Equal("action-1", action.Id);
         Assert.Equal("Draw Card", action.Name);
         Assert.Equal(ActionType.Mandatory, action.Type);
-        Assert.Null(action.Description);
-        Assert.Null(action.Prerequisites);
-        Assert.Null(action.Effects);
-        Assert.Null(action.Cost);
+        action.Description.Should().BeNull();
+        action.Prerequisites.Should().BeNull();
+        action.Effects.Should().BeNull();
+        action.Cost.Should().BeNull();
     }
 
     [Fact]
@@ -369,11 +370,11 @@ public class RuleSpecV0ModelTests
         Assert.Equal("Buy Card", action.Name);
         Assert.Equal(ActionType.Optional, action.Type);
         Assert.Equal("Purchase a card", action.Description);
-        Assert.NotNull(action.Prerequisites);
+        action.Prerequisites.Should().NotBeNull();
         Assert.Single(action.Prerequisites);
-        Assert.NotNull(action.Effects);
+        action.Effects.Should().NotBeNull();
         Assert.Single(action.Effects);
-        Assert.NotNull(action.Cost);
+        action.Cost.Should().NotBeNull();
     }
 
     [Fact]
@@ -427,8 +428,8 @@ public class RuleSpecV0ModelTests
         Assert.Equal("src-1", source.Id);
         Assert.Equal("Gold", source.Name);
         Assert.Equal(5, source.Value);
-        Assert.Null(source.Description);
-        Assert.Null(source.When);
+        source.Description.Should().BeNull();
+        source.When.Should().BeNull();
     }
 
     [Fact]
@@ -462,9 +463,9 @@ public class RuleSpecV0ModelTests
 
         // Assert
         Assert.Equal(ScoringMethod.Points, rules.Method);
-        Assert.Null(rules.Description);
-        Assert.Null(rules.Sources);
-        Assert.Null(rules.Tiebreakers);
+        rules.Description.Should().BeNull();
+        rules.Sources.Should().BeNull();
+        rules.Tiebreakers.Should().BeNull();
     }
 
     [Fact]
@@ -484,9 +485,9 @@ public class RuleSpecV0ModelTests
         // Assert
         Assert.Equal(ScoringMethod.Hybrid, rules.Method);
         Assert.Equal("Combined scoring", rules.Description);
-        Assert.NotNull(rules.Sources);
+        rules.Sources.Should().NotBeNull();
         Assert.Single(rules.Sources);
-        Assert.NotNull(rules.Tiebreakers);
+        rules.Tiebreakers.Should().NotBeNull();
         Assert.Single(rules.Tiebreakers);
     }
 
@@ -514,7 +515,7 @@ public class RuleSpecV0ModelTests
         Assert.Equal("ec-1", condition.Id);
         Assert.Equal(EndConditionType.Rounds, condition.Type);
         Assert.Equal("Game ends after 10 rounds", condition.Description);
-        Assert.Null(condition.Value);
+        condition.Value.Should().BeNull();
     }
 
     [Fact]
@@ -555,8 +556,8 @@ public class RuleSpecV0ModelTests
         Assert.Equal("ec-1", edgeCase.Id);
         Assert.Equal(EdgeCaseCategory.Exception, edgeCase.Category);
         Assert.Equal("Special rule for ties", edgeCase.Text);
-        Assert.Null(edgeCase.RelatedActions);
-        Assert.Null(edgeCase.RelatedPhases);
+        edgeCase.RelatedActions.Should().BeNull();
+        edgeCase.RelatedPhases.Should().BeNull();
     }
 
     [Fact]
@@ -577,9 +578,9 @@ public class RuleSpecV0ModelTests
         // Assert
         Assert.Equal("ec-1", edgeCase.Id);
         Assert.Equal(EdgeCaseCategory.Clarification, edgeCase.Category);
-        Assert.NotNull(edgeCase.RelatedActions);
+        edgeCase.RelatedActions.Should().NotBeNull();
         Assert.Equal(2, edgeCase.RelatedActions.Count);
-        Assert.NotNull(edgeCase.RelatedPhases);
+        edgeCase.RelatedPhases.Should().NotBeNull();
         Assert.Single(edgeCase.RelatedPhases);
     }
 
@@ -606,7 +607,7 @@ public class RuleSpecV0ModelTests
         // Assert
         Assert.Equal("Action Point", term.Term);
         Assert.Equal("A resource used to perform actions", term.Definition);
-        Assert.Null(term.Examples);
+        term.Examples.Should().BeNull();
     }
 
     [Fact]
@@ -620,7 +621,7 @@ public class RuleSpecV0ModelTests
 
         // Assert
         Assert.Equal("Action Point", term.Term);
-        Assert.NotNull(term.Examples);
+        term.Examples.Should().NotBeNull();
         Assert.Equal(2, term.Examples.Count);
     }
 
@@ -640,11 +641,11 @@ public class RuleSpecV0ModelTests
         // Assert
         Assert.Equal("Catan", metadata.Name);
         Assert.Equal(createdAt, metadata.CreatedAt);
-        Assert.Null(metadata.Description);
-        Assert.Null(metadata.UpdatedAt);
-        Assert.Null(metadata.PlayerCount);
-        Assert.Null(metadata.PlayTime);
-        Assert.Null(metadata.AgeRange);
+        metadata.Description.Should().BeNull();
+        metadata.UpdatedAt.Should().BeNull();
+        metadata.PlayerCount.Should().BeNull();
+        metadata.PlayTime.Should().BeNull();
+        metadata.AgeRange.Should().BeNull();
     }
 
     [Fact]
@@ -715,8 +716,8 @@ public class RuleSpecV0ModelTests
         Assert.Single(spec.Actions);
         Assert.Equal(scoring, spec.Scoring);
         Assert.Single(spec.EndConditions);
-        Assert.Null(spec.EdgeCases);
-        Assert.Null(spec.Glossary);
+        spec.EdgeCases.Should().BeNull();
+        spec.Glossary.Should().BeNull();
     }
 
     [Fact]
@@ -746,9 +747,9 @@ public class RuleSpecV0ModelTests
             glossary);
 
         // Assert
-        Assert.NotNull(spec.EdgeCases);
+        spec.EdgeCases.Should().NotBeNull();
         Assert.Single(spec.EdgeCases);
-        Assert.NotNull(spec.Glossary);
+        spec.Glossary.Should().NotBeNull();
         Assert.Single(spec.Glossary);
     }
 

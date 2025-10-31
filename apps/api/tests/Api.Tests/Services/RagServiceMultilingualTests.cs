@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
@@ -208,7 +209,7 @@ public class RagServiceMultilingualTests : IDisposable
         var result = await _service.AskAsync("chess", "Come si muove il cavallo?", language: "it");
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Risposta italiana", result.answer);
         Assert.Equal("it", capturedEmbeddingLanguage);
         Assert.Equal("it", capturedSearchLanguage);
@@ -259,7 +260,7 @@ public class RagServiceMultilingualTests : IDisposable
         var result = await _service.AskAsync("chess", query, language: language);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Answer", result.answer);
         Assert.Equal(language, capturedLanguage);
     }
@@ -304,7 +305,7 @@ public class RagServiceMultilingualTests : IDisposable
         var result = await _service.AskAsync("chess", "How does it work?", language: null);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("English answer", result.answer);
         Assert.Equal("en", capturedLanguage);
     }
@@ -385,7 +386,7 @@ public class RagServiceMultilingualTests : IDisposable
         var result = await _service.AskAsync("chess", "Come si muove?", language: "it");
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Risposta italiana dalla cache", result.answer);
 
         // Verify services were NOT called
@@ -462,8 +463,8 @@ public class RagServiceMultilingualTests : IDisposable
         var result = await _service.ExplainAsync("chess", "Rochade", language: "de");
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.script);
+        result.Should().NotBeNull();
+        result.script.Should().NotBeEmpty();
         Assert.Contains("Rochade", result.script);
         Assert.Equal("de", capturedEmbeddingLanguage);
         Assert.Equal("de", capturedSearchLanguage);
@@ -509,8 +510,8 @@ public class RagServiceMultilingualTests : IDisposable
         var result = await _service.ExplainAsync("chess", "castling", language: null);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.script);
+        result.Should().NotBeNull();
+        result.script.Should().NotBeEmpty();
         Assert.Contains("castling", result.script);
         Assert.Equal("en", capturedLanguage);
     }
@@ -594,7 +595,7 @@ public class RagServiceMultilingualTests : IDisposable
         var result = await _service.ExplainAsync("chess", "roque", language: "fr");
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Explication française du cache", result.script);
 
         // Verify services were NOT called
@@ -642,7 +643,7 @@ public class RagServiceMultilingualTests : IDisposable
         var result = await _service.AskAsync("chess", "¿Cómo se juega?", language: "es");
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Unable to process query.", result.answer);
     }
 
@@ -678,7 +679,7 @@ public class RagServiceMultilingualTests : IDisposable
         var result = await _service.AskAsync("chess", "Come si gioca?", language: "it");
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Not specified", result.answer);
     }
 

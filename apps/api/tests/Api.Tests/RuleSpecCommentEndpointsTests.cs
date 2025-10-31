@@ -10,6 +10,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -68,7 +69,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var comment = await response.Content.ReadFromJsonAsync<RuleSpecComment>();
-        Assert.NotNull(comment);
+        comment.Should().NotBeNull();
         Assert.Equal("This rule needs clarification", comment!.CommentText);
         Assert.Equal("atom-1", comment.AtomId);
         Assert.Equal(user.Id, comment.UserId);
@@ -77,7 +78,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var entity = await db.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == comment.Id);
-        Assert.NotNull(entity);
+        entity.Should().NotBeNull();
         Assert.Equal("This rule needs clarification", entity!.CommentText);
     }
 
@@ -117,7 +118,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var comment = await response.Content.ReadFromJsonAsync<RuleSpecComment>();
-        Assert.NotNull(comment);
+        comment.Should().NotBeNull();
         Assert.Null(comment!.AtomId);
         Assert.Equal("Overall, this version looks good", comment.CommentText);
     }
@@ -221,7 +222,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<RuleSpecCommentsResponse>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(3, result!.TotalComments);
         Assert.Collection(
             result.Comments,
@@ -280,7 +281,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var updated = await response.Content.ReadFromJsonAsync<RuleSpecComment>();
-        Assert.NotNull(updated);
+        updated.Should().NotBeNull();
         Assert.Equal("Updated text", updated!.CommentText);
         Assert.NotNull(updated.UpdatedAt);
     }
@@ -386,7 +387,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         {
             var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var deleted = await db.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId);
-            Assert.Null(deleted);
+            deleted.Should().BeNull();
         }
     }
 
@@ -440,7 +441,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         {
             var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var deleted = await db.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == commentId);
-            Assert.Null(deleted);
+            deleted.Should().BeNull();
         }
     }
 

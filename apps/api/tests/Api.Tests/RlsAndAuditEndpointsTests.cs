@@ -10,6 +10,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -67,7 +68,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         // Then: Access is granted
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<RuleSpec>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(ruleSpec.Version, result!.version);
     }
 
@@ -133,7 +134,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         // Then: Game is created
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var game = await response.Content.ReadFromJsonAsync<GameResponse>();
-        Assert.NotNull(game);
+        game.Should().NotBeNull();
         TrackGameId(game!.Id);
     }
 
@@ -195,7 +196,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         // Then: Game is created
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var game = await response.Content.ReadFromJsonAsync<GameResponse>();
-        Assert.NotNull(game);
+        game.Should().NotBeNull();
         TrackGameId(game!.Id);
     }
 
@@ -518,7 +519,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
             .OrderByDescending(a => a.CreatedAt)
             .FirstOrDefaultAsync();
 
-        Assert.NotNull(auditLog);
+        auditLog.Should().NotBeNull();
         Assert.Equal(attacker.Id, auditLog!.UserId);
         Assert.Equal("Denied", auditLog.Result);
         Assert.Contains("scope", auditLog.Details ?? "", StringComparison.OrdinalIgnoreCase);
@@ -569,7 +570,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
             var games = await response.Content.ReadFromJsonAsync<List<GameResponse>>();
-            Assert.NotNull(games);
+            games.Should().NotBeNull();
             Assert.Contains(games!, g => g.Id == game.Id);
         }
     }

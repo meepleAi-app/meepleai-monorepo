@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using Xunit.Abstractions;
@@ -67,32 +68,32 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: System returns HTTP 200 OK
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var root = document.RootElement;
 
         // And: Response includes core aggregated metrics
-        Assert.Equal(2, root.GetProperty("totalRequests").GetInt32());
-        Assert.Equal(100, root.GetProperty("avgLatencyMs").GetDouble(), 2);
-        Assert.Equal(80, root.GetProperty("totalTokens").GetInt32());
-        Assert.Equal(0.5, root.GetProperty("successRate").GetDouble(), 3);
+        root.GetProperty("totalRequests").GetInt32().Should().Be(2);
+        root.GetProperty("avgLatencyMs").GetDouble().Should().BeApproximately(100, 0.01);
+        root.GetProperty("totalTokens").GetInt32().Should().Be(80);
+        root.GetProperty("successRate").GetDouble().Should().BeApproximately(0.5, 0.001);
 
         // And: Response includes endpoint-specific counts
         var endpointCounts = root.GetProperty("endpointCounts");
-        Assert.Equal(1, endpointCounts.GetProperty("qa").GetInt32());
-        Assert.Equal(1, endpointCounts.GetProperty("setup").GetInt32());
+        endpointCounts.GetProperty("qa").GetInt32().Should().Be(1);
+        endpointCounts.GetProperty("setup").GetInt32().Should().Be(1);
 
         // And: Response includes feedback aggregation
         var feedbackCounts = root.GetProperty("feedbackCounts");
-        Assert.Equal(1, feedbackCounts.GetProperty("helpful").GetInt32());
-        Assert.Equal(1, feedbackCounts.GetProperty("not-helpful").GetInt32());
-        Assert.Equal(2, root.GetProperty("totalFeedback").GetInt32());
+        feedbackCounts.GetProperty("helpful").GetInt32().Should().Be(1);
+        feedbackCounts.GetProperty("not-helpful").GetInt32().Should().Be(1);
+        root.GetProperty("totalFeedback").GetInt32().Should().Be(2);
 
         // And: Response includes feedback breakdown by endpoint
         var feedbackByEndpoint = root.GetProperty("feedbackByEndpoint");
-        Assert.Equal(1, feedbackByEndpoint.GetProperty("qa").GetProperty("helpful").GetInt32());
-        Assert.Equal(1, feedbackByEndpoint.GetProperty("setup").GetProperty("not-helpful").GetInt32());
+        feedbackByEndpoint.GetProperty("qa").GetProperty("helpful").GetInt32().Should().Be(1);
+        feedbackByEndpoint.GetProperty("setup").GetProperty("not-helpful").GetInt32().Should().Be(1);
     }
 
     /// <summary>
@@ -118,7 +119,7 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         var response = await nonAdminClient.SendAsync(request);
 
         // Then: System denies access
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -137,7 +138,7 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         var response = await client.GetAsync("/api/v1/admin/stats");
 
         // Then: System requires authentication
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -165,16 +166,16 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: System returns HTTP 200 OK with empty stats
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var root = document.RootElement;
 
-        Assert.Equal(0, root.GetProperty("totalRequests").GetInt32());
-        Assert.Equal(0, root.GetProperty("avgLatencyMs").GetDouble());
-        Assert.Equal(0, root.GetProperty("totalTokens").GetInt32());
-        Assert.Equal(0, root.GetProperty("successRate").GetDouble());
-        Assert.Empty(root.GetProperty("endpointCounts").EnumerateObject());
+        root.GetProperty("totalRequests").GetInt32().Should().Be(0);
+        root.GetProperty("avgLatencyMs").GetDouble().Should().Be(0);
+        root.GetProperty("totalTokens").GetInt32().Should().Be(0);
+        root.GetProperty("successRate").GetDouble().Should().Be(0);
+        root.GetProperty("endpointCounts").EnumerateObject().Should().BeEmpty();
     }
 
     /// <summary>
@@ -207,13 +208,13 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: System returns filtered statistics
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var root = document.RootElement;
 
         // Should have data within date range
-        Assert.True(root.GetProperty("totalRequests").GetInt32() > 0);
+        root.GetProperty("totalRequests").GetInt32().Should().BeGreaterThan(0);
     }
 
     /// <summary>
@@ -244,13 +245,13 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: System returns stats only for game-1
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var root = document.RootElement;
 
         // Should have 2 requests for game-1 (from seed data)
-        Assert.Equal(2, root.GetProperty("totalRequests").GetInt32());
+        root.GetProperty("totalRequests").GetInt32().Should().Be(2);
     }
 
     /// <summary>
@@ -288,13 +289,13 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: System returns stats matching all criteria
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var root = document.RootElement;
 
         // Should have admin's requests for game-1 only
-        Assert.Equal(2, root.GetProperty("totalRequests").GetInt32());
+        root.GetProperty("totalRequests").GetInt32().Should().Be(2);
     }
 
     /// <summary>
@@ -348,12 +349,12 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: System returns 0% success rate
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var root = document.RootElement;
 
-        Assert.Equal(2, root.GetProperty("totalRequests").GetInt32());
-        Assert.Equal(0.0, root.GetProperty("successRate").GetDouble());
+        root.GetProperty("totalRequests").GetInt32().Should().Be(2);
+        root.GetProperty("successRate").GetDouble().Should().Be(0.0);
     }
 }

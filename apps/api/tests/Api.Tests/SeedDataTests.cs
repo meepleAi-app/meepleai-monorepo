@@ -5,6 +5,7 @@ using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -55,11 +56,11 @@ public class SeedDataTests : IntegrationTestBase
             .FirstOrDefaultAsync(u => u.Email == "admin@meepleai.dev");
 
         // Then: Admin user exists with correct properties
-        Assert.NotNull(admin);
+        admin.Should().NotBeNull();
         Assert.Equal("demo-admin-001", admin!.Id);
         Assert.Equal("Demo Admin", admin.DisplayName);
         Assert.Equal(UserRole.Admin, admin.Role);
-        Assert.NotEmpty(admin.PasswordHash);
+        admin.PasswordHash.Should().NotBeEmpty();
     }
 
     /// <summary>
@@ -82,11 +83,11 @@ public class SeedDataTests : IntegrationTestBase
             .FirstOrDefaultAsync(u => u.Email == "editor@meepleai.dev");
 
         // Then: Editor user exists with correct properties
-        Assert.NotNull(editor);
+        editor.Should().NotBeNull();
         Assert.Equal("demo-editor-001", editor!.Id);
         Assert.Equal("Demo Editor", editor.DisplayName);
         Assert.Equal(UserRole.Editor, editor.Role);
-        Assert.NotEmpty(editor.PasswordHash);
+        editor.PasswordHash.Should().NotBeEmpty();
     }
 
     /// <summary>
@@ -109,11 +110,11 @@ public class SeedDataTests : IntegrationTestBase
             .FirstOrDefaultAsync(u => u.Email == "user@meepleai.dev");
 
         // Then: Regular user exists with correct properties
-        Assert.NotNull(user);
+        user.Should().NotBeNull();
         Assert.Equal("demo-user-001", user!.Id);
         Assert.Equal("Demo User", user.DisplayName);
         Assert.Equal(UserRole.User, user.Role);
-        Assert.NotEmpty(user.PasswordHash);
+        user.PasswordHash.Should().NotBeEmpty();
     }
 
     #endregion
@@ -139,7 +140,7 @@ public class SeedDataTests : IntegrationTestBase
             .FirstOrDefaultAsync(g => g.Id == "tic-tac-toe");
 
         // Then: Game exists with correct properties
-        Assert.NotNull(game);
+        game.Should().NotBeNull();
         Assert.Equal("Tic-Tac-Toe", game!.Name);
     }
 
@@ -162,7 +163,7 @@ public class SeedDataTests : IntegrationTestBase
             .FirstOrDefaultAsync(g => g.Id == "chess");
 
         // Then: Game exists with correct properties
-        Assert.NotNull(game);
+        game.Should().NotBeNull();
         Assert.Equal("Chess", game!.Name);
     }
 
@@ -191,11 +192,11 @@ public class SeedDataTests : IntegrationTestBase
             .FirstOrDefaultAsync(r => r.GameId == "tic-tac-toe" && r.Version == "v1.0");
 
         // Then: Rule spec exists with correct properties
-        Assert.NotNull(ruleSpec);
+        ruleSpec.Should().NotBeNull();
         Assert.Equal("tic-tac-toe", ruleSpec!.GameId);
         Assert.Equal("v1.0", ruleSpec.Version);
         Assert.Equal("demo-admin-001", ruleSpec.CreatedByUserId);
-        Assert.NotNull(ruleSpec.Game);
+        ruleSpec.Game.Should().NotBeNull();
         Assert.Equal("Tic-Tac-Toe", ruleSpec.Game.Name);
     }
 
@@ -220,11 +221,11 @@ public class SeedDataTests : IntegrationTestBase
             .FirstOrDefaultAsync(r => r.GameId == "chess" && r.Version == "v1.0");
 
         // Then: Rule spec exists with correct properties
-        Assert.NotNull(ruleSpec);
+        ruleSpec.Should().NotBeNull();
         Assert.Equal("chess", ruleSpec!.GameId);
         Assert.Equal("v1.0", ruleSpec.Version);
         Assert.Equal("demo-admin-001", ruleSpec.CreatedByUserId);
-        Assert.NotNull(ruleSpec.Game);
+        ruleSpec.Game.Should().NotBeNull();
         Assert.Equal("Chess", ruleSpec.Game.Name);
     }
 
@@ -256,12 +257,12 @@ public class SeedDataTests : IntegrationTestBase
         Assert.Equal(2, agents.Count);
 
         var explainAgent = agents.FirstOrDefault(a => a.Kind == "explain");
-        Assert.NotNull(explainAgent);
+        explainAgent.Should().NotBeNull();
         Assert.Equal("agent-ttt-explain", explainAgent!.Id);
         Assert.Equal("Tic-Tac-Toe Explainer", explainAgent.Name);
 
         var qaAgent = agents.FirstOrDefault(a => a.Kind == "qa");
-        Assert.NotNull(qaAgent);
+        qaAgent.Should().NotBeNull();
         Assert.Equal("agent-ttt-qa", qaAgent!.Id);
         Assert.Equal("Tic-Tac-Toe Q&A", qaAgent.Name);
     }
@@ -290,12 +291,12 @@ public class SeedDataTests : IntegrationTestBase
         Assert.Equal(2, agents.Count);
 
         var explainAgent = agents.FirstOrDefault(a => a.Kind == "explain");
-        Assert.NotNull(explainAgent);
+        explainAgent.Should().NotBeNull();
         Assert.Equal("agent-chess-explain", explainAgent!.Id);
         Assert.Equal("Chess Explainer", explainAgent.Name);
 
         var qaAgent = agents.FirstOrDefault(a => a.Kind == "qa");
-        Assert.NotNull(qaAgent);
+        qaAgent.Should().NotBeNull();
         Assert.Equal("agent-chess-qa", qaAgent!.Id);
         Assert.Equal("Chess Q&A", qaAgent.Name);
     }
@@ -333,7 +334,7 @@ public class SeedDataTests : IntegrationTestBase
             var ruleSpecs = await db.RuleSpecs
                 .Where(r => r.GameId == game.Id)
                 .ToListAsync();
-            Assert.NotEmpty(ruleSpecs);
+            ruleSpecs.Should().NotBeEmpty();
 
             // Each game should have exactly two agents (explain and qa)
             var agents = await db.Agents

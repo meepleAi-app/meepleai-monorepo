@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -71,8 +72,8 @@ public class AuditServiceTests : IDisposable
         Assert.Equal(resourceId, log.ResourceId);
         Assert.Equal("Success", log.Result);
         Assert.Equal("Test details", log.Details);
-        Assert.Null(log.IpAddress);
-        Assert.Null(log.UserAgent);
+        log.IpAddress.Should().BeNull();
+        log.UserAgent.Should().BeNull();
         Assert.True(log.CreatedAt <= DateTime.UtcNow);
     }
 
@@ -99,7 +100,7 @@ public class AuditServiceTests : IDisposable
 
         // Assert
         var log = await _dbContext.AuditLogs.FirstAsync();
-        Assert.Null(log.Details);
+        log.Details.Should().BeNull();
     }
 
     [Fact]
@@ -185,6 +186,6 @@ public class AuditServiceTests : IDisposable
 
         // Assert
         var log = await _dbContext.AuditLogs.FirstAsync();
-        Assert.Null(log.UserId);
+        log.UserId.Should().BeNull();
     }
 }

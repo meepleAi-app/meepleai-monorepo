@@ -12,6 +12,7 @@ using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -66,7 +67,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         var json = await response.Content.ReadAsStringAsync();
         var authResponse = JsonSerializer.Deserialize<AuthResponse>(json, JsonOptions);
 
-        Assert.NotNull(authResponse);
+        authResponse.Should().NotBeNull();
         Assert.Equal(payload.Email, authResponse!.User.Email);
         Assert.Equal(payload.DisplayName, authResponse.User.DisplayName);
         Assert.Equal(UserRole.User.ToString(), authResponse.User.Role);
@@ -112,7 +113,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         var json = await response.Content.ReadAsStringAsync();
         var authResponse = JsonSerializer.Deserialize<AuthResponse>(json, JsonOptions);
 
-        Assert.NotNull(authResponse);
+        authResponse.Should().NotBeNull();
         Assert.Equal(email, authResponse!.User.Email);
 
         var cookies = ExtractCookies(response);
@@ -222,7 +223,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         var json = await response.Content.ReadAsStringAsync();
         var ruleSpec = JsonSerializer.Deserialize<RuleSpec>(json, JsonOptions);
 
-        Assert.NotNull(ruleSpec);
+        ruleSpec.Should().NotBeNull();
         Assert.Equal(game.Id, ruleSpec!.gameId);
         Assert.True(ruleSpec.rules.Count >= 2);
         Assert.Contains(ruleSpec.rules, atom => atom.page == "2");
@@ -316,7 +317,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
 
         var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
-        Assert.NotNull(body);
+        body.Should().NotBeNull();
         Assert.True(body!.TryGetValue("error", out var message));
         Assert.Equal("Only administrators can assign elevated roles.", message);
         // Cleanup happens automatically via DisposeAsync

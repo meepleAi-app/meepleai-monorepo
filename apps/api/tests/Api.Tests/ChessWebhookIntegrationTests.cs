@@ -9,6 +9,7 @@ using Api.Infrastructure.Entities;
 using Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;

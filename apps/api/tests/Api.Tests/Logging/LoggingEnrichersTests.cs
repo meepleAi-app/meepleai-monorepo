@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Serilog.Events;
 using System.Security.Claims;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Logging;

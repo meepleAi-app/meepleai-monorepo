@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -67,9 +68,9 @@ public class UserManagementEndpointsTests : AdminTestFixture
 
         // And: Response includes paginated list
         var result = await response.Content.ReadFromJsonAsync<PagedResult<UserDto>>(JsonOptions);
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.True(result.Total >= 3); // At least admin + 2 users
-        Assert.NotEmpty(result.Items);
+        result.Items.Should().NotBeEmpty();
         Assert.Equal(1, result.Page);
         Assert.Equal(20, result.PageSize);
     }
@@ -104,7 +105,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         // Then: Returns filtered results
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<PagedResult<UserDto>>(JsonOptions);
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.True(result.Items.Any(u => u.Email.Contains(uniqueIdentifier)));
     }
 
@@ -137,7 +138,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         // Then: Returns only Editors
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<PagedResult<UserDto>>(JsonOptions);
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.All(result.Items, user => Assert.Equal("Editor", user.Role));
     }
 
@@ -166,7 +167,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         // Then: Returns exactly 2 users
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<PagedResult<UserDto>>(JsonOptions);
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.True(result.Items.Count <= 2);
         Assert.Equal(1, result.Page);
         Assert.Equal(2, result.PageSize);
@@ -257,14 +258,14 @@ public class UserManagementEndpointsTests : AdminTestFixture
 
         // And: Response includes user details
         var createdUser = await response.Content.ReadFromJsonAsync<UserDto>(JsonOptions);
-        Assert.NotNull(createdUser);
+        createdUser.Should().NotBeNull();
         Assert.Equal(newUserEmail, createdUser.Email);
         Assert.Equal("New Test User", createdUser.DisplayName);
         Assert.Equal("User", createdUser.Role);
 
         // And: User exists in database
         var userId = await GetUserIdByEmailAsync(newUserEmail);
-        Assert.NotNull(userId);
+        userId.Should().NotBeNull();
     }
 
     /// <summary>

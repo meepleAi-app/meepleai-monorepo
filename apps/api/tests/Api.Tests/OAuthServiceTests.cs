@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -196,15 +197,15 @@ public class OAuthServiceTests : IDisposable
         var result = await _service.HandleCallbackAsync(provider, code, state);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.True(result.IsNewUser);
         Assert.Equal("test@example.com", result.User.Email);
 
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == "test@example.com");
-        Assert.NotNull(user);
+        user.Should().NotBeNull();
 
         var oauthAccount = await _db.OAuthAccounts.FirstOrDefaultAsync(oa => oa.UserId == user.Id);
-        Assert.NotNull(oauthAccount);
+        oauthAccount.Should().NotBeNull();
         Assert.Equal(provider, oauthAccount.Provider);
     }
 
@@ -227,12 +228,12 @@ public class OAuthServiceTests : IDisposable
         var result = await _service.HandleCallbackAsync(provider, code, state);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.False(result.IsNewUser);
         Assert.Equal(user.Email, result.User.Email);
 
         var updatedAccount = await _db.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == existingAccount.Id);
-        Assert.NotNull(updatedAccount);
+        updatedAccount.Should().NotBeNull();
         Assert.Contains("new-access-token", updatedAccount.AccessTokenEncrypted);
     }
 
@@ -287,7 +288,7 @@ public class OAuthServiceTests : IDisposable
 
         // Assert
         var removed = await _db.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == account.Id);
-        Assert.Null(removed);
+        removed.Should().BeNull();
     }
 
     [Fact]
@@ -328,7 +329,7 @@ public class OAuthServiceTests : IDisposable
         var accounts = await _service.GetLinkedAccountsAsync(user.Id);
 
         // Assert
-        Assert.Empty(accounts);
+        accounts.Should().BeEmpty();
     }
 
     // AUTH-06-P2: Token Refresh Tests
@@ -350,7 +351,7 @@ public class OAuthServiceTests : IDisposable
         var result = await _service.RefreshTokenAsync(user.Id, provider);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("new-access-token", result.AccessToken);
     }
 
@@ -365,7 +366,7 @@ public class OAuthServiceTests : IDisposable
         var result = await _service.RefreshTokenAsync(user.Id, "github");
 
         // Assert
-        Assert.Null(result); // GitHub doesn't support refresh
+        result.Should().BeNull(); // GitHub doesn't support refresh
     }
 
     [Fact]
@@ -381,7 +382,7 @@ public class OAuthServiceTests : IDisposable
         var result = await _service.RefreshTokenAsync(user.Id, "google");
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -399,7 +400,7 @@ public class OAuthServiceTests : IDisposable
         var result = await _service.RefreshTokenAsync(user.Id, "discord");
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -417,7 +418,7 @@ public class OAuthServiceTests : IDisposable
         var result = await _service.RefreshTokenAsync(user.Id, "google");
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -437,7 +438,7 @@ public class OAuthServiceTests : IDisposable
 
         // Assert
         var updated = await _db.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == account.Id);
-        Assert.NotNull(updated);
+        updated.Should().NotBeNull();
         Assert.NotEqual(oldAccessToken, updated.AccessTokenEncrypted);
         Assert.Contains("refreshed-access-token", updated.AccessTokenEncrypted);
     }

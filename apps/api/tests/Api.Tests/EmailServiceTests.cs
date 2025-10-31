@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -56,7 +57,7 @@ public class EmailServiceTests
         var service = new EmailService(mockConfig.Object, _mockLogger.Object);
 
         // Assert
-        Assert.NotNull(service);
+        service.Should().NotBeNull();
     }
 
     [Fact]
@@ -75,7 +76,7 @@ public class EmailServiceTests
         var service = new EmailService(mockConfig.Object, _mockLogger.Object);
 
         // Assert - No exception thrown, defaults are applied
-        Assert.NotNull(service);
+        service.Should().NotBeNull();
     }
 
     [Fact]
@@ -282,7 +283,7 @@ public class EmailServiceTests
             async () => await service.SendPasswordResetEmailAsync("user@example.com", "Test User", tokenWithSpecialChars));
 
         // Assert - Error is from SMTP, not from URL encoding
-        Assert.NotNull(exception.InnerException);
+        exception.InnerException.Should().NotBeNull();
 
         // Verify error was logged
         _mockLogger.Verify(
@@ -345,7 +346,7 @@ public class EmailServiceTests
 
         // Assert
         Assert.Equal("Failed to send password reset email", exception.Message);
-        Assert.NotNull(exception.InnerException); // Should contain the original SMTP exception
+        exception.InnerException.Should().NotBeNull(); // Should contain the original SMTP exception
 
         // Verify error was logged with exception details
         _mockLogger.Verify(

@@ -87,6 +87,9 @@ public static class WebApplicationExtensions
         // AUTH-03: Authorization middleware (must be after all authentication middleware)
         app.UseAuthorization();
 
+        // Rate limiting middleware (must be after authorization to read user role from ActiveSession)
+        app.UseRoleAwareRateLimiting();
+
         return app;
     }
 

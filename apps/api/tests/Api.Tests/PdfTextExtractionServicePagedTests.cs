@@ -6,6 +6,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -121,9 +122,9 @@ public class PdfTextExtractionServicePagedTests : IDisposable
 
         // Assert: Verify page-aware extraction
         Assert.True(result.Success);
-        Assert.Null(result.Error);
+        result.Error.Should().BeNull();
         Assert.Equal(3, result.TotalPageCount);
-        Assert.NotNull(result.PageChunks);
+        result.PageChunks.Should().NotBeNull();
         Assert.Equal(3, result.PageChunks.Count);
 
         // Verify page 1
@@ -210,7 +211,7 @@ public class PdfTextExtractionServicePagedTests : IDisposable
 
         // Assert: Failure with structured error
         Assert.False(result.Success);
-        Assert.NotNull(result.Error);
+        result.Error.Should().NotBeNull();
         Assert.Contains("failed", result.Error, StringComparison.OrdinalIgnoreCase);
         Assert.Equal(0, result.TotalPageCount);
         Assert.True(result.PageChunks == null || result.PageChunks.Count == 0);
@@ -299,7 +300,7 @@ public class PdfTextExtractionServicePagedTests : IDisposable
 
         // Assert
         Assert.False(result.Success);
-        Assert.NotNull(result.Error);
+        result.Error.Should().NotBeNull();
         Assert.Contains("required", result.Error, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -317,7 +318,7 @@ public class PdfTextExtractionServicePagedTests : IDisposable
 
         // Assert
         Assert.False(result.Success);
-        Assert.NotNull(result.Error);
+        result.Error.Should().NotBeNull();
     }
 
     /// <summary>
@@ -338,7 +339,7 @@ public class PdfTextExtractionServicePagedTests : IDisposable
 
         // Assert
         Assert.False(result.Success);
-        Assert.NotNull(result.Error);
+        result.Error.Should().NotBeNull();
         Assert.Contains("not found", result.Error, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -366,9 +367,9 @@ public class PdfTextExtractionServicePagedTests : IDisposable
 
         // Assert: Verify all properties
         Assert.True(result.Success);
-        Assert.Null(result.Error);
+        result.Error.Should().BeNull();
         Assert.Equal(3, result.TotalPageCount);
-        Assert.NotNull(result.PageChunks);
+        result.PageChunks.Should().NotBeNull();
         Assert.Equal(3, result.PageChunks.Count);
         Assert.Same(pageChunks, result.PageChunks);
     }

@@ -12,6 +12,7 @@ using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -57,7 +58,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var history = await DeserializeAsync<RuleSpecHistory>(response);
-        Assert.NotNull(history);
+        history.Should().NotBeNull();
         Assert.Equal(gameId, history!.GameId);
         Assert.Equal(3, history.TotalVersions);
         Assert.Equal(3, history.Versions.Count);
@@ -118,7 +119,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var ruleSpec = await DeserializeAsync<RuleSpec>(response);
-        Assert.NotNull(ruleSpec);
+        ruleSpec.Should().NotBeNull();
         Assert.Equal(gameId, ruleSpec!.gameId);
         Assert.Equal("v2", ruleSpec.version);
         Assert.Equal(2, ruleSpec.rules.Count);
@@ -233,7 +234,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var diff = await DeserializeAsync<RuleSpecDiff>(response);
-        Assert.NotNull(diff);
+        diff.Should().NotBeNull();
         Assert.Equal(gameId, diff!.GameId);
         Assert.Equal("v1", diff.FromVersion);
         Assert.Equal("v2", diff.ToVersion);

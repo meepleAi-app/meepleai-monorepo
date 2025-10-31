@@ -7,6 +7,7 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Logging;
@@ -50,12 +51,12 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
         // Assert - check correlation header
         Assert.True(response.Headers.Contains("X-Correlation-Id"));
         var correlationId = response.Headers.GetValues("X-Correlation-Id").First();
-        Assert.NotEmpty(correlationId);
+        correlationId.Should().NotBeEmpty();
 
         // Assert - logs include correlation id
-        Assert.NotEmpty(logEvents);
+        logEvents.Should().NotBeEmpty();
         var requestLog = logEvents.FirstOrDefault(e => e.Properties.ContainsKey("CorrelationId"));
-        Assert.NotNull(requestLog);
+        requestLog.Should().NotBeNull();
         var loggedCorrelationId = requestLog.Properties["CorrelationId"].ToString().Trim('"');
         Assert.Equal(correlationId, loggedCorrelationId);
     }
@@ -109,7 +110,7 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
 
         // In test environment, user context enrichment may not be fully active
         // This test verifies the enricher infrastructure is in place
-        Assert.NotNull(userContextLogs); // Infrastructure exists
+        userContextLogs.Should().NotBeNull(); // Infrastructure exists
     }
 
     [Fact]
@@ -126,20 +127,20 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
         var logEvents = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
         var loginLog = logEvents.FirstOrDefault(e => e.MessageTemplate.Text.Contains("Login attempt"));
 
-        Assert.NotNull(loginLog);
+        loginLog.Should().NotBeNull();
         Assert.True(loginLog.Properties.ContainsKey("LoginAttempt"));
 
         var loginAttemptProp = loginLog.Properties["LoginAttempt"];
         var structureValue = Assert.IsType<StructureValue>(loginAttemptProp);
 
         var passwordProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Password");
-        Assert.NotNull(passwordProp);
+        passwordProp.Should().NotBeNull();
         var scalarValue = Assert.IsType<ScalarValue>(passwordProp.Value);
         Assert.Equal("[REDACTED]", scalarValue.Value);
 
         // Username should still be visible
         var usernameProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Username");
-        Assert.NotNull(usernameProp);
+        usernameProp.Should().NotBeNull();
         var usernameValue = Assert.IsType<ScalarValue>(usernameProp.Value);
         Assert.Equal("admin", usernameValue.Value);
     }
@@ -158,7 +159,7 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
         var logEvents = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
         var apiLog = logEvents.FirstOrDefault(e => e.MessageTemplate.Text.Contains("API request"));
 
-        Assert.NotNull(apiLog);
+        apiLog.Should().NotBeNull();
 
         // The API key should be redacted in the rendered message
         var renderedMessage = apiLog.RenderMessage();
@@ -179,14 +180,14 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
         var logEvents = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
         var configLog = logEvents.FirstOrDefault(e => e.MessageTemplate.Text.Contains("Database config"));
 
-        Assert.NotNull(configLog);
+        configLog.Should().NotBeNull();
         Assert.True(configLog.Properties.ContainsKey("Config"));
 
         var configProp = configLog.Properties["Config"];
         var structureValue = Assert.IsType<StructureValue>(configProp);
 
         var connStringProp = structureValue.Properties.FirstOrDefault(p => p.Name == "ConnectionString");
-        Assert.NotNull(connStringProp);
+        connStringProp.Should().NotBeNull();
         var scalarValue = Assert.IsType<ScalarValue>(connStringProp.Value);
         Assert.Equal("[REDACTED]", scalarValue.Value); // Property name contains sensitive keyword
     }
@@ -253,7 +254,7 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
         var logEvents = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
         var sensitiveLog = logEvents.FirstOrDefault(e => e.MessageTemplate.Text.Contains("Sensitive data test"));
 
-        Assert.NotNull(sensitiveLog);
+        sensitiveLog.Should().NotBeNull();
         Assert.True(sensitiveLog.Properties.ContainsKey("SensitiveData"));
 
         var dataProp = sensitiveLog.Properties["SensitiveData"];
@@ -261,30 +262,30 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
 
         // Password should be redacted
         var passwordProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Password");
-        Assert.NotNull(passwordProp);
+        passwordProp.Should().NotBeNull();
         Assert.Equal("[REDACTED]", ((ScalarValue)passwordProp.Value).Value);
 
         // ApiKey should be redacted
         var apiKeyProp = structureValue.Properties.FirstOrDefault(p => p.Name == "ApiKey");
-        Assert.NotNull(apiKeyProp);
+        apiKeyProp.Should().NotBeNull();
         Assert.Equal("[REDACTED]", ((ScalarValue)apiKeyProp.Value).Value);
 
         // Token should be redacted
         var tokenProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Token");
-        Assert.NotNull(tokenProp);
+        tokenProp.Should().NotBeNull();
         Assert.Equal("[REDACTED]", ((ScalarValue)tokenProp.Value).Value);
 
         // Safe fields should be visible
         var usernameProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Username");
-        Assert.NotNull(usernameProp);
+        usernameProp.Should().NotBeNull();
         Assert.Equal("admin", ((ScalarValue)usernameProp.Value).Value);
 
         var emailProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Email");
-        Assert.NotNull(emailProp);
+        emailProp.Should().NotBeNull();
         Assert.Equal("admin@example.com", ((ScalarValue)emailProp.Value).Value);
 
         var descProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Description");
-        Assert.NotNull(descProp);
+        descProp.Should().NotBeNull();
         Assert.Equal("Safe description", ((ScalarValue)descProp.Value).Value);
     }
 

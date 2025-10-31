@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Testcontainers.PostgreSql;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -459,13 +460,13 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
             .FirstOrDefaultAsync();
 
         // Verify log was created
-        Assert.NotNull(log);
+        log.Should().NotBeNull();
 
         // Verify quality scores were calculated and stored
-        Assert.NotNull(log.RagConfidence);
-        Assert.NotNull(log.LlmConfidence);
-        Assert.NotNull(log.CitationQuality);
-        Assert.NotNull(log.OverallConfidence);
+        log.RagConfidence.Should().NotBeNull();
+        log.LlmConfidence.Should().NotBeNull();
+        log.CitationQuality.Should().NotBeNull();
+        log.OverallConfidence.Should().NotBeNull();
 
         // Verify low-quality detection
         Assert.True(log.IsLowQuality, $"Expected IsLowQuality = true, but got false. Overall confidence: {log.OverallConfidence:F3}");
@@ -545,13 +546,13 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
             .OrderByDescending(l => l.CreatedAt)
             .First();
 
-        Assert.NotNull(log.RagConfidence);
+        log.RagConfidence.Should().NotBeNull();
         Assert.InRange(log.RagConfidence.Value, 0.0, 1.0);
-        Assert.NotNull(log.LlmConfidence);
+        log.LlmConfidence.Should().NotBeNull();
         Assert.InRange(log.LlmConfidence.Value, 0.0, 1.0);
-        Assert.NotNull(log.CitationQuality);
+        log.CitationQuality.Should().NotBeNull();
         Assert.InRange(log.CitationQuality.Value, 0.0, 1.0);
-        Assert.NotNull(log.OverallConfidence);
+        log.OverallConfidence.Should().NotBeNull();
         Assert.InRange(log.OverallConfidence.Value, 0.0, 1.0);
     }
 
@@ -649,7 +650,7 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<LowQualityResponsesResult>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(2, result.TotalCount);
         Assert.All(result.Responses, r => Assert.True(r.IsLowQuality));
     }
@@ -693,7 +694,7 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<LowQualityResponsesResult>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(25, result.TotalCount);
         Assert.Equal(10, result.Responses.Count);
     }
@@ -780,7 +781,7 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var report = await response.Content.ReadFromJsonAsync<QualityReport>();
-        Assert.NotNull(report);
+        report.Should().NotBeNull();
         Assert.Equal(50, report.TotalResponses);
         Assert.Equal(15, report.LowQualityCount);
         Assert.InRange(report.AverageRagConfidence!.Value, 0.60, 0.75);
@@ -852,7 +853,7 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<LowQualityResponsesResult>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(2, result.TotalCount);
         Assert.All(result.Responses, r =>
         {

@@ -8,6 +8,7 @@ using Api.Infrastructure.Entities;
 using Api.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -58,13 +59,13 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<CreateApiKeyResponse>();
-        Assert.NotNull(result);
-        Assert.NotNull(result.PlaintextKey);
+        result.Should().NotBeNull();
+        result.PlaintextKey.Should().NotBeNull();
         Assert.StartsWith("mpl_live_", result.PlaintextKey);
         Assert.Equal("Production Key", result.ApiKey.KeyName);
         Assert.Equal(2, result.ApiKey.Scopes.Length);
         Assert.True(result.ApiKey.IsActive);
-        Assert.NotNull(result.ApiKey.Quota);
+        result.ApiKey.Quota.Should().NotBeNull();
         Assert.Equal(1000, result.ApiKey.Quota.MaxRequestsPerDay);
         Assert.Equal(100, result.ApiKey.Quota.MaxRequestsPerHour);
     }
@@ -143,7 +144,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<CreateApiKeyResponse>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.StartsWith($"mpl_{environment}_", result.PlaintextKey);
     }
 
@@ -177,7 +178,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<ApiKeyListResponse>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(2, result.Keys.Count);
         Assert.Equal(3, result.TotalCount);
         Assert.Equal(1, result.Page);
@@ -208,7 +209,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<ApiKeyListResponse>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Single(result.Keys);
         Assert.Null(result.Keys[0].RevokedAt);
     }
@@ -233,7 +234,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<ApiKeyListResponse>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Single(result.Keys);
         Assert.NotNull(result.Keys[0].RevokedAt);
     }
@@ -259,7 +260,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<ApiKeyListResponse>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Single(result.Keys);
         Assert.Equal("User1 Key", result.Keys[0].KeyName);
     }
@@ -290,7 +291,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<ApiKeyDto>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(key.Id, result.Id);
         Assert.Equal("Test Key", result.KeyName);
         Assert.Equal(2, result.Scopes.Length);
@@ -369,11 +370,11 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<ApiKeyDto>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Updated Name", result.KeyName);
         Assert.Equal(3, result.Scopes.Length);
         Assert.Contains("admin", result.Scopes);
-        Assert.NotNull(result.Quota);
+        result.Quota.Should().NotBeNull();
         Assert.Equal(5000, result.Quota.MaxRequestsPerDay);
     }
 
@@ -464,7 +465,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<RotateApiKeyResponse>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.NotEqual(oldPlaintextKey, result.PlaintextKey);
         Assert.Equal(oldKey.Id, result.RevokedKeyId);
         Assert.Equal("Original Key (Rotated)", result.NewApiKey.KeyName);
@@ -627,7 +628,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await response.Content.ReadFromJsonAsync<ApiKeyQuotaDto>();
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(1000, result.MaxRequestsPerDay);
         Assert.Equal(100, result.MaxRequestsPerHour);
         Assert.NotNull(result.ResetsAt);

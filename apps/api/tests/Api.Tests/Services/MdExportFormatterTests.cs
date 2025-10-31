@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Api.Infrastructure.Entities;
 using Api.Services;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
@@ -90,7 +91,7 @@ public class MdExportFormatterTests
         var stream = await _formatter.FormatAsync(chat, null, null);
 
         // Then: Valid Markdown stream is returned
-        Assert.NotNull(stream);
+        stream.Should().NotBeNull();
         stream.Position = 0;
 
         using var reader = new StreamReader(stream);
@@ -196,7 +197,7 @@ public class MdExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // Then: Formatter does not crash
-        Assert.NotNull(content);
+        content.Should().NotBeNull();
 
         // And: Message content is still included
         Assert.Contains("Answer with metadata", content);

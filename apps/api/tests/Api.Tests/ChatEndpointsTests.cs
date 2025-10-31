@@ -11,6 +11,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -62,7 +63,7 @@ public class ChatEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         var chat = await response.Content.ReadFromJsonAsync<ChatDto>();
-        Assert.NotNull(chat);
+        chat.Should().NotBeNull();
         Assert.NotEqual(Guid.Empty, chat!.Id);
         Assert.Equal(game.Id, chat.GameId);
         Assert.Equal(agent.Id, chat.AgentId);
@@ -72,7 +73,7 @@ public class ChatEndpointsTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var stored = await db.Chats.FindAsync(chat.Id);
-        Assert.NotNull(stored);
+        stored.Should().NotBeNull();
         Assert.Equal(user.Id, stored!.UserId);
     }
 
@@ -128,7 +129,7 @@ public class ChatEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var chats = await response.Content.ReadFromJsonAsync<List<ChatDto>>();
-        Assert.NotNull(chats);
+        chats.Should().NotBeNull();
         Assert.Equal(2, chats!.Count);
         Assert.Equal(chat2.Id, chats[0].Id); // Most recent first
         Assert.Equal(chat1.Id, chats[1].Id);
@@ -184,7 +185,7 @@ public class ChatEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var chatWithHistory = await response.Content.ReadFromJsonAsync<ChatWithHistoryDto>();
-        Assert.NotNull(chatWithHistory);
+        chatWithHistory.Should().NotBeNull();
         Assert.Equal(chat.Id, chatWithHistory!.Id);
         Assert.Equal(2, chatWithHistory.Messages.Count);
         Assert.Equal("user", chatWithHistory.Messages[0].Level);
@@ -244,7 +245,7 @@ public class ChatEndpointsTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var stored = await db.Chats.FindAsync(chat.Id);
-        Assert.Null(stored);
+        stored.Should().BeNull();
     }
 
     /// <summary>
@@ -275,7 +276,7 @@ public class ChatEndpointsTests : IntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var stored = await db.Chats.FindAsync(chat.Id);
-        Assert.NotNull(stored);
+        stored.Should().NotBeNull();
     }
 
     /// <summary>
@@ -302,7 +303,7 @@ public class ChatEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var agents = await response.Content.ReadFromJsonAsync<List<AgentDto>>();
-        Assert.NotNull(agents);
+        agents.Should().NotBeNull();
         Assert.Equal(2, agents!.Count);
         Assert.Contains(agents, a => a.Id == qaAgent.Id && a.Kind == "qa");
         Assert.Contains(agents, a => a.Id == explainAgent.Id && a.Kind == "explain");
@@ -336,7 +337,7 @@ public class ChatEndpointsTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var chats = await response.Content.ReadFromJsonAsync<List<ChatDto>>();
-        Assert.NotNull(chats);
+        chats.Should().NotBeNull();
         Assert.Single(chats!);
         Assert.Equal(chat1.Id, chats[0].Id);
         Assert.Equal(game1.Id, chats[0].GameId);

@@ -10,6 +10,11 @@ public interface IEmbeddingService
     /// </summary>
     int GetEmbeddingDimensions();
 
+    /// <summary>
+    /// Get the configured embedding model name
+    /// </summary>
+    string GetModelName();
+
     // AI-09: Multi-language support
     /// <summary>
     /// Generate embeddings for texts with language-specific model selection

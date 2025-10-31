@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -71,7 +72,7 @@ public class FollowUpQuestionServiceTests
             ct: CancellationToken.None);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(3, result.Count);
         Assert.Contains("How many players", result[0]);
         Assert.Contains("tie", result[1]);
@@ -107,8 +108,8 @@ public class FollowUpQuestionServiceTests
             "Test Game");
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
 
         // Verify retry logic (should retry MaxRetries times)
         _llmServiceMock.Verify(
@@ -150,8 +151,8 @@ public class FollowUpQuestionServiceTests
             "Game");
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result); // Should return empty due to timeout
+        result.Should().NotBeNull();
+        result.Should().BeEmpty(); // Should return empty due to timeout
     }
 
     [Fact]
@@ -311,8 +312,8 @@ public class FollowUpQuestionServiceTests
             "Game");
 
         // Assert: Should gracefully degrade
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     [Fact]

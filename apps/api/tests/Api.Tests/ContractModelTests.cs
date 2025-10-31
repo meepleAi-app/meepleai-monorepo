@@ -1,5 +1,6 @@
 using Api.Models;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -78,7 +79,7 @@ public class ContractModelTests
         // Assert
         Assert.Equal("game-123", request.gameId);
         Assert.Equal("How do I win?", request.query);
-        Assert.NotNull(request.chatId);
+        request.chatId.Should().NotBeNull();
     }
 
     [Fact]
@@ -90,7 +91,7 @@ public class ContractModelTests
         // Assert
         Assert.Equal("game-123", request.gameId);
         Assert.Equal("test query", request.query);
-        Assert.Null(request.chatId);
+        request.chatId.Should().BeNull();
     }
 
     #endregion
@@ -129,7 +130,7 @@ public class ContractModelTests
         Assert.Equal(50, response.completionTokens);
         Assert.Equal(150, response.totalTokens);
         Assert.Equal(0.95, response.confidence);
-        Assert.NotNull(response.metadata);
+        response.metadata.Should().NotBeNull();
         Assert.Equal(2, response.metadata.Count);
         Assert.Equal("anthropic/claude-3.5-sonnet", response.metadata["model"]);
     }
@@ -142,12 +143,12 @@ public class ContractModelTests
 
         // Assert
         Assert.Equal("Answer", response.answer);
-        Assert.Empty(response.snippets);
+        response.snippets.Should().BeEmpty();
         Assert.Equal(0, response.promptTokens);
         Assert.Equal(0, response.completionTokens);
         Assert.Equal(0, response.totalTokens);
-        Assert.Null(response.confidence);
-        Assert.Null(response.metadata);
+        response.confidence.Should().BeNull();
+        response.metadata.Should().BeNull();
     }
 
     #endregion
@@ -388,8 +389,8 @@ public class ContractModelTests
 
         // Assert
         Assert.Equal("What is castling?", request.question);
-        Assert.Null(request.fenPosition);
-        Assert.Null(request.chatId);
+        request.fenPosition.Should().BeNull();
+        request.chatId.Should().BeNull();
     }
 
     #endregion
@@ -422,7 +423,7 @@ public class ContractModelTests
 
         // Assert
         Assert.Equal("Consider controlling the center.", response.answer);
-        Assert.NotNull(response.analysis);
+        response.analysis.Should().NotBeNull();
         Assert.Equal("White has slight advantage", response.analysis.evaluationSummary);
         Assert.Equal(3, response.suggestedMoves.Count);
         Assert.Single(response.sources);
@@ -430,7 +431,7 @@ public class ContractModelTests
         Assert.Equal(150, response.completionTokens);
         Assert.Equal(350, response.totalTokens);
         Assert.Equal(0.90, response.confidence);
-        Assert.NotNull(response.metadata);
+        response.metadata.Should().NotBeNull();
     }
 
     #endregion
@@ -500,7 +501,7 @@ public class ContractModelTests
             gameId: "game-789");
 
         // Assert
-        Assert.Null(request.outcome);
+        request.outcome.Should().BeNull();
     }
 
     #endregion
@@ -534,7 +535,7 @@ public class ContractModelTests
         // Assert
         Assert.False(result.Success);
         Assert.Equal("Connection timeout", result.Message);
-        Assert.Null(result.LatencyMs);
+        result.LatencyMs.Should().BeNull();
     }
 
     #endregion

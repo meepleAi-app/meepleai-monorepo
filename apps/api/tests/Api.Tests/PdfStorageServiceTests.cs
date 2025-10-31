@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 public class PdfStorageServiceTests
@@ -311,7 +312,7 @@ public class PdfStorageServiceTests
             var result = await service.UploadPdfAsync("game-1", "user", file, CancellationToken.None);
 
             Assert.True(result.Success);
-            Assert.NotNull(result.Document);
+            result.Document.Should().NotBeNull();
             Assert.Equal("rules.pdf", result.Document!.FileName);
 
             var gameDirectory = Path.Combine(storagePath, "game-1");
@@ -323,7 +324,7 @@ public class PdfStorageServiceTests
             Assert.Equal("application/pdf", stored.ContentType);
             Assert.Equal("user", stored.UploadedByUserId);
 
-            Assert.NotNull(scheduledTask);
+            scheduledTask.Should().NotBeNull();
 
             cacheMock.Verify(x => x.InvalidateGameAsync("game-1", It.IsAny<CancellationToken>()), Times.Once);
         }
@@ -497,7 +498,7 @@ public class PdfStorageServiceTests
 
             var processedDoc = await dbContext.PdfDocuments.SingleAsync();
             Assert.Equal("completed", processedDoc.ProcessingStatus);
-            Assert.NotNull(processedDoc.ProcessedAt);
+            processedDoc.ProcessedAt.Should().NotBeNull();
             qdrantMock.Verify(
                 q => q.IndexDocumentChunksAsync(
                     "game-1",

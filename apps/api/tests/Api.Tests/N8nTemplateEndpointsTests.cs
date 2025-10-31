@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Api.Models;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -53,9 +54,9 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
             content,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-        Assert.NotNull(templates);
+        templates.Should().NotBeNull();
         // Should have templates from infra/n8n/templates/
-        Assert.NotEmpty(templates);
+        templates.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -74,7 +75,7 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
             content,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-        Assert.NotNull(templates);
+        templates.Should().NotBeNull();
         Assert.All(templates!, t => Assert.Equal("integration", t.Category));
     }
 
@@ -95,9 +96,9 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
             content,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-        Assert.NotNull(template);
+        template.Should().NotBeNull();
         Assert.Equal(templateId, template!.Id);
-        Assert.NotNull(template.Workflow);
+        template.Workflow.Should().NotBeNull();
     }
 
     [Fact]
@@ -238,7 +239,7 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
             responseContent,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.True(result!.Valid);
     }
 

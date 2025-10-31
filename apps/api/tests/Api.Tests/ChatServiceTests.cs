@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -78,7 +79,7 @@ public class ChatServiceTests
         Assert.Equal("catan", chat.GameId);
         Assert.Equal("catan-qa", chat.AgentId);
         Assert.NotEqual(default, chat.StartedAt);
-        Assert.Null(chat.LastMessageAt);
+        chat.LastMessageAt.Should().BeNull();
 
         var stored = await dbContext.Chats.FirstAsync();
         Assert.Equal(chat.Id, stored.Id);
@@ -151,7 +152,7 @@ public class ChatServiceTests
 
         var result = await service.GetChatByIdAsync(chat.Id, "user-123");
 
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(chat.Id, result!.Id);
         Assert.Equal("user-123", result.UserId);
     }
@@ -189,7 +190,7 @@ public class ChatServiceTests
 
         var result = await service.GetChatByIdAsync(chat.Id, "user-456");
 
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     /// <summary>
@@ -234,7 +235,7 @@ public class ChatServiceTests
         Assert.Equal(chat.Id, message.ChatId);
         Assert.Equal("user", message.Level);
         Assert.Equal("How do I setup the game?", message.Message);
-        Assert.NotNull(message.MetadataJson);
+        message.MetadataJson.Should().NotBeNull();
 
         // Verify LastMessageAt was updated
         var updatedChat = await dbContext.Chats.FindAsync(chat.Id);
@@ -377,7 +378,7 @@ public class ChatServiceTests
 
         var agent = await service.GetOrCreateAgentAsync("catan", "qa");
 
-        Assert.NotNull(agent);
+        agent.Should().NotBeNull();
         Assert.Equal("catan-qa", agent!.Id);
         Assert.Equal("catan", agent.GameId);
         Assert.Equal("Q&A Agent", agent.Name);
@@ -385,7 +386,7 @@ public class ChatServiceTests
 
         // Verify it was persisted
         var stored = await dbContext.Agents.FindAsync("catan-qa");
-        Assert.NotNull(stored);
+        stored.Should().NotBeNull();
     }
 
     /// <summary>
@@ -415,7 +416,7 @@ public class ChatServiceTests
 
         var agent = await service.GetOrCreateAgentAsync("catan", "qa");
 
-        Assert.NotNull(agent);
+        agent.Should().NotBeNull();
         Assert.Equal("catan-qa", agent!.Id);
         Assert.Equal(existingAgent.CreatedAt, agent.CreatedAt); // Same instance
 

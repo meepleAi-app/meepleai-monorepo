@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
@@ -133,7 +134,7 @@ public class KeywordSearchServiceTests : IDisposable
         var results = await _service.SearchAsync("", Guid.Parse(gameId), limit: 10);
 
         // Assert
-        Assert.Empty(results);
+        results.Should().BeEmpty();
     }
 
     [Fact]
@@ -146,7 +147,7 @@ public class KeywordSearchServiceTests : IDisposable
         var results = await _service.SearchAsync("   ", Guid.Parse(gameId), limit: 10);
 
         // Assert
-        Assert.Empty(results);
+        results.Should().BeEmpty();
     }
 
     [Fact]
@@ -159,7 +160,7 @@ public class KeywordSearchServiceTests : IDisposable
         var results = await _service.SearchAsync(null!, Guid.Parse(gameId), limit: 10);
 
         // Assert
-        Assert.Empty(results);
+        results.Should().BeEmpty();
         _loggerMock.Verify(
             x => x.Log(
                 LogLevel.Warning,
@@ -220,7 +221,7 @@ public class KeywordSearchServiceTests : IDisposable
         var results = await _service.SearchDocumentsAsync("", Guid.Parse(gameId), limit: 10);
 
         // Assert
-        Assert.Empty(results);
+        results.Should().BeEmpty();
     }
 
     [Fact]
@@ -278,7 +279,7 @@ public class KeywordSearchServiceTests : IDisposable
         // Testing SQL injection prevention indirectly
         var maliciousQuery = "'; DROP TABLE text_chunks; --";
         // Service should sanitize this query
-        Assert.NotEmpty(maliciousQuery);
+        maliciousQuery.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -338,7 +339,7 @@ public class KeywordSearchServiceTests : IDisposable
         var service = new KeywordSearchService(_dbContext, _loggerMock.Object);
 
         // Assert
-        Assert.NotNull(service);
+        service.Should().NotBeNull();
     }
 
     [Fact(Skip = "Cancellation testing requires PostgreSQL - SQLite fails during parameter binding before cancellation is checked. " +

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
@@ -148,7 +149,7 @@ public class RuleSpecServiceTimelineTests : IDisposable
         var result = await _service.GetVersionTimelineAsync("test-game");
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("test-game", result.GameId);
         Assert.Equal(3, result.TotalVersions);
         Assert.Equal(3, result.Versions.Count);
@@ -188,15 +189,15 @@ public class RuleSpecServiceTimelineTests : IDisposable
 
         // Assert
         var v1 = result.Versions.First(v => v.Version == "v1");
-        Assert.Null(v1.ParentVersionId);
-        Assert.Null(v1.ParentVersion);
+        v1.ParentVersionId.Should().BeNull();
+        v1.ParentVersion.Should().BeNull();
 
         var v2 = result.Versions.First(v => v.Version == "v2");
-        Assert.NotNull(v2.ParentVersionId);
+        v2.ParentVersionId.Should().NotBeNull();
         Assert.Equal("v1", v2.ParentVersion);
 
         var v3 = result.Versions.First(v => v.Version == "v3");
-        Assert.NotNull(v3.ParentVersionId);
+        v3.ParentVersionId.Should().NotBeNull();
         Assert.Equal("v2", v3.ParentVersion);
     }
 
@@ -347,11 +348,11 @@ public class RuleSpecServiceTimelineTests : IDisposable
         var result = await _service.GetVersionTimelineAsync("non-existent-game");
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("non-existent-game", result.GameId);
         Assert.Equal(0, result.TotalVersions);
-        Assert.Empty(result.Versions);
-        Assert.Empty(result.Authors);
+        result.Versions.Should().BeEmpty();
+        result.Authors.Should().BeEmpty();
     }
 
     [Fact]
@@ -361,7 +362,7 @@ public class RuleSpecServiceTimelineTests : IDisposable
         var result = await _service.GetVersionTimelineAsync("test-game", null);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(3, result.TotalVersions);
     }
 
@@ -392,10 +393,10 @@ public class RuleSpecServiceTimelineTests : IDisposable
         foreach (var version in result.Versions)
         {
             Assert.NotEqual(Guid.Empty, version.Id);
-            Assert.NotEmpty(version.Version);
-            Assert.NotEmpty(version.Title);
-            Assert.NotEmpty(version.Description);
-            Assert.NotEmpty(version.Author);
+            version.Version.Should().NotBeEmpty();
+            version.Title.Should().NotBeEmpty();
+            version.Description.Should().NotBeEmpty();
+            version.Author.Should().NotBeEmpty();
             Assert.NotEqual(DateTime.MinValue, version.CreatedAt);
         }
     }

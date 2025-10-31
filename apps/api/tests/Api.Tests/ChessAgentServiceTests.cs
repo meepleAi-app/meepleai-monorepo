@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -64,8 +65,8 @@ public class ChessAgentServiceTests
 
         // Assert
         Assert.Equal("Please provide a question.", result.answer);
-        Assert.Empty(result.suggestedMoves);
-        Assert.Empty(result.sources);
+        result.suggestedMoves.Should().BeEmpty();
+        result.sources.Should().BeEmpty();
         Assert.Equal(0, result.promptTokens);
     }
 
@@ -80,8 +81,8 @@ public class ChessAgentServiceTests
 
         // Assert
         Assert.Equal("Please provide a question.", result.answer);
-        Assert.Empty(result.suggestedMoves);
-        Assert.Empty(result.sources);
+        result.suggestedMoves.Should().BeEmpty();
+        result.sources.Should().BeEmpty();
     }
 
     #endregion
@@ -148,7 +149,7 @@ public class ChessAgentServiceTests
         var result = await _service.AskAsync(request);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Contains("Castling", result.answer);
 
         // Should cache the response with 24h TTL
@@ -179,8 +180,8 @@ public class ChessAgentServiceTests
         var result = await _service.AskAsync(request);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result.answer);
+        result.Should().NotBeNull();
+        result.answer.Should().NotBeEmpty();
         // Should not log validation errors
         _loggerMock.Verify(
             x => x.Log(
@@ -212,7 +213,7 @@ public class ChessAgentServiceTests
         var result = await _service.AskAsync(request);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         // Should log warning about invalid FEN
         _loggerMock.Verify(
             x => x.Log(
@@ -247,8 +248,8 @@ public class ChessAgentServiceTests
 
         // Assert
         Assert.Equal("I don't have enough information to answer that question about chess.", result.answer);
-        Assert.Empty(result.sources);
-        Assert.Empty(result.suggestedMoves);
+        result.sources.Should().BeEmpty();
+        result.suggestedMoves.Should().BeEmpty();
 
         // Should not call LLM service
         _llmServiceMock.Verify(
@@ -275,7 +276,7 @@ public class ChessAgentServiceTests
 
         // Assert
         Assert.Equal("I don't have enough information to answer that question about chess.", result.answer);
-        Assert.Empty(result.sources);
+        result.sources.Should().BeEmpty();
     }
 
     [Fact]
@@ -355,11 +356,11 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
         var result = await _service.AskAsync(request);
 
         // Assert
-        Assert.NotNull(result.analysis);
+        result.analysis.Should().NotBeNull();
         Assert.Equal(fenPosition, result.analysis!.fenPosition);
-        Assert.NotNull(result.analysis.evaluationSummary);
+        result.analysis.evaluationSummary.Should().NotBeNull();
         Assert.Contains("advantage", result.analysis.evaluationSummary, StringComparison.OrdinalIgnoreCase);
-        Assert.NotEmpty(result.analysis.keyConsiderations);
+        result.analysis.keyConsiderations.Should().NotBeEmpty();
         Assert.Contains(result.analysis.keyConsiderations, c => c.Contains("king safety"));
         Assert.Contains(result.analysis.keyConsiderations, c => c.Contains("development"));
     }
@@ -381,7 +382,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
         var result = await _service.AskAsync(request);
 
         // Assert
-        Assert.Null(result.analysis);
+        result.analysis.Should().BeNull();
         Assert.Contains("Italian Game", result.answer);
     }
 
@@ -440,7 +441,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
         var result = await _service.AskAsync(request);
 
         // Assert
-        Assert.NotNull(result.confidence);
+        result.confidence.Should().NotBeNull();
         Assert.Equal(0.92, result.confidence.Value, precision: 2);
     }
 
@@ -503,8 +504,8 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
 
         // Assert
         Assert.Equal("An error occurred while processing your question.", result.answer);
-        Assert.Empty(result.sources);
-        Assert.Empty(result.suggestedMoves);
+        result.sources.Should().BeEmpty();
+        result.suggestedMoves.Should().BeEmpty();
 
         // Should log exception
         _loggerMock.Verify(
@@ -568,7 +569,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
         var result = await _service.AskAsync(request);
 
         // Assert
-        Assert.NotNull(result.metadata);
+        result.metadata.Should().NotBeNull();
         Assert.Equal("anthropic/claude-3.5-sonnet", result.metadata["model"]);
         Assert.Equal("stop", result.metadata["finish_reason"]);
         Assert.Equal("resp_abc123", result.metadata["response_id"]);

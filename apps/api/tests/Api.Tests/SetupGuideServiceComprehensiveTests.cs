@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -82,9 +83,9 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Unknown Game", result.gameTitle);
-        Assert.NotEmpty(result.steps);
+        result.steps.Should().NotBeEmpty();
         Assert.All(result.steps, step => Assert.False(string.IsNullOrEmpty(step.instruction)));
     }
 
@@ -109,9 +110,9 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Test Game", result.gameTitle);
-        Assert.NotEmpty(result.steps);
+        result.steps.Should().NotBeEmpty();
         Assert.Equal(5, result.steps.Count); // Default steps count
         Assert.All(result.steps, step => Assert.Empty(step.references)); // Default steps have no references
     }
@@ -173,19 +174,19 @@ Shuffle all card decks thoroughly and place them face-down near the board.";
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Advanced Strategy Game", result.gameTitle);
         Assert.Equal(3, result.steps.Count);
         Assert.Equal(250, result.totalTokens);
         Assert.Equal(150, result.promptTokens);
         Assert.Equal(100, result.completionTokens);
-        Assert.NotNull(result.confidence);
+        result.confidence.Should().NotBeNull();
 
         var firstStep = result.steps.First();
         Assert.Equal(1, firstStep.stepNumber);
         Assert.Equal("Place the Board", firstStep.title);
         Assert.Contains("center of the table", firstStep.instruction);
-        Assert.NotEmpty(firstStep.references);
+        firstStep.references.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -256,7 +257,7 @@ Include expansion components if playing with expansions.";
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Resilient Game", result.gameTitle);
         Assert.Equal(5, result.steps.Count); // Fallback to default 5 steps
         Assert.All(result.steps, step => Assert.False(string.IsNullOrEmpty(step.instruction)));
@@ -292,7 +293,7 @@ Include expansion components if playing with expansions.";
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Cached Game", result.gameTitle);
         Assert.Single(result.steps);
         Assert.Equal("Cached Step", result.steps[0].title);
@@ -353,9 +354,9 @@ Include expansion components if playing with expansions.";
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert: Service gracefully falls back to default steps even when embedding fails
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Embedding Fail Game", result.gameTitle);
-        Assert.NotEmpty(result.steps);
+        result.steps.Should().NotBeEmpty();
         Assert.Equal(5, result.steps.Count); // Default steps
         Assert.True(result.estimatedSetupTimeMinutes >= 5); // Minimum 5 minutes
     }
@@ -496,9 +497,9 @@ Do this quickly.";
 
         // Assert: When LLM response can't be parsed, service returns empty steps (not default steps)
         // Note: This differs from LLM failure (when LLM call fails), which returns default steps
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Parsing Challenge Game", result.gameTitle);
-        Assert.Empty(result.steps); // Malformed response results in empty steps
+        result.steps.Should().BeEmpty(); // Malformed response results in empty steps
         Assert.Equal(150, result.totalTokens); // But tokens were still used
     }
 
@@ -530,7 +531,7 @@ Do this quickly.";
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
-        Assert.NotNull(result.confidence);
+        result.confidence.Should().NotBeNull();
         Assert.True(result.confidence >= 0.98);
     }
 
@@ -573,8 +574,8 @@ Second instruction.";
 
         // Assert
         Assert.Equal(2, result.steps.Count);
-        Assert.NotEmpty(result.steps[0].references); // First step gets first 3 references
-        Assert.NotEmpty(result.steps[1].references); // Second step gets next set of references
+        result.steps[0].references.Should().NotBeEmpty(); // First step gets first 3 references
+        result.steps[1].references.Should().NotBeEmpty(); // Second step gets next set of references
     }
 
     [Fact]
@@ -594,7 +595,7 @@ Second instruction.";
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("Unknown Game", result.gameTitle);
     }
 }

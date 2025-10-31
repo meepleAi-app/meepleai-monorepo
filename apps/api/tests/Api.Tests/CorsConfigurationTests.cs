@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -42,7 +43,7 @@ public class CorsConfigurationTests : IClassFixture<WebApplicationFactoryFixture
 
         var policy = await corsPolicyProvider.GetPolicyAsync(new DefaultHttpContext(), "web");
 
-        Assert.NotNull(policy);
+        policy.Should().NotBeNull();
         Assert.Contains(origin, policy!.Origins);
     }
 }

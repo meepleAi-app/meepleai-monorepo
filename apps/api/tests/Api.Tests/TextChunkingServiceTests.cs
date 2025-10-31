@@ -5,6 +5,7 @@ using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -53,7 +54,7 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(input ?? string.Empty);
 
         // Assert: Empty list returned
-        Assert.Empty(chunks);
+        chunks.Should().BeEmpty();
     }
 
     /// <summary>
@@ -403,7 +404,7 @@ public class TextChunkingServiceTests
             var chunks = _service.ChunkText(text);
 
             // Assert: First chunk on page 1
-            Assert.NotEmpty(chunks);
+            chunks.Should().NotBeEmpty();
             Assert.Equal(1, chunks[0].Page);
         }
     }
@@ -428,12 +429,12 @@ public class TextChunkingServiceTests
         var inputs = _service.PrepareForEmbedding(text);
 
         // Assert: DocumentChunkInput format
-        Assert.NotEmpty(inputs);
+        inputs.Should().NotBeEmpty();
 
         foreach (var input in inputs)
         {
-            Assert.NotNull(input.Text);
-            Assert.NotEmpty(input.Text);
+            input.Text.Should().NotBeNull();
+            input.Text.Should().NotBeEmpty();
             Assert.True(input.Page >= 1);
             Assert.True(input.CharStart >= 0);
             Assert.True(input.CharEnd > input.CharStart);
@@ -483,7 +484,7 @@ public class TextChunkingServiceTests
         var inputs = _service.PrepareForEmbedding(text);
 
         // Assert: Empty list
-        Assert.Empty(inputs);
+        inputs.Should().BeEmpty();
     }
 
     #endregion
@@ -506,7 +507,7 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text);
 
         // Assert: All text is covered
-        Assert.NotEmpty(chunks);
+        chunks.Should().NotBeEmpty();
 
         // Calculate total characters in all chunks (accounting for overlap)
         var lastChunk = chunks[chunks.Count - 1];
@@ -531,7 +532,7 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text, chunkSize: 100);
 
         // Assert: Chunks are created despite whitespace
-        Assert.NotEmpty(chunks);
+        chunks.Should().NotBeEmpty();
 
         // Verify chunks are trimmed
         foreach (var chunk in chunks)
@@ -559,7 +560,7 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text);
 
         // Assert: Special characters preserved
-        Assert.NotEmpty(chunks);
+        chunks.Should().NotBeEmpty();
 
         var firstChunk = chunks[0];
         Assert.Contains("café", firstChunk.Text);
@@ -585,7 +586,7 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text, chunkSize, overlap);
 
         // Assert: Chunks are still created
-        Assert.NotEmpty(chunks);
+        chunks.Should().NotBeEmpty();
 
         // Service should still produce some reasonable output
         Assert.True(chunks.Count > 0);
@@ -627,7 +628,7 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text);
 
         // Assert: Chunks created successfully
-        Assert.NotEmpty(chunks);
+        chunks.Should().NotBeEmpty();
 
         // First chunk should preserve the structure
         Assert.Contains("Line1", chunks[0].Text);

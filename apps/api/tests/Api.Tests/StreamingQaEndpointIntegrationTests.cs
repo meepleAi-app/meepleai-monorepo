@@ -13,6 +13,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -75,7 +76,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
 
         // And: Events are streamed in correct order
         var events = await ParseSSEEventsAsync(response);
-        Assert.NotEmpty(events);
+        events.Should().NotBeEmpty();
 
         // Verify event sequence
         var eventTypes = events.Select(e => e.Type).ToList();
@@ -188,8 +189,8 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
             var citationsJson = ((JsonElement)citationsEvent.Data).GetRawText();
             var citations = JsonSerializer.Deserialize<StreamingCitations>(citationsJson, JsonOptions);
 
-            Assert.NotNull(citations);
-            Assert.NotEmpty(citations!.citations);
+            citations.Should().NotBeNull();
+            citations!.citations.Should().NotBeEmpty();
             Assert.All(citations.citations, citation =>
             {
                 Assert.False(string.IsNullOrWhiteSpace(citation.text));
@@ -264,13 +265,13 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
             .OrderBy(log => log.CreatedAt)
             .ToListAsync();
 
-        Assert.NotEmpty(chatLogs);
+        chatLogs.Should().NotBeEmpty();
 
         // Should have user message (query) and assistant message (answer)
         var userMessage = chatLogs.FirstOrDefault(log => log.Level == "user");
         var assistantMessage = chatLogs.FirstOrDefault(log => log.Level == "assistant");
 
-        Assert.NotNull(userMessage);
+        userMessage.Should().NotBeNull();
         Assert.Contains("How many players?", userMessage!.Message);
 
         // Assistant message may or may not exist depending on whether an answer was generated
@@ -322,7 +323,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
             .ToListAsync();
 
         // And: The log includes user ID, game ID, endpoint, and latency
-        Assert.NotEmpty(logs);
+        logs.Should().NotBeEmpty();
         var log = logs.First();
         Assert.Equal(user.Id, log.UserId);
         Assert.Equal(game.Id, log.GameId);
@@ -370,7 +371,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
             var completeJson = ((JsonElement)completeEvent.Data).GetRawText();
             var complete = JsonSerializer.Deserialize<StreamingComplete>(completeJson, JsonOptions);
 
-            Assert.NotNull(complete);
+            complete.Should().NotBeNull();
             // Token counts should be >= 0
             Assert.True(complete!.completionTokens >= 0);
             Assert.True(complete.totalTokens >= 0);
@@ -473,7 +474,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
 
         // Then: Events are received (may include Error event if services fail)
         var events = await ParseSSEEventsAsync(response);
-        Assert.NotEmpty(events);
+        events.Should().NotBeEmpty();
 
         // If an error occurred, verify it has proper structure
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
@@ -482,7 +483,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
             var errorJson = ((JsonElement)errorEvent.Data).GetRawText();
             var error = JsonSerializer.Deserialize<StreamingError>(errorJson, JsonOptions);
 
-            Assert.NotNull(error);
+            error.Should().NotBeNull();
             Assert.False(string.IsNullOrWhiteSpace(error!.errorMessage));
             Assert.False(string.IsNullOrWhiteSpace(error.errorCode));
         }

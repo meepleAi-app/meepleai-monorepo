@@ -5,6 +5,7 @@ using Api.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 public class AuthServiceTests : IDisposable
@@ -54,19 +55,19 @@ public class AuthServiceTests : IDisposable
             IpAddress: "127.0.0.1",
             UserAgent: "unit-tests"));
 
-        Assert.False(string.IsNullOrWhiteSpace(register.User.Id));
-        Assert.Equal("user@example.com", register.User.Email);
-        Assert.Equal("Test User", register.User.DisplayName);
-        Assert.Equal("Admin", register.User.Role);
-        Assert.False(string.IsNullOrWhiteSpace(register.SessionToken));
+        register.User.Id.Should().NotBeNullOrWhiteSpace();
+        register.User.Email.Should().Be("user@example.com");
+        register.User.DisplayName.Should().Be("Test User");
+        register.User.Role.Should().Be("Admin");
+        register.SessionToken.Should().NotBeNullOrWhiteSpace();
 
         var active = await authService.ValidateSessionAsync(register.SessionToken);
-        Assert.NotNull(active);
-        Assert.Equal(register.User, active!.User);
+        active.Should().NotBeNull();
+        active!.User.Should().Be(register.User);
 
         await authService.LogoutAsync(register.SessionToken);
         var afterLogout = await authService.ValidateSessionAsync(register.SessionToken);
-        Assert.Null(afterLogout);
+        afterLogout.Should().BeNull();
 
         var login = await authService.LoginAsync(new LoginCommand(
             Email: "user@example.com",
@@ -74,16 +75,16 @@ public class AuthServiceTests : IDisposable
             IpAddress: null,
             UserAgent: null));
 
-        Assert.NotNull(login);
-        Assert.Equal(register.User, login!.User);
-        Assert.NotEqual(register.SessionToken, login.SessionToken);
+        login.Should().NotBeNull();
+        login!.User.Should().Be(register.User);
+        login.SessionToken.Should().NotBe(register.SessionToken);
 
         var failedLogin = await authService.LoginAsync(new LoginCommand(
             Email: "user@example.com",
             Password: "wrong",
             IpAddress: null,
             UserAgent: null));
-        Assert.Null(failedLogin);
+        failedLogin.Should().BeNull();
     }
 
     [Theory]
@@ -111,15 +112,16 @@ public class AuthServiceTests : IDisposable
             IpAddress: "127.0.0.1",
             UserAgent: "unit-tests"));
 
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => authService.RegisterAsync(new RegisterCommand(
+        var exception = await FluentActions.Invoking(() => authService.RegisterAsync(new RegisterCommand(
             Email: $"{requestedRole.ToLowerInvariant()}@example.com",
             Password: "Password!1",
             DisplayName: $"{requestedRole} User",
             Role: requestedRole,
             IpAddress: "127.0.0.1",
-            UserAgent: "unit-tests")));
+            UserAgent: "unit-tests")))
+            .Should().ThrowAsync<InvalidOperationException>();
 
-        Assert.Equal("Only administrators can assign elevated roles.", exception.Message);
+        exception.Which.Message.Should().Be("Only administrators can assign elevated roles.");
     }
 
     private sealed class FixedTimeProvider : TimeProvider

@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
@@ -153,7 +154,7 @@ public class ChatExportServiceTests : IDisposable
         // Then: NotFound result is returned
         Assert.False(result.Success);
         Assert.Equal("not_found", result.Error);
-        Assert.Null(result.Stream);
+        result.Stream.Should().BeNull();
 
         // And: No formatter is called
         _pdfFormatterMock.Verify(
@@ -180,7 +181,7 @@ public class ChatExportServiceTests : IDisposable
         // Then: UnsupportedFormat result is returned
         Assert.False(result.Success);
         Assert.Equal("unsupported_format", result.Error);
-        Assert.Null(result.Stream);
+        result.Stream.Should().BeNull();
 
         // And: Error message lists supported formats
         Assert.Contains("pdf", result.ErrorDetails ?? "");
@@ -372,7 +373,7 @@ public class ChatExportServiceTests : IDisposable
 
         // Then: Filename is sanitized and follows pattern
         Assert.True(result.Success);
-        Assert.NotNull(result.Filename);
+        result.Filename.Should().NotBeNull();
         Assert.Contains(expectedSanitized, result.Filename);
         Assert.StartsWith("chat-", result.Filename);
         Assert.EndsWith(".txt", result.Filename);
@@ -409,7 +410,7 @@ public class ChatExportServiceTests : IDisposable
 
         // Then: Filename includes date range
         Assert.True(result.Success);
-        Assert.NotNull(result.Filename);
+        result.Filename.Should().NotBeNull();
         Assert.Contains("2025-10-01", result.Filename);
         Assert.Contains("2025-10-15", result.Filename);
         Assert.Contains("to", result.Filename);
@@ -617,7 +618,7 @@ public class ChatExportServiceTests : IDisposable
 
         // Then: Filename uses "chat" as fallback
         Assert.True(result.Success);
-        Assert.NotNull(result.Filename);
+        result.Filename.Should().NotBeNull();
         Assert.StartsWith("chat-chat-", result.Filename);
         Assert.EndsWith(".txt", result.Filename);
     }
@@ -650,7 +651,7 @@ public class ChatExportServiceTests : IDisposable
 
         // Then: Control characters are removed
         Assert.True(result.Success);
-        Assert.NotNull(result.Filename);
+        result.Filename.Should().NotBeNull();
         Assert.Contains(expectedSanitized, result.Filename);
 
         // And: Filename starts with sanitized game name
@@ -682,7 +683,7 @@ public class ChatExportServiceTests : IDisposable
 
         // Then: Game name is truncated
         Assert.True(result.Success);
-        Assert.NotNull(result.Filename);
+        result.Filename.Should().NotBeNull();
 
         // And: Filename contains truncated portion (max 50 chars of game name)
         // Format: {gameName(<=50)}-chat-{id(8)}.{ext}
@@ -720,7 +721,7 @@ public class ChatExportServiceTests : IDisposable
 
         // Then: Newlines are removed
         Assert.True(result.Success);
-        Assert.NotNull(result.Filename);
+        result.Filename.Should().NotBeNull();
         Assert.Contains(expectedSanitized, result.Filename);
         Assert.DoesNotContain("\n", result.Filename);
         Assert.DoesNotContain("\r", result.Filename);

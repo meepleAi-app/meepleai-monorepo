@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Api.Infrastructure.Entities;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -93,7 +94,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
 
         Assert.True(result.TryGetProperty("details", out var details));
         var detailsDict = JsonSerializer.Deserialize<Dictionary<string, string>>(details.GetRawText());
-        Assert.NotNull(detailsDict);
+        detailsDict.Should().NotBeNull();
         Assert.Contains("fileSize", detailsDict!.Keys);
         Assert.Contains("exceeds maximum", detailsDict["fileSize"]);
     }
@@ -141,7 +142,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
 
         Assert.True(result.TryGetProperty("details", out var details));
         var detailsDict = JsonSerializer.Deserialize<Dictionary<string, string>>(details.GetRawText());
-        Assert.NotNull(detailsDict);
+        detailsDict.Should().NotBeNull();
         Assert.Contains("fileType", detailsDict!.Keys);
         Assert.Contains("not allowed", detailsDict["fileType"]);
     }
@@ -189,7 +190,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
 
         Assert.True(result.TryGetProperty("details", out var details));
         var detailsDict = JsonSerializer.Deserialize<Dictionary<string, string>>(details.GetRawText());
-        Assert.NotNull(detailsDict);
+        detailsDict.Should().NotBeNull();
         Assert.Contains("fileFormat", detailsDict!.Keys);
         Assert.Contains("Invalid PDF file format", detailsDict["fileFormat"]);
     }
@@ -277,7 +278,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
 
         Assert.True(result.TryGetProperty("details", out var details));
         var detailsDict = JsonSerializer.Deserialize<Dictionary<string, string>>(details.GetRawText());
-        Assert.NotNull(detailsDict);
+        detailsDict.Should().NotBeNull();
         Assert.Contains("file", detailsDict!.Keys);
         Assert.Contains("No file provided", detailsDict["file"]);
     }
@@ -375,8 +376,8 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
 
         // Verify details can be deserialized to Dictionary<string, string>
         var detailsDict = JsonSerializer.Deserialize<Dictionary<string, string>>(details.GetRawText());
-        Assert.NotNull(detailsDict);
-        Assert.NotEmpty(detailsDict!);
+        detailsDict.Should().NotBeNull();
+        detailsDict!.Should().NotBeEmpty();
     }
 
     /// <summary>

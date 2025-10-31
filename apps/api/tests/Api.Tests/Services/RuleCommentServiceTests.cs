@@ -11,6 +11,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
@@ -133,7 +134,7 @@ public class RuleCommentServiceTests : IDisposable
             TestUserId1);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(TestGameId, result.GameId);
         Assert.Equal(TestVersion, result.Version);
         Assert.Equal(10, result.LineNumber);
@@ -141,8 +142,8 @@ public class RuleCommentServiceTests : IDisposable
         Assert.Equal(TestUserId1, result.UserId);
         Assert.Equal("alice", result.UserDisplayName);
         Assert.False(result.IsResolved);
-        Assert.Null(result.ParentCommentId);
-        Assert.Empty(result.Replies);
+        result.ParentCommentId.Should().BeNull();
+        result.Replies.Should().BeEmpty();
     }
 
     [Fact]
@@ -160,8 +161,8 @@ public class RuleCommentServiceTests : IDisposable
             TestUserId1);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Null(result.LineNumber);
+        result.Should().NotBeNull();
+        result.LineNumber.Should().BeNull();
         Assert.Equal(commentText, result.CommentText);
     }
 
@@ -180,7 +181,7 @@ public class RuleCommentServiceTests : IDisposable
             TestUserId3);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(2, result.MentionedUserIds.Count);
         Assert.Contains(TestUserId1, result.MentionedUserIds); // alice
         Assert.Contains(TestUserId2, result.MentionedUserIds); // Bob
@@ -201,7 +202,7 @@ public class RuleCommentServiceTests : IDisposable
             TestUserId1);
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Single(result.MentionedUserIds);
         Assert.Contains(TestUserId3, result.MentionedUserIds); // admin@example.com
     }
@@ -307,7 +308,7 @@ public class RuleCommentServiceTests : IDisposable
             TestUserId2);
 
         // Assert
-        Assert.NotNull(reply);
+        reply.Should().NotBeNull();
         Assert.Equal(parent.Id, reply.ParentCommentId);
         Assert.Equal(parent.GameId, reply.GameId);
         Assert.Equal(parent.Version, reply.Version);
@@ -405,8 +406,8 @@ public class RuleCommentServiceTests : IDisposable
             includeResolved: true);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -526,7 +527,7 @@ public class RuleCommentServiceTests : IDisposable
         var result = await _service.GetCommentsForLineAsync(TestGameId, TestVersion, 99);
 
         // Assert
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -572,7 +573,7 @@ public class RuleCommentServiceTests : IDisposable
         Assert.True(result.IsResolved);
         Assert.Equal(TestUserId2, result.ResolvedByUserId);
         Assert.Equal("Bob", result.ResolvedByDisplayName);
-        Assert.NotNull(result.ResolvedAt);
+        result.ResolvedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -610,7 +611,7 @@ public class RuleCommentServiceTests : IDisposable
 
         // Verify grandchild is also resolved by checking database directly
         var grandchildEntity = await _dbContext.RuleSpecComments.FindAsync(grandchild.Id);
-        Assert.NotNull(grandchildEntity);
+        grandchildEntity.Should().NotBeNull();
         Assert.True(grandchildEntity.IsResolved);
     }
 
@@ -649,9 +650,9 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         Assert.False(result.IsResolved);
-        Assert.Null(result.ResolvedByUserId);
-        Assert.Null(result.ResolvedByDisplayName);
-        Assert.Null(result.ResolvedAt);
+        result.ResolvedByUserId.Should().BeNull();
+        result.ResolvedByDisplayName.Should().BeNull();
+        result.ResolvedAt.Should().BeNull();
     }
 
     [Fact]
@@ -732,7 +733,7 @@ public class RuleCommentServiceTests : IDisposable
         var result = await _service.ExtractMentionedUsersAsync("This text has no mentions");
 
         // Assert
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -742,7 +743,7 @@ public class RuleCommentServiceTests : IDisposable
         var result = await _service.ExtractMentionedUsersAsync("");
 
         // Assert
-        Assert.Empty(result);
+        result.Should().BeEmpty();
     }
 
     [Fact]

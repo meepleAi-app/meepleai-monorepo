@@ -16,6 +16,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -49,11 +50,11 @@ public class ApiExceptionHandlerMiddlewareTests
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
-        Assert.NotNull(errorResponse);
+        errorResponse.Should().NotBeNull();
         Assert.Equal("bad_request", errorResponse.Error);
         Assert.Equal("Invalid request parameters", errorResponse.Message);
-        Assert.NotNull(errorResponse.CorrelationId);
-        Assert.Null(errorResponse.StackTrace); // Production mode
+        errorResponse.CorrelationId.Should().NotBeNull();
+        errorResponse.StackTrace.Should().BeNull(); // Production mode
     }
 
     [Fact]
@@ -73,7 +74,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
-        Assert.NotNull(errorResponse);
+        errorResponse.Should().NotBeNull();
         Assert.Equal("bad_request", errorResponse.Error);
         Assert.Equal("Invalid request parameters", errorResponse.Message);
     }
@@ -95,7 +96,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
-        Assert.NotNull(errorResponse);
+        errorResponse.Should().NotBeNull();
         Assert.Equal("forbidden", errorResponse.Error);
         Assert.Equal("Access denied", errorResponse.Message);
     }
@@ -117,7 +118,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
-        Assert.NotNull(errorResponse);
+        errorResponse.Should().NotBeNull();
         Assert.Equal("not_found", errorResponse.Error);
         Assert.Equal("Resource not found", errorResponse.Message);
     }
@@ -139,7 +140,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
-        Assert.NotNull(errorResponse);
+        errorResponse.Should().NotBeNull();
         Assert.Equal("internal_server_error", errorResponse.Error);
         Assert.Equal("An unexpected error occurred", errorResponse.Message);
     }
@@ -161,7 +162,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
-        Assert.NotNull(errorResponse);
+        errorResponse.Should().NotBeNull();
         Assert.Equal("timeout", errorResponse.Error);
         Assert.Equal("Request timed out", errorResponse.Message);
     }
@@ -183,7 +184,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
-        Assert.NotNull(errorResponse);
+        errorResponse.Should().NotBeNull();
         Assert.Equal("internal_server_error", errorResponse.Error);
         Assert.Equal("An unexpected error occurred", errorResponse.Message);
     }
@@ -236,9 +237,9 @@ public class ApiExceptionHandlerMiddlewareTests
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
-        Assert.NotNull(errorResponse);
-        Assert.NotNull(errorResponse.StackTrace); // Stack trace included in development
-        Assert.NotEmpty(errorResponse.StackTrace); // Verify stack trace is present
+        errorResponse.Should().NotBeNull();
+        errorResponse.StackTrace.Should().NotBeNull(); // Stack trace included in development
+        errorResponse.StackTrace.Should().NotBeEmpty(); // Verify stack trace is present
     }
 
     [Fact]
@@ -256,8 +257,8 @@ public class ApiExceptionHandlerMiddlewareTests
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
-        Assert.NotNull(errorResponse);
-        Assert.Null(errorResponse.StackTrace); // No stack trace in production
+        errorResponse.Should().NotBeNull();
+        errorResponse.StackTrace.Should().BeNull(); // No stack trace in production
     }
 
     [Fact]
@@ -309,9 +310,9 @@ public class ApiExceptionHandlerMiddlewareTests
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
-        Assert.NotNull(errorResponse);
-        Assert.NotNull(errorResponse.CorrelationId);
-        Assert.NotEmpty(errorResponse.CorrelationId);
+        errorResponse.Should().NotBeNull();
+        errorResponse.CorrelationId.Should().NotBeNull();
+        errorResponse.CorrelationId.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -333,7 +334,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
-        Assert.NotNull(errorResponse);
+        errorResponse.Should().NotBeNull();
         Assert.InRange(errorResponse.Timestamp, beforeRequest.AddSeconds(-1), afterRequest.AddSeconds(1));
     }
 
@@ -373,7 +374,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
-        Assert.NotNull(errorResponse);
+        errorResponse.Should().NotBeNull();
         Assert.Equal("internal_server_error", errorResponse.Error);
     }
 

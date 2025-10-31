@@ -18,6 +18,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
@@ -90,8 +91,8 @@ public class N8nTemplateServiceTests : IDisposable
         var result = await _service.GetTemplatesAsync();
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Empty(result);
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
     }
 
     [Fact]
@@ -170,7 +171,7 @@ public class N8nTemplateServiceTests : IDisposable
         var result = await _service.GetTemplateAsync("nonexistent");
 
         // Assert
-        Assert.Null(result);
+        result.Should().BeNull();
     }
 
     [Fact]
@@ -183,10 +184,10 @@ public class N8nTemplateServiceTests : IDisposable
         var result = await _service.GetTemplateAsync("test-template");
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("test-template", result.Id);
         Assert.Equal("integration", result.Category);
-        Assert.NotNull(result.Workflow);
+        result.Workflow.Should().NotBeNull();
     }
 
     [Fact]
@@ -199,8 +200,8 @@ public class N8nTemplateServiceTests : IDisposable
         var result = await _service.GetTemplateAsync("test");
 
         // Assert
-        Assert.NotNull(result);
-        Assert.NotNull(result.Workflow);
+        result.Should().NotBeNull();
+        result.Workflow.Should().NotBeNull();
     }
 
     #endregion
@@ -288,7 +289,7 @@ public class N8nTemplateServiceTests : IDisposable
         var result = await _service.ImportTemplateAsync("test", parameters, "user123");
 
         // Assert
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("workflow-123", result.WorkflowId);
         Assert.Contains("imported successfully", result.Message.ToLower());
 
@@ -347,7 +348,7 @@ public class N8nTemplateServiceTests : IDisposable
         await _service.ImportTemplateAsync("test-params", parameters, "user123");
 
         // Assert
-        Assert.NotNull(capturedRequest);
+        capturedRequest.Should().NotBeNull();
         var requestBody = await capturedRequest!.Content!.ReadAsStringAsync();
 
         Assert.Contains("https://api.example.com", requestBody);
@@ -400,7 +401,7 @@ public class N8nTemplateServiceTests : IDisposable
 
         // Assert
         Assert.False(result.Valid);
-        Assert.NotNull(result.Errors);
+        result.Errors.Should().NotBeNull();
         Assert.Contains(result.Errors, e => e.Contains("Invalid JSON"));
     }
 
@@ -419,7 +420,7 @@ public class N8nTemplateServiceTests : IDisposable
 
         // Assert
         Assert.False(result.Valid);
-        Assert.NotNull(result.Errors);
+        result.Errors.Should().NotBeNull();
         Assert.Contains(result.Errors, e => e.Contains("name"));
         Assert.Contains(result.Errors, e => e.Contains("version"));
     }
@@ -448,7 +449,7 @@ public class N8nTemplateServiceTests : IDisposable
 
         // Assert
         Assert.False(result.Valid);
-        Assert.NotNull(result.Errors);
+        result.Errors.Should().NotBeNull();
         Assert.Contains(result.Errors, e => e.Contains("nodes"));
     }
 
@@ -463,7 +464,7 @@ public class N8nTemplateServiceTests : IDisposable
 
         // Assert
         Assert.True(result.Valid);
-        Assert.Null(result.Errors);
+        result.Errors.Should().BeNull();
     }
 
     [Fact]

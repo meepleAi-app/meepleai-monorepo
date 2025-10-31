@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -123,22 +124,22 @@ public class PdfIndexingServiceTests : IDisposable
 
         // THEN: The indexing should succeed
         Assert.True(result.Success);
-        Assert.NotNull(result.VectorDocumentId);
+        result.VectorDocumentId.Should().NotBeNull();
         Assert.Equal(2, result.ChunkCount);
-        Assert.NotNull(result.IndexedAt);
+        result.IndexedAt.Should().NotBeNull();
 
         // AND: The VectorDocumentEntity should be persisted with status "completed"
         var vectorDoc = await _db.Set<VectorDocumentEntity>()
             .FirstOrDefaultAsync(v => v.Id == result.VectorDocumentId);
 
-        Assert.NotNull(vectorDoc);
+        vectorDoc.Should().NotBeNull();
         Assert.Equal("completed", vectorDoc.IndexingStatus);
         Assert.Equal("tic-tac-toe", vectorDoc.GameId);
         Assert.Equal("pdf-1", vectorDoc.PdfDocumentId);
         Assert.Equal(2, vectorDoc.ChunkCount);
         Assert.Equal(extractedText.Length, vectorDoc.TotalCharacters);
-        Assert.NotNull(vectorDoc.IndexedAt);
-        Assert.Null(vectorDoc.IndexingError);
+        vectorDoc.IndexedAt.Should().NotBeNull();
+        vectorDoc.IndexingError.Should().BeNull();
         Assert.Equal("openai/text-embedding-3-small", vectorDoc.EmbeddingModel);
         Assert.Equal(1536, vectorDoc.EmbeddingDimensions);
     }
@@ -276,7 +277,7 @@ public class PdfIndexingServiceTests : IDisposable
 
         // THEN: Should succeed and update the same VectorDocumentEntity
         Assert.True(result.Success);
-        Assert.NotNull(result.VectorDocumentId);
+        result.VectorDocumentId.Should().NotBeNull();
 
         // Verify Qdrant delete was called (idempotency cleanup)
         _qdrantServiceMock.Verify(x => x.DeleteDocumentAsync("pdf-3", It.IsAny<CancellationToken>()), Times.Once);
@@ -345,8 +346,8 @@ public class PdfIndexingServiceTests : IDisposable
         var vectorDoc = await _db.Set<VectorDocumentEntity>()
             .FirstOrDefaultAsync(v => v.PdfDocumentId == "pdf-4");
 
-        Assert.NotNull(vectorDoc);
+        vectorDoc.Should().NotBeNull();
         Assert.Equal("failed", vectorDoc.IndexingStatus);
-        Assert.NotNull(vectorDoc.IndexingError);
+        vectorDoc.IndexingError.Should().NotBeNull();
     }
 }

@@ -5,6 +5,7 @@ using Api.Infrastructure.Entities;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -216,7 +217,7 @@ public class InfrastructureTests : IDisposable
 
         // Assert
         var savedUser = _dbContext.Users.Find("user-maxlength");
-        Assert.NotNull(savedUser);
+        savedUser.Should().NotBeNull();
         // Note: In production with PostgreSQL, MaxLength would be enforced.
         // SQLite stores the full email length for testing purposes.
         Assert.Equal(longEmail, savedUser.Email);

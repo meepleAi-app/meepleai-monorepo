@@ -2,6 +2,7 @@ using System.Linq;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
+using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -49,16 +50,19 @@ public class AgentFeedbackServiceTests : IDisposable
         await service.RecordFeedbackAsync("msg-1", "qa", "user-1", "helpful", "game-1");
 
         var entry = await dbContext.AgentFeedbacks.SingleAsync();
-        Assert.Equal("msg-1", entry.MessageId);
-        Assert.Equal("qa", entry.Endpoint);
-        Assert.Equal("user-1", entry.UserId);
-        Assert.Equal("helpful", entry.Outcome);
-        Assert.Equal("game-1", entry.GameId);
+        // Convert all Assert statements to FluentAssertions
+        
+        // Simple property assertions
+        entry.MessageId.Should().Be("msg-1");
+        entry.Endpoint.Should().Be("qa");
+        entry.UserId.Should().Be("user-1");
+        entry.Outcome.Should().Be("helpful");
+        entry.GameId.Should().Be("game-1");
 
         await service.RecordFeedbackAsync("msg-1", "qa", "user-1", "not-helpful", "game-1");
 
         entry = await dbContext.AgentFeedbacks.SingleAsync();
-        Assert.Equal("not-helpful", entry.Outcome);
+        entry.Outcome.Should().Be("not-helpful");
     }
 
     [Fact]
@@ -80,7 +84,8 @@ public class AgentFeedbackServiceTests : IDisposable
 
         await service.RecordFeedbackAsync("msg-2", "qa", "user-1", null, "game-1");
 
-        Assert.Empty(dbContext.AgentFeedbacks);
+        // Empty and Null assertions
+        dbContext.AgentFeedbacks.Should().BeEmpty();
     }
 
     [Fact]
@@ -122,11 +127,12 @@ public class AgentFeedbackServiceTests : IDisposable
 
         var stats = await service.GetStatsAsync(ct: CancellationToken.None);
 
-        Assert.Equal(3, stats.TotalFeedback);
-        Assert.Equal(2, stats.OutcomeCounts["helpful"]);
-        Assert.Equal(1, stats.OutcomeCounts["not-helpful"]);
-        Assert.Equal(2, stats.EndpointOutcomeCounts["qa"].Values.Sum());
-        Assert.Equal(1, stats.EndpointOutcomeCounts["setup"].Values.Sum());
+        // Stats assertions
+        stats.TotalFeedback.Should().Be(3);
+        stats.OutcomeCounts["helpful"].Should().Be(2);
+        stats.OutcomeCounts["not-helpful"].Should().Be(1);
+        stats.EndpointOutcomeCounts["qa"].Values.Sum().Should().Be(2);
+        stats.EndpointOutcomeCounts["setup"].Values.Sum().Should().Be(1);
     }
 
     #region Phase 3: Additional Coverage Tests
@@ -138,8 +144,8 @@ public class AgentFeedbackServiceTests : IDisposable
         var loggerMock = new Mock<ILogger<AgentFeedbackService>>();
         var service = new AgentFeedbackService(dbContext, loggerMock.Object);
 
-        await Assert.ThrowsAsync<ArgumentException>(async () =>
-            await service.RecordFeedbackAsync(null!, "qa", "user-1", "helpful", "game-1"));
+        await FluentActions.Invoking(async () => await service.RecordFeedbackAsync(null!, "qa", "user", "helpful", "game"))
+            .Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -149,8 +155,8 @@ public class AgentFeedbackServiceTests : IDisposable
         var loggerMock = new Mock<ILogger<AgentFeedbackService>>();
         var service = new AgentFeedbackService(dbContext, loggerMock.Object);
 
-        await Assert.ThrowsAsync<ArgumentException>(async () =>
-            await service.RecordFeedbackAsync("msg-1", "", "user-1", "helpful", "game-1"));
+        await FluentActions.Invoking(async () => await service.RecordFeedbackAsync("msg", null!, "user", "helpful", "game"))
+            .Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -160,8 +166,8 @@ public class AgentFeedbackServiceTests : IDisposable
         var loggerMock = new Mock<ILogger<AgentFeedbackService>>();
         var service = new AgentFeedbackService(dbContext, loggerMock.Object);
 
-        await Assert.ThrowsAsync<ArgumentException>(async () =>
-            await service.RecordFeedbackAsync("msg-1", "qa", null!, "helpful", "game-1"));
+        await FluentActions.Invoking(async () => await service.RecordFeedbackAsync("msg", "qa", null!, "helpful", "game"))
+            .Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -186,10 +192,11 @@ public class AgentFeedbackServiceTests : IDisposable
         await service.RecordFeedbackAsync("msg-1", "explain", "user-1", "not-helpful", "game-2");
 
         var updated = await dbContext.AgentFeedbacks.SingleAsync();
-        Assert.Equal("not-helpful", updated.Outcome);
-        Assert.Equal("explain", updated.Endpoint);
-        Assert.Equal("game-2", updated.GameId);
-        Assert.True(updated.UpdatedAt > updated.CreatedAt);
+        // Updated entity assertions
+        updated.Outcome.Should().Be("not-helpful");
+        updated.Endpoint.Should().Be("explain");
+        updated.GameId.Should().Be("game-2");
+        updated.UpdatedAt.Should().BeAfter(updated.CreatedAt);
     }
 
     [Fact]
@@ -208,9 +215,9 @@ public class AgentFeedbackServiceTests : IDisposable
 
         var stats = await service.GetStatsAsync(endpoint: "qa");
 
-        Assert.Equal(2, stats.TotalFeedback);
-        Assert.Equal(1, stats.OutcomeCounts["helpful"]);
-        Assert.Equal(1, stats.OutcomeCounts["not-helpful"]);
+        stats.TotalFeedback.Should().Be(2);
+        stats.OutcomeCounts["helpful"].Should().Be(1);
+        stats.OutcomeCounts["not-helpful"].Should().Be(1);
     }
 
     [Fact]
@@ -228,8 +235,8 @@ public class AgentFeedbackServiceTests : IDisposable
 
         var stats = await service.GetStatsAsync(userId: "user-1");
 
-        Assert.Equal(1, stats.TotalFeedback);
-        Assert.Equal(1, stats.OutcomeCounts["helpful"]);
+        stats.TotalFeedback.Should().Be(1);
+        stats.OutcomeCounts["helpful"].Should().Be(1);
     }
 
     [Fact]
@@ -247,8 +254,8 @@ public class AgentFeedbackServiceTests : IDisposable
 
         var stats = await service.GetStatsAsync(gameId: "game-1");
 
-        Assert.Equal(1, stats.TotalFeedback);
-        Assert.Equal(1, stats.OutcomeCounts["helpful"]);
+        stats.TotalFeedback.Should().Be(1);
+        stats.OutcomeCounts["helpful"].Should().Be(1);
     }
 
     [Fact]
@@ -268,8 +275,8 @@ public class AgentFeedbackServiceTests : IDisposable
 
         var stats = await service.GetStatsAsync(startDate: now.AddDays(-3), endDate: now.AddDays(-1));
 
-        Assert.Equal(1, stats.TotalFeedback); // Only msg-2 in range
-        Assert.Equal(1, stats.OutcomeCounts["helpful"]);
+        stats.TotalFeedback.Should().Be(1); // Only msg-2 in range
+        stats.OutcomeCounts["helpful"].Should().Be(1);
     }
 
     [Fact]
@@ -281,9 +288,9 @@ public class AgentFeedbackServiceTests : IDisposable
 
         var stats = await service.GetStatsAsync();
 
-        Assert.Equal(0, stats.TotalFeedback);
-        Assert.Empty(stats.OutcomeCounts);
-        Assert.Empty(stats.EndpointOutcomeCounts);
+        stats.TotalFeedback.Should().Be(0);
+        stats.OutcomeCounts.Should().BeEmpty();
+        stats.EndpointOutcomeCounts.Should().BeEmpty();
     }
 
     [Fact]
@@ -296,8 +303,7 @@ public class AgentFeedbackServiceTests : IDisposable
         await service.RecordFeedbackAsync("msg-1", "qa", "user-1", "helpful", null);
 
         var entry = await dbContext.AgentFeedbacks.SingleAsync();
-        Assert.Equal("msg-1", entry.MessageId);
-        Assert.Null(entry.GameId);
+        entry.GameId.Should().BeNull();
     }
 
     [Fact]
@@ -318,9 +324,9 @@ public class AgentFeedbackServiceTests : IDisposable
         var stats = await service.GetStatsAsync();
 
         // Should aggregate by outcome (case-sensitive)
-        Assert.Equal(2, stats.OutcomeCounts["helpful"]);
-        Assert.Equal(1, stats.OutcomeCounts["not_helpful"]);
-        Assert.Equal(3, stats.TotalFeedback);
+        stats.OutcomeCounts["helpful"].Should().Be(2);
+        stats.OutcomeCounts["not_helpful"].Should().Be(1);
+        stats.TotalFeedback.Should().Be(3);
     }
 
     #endregion

@@ -12,6 +12,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -142,7 +143,7 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await DeserializeAsync<RuleSpec>(response);
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(gameId, result!.gameId);
         Assert.Equal("v1", result.version);
         Assert.Single(result.rules);
@@ -185,7 +186,7 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await DeserializeAsync<RuleSpec>(response);
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(gameId, result!.gameId);
         Assert.Equal("v1", result.version);
     }
@@ -299,8 +300,8 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await DeserializeAsync<RuleSpec>(response);
-        Assert.NotNull(result);
-        Assert.Empty(result!.rules);
+        result.Should().NotBeNull();
+        result!.rules.Should().BeEmpty();
     }
 
     #endregion
@@ -350,7 +351,7 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await DeserializeAsync<RuleSpec>(response);
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal("v2", result!.version); // Should auto-increment to v2
     }
 
@@ -434,7 +435,7 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, historyResponse.StatusCode);
 
         var history = await DeserializeAsync<RuleSpecHistory>(historyResponse);
-        Assert.NotNull(history);
+        history.Should().NotBeNull();
         Assert.Equal(3, history!.TotalVersions);
         Assert.Contains(history.Versions, v => v.Version == "v1");
         Assert.Contains(history.Versions, v => v.Version == "v2");
@@ -484,33 +485,33 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await DeserializeAsync<RuleSpec>(response);
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
         Assert.Equal(4, result!.rules.Count);
 
         // Verify each rule
         var r1 = result.rules.FirstOrDefault(r => r.id == "r1");
-        Assert.NotNull(r1);
+        r1.Should().NotBeNull();
         Assert.Equal("Rule with all fields", r1!.text);
         Assert.Equal("Setup", r1.section);
         Assert.Equal("1", r1.page);
         Assert.Equal("5", r1.line);
 
         var r2 = result.rules.FirstOrDefault(r => r.id == "r2");
-        Assert.NotNull(r2);
+        r2.Should().NotBeNull();
         Assert.Null(r2!.section);
         Assert.Equal("2", r2.page);
 
         var r3 = result.rules.FirstOrDefault(r => r.id == "r3");
-        Assert.NotNull(r3);
+        r3.Should().NotBeNull();
         Assert.Equal("Gameplay", r3!.section);
-        Assert.Null(r3.page);
-        Assert.Null(r3.line);
+        r3.page.Should().BeNull();
+        r3.line.Should().BeNull();
 
         var r4 = result.rules.FirstOrDefault(r => r.id == "r4");
-        Assert.NotNull(r4);
+        r4.Should().NotBeNull();
         Assert.Null(r4!.section);
-        Assert.Null(r4.page);
-        Assert.Null(r4.line);
+        r4.page.Should().BeNull();
+        r4.line.Should().BeNull();
     }
 
     /// <summary>
@@ -551,7 +552,7 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var result = await DeserializeAsync<RuleSpec>(response);
-        Assert.NotNull(result);
+        result.Should().NotBeNull();
 
         // Rules should be in the order they were provided
         Assert.Equal("z-last", result!.rules[0].id);
@@ -595,12 +596,12 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
             editor.Cookies);
 
         var history = await DeserializeAsync<RuleSpecHistory>(historyResponse);
-        Assert.NotNull(history);
+        history.Should().NotBeNull();
         Assert.Single(history!.Versions);
 
         var version = history.Versions[0];
         Assert.Equal("v1", version.Version);
-        Assert.NotNull(version.CreatedBy);
+        version.CreatedBy.Should().NotBeNull();
         Assert.Contains("Editor User", version.CreatedBy!); // User display name or email
     }
 
@@ -635,7 +636,7 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
             editor.Cookies);
 
         var latest = await DeserializeAsync<RuleSpec>(getResponse);
-        Assert.NotNull(latest);
+        latest.Should().NotBeNull();
         Assert.Equal("v2", latest!.version);
         Assert.Single(latest.rules);
         Assert.Equal("V2", latest.rules[0].text);

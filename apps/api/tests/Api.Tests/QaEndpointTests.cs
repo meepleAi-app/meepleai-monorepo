@@ -9,6 +9,7 @@ using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 public class QaEndpointTests

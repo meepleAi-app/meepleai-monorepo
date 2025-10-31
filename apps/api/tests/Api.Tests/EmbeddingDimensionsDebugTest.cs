@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;

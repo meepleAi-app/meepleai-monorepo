@@ -3,6 +3,7 @@ using Api.Tests.Helpers;
 using Api.Models;
 using Api.Observability;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests.Observability;
@@ -116,7 +117,7 @@ public class QualityMetricsTests
 
         // Assert
         var measurements = collector.GetMeasurements();
-        Assert.Empty(measurements);
+        measurements.Should().BeEmpty();
     }
 
     /// <summary>
@@ -332,7 +333,7 @@ public class QualityMetricsTests
         // Assert
         // This test verifies the histogram is created with correct configuration
         // Actual bucket verification will depend on OpenTelemetry exporter config
-        Assert.NotNull(metrics);
+        metrics.Should().NotBeNull();
     }
 
     /// <summary>
@@ -353,7 +354,7 @@ public class QualityMetricsTests
         var histogramCollector = new MetricCollector<double>(meterFactory, "meepleai.quality.score");
         var counterCollector = new MetricCollector<long>(meterFactory, "meepleai.quality.low_quality_responses.total");
 
-        Assert.NotNull(histogramCollector);
-        Assert.NotNull(counterCollector);
+        histogramCollector.Should().NotBeNull();
+        counterCollector.Should().NotBeNull();
     }
 }

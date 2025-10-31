@@ -7,6 +7,7 @@ using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using System.Runtime.InteropServices;
 using Xunit;
+using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
@@ -149,8 +150,8 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.Empty(result.Errors);
-        Assert.NotNull(result.Metadata);
+        result.Errors.Should().BeEmpty();
+        result.Metadata.Should().NotBeNull();
         Assert.Equal(validSize, result.Metadata.FileSizeBytes);
     }
 
@@ -162,7 +163,7 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.Empty(result.Errors);
+        result.Errors.Should().BeEmpty();
     }
 
     // ===== MIME Type Validation Tests =====
@@ -210,7 +211,7 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.Empty(result.Errors);
+        result.Errors.Should().BeEmpty();
     }
 
     [Fact]
@@ -221,7 +222,7 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.Empty(result.Errors);
+        result.Errors.Should().BeEmpty();
     }
 
     // ===== PDF Stream Validation Tests =====
@@ -274,10 +275,10 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.Empty(result.Errors);
-        Assert.NotNull(result.Metadata);
+        result.Errors.Should().BeEmpty();
+        result.Metadata.Should().NotBeNull();
         Assert.True(result.Metadata.PageCount >= 1);
-        Assert.NotEmpty(result.Metadata.PdfVersion);
+        result.Metadata.PdfVersion.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -406,9 +407,9 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.NotNull(result.Metadata);
+        result.Metadata.Should().NotBeNull();
         Assert.Equal(3, result.Metadata.PageCount);
-        Assert.NotEmpty(result.Metadata.PdfVersion);
+        result.Metadata.PdfVersion.Should().NotBeEmpty();
         Assert.True(result.Metadata.FileSizeBytes > 0);
     }
 
@@ -435,8 +436,8 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.NotNull(result.Metadata);
-        Assert.NotEmpty(result.Metadata.PdfVersion);
+        result.Metadata.Should().NotBeNull();
+        result.Metadata.PdfVersion.Should().NotBeEmpty();
     }
 
     // ===== Multiple Validation Errors Tests =====
@@ -543,7 +544,7 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         Assert.True(result.IsValid);
-        Assert.Empty(result.Errors);
+        result.Errors.Should().BeEmpty();
         Assert.Equal(metadata, result.Metadata);
     }
 
@@ -563,6 +564,6 @@ public class PdfValidationServiceTests : IDisposable
         // Assert
         Assert.False(result.IsValid);
         Assert.Equal(errors, result.Errors);
-        Assert.Null(result.Metadata);
+        result.Metadata.Should().BeNull();
     }
 }

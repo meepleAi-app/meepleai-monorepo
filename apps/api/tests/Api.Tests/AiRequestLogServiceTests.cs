@@ -66,25 +66,25 @@ public class AiRequestLogServiceTests : IDisposable
             ct: CancellationToken.None);
 
         var logs = await dbContext.AiRequestLogs.ToListAsync();
-        Assert.Single(logs);
+        logs.Should().ContainSingle();
 
         var log = logs[0];
-        Assert.Equal("user-1", log.UserId);
-        Assert.Equal("game-1", log.GameId);
-        Assert.Equal("qa", log.Endpoint);
-        Assert.Equal("What is the setup?", log.Query);
-        Assert.Equal("Setup details...", log.ResponseSnippet);
-        Assert.Equal(120, log.LatencyMs);
-        Assert.Equal(500, log.TokenCount);
-        Assert.Equal(300, log.PromptTokens);
-        Assert.Equal(200, log.CompletionTokens);
-        Assert.Equal(0.9, log.Confidence);
-        Assert.Equal("Success", log.Status);
-        Assert.Equal("127.0.0.1", log.IpAddress);
-        Assert.Equal("agent", log.UserAgent);
-        Assert.Equal("anthropic/claude-3.5-sonnet", log.Model);
-        Assert.Equal("stop", log.FinishReason);
-        Assert.True(log.CreatedAt > DateTime.UtcNow.AddMinutes(-5));
+        log.UserId.Should().Be("user-1");
+        log.GameId.Should().Be("game-1");
+        log.Endpoint.Should().Be("qa");
+        log.Query.Should().Be("What is the setup?");
+        log.ResponseSnippet.Should().Be("Setup details...");
+        log.LatencyMs.Should().Be(120);
+        log.TokenCount.Should().Be(500);
+        log.PromptTokens.Should().Be(300);
+        log.CompletionTokens.Should().Be(200);
+        log.Confidence.Should().Be(0.9);
+        log.Status.Should().Be("Success");
+        log.IpAddress.Should().Be("127.0.0.1");
+        log.UserAgent.Should().Be("agent");
+        log.Model.Should().Be("anthropic/claude-3.5-sonnet");
+        log.FinishReason.Should().Be("stop");
+        log.CreatedAt.Should().BeAfter(DateTime.UtcNow.AddMinutes(-5));
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public class AiRequestLogServiceTests : IDisposable
 
         errorInvocation.Should().NotBeNull();
         var state = errorInvocation!.Arguments[2];
-        Assert.Contains("Failed to log AI request", state.ToString());
+        state.ToString().Should().Contain("Failed to log AI request");
     }
 
     [Fact]
@@ -151,10 +151,10 @@ public class AiRequestLogServiceTests : IDisposable
             gameId: "game-2",
             ct: CancellationToken.None);
 
-        Assert.Single(result.Requests);
-        Assert.Equal(1, result.TotalCount);
-        Assert.Equal("game-2", result.Requests[0].GameId);
-        Assert.Equal("qa", result.Requests[0].Endpoint);
+        result.Requests.Should().ContainSingle();
+        result.TotalCount.Should().Be(1);
+        result.Requests[0].GameId.Should().Be("game-2");
+        result.Requests[0].Endpoint.Should().Be("qa");
     }
 
     [Fact]
@@ -202,12 +202,12 @@ public class AiRequestLogServiceTests : IDisposable
             endDate: DateTime.UtcNow,
             ct: CancellationToken.None);
 
-        Assert.Equal(3, stats.TotalRequests);
-        Assert.Equal(200, stats.AvgLatencyMs);
-        Assert.Equal(350, stats.TotalTokens);
-        Assert.Equal(2d / 3d, stats.SuccessRate, 3);
-        Assert.Equal(2, stats.EndpointCounts["qa"]);
-        Assert.Equal(1, stats.EndpointCounts["setup"]);
+        stats.TotalRequests.Should().Be(3);
+        stats.AvgLatencyMs.Should().Be(200);
+        stats.TotalTokens.Should().Be(350);
+        stats.SuccessRate, 3.Should().Be(2d / 3d);
+        stats.EndpointCounts["qa"].Should().Be(2);
+        stats.EndpointCounts["setup"].Should().Be(1);
     }
 
     [Fact]
@@ -219,10 +219,10 @@ public class AiRequestLogServiceTests : IDisposable
 
         var stats = await service.GetStatsAsync(ct: CancellationToken.None);
 
-        Assert.Equal(0, stats.TotalRequests);
-        Assert.Equal(0, stats.AvgLatencyMs);
-        Assert.Equal(0, stats.TotalTokens);
-        Assert.Equal(0, stats.SuccessRate);
+        stats.TotalRequests.Should().Be(0);
+        stats.AvgLatencyMs.Should().Be(0);
+        stats.TotalTokens.Should().Be(0);
+        stats.SuccessRate.Should().Be(0);
         stats.EndpointCounts.Should().BeEmpty();
     }
 
@@ -258,12 +258,12 @@ public class AiRequestLogServiceTests : IDisposable
 
         var stats = await service.GetStatsAsync(userId: "user-1", ct: CancellationToken.None);
 
-        Assert.Equal(1, stats.TotalRequests);
-        Assert.Equal(100, stats.AvgLatencyMs);
-        Assert.Equal(50, stats.TotalTokens);
-        Assert.Equal(1.0, stats.SuccessRate);
-        Assert.Single(stats.EndpointCounts);
-        Assert.Equal(1, stats.EndpointCounts["qa"]);
+        stats.TotalRequests.Should().Be(1);
+        stats.AvgLatencyMs.Should().Be(100);
+        stats.TotalTokens.Should().Be(50);
+        stats.SuccessRate.Should().Be(1.0);
+        stats.EndpointCounts.Should().ContainSingle();
+        stats.EndpointCounts["qa"].Should().Be(1);
     }
 
     [Fact]
@@ -298,12 +298,12 @@ public class AiRequestLogServiceTests : IDisposable
 
         var stats = await service.GetStatsAsync(gameId: "game-1", ct: CancellationToken.None);
 
-        Assert.Equal(1, stats.TotalRequests);
-        Assert.Equal(150, stats.AvgLatencyMs);
-        Assert.Equal(75, stats.TotalTokens);
-        Assert.Equal(1.0, stats.SuccessRate);
-        Assert.Single(stats.EndpointCounts);
-        Assert.Equal(1, stats.EndpointCounts["qa"]);
+        stats.TotalRequests.Should().Be(1);
+        stats.AvgLatencyMs.Should().Be(150);
+        stats.TotalTokens.Should().Be(75);
+        stats.SuccessRate.Should().Be(1.0);
+        stats.EndpointCounts.Should().ContainSingle();
+        stats.EndpointCounts["qa"].Should().Be(1);
     }
 
     [Fact]
@@ -338,8 +338,8 @@ public class AiRequestLogServiceTests : IDisposable
 
         var stats = await service.GetStatsAsync(ct: CancellationToken.None);
 
-        Assert.Equal(2, stats.TotalRequests);
-        Assert.Equal(0.0, stats.SuccessRate);
+        stats.TotalRequests.Should().Be(2);
+        stats.SuccessRate.Should().Be(0.0);
     }
 
     [Fact]
@@ -385,9 +385,9 @@ public class AiRequestLogServiceTests : IDisposable
             endDate: now,
             ct: CancellationToken.None);
 
-        Assert.Equal(2, result.Requests.Count);
-        Assert.Equal(2, result.TotalCount);
-        Assert.DoesNotContain(result.Requests, r => r.CreatedAt < now.AddHours(-6));
+        result.Requests.Count.Should().Be(2);
+        result.TotalCount.Should().Be(2);
+        result.Requests.Should().NotContain(r => r.CreatedAt < now.AddHours(-6));
     }
 
     [Fact]
@@ -430,10 +430,10 @@ public class AiRequestLogServiceTests : IDisposable
 
         var result = await service.GetRequestsAsync(ct: CancellationToken.None);
 
-        Assert.Equal(3, result.Requests.Count);
-        Assert.Equal("setup", result.Requests[0].Endpoint); // Most recent
-        Assert.Equal("explain", result.Requests[1].Endpoint);
-        Assert.Equal("qa", result.Requests[2].Endpoint); // Oldest
+        result.Requests.Count.Should().Be(3);
+        result.Requests[0].Endpoint.Should().Be("setup"); // Most recent
+        result.Requests[1].Endpoint.Should().Be("explain");
+        result.Requests[2].Endpoint.Should().Be("qa"); // Oldest
     }
 
     [Fact]
@@ -458,7 +458,7 @@ public class AiRequestLogServiceTests : IDisposable
         var result = await service.GetRequestsAsync(offset: 10, ct: CancellationToken.None);
 
         result.Requests.Should().BeEmpty();
-        Assert.Equal(1, result.TotalCount); // Total count still correct
+        result.TotalCount.Should().Be(1); // Total count still correct
     }
 
     [Fact]
@@ -489,15 +489,15 @@ public class AiRequestLogServiceTests : IDisposable
             ct: CancellationToken.None);
 
         var logs = await dbContext.AiRequestLogs.ToListAsync();
-        Assert.Single(logs);
+        logs.Should().ContainSingle();
 
         var log = logs[0];
         log.UserId.Should().BeNull();
         log.GameId.Should().BeNull();
         log.Query.Should().BeNull();
         log.Confidence.Should().BeNull();
-        Assert.Equal(0, log.TokenCount); // Default value
-        Assert.Equal(0, log.PromptTokens);
-        Assert.Equal(0, log.CompletionTokens);
+        log.TokenCount.Should().Be(0); // Default value
+        log.PromptTokens.Should().Be(0);
+        log.CompletionTokens.Should().Be(0);
     }
 }

@@ -73,12 +73,12 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text);
 
         // Assert: Single chunk
-        Assert.Single(chunks);
-        Assert.Equal(text, chunks[0].Text);
-        Assert.Equal(0, chunks[0].Index);
-        Assert.Equal(0, chunks[0].CharStart);
-        Assert.Equal(text.Length, chunks[0].CharEnd);
-        Assert.Equal(1, chunks[0].Page); // First page
+        chunks.Should().ContainSingle();
+        chunks[0].Text.Should().Be(text);
+        chunks[0].Index.Should().Be(0);
+        chunks[0].CharStart.Should().Be(0);
+        chunks[0].CharEnd.Should().Be(text.Length);
+        chunks[0].Page.Should().Be(1); // First page
     }
 
     /// <summary>
@@ -97,8 +97,8 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text);
 
         // Assert: Multiple chunks created
-        Assert.True(chunks.Count > 1);
-        Assert.True(chunks.Count >= 3); // ~1500 / 512 = ~3 chunks
+        chunks.Count > 1.Should().BeTrue();
+        chunks.Count >= 3.Should().BeTrue(); // ~1500 / 512 = ~3 chunks
     }
 
     /// <summary>
@@ -118,12 +118,12 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text, chunkSize: customChunkSize);
 
         // Assert: More chunks due to smaller size
-        Assert.True(chunks.Count >= 10); // ~1000 / 100 = ~10 chunks
+        chunks.Count >= 10.Should().BeTrue(); // ~1000 / 100 = ~10 chunks
 
         // Verify chunk sizes are approximately correct (accounting for overlap reduction)
         foreach (var chunk in chunks.Take(chunks.Count - 1)) // Except last chunk
         {
-            Assert.True(chunk.Text.Length <= customChunkSize + 10); // Small tolerance for boundary adjustment
+            chunk.Text.Length <= customChunkSize + 10.Should().BeTrue(); // Small tolerance for boundary adjustment
         }
     }
 
@@ -145,7 +145,7 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text, chunkSize: chunkSize, overlap: overlap);
 
         // Assert: Overlapping chunks
-        Assert.True(chunks.Count >= 2);
+        chunks.Count >= 2.Should().BeTrue();
 
         // Verify overlap exists between consecutive chunks
         if (chunks.Count >= 2)
@@ -154,11 +154,11 @@ public class TextChunkingServiceTests
             var secondChunk = chunks[1];
 
             // Second chunk should start before first chunk ends (due to overlap)
-            Assert.True(secondChunk.CharStart < firstChunk.CharEnd);
+            secondChunk.CharStart < firstChunk.CharEnd.Should().BeTrue();
 
             // The overlap should be approximately the specified overlap
             var actualOverlap = firstChunk.CharEnd - secondChunk.CharStart;
-            Assert.InRange(actualOverlap, 0, overlap + 10); // Allow some tolerance
+            actualOverlap.Should().BeInRange(0, overlap + 10); // Allow some tolerance
         }
     }
 
@@ -181,7 +181,7 @@ public class TextChunkingServiceTests
         // Assert: Non-overlapping chunks
         for (int i = 0; i < chunks.Count - 1; i++)
         {
-            Assert.Equal(chunks[i].CharEnd, chunks[i + 1].CharStart);
+            chunks[i + 1].CharStart.Should().Be(chunks[i].CharEnd);
         }
     }
 
@@ -210,16 +210,14 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text, chunkSize: 100);
 
         // Assert: Verify chunks break at reasonable boundaries
-        Assert.True(chunks.Count > 1);
+        chunks.Count > 1.Should().BeTrue();
 
         // First chunk should likely end at a sentence boundary
         var firstChunk = chunks[0];
-        Assert.True(
-            firstChunk.Text.EndsWith(".") ||
+        (firstChunk.Text.EndsWith(".") ||
             firstChunk.Text.EndsWith("!") ||
-            firstChunk.Text.EndsWith("?"),
-            "First chunk should end at sentence boundary when possible"
-        );
+            firstChunk.Text.EndsWith("?"))
+            .Should().BeTrue("First chunk should end at sentence boundary when possible");
     }
 
     /// <summary>
@@ -238,7 +236,7 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text, chunkSize: 120);
 
         // Assert: Should have multiple chunks
-        Assert.True(chunks.Count >= 2);
+        chunks.Count >= 2.Should().BeTrue();
 
         // Verify chunks end at sentence boundaries where possible
         var chunksEndingWithPunctuation = chunks.Count(c =>
@@ -247,7 +245,7 @@ public class TextChunkingServiceTests
             c.Text.TrimEnd().EndsWith("?")
         );
 
-        Assert.True(chunksEndingWithPunctuation > 0, "At least some chunks should end with sentence terminators");
+        chunksEndingWithPunctuation > 0, "At least some chunks should end with sentence terminators".Should().BeTrue();
     }
 
     #endregion
@@ -270,7 +268,7 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text, chunkSize: 100);
 
         // Assert: Multiple chunks
-        Assert.True(chunks.Count > 1);
+        chunks.Count > 1.Should().BeTrue();
 
         // Verify chunks don't split words (except last chunk)
         foreach (var chunk in chunks.Take(chunks.Count - 1))
@@ -279,11 +277,9 @@ public class TextChunkingServiceTests
             if (trimmed.Length > 0)
             {
                 // Should not end mid-word (should end with whitespace or complete word)
-                Assert.True(
-                    char.IsWhiteSpace(chunk.Text[chunk.Text.Length - 1]) ||
-                    trimmed.Length < chunk.Text.Length,
-                    "Chunks should break at word boundaries when possible"
-                );
+                (char.IsWhiteSpace(chunk.Text[chunk.Text.Length - 1]) ||
+                    trimmed.Length < chunk.Text.Length)
+                    .Should().BeTrue("Chunks should break at word boundaries when possible");
             }
         }
     }
@@ -308,21 +304,21 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text, chunkSize: 100);
 
         // Assert: Verify positions
-        Assert.True(chunks.Count > 1);
+        chunks.Count > 1.Should().BeTrue();
 
         // First chunk should start at 0
-        Assert.Equal(0, chunks[0].CharStart);
+        chunks[0].CharStart.Should().Be(0);
 
         // Each chunk's text should match the substring at its positions
         foreach (var chunk in chunks)
         {
             var expectedText = text.Substring(chunk.CharStart, chunk.CharEnd - chunk.CharStart).Trim();
-            Assert.Equal(expectedText, chunk.Text);
+            chunk.Text.Should().Be(expectedText);
         }
 
         // Last chunk should end at text length
         var lastChunk = chunks[chunks.Count - 1];
-        Assert.True(lastChunk.CharEnd <= text.Length);
+        lastChunk.CharEnd <= text.Length.Should().BeTrue();
     }
 
     /// <summary>
@@ -343,7 +339,7 @@ public class TextChunkingServiceTests
         // Assert: Sequential indices
         for (int i = 0; i < chunks.Count; i++)
         {
-            Assert.Equal(i, chunks[i].Index);
+            chunks[i].Index.Should().Be(i);
         }
     }
 
@@ -369,14 +365,14 @@ public class TextChunkingServiceTests
         // Assert: Page numbers should increase
         var pageNumbers = chunks.Select(c => c.Page).Distinct().ToList();
 
-        Assert.True(pageNumbers.Count >= 2, "Should span multiple pages");
-        Assert.True(pageNumbers.Max() >= 2, "Should reach at least page 2");
+        pageNumbers.Count >= 2, "Should span multiple pages".Should().BeTrue();
+        pageNumbers.Max().Should().BeGreaterOrEqualTo(2, "Should reach at least page 2");
 
         // Verify pages are in ascending order
         int previousPage = 0;
         foreach (var chunk in chunks)
         {
-            Assert.True(chunk.Page >= previousPage, "Page numbers should be non-decreasing");
+            (chunk.Page >= previousPage).Should().BeTrue("Page numbers should be non-decreasing");
             previousPage = chunk.Page;
         }
     }
@@ -405,7 +401,7 @@ public class TextChunkingServiceTests
 
             // Assert: First chunk on page 1
             chunks.Should().NotBeEmpty();
-            Assert.Equal(1, chunks[0].Page);
+            chunks[0].Page.Should().Be(1);
         }
     }
 
@@ -435,9 +431,9 @@ public class TextChunkingServiceTests
         {
             input.Text.Should().NotBeNull();
             input.Text.Should().NotBeEmpty();
-            Assert.True(input.Page >= 1);
-            Assert.True(input.CharStart >= 0);
-            Assert.True(input.CharEnd > input.CharStart);
+            input.Page >= 1.Should().BeTrue();
+            input.CharStart >= 0.Should().BeTrue();
+            input.CharEnd > input.CharStart.Should().BeTrue();
         }
     }
 
@@ -459,12 +455,12 @@ public class TextChunkingServiceTests
         var inputs = _service.PrepareForEmbedding(text, customChunkSize, customOverlap);
 
         // Assert: More chunks due to smaller size
-        Assert.True(inputs.Count >= 10);
+        inputs.Count >= 10.Should().BeTrue();
 
         // Verify chunk sizes
         foreach (var input in inputs.Take(inputs.Count - 1))
         {
-            Assert.True(input.Text.Length <= customChunkSize + 20); // Tolerance for boundary adjustment
+            input.Text.Length <= customChunkSize + 20.Should().BeTrue(); // Tolerance for boundary adjustment
         }
     }
 
@@ -513,7 +509,7 @@ public class TextChunkingServiceTests
         var lastChunk = chunks[chunks.Count - 1];
         var totalCoverage = lastChunk.CharEnd;
 
-        Assert.Equal(text.Length, totalCoverage);
+        totalCoverage.Should().Be(text.Length);
     }
 
     /// <summary>
@@ -539,7 +535,7 @@ public class TextChunkingServiceTests
         {
             if (!string.IsNullOrWhiteSpace(chunk.Text))
             {
-                Assert.Equal(chunk.Text.Trim(), chunk.Text);
+                chunk.Text.Should().Be(chunk.Text.Trim());
             }
         }
     }
@@ -563,9 +559,9 @@ public class TextChunkingServiceTests
         chunks.Should().NotBeEmpty();
 
         var firstChunk = chunks[0];
-        Assert.Contains("café", firstChunk.Text);
-        Assert.Contains("😀", firstChunk.Text);
-        Assert.Contains("©", firstChunk.Text);
+        firstChunk.Text.Should().Contain("café");
+        firstChunk.Text.Should().Contain("😀");
+        firstChunk.Text.Should().Contain("©");
     }
 
     /// <summary>
@@ -589,7 +585,7 @@ public class TextChunkingServiceTests
         chunks.Should().NotBeEmpty();
 
         // Service should still produce some reasonable output
-        Assert.True(chunks.Count > 0);
+        chunks.Count > 0.Should().BeTrue();
     }
 
     /// <summary>
@@ -609,7 +605,7 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text, chunkSize, overlap: 0);
 
         // Assert: Many chunks
-        Assert.True(chunks.Count >= 5); // Should create multiple chunks
+        chunks.Count >= 5.Should().BeTrue(); // Should create multiple chunks
     }
 
     /// <summary>
@@ -631,7 +627,7 @@ public class TextChunkingServiceTests
         chunks.Should().NotBeEmpty();
 
         // First chunk should preserve the structure
-        Assert.Contains("Line1", chunks[0].Text);
+        chunks[0].Text.Should().Contain("Line1");
     }
 
     #endregion

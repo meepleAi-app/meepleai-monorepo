@@ -170,8 +170,8 @@ test.describe('Focus Indicators', () => {
   test('buttons should have visible focus indicators', async ({ page }) => {
     await page.goto('/');
 
-    // Focus a button
-    const button = page.getByRole('button', { name: /get started/i });
+    // Focus a button (use test-id to avoid ambiguity)
+    const button = page.getByTestId('hero-get-started');
     await button.focus();
 
     // Check for focus styles (outline should be visible)

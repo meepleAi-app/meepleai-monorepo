@@ -126,18 +126,18 @@ public class PdfTableExtractionServiceTests : IDisposable
         var result = await _service.ExtractStructuredContentAsync(pdfPath);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.Tables.Should().NotBeEmpty();
 
         var table = result.Tables.First();
-        Assert.Equal(new[] { "Phase", "Task", "Count" }, table.Headers);
-        Assert.Equal(table.ColumnCount, table.Headers.Count);
-        Assert.True(table.RowCount >= 1);
-        Assert.True(result.AtomicRules.Count >= table.RowCount);
-        Assert.Contains(result.AtomicRules, rule => rule.Contains("Setup", StringComparison.OrdinalIgnoreCase));
+        "Task", "Count" }, table.Headers.Should().Be(new[] { "Phase");
+        table.Headers.Count.Should().Be(table.ColumnCount);
+        table.RowCount >= 1.Should().BeTrue();
+        result.AtomicRules.Count >= table.RowCount.Should().BeTrue();
+        result.AtomicRules.Should().Contain(rule => rule.Contains("Setup", StringComparison.OrdinalIgnoreCase));
 
         result.Diagrams.Should().NotBeEmpty();
-        Assert.Contains(result.Diagrams, diagram => diagram.Width > 0 && diagram.Height > 0);
+        diagram => diagram.Width > 0 && diagram.Height > 0.Should().Contain(result.Diagrams);
     }
 
     [Fact]
@@ -157,21 +157,21 @@ Row A1          Row A2
         var tables = InvokeDetectTablesInPage(pageText, pageNum: 1);
 
         // Assert
-        Assert.Equal(2, tables.Count);
+        tables.Count.Should().Be(2);
 
         var firstTable = tables[0];
-        Assert.Equal(3, firstTable.ColumnCount);
-        Assert.Equal(new[] { "Header 1", "Header 2", "Header 3" }, firstTable.Headers);
-        Assert.Equal(2, firstTable.RowCount);
-        Assert.DoesNotContain(firstTable.Rows, row => row.All(string.IsNullOrWhiteSpace));
-        Assert.Equal(string.Empty, firstTable.Rows[1][2]);
+        firstTable.ColumnCount.Should().Be(3);
+        "Header 2", "Header 3" }, firstTable.Headers.Should().Be(new[] { "Header 1");
+        firstTable.RowCount.Should().Be(2);
+        firstTable.Rows.Should().NotContain(row => row.All(string.IsNullOrWhiteSpace));
+        firstTable.Rows[1][2].Should().Be(string.Empty);
 
         var secondTable = tables[1];
-        Assert.Equal(2, secondTable.ColumnCount);
-        Assert.Equal(new[] { "Next Header 1", "Next Header 2" }, secondTable.Headers);
-        Assert.Equal(1, secondTable.RowCount);
-        Assert.Equal("Row A1", secondTable.Rows[0][0]);
-        Assert.Equal("Row A2", secondTable.Rows[0][1]);
+        secondTable.ColumnCount.Should().Be(2);
+        "Next Header 2" }, secondTable.Headers.Should().Be(new[] { "Next Header 1");
+        secondTable.RowCount.Should().Be(1);
+        secondTable.Rows[0][0].Should().Be("Row A1");
+        secondTable.Rows[0][1].Should().Be("Row A2");
     }
 
     [Fact]
@@ -195,9 +195,9 @@ Row A1          Row A2
         var rules = InvokeConvertTableToAtomicRules(table);
 
         // Assert
-        Assert.Equal(2, rules.Count);
-        Assert.Contains(rules, rule => rule.Contains("Col1: Value1") && rule.Contains("Col2: Value2"));
-        Assert.Contains(rules, rule => rule.Contains("Col1: OnlyFirst") && !rule.Contains("Col2:"));
+        rules.Count.Should().Be(2);
+        rules.Should().Contain(rule => rule.Contains("Col1: Value1") && rule.Contains("Col2: Value2"));
+        rules.Should().Contain(rule => rule.Contains("Col1: OnlyFirst") && !rule.Contains("Col2:"));
     }
 
     [Fact]
@@ -213,9 +213,9 @@ Row A1          Row A2
             var result = await _service.ExtractStructuredContentAsync(tempFilePath);
 
             // Assert
-            Assert.False(result.Success);
+            result.Success.Should().BeFalse();
             result.ErrorMessage.Should().NotBeNull();
-            Assert.Contains("Extraction failed", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+            result.ErrorMessage, StringComparison.OrdinalIgnoreCase.Should().Contain("Extraction failed");
 
             _mockLogger.Verify(
                 x => x.Log(
@@ -321,9 +321,9 @@ Row A1          Row A2
         var result = await _service.ExtractStructuredContentAsync(null!);
 
         // Assert
-        Assert.False(result.Success);
+        result.Success.Should().BeFalse();
         result.ErrorMessage.Should().NotBeNull();
-        Assert.Contains("path is required", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.ErrorMessage, StringComparison.OrdinalIgnoreCase.Should().Contain("path is required");
     }
 
     [Fact]
@@ -333,7 +333,7 @@ Row A1          Row A2
         var result = await _service.ExtractStructuredContentAsync("");
 
         // Assert
-        Assert.False(result.Success);
+        result.Success.Should().BeFalse();
         result.ErrorMessage.Should().NotBeNull();
     }
 
@@ -347,9 +347,9 @@ Row A1          Row A2
         var result = await _service.ExtractStructuredContentAsync(filePath);
 
         // Assert
-        Assert.False(result.Success);
+        result.Success.Should().BeFalse();
         result.ErrorMessage.Should().NotBeNull();
-        Assert.Contains("not found", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.ErrorMessage, StringComparison.OrdinalIgnoreCase.Should().Contain("not found");
     }
 
     [Fact]
@@ -384,14 +384,14 @@ Row A1          Row A2
         var result = PdfStructuredExtractionResult.CreateSuccess(tables, diagrams, atomicRules);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.ErrorMessage.Should().BeNull();
-        Assert.Single(result.Tables);
-        Assert.Single(result.Diagrams);
-        Assert.Equal(2, result.AtomicRules.Count);
-        Assert.Equal(1, result.TableCount);
-        Assert.Equal(1, result.DiagramCount);
-        Assert.Equal(2, result.AtomicRuleCount);
+        result.Tables.Should().ContainSingle();
+        result.Diagrams.Should().ContainSingle();
+        result.AtomicRules.Count.Should().Be(2);
+        result.TableCount.Should().Be(1);
+        result.DiagramCount.Should().Be(1);
+        result.AtomicRuleCount.Should().Be(2);
     }
 
     [Fact]
@@ -404,8 +404,8 @@ Row A1          Row A2
         var result = PdfStructuredExtractionResult.CreateFailure(errorMessage);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal(errorMessage, result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be(errorMessage);
         result.Tables.Should().BeEmpty();
         result.Diagrams.Should().BeEmpty();
         result.AtomicRules.Should().BeEmpty();
@@ -422,8 +422,8 @@ Row A1          Row A2
         table.Rows.Should().NotBeNull();
         table.Headers.Should().BeEmpty();
         table.Rows.Should().BeEmpty();
-        Assert.Equal(0, table.ColumnCount);
-        Assert.Equal(0, table.RowCount);
+        table.ColumnCount.Should().Be(0);
+        table.RowCount.Should().Be(0);
     }
 
     [Fact]
@@ -433,10 +433,10 @@ Row A1          Row A2
         var diagram = new PdfDiagram();
 
         // Assert
-        Assert.Equal("Unknown", diagram.DiagramType);
-        Assert.Equal(string.Empty, diagram.Description);
-        Assert.Equal(0, diagram.Width);
-        Assert.Equal(0, diagram.Height);
+        diagram.DiagramType.Should().Be("Unknown");
+        diagram.Description.Should().Be(string.Empty);
+        diagram.Width.Should().Be(0);
+        diagram.Height.Should().Be(0);
         diagram.ImageData.Should().BeNull();
     }
 
@@ -450,17 +450,17 @@ Row A1          Row A2
         var result = await _service.ExtractStructuredContentAsync(fixturePath);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(1, result.TableCount);
-        Assert.Equal(result.TableCount, result.Tables.Count);
-        var table = Assert.Single(result.Tables);
-        Assert.Equal(new[] { "Name", "Value" }, table.Headers);
-        Assert.Equal(3, table.RowCount);
-        Assert.Equal(3, result.AtomicRuleCount);
-        Assert.Contains(result.AtomicRules, rule => rule.Contains("Name: Alpha", StringComparison.OrdinalIgnoreCase));
+        result.Success.Should().BeTrue();
+        result.TableCount.Should().Be(1);
+        result.Tables.Count.Should().Be(result.TableCount);
+        var table = result.Tables.Should().ContainSingle().Subject;
+        "Value" }, table.Headers.Should().Be(new[] { "Name");
+        table.RowCount.Should().Be(3);
+        result.AtomicRuleCount.Should().Be(3);
+        result.AtomicRules.Should().Contain(rule => rule.Contains("Name: Alpha", StringComparison.OrdinalIgnoreCase));
         result.Diagrams.Should().NotBeEmpty();
-        Assert.Equal(result.Diagrams.Count, result.DiagramCount);
-        Assert.All(result.Diagrams, diagram => Assert.Equal("Image", diagram.DiagramType));
+        result.DiagramCount.Should().Be(result.Diagrams.Count);
+        result.Diagrams.Should().OnlyContain(diagram => diagram.DiagramType == "Image");
     }
 
     [Fact]
@@ -474,22 +474,22 @@ Row A1          Row A2
         var result = await _service.ExtractStructuredContentAsync(pdfPath);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.Tables.Should().NotBeEmpty();
 
         var table = result.Tables.First();
-        Assert.Equal(new[] { "Phase", "Task", "Count" }, table.Headers);
-        Assert.Equal(table.ColumnCount, table.Headers.Count);
-        Assert.True(table.RowCount >= 1);
-        Assert.All(table.Rows, row => Assert.Equal(table.ColumnCount, row.Length));
-        Assert.Contains(table.Rows, row =>
+        "Task", "Count" }, table.Headers.Should().Be(new[] { "Phase");
+        table.Headers.Count.Should().Be(table.ColumnCount);
+        table.RowCount >= 1.Should().BeTrue();
+        table.Rows.Should().OnlyContain(row => row.Length == table.ColumnCount);
+        table.Rows.Should().Contain(row =>
             row.Length == table.ColumnCount &&
             row.Any(value => string.IsNullOrWhiteSpace(value)) &&
             row.Any(value => !string.IsNullOrWhiteSpace(value)));
 
         result.AtomicRules.Should().NotBeEmpty();
-        Assert.Contains(result.AtomicRules, rule => rule.Contains("Setup", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(result.AtomicRules, rule => rule.Contains("Round Start", StringComparison.OrdinalIgnoreCase));
+        result.AtomicRules.Should().Contain(rule => rule.Contains("Setup", StringComparison.OrdinalIgnoreCase));
+        result.AtomicRules.Should().Contain(rule => rule.Contains("Round Start", StringComparison.OrdinalIgnoreCase));
 
         result.Diagrams.Should().NotBeEmpty();
     }
@@ -515,21 +515,19 @@ Row A1          Row A2
         var rules = InvokeConvertTableToAtomicRules(table);
 
         // Assert
-        Assert.Equal(3, rules.Count);
-        Assert.All(rules, rule =>
-        {
-            Assert.Contains("[Table on page 5]", rule);
-            Assert.Contains(":", rule);
-        });
+        rules.Count.Should().Be(3);
+        rules.Should().OnlyContain(rule =>
+            rule.Contains("[Table on page 5]") &&
+            rule.Contains(":"));
 
         // First rule should contain all non-empty columns
-        Assert.Contains("Action: Move", rules[0]);
-        Assert.Contains("Cost: 1 Action", rules[0]);
-        Assert.Contains("Effect: Move up to 3 spaces", rules[0]);
-        Assert.Contains("Timing: Any time", rules[0]);
+        rules[0].Should().Contain("Action: Move");
+        rules[0].Should().Contain("Cost: 1 Action");
+        rules[0].Should().Contain("Effect: Move up to 3 spaces");
+        rules[0].Should().Contain("Timing: Any time");
 
         // Rules should be properly delimited
-        Assert.All(rules, rule => Assert.Contains("; ", rule));
+        rules.Should().OnlyContain(rule => rule.Contains("; "));
     }
 
     [Fact]
@@ -589,19 +587,19 @@ Row A1          Row A2
         var rules = InvokeConvertTableToAtomicRules(table);
 
         // Assert
-        Assert.Single(rules);
+        rules.Should().ContainSingle();
         var rule = rules[0];
 
         // All headers should be present
         for (char c = 'A'; c <= 'F'; c++)
         {
-            Assert.Contains($"{c}:", rule);
+            rule.Should().Contain($"{c}:");
         }
 
         // All values should be present
         for (int i = 1; i <= 6; i++)
         {
-            Assert.Contains(i.ToString(), rule);
+            rule.Should().Contain(i.ToString());
         }
     }
 

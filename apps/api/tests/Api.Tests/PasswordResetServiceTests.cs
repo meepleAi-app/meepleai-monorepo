@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -31,13 +32,16 @@ namespace Api.Tests;
 /// </summary>
 public class PasswordResetServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
     private const string ValidEmail = "user@example.com";
     private const string ValidPassword = "Password123";
     private static readonly DateTime FixedNow = DateTime.Parse("2024-01-15T12:00:00Z");
 
-    public PasswordResetServiceTests()
+    public PasswordResetServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();
     }

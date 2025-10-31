@@ -6,6 +6,7 @@ using Moq.Protected;
 using System.Net;
 using System.Text.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
 
@@ -15,10 +16,13 @@ namespace Api.Tests.Services;
 /// </summary>
 public class EmbeddingServiceMultilingualTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<ILogger<EmbeddingService>> _loggerMock;
 
-    public EmbeddingServiceMultilingualTests()
+    public EmbeddingServiceMultilingualTests(ITestOutputHelper output)
     {
+        _output = output;
         _loggerMock = new Mock<ILogger<EmbeddingService>>();
     }
 

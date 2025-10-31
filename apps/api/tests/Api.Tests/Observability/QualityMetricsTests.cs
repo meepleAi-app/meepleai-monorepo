@@ -3,6 +3,7 @@ using Api.Tests.Helpers;
 using Api.Models;
 using Api.Observability;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Observability;
 
@@ -12,6 +13,8 @@ namespace Api.Tests.Observability;
 /// </summary>
 public class QualityMetricsTests
 {
+    private readonly ITestOutputHelper _output;
+
     /// <summary>
     /// Scenario: Recording quality scores across all dimensions
     /// Given a response with RAG 0.85, LLM 0.80, Citation 0.90, Overall 0.85

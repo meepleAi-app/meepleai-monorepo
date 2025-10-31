@@ -10,6 +10,7 @@ using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Integration;
 
@@ -28,8 +29,11 @@ namespace Api.Tests.Integration;
 /// </summary>
 public class ChatExportEndpointTests : IntegrationTestBase
 {
-    public ChatExportEndpointTests(WebApplicationFactoryFixture factory) : base(factory)
+    private readonly ITestOutputHelper _output;
+
+    public ChatExportEndpointTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     /// <summary>

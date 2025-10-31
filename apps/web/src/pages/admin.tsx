@@ -100,14 +100,14 @@ export default function AdminDashboard() {
     }
   }, [endpointFilter, startDate, endDate, page, pageSize]);
 
-  useEffect(() => {
-    void fetchData();
-  }, [fetchData]);
-
-  // Reset to page 1 when filters change
+  // Reset to page 1 when filters change (must run before fetchData)
   useEffect(() => {
     setPage(1);
   }, [endpointFilter, startDate, endDate]);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
 
   const exportToCSV = () => {
     const headers = [
@@ -154,7 +154,7 @@ export default function AdminDashboard() {
     URL.revokeObjectURL(url);
   };
 
-  const filteredRequests = requests.filter(
+  const filteredRequests = (requests || []).filter(
     (req) =>
       req.query?.toLowerCase()?.includes(filter.toLowerCase()) ||
       req.endpoint.toLowerCase().includes(filter.toLowerCase()) ||

@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
 
@@ -24,15 +25,18 @@ namespace Api.Tests.Services;
 /// </summary>
 public class ChatExportServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
     private readonly MeepleAiDbContext _dbContext;
-    private readonly Mock<IExportFormatter> _mockTxtFormatter;
-    private readonly Mock<IExportFormatter> _mockPdfFormatter;
-    private readonly Mock<IExportFormatter> _mockMdFormatter;
+    private readonly Mock<IExportFormatter> _txtFormatterMock;
+    private readonly Mock<IExportFormatter> _pdfFormatterMock;
+    private readonly Mock<IExportFormatter> _mdFormatterMock;
     private readonly ChatExportService _service;
 
-    public ChatExportServiceTests()
+    public ChatExportServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         // Setup SQLite in-memory database
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();
@@ -52,26 +56,26 @@ public class ChatExportServiceTests : IDisposable
         _dbContext.Database.EnsureCreated();
 
         // Setup mock formatters
-        _mockTxtFormatter = new Mock<IExportFormatter>();
-        _mockTxtFormatter.Setup(f => f.Format).Returns("txt");
-        _mockTxtFormatter.Setup(f => f.ContentType).Returns("text/plain");
-        _mockTxtFormatter.Setup(f => f.FileExtension).Returns("txt");
+        _txtFormatterMock = new Mock<IExportFormatter>();
+        _txtFormatterMock.Setup(f => f.Format).Returns("txt");
+        _txtFormatterMock.Setup(f => f.ContentType).Returns("text/plain");
+        _txtFormatterMock.Setup(f => f.FileExtension).Returns("txt");
 
-        _mockPdfFormatter = new Mock<IExportFormatter>();
-        _mockPdfFormatter.Setup(f => f.Format).Returns("pdf");
-        _mockPdfFormatter.Setup(f => f.ContentType).Returns("application/pdf");
-        _mockPdfFormatter.Setup(f => f.FileExtension).Returns("pdf");
+        _pdfFormatterMock = new Mock<IExportFormatter>();
+        _pdfFormatterMock.Setup(f => f.Format).Returns("pdf");
+        _pdfFormatterMock.Setup(f => f.ContentType).Returns("application/pdf");
+        _pdfFormatterMock.Setup(f => f.FileExtension).Returns("pdf");
 
-        _mockMdFormatter = new Mock<IExportFormatter>();
-        _mockMdFormatter.Setup(f => f.Format).Returns("md");
-        _mockMdFormatter.Setup(f => f.ContentType).Returns("text/markdown");
-        _mockMdFormatter.Setup(f => f.FileExtension).Returns("md");
+        _mdFormatterMock = new Mock<IExportFormatter>();
+        _mdFormatterMock.Setup(f => f.Format).Returns("md");
+        _mdFormatterMock.Setup(f => f.ContentType).Returns("text/markdown");
+        _mdFormatterMock.Setup(f => f.FileExtension).Returns("md");
 
         var formatters = new[]
         {
-            _mockTxtFormatter.Object,
-            _mockPdfFormatter.Object,
-            _mockMdFormatter.Object
+            _txtFormatterMock.Object,
+            _pdfFormatterMock.Object,
+            _mdFormatterMock.Object
         };
 
         _service = new ChatExportService(
@@ -152,7 +156,7 @@ public class ChatExportServiceTests : IDisposable
         Assert.Null(result.Stream);
 
         // And: No formatter is called
-        _mockPdfFormatter.Verify(
+        _pdfFormatterMock.Verify(
             f => f.FormatAsync(It.IsAny<ChatEntity>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()),
             Times.Never);
     }
@@ -210,7 +214,7 @@ public class ChatExportServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         var exportStream = new MemoryStream();
-        _mockTxtFormatter
+        _txtFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(exportStream);
 
@@ -218,7 +222,7 @@ public class ChatExportServiceTests : IDisposable
         var result = await _service.ExportChatAsync(chat.Id, "user-123", "txt");
 
         // Then: Correct formatter is selected
-        _mockTxtFormatter.Verify(
+        _txtFormatterMock.Verify(
             f => f.FormatAsync(
                 It.Is<ChatEntity>(c => c.Id == chat.Id && c.Logs.Any()),
                 null,
@@ -252,7 +256,7 @@ public class ChatExportServiceTests : IDisposable
         Assert.Equal("not_found", result.Error);
 
         // And: No formatter is called
-        _mockPdfFormatter.Verify(
+        _pdfFormatterMock.Verify(
             f => f.FormatAsync(It.IsAny<ChatEntity>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()),
             Times.Never);
     }
@@ -292,7 +296,7 @@ public class ChatExportServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         var exportStream = new MemoryStream();
-        _mockPdfFormatter
+        _pdfFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ReturnsAsync(exportStream);
 
@@ -302,7 +306,7 @@ public class ChatExportServiceTests : IDisposable
         var result = await _service.ExportChatAsync(chat.Id, "user-123", "pdf", startDate, endDate);
 
         // Then: Formatter receives date range parameters
-        _mockPdfFormatter.Verify(
+        _pdfFormatterMock.Verify(
             f => f.FormatAsync(
                 It.Is<ChatEntity>(c => c.Id == chat.Id),
                 It.Is<DateTime?>(d => d.HasValue && (d.Value - startDate).TotalSeconds < 1),
@@ -325,7 +329,7 @@ public class ChatExportServiceTests : IDisposable
         // Given: Valid chat exists
         var chat = await CreateTestChatAsync();
 
-        _mockPdfFormatter
+        _pdfFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ThrowsAsync(new InvalidOperationException("PDF generation failed"));
 
@@ -359,7 +363,7 @@ public class ChatExportServiceTests : IDisposable
         var chat = await CreateTestChatAsync("user-123", gameName);
 
         var exportStream = new MemoryStream();
-        _mockTxtFormatter
+        _txtFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(exportStream);
 
@@ -393,7 +397,7 @@ public class ChatExportServiceTests : IDisposable
         var chat = await CreateTestChatAsync();
 
         var exportStream = new MemoryStream();
-        _mockPdfFormatter
+        _pdfFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ReturnsAsync(exportStream);
 
@@ -425,7 +429,7 @@ public class ChatExportServiceTests : IDisposable
         var chat = await CreateTestChatAsync();
 
         var exportStream = new MemoryStream();
-        _mockMdFormatter
+        _mdFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(exportStream);
 
@@ -433,7 +437,7 @@ public class ChatExportServiceTests : IDisposable
         var result = await _service.ExportChatAsync(chat.Id, "user-123", "md");
 
         // Then: Formatter is still called
-        _mockMdFormatter.Verify(
+        _mdFormatterMock.Verify(
             f => f.FormatAsync(
                 It.Is<ChatEntity>(c => c.Id == chat.Id && !c.Logs.Any()),
                 null,
@@ -489,7 +493,7 @@ public class ChatExportServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         var exportStream = new MemoryStream();
-        _mockPdfFormatter
+        _pdfFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(exportStream);
 
@@ -497,7 +501,7 @@ public class ChatExportServiceTests : IDisposable
         var result = await _service.ExportChatAsync(chat.Id, "user-123", "pdf");
 
         // Then: All message types are included
-        _mockPdfFormatter.Verify(
+        _pdfFormatterMock.Verify(
             f => f.FormatAsync(
                 It.Is<ChatEntity>(c => c.Logs.Count == 3 &&
                                       c.Logs.Any(l => l.Level == "user") &&
@@ -542,9 +546,9 @@ public class ChatExportServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         var exportStream = new MemoryStream();
-        var mockFormatter = format.ToLower() == "pdf" ? _mockPdfFormatter :
-                            format.ToLower() == "txt" ? _mockTxtFormatter :
-                            _mockMdFormatter;
+        var mockFormatter = format.ToLower() == "pdf" ? _pdfFormatterMock :
+                            format.ToLower() == "txt" ? _txtFormatterMock :
+                            _mdFormatterMock;
 
         mockFormatter
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
@@ -604,7 +608,7 @@ public class ChatExportServiceTests : IDisposable
         var chat = await CreateTestChatAsync("user-123", emptyGameName);
 
         var exportStream = new MemoryStream();
-        _mockTxtFormatter
+        _txtFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(exportStream);
 
@@ -637,7 +641,7 @@ public class ChatExportServiceTests : IDisposable
         var chat = await CreateTestChatAsync("user-123", gameName);
 
         var exportStream = new MemoryStream();
-        _mockPdfFormatter
+        _pdfFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(exportStream);
 
@@ -669,7 +673,7 @@ public class ChatExportServiceTests : IDisposable
         var chat = await CreateTestChatAsync("user-123", longGameName);
 
         var exportStream = new MemoryStream();
-        _mockMdFormatter
+        _mdFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(exportStream);
 
@@ -707,7 +711,7 @@ public class ChatExportServiceTests : IDisposable
         var chat = await CreateTestChatAsync("user-123", gameName);
 
         var exportStream = new MemoryStream();
-        _mockTxtFormatter
+        _txtFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(exportStream);
 
@@ -748,7 +752,7 @@ public class ChatExportServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Setup formatter to return unique streams
-        _mockPdfFormatter
+        _pdfFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(() => new MemoryStream());
 
@@ -766,7 +770,7 @@ public class ChatExportServiceTests : IDisposable
         Assert.All(results, result => Assert.NotNull(result.Stream));
 
         // And: Formatter was called 5 times (once per request)
-        _mockPdfFormatter.Verify(
+        _pdfFormatterMock.Verify(
             f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null),
             Times.Exactly(5));
     }
@@ -798,7 +802,7 @@ public class ChatExportServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         var exportStream = new MemoryStream();
-        _mockPdfFormatter
+        _pdfFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(exportStream);
 
@@ -809,7 +813,7 @@ public class ChatExportServiceTests : IDisposable
         Assert.True(result.Success);
 
         // And: All 150 messages are loaded and passed to formatter
-        _mockPdfFormatter.Verify(
+        _pdfFormatterMock.Verify(
             f => f.FormatAsync(
                 It.Is<ChatEntity>(c => c.Logs.Count == 150),
                 null,

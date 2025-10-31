@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -20,13 +21,16 @@ namespace Api.Tests.Services;
 /// </summary>
 public class ChatMessageEditDeleteServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
     private readonly MeepleAiDbContext _context;
     private readonly ChatService _chatService;
     private readonly AuditService _auditService;
 
-    public ChatMessageEditDeleteServiceTests()
+    public ChatMessageEditDeleteServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         // Setup SQLite in-memory database
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();

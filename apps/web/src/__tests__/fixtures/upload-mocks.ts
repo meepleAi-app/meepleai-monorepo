@@ -9,7 +9,15 @@
  */
 
 import { MockApiRouter, createJsonResponse, createErrorResponse } from '../utils/mock-api-router';
-import { createMockAuthResponse, createMockGame, type MockUser } from './common-fixtures';
+import {
+  createMockAuthResponse,
+  createMockGame,
+  createMockPdfDocument,
+  createMockRuleSpec,
+  type MockUser,
+  type MockPdfDocument,
+  type MockRuleSpec,
+} from './common-fixtures';
 
 export interface AuthMockOptions {
   userId?: string;
@@ -99,60 +107,42 @@ export function createGameMock(options: GameMockOptions = {}) {
 
 /**
  * Creates a mock PDF document
+ * @deprecated - Now wraps common-fixtures createMockPdfDocument for consistency
  */
-export function createPdfMock(options: PdfMockOptions = {}): {
-  id: string;
-  fileName: string;
-  fileSizeBytes: number;
-  uploadedAt: string;
-  uploadedByUserId: string;
-  status?: string;
-  logUrl?: string | null;
-  processingStatus?: string;
-  processingError?: string | null;
-} {
-  const baseResponse = {
-    id: options.id ?? 'pdf-123',
-    fileName: options.fileName ?? 'test.pdf',
-    fileSizeBytes: options.fileSizeBytes ?? 1024,
-    uploadedAt: options.uploadedAt ?? new Date().toISOString(),
-    uploadedByUserId: options.uploadedByUserId ?? 'user-1'
-  };
-
-  // If status is provided (for PDF list response)
-  if (options.status !== undefined) {
-    return {
-      ...baseResponse,
-      status: options.status,
-      logUrl: options.logUrl ?? null
-    };
-  }
-
-  // If processingStatus is provided (for status polling response)
-  if (options.processingStatus !== undefined) {
-    return {
-      ...baseResponse,
-      processingStatus: options.processingStatus,
-      processingError: options.processingError ?? null
-    };
-  }
-
-  // Default: return basic response
-  return baseResponse;
+export function createPdfMock(options: PdfMockOptions = {}): MockPdfDocument {
+  return createMockPdfDocument({
+    id: options.id,
+    fileName: options.fileName,
+    fileSizeBytes: options.fileSizeBytes,
+    uploadedAt: options.uploadedAt,
+    uploadedByUserId: options.uploadedByUserId,
+    processingStatus: options.processingStatus,
+    processingError: options.processingError,
+    status: options.status,
+    logUrl: options.logUrl,
+  });
 }
 
 /**
  * Creates a mock RuleSpec object
+ * @deprecated - Now wraps common-fixtures createMockRuleSpec for consistency
  */
-export function createRuleSpecMock(options: RuleSpecMockOptions = {}) {
-  return {
-    gameId: options.gameId ?? 'game-1',
-    version: options.version ?? 'v1',
-    createdAt: options.createdAt ?? new Date().toISOString(),
-    rules: options.rules ?? [
-      { id: 'r1', text: 'Test rule', section: null, page: null, line: null }
-    ]
-  };
+export function createRuleSpecMock(options: RuleSpecMockOptions = {}): MockRuleSpec {
+  // Convert rules format if provided in options
+  const rules = options.rules?.map(rule => ({
+    id: rule.id,
+    text: rule.text,
+    section: rule.section,
+    page: rule.page,
+    line: rule.line,
+  }));
+
+  return createMockRuleSpec({
+    gameId: options.gameId,
+    version: options.version,
+    createdAt: options.createdAt,
+    rules: rules,
+  });
 }
 
 /**

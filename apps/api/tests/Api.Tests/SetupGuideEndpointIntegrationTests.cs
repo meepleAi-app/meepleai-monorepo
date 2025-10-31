@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -25,13 +26,16 @@ namespace Api.Tests;
 /// </summary>
 public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
 {
+    private readonly ITestOutputHelper _output;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    public SetupGuideEndpointIntegrationTests(WebApplicationFactoryFixture factory) : base(factory)
+    public SetupGuideEndpointIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     /// <summary>

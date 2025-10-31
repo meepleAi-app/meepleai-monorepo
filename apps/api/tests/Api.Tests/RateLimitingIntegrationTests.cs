@@ -18,6 +18,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -31,8 +32,11 @@ namespace Api.Tests;
 /// </summary>
 public class RateLimitingIntegrationTests : IntegrationTestBase
 {
-    public RateLimitingIntegrationTests(WebApplicationFactoryFixture fixture) : base(fixture)
+    private readonly ITestOutputHelper _output;
+
+    public RateLimitingIntegrationTests(WebApplicationFactoryFixture fixture, ITestOutputHelper output) : base(fixture)
     {
+        _output = output;
     }
 
     /// <summary>
@@ -279,14 +283,14 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
     private sealed class TestRateLimitService : RateLimitService
     {
         private readonly Queue<RedisResult[]> _responses = new();
-        private readonly Mock<IDatabase> _mockDatabase;
+        private readonly Mock<IDatabase> _databaseMock;
         private Exception? _nextException;
 
         public TestRateLimitService()
             : base(CreateMultiplexer(out var databaseMock), NullLogger<RateLimitService>.Instance, CreateDefaultConfig())
         {
-            _mockDatabase = databaseMock;
-            _mockDatabase
+            _databaseMock = databaseMock;
+            _databaseMock
                 .Setup(db => db.ScriptEvaluateAsync(
                     It.IsAny<string>(),
                     It.IsAny<RedisKey[]>(),

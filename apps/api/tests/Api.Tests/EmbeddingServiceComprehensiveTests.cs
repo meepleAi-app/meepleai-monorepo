@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -22,13 +23,16 @@ namespace Api.Tests;
 /// </summary>
 public class EmbeddingServiceComprehensiveTests
 {
-    private readonly Mock<ILogger<EmbeddingService>> _mockLogger;
-    private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
+    private readonly ITestOutputHelper _output;
 
-    public EmbeddingServiceComprehensiveTests()
+    private readonly Mock<ILogger<EmbeddingService>> _mockLogger;
+    private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;
+
+    public EmbeddingServiceComprehensiveTests(ITestOutputHelper output)
     {
+        _output = output;
         _mockLogger = new Mock<ILogger<EmbeddingService>>();
-        _mockHttpClientFactory = new Mock<IHttpClientFactory>();
+        _httpClientFactoryMock = new Mock<IHttpClientFactory>();
     }
 
     #region Constructor Tests
@@ -48,16 +52,16 @@ public class EmbeddingServiceComprehensiveTests
             .Build();
 
         var httpClient = new HttpClient();
-        _mockHttpClientFactory
+        _httpClientFactoryMock
             .Setup(f => f.CreateClient("Ollama"))
             .Returns(httpClient);
 
         // Act
-        var service = new EmbeddingService(_mockHttpClientFactory.Object, config, _mockLogger.Object);
+        var service = new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object);
 
         // Assert
         Assert.NotNull(service);
-        _mockHttpClientFactory.Verify(f => f.CreateClient("Ollama"), Times.Once);
+        _httpClientFactoryMock.Verify(f => f.CreateClient("Ollama"), Times.Once);
     }
 
     [Fact]
@@ -75,16 +79,16 @@ public class EmbeddingServiceComprehensiveTests
             .Build();
 
         var httpClient = new HttpClient();
-        _mockHttpClientFactory
+        _httpClientFactoryMock
             .Setup(f => f.CreateClient("OpenRouter"))
             .Returns(httpClient);
 
         // Act
-        var service = new EmbeddingService(_mockHttpClientFactory.Object, config, _mockLogger.Object);
+        var service = new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object);
 
         // Assert
         Assert.NotNull(service);
-        _mockHttpClientFactory.Verify(f => f.CreateClient("OpenRouter"), Times.Once);
+        _httpClientFactoryMock.Verify(f => f.CreateClient("OpenRouter"), Times.Once);
     }
 
     [Fact]
@@ -97,16 +101,16 @@ public class EmbeddingServiceComprehensiveTests
             .Build();
 
         var httpClient = new HttpClient();
-        _mockHttpClientFactory
+        _httpClientFactoryMock
             .Setup(f => f.CreateClient("Ollama"))
             .Returns(httpClient);
 
         // Act
-        var service = new EmbeddingService(_mockHttpClientFactory.Object, config, _mockLogger.Object);
+        var service = new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object);
 
         // Assert
         Assert.NotNull(service);
-        _mockHttpClientFactory.Verify(f => f.CreateClient("Ollama"), Times.Once);
+        _httpClientFactoryMock.Verify(f => f.CreateClient("Ollama"), Times.Once);
     }
 
     [Fact]
@@ -123,13 +127,13 @@ public class EmbeddingServiceComprehensiveTests
             .Build();
 
         var httpClient = new HttpClient();
-        _mockHttpClientFactory
+        _httpClientFactoryMock
             .Setup(f => f.CreateClient("OpenRouter"))
             .Returns(httpClient);
 
         // Act & Assert
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            new EmbeddingService(_mockHttpClientFactory.Object, config, _mockLogger.Object));
+            new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object));
 
         Assert.Contains("OPENAI_API_KEY not configured", ex.Message);
     }
@@ -148,7 +152,7 @@ public class EmbeddingServiceComprehensiveTests
 
         // Act & Assert
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            new EmbeddingService(_mockHttpClientFactory.Object, config, _mockLogger.Object));
+            new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object));
 
         Assert.Contains("Unsupported embedding provider", ex.Message);
         Assert.Contains("invalid-provider", ex.Message);
@@ -169,12 +173,12 @@ public class EmbeddingServiceComprehensiveTests
             .Build();
 
         var httpClient = new HttpClient();
-        _mockHttpClientFactory
+        _httpClientFactoryMock
             .Setup(f => f.CreateClient("Ollama"))
             .Returns(httpClient);
 
         // Act
-        var service = new EmbeddingService(_mockHttpClientFactory.Object, config, _mockLogger.Object);
+        var service = new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object);
 
         // Assert
         Assert.NotNull(service);
@@ -520,11 +524,11 @@ public class EmbeddingServiceComprehensiveTests
             BaseAddress = new Uri("http://localhost:11434")
         };
 
-        _mockHttpClientFactory
+        _httpClientFactoryMock
             .Setup(f => f.CreateClient("Ollama"))
             .Returns(httpClient);
 
-        return new EmbeddingService(_mockHttpClientFactory.Object, config, _mockLogger.Object);
+        return new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object);
     }
 
     private EmbeddingService CreateOpenAIService(
@@ -606,11 +610,11 @@ public class EmbeddingServiceComprehensiveTests
             BaseAddress = new Uri("https://openrouter.ai/api/v1/")
         };
 
-        _mockHttpClientFactory
+        _httpClientFactoryMock
             .Setup(f => f.CreateClient("OpenRouter"))
             .Returns(httpClient);
 
-        return new EmbeddingService(_mockHttpClientFactory.Object, config, _mockLogger.Object);
+        return new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object);
     }
 
     private static float[] CreateRandomEmbedding(int dimensions)

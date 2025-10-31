@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 /// <summary>
 /// AI-04: BDD-style integration tests for snippet pipeline and fallback behavior
@@ -21,6 +22,8 @@ using Xunit;
 /// </summary>
 public class SnippetPipelineIntegrationTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<ILogger<RagService>> _mockLogger = new();
     private static Mock<IPromptTemplateService> CreatePromptTemplateMock()
     {
@@ -57,8 +60,9 @@ CRITICAL INSTRUCTIONS:
 
     private readonly SqliteConnection _connection;
 
-    public SnippetPipelineIntegrationTests()
+    public SnippetPipelineIntegrationTests(ITestOutputHelper output)
     {
+        _output = output;
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();
     }

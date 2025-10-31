@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Api.Infrastructure.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -22,13 +23,16 @@ namespace Api.Tests;
 /// </summary>
 public class PdfUploadValidationIntegrationTests : IntegrationTestBase
 {
+    private readonly ITestOutputHelper _output;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    public PdfUploadValidationIntegrationTests(WebApplicationFactoryFixture factory) : base(factory)
+    public PdfUploadValidationIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     /// <summary>

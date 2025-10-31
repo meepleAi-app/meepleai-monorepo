@@ -11,6 +11,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
 
@@ -20,11 +21,14 @@ namespace Api.Tests.Services;
 /// </summary>
 public class QualityReportServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
     private readonly TestTimeProvider _timeProvider;
 
-    public QualityReportServiceTests()
+    public QualityReportServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();
         _timeProvider = new TestTimeProvider();

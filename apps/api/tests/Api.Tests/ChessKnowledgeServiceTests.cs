@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Hosting;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -11,26 +12,29 @@ namespace Api.Tests;
 /// </summary>
 public class ChessKnowledgeServiceTests
 {
-    private readonly Mock<IQdrantService> _mockQdrantService;
-    private readonly Mock<IEmbeddingService> _mockEmbeddingService;
-    private readonly Mock<ITextChunkingService> _mockChunkingService;
-    private readonly Mock<IWebHostEnvironment> _mockEnvironment;
+    private readonly ITestOutputHelper _output;
+
+    private readonly Mock<IQdrantService> _qdrantServiceMock;
+    private readonly Mock<IEmbeddingService> _embeddingServiceMock;
+    private readonly Mock<ITextChunkingService> _chunkingServiceMock;
+    private readonly Mock<IWebHostEnvironment> _environmentMock;
     private readonly Mock<ILogger<ChessKnowledgeService>> _mockLogger;
     private readonly ChessKnowledgeService _service;
 
-    public ChessKnowledgeServiceTests()
+    public ChessKnowledgeServiceTests(ITestOutputHelper output)
     {
-        _mockQdrantService = new Mock<IQdrantService>();
-        _mockEmbeddingService = new Mock<IEmbeddingService>();
-        _mockChunkingService = new Mock<ITextChunkingService>();
-        _mockEnvironment = new Mock<IWebHostEnvironment>();
+        _output = output;
+        _qdrantServiceMock = new Mock<IQdrantService>();
+        _embeddingServiceMock = new Mock<IEmbeddingService>();
+        _chunkingServiceMock = new Mock<ITextChunkingService>();
+        _environmentMock = new Mock<IWebHostEnvironment>();
         _mockLogger = new Mock<ILogger<ChessKnowledgeService>>();
 
         _service = new ChessKnowledgeService(
-            _mockQdrantService.Object,
-            _mockEmbeddingService.Object,
-            _mockChunkingService.Object,
-            _mockEnvironment.Object,
+            _qdrantServiceMock.Object,
+            _embeddingServiceMock.Object,
+            _chunkingServiceMock.Object,
+            _environmentMock.Object,
             _mockLogger.Object
         );
     }
@@ -39,7 +43,7 @@ public class ChessKnowledgeServiceTests
     public async Task IndexChessKnowledgeAsync_WhenFileNotFound_ReturnsFailure()
     {
         // Arrange
-        _mockEnvironment.Setup(e => e.ContentRootPath).Returns("D:\\NonExistentPath");
+        _environmentMock.Setup(e => e.ContentRootPath).Returns("D:\\NonExistentPath");
 
         // Act
         var result = await _service.IndexChessKnowledgeAsync();
@@ -69,11 +73,11 @@ public class ChessKnowledgeServiceTests
         var query = "How does the knight move?";
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
 
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(e => e.GenerateEmbeddingAsync(query, It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
 
-        _mockQdrantService
+        _qdrantServiceMock
             .Setup(q => q.SearchByCategoryAsync("chess", embedding, 5, It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>
             {
@@ -88,15 +92,15 @@ public class ChessKnowledgeServiceTests
         Assert.Single(result.Results);
         Assert.True(result.Results[0].Score >= 0.8f);
 
-        _mockEmbeddingService.Verify(e => e.GenerateEmbeddingAsync(query, It.IsAny<CancellationToken>()), Times.Once);
-        _mockQdrantService.Verify(q => q.SearchByCategoryAsync("chess", embedding, 5, It.IsAny<CancellationToken>()), Times.Once);
+        _embeddingServiceMock.Verify(e => e.GenerateEmbeddingAsync(query, It.IsAny<CancellationToken>()), Times.Once);
+        _qdrantServiceMock.Verify(q => q.SearchByCategoryAsync("chess", embedding, 5, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task DeleteChessKnowledgeAsync_CallsQdrantService()
     {
         // Arrange
-        _mockQdrantService
+        _qdrantServiceMock
             .Setup(q => q.DeleteByCategoryAsync("chess", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
@@ -105,7 +109,7 @@ public class ChessKnowledgeServiceTests
 
         // Assert
         Assert.True(result);
-        _mockQdrantService.Verify(q => q.DeleteByCategoryAsync("chess", It.IsAny<CancellationToken>()), Times.Once);
+        _qdrantServiceMock.Verify(q => q.DeleteByCategoryAsync("chess", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     /// <summary>
@@ -189,7 +193,8 @@ public class ChessKnowledgeRetrievalPrecisionTests
     /// Integration test to validate that chess knowledge queries return results with precision >0.8
     /// This test should be run after indexing the chess knowledge
     /// </summary>
-    [Fact(Skip = "Integration test - requires actual Qdrant instance and OpenRouter API key")]
+    // Note: Integration test - ensure Qdrant instance running and OpenRouter API key configured
+    [Fact]
     public async Task ChessKnowledge_TenSampleQueries_ShouldAchievePrecisionGreaterThan0Point8()
     {
         // This test validates the CHESS-03 acceptance criteria:

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Api.Infrastructure.Entities;
 using Api.Services;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
 
@@ -26,10 +27,13 @@ namespace Api.Tests.Services;
 /// </summary>
 public class MdExportFormatterTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly MdExportFormatter _formatter;
 
-    public MdExportFormatterTests()
+    public MdExportFormatterTests(ITestOutputHelper output)
     {
+        _output = output;
         _formatter = new MdExportFormatter();
     }
 

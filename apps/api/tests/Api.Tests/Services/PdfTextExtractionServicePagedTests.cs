@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
 
@@ -12,13 +13,16 @@ namespace Api.Tests.Services;
 /// </summary>
 public class PdfTextExtractionServicePagedTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<ILogger<PdfTextExtractionService>> _loggerMock;
     private readonly Mock<IConfiguration> _configMock;
     private readonly Mock<IOcrService> _ocrServiceMock;
     private readonly PdfTextExtractionService _service;
 
-    public PdfTextExtractionServicePagedTests()
+    public PdfTextExtractionServicePagedTests(ITestOutputHelper output)
     {
+        _output = output;
         _loggerMock = new Mock<ILogger<PdfTextExtractionService>>();
         _configMock = new Mock<IConfiguration>();
         _ocrServiceMock = new Mock<IOcrService>();
@@ -38,7 +42,8 @@ public class PdfTextExtractionServicePagedTests
     /// And TotalPageCount should be 3
     /// And PageChunks should contain 3 items with page numbers 1, 2, 3
     /// </summary>
-    [Fact(Skip = "Requires test PDF generation - implement CreateTestPdf() helper")]
+    // Note: Requires test PDF generation - implement CreateTestPdf() helper
+    [Fact]
     public async Task ExtractPagedTextAsync_MultiPagePdf_ReturnsAccuratePageNumbers()
     {
         // Arrange
@@ -78,7 +83,8 @@ public class PdfTextExtractionServicePagedTests
     /// And PageChunks[1].IsEmpty should be true
     /// And PageChunks[1].PageNumber should be 2
     /// </summary>
-    [Fact(Skip = "Requires test PDF generation - implement CreateTestPdf() helper")]
+    // Note: Requires test PDF generation - implement CreateTestPdf() helper
+    [Fact]
     public async Task ExtractPagedTextAsync_EmptyPages_HandledGracefully()
     {
         // Arrange
@@ -116,7 +122,8 @@ public class PdfTextExtractionServicePagedTests
     /// And PageChunks should be empty
     /// And TotalPageCount should be 0
     /// </summary>
-    [Fact(Skip = "Requires test PDF generation - implement CreateCorruptedPdf() helper")]
+    // Note: Requires test PDF generation - implement CreateCorruptedPdf() helper
+    [Fact]
     public async Task ExtractPagedTextAsync_CorruptedPdf_ReturnsStructuredError()
     {
         // Arrange
@@ -141,7 +148,8 @@ public class PdfTextExtractionServicePagedTests
     /// And TotalPageCount should be 0
     /// And PageChunks should be empty
     /// </summary>
-    [Fact(Skip = "Requires test PDF generation - implement CreateTestPdf() helper")]
+    // Note: Requires test PDF generation - implement CreateTestPdf() helper
+    [Fact]
     public async Task ExtractPagedTextAsync_EmptyPdf_HandledGracefully()
     {
         // Arrange
@@ -165,7 +173,8 @@ public class PdfTextExtractionServicePagedTests
     /// And PageNumber should be accurate
     /// Note: Actual chunking to 512-char pieces happens in TextChunkingService
     /// </summary>
-    [Fact(Skip = "Requires test PDF generation - implement CreateTestPdf() helper")]
+    // Note: Requires test PDF generation - implement CreateTestPdf() helper
+    [Fact]
     public async Task ExtractPagedTextAsync_LargePage_CapturedCorrectly()
     {
         // Arrange
@@ -190,7 +199,8 @@ public class PdfTextExtractionServicePagedTests
     /// Then 1 PagedTextChunk should be created
     /// And the chunk should have the correct page number
     /// </summary>
-    [Fact(Skip = "Requires test PDF generation - implement CreateTestPdf() helper")]
+    // Note: Requires test PDF generation - implement CreateTestPdf() helper
+    [Fact]
     public async Task ExtractPagedTextAsync_SmallPage_ProcessedCorrectly()
     {
         // Arrange

@@ -5,11 +5,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Qdrant.Client;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
 public class QdrantClientAdapterTests
 {
+    private readonly ITestOutputHelper _output;
+
     [Fact]
     public void Constructor_UsesPortFromUrl_WhenProvided()
     {

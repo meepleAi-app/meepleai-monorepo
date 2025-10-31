@@ -9,9 +9,12 @@ using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 public class QaEndpointTests
 {
+    private readonly ITestOutputHelper _output;
+
     private static Mock<IPromptTemplateService> CreatePromptTemplateMock()
     {
         var mock = new Mock<IPromptTemplateService>();

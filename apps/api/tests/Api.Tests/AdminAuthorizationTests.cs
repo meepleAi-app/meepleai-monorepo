@@ -6,6 +6,7 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Api.Models;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -23,8 +24,11 @@ namespace Api.Tests;
 [Collection("Admin Endpoints")]
 public class AdminAuthorizationTests : AdminTestFixture
 {
-    public AdminAuthorizationTests(WebApplicationFactoryFixture factory) : base(factory)
+    private readonly ITestOutputHelper _output;
+
+    public AdminAuthorizationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     /// <summary>

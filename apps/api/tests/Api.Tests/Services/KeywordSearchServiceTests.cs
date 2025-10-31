@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
 
@@ -16,13 +17,16 @@ namespace Api.Tests.Services;
 /// </summary>
 public class KeywordSearchServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
     private readonly MeepleAiDbContext _dbContext;
     private readonly KeywordSearchService _service;
     private readonly Mock<ILogger<KeywordSearchService>> _loggerMock;
 
-    public KeywordSearchServiceTests()
+    public KeywordSearchServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         // Setup SQLite in-memory database
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();

@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Api.Models;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -15,6 +16,8 @@ namespace Api.Tests;
 /// </summary>
 public class ChessDatasetTests
 {
+    private readonly ITestOutputHelper _output;
+
     #region FIDE Rules Tests
 
     [Fact]

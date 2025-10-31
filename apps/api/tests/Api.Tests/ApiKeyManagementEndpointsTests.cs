@@ -8,6 +8,7 @@ using Api.Infrastructure.Entities;
 using Api.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -18,8 +19,11 @@ namespace Api.Tests;
 /// </summary>
 public class ApiKeyManagementEndpointsTests : IntegrationTestBase
 {
-    public ApiKeyManagementEndpointsTests(WebApplicationFactoryFixture fixture) : base(fixture)
+    private readonly ITestOutputHelper _output;
+
+    public ApiKeyManagementEndpointsTests(WebApplicationFactoryFixture fixture, ITestOutputHelper output) : base(fixture)
     {
+        _output = output;
     }
 
     #region POST /api/v1/api-keys - Create API Key

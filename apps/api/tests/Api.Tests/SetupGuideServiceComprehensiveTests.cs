@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -17,18 +18,21 @@ namespace Api.Tests;
 /// </summary>
 public class SetupGuideServiceComprehensiveTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly MeepleAiDbContext _dbContext;
-    private readonly Mock<IEmbeddingService> _mockEmbeddingService;
-    private readonly Mock<IQdrantService> _mockQdrantService;
-    private readonly Mock<ILlmService> _mockLlmService;
-    private readonly Mock<IAiResponseCacheService> _mockCacheService;
-    private readonly Mock<IPromptTemplateService> _mockPromptTemplate;
-    private readonly Mock<IConfiguration> _mockConfiguration;
-    private readonly Mock<ILogger<SetupGuideService>> _mockLogger;
+    private readonly Mock<IEmbeddingService> _embeddingServiceMock;
+    private readonly Mock<IQdrantService> _qdrantServiceMock;
+    private readonly Mock<ILlmService> _llmServiceMock;
+    private readonly Mock<IAiResponseCacheService> _cacheServiceMock;
+    private readonly Mock<IPromptTemplateService> _promptTemplateMock;
+    private readonly Mock<IConfiguration> _configurationMock;
+    private readonly Mock<ILogger<SetupGuideService>> _loggerMock;
     private readonly SetupGuideService _service;
 
-    public SetupGuideServiceComprehensiveTests()
+    public SetupGuideServiceComprehensiveTests(ITestOutputHelper output)
     {
+        _output = output;
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseSqlite($"DataSource=SetupGuideComprehensiveTest_{Guid.NewGuid()};Mode=Memory;Cache=Shared")
             .Options;
@@ -36,29 +40,29 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
         _dbContext = new MeepleAiDbContext(options);
         _dbContext.Database.OpenConnection();
         _dbContext.Database.EnsureCreated();
-        _mockEmbeddingService = new Mock<IEmbeddingService>();
-        _mockQdrantService = new Mock<IQdrantService>();
-        _mockLlmService = new Mock<ILlmService>();
-        _mockCacheService = new Mock<IAiResponseCacheService>();
-        _mockPromptTemplate = new Mock<IPromptTemplateService>();
-        _mockConfiguration = new Mock<IConfiguration>();
-        _mockLogger = new Mock<ILogger<SetupGuideService>>();
+        _embeddingServiceMock = new Mock<IEmbeddingService>();
+        _qdrantServiceMock = new Mock<IQdrantService>();
+        _llmServiceMock = new Mock<ILlmService>();
+        _cacheServiceMock = new Mock<IAiResponseCacheService>();
+        _promptTemplateMock = new Mock<IPromptTemplateService>();
+        _configurationMock = new Mock<IConfiguration>();
+        _loggerMock = new Mock<ILogger<SetupGuideService>>();
 
         // ADMIN-01 Phase 3: Setup feature flag to use fallback (default behavior)
         // Mock IConfigurationSection for GetValue<bool> to work correctly
         var mockSection = new Mock<IConfigurationSection>();
         mockSection.Setup(s => s.Value).Returns("false");
-        _mockConfiguration.Setup(c => c.GetSection("Features:PromptDatabase")).Returns(mockSection.Object);
+        _configurationMock.Setup(c => c.GetSection("Features:PromptDatabase")).Returns(mockSection.Object);
 
         _service = new SetupGuideService(
             _dbContext,
-            _mockEmbeddingService.Object,
-            _mockQdrantService.Object,
-            _mockLlmService.Object,
-            _mockCacheService.Object,
-            _mockPromptTemplate.Object,
-            _mockConfiguration.Object,
-            _mockLogger.Object
+            _embeddingServiceMock.Object,
+            _qdrantServiceMock.Object,
+            _llmServiceMock.Object,
+            _cacheServiceMock.Object,
+            _promptTemplateMock.Object,
+            _configurationMock.Object,
+            _loggerMock.Object
         );
     }
 
@@ -93,11 +97,11 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
 
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new float[] { 0.1f } } });
 
-        _mockQdrantService
+        _qdrantServiceMock
             .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>())); // Empty results
 
@@ -121,7 +125,7 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
 
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult
             {
@@ -129,7 +133,7 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
                 Embeddings = new List<float[]> { new float[] { 0.1f, 0.2f, 0.3f } }
             });
 
-        _mockQdrantService
+        _qdrantServiceMock
             .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>
             {
@@ -158,7 +162,7 @@ Give each player a player board and their starting resources as listed in the ru
 STEP 3: Shuffle Card Decks
 Shuffle all card decks thoroughly and place them face-down near the board.";
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
                 llmResponse,
@@ -193,11 +197,11 @@ Shuffle all card decks thoroughly and place them face-down near the board.";
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
 
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new float[] { 0.1f } } });
 
-        _mockQdrantService
+        _qdrantServiceMock
             .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>
             {
@@ -210,7 +214,7 @@ This step is mandatory.
 STEP 2: [OPTIONAL] Add Expansion Content
 Include expansion components if playing with expansions.";
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(llmResponse, new LlmUsage(100, 50, 150)));
 
@@ -233,18 +237,18 @@ Include expansion components if playing with expansions.";
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
 
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new float[] { 0.1f } } });
 
-        _mockQdrantService
+        _qdrantServiceMock
             .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>
             {
                 new SearchResultItem { Text = "Some setup text", Score = 0.8f, PdfId = "pdf1", Page = 1 }
             }));
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateFailure("LLM service unavailable"));
 
@@ -276,11 +280,11 @@ Include expansion components if playing with expansions.";
             0.95
         );
 
-        _mockCacheService
+        _cacheServiceMock
             .Setup(x => x.GenerateSetupCacheKey(gameId))
             .Returns($"setup:{gameId}");
 
-        _mockCacheService
+        _cacheServiceMock
             .Setup(x => x.GetAsync<SetupGuideResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(cachedResponse);
 
@@ -294,9 +298,9 @@ Include expansion components if playing with expansions.";
         Assert.Equal("Cached Step", result.steps[0].title);
 
         // Verify no embedding, qdrant, or LLM calls were made
-        _mockEmbeddingService.VerifyNoOtherCalls();
-        _mockQdrantService.VerifyNoOtherCalls();
-        _mockLlmService.VerifyNoOtherCalls();
+        _embeddingServiceMock.VerifyNoOtherCalls();
+        _qdrantServiceMock.VerifyNoOtherCalls();
+        _llmServiceMock.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -308,15 +312,15 @@ Include expansion components if playing with expansions.";
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
 
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new float[] { 0.1f } } });
 
-        _mockQdrantService
+        _qdrantServiceMock
             .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>()));
 
-        _mockCacheService
+        _cacheServiceMock
             .Setup(x => x.GenerateSetupCacheKey(gameId))
             .Returns($"setup:{gameId}");
 
@@ -324,7 +328,7 @@ Include expansion components if playing with expansions.";
         await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
-        _mockCacheService.Verify(x => x.SetAsync(
+        _cacheServiceMock.Verify(x => x.SetAsync(
             $"setup:{gameId}",
             It.IsAny<SetupGuideResponse>(),
             86400, // 24 hours TTL
@@ -341,7 +345,7 @@ Include expansion components if playing with expansions.";
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
 
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = false, ErrorMessage = "Embedding service down" });
 
@@ -365,11 +369,11 @@ Include expansion components if playing with expansions.";
         _dbContext.Games.AddRange(game1, game2);
         await _dbContext.SaveChangesAsync();
 
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new float[] { 0.1f } } });
 
-        _mockQdrantService
+        _qdrantServiceMock
             .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>()));
 
@@ -391,11 +395,11 @@ Include expansion components if playing with expansions.";
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
 
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new float[] { 0.1f } } });
 
-        _mockQdrantService
+        _qdrantServiceMock
             .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>
             {
@@ -406,7 +410,7 @@ Include expansion components if playing with expansions.";
         var llmResponse = $@"STEP 1: Long Step
 {longInstruction}";
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(llmResponse, new LlmUsage(100, 50, 150)));
 
@@ -428,11 +432,11 @@ Include expansion components if playing with expansions.";
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
 
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new float[] { 0.1f } } });
 
-        _mockQdrantService
+        _qdrantServiceMock
             .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>
             {
@@ -442,7 +446,7 @@ Include expansion components if playing with expansions.";
         var llmResponse = @"STEP 1: Quick Setup
 Do this quickly.";
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(llmResponse, new LlmUsage(50, 25, 75)));
 
@@ -462,19 +466,19 @@ Do this quickly.";
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
 
-        _mockCacheService
+        _cacheServiceMock
             .Setup(x => x.GetAsync<SetupGuideResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((SetupGuideResponse?)null);
 
-        _mockCacheService
+        _cacheServiceMock
             .Setup(x => x.GenerateSetupCacheKey(gameId))
             .Returns($"setup:{gameId}");
 
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new float[] { 0.1f } } });
 
-        _mockQdrantService
+        _qdrantServiceMock
             .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>
             {
@@ -483,7 +487,7 @@ Do this quickly.";
 
         var malformedResponse = "This is not in the expected format at all!";
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(malformedResponse, new LlmUsage(100, 50, 150)));
 
@@ -507,18 +511,18 @@ Do this quickly.";
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
 
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new float[] { 0.1f } } });
 
-        _mockQdrantService
+        _qdrantServiceMock
             .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>
             {
                 new SearchResultItem { Text = "Perfect match text", Score = 0.98f, PdfId = "pdf1", Page = 1 }
             }));
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("STEP 1: Test\nTest step", new LlmUsage(100, 50, 150)));
 
@@ -539,11 +543,11 @@ Do this quickly.";
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
 
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new float[] { 0.1f } } });
 
-        _mockQdrantService
+        _qdrantServiceMock
             .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<float[]>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>
             {
@@ -560,7 +564,7 @@ First instruction.
 STEP 2: Second Step
 Second instruction.";
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(llmResponse, new LlmUsage(100, 50, 150)));
 
@@ -582,7 +586,7 @@ Second instruction.";
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
 
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("Unexpected error"));
 

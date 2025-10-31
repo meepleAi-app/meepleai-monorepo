@@ -10,6 +10,7 @@ using Api.Models;
 using Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -24,8 +25,11 @@ namespace Api.Tests;
 [Collection("Sequential")]
 public class CacheInvalidationIntegrationTests : IntegrationTestBase
 {
-    public CacheInvalidationIntegrationTests(WebApplicationFactoryFixture factory) : base(factory)
+    private readonly ITestOutputHelper _output;
+
+    public CacheInvalidationIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     #region PDF Upload Cache Invalidation

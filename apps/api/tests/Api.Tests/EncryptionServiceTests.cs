@@ -3,17 +3,21 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
 public class EncryptionServiceTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly Mock<ILogger<EncryptionService>> _mockLogger;
     private readonly EncryptionService _service;
 
-    public EncryptionServiceTests()
+    public EncryptionServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         // Use EphemeralDataProtectionProvider for testing (in-memory, no persistence)
         _dataProtectionProvider = new EphemeralDataProtectionProvider();
         _mockLogger = new Mock<ILogger<EncryptionService>>();

@@ -4,6 +4,7 @@ using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -13,12 +14,15 @@ namespace Api.Tests;
 /// </summary>
 public class FeatureFlagServiceTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<IConfigurationService> _configServiceMock;
     private readonly Mock<ILogger<FeatureFlagService>> _loggerMock;
     private readonly FeatureFlagService _service;
 
-    public FeatureFlagServiceTests()
+    public FeatureFlagServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         _configServiceMock = new Mock<IConfigurationService>();
         _loggerMock = new Mock<ILogger<FeatureFlagService>>();
         _service = new FeatureFlagService(_configServiceMock.Object, _loggerMock.Object);

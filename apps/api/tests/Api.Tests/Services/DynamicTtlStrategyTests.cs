@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace MeepleAI.Api.Tests.Services;
 
@@ -15,11 +16,14 @@ namespace MeepleAI.Api.Tests.Services;
 /// </summary>
 public class DynamicTtlStrategyTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<ILogger<DynamicTtlStrategy>> _mockLogger;
     private readonly Mock<IOptions<CacheOptimizationConfiguration>> _mockConfig;
 
-    public DynamicTtlStrategyTests()
+    public DynamicTtlStrategyTests(ITestOutputHelper output)
     {
+        _output = output;
         _mockLogger = new Mock<ILogger<DynamicTtlStrategy>>();
         _mockConfig = new Mock<IOptions<CacheOptimizationConfiguration>>();
     }

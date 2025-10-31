@@ -11,6 +11,7 @@ using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Integration;
 
@@ -21,11 +22,14 @@ namespace Api.Tests.Integration;
 [Collection("Admin Endpoints")]
 public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
 {
+    private readonly ITestOutputHelper _output;
+
     private string _adminEmail = null!;
     private List<string> _adminCookies = null!;
 
-    public ConfigurationIntegrationTests(WebApplicationFactoryFixture factory) : base(factory)
+    public ConfigurationIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     public override async Task InitializeAsync()

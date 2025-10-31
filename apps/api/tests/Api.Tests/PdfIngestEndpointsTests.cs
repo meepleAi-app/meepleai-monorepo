@@ -11,6 +11,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -24,13 +25,16 @@ namespace Api.Tests;
 /// </summary>
 public class PdfIngestEndpointsTests : IntegrationTestBase
 {
+    private readonly ITestOutputHelper _output;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    public PdfIngestEndpointsTests(WebApplicationFactoryFixture factory) : base(factory)
+    public PdfIngestEndpointsTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     /// <summary>

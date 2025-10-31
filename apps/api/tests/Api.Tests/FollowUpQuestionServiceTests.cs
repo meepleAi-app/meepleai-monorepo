@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -20,13 +21,16 @@ namespace Api.Tests;
 /// </summary>
 public class FollowUpQuestionServiceTests
 {
-    private readonly Mock<ILlmService> _mockLlmService;
+    private readonly ITestOutputHelper _output;
+
+    private readonly Mock<ILlmService> _llmServiceMock;
     private readonly Mock<ILogger<FollowUpQuestionService>> _mockLogger;
     private readonly FollowUpQuestionsConfiguration _defaultConfig;
 
-    public FollowUpQuestionServiceTests()
+    public FollowUpQuestionServiceTests(ITestOutputHelper output)
     {
-        _mockLlmService = new Mock<ILlmService>();
+        _output = output;
+        _llmServiceMock = new Mock<ILlmService>();
         _mockLogger = new Mock<ILogger<FollowUpQuestionService>>();
         _defaultConfig = new FollowUpQuestionsConfiguration
         {
@@ -49,7 +53,7 @@ public class FollowUpQuestionServiceTests
             "Can you explain the scoring?"
         };
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(x => x.GenerateJsonAsync<FollowUpQuestionsDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -74,7 +78,7 @@ public class FollowUpQuestionServiceTests
         Assert.Contains("scoring", result[2]);
 
         // Verify LLM was called with correct prompt structure
-        _mockLlmService.Verify(
+        _llmServiceMock.Verify(
             x => x.GenerateJsonAsync<FollowUpQuestionsDto>(
                 It.Is<string>(s => s.Contains("follow-up questions")),
                 It.Is<string>(s => s.Contains("Tic-Tac-Toe") && s.Contains("How do I win")),
@@ -86,7 +90,7 @@ public class FollowUpQuestionServiceTests
     public async Task GenerateQuestionsAsync_LlmReturnsNull_ReturnsEmptyList()
     {
         // Arrange: LLM JSON parsing failed
-        _mockLlmService
+        _llmServiceMock
             .Setup(x => x.GenerateJsonAsync<FollowUpQuestionsDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -107,7 +111,7 @@ public class FollowUpQuestionServiceTests
         Assert.Empty(result);
 
         // Verify retry logic (should retry MaxRetries times)
-        _mockLlmService.Verify(
+        _llmServiceMock.Verify(
             x => x.GenerateJsonAsync<FollowUpQuestionsDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -125,7 +129,7 @@ public class FollowUpQuestionServiceTests
             MaxRetries = 1
         };
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(x => x.GenerateJsonAsync<FollowUpQuestionsDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -161,7 +165,7 @@ public class FollowUpQuestionServiceTests
 
         var tenQuestions = Enumerable.Range(1, 10).Select(i => $"Question {i}").ToList();
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(x => x.GenerateJsonAsync<FollowUpQuestionsDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -198,7 +202,7 @@ public class FollowUpQuestionServiceTests
             "Valid question 3"
         };
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(x => x.GenerateJsonAsync<FollowUpQuestionsDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -229,7 +233,7 @@ public class FollowUpQuestionServiceTests
             new Snippet("Rule text about setup", "rulebook.pdf", 10, 1, 0.85f)
         };
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(x => x.GenerateJsonAsync<FollowUpQuestionsDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -246,7 +250,7 @@ public class FollowUpQuestionServiceTests
             "Chess");
 
         // Assert: Verify RAG context was included in user prompt
-        _mockLlmService.Verify(
+        _llmServiceMock.Verify(
             x => x.GenerateJsonAsync<FollowUpQuestionsDto>(
                 It.IsAny<string>(),
                 It.Is<string>(s => s.Contains("Rule text about winning") || s.Contains("Relevant Rule Context")),
@@ -258,7 +262,7 @@ public class FollowUpQuestionServiceTests
     public async Task GenerateQuestionsAsync_RetriesOnceOnFailure()
     {
         // Arrange: First call fails (returns null), second succeeds
-        _mockLlmService
+        _llmServiceMock
             .SetupSequence(x => x.GenerateJsonAsync<FollowUpQuestionsDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -290,7 +294,7 @@ public class FollowUpQuestionServiceTests
             FailOnGenerationError = false
         };
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(x => x.GenerateJsonAsync<FollowUpQuestionsDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -320,7 +324,7 @@ public class FollowUpQuestionServiceTests
             FailOnGenerationError = true
         };
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(x => x.GenerateJsonAsync<FollowUpQuestionsDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -347,7 +351,7 @@ public class FollowUpQuestionServiceTests
         var cts = new CancellationTokenSource();
         cts.Cancel(); // Pre-cancelled
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(x => x.GenerateJsonAsync<FollowUpQuestionsDto>(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
@@ -373,7 +377,7 @@ public class FollowUpQuestionServiceTests
         IOptions<FollowUpQuestionsConfiguration>? config = null)
     {
         return new FollowUpQuestionService(
-            llmService ?? _mockLlmService.Object,
+            llmService ?? _llmServiceMock.Object,
             _mockLogger.Object,
             config ?? Options.Create(_defaultConfig),
             new TestMeterFactory());

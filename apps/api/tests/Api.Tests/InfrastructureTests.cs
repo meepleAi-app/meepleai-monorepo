@@ -5,6 +5,7 @@ using Api.Infrastructure.Entities;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -14,11 +15,14 @@ namespace Api.Tests;
 /// </summary>
 public class InfrastructureTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
     private readonly MeepleAiDbContext _dbContext;
 
-    public InfrastructureTests()
+    public InfrastructureTests(ITestOutputHelper output)
     {
+        _output = output;
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();
 

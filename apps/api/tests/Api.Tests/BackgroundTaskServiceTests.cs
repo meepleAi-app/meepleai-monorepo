@@ -2,9 +2,12 @@ using Api.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 public class BackgroundTaskServiceTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<ILogger<BackgroundTaskService>> _mockLogger = new();
 
     [Fact]

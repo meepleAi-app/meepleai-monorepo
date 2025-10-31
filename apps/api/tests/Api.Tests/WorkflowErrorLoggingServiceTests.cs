@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -17,13 +18,16 @@ namespace Api.Tests;
 
 public class WorkflowErrorLoggingServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
     private readonly MeepleAiDbContext _dbContext;
     private readonly HybridCache _cache;
     private readonly ServiceProvider _serviceProvider;
 
-    public WorkflowErrorLoggingServiceTests()
+    public WorkflowErrorLoggingServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         // Setup in-memory SQLite
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();

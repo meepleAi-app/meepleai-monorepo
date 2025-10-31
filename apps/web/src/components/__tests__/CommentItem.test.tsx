@@ -179,7 +179,7 @@ describe('CommentItem', () => {
         />
       );
 
-      expect(screen.getByRole('button', { name: 'Modifica' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Edit comment' })).toBeInTheDocument();
     });
 
     it('does not show edit button when user is not comment owner', () => {
@@ -196,7 +196,7 @@ describe('CommentItem', () => {
         />
       );
 
-      expect(screen.queryByRole('button', { name: 'Modifica' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Edit comment' })).not.toBeInTheDocument();
     });
 
     it('shows edit button for Admin even if not owner', () => {
@@ -214,7 +214,7 @@ describe('CommentItem', () => {
       );
 
       // Admin can delete but not edit other users' comments based on canEdit logic
-      expect(screen.queryByRole('button', { name: 'Modifica' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Edit comment' })).not.toBeInTheDocument();
     });
   });
 
@@ -233,7 +233,7 @@ describe('CommentItem', () => {
         />
       );
 
-      expect(screen.getByRole('button', { name: 'Elimina' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Delete comment' })).toBeInTheDocument();
     });
 
     it('does not show delete button when user is not owner and not Admin', () => {
@@ -250,7 +250,7 @@ describe('CommentItem', () => {
         />
       );
 
-      expect(screen.queryByRole('button', { name: 'Elimina' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Delete comment' })).not.toBeInTheDocument();
     });
 
     it('shows delete button for Admin even if not owner', () => {
@@ -267,7 +267,7 @@ describe('CommentItem', () => {
         />
       );
 
-      expect(screen.getByRole('button', { name: 'Elimina' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Delete comment' })).toBeInTheDocument();
     });
 
     it('shows delete button for Editor if they own the comment', () => {
@@ -284,7 +284,7 @@ describe('CommentItem', () => {
         />
       );
 
-      expect(screen.getByRole('button', { name: 'Elimina' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Delete comment' })).toBeInTheDocument();
     });
   });
 
@@ -305,7 +305,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const editButton = screen.getByRole('button', { name: 'Modifica' });
+      const editButton = screen.getByRole('button', { name: 'Edit comment' });
       await user.click(editButton);
 
       expect(screen.getByDisplayValue('This is a test comment')).toBeInTheDocument();
@@ -329,7 +329,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const editButton = screen.getByRole('button', { name: 'Modifica' });
+      const editButton = screen.getByRole('button', { name: 'Edit comment' });
       await user.click(editButton);
 
       const textarea = screen.getByDisplayValue('This is a test comment');
@@ -356,7 +356,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const editButton = screen.getByRole('button', { name: 'Modifica' });
+      const editButton = screen.getByRole('button', { name: 'Edit comment' });
       await user.click(editButton);
 
       const textarea = screen.getByDisplayValue('This is a test comment');
@@ -388,7 +388,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const editButton = screen.getByRole('button', { name: 'Modifica' });
+      const editButton = screen.getByRole('button', { name: 'Edit comment' });
       await user.click(editButton);
 
       const textarea = screen.getByDisplayValue('This is a test comment');
@@ -419,7 +419,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const editButton = screen.getByRole('button', { name: 'Modifica' });
+      const editButton = screen.getByRole('button', { name: 'Edit comment' });
       await user.click(editButton);
 
       const textarea = screen.getByDisplayValue('This is a test comment');
@@ -449,7 +449,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const editButton = screen.getByRole('button', { name: 'Modifica' });
+      const editButton = screen.getByRole('button', { name: 'Edit comment' });
       await user.click(editButton);
 
       const textarea = screen.getByDisplayValue('This is a test comment');
@@ -475,7 +475,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const editButton = screen.getByRole('button', { name: 'Modifica' });
+      const editButton = screen.getByRole('button', { name: 'Edit comment' });
       await user.click(editButton);
 
       const textarea = screen.getByDisplayValue('This is a test comment');
@@ -502,7 +502,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const editButton = screen.getByRole('button', { name: 'Modifica' });
+      const editButton = screen.getByRole('button', { name: 'Edit comment' });
       await user.click(editButton);
 
       const textarea = screen.getByDisplayValue('This is a test comment');
@@ -532,7 +532,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const editButton = screen.getByRole('button', { name: 'Modifica' });
+      const editButton = screen.getByRole('button', { name: 'Edit comment' });
       await user.click(editButton);
 
       const textarea = screen.getByDisplayValue('This is a test comment');
@@ -563,7 +563,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const editButton = screen.getByRole('button', { name: 'Modifica' });
+      const editButton = screen.getByRole('button', { name: 'Edit comment' });
       await user.click(editButton);
 
       const textarea = screen.getByDisplayValue('This is a test comment');
@@ -593,7 +593,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const editButton = screen.getByRole('button', { name: 'Modifica' });
+      const editButton = screen.getByRole('button', { name: 'Edit comment' });
       await user.click(editButton);
 
       const textarea = screen.getByDisplayValue('This is a test comment');
@@ -627,7 +627,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const editButton = screen.getByRole('button', { name: 'Modifica' });
+      const editButton = screen.getByRole('button', { name: 'Edit comment' });
       await user.click(editButton);
 
       const textarea = screen.getByDisplayValue('This is a test comment');
@@ -665,7 +665,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const editButton = screen.getByRole('button', { name: 'Modifica' });
+      const editButton = screen.getByRole('button', { name: 'Edit comment' });
       await user.click(editButton);
 
       const textarea = screen.getByDisplayValue('This is a test comment');
@@ -706,7 +706,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const deleteButton = screen.getByRole('button', { name: 'Elimina' });
+      const deleteButton = screen.getByRole('button', { name: 'Delete comment' });
       await user.click(deleteButton);
 
       expect(confirmSpy).toHaveBeenCalledWith('Sei sicuro di voler eliminare questo commento?');
@@ -730,7 +730,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const deleteButton = screen.getByRole('button', { name: 'Elimina' });
+      const deleteButton = screen.getByRole('button', { name: 'Delete comment' });
       await user.click(deleteButton);
 
       expect(mockOnDelete).not.toHaveBeenCalled();
@@ -755,7 +755,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const deleteButton = screen.getByRole('button', { name: 'Elimina' });
+      const deleteButton = screen.getByRole('button', { name: 'Delete comment' });
       await user.click(deleteButton);
 
       await waitFor(() => {
@@ -783,11 +783,11 @@ describe('CommentItem', () => {
         />
       );
 
-      const deleteButton = screen.getByRole('button', { name: 'Elimina' });
+      const deleteButton = screen.getByRole('button', { name: 'Delete comment' });
       await user.click(deleteButton);
 
-      expect(screen.getByRole('button', { name: 'Eliminazione...' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Eliminazione...' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Delete comment' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Delete comment' })).toBeDisabled();
 
       confirmSpy.mockRestore();
     });
@@ -810,10 +810,10 @@ describe('CommentItem', () => {
         />
       );
 
-      const deleteButton = screen.getByRole('button', { name: 'Elimina' });
+      const deleteButton = screen.getByRole('button', { name: 'Delete comment' });
       await user.click(deleteButton);
 
-      const editButton = screen.getByRole('button', { name: 'Modifica' });
+      const editButton = screen.getByRole('button', { name: 'Edit comment' });
       expect(editButton).toBeDisabled();
 
       confirmSpy.mockRestore();
@@ -840,7 +840,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const deleteButton = screen.getByRole('button', { name: 'Elimina' });
+      const deleteButton = screen.getByRole('button', { name: 'Delete comment' });
       await user.click(deleteButton);
 
       await waitFor(() => {
@@ -874,7 +874,7 @@ describe('CommentItem', () => {
         />
       );
 
-      const deleteButton = screen.getByRole('button', { name: 'Elimina' });
+      const deleteButton = screen.getByRole('button', { name: 'Delete comment' });
       await user.click(deleteButton);
 
       await waitFor(() => {
@@ -991,8 +991,8 @@ describe('CommentItem', () => {
       );
 
       // Should show edit/delete since user is owner
-      expect(screen.getByRole('button', { name: 'Modifica' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Elimina' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Edit comment' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Delete comment' })).toBeInTheDocument();
     });
   });
 });

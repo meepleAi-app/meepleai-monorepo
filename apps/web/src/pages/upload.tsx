@@ -1383,12 +1383,12 @@ export default function UploadPage({
                   <strong>Version:</strong> {ruleSpec.version}
                 </p>
                 <p>
-                  <strong>Total Rules:</strong> {ruleSpec.rules.length}
+                  <strong>Total Rules:</strong> {ruleSpec.rules?.length || 0}
                 </p>
               </div>
 
               <div style={{ marginBottom: '20px' }}>
-                {ruleSpec.rules.map((rule, index) => (
+                {(ruleSpec.rules || []).map((rule, index) => (
                   <div key={rule.id ?? index} style={{ marginBottom: '20px', padding: '16px', border: '1px solid #ddd', borderRadius: '4px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                       <h4 style={{ margin: 0 }}>Rule {index + 1}</h4>

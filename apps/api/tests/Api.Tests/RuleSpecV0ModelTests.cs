@@ -1,5 +1,6 @@
 using Api.Models;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -8,6 +9,8 @@ namespace Api.Tests;
 /// </summary>
 public class RuleSpecV0ModelTests
 {
+    private readonly ITestOutputHelper _output;
+
     #region PlayerCountRange Tests
 
     [Fact]

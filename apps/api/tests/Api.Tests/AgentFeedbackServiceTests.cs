@@ -7,13 +7,17 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 public class AgentFeedbackServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
 
-    public AgentFeedbackServiceTests()
+    public AgentFeedbackServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         // Keep connection open for the lifetime of the test class
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();

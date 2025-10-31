@@ -10,6 +10,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -28,8 +29,11 @@ namespace Api.Tests;
 /// </summary>
 public class RlsAndAuditEndpointsTests : IntegrationTestBase
 {
-    public RlsAndAuditEndpointsTests(WebApplicationFactoryFixture factory) : base(factory)
+    private readonly ITestOutputHelper _output;
+
+    public RlsAndAuditEndpointsTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     #region Admin Role Tests

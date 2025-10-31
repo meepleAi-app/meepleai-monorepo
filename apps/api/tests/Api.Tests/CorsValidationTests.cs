@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Api.Infrastructure.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -12,8 +13,11 @@ namespace Api.Tests;
 /// </summary>
 public class CorsValidationTests : IntegrationTestBase
 {
-    public CorsValidationTests(WebApplicationFactoryFixture fixture) : base(fixture)
+    private readonly ITestOutputHelper _output;
+
+    public CorsValidationTests(WebApplicationFactoryFixture fixture, ITestOutputHelper output) : base(fixture)
     {
+        _output = output;
     }
 
     #region OPTIONS Preflight Requests

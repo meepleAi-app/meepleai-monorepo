@@ -9,6 +9,7 @@ using Api.Infrastructure.Entities;
 using Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -22,13 +23,16 @@ namespace Api.Tests;
 /// </summary>
 public class ChessWebhookIntegrationTests : IntegrationTestBase
 {
+    private readonly ITestOutputHelper _output;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    public ChessWebhookIntegrationTests(WebApplicationFactoryFixture factory) : base(factory)
+    public ChessWebhookIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     /// <summary>

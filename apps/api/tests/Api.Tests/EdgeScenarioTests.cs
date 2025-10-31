@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text;
 using Api.Infrastructure.Entities;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -13,8 +14,11 @@ namespace Api.Tests;
 /// </summary>
 public class EdgeScenarioTests : IntegrationTestBase
 {
-    public EdgeScenarioTests(WebApplicationFactoryFixture fixture) : base(fixture)
+    private readonly ITestOutputHelper _output;
+
+    public EdgeScenarioTests(WebApplicationFactoryFixture fixture, ITestOutputHelper output) : base(fixture)
     {
+        _output = output;
     }
 
     #region Content-Type Validation

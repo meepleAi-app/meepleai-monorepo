@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -26,14 +27,17 @@ namespace Api.Tests;
 /// </summary>
 public class ConfigurationServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
     private readonly MeepleAiDbContext _dbContext;
-    private readonly Mock<IHybridCacheService> _mockCache;
+    private readonly Mock<IHybridCacheService> _cacheMock;
     private readonly IConfigurationService _service;
     private readonly string _testUserId;
 
-    public ConfigurationServiceTests()
+    public ConfigurationServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         // Setup SQLite in-memory database
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();
@@ -65,10 +69,10 @@ public class ConfigurationServiceTests : IDisposable
         _dbContext.SaveChanges();
 
         // Mock IHybridCacheService
-        _mockCache = new Mock<IHybridCacheService>();
+        _cacheMock = new Mock<IHybridCacheService>();
 
         // Setup default cache behavior - always call factory (cache miss simulation)
-        _mockCache.Setup(x => x.GetOrCreateAsync(
+        _cacheMock.Setup(x => x.GetOrCreateAsync(
             It.IsAny<string>(),
             It.IsAny<Func<CancellationToken, Task<SystemConfigurationDto>>>(),
             It.IsAny<string[]>(),
@@ -78,11 +82,11 @@ public class ConfigurationServiceTests : IDisposable
                 async (key, factory, tags, expiration, ct) => await factory(ct));
 
         // Setup RemoveAsync to do nothing (cache invalidation)
-        _mockCache.Setup(x => x.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _cacheMock.Setup(x => x.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
         // Setup RemoveByTagAsync to return 0 (no entries removed)
-        _mockCache.Setup(x => x.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _cacheMock.Setup(x => x.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
 
         // Mock environment (Development by default)
@@ -91,7 +95,7 @@ public class ConfigurationServiceTests : IDisposable
 
         _service = new ConfigurationService(
             _dbContext,
-            _mockCache.Object,
+            _cacheMock.Object,
             NullLogger<ConfigurationService>.Instance,
             mockEnvironment.Object);
     }

@@ -1,6 +1,7 @@
 using Api.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
 
@@ -11,10 +12,13 @@ namespace Api.Tests.Services;
 /// </summary>
 public class LanguageDetectionServiceTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly ILanguageDetectionService _service;
 
-    public LanguageDetectionServiceTests()
+    public LanguageDetectionServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         // AI-09: Use NullLogger for unit tests
         _service = new LanguageDetectionService(NullLogger<LanguageDetectionService>.Instance);
     }

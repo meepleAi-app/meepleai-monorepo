@@ -5,11 +5,14 @@ using Microsoft.Extensions.Options;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
 public class RateLimitServiceTests
 {
+    private readonly ITestOutputHelper _output;
+
     [Fact]
     public async Task CheckRateLimit_AllowsRequestWhenUnderLimit()
     {

@@ -15,11 +15,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
 public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
 {
+    private readonly ITestOutputHelper _output;
+
     [Fact]
     public async Task IndexVectorsAsync_UsesScopedServicesWhenOverridesAreNull()
     {

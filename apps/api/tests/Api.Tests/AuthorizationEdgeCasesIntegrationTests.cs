@@ -10,6 +10,7 @@ using Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -26,8 +27,11 @@ namespace Api.Tests;
 [Collection("Integration")]
 public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
 {
-    public AuthorizationEdgeCasesIntegrationTests(WebApplicationFactoryFixture factory) : base(factory)
+    private readonly ITestOutputHelper _output;
+
+    public AuthorizationEdgeCasesIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     #region Admin-Only Endpoint Tests

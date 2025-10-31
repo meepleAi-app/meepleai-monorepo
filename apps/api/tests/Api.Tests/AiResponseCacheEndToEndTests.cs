@@ -6,6 +6,7 @@ using Api.Models;
 using Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -24,8 +25,11 @@ namespace Api.Tests;
 /// </summary>
 public class AiResponseCacheEndToEndTests : IntegrationTestBase
 {
-    public AiResponseCacheEndToEndTests(WebApplicationFactoryFixture factory) : base(factory)
+    private readonly ITestOutputHelper _output;
+
+    public AiResponseCacheEndToEndTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     #region QA Endpoint Caching Tests
@@ -194,7 +198,8 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
 
     #region Setup Endpoint Caching Tests
 
-    [Fact(Skip = "Setup endpoint needs implementation or test adjustment - returns empty response")]
+    // Note: Setup endpoint needs implementation or test adjustment - currently returns empty response
+    [Fact]
     public async Task GivenSetupRequest_WhenAskedTwice_ThenSecondRequestReturnsCachedGuide()
     {
         // Given: Authenticated user and game with PDF
@@ -431,7 +436,8 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    [Fact(Skip = "API needs game existence validation - currently returns 200 for nonexistent games")]
+    // Note: API needs game existence validation - currently returns 200 for nonexistent games
+    [Fact]
     public async Task GivenNonexistentGame_WhenRequestingCachedEndpoint_ThenHandlesGracefully()
     {
         // Given: Authenticated user with non-existent game ID
@@ -455,7 +461,8 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
             $"Expected 404 or 400, got {response.StatusCode}");
     }
 
-    [Fact(Skip = "API needs query validation - currently accepts empty queries")]
+    // Note: API needs query validation - currently accepts empty queries
+    [Fact]
     public async Task GivenEmptyQuery_WhenCaching_ThenHandlesValidation()
     {
         // Given: Authenticated user and game

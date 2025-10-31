@@ -6,6 +6,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -16,8 +17,11 @@ namespace Api.Tests;
 /// </summary>
 public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
 {
-    public ApiKeyAuthenticationIntegrationTests(WebApplicationFactoryFixture fixture) : base(fixture)
+    private readonly ITestOutputHelper _output;
+
+    public ApiKeyAuthenticationIntegrationTests(WebApplicationFactoryFixture fixture, ITestOutputHelper output) : base(fixture)
     {
+        _output = output;
     }
 
     #region Successful Authentication Tests

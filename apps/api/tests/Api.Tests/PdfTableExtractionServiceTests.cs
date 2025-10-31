@@ -12,6 +12,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 using QuestPdfDocument = QuestPDF.Fluent.Document;
 
@@ -19,12 +20,15 @@ namespace Api.Tests;
 
 public class PdfTableExtractionServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<ILogger<PdfTableExtractionService>> _mockLogger;
     private readonly PdfTableExtractionService _service;
     private readonly List<string> _tempFiles = new();
 
-    public PdfTableExtractionServiceTests()
+    public PdfTableExtractionServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         QuestPDF.Settings.License = LicenseType.Community;
         _mockLogger = new Mock<ILogger<PdfTableExtractionService>>();
         _service = new PdfTableExtractionService(

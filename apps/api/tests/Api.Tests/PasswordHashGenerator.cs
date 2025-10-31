@@ -16,7 +16,8 @@ public class PasswordHashGenerator
         _output = output;
     }
 
-    [Fact(Skip = "Utility test - run manually to generate hash")]
+    // Note: Utility test - run manually to generate hash when needed
+    [Fact]
     public void GenerateDemo123Hash()
     {
         const int iterations = 210_000;

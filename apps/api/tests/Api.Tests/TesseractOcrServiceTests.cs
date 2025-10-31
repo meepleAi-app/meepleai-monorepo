@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -19,19 +20,22 @@ namespace Api.Tests;
 /// </summary>
 public class TesseractOcrServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<ILogger<TesseractOcrService>> _mockLogger;
-    private readonly Mock<IConfiguration> _mockConfig;
+    private readonly Mock<IConfiguration> _configMock;
     private readonly string _testTempDir;
 
     private TesseractOcrService CreateService(bool useStub = false) =>
         useStub
-            ? new StubbedTesseractOcrService(_mockLogger.Object, _mockConfig.Object)
-            : new TesseractOcrService(_mockLogger.Object, _mockConfig.Object);
+            ? new StubbedTesseractOcrService(_mockLogger.Object, _configMock.Object)
+            : new TesseractOcrService(_mockLogger.Object, _configMock.Object);
 
-    public TesseractOcrServiceTests()
+    public TesseractOcrServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         _mockLogger = new Mock<ILogger<TesseractOcrService>>();
-        _mockConfig = new Mock<IConfiguration>();
+        _configMock = new Mock<IConfiguration>();
 
         // Create a temp directory for test files
         _testTempDir = Path.Combine(Path.GetTempPath(), $"TesseractOcrServiceTests_{Guid.NewGuid()}");
@@ -41,11 +45,11 @@ public class TesseractOcrServiceTests : IDisposable
         // Instead, mock the indexer which is what the extension method uses
         var mockLanguageSection = new Mock<IConfigurationSection>();
         mockLanguageSection.Setup(s => s.Value).Returns("eng");
-        _mockConfig.Setup(c => c.GetSection("PdfExtraction:Ocr:DefaultLanguage")).Returns(mockLanguageSection.Object);
+        _configMock.Setup(c => c.GetSection("PdfExtraction:Ocr:DefaultLanguage")).Returns(mockLanguageSection.Object);
 
         var mockConcurrencySection = new Mock<IConfigurationSection>();
         mockConcurrencySection.Setup(s => s.Value).Returns("2");
-        _mockConfig.Setup(c => c.GetSection("PdfExtraction:Ocr:MaxConcurrentOperations")).Returns(mockConcurrencySection.Object);
+        _configMock.Setup(c => c.GetSection("PdfExtraction:Ocr:MaxConcurrentOperations")).Returns(mockConcurrencySection.Object);
     }
 
     [Fact]
@@ -75,7 +79,7 @@ public class TesseractOcrServiceTests : IDisposable
         // Arrange
         var mockFrenchSection = new Mock<IConfigurationSection>();
         mockFrenchSection.Setup(s => s.Value).Returns("fra");
-        _mockConfig.Setup(c => c.GetSection("PdfExtraction:Ocr:DefaultLanguage")).Returns(mockFrenchSection.Object);
+        _configMock.Setup(c => c.GetSection("PdfExtraction:Ocr:DefaultLanguage")).Returns(mockFrenchSection.Object);
 
         // Act
         using var service = CreateService();
@@ -97,7 +101,7 @@ public class TesseractOcrServiceTests : IDisposable
         // Arrange
         var mockConcurrencySection = new Mock<IConfigurationSection>();
         mockConcurrencySection.Setup(s => s.Value).Returns("4");
-        _mockConfig.Setup(c => c.GetSection("PdfExtraction:Ocr:MaxConcurrentOperations")).Returns(mockConcurrencySection.Object);
+        _configMock.Setup(c => c.GetSection("PdfExtraction:Ocr:MaxConcurrentOperations")).Returns(mockConcurrencySection.Object);
 
         // Act
         using var service = CreateService();

@@ -424,6 +424,14 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
         ))}
       </div>
 
+      {/* Network Error - Display even when progress is null */}
+      {/* This allows errors to be shown during initial fetch failures */}
+      {networkError && (
+        <div style={networkErrorStyle} role="alert">
+          <strong>Network Error:</strong> {networkError}
+        </div>
+      )}
+
       {/* Current Status */}
       {progress && (
         <div>
@@ -446,17 +454,10 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
             <strong>Progress:</strong> {progress.percentComplete}%
           </p>
 
-          {/* Error Message */}
+          {/* Error Message - Processing failure errors */}
           {progress.currentStep === ProcessingStep.Failed && progress.errorMessage && (
             <div style={errorMessageStyle} role="alert">
               <strong>Error:</strong> {progress.errorMessage}
-            </div>
-          )}
-
-          {/* Network Error */}
-          {networkError && (
-            <div style={networkErrorStyle} role="alert">
-              <strong>Network Error:</strong> {networkError}
             </div>
           )}
 

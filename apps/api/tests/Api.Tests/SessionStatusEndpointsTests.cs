@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 // TODO: Add Microsoft.Extensions.TimeProvider.Testing package
 // using Microsoft.Extensions.Time.Testing;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -22,12 +23,15 @@ namespace Api.Tests;
 /*
 public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
     private readonly WebApplicationFactory<Program> _factory;
     private readonly object _timeProvider; // FakeTimeProvider
 
-    public SessionStatusEndpointsTests(WebApplicationFactory<Program> factory)
+    public SessionStatusEndpointsTests(WebApplicationFactory<Program> factory, ITestOutputHelper output)
     {
+        _output = output;
         // Setup SQLite in-memory database
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();

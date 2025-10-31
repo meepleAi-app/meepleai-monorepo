@@ -4,6 +4,7 @@ using System.Linq;
 using Api.Models;
 using Api.Services;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -18,10 +19,13 @@ namespace Api.Tests;
 /// </summary>
 public class RuleSpecDiffServiceTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly RuleSpecDiffService _service;
 
-    public RuleSpecDiffServiceTests()
+    public RuleSpecDiffServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         _service = new RuleSpecDiffService();
     }
 

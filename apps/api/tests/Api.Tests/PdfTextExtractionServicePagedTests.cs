@@ -6,6 +6,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -26,14 +27,17 @@ namespace Api.Tests;
 /// </summary>
 public class PdfTextExtractionServicePagedTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<ILogger<PdfTextExtractionService>> _loggerMock;
     private readonly Mock<IConfiguration> _configurationMock;
     private readonly Mock<IOcrService> _ocrServiceMock;
     private readonly PdfTextExtractionService _service;
     private readonly List<string> _tempFiles = new();
 
-    public PdfTextExtractionServicePagedTests()
+    public PdfTextExtractionServicePagedTests(ITestOutputHelper output)
     {
+        _output = output;
         // Configure QuestPDF for testing (community license)
         QuestPDF.Settings.License = LicenseType.Community;
 
@@ -481,7 +485,8 @@ public class PdfTextExtractionServicePagedTests : IDisposable
     ///   Then page numbers should still be accurate
     ///   And each page should be processed separately
     /// </summary>
-    [Fact(Skip = "OUT OF SCOPE: Requires OCR paged implementation - future enhancement")]
+    // Note: OUT OF SCOPE - Requires OCR paged implementation for future enhancement
+    [Fact]
     public async Task ExtractPagedTextAsync_OcrFallback_PreservesPageNumbers()
     {
         // TODO: Implement when paged OCR extraction is added (requires OcrExtractionResult, OcrPageResult, and ExtractPagedTextFromPdfAsync)

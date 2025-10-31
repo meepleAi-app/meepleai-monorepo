@@ -1,5 +1,6 @@
 using Api.Services;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -8,6 +9,8 @@ namespace Api.Tests;
 /// </summary>
 public class QdrantServiceIntegrationTests : QdrantIntegrationTestBase, IAsyncLifetime
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly List<string> _createdPdfIds = new();
 
     async Task IAsyncLifetime.InitializeAsync()

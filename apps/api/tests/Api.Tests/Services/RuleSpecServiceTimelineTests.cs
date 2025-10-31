@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
 
@@ -14,12 +15,15 @@ namespace Api.Tests.Services;
 /// </summary>
 public class RuleSpecServiceTimelineTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly MeepleAiDbContext _context;
-    private readonly Mock<IAiResponseCacheService> _mockCache;
+    private readonly Mock<IAiResponseCacheService> _cacheMock;
     private readonly RuleSpecService _service;
 
-    public RuleSpecServiceTimelineTests()
+    public RuleSpecServiceTimelineTests(ITestOutputHelper output)
     {
+        _output = output;
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseSqlite("DataSource=:memory:")
             .Options;
@@ -27,8 +31,8 @@ public class RuleSpecServiceTimelineTests : IDisposable
         _context = new MeepleAiDbContext(options);
         _context.Database.OpenConnection();
         _context.Database.EnsureCreated();
-        _mockCache = new Mock<IAiResponseCacheService>();
-        _service = new RuleSpecService(_context, _mockCache.Object);
+        _cacheMock = new Mock<IAiResponseCacheService>();
+        _service = new RuleSpecService(_context, _cacheMock.Object);
 
         SeedTestData();
     }

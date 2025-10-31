@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -25,8 +26,11 @@ namespace Api.Tests;
 /// </summary>
 public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
 {
-    public LlmServiceConfigurationIntegrationTests(WebApplicationFactoryFixture factory) : base(factory)
+    private readonly ITestOutputHelper _output;
+
+    public LlmServiceConfigurationIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     /// <summary>

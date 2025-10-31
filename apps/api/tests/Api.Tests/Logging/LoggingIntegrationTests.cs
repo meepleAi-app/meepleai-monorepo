@@ -7,6 +7,7 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Logging;
 
@@ -16,12 +17,15 @@ namespace Api.Tests.Logging;
 /// </summary>
 public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly LoggingTestFactory _factory;
     private readonly HttpClient _client;
     private readonly IDisposable _logContext;
 
-    public LoggingIntegrationTests(LoggingTestFactory factory)
+    public LoggingIntegrationTests(LoggingTestFactory factory, ITestOutputHelper output)
     {
+        _output = output;
         _factory = factory;
         _client = factory.CreateClient();
 

@@ -10,22 +10,26 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
 public class OAuthServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly MeepleAiDbContext _db;
-    private readonly Mock<IEncryptionService> _mockEncryption;
+    private readonly Mock<IEncryptionService> _encryptionMock;
     private readonly Mock<ILogger<OAuthService>> _mockLogger;
-    private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
-    private readonly Mock<HttpMessageHandler> _mockHttpMessageHandler;
+    private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;
+    private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
     private readonly OAuthConfiguration _config;
     private readonly OAuthService _service;
     private readonly TestTimeProvider _timeProvider;
 
-    public OAuthServiceTests()
+    public OAuthServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseSqlite("DataSource=:memory:")
             .Options;
@@ -33,10 +37,10 @@ public class OAuthServiceTests : IDisposable
         _db.Database.OpenConnection();
         _db.Database.EnsureCreated();
 
-        _mockEncryption = new Mock<IEncryptionService>();
+        _encryptionMock = new Mock<IEncryptionService>();
         _mockLogger = new Mock<ILogger<OAuthService>>();
-        _mockHttpClientFactory = new Mock<IHttpClientFactory>();
-        _mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+        _httpClientFactoryMock = new Mock<IHttpClientFactory>();
+        _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
         _timeProvider = new TestTimeProvider(DateTimeOffset.Parse("2024-10-26T00:00:00Z"));
 
         _config = new OAuthConfiguration
@@ -74,19 +78,19 @@ public class OAuthServiceTests : IDisposable
             }
         };
 
-        var httpClient = new HttpClient(_mockHttpMessageHandler.Object);
-        _mockHttpClientFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
+        var httpClient = new HttpClient(_httpMessageHandlerMock.Object);
+        _httpClientFactoryMock.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
 
-        _mockEncryption.Setup(e => e.EncryptAsync(It.IsAny<string>(), It.IsAny<string>()))
+        _encryptionMock.Setup(e => e.EncryptAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync((string plaintext, string purpose) => $"encrypted_{plaintext}");
-        _mockEncryption.Setup(e => e.DecryptAsync(It.IsAny<string>(), It.IsAny<string>()))
+        _encryptionMock.Setup(e => e.DecryptAsync(It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync((string ciphertext, string purpose) => ciphertext.Replace("encrypted_", ""));
 
         _service = new OAuthService(
             _db,
-            _mockEncryption.Object,
+            _encryptionMock.Object,
             _mockLogger.Object,
-            _mockHttpClientFactory.Object,
+            _httpClientFactoryMock.Object,
             Options.Create(_config),
             _timeProvider);
     }
@@ -482,7 +486,7 @@ public class OAuthServiceTests : IDisposable
             expires_in = 3600
         };
 
-        _mockHttpMessageHandler.Protected()
+        _httpMessageHandlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req => req.RequestUri!.ToString().Contains("token")),
@@ -504,7 +508,7 @@ public class OAuthServiceTests : IDisposable
             _ => throw new ArgumentException($"Unknown provider: {provider}")
         };
 
-        _mockHttpMessageHandler.Protected()
+        _httpMessageHandlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req =>
@@ -529,7 +533,7 @@ public class OAuthServiceTests : IDisposable
             refresh_token = "new-refresh-token" // Optional: provider may return new refresh token
         };
 
-        _mockHttpMessageHandler.Protected()
+        _httpMessageHandlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req =>
@@ -545,7 +549,7 @@ public class OAuthServiceTests : IDisposable
 
     private void MockFailedRefreshTokenExchange(HttpStatusCode statusCode)
     {
-        _mockHttpMessageHandler.Protected()
+        _httpMessageHandlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
                 ItExpr.Is<HttpRequestMessage>(req =>

@@ -174,36 +174,49 @@ describe('useSessionCheck', () => {
   });
 
   describe('Session Expiration', () => {
-    // Skipped due to jsdom limitations with window.location.href mocking
-    it.skip('should redirect to login when session expires (0 minutes)', async () => {
+    /**
+     * Note: Browser redirect behavior is tested in e2e/session-expiration.spec.ts
+     * These unit tests verify the hook logic only (state management, API calls)
+     */
+
+    it('should detect expired session (0 minutes) and trigger redirect logic', async () => {
       mockGetSessionStatus.mockResolvedValueOnce({
         expiresAt: new Date().toISOString(),
         lastSeenAt: new Date().toISOString(),
         remainingMinutes: 0,
       });
 
-      renderHook(() => useSessionCheck());
+      const { result } = renderHook(() => useSessionCheck());
 
-      // Cannot test redirect in jsdom - window.location.href is not mockable
+      // Verify hook state reflects expiration
       await waitFor(() => {
         expect(mockGetSessionStatus).toHaveBeenCalled();
+        expect(result.current.remainingMinutes).toBe(0);
+        expect(result.current.isNearExpiry).toBe(true);
       });
+
+      // Note: Cannot verify window.location.href redirect in jsdom
+      // See e2e/session-expiration.spec.ts for actual redirect behavior testing
     });
 
-    // Skipped due to jsdom limitations with window.location.href mocking
-    it.skip('should redirect to login when session has negative remaining time', async () => {
+    it('should detect negative remaining time and trigger redirect logic', async () => {
       mockGetSessionStatus.mockResolvedValueOnce({
         expiresAt: new Date(Date.now() - 60 * 1000).toISOString(),
         lastSeenAt: new Date().toISOString(),
         remainingMinutes: -1,
       });
 
-      renderHook(() => useSessionCheck());
+      const { result } = renderHook(() => useSessionCheck());
 
-      // Cannot test redirect in jsdom - window.location.href is not mockable
+      // Verify hook state reflects expiration
       await waitFor(() => {
         expect(mockGetSessionStatus).toHaveBeenCalled();
+        expect(result.current.remainingMinutes).toBe(-1);
+        expect(result.current.isNearExpiry).toBe(true);
       });
+
+      // Note: Cannot verify window.location.href redirect in jsdom
+      // See e2e/session-expiration.spec.ts for actual redirect behavior testing
     });
 
     it('should not redirect when remaining > 0', async () => {

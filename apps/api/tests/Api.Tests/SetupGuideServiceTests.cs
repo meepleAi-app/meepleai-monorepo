@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -15,18 +16,21 @@ namespace Api.Tests;
 /// </summary>
 public class SetupGuideServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly MeepleAiDbContext _dbContext;
-    private readonly Mock<IEmbeddingService> _mockEmbeddingService;
-    private readonly Mock<IQdrantService> _mockQdrantService;
-    private readonly Mock<ILlmService> _mockLlmService;
-    private readonly Mock<IAiResponseCacheService> _mockCacheService;
-    private readonly Mock<IPromptTemplateService> _mockPromptTemplate;
-    private readonly Mock<IConfiguration> _mockConfiguration;
-    private readonly Mock<ILogger<SetupGuideService>> _mockLogger;
+    private readonly Mock<IEmbeddingService> _embeddingServiceMock;
+    private readonly Mock<IQdrantService> _qdrantServiceMock;
+    private readonly Mock<ILlmService> _llmServiceMock;
+    private readonly Mock<IAiResponseCacheService> _cacheServiceMock;
+    private readonly Mock<IPromptTemplateService> _promptTemplateMock;
+    private readonly Mock<IConfiguration> _configurationMock;
+    private readonly Mock<ILogger<SetupGuideService>> _loggerMock;
     private readonly SetupGuideService _service;
 
-    public SetupGuideServiceTests()
+    public SetupGuideServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseSqlite($"DataSource=SetupGuideTest_{Guid.NewGuid()};Mode=Memory;Cache=Shared")
             .Options;
@@ -34,29 +38,29 @@ public class SetupGuideServiceTests : IDisposable
         _dbContext = new MeepleAiDbContext(options);
         _dbContext.Database.OpenConnection();
         _dbContext.Database.EnsureCreated();
-        _mockEmbeddingService = new Mock<IEmbeddingService>();
-        _mockQdrantService = new Mock<IQdrantService>();
-        _mockLlmService = new Mock<ILlmService>();
-        _mockCacheService = new Mock<IAiResponseCacheService>();
-        _mockPromptTemplate = new Mock<IPromptTemplateService>();
-        _mockConfiguration = new Mock<IConfiguration>();
-        _mockLogger = new Mock<ILogger<SetupGuideService>>();
+        _embeddingServiceMock = new Mock<IEmbeddingService>();
+        _qdrantServiceMock = new Mock<IQdrantService>();
+        _llmServiceMock = new Mock<ILlmService>();
+        _cacheServiceMock = new Mock<IAiResponseCacheService>();
+        _promptTemplateMock = new Mock<IPromptTemplateService>();
+        _configurationMock = new Mock<IConfiguration>();
+        _loggerMock = new Mock<ILogger<SetupGuideService>>();
 
         // ADMIN-01 Phase 3: Setup feature flag to use fallback (default behavior)
         // Mock IConfigurationSection for GetValue<bool> to work correctly
         var mockSection = new Mock<IConfigurationSection>();
         mockSection.Setup(s => s.Value).Returns("false");
-        _mockConfiguration.Setup(c => c.GetSection("Features:PromptDatabase")).Returns(mockSection.Object);
+        _configurationMock.Setup(c => c.GetSection("Features:PromptDatabase")).Returns(mockSection.Object);
 
         _service = new SetupGuideService(
             _dbContext,
-            _mockEmbeddingService.Object,
-            _mockQdrantService.Object,
-            _mockLlmService.Object,
-            _mockCacheService.Object,
-            _mockPromptTemplate.Object,
-            _mockConfiguration.Object,
-            _mockLogger.Object
+            _embeddingServiceMock.Object,
+            _qdrantServiceMock.Object,
+            _llmServiceMock.Object,
+            _cacheServiceMock.Object,
+            _promptTemplateMock.Object,
+            _configurationMock.Object,
+            _loggerMock.Object
         );
     }
 
@@ -99,7 +103,7 @@ public class SetupGuideServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Mock embedding service to return empty results (no RAG data)
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult
             {
@@ -139,7 +143,7 @@ public class SetupGuideServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Mock embedding service
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult
             {
@@ -148,7 +152,7 @@ public class SetupGuideServiceTests : IDisposable
             });
 
         // Mock Qdrant service to return setup instructions
-        _mockQdrantService
+        _qdrantServiceMock
             .Setup(x => x.SearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<float[]>(),
@@ -172,7 +176,7 @@ Place the game board in the center where all players can reach it.
 STEP 2: Distribute Player Materials
 Each player takes a player board and starting components.";
 
-        _mockLlmService
+        _llmServiceMock
             .Setup(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(llmResponse, new LlmUsage(100, 80, 180)));
 
@@ -236,7 +240,7 @@ Each player takes a player board and starting components.";
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
 
-        _mockEmbeddingService
+        _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = false, Embeddings = new List<float[]>() });
 

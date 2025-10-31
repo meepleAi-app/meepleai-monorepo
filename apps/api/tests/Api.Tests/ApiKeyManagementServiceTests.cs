@@ -9,6 +9,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -19,10 +20,13 @@ namespace Api.Tests;
 /// </summary>
 public class ApiKeyManagementServiceTests : IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly SqliteConnection _connection;
 
-    public ApiKeyManagementServiceTests()
+    public ApiKeyManagementServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();
     }

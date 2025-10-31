@@ -4,6 +4,7 @@ using System.Text.Json;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -17,13 +18,16 @@ namespace Api.Tests;
 /// </summary>
 public class ChessAgentIntegrationTests : IntegrationTestBase
 {
+    private readonly ITestOutputHelper _output;
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    public ChessAgentIntegrationTests(WebApplicationFactoryFixture factory) : base(factory)
+    public ChessAgentIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
     {
+        _output = output;
     }
 
     /// <summary>
@@ -35,7 +39,8 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
     ///   And sources are cited
     ///   And confidence is reported
     /// </summary>
-    [Fact(Skip = "Integration test - requires Qdrant and OpenRouter")]
+    // Note: Integration test - ensure Qdrant and OpenRouter services running
+    [Fact]
     public async Task AskChessAgent_SimpleRulesQuestion_ReturnsAnswerWithSources()
     {
         // Given: User is authenticated
@@ -84,7 +89,8 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
     ///   When user asks about the Italian Game
     ///   Then explanation includes key moves and ideas
     /// </summary>
-    [Fact(Skip = "Integration test - requires Qdrant and OpenRouter")]
+    // Note: Integration test - ensure Qdrant and OpenRouter services running
+    [Fact]
     public async Task AskChessAgent_OpeningQuestion_ReturnsExplanation()
     {
         // Given: User is authenticated
@@ -119,7 +125,8 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
     ///   Then analysis includes evaluation and key considerations
     ///   And suggested moves are provided
     /// </summary>
-    [Fact(Skip = "Integration test - requires Qdrant and OpenRouter")]
+    // Note: Integration test - ensure Qdrant and OpenRouter services running
+    [Fact]
     public async Task AskChessAgent_PositionAnalysisWithFEN_ReturnsAnalysisAndMoves()
     {
         // Given: User is authenticated
@@ -160,7 +167,8 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
     ///   Then response includes warning about invalid FEN
     ///   And still attempts to answer the question
     /// </summary>
-    [Fact(Skip = "Integration test - requires Qdrant and OpenRouter")]
+    // Note: Integration test - ensure Qdrant and OpenRouter services running
+    [Fact]
     public async Task AskChessAgent_InvalidFEN_ReturnsWarning()
     {
         // Given: User is authenticated
@@ -197,7 +205,8 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
     ///   When user asks "What is a fork in chess?"
     ///   Then explanation includes definition and examples
     /// </summary>
-    [Fact(Skip = "Integration test - requires Qdrant and OpenRouter")]
+    // Note: Integration test - ensure Qdrant and OpenRouter services running
+    [Fact]
     public async Task AskChessAgent_TacticalQuestion_ReturnsExplanationWithExamples()
     {
         // Given: User is authenticated
@@ -283,7 +292,8 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
     ///   When user asks a question
     ///   Then response includes prompt, completion, and total token counts
     /// </summary>
-    [Fact(Skip = "Integration test - requires Qdrant and OpenRouter")]
+    // Note: Integration test - ensure Qdrant and OpenRouter services running
+    [Fact]
     public async Task AskChessAgent_ReturnsTokenUsage()
     {
         // Given: User is authenticated
@@ -320,7 +330,8 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
     ///   Then cached response is returned
     ///   And token usage remains the same (cached)
     /// </summary>
-    [Fact(Skip = "Integration test - requires Qdrant and OpenRouter")]
+    // Note: Integration test - ensure Qdrant and OpenRouter services running
+    [Fact]
     public async Task AskChessAgent_SameQuestionTwice_ReturnsCachedResponse()
     {
         // Given: User is authenticated

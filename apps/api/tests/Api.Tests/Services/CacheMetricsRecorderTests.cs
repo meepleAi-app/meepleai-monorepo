@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace MeepleAI.Api.Tests.Services;
 
@@ -18,10 +19,13 @@ namespace MeepleAI.Api.Tests.Services;
 /// </summary>
 public class CacheMetricsRecorderTests
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<ILogger<CacheMetricsRecorder>> _mockLogger;
 
-    public CacheMetricsRecorderTests()
+    public CacheMetricsRecorderTests(ITestOutputHelper output)
     {
+        _output = output;
         _mockLogger = new Mock<ILogger<CacheMetricsRecorder>>();
     }
 

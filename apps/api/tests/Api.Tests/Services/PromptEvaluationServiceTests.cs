@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests.Services;
 
@@ -24,6 +25,8 @@ namespace Api.Tests.Services;
 /// </summary>
 public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
 {
+    private readonly ITestOutputHelper _output;
+
     private readonly Mock<IRagService> _ragServiceMock;
     private readonly Mock<IPromptTemplateService> _promptServiceMock;
     private readonly Mock<ILogger<PromptEvaluationService>> _loggerMock;
@@ -32,8 +35,9 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
     private readonly SqliteConnection _connection;
     private string _testDatasetPath = null!;
 
-    public PromptEvaluationServiceTests()
+    public PromptEvaluationServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         // Setup in-memory SQLite database
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Api.Tests;
 
@@ -21,20 +22,23 @@ namespace Api.Tests;
 /// </summary>
 public class OllamaLlmServiceTests
 {
-    private readonly Mock<ILogger<OllamaLlmService>> _mockLogger;
-    private readonly Mock<IConfiguration> _mockConfig;
-    private readonly Mock<HttpMessageHandler> _mockHttpHandler;
-    private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
+    private readonly ITestOutputHelper _output;
 
-    public OllamaLlmServiceTests()
+    private readonly Mock<ILogger<OllamaLlmService>> _mockLogger;
+    private readonly Mock<IConfiguration> _configMock;
+    private readonly Mock<HttpMessageHandler> _httpHandlerMock;
+    private readonly Mock<IHttpClientFactory> _httpClientFactoryMock;
+
+    public OllamaLlmServiceTests(ITestOutputHelper output)
     {
+        _output = output;
         _mockLogger = new Mock<ILogger<OllamaLlmService>>();
-        _mockConfig = new Mock<IConfiguration>();
-        _mockHttpHandler = new Mock<HttpMessageHandler>();
-        _mockHttpClientFactory = new Mock<IHttpClientFactory>();
+        _configMock = new Mock<IConfiguration>();
+        _httpHandlerMock = new Mock<HttpMessageHandler>();
+        _httpClientFactoryMock = new Mock<IHttpClientFactory>();
 
         // Default configuration
-        _mockConfig.Setup(c => c["OLLAMA_URL"]).Returns("http://ollama:11434");
+        _configMock.Setup(c => c["OLLAMA_URL"]).Returns("http://ollama:11434");
     }
 
     [Fact]
@@ -223,7 +227,7 @@ public class OllamaLlmServiceTests
         // Arrange
         var service = CreateService();
 
-        _mockHttpHandler.Protected()
+        _httpHandlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
@@ -244,7 +248,7 @@ public class OllamaLlmServiceTests
         // Arrange
         var service = CreateService();
 
-        _mockHttpHandler.Protected()
+        _httpHandlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
@@ -294,7 +298,7 @@ public class OllamaLlmServiceTests
     public async Task GenerateCompletionAsync_WithCustomOllamaUrl_UsesConfiguredUrl()
     {
         // Arrange
-        _mockConfig.Setup(c => c["OLLAMA_URL"]).Returns("http://custom-ollama:9999");
+        _configMock.Setup(c => c["OLLAMA_URL"]).Returns("http://custom-ollama:9999");
         var service = CreateService();
 
         var ollamaResponse = new
@@ -305,7 +309,7 @@ public class OllamaLlmServiceTests
         };
 
         HttpRequestMessage? capturedRequest = null;
-        _mockHttpHandler.Protected()
+        _httpHandlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
@@ -329,7 +333,7 @@ public class OllamaLlmServiceTests
     public async Task GenerateCompletionAsync_WithNullOllamaUrl_UsesDefaultUrl()
     {
         // Arrange
-        _mockConfig.Setup(c => c["OLLAMA_URL"]).Returns((string?)null);
+        _configMock.Setup(c => c["OLLAMA_URL"]).Returns((string?)null);
         var service = CreateService();
 
         var ollamaResponse = new
@@ -340,7 +344,7 @@ public class OllamaLlmServiceTests
         };
 
         HttpRequestMessage? capturedRequest = null;
-        _mockHttpHandler.Protected()
+        _httpHandlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
@@ -376,7 +380,7 @@ public class OllamaLlmServiceTests
         };
 
         string? capturedRequestBody = null;
-        _mockHttpHandler.Protected()
+        _httpHandlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
@@ -427,7 +431,7 @@ public class OllamaLlmServiceTests
         var cts = new CancellationTokenSource();
         cts.Cancel(); // Pre-cancelled
 
-        _mockHttpHandler.Protected()
+        _httpHandlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
@@ -497,16 +501,16 @@ public class OllamaLlmServiceTests
     /// </summary>
     private OllamaLlmService CreateService()
     {
-        var httpClient = new HttpClient(_mockHttpHandler.Object)
+        var httpClient = new HttpClient(_httpHandlerMock.Object)
         {
             BaseAddress = new Uri("http://ollama:11434")
         };
 
-        _mockHttpClientFactory
+        _httpClientFactoryMock
             .Setup(f => f.CreateClient("Ollama"))
             .Returns(httpClient);
 
-        return new OllamaLlmService(_mockHttpClientFactory.Object, _mockConfig.Object, _mockLogger.Object);
+        return new OllamaLlmService(_httpClientFactoryMock.Object, _configMock.Object, _mockLogger.Object);
     }
 
     /// <summary>
@@ -514,7 +518,7 @@ public class OllamaLlmServiceTests
     /// </summary>
     private void SetupHttpResponse(HttpStatusCode statusCode, string content)
     {
-        _mockHttpHandler.Protected()
+        _httpHandlerMock.Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),

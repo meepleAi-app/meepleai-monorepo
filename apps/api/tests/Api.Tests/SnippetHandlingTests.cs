@@ -186,8 +186,8 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "How many players can play this game?");
 
         // Then: Returns "Not specified" to avoid hallucination
-        Assert.Equal("Not specified", result.answer);
-        Assert.Equal(2, result.snippets.Count); // Snippets are still provided for transparency
+        result.answer.Should().Be("Not specified");
+        result.snippets.Count.Should().Be(2); // Snippets are still provided for transparency
     }
 
     [Fact]
@@ -214,7 +214,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "What is the airspeed velocity of an unladen swallow?");
 
         // Then: Returns "Not specified" with no snippets
-        Assert.Equal("Not specified", result.answer);
+        result.answer.Should().Be("Not specified");
         result.snippets.Should().BeEmpty();
         mockLlm.Verify(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -243,7 +243,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "How do I win?");
 
         // Then: Returns "Not specified" gracefully
-        Assert.Equal("Not specified", result.answer);
+        result.answer.Should().Be("Not specified");
         result.snippets.Should().BeEmpty();
     }
 
@@ -280,7 +280,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "Unknown question");
 
         // Then: Preserves exact "Not specified" text (not "NOT SPECIFIED" or "not specified")
-        Assert.Equal("Not specified", result.answer);
+        result.answer.Should().Be("Not specified");
     }
 
     #endregion
@@ -325,18 +325,18 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "How many players?");
 
         // Then: Returns answer with all snippets
-        Assert.NotEqual("Not specified", result.answer);
-        Assert.Contains("2-4 players", result.answer);
-        Assert.Equal(3, result.snippets.Count);
+        result.answer.Should().NotBe("Not specified");
+        result.answer.Should().Contain("2-4 players");
+        result.snippets.Count.Should().Be(3);
 
         // Verify snippet details
-        Assert.Equal("The game is designed for 2-4 players.", result.snippets[0].text);
-        Assert.Equal("PDF:pdf-123", result.snippets[0].source);
-        Assert.Equal(3, result.snippets[0].page);
+        result.snippets[0].text.Should().Be("The game is designed for 2-4 players.");
+        result.snippets[0].source.Should().Be("PDF:pdf-123");
+        result.snippets[0].page.Should().Be(3);
 
-        Assert.Equal("Each player starts with 7 cards.", result.snippets[1].text);
-        Assert.Equal("PDF:pdf-123", result.snippets[1].source);
-        Assert.Equal(4, result.snippets[1].page);
+        result.snippets[1].text.Should().Be("Each player starts with 7 cards.");
+        result.snippets[1].source.Should().Be("PDF:pdf-123");
+        result.snippets[1].page.Should().Be(4);
     }
 
     [Fact]
@@ -376,10 +376,10 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "Player count variations?");
 
         // Then: Returns snippets from all PDF sources
-        Assert.Equal(3, result.snippets.Count);
-        Assert.Equal("PDF:pdf-basic", result.snippets[0].source);
-        Assert.Equal("PDF:pdf-advanced", result.snippets[1].source);
-        Assert.Equal("PDF:pdf-tournament", result.snippets[2].source);
+        result.snippets.Count.Should().Be(3);
+        result.snippets[0].source.Should().Be("PDF:pdf-basic");
+        result.snippets[1].source.Should().Be("PDF:pdf-advanced");
+        result.snippets[2].source.Should().Be("PDF:pdf-tournament");
     }
 
     [Fact]
@@ -418,10 +418,10 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "test");
 
         // Then: Snippets maintain the order from search results (Qdrant already sorts by score)
-        Assert.Equal(3, result.snippets.Count);
-        Assert.Equal("Low relevance text.", result.snippets[0].text);
-        Assert.Equal("Highest relevance text.", result.snippets[1].text);
-        Assert.Equal("Medium relevance text.", result.snippets[2].text);
+        result.snippets.Count.Should().Be(3);
+        result.snippets[0].text.Should().Be("Low relevance text.");
+        result.snippets[1].text.Should().Be("Highest relevance text.");
+        result.snippets[2].text.Should().Be("Medium relevance text.");
     }
 
     [Fact]
@@ -457,8 +457,8 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "test");
 
         // Then: Source includes "PDF:" prefix
-        Assert.Single(result.snippets);
-        Assert.Equal("PDF:abc-123-def", result.snippets[0].source);
+        result.snippets.Should().ContainSingle();
+        result.snippets[0].source.Should().Be("PDF:abc-123-def");
     }
 
     #endregion
@@ -500,9 +500,9 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "test");
 
         // Then: Token usage is accurately reported
-        Assert.Equal(523, result.promptTokens);
-        Assert.Equal(87, result.completionTokens);
-        Assert.Equal(610, result.totalTokens);
+        result.promptTokens.Should().Be(523);
+        result.completionTokens.Should().Be(87);
+        result.totalTokens.Should().Be(610);
     }
 
     [Fact]
@@ -541,7 +541,7 @@ CRITICAL INSTRUCTIONS:
 
         // Then: Confidence score is the maximum from search results
         result.confidence.Should().NotBeNull();
-        Assert.Equal(0.92, result.confidence.Value, precision: 2);
+        result.confidence.Value, precision: 2.Should().Be(0.92);
     }
 
     [Fact]
@@ -586,9 +586,9 @@ CRITICAL INSTRUCTIONS:
 
         // Then: Metadata is included in response
         result.metadata.Should().NotBeNull();
-        Assert.Equal("anthropic/claude-3-5-sonnet-20241022", result.metadata["model"]);
-        Assert.Equal("end_turn", result.metadata["finish_reason"]);
-        Assert.Equal("fp_123abc", result.metadata["system_fingerprint"]);
+        result.metadata["model"].Should().Be("anthropic/claude-3-5-sonnet-20241022");
+        result.metadata["finish_reason"].Should().Be("end_turn");
+        result.metadata["system_fingerprint"].Should().Be("fp_123abc");
     }
 
     #endregion
@@ -621,7 +621,7 @@ CRITICAL INSTRUCTIONS:
 
         // Then: Handles without error
         result.Should().NotBeNull();
-        Assert.Equal("Not specified", result.answer); // No results found
+        result.answer.Should().Be("Not specified"); // No results found
     }
 
     [Fact]
@@ -658,7 +658,7 @@ CRITICAL INSTRUCTIONS:
 
         // Then: Handles correctly without escaping issues
         result.Should().NotBeNull();
-        Assert.Contains("special", result.answer);
+        result.answer.Should().Contain("special");
     }
 
     [Fact]
@@ -696,7 +696,7 @@ CRITICAL INSTRUCTIONS:
 
         // Then: Answer is preserved (no artificial truncation at service level)
         result.Should().NotBeNull();
-        Assert.True(result.answer.Length > 1000); // Long answer preserved
+        result.answer.Length > 1000.Should().BeTrue(); // Long answer preserved
     }
 
     [Fact]
@@ -769,18 +769,18 @@ CRITICAL INSTRUCTIONS:
 
         // Then: System prompt contains anti-hallucination instructions
         capturedSystemPrompt.Should().NotBeNull();
-        Assert.Contains("board game rules assistant", capturedSystemPrompt, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("NOT in the provided context", capturedSystemPrompt, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Not specified", capturedSystemPrompt);
-        Assert.Contains("Do NOT hallucinate", capturedSystemPrompt, StringComparison.OrdinalIgnoreCase);
+        capturedSystemPrompt, StringComparison.OrdinalIgnoreCase.Should().Contain("board game rules assistant");
+        capturedSystemPrompt, StringComparison.OrdinalIgnoreCase.Should().Contain("NOT in the provided context");
+        capturedSystemPrompt.Should().Contain("Not specified");
+        capturedSystemPrompt, StringComparison.OrdinalIgnoreCase.Should().Contain("Do NOT hallucinate");
 
         // User prompt contains context with page numbers
         capturedUserPrompt.Should().NotBeNull();
-        Assert.Contains("CONTEXT FROM RULEBOOK", capturedUserPrompt, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("[Page 5]", capturedUserPrompt);
-        Assert.Contains("Rule text from page 5.", capturedUserPrompt);
-        Assert.Contains("QUESTION", capturedUserPrompt, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Test question?", capturedUserPrompt);
+        capturedUserPrompt, StringComparison.OrdinalIgnoreCase.Should().Contain("CONTEXT FROM RULEBOOK");
+        capturedUserPrompt.Should().Contain("[Page 5]");
+        capturedUserPrompt.Should().Contain("Rule text from page 5.");
+        capturedUserPrompt, StringComparison.OrdinalIgnoreCase.Should().Contain("QUESTION");
+        capturedUserPrompt.Should().Contain("Test question?");
     }
 
     [Fact]
@@ -821,9 +821,9 @@ CRITICAL INSTRUCTIONS:
 
         // Then: Context includes page numbers for each chunk
         capturedUserPrompt.Should().NotBeNull();
-        Assert.Contains("[Page 2]", capturedUserPrompt);
-        Assert.Contains("[Page 8]", capturedUserPrompt);
-        Assert.Contains("[Page 15]", capturedUserPrompt);
+        capturedUserPrompt.Should().Contain("[Page 2]");
+        capturedUserPrompt.Should().Contain("[Page 8]");
+        capturedUserPrompt.Should().Contain("[Page 15]");
     }
 
     #endregion

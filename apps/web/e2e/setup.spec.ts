@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/auth';
 
 test.describe('Setup Guide Page', () => {
   test('should require authentication', async ({ page }) => {
@@ -25,25 +25,13 @@ test.describe('Setup Guide Page', () => {
   });
 
   test.describe('Authenticated User Flow', () => {
-    test.beforeEach(async ({ page }) => {
-      // Login as demo user
-      await page.goto('/');
-
-      // Fill login form
-      await page.fill('input[type="email"]', 'user@meepleai.dev');
-      await page.fill('input[type="password"]', 'Demo123!');
-
-      // Submit login
-      await page.click('button[type="submit"]');
-
-      // Wait for successful login
-      await page.waitForURL('/', { timeout: 5000 });
-
-      // Navigate to setup page
+    test.beforeEach(async ({ userPage: page }) => {
+      // Navigate to setup page (already authenticated as user)
       await page.goto('/setup');
+      await page.waitForLoadState('networkidle');
     });
 
-    test('should show setup guide interface when authenticated', async ({ page }) => {
+    test('should display setup guide interface', async ({ userPage: page }) => {
       // Check header is present
       await expect(page.getByRole('heading', { name: 'Game Setup Guide' })).toBeVisible();
 
@@ -58,7 +46,7 @@ test.describe('Setup Guide Page', () => {
       await expect(page.getByRole('button', { name: /Generate Setup Guide/i })).toBeVisible();
     });
 
-    test('should load available games', async ({ page }) => {
+    test('should load available games', async ({ userPage: page }) => {
       // Wait for games to load
       const gameSelect = page.getByLabel('Game:');
       await expect(gameSelect).toBeVisible();
@@ -71,7 +59,7 @@ test.describe('Setup Guide Page', () => {
       expect(options).toBeGreaterThan(1); // 1 placeholder + at least 1 game
     });
 
-    test('should auto-select first game', async ({ page }) => {
+    test('should auto-select first game', async ({ userPage: page }) => {
       // Wait for games to load
       await page.waitForTimeout(1000);
 
@@ -83,7 +71,7 @@ test.describe('Setup Guide Page', () => {
       expect(selectedValue).not.toBe('');
     });
 
-    test('should generate setup guide when button is clicked', async ({ page }) => {
+    test('should generate setup guide when button is clicked', async ({ userPage: page }) => {
       // Wait for games to load
       await page.waitForTimeout(1000);
 
@@ -112,7 +100,7 @@ test.describe('Setup Guide Page', () => {
       await expect(page.getByText(/Estimated setup time:/i)).toBeVisible();
     });
 
-    test('should display setup steps with checkboxes', async ({ page }) => {
+    test('should display setup steps with checkboxes', async ({ userPage: page }) => {
       // Generate setup guide first
       await page.waitForTimeout(1000);
       const generateButton = page.getByRole('button', { name: /Generate Setup Guide/i });
@@ -134,7 +122,7 @@ test.describe('Setup Guide Page', () => {
       }
     });
 
-    test('should toggle step completion when checkbox is clicked', async ({ page }) => {
+    test('should toggle step completion when checkbox is clicked', async ({ userPage: page }) => {
       // Generate setup guide
       await page.waitForTimeout(1000);
       await page.getByRole('button', { name: /Generate Setup Guide/i }).click();
@@ -158,7 +146,7 @@ test.describe('Setup Guide Page', () => {
       await expect(page.getByText(/Progress: 0 \//i)).toBeVisible();
     });
 
-    test('should show progress percentage', async ({ page }) => {
+    test('should show progress percentage', async ({ userPage: page }) => {
       // Generate setup guide
       await page.waitForTimeout(1000);
       await page.getByRole('button', { name: /Generate Setup Guide/i }).click();
@@ -175,7 +163,7 @@ test.describe('Setup Guide Page', () => {
       expect(progressText).not.toBe('0%');
     });
 
-    test('should show completion message when all steps are checked', async ({ page }) => {
+    test('should show completion message when all steps are checked', async ({ userPage: page }) => {
       // Generate setup guide
       await page.waitForTimeout(1000);
       await page.getByRole('button', { name: /Generate Setup Guide/i }).click();
@@ -197,7 +185,7 @@ test.describe('Setup Guide Page', () => {
       await expect(page.getByText('100%')).toBeVisible();
     });
 
-    test('should show references button for steps with citations', async ({ page }) => {
+    test('should show references button for steps with citations', async ({ userPage: page }) => {
       // Generate setup guide
       await page.waitForTimeout(1000);
       await page.getByRole('button', { name: /Generate Setup Guide/i }).click();
@@ -211,7 +199,7 @@ test.describe('Setup Guide Page', () => {
       expect(count).toBeGreaterThan(0);
     });
 
-    test('should open citation modal when reference button is clicked', async ({ page }) => {
+    test('should open citation modal when reference button is clicked', async ({ userPage: page }) => {
       // Generate setup guide
       await page.waitForTimeout(1000);
       await page.getByRole('button', { name: /Generate Setup Guide/i }).click();
@@ -229,7 +217,7 @@ test.describe('Setup Guide Page', () => {
       await expect(closeButton).toBeVisible();
     });
 
-    test('should close citation modal when close button is clicked', async ({ page }) => {
+    test('should close citation modal when close button is clicked', async ({ userPage: page }) => {
       // Generate setup guide and open modal
       await page.waitForTimeout(1000);
       await page.getByRole('button', { name: /Generate Setup Guide/i }).click();
@@ -245,7 +233,7 @@ test.describe('Setup Guide Page', () => {
       await expect(page.getByRole('heading', { name: 'References' })).not.toBeVisible();
     });
 
-    test('should close citation modal when clicking outside', async ({ page }) => {
+    test('should close citation modal when clicking outside', async ({ userPage: page }) => {
       // Generate setup guide and open modal
       await page.waitForTimeout(1000);
       await page.getByRole('button', { name: /Generate Setup Guide/i }).click();
@@ -263,7 +251,7 @@ test.describe('Setup Guide Page', () => {
       await expect(page.getByRole('heading', { name: 'References' })).not.toBeVisible();
     });
 
-    test('should reset progress when reset button is clicked', async ({ page }) => {
+    test('should reset progress when reset button is clicked', async ({ userPage: page }) => {
       // Generate setup guide
       await page.waitForTimeout(1000);
       await page.getByRole('button', { name: /Generate Setup Guide/i }).click();
@@ -293,7 +281,7 @@ test.describe('Setup Guide Page', () => {
       }
     });
 
-    test('should show empty state before generating guide', async ({ page }) => {
+    test('should show empty state before generating guide', async ({ userPage: page }) => {
       // Should see empty state
       await expect(page.getByText('No Setup Guide Yet')).toBeVisible();
       await expect(page.getByText(/Select a game and click "Generate Setup Guide"/i)).toBeVisible();
@@ -302,7 +290,7 @@ test.describe('Setup Guide Page', () => {
       await expect(page.locator('text=🎲')).toBeVisible();
     });
 
-    test('should disable generate button when no game selected', async ({ page }) => {
+    test('should disable generate button when no game selected', async ({ userPage: page }) => {
       // Wait for page to load
       await page.waitForTimeout(1000);
 
@@ -315,7 +303,7 @@ test.describe('Setup Guide Page', () => {
       await expect(generateButton).toBeDisabled();
     });
 
-    test('should show loading indicator while generating', async ({ page }) => {
+    test('should show loading indicator while generating', async ({ userPage: page }) => {
       // Wait and generate
       await page.waitForTimeout(1000);
       const generateButton = page.getByRole('button', { name: /Generate Setup Guide/i });
@@ -329,7 +317,7 @@ test.describe('Setup Guide Page', () => {
       await expect(page.getByRole('button', { name: 'Generating...' })).toBeVisible();
     });
 
-    test('should mark optional steps with badge', async ({ page }) => {
+    test('should mark optional steps with badge', async ({ userPage: page }) => {
       // Generate setup guide
       await page.waitForTimeout(1000);
       await page.getByRole('button', { name: /Generate Setup Guide/i }).click();
@@ -343,14 +331,14 @@ test.describe('Setup Guide Page', () => {
       console.log(`Found ${count} optional steps`);
     });
 
-    test('should display AI confidence score', async ({ page }) => {
+    test('should display AI confidence score', async ({ userPage: page }) => {
       // Generate setup guide
       await page.waitForTimeout(1000);
       await page.getByRole('button', { name: /Generate Setup Guide/i }).click();
       await page.waitForSelector('text=Progress:', { timeout: 15000 });
 
       // Look for AI confidence (if present)
-      const confidenceText = page.locator('text=/AI Confidence: \\d+%/');
+      const confidenceText = page.locator('text=/AI Confidence: \\d+%/'));
 
       // May or may not be visible depending on API response
       const isVisible = await confidenceText.isVisible().catch(() => false);

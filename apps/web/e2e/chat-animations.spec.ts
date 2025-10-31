@@ -14,26 +14,10 @@
  * @module e2e/chat-animations
  */
 
-import { test, expect, Page, BrowserContext } from '@playwright/test';
+import { test, expect, Page, BrowserContext } from './fixtures/auth';
 
 /**
- * Helper: Login as test user
- */
-async function loginAsTestUser(page: Page): Promise<void> {
-  await page.goto('/');
-
-  // Fill login form
-  await page.fill('input[type="email"]', 'user@meepleai.dev');
-  await page.fill('input[type="password"]', 'Demo123!');
-  await page.click('button[type="submit"]');
-
-  // Wait for redirect to home
-  await expect(page).toHaveURL('/');
-  await expect(page.getByText('Benvenuto in MeepleAI')).toBeVisible();
-}
-
-/**
- * Helper: Navigate to chat page after login
+ * Helper: Navigate to chat page (auth handled by fixture)
  */
 async function navigateToChat(page: Page): Promise<void> {
   await page.goto('/chat');
@@ -87,9 +71,8 @@ async function measureFPS(page: Page, durationMs: number = 1000): Promise<number
 }
 
 test.describe('Chat Loading States and Animations (CHAT-04)', () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAsTestUser(page);
-  });
+  test.beforeEach(async ({ userPage: page }) => {
+      });
 
   /**
    * Test 1: Skeleton loaders on initial page load
@@ -97,7 +80,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
    * Verifies that skeleton loaders appear during initial data fetching
    * and disappear once real content is loaded.
    */
-  test('shows skeleton loaders during initial page load', async ({ page }) => {
+  test('shows skeleton loaders during initial page load', async ({ userPage: page }) => {
     // Start navigation but don't wait for full load
     const navigationPromise = page.goto('/chat');
 
@@ -128,7 +111,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
    *
    * Verifies the games skeleton has correct structure and accessibility.
    */
-  test('shows games skeleton with correct variant', async ({ page }) => {
+  test('shows games skeleton with correct variant', async ({ userPage: page }) => {
     // Intercept games request to delay it
     await page.route('**/api/v1/games', async (route) => {
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -155,7 +138,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
    *
    * Verifies agents skeleton appears when game is selected.
    */
-  test('shows agents skeleton when loading agents', async ({ page }) => {
+  test('shows agents skeleton when loading agents', async ({ userPage: page }) => {
     await navigateToChat(page);
     await waitForGamesToLoad(page);
 
@@ -186,7 +169,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
    *
    * Verifies chat history skeleton appears when loading chat list.
    */
-  test('shows chat history skeleton when loading chats', async ({ page }) => {
+  test('shows chat history skeleton when loading chats', async ({ userPage: page }) => {
     await navigateToChat(page);
     await waitForGamesToLoad(page);
 
@@ -219,7 +202,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
    *
    * Verifies messages skeleton appears when loading chat history.
    */
-  test('shows messages skeleton when loading chat history', async ({ page }) => {
+  test('shows messages skeleton when loading chat history', async ({ userPage: page }) => {
     await navigateToChat(page);
     await waitForGamesToLoad(page);
 
@@ -262,7 +245,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
    *
    * Verifies typing indicator appears with agent name during AI response.
    */
-  test('shows typing indicator when AI is generating response', async ({ page }) => {
+  test('shows typing indicator when AI is generating response', async ({ userPage: page }) => {
     await navigateToChat(page);
     await waitForGamesToLoad(page);
 
@@ -323,7 +306,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
    *
    * Verifies user messages slide in from the right.
    */
-  test('animates user messages from right', async ({ page }) => {
+  test('animates user messages from right', async ({ userPage: page }) => {
     await navigateToChat(page);
     await waitForGamesToLoad(page);
 
@@ -368,7 +351,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
    *
    * Verifies AI messages slide in from the left.
    */
-  test('animates AI messages from left', async ({ page }) => {
+  test('animates AI messages from left', async ({ userPage: page }) => {
     await navigateToChat(page);
     await waitForGamesToLoad(page);
 
@@ -415,7 +398,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
    *
    * Verifies messages appear with stagger delay when loading chat history.
    */
-  test('staggers message animations when loading chat history', async ({ page }) => {
+  test('staggers message animations when loading chat history', async ({ userPage: page }) => {
     await navigateToChat(page);
     await waitForGamesToLoad(page);
 
@@ -470,7 +453,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
    *
    * Verifies send button shows loading state when sending message.
    */
-  test('send button shows loading state when sending message', async ({ page }) => {
+  test('send button shows loading state when sending message', async ({ userPage: page }) => {
     await navigateToChat(page);
     await waitForGamesToLoad(page);
 
@@ -520,7 +503,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
    *
    * Verifies new chat button shows loading state when creating chat.
    */
-  test('new chat button shows loading state', async ({ page }) => {
+  test('new chat button shows loading state', async ({ userPage: page }) => {
     await navigateToChat(page);
     await waitForGamesToLoad(page);
 
@@ -562,7 +545,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
    *
    * Verifies new messages trigger smooth scroll to bottom.
    */
-  test('smoothly scrolls to latest message', async ({ page }) => {
+  test('smoothly scrolls to latest message', async ({ userPage: page }) => {
     await navigateToChat(page);
     await waitForGamesToLoad(page);
 
@@ -619,7 +602,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
    *
    * Verifies animations respect prefers-reduced-motion setting.
    */
-  test('respects prefers-reduced-motion setting', async ({ page }) => {
+  test('respects prefers-reduced-motion setting', async ({ userPage: page }) => {
     // Emulate reduced motion preference
     await page.emulateMedia({ reducedMotion: 'reduce' });
 
@@ -690,7 +673,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
    *
    * Verifies animations maintain acceptable frame rate (>55 FPS).
    */
-  test('animations maintain 60fps performance', async ({ page }) => {
+  test('animations maintain 60fps performance', async ({ userPage: page }) => {
     await navigateToChat(page);
     await waitForGamesToLoad(page);
 
@@ -735,7 +718,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
    *
    * Verifies that when count > 1, multiple skeleton items render.
    */
-  test('renders multiple skeleton items when count > 1', async ({ page }) => {
+  test('renders multiple skeleton items when count > 1', async ({ userPage: page }) => {
     await navigateToChat(page);
     await waitForGamesToLoad(page);
 
@@ -771,7 +754,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
    *
    * Verifies stop button is present and functional during AI response.
    */
-  test('shows stop button during streaming response', async ({ page }) => {
+  test('shows stop button during streaming response', async ({ userPage: page }) => {
     await navigateToChat(page);
     await waitForGamesToLoad(page);
 

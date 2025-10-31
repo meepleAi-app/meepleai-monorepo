@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures/auth';
 
 /**
  * CHAT-03: Multi-document context switching in chat interface
@@ -13,21 +13,10 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('CHAT-03: Multi-game chat context switching', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to home and login
-    await page.goto('/');
-
-    // Login with demo user
-    await page.fill('input[name="email"]', 'user@meepleai.dev');
-    await page.fill('input[name="password"]', 'Demo123!');
-    await page.click('button[type="submit"]:has-text("Login")');
-
-    // Wait for successful login (redirected to homepage or chat available)
-    await page.waitForURL('/');
-
-    // Navigate to chat page
+  test.beforeEach(async ({ userPage: page }) => {
+    // Navigate to chat (already authenticated as user)
     await page.goto('/chat');
-    await page.waitForSelector('h2:has-text("MeepleAI Chat")');
+    await page.waitForLoadState('networkidle');
   });
 
   /**
@@ -41,7 +30,7 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
    *   Then Chess conversation history is restored
    *   And Checkers history is preserved when switching back
    */
-  test('preserves conversation history when switching between games', async ({ page }) => {
+  test('preserves conversation history when switching between games', async ({ userPage: page }) => {
     // Step 1: Select Chess game
     const gameSelector = page.locator('#gameSelect');
     // Get the option by text and select by value
@@ -145,7 +134,7 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
    *   When user switches to different game
    *   Then badge updates to show new game name
    */
-  test('game context badge displays and updates correctly', async ({ page }) => {
+  test('game context badge displays and updates correctly', async ({ userPage: page }) => {
     const gameSelector = page.locator('#gameSelect');
     const contextBadge = page.locator('div[aria-label*="Active game context"]');
 
@@ -183,7 +172,7 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
    *   When user switches to different game
    *   Then only chats for that game are shown in sidebar
    */
-  test('chat list filters by selected game', async ({ page }) => {
+  test('chat list filters by selected game', async ({ userPage: page }) => {
     const gameSelector = page.locator('#gameSelect');
 
     // Select Chess and create a chat
@@ -230,7 +219,7 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
    *   Then each game maintains its own state
    *   And no data is lost or mixed between games
    */
-  test('rapid game switching preserves independent state', async ({ page }) => {
+  test('rapid game switching preserves independent state', async ({ userPage: page }) => {
     const gameSelector = page.locator('#gameSelect');
     const messageInput = page.locator('#message-input');
     const sendButton = page.locator('button[type="submit"][aria-label="Send message"]');
@@ -303,7 +292,7 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
    *   Then game selector is keyboard accessible
    *   And screen reader announces game context changes
    */
-  test('game selector is keyboard accessible', async ({ page }) => {
+  test('game selector is keyboard accessible', async ({ userPage: page }) => {
     const gameSelector = page.locator('#gameSelect');
 
     // Focus on game selector

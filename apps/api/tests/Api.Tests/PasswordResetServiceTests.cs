@@ -92,14 +92,14 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.RequestPasswordResetAsync(ValidEmail);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
 
         var token = await db.PasswordResetTokens.FirstOrDefaultAsync();
         token.Should().NotBeNull();
-        Assert.Equal("user1", token.UserId);
-        Assert.False(token.IsUsed);
-        Assert.Equal(FixedNow, token.CreatedAt);
-        Assert.Equal(FixedNow.AddMinutes(30), token.ExpiresAt);
+        token.UserId.Should().Be("user1");
+        token.IsUsed.Should().BeFalse();
+        token.CreatedAt.Should().Be(FixedNow);
+        token.ExpiresAt.Should().Be(FixedNow.AddMinutes(30));
 
         mockEmail.Verify(x => x.SendPasswordResetEmailAsync(
             ValidEmail,
@@ -134,10 +134,10 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.RequestPasswordResetAsync("nonexistent@example.com");
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
 
         var tokenCount = await db.PasswordResetTokens.CountAsync();
-        Assert.Equal(0, tokenCount);
+        tokenCount.Should().Be(0);
 
         mockEmail.Verify(x => x.SendPasswordResetEmailAsync(
             It.IsAny<string>(),
@@ -175,10 +175,10 @@ public class PasswordResetServiceTests : IDisposable
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            async () => await service.RequestPasswordResetAsync(null!));
+        var act = async () => await service.RequestPasswordResetAsync(null!);
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
 
-        Assert.Contains("Email is required", exception.Message);
+        exception.Which.Message.Should().Contain("Email is required");
     }
 
     /// <summary>
@@ -200,10 +200,10 @@ public class PasswordResetServiceTests : IDisposable
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            async () => await service.RequestPasswordResetAsync(string.Empty));
+        var act = async () => await service.RequestPasswordResetAsync(string.Empty);
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
 
-        Assert.Contains("Email is required", exception.Message);
+        exception.Which.Message.Should().Contain("Email is required");
     }
 
     /// <summary>
@@ -227,10 +227,10 @@ public class PasswordResetServiceTests : IDisposable
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.RequestPasswordResetAsync(ValidEmail));
+        var act = async () => await service.RequestPasswordResetAsync(ValidEmail);
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
-        Assert.Contains("Too many password reset requests", exception.Message);
+        exception.Which.Message.Should().Contain("Too many password reset requests");
 
         // Verify warning log was written
         mockLogger.Verify(
@@ -291,16 +291,16 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.RequestPasswordResetAsync(ValidEmail);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
 
         var allTokens = await db.PasswordResetTokens.ToListAsync();
-        Assert.Equal(2, allTokens.Count);
+        allTokens.Count.Should().Be(2);
 
         var oldToken = allTokens.First(t => t.Id == "existing-token");
-        Assert.True(oldToken.IsUsed);
+        oldToken.IsUsed.Should().BeTrue();
 
         var newToken = allTokens.First(t => t.Id != "existing-token");
-        Assert.False(newToken.IsUsed);
+        newToken.IsUsed.Should().BeFalse();
 
         mockEmail.Verify(x => x.SendPasswordResetEmailAsync(
             It.IsAny<string>(),
@@ -353,7 +353,7 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.RequestPasswordResetAsync(ValidEmail);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
 
         var token = await db.PasswordResetTokens.FirstOrDefaultAsync();
         token.Should().NotBeNull();
@@ -414,9 +414,9 @@ public class PasswordResetServiceTests : IDisposable
 
         // Assert
         capturedToken.Should().NotBeNull();
-        Assert.DoesNotContain("+", capturedToken);
-        Assert.DoesNotContain("/", capturedToken);
-        Assert.DoesNotContain("=", capturedToken);
+        capturedToken.Should().NotContain("+");
+        capturedToken.Should().NotContain("/");
+        capturedToken.Should().NotContain("=");
     }
 
     /// <summary>
@@ -453,11 +453,11 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.RequestPasswordResetAsync("USER@EXAMPLE.COM");
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
 
         var token = await db.PasswordResetTokens.FirstOrDefaultAsync();
         token.Should().NotBeNull();
-        Assert.Equal("user1", token.UserId);
+        token.UserId.Should().Be("user1");
     }
 
     /// <summary>
@@ -494,11 +494,11 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.RequestPasswordResetAsync("  user@example.com  ");
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
 
         var token = await db.PasswordResetTokens.FirstOrDefaultAsync();
         token.Should().NotBeNull();
-        Assert.Equal("user1", token.UserId);
+        token.UserId.Should().Be("user1");
     }
 
     #endregion
@@ -554,7 +554,7 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.ValidateResetTokenAsync(token);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     /// <summary>
@@ -579,7 +579,7 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.ValidateResetTokenAsync(null!);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     /// <summary>
@@ -604,7 +604,7 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.ValidateResetTokenAsync(string.Empty);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     /// <summary>
@@ -629,7 +629,7 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.ValidateResetTokenAsync("invalid-token-that-does-not-exist");
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     /// <summary>
@@ -683,7 +683,7 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.ValidateResetTokenAsync(token);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
 
         // Verify warning log was written
         mockLogger.Verify(
@@ -746,7 +746,7 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.ValidateResetTokenAsync(token);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
 
         // Verify information log was written
         mockLogger.Verify(
@@ -816,15 +816,15 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.ResetPasswordAsync(token, "NewPassword123");
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal("user1", result.UserId);
+        result.Success.Should().BeTrue();
+        result.UserId.Should().Be("user1");
 
         var updatedUser = await db.Users.FindAsync("user1");
-        Assert.NotEqual(originalPasswordHash, updatedUser!.PasswordHash);
-        Assert.StartsWith("v1.210000.", updatedUser.PasswordHash); // PBKDF2 format
+        updatedUser!.PasswordHash.Should().NotBe(originalPasswordHash);
+        updatedUser.PasswordHash.Should().StartWith("v1.210000."); // PBKDF2 format
 
         var updatedToken = await db.PasswordResetTokens.FindAsync("token1");
-        Assert.True(updatedToken!.IsUsed);
+        updatedToken!.IsUsed.Should().BeTrue();
     }
 
     /// <summary>
@@ -901,11 +901,11 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.ResetPasswordAsync(token, "NewPassword123");
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var sessions = await db.UserSessions.Where(s => s.UserId == "user1").ToListAsync();
-        Assert.All(sessions, s => Assert.NotNull(s.RevokedAt));
-        Assert.All(sessions, s => Assert.Equal(FixedNow, s.RevokedAt!.Value));
+        sessions.Should().OnlyContain(s => s.RevokedAt != null);
+        sessions.Should().OnlyContain(s => s.RevokedAt!.Value == FixedNow);
     }
 
     /// <summary>
@@ -927,10 +927,10 @@ public class PasswordResetServiceTests : IDisposable
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            async () => await service.ResetPasswordAsync(null!, ValidPassword));
+        var act = async () => await service.ResetPasswordAsync(null!, ValidPassword);
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
 
-        Assert.Contains("Token is required", exception.Message);
+        exception.Which.Message.Should().Contain("Token is required");
     }
 
     /// <summary>
@@ -952,10 +952,10 @@ public class PasswordResetServiceTests : IDisposable
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            async () => await service.ResetPasswordAsync(string.Empty, ValidPassword));
+        var act = async () => await service.ResetPasswordAsync(string.Empty, ValidPassword);
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
 
-        Assert.Contains("Token is required", exception.Message);
+        exception.Which.Message.Should().Contain("Token is required");
     }
 
     /// <summary>
@@ -977,10 +977,10 @@ public class PasswordResetServiceTests : IDisposable
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            async () => await service.ResetPasswordAsync("some-token", null!));
+        var act = async () => await service.ResetPasswordAsync("some-token", null!);
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
 
-        Assert.Contains("Password must be at least 8 characters", exception.Message);
+        exception.Which.Message.Should().Contain("Password must be at least 8 characters");
     }
 
     /// <summary>
@@ -1002,10 +1002,10 @@ public class PasswordResetServiceTests : IDisposable
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            async () => await service.ResetPasswordAsync("some-token", "Pass12")); // 6 chars
+        var act = async () => await service.ResetPasswordAsync("some-token", "Pass12"); // 6 chars
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
 
-        Assert.Contains("Password must be at least 8 characters", exception.Message);
+        exception.Which.Message.Should().Contain("Password must be at least 8 characters");
     }
 
     /// <summary>
@@ -1031,10 +1031,10 @@ public class PasswordResetServiceTests : IDisposable
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            async () => await service.ResetPasswordAsync("some-token", weakPassword));
+        var act = async () => await service.ResetPasswordAsync("some-token", weakPassword);
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
 
-        Assert.Contains("Password must contain at least one uppercase letter, one lowercase letter, and one number", exception.Message);
+        exception.Which.Message.Should().Contain("Password must contain at least one uppercase letter, one lowercase letter, and one number");
     }
 
     /// <summary>
@@ -1063,7 +1063,7 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.ResetPasswordAsync("invalid-token", strongPassword);
 
         // Assert - Should fail because token is invalid, not because password is weak
-        Assert.False(result.Success);
+        result.Success.Should().BeFalse();
         result.UserId.Should().BeNull();
     }
 
@@ -1090,7 +1090,7 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.ResetPasswordAsync("invalid-token-xyz", ValidPassword);
 
         // Assert
-        Assert.False(result.Success);
+        result.Success.Should().BeFalse();
         result.UserId.Should().BeNull();
 
         // Verify warning log was written
@@ -1157,11 +1157,11 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.ResetPasswordAsync(token, "NewPassword123");
 
         // Assert
-        Assert.False(result.Success);
+        result.Success.Should().BeFalse();
         result.UserId.Should().BeNull();
 
         var updatedUser = await db.Users.FindAsync("user1");
-        Assert.Equal(originalPasswordHash, updatedUser!.PasswordHash); // Password unchanged
+        updatedUser!.PasswordHash.Should().Be(originalPasswordHash); // Password unchanged
 
         // Verify warning log was written
         mockLogger.Verify(
@@ -1226,11 +1226,11 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.ResetPasswordAsync(token, "NewPassword123");
 
         // Assert
-        Assert.False(result.Success);
+        result.Success.Should().BeFalse();
         result.UserId.Should().BeNull();
 
         var updatedUser = await db.Users.FindAsync("user1");
-        Assert.Equal(originalPasswordHash, updatedUser!.PasswordHash); // Password unchanged
+        updatedUser!.PasswordHash.Should().Be(originalPasswordHash); // Password unchanged
 
         // Verify information log was written
         mockLogger.Verify(
@@ -1292,11 +1292,11 @@ public class PasswordResetServiceTests : IDisposable
         var result = await service.ResetPasswordAsync(token, "Pássw0rd"); // Unicode characters
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal("user1", result.UserId);
+        result.Success.Should().BeTrue();
+        result.UserId.Should().Be("user1");
 
         var updatedUser = await db.Users.FindAsync("user1");
-        Assert.NotEqual("original-hash", updatedUser!.PasswordHash);
+        updatedUser!.PasswordHash.Should().NotBe("original-hash");
     }
 
     #endregion

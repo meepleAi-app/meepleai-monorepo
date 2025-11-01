@@ -421,7 +421,7 @@ public class RuleSpecDiffServiceTests
         // Assert: No changes detected despite null fields
         diff.Summary.TotalChanges.Should().Be(0);
         diff.Changes.Should().ContainSingle();
-        Assert.Equal(ChangeType.Unchanged, diff.Changes.First().Type);
+        diff.Changes.First().Type.Should().Be(ChangeType.Unchanged);
     }
 
     /// <summary>
@@ -685,7 +685,7 @@ public class RuleSpecDiffServiceTests
 
         // Assert: Only modified atom in changes section
         summary.Should().Contain("~ Modified: atom2");
-        Assert.DoesNotContain("atom1", summary.Split("Changes:")[1]); // atom1 not in detailed changes
+        summary.Split("Changes:")[1].Should().NotContain("atom1"); // atom1 not in detailed changes
     }
 
     #endregion

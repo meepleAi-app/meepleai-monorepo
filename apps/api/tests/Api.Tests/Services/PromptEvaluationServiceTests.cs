@@ -415,8 +415,8 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
 
         // Assert
         progressUpdates.Count.Should().Be(2);
-        Assert.Equal((1, 2), progressUpdates[0]);
-        Assert.Equal((2, 2), progressUpdates[1]);
+        progressUpdates[0].Should().Be((1, 2));
+        progressUpdates[1].Should().Be((2, 2));
     }
 
     [Fact]

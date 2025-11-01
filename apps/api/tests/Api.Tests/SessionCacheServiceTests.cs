@@ -50,7 +50,7 @@ public class SessionCacheServiceTests
         result.Should().NotBeNull();
         result!.User.Id.Should().Be(user.Id);
         result.User.Email.Should().Be(user.Email);
-        Assert.Equal(expiresAt.ToString("O"), result.ExpiresAt.ToString("O"));
+        result.ExpiresAt.ToString("O").Should().Be(expiresAt.ToString("O"));
     }
 
     [Fact]

@@ -406,7 +406,7 @@ public class PromptTemplateConcurrencyTests : ConfigIntegrationTestBase
         var results = await Task.WhenAll(tasks);
 
         // Assert: All instances get consistent value
-        Assert.All(results, content => Assert.Equal("Distributed content", content));
+        results.Should().OnlyContain(content => content).Should().Be("Distributed content");
         results.Length.Should().Be(5);
     }
 }

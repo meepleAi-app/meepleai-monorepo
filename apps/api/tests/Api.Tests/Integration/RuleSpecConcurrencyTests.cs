@@ -345,7 +345,7 @@ public class RuleSpecConcurrencyTests : ConfigIntegrationTestBase
                 .Include(r => r.Atoms)
                 .FirstOrDefaultAsync(r => r.GameId == gameId);
             cachedSpec.Should().NotBeNull();
-            Assert.Equal("Cached rule", cachedSpec.Atoms.First().Text);
+            cachedSpec.Atoms.First().Text.Should().Be("Cached rule");
         }
 
         // Act: Update RuleSpec (should invalidate cache)
@@ -369,6 +369,6 @@ public class RuleSpecConcurrencyTests : ConfigIntegrationTestBase
 
         newSpec.Should().NotBeNull();
         newSpec.Version.Should().Be("2.0");
-        Assert.Equal("Updated rule", newSpec.Atoms.First().Text);
+        newSpec.Atoms.First().Text.Should().Be("Updated rule");
     }
 }

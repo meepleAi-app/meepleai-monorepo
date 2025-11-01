@@ -160,7 +160,7 @@ public class PromptTemplateServiceTests : IDisposable
         // Assert
         template.Should().NotBeNull();
         template.FewShotExamples.Should().NotBeEmpty();
-        Assert.All(template.FewShotExamples, example =>
+        template.FewShotExamples.Should().OnlyContain(example =>
         {
             string.IsNullOrWhiteSpace(example.Question).Should().BeFalse();
             string.IsNullOrWhiteSpace(example.Answer).Should().BeFalse();
@@ -562,7 +562,7 @@ public class PromptTemplateServiceTests : IDisposable
             .ToListAsync();
 
         Assert.Single(allVersions.Where(v => v.IsActive));
-        Assert.Equal(versionId, allVersions.First(v => v.IsActive).Id);
+        allVersions.First(v => v.IsActive).Id.Should().Be(versionId);
 
         // Verify cache invalidation
         _redisDbMock.Verify(db => db.KeyDeleteAsync(

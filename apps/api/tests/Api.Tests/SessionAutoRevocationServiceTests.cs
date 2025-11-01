@@ -549,10 +549,10 @@ public class SessionAutoRevocationServiceTests : IDisposable
         revokedCount.Should().Be(2);
 
         var allSessions = await _dbContext.UserSessions.ToListAsync();
-        Assert.Null(allSessions.First(s => s.Id == "u1-s1").RevokedAt);
-        Assert.NotNull(allSessions.First(s => s.Id == "u1-s2").RevokedAt);
-        Assert.Null(allSessions.First(s => s.Id == "u2-s1").RevokedAt);
-        Assert.NotNull(allSessions.First(s => s.Id == "u2-s2").RevokedAt);
+        allSessions.First(s => s.Id == "u1-s1").RevokedAt.Should().BeNull();
+        allSessions.First(s => s.Id == "u1-s2").RevokedAt.Should().NotBeNull();
+        allSessions.First(s => s.Id == "u2-s1").RevokedAt.Should().BeNull();
+        allSessions.First(s => s.Id == "u2-s2").RevokedAt.Should().NotBeNull();
     }
 
     #endregion

@@ -263,30 +263,30 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
         // Password should be redacted
         var passwordProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Password");
         passwordProp.Should().NotBeNull();
-        Assert.Equal("[REDACTED]", ((ScalarValue)passwordProp.Value).Value);
+        ((ScalarValue)passwordProp.Value).Value.Should().Be("[REDACTED]");
 
         // ApiKey should be redacted
         var apiKeyProp = structureValue.Properties.FirstOrDefault(p => p.Name == "ApiKey");
         apiKeyProp.Should().NotBeNull();
-        Assert.Equal("[REDACTED]", ((ScalarValue)apiKeyProp.Value).Value);
+        ((ScalarValue)apiKeyProp.Value).Value.Should().Be("[REDACTED]");
 
         // Token should be redacted
         var tokenProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Token");
         tokenProp.Should().NotBeNull();
-        Assert.Equal("[REDACTED]", ((ScalarValue)tokenProp.Value).Value);
+        ((ScalarValue)tokenProp.Value).Value.Should().Be("[REDACTED]");
 
         // Safe fields should be visible
         var usernameProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Username");
         usernameProp.Should().NotBeNull();
-        Assert.Equal("admin", ((ScalarValue)usernameProp.Value).Value);
+        ((ScalarValue)usernameProp.Value).Value.Should().Be("admin");
 
         var emailProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Email");
         emailProp.Should().NotBeNull();
-        Assert.Equal("admin@example.com", ((ScalarValue)emailProp.Value).Value);
+        ((ScalarValue)emailProp.Value).Value.Should().Be("admin@example.com");
 
         var descProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Description");
         descProp.Should().NotBeNull();
-        Assert.Equal("Safe description", ((ScalarValue)descProp.Value).Value);
+        ((ScalarValue)descProp.Value).Value.Should().Be("Safe description");
     }
 
     public void Dispose()

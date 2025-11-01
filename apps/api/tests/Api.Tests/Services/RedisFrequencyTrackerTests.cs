@@ -109,11 +109,11 @@ public class RedisFrequencyTrackerTests
         var topQueries = await tracker.GetTopQueriesAsync(gameId, 10);
 
         // Assert (Then): Returns top 10 by score, ordered descending
-        Assert.Equal(10, topQueries.Count());
-        Assert.Equal("Query 1", topQueries.First().Query); // Highest score (100)
-        Assert.Equal(100, topQueries.First().AccessCount);
-        Assert.Equal("Query 10", topQueries.Last().Query); // 10th highest (91)
-        Assert.Equal(91, topQueries.Last().AccessCount);
+        topQueries.Count().Should().Be(10);
+        topQueries.First().Query.Should().Be("Query 1"); // Highest score (100)
+        topQueries.First().AccessCount.Should().Be(100);
+        topQueries.Last().Query.Should().Be("Query 10"); // 10th highest (91)
+        topQueries.Last().AccessCount.Should().Be(91);
     }
 
     [Fact]

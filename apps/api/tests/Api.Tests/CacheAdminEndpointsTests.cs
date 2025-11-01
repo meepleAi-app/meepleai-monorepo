@@ -131,7 +131,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         result.TryGetProperty("totalHits", out var hits).Should().BeTrue();
 
         // Game1 should have 2 hits (not 5 which would include game2)
-        Assert.Equal(2, hits.GetInt64());
+        hits.GetInt64().Should().Be(2);
     }
 
     /// <summary>

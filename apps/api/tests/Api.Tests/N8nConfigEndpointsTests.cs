@@ -91,7 +91,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         using var listDocument = JsonDocument.Parse(await listResponse.Content.ReadAsStringAsync());
         var configs = listDocument.RootElement.GetProperty("configs");
-        Assert.Contains(configs.EnumerateArray(), element => element.GetProperty("id").GetString() == dto.Id);
+        element => element.GetProperty("id").GetString() == dto.Id.Should().Contain(configs.EnumerateArray());
     }
 
     /// <summary>
@@ -225,7 +225,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         // Then: System returns 404 with error message
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.Equal("Configuration not found", document.RootElement.GetProperty("error").GetString());
+        document.RootElement.GetProperty("error").GetString().Should().Be("Configuration not found");
     }
 
     /// <summary>

@@ -119,7 +119,7 @@ public class SetupGuideServiceTests : IDisposable
         result.Should().NotBeNull();
         result.gameTitle.Should().Be("Test Board Game");
         result.steps.Should().NotBeEmpty();
-        Assert.All(result.steps, step =>
+        result.steps.Should().OnlyContain(step =>
         {
             step.stepNumber > 0.Should().BeTrue();
             string.IsNullOrEmpty(step.title).Should().BeFalse();

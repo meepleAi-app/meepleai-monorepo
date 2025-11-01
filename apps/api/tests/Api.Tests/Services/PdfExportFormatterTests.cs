@@ -137,7 +137,7 @@ public class PdfExportFormatterTests
         stream.Position = 0;
         var buffer = new byte[5];
         await stream.ReadAsync(buffer, 0, 5);
-        Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(buffer));
+        System.Text.Encoding.ASCII.GetString(buffer).Should().Be("%PDF-");
     }
 
     /// <summary>
@@ -185,7 +185,7 @@ public class PdfExportFormatterTests
         stream.Position = 0;
         var buffer = new byte[5];
         await stream.ReadAsync(buffer, 0, 5);
-        Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(buffer));
+        System.Text.Encoding.ASCII.GetString(buffer).Should().Be("%PDF-");
 
         // Note: Verifying actual citation content would require PDF parsing library
         // For now, we verify the PDF is generated and contains data
@@ -217,7 +217,7 @@ public class PdfExportFormatterTests
         stream.Position = 0;
         var buffer = new byte[5];
         await stream.ReadAsync(buffer, 0, 5);
-        Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(buffer));
+        System.Text.Encoding.ASCII.GetString(buffer).Should().Be("%PDF-");
     }
 
     /// <summary>
@@ -266,7 +266,7 @@ public class PdfExportFormatterTests
         stream.Position = 0;
         var buffer = new byte[5];
         await stream.ReadAsync(buffer, 0, 5);
-        Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(buffer));
+        System.Text.Encoding.ASCII.GetString(buffer).Should().Be("%PDF-");
 
         // Note: Actual content verification would require PDF text extraction
         // For TDD, we trust the formatter implementation will filter correctly
@@ -336,7 +336,7 @@ public class PdfExportFormatterTests
         stream.Position = 0;
         var buffer = new byte[5];
         await stream.ReadAsync(buffer, 0, 5);
-        Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(buffer));
+        System.Text.Encoding.ASCII.GetString(buffer).Should().Be("%PDF-");
     }
 
     /// <summary>
@@ -376,7 +376,7 @@ public class PdfExportFormatterTests
         stream.Position = 0;
         var buffer = new byte[5];
         await stream.ReadAsync(buffer, 0, 5);
-        Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(buffer));
+        System.Text.Encoding.ASCII.GetString(buffer).Should().Be("%PDF-");
     }
 
     /// <summary>
@@ -419,7 +419,7 @@ public class PdfExportFormatterTests
         stream.Position = 0;
         var buffer = new byte[5];
         await stream.ReadAsync(buffer, 0, 5);
-        Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(buffer));
+        System.Text.Encoding.ASCII.GetString(buffer).Should().Be("%PDF-");
 
         // And: PDF size reflects content (should be larger for long content)
         stream.Length > 10000, $"Expected large PDF, got {stream.Length} bytes".Should().BeTrue();
@@ -477,6 +477,6 @@ public class PdfExportFormatterTests
         stream.Position = 0;
         var buffer = new byte[5];
         await stream.ReadAsync(buffer, 0, 5);
-        Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(buffer));
+        System.Text.Encoding.ASCII.GetString(buffer).Should().Be("%PDF-");
     }
 }

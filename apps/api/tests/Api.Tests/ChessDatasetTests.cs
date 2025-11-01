@@ -107,9 +107,9 @@ public class ChessDatasetTests
         // Then: It should include Italian Game, Spanish Opening, and Sicilian Defense
         var openingNames = openings.Select(o => o.name.ToLowerInvariant()).ToList();
 
-        Assert.Contains(openingNames, name => name.Contains("italian"));
-        Assert.Contains(openingNames, name => name.Contains("spanish") || name.Contains("ruy lopez"));
-        Assert.Contains(openingNames, name => name.Contains("sicilian"));
+        name => name.Contains("italian").Should().Contain(openingNames);
+        name => name.Contains("spanish") || name.Contains("ruy lopez").Should().Contain(openingNames);
+        name => name.Contains("sicilian").Should().Contain(openingNames);
     }
 
     /// <summary>
@@ -230,9 +230,9 @@ public class ChessDatasetTests
         // Then: It should include fork, pin, and discovered check
         var tacticNames = tactics.Select(t => t.name.ToLowerInvariant()).ToList();
 
-        Assert.Contains(tacticNames, name => name.Contains("fork") || name.Contains("forchetta"));
-        Assert.Contains(tacticNames, name => name.Contains("pin") || name.Contains("inchiodatura"));
-        Assert.Contains(tacticNames, name => name.Contains("discovered") || name.Contains("scoperta"));
+        name => name.Contains("fork") || name.Contains("forchetta").Should().Contain(tacticNames);
+        name => name.Contains("pin") || name.Contains("inchiodatura").Should().Contain(tacticNames);
+        name => name.Contains("discovered") || name.Contains("scoperta").Should().Contain(tacticNames);
     }
 
     /// <summary>

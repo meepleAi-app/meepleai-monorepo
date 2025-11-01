@@ -73,7 +73,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
 
         // And: Sources are cited
         result.sources.Should().NotBeEmpty();
-        Assert.All(result.sources, source =>
+        result.sources.Should().OnlyContain(source =>
         {
             source.text.Should().NotBeEmpty();
             source.source.Should().StartWith("ChessKnowledge:");

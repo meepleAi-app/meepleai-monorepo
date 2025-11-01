@@ -43,18 +43,18 @@ public class QualityMetricsTests
 
         // Assert
         var measurements = collector.GetMeasurements();
-        Assert.Contains(measurements, m =>
+        m =>
             m.Tags["dimension"]?.ToString() == "rag_confidence" &&
-            Math.Abs(m.Value - 0.85) < 0.001);
-        Assert.Contains(measurements, m =>
+            Math.Abs(m.Value - 0.85) < 0.001.Should().Contain(measurements);
+        m =>
             m.Tags["dimension"]?.ToString() == "llm_confidence" &&
-            Math.Abs(m.Value - 0.80) < 0.001);
-        Assert.Contains(measurements, m =>
+            Math.Abs(m.Value - 0.80) < 0.001.Should().Contain(measurements);
+        m =>
             m.Tags["dimension"]?.ToString() == "citation_quality" &&
-            Math.Abs(m.Value - 0.90) < 0.001);
-        Assert.Contains(measurements, m =>
+            Math.Abs(m.Value - 0.90) < 0.001.Should().Contain(measurements);
+        m =>
             m.Tags["dimension"]?.ToString() == "overall_confidence" &&
-            Math.Abs(m.Value - 0.85) < 0.001);
+            Math.Abs(m.Value - 0.85) < 0.001.Should().Contain(measurements);
     }
 
     /// <summary>
@@ -147,12 +147,12 @@ public class QualityMetricsTests
 
         // Assert
         var measurements = collector.GetMeasurements();
-        Assert.All(measurements, m =>
+        measurements.Should().OnlyContain(m =>
         {
             m.Tags.Keys.Should().Contain("agent.type");
-            Assert.Equal("qa", m.Tags["agent.type"]?.ToString());
+            m.Tags["agent.type"]?.ToString().Should().Be("qa");
             m.Tags.Keys.Should().Contain("operation");
-            Assert.Equal("answer", m.Tags["operation"]?.ToString());
+            m.Tags["operation"]?.ToString().Should().Be("answer");
         });
     }
 
@@ -187,10 +187,10 @@ public class QualityMetricsTests
 
         // Assert
         var measurements = collector.GetMeasurements();
-        Assert.All(measurements, m =>
+        measurements.Should().OnlyContain(m =>
         {
             m.Tags.Keys.Should().Contain("quality_tier");
-            Assert.Equal(expectedTier, m.Tags["quality_tier"]?.ToString());
+            m.Tags["quality_tier"]?.ToString().Should().Be(expectedTier);
         });
     }
 

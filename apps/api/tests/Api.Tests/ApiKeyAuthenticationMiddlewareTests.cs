@@ -68,7 +68,7 @@ public class ApiKeyAuthenticationMiddlewareTests
 
         // Assert
         var entry = logger.Entries.Where(e => e.LogLevel == LogLevel.Information).Should().ContainSingle().Subject;
-        Assert.Equal("/api/datafetch", entry.GetStateValue("Path"));
+        entry.GetStateValue("Path").Should().Be("/api/datafetch");
     }
 
     private static MeepleAiDbContext CreateContext(SqliteConnection connection)

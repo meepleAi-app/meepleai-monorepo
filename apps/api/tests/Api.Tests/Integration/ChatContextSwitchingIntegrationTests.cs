@@ -190,16 +190,16 @@ public class ChatContextSwitchingIntegrationTests
 
         // Assert: Chess chat has only Chess messages
         chessHistory.Count.Should().Be(2);
-        Assert.Contains(chessHistory, msg => msg.Message.Contains("castling"));
-        Assert.DoesNotContain(chessHistory, msg => msg.Message.Contains("backwards"));
+        msg => msg.Message.Contains("castling").Should().Contain(chessHistory);
+        msg => msg.Message.Contains("backwards").Should().NotContain(chessHistory);
 
         // Act: Retrieve Checkers chat history
         var checkersHistory = await service.GetChatHistoryAsync(checkersChat.Id, user.Id);
 
         // Assert: Checkers chat has only Checkers messages
         checkersHistory.Count.Should().Be(2);
-        Assert.Contains(checkersHistory, msg => msg.Message.Contains("backwards"));
-        Assert.DoesNotContain(checkersHistory, msg => msg.Message.Contains("castling"));
+        msg => msg.Message.Contains("backwards").Should().Contain(checkersHistory);
+        msg => msg.Message.Contains("castling").Should().NotContain(checkersHistory);
     }
 
     /// <summary>
@@ -240,12 +240,12 @@ public class ChatContextSwitchingIntegrationTests
         // Assert: Chess chat has complete Chess history
         var chessHistory = await service.GetChatHistoryAsync(chessChat.Id, user.Id);
         chessHistory.Count.Should().Be(4);
-        Assert.All(chessHistory, msg => Assert.Contains("chess", msg.Message.ToLower()));
+        chessHistory.Should().OnlyContain(msg => msg.Message.ToLower()).Should().Contain("chess");
 
         // Assert: Checkers chat has complete Checkers history
         var checkersHistory = await service.GetChatHistoryAsync(checkersChat.Id, user.Id);
         checkersHistory.Count.Should().Be(3);
-        Assert.All(checkersHistory, msg => Assert.Contains("checkers", msg.Message.ToLower()));
+        checkersHistory.Should().OnlyContain(msg => msg.Message.ToLower()).Should().Contain("checkers");
     }
 
     /// <summary>

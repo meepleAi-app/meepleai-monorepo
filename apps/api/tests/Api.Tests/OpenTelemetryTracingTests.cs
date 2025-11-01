@@ -200,9 +200,9 @@ public class OpenTelemetryTracingTests
 
         // Assert
         activity.Should().NotBeNull();
-        Assert.Equal("test-game-123", activity.GetTagItem("game.id"));
-        Assert.Equal("qa", activity.GetTagItem("operation"));
-        Assert.Equal(42, activity.GetTagItem("query.length"));
+        activity.GetTagItem("game.id").Should().Be("test-game-123");
+        activity.GetTagItem("operation").Should().Be("qa");
+        activity.GetTagItem("query.length").Should().Be(42);
     }
 
     [Fact]
@@ -227,9 +227,9 @@ public class OpenTelemetryTracingTests
 
         // Assert
         activity.Should().NotBeNull();
-        Assert.Equal(false, activity.GetTagItem("success"));
-        Assert.Equal("InvalidOperationException", activity.GetTagItem("error.type"));
-        Assert.Equal("Test exception message", activity.GetTagItem("error.message"));
+        activity.GetTagItem("success").Should().Be(false);
+        activity.GetTagItem("error.type").Should().Be("InvalidOperationException");
+        activity.GetTagItem("error.message").Should().Be("Test exception message");
         activity.Status.Should().Be(ActivityStatusCode.Error);
     }
 

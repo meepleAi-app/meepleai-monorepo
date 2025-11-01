@@ -152,7 +152,7 @@ startxref
         result.TryGetProperty("documentId", out var docId).Should().BeTrue();
         result.TryGetProperty("fileName", out var fileName).Should().BeTrue();
         string.IsNullOrWhiteSpace(docId.GetString()).Should().BeFalse();
-        Assert.Equal("chess-rules.pdf", fileName.GetString());
+        fileName.GetString().Should().Be("chess-rules.pdf");
 
         // And: PDF is saved in database
         using var scope = Factory.Services.CreateScope();
@@ -383,9 +383,9 @@ startxref
         pdfs.Count.Should().Be(3);
 
         // Verify ordering: most recent first
-        Assert.Equal("rules-v3.pdf", pdfs[0].GetProperty("fileName").GetString());
-        Assert.Equal("rules-v2.pdf", pdfs[1].GetProperty("fileName").GetString());
-        Assert.Equal("rules-v1.pdf", pdfs[2].GetProperty("fileName").GetString());
+        pdfs[0].GetProperty("fileName").GetString().Should().Be("rules-v3.pdf");
+        pdfs[1].GetProperty("fileName").GetString().Should().Be("rules-v2.pdf");
+        pdfs[2].GetProperty("fileName").GetString().Should().Be("rules-v1.pdf");
 
         // Verify required fields
         pdfs[0].TryGetProperty("id", out _).Should().BeTrue();
@@ -502,13 +502,13 @@ startxref
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         result.TryGetProperty("processingStatus", out var status).Should().BeTrue();
-        Assert.Equal("completed", status.GetString());
+        status.GetString().Should().Be("completed");
         result.TryGetProperty("extractedText", out var text).Should().BeTrue();
         text.GetString().Should().Contain("extracted text");
         result.TryGetProperty("pageCount", out var pageCount).Should().BeTrue();
-        Assert.Equal(10, pageCount.GetInt32());
+        pageCount.GetInt32().Should().Be(10);
         result.TryGetProperty("characterCount", out var charCount).Should().BeTrue();
-        Assert.Equal(500, charCount.GetInt32());
+        charCount.GetInt32().Should().Be(500);
     }
 
     /// <summary>
@@ -561,7 +561,7 @@ startxref
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         result.TryGetProperty("processingStatus", out var status).Should().BeTrue();
-        Assert.Equal("pending", status.GetString());
+        status.GetString().Should().Be("pending");
 
         // extractedText should be null or missing
         if (result.TryGetProperty("extractedText", out var text))
@@ -622,9 +622,9 @@ startxref
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         result.TryGetProperty("processingStatus", out var status).Should().BeTrue();
-        Assert.Equal("failed", status.GetString());
+        status.GetString().Should().Be("failed");
         result.TryGetProperty("processingError", out var error).Should().BeTrue();
-        Assert.Equal("Corrupted PDF file", error.GetString());
+        error.GetString().Should().Be("Corrupted PDF file");
     }
 
     /// <summary>

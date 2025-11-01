@@ -129,7 +129,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
 
         // Then: Location header contains comment URL
         response.Headers.Location.Should().NotBeNull();
-        Assert.Contains("/api/v1/comments/", response.Headers.Location.ToString());
+        response.Headers.Location.ToString().Should().Contain("/api/v1/comments/");
 
         // Then: Comment is stored correctly
         var comment = await response.Content.ReadFromJsonAsync<RuleCommentDto>();

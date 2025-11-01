@@ -248,11 +248,11 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
             change.Type == ChangeType.Added && change.NewAtom == "endgame".Should().Contain(diff.Changes);
         change =>
             change.Type == ChangeType.Deleted && change.OldAtom == "scoring".Should().Contain(diff.Changes);
-        Assert.Contains(diff.Changes, change =>
+        change =>
             change.Type == ChangeType.Modified &&
             change.OldAtom == "setup" &&
             change.FieldChanges != null &&
-            change.FieldChanges.Any(field => field.FieldName == "text"));
+            change.FieldChanges.Any(field => field.FieldName == "text").Should().Contain(diff.Changes);
     }
 
     [Fact]

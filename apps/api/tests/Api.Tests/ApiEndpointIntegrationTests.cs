@@ -160,7 +160,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
 
         document.RootElement.TryGetProperty("ok", out var okElement) && okElement.GetBoolean().Should().BeTrue();
         document.RootElement.TryGetProperty("spec", out var specElement).Should().BeTrue();
-        Assert.Equal("terraforming-mars", specElement.GetProperty("gameId").GetString());
+        specElement.GetProperty("gameId").GetString().Should().Be("terraforming-mars");
         // Cleanup happens automatically via DisposeAsync
     }
 
@@ -367,7 +367,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         "email", "id", "role" }, userProperties.Should().Be(new[] { "displayName");
 
         string.IsNullOrWhiteSpace(userElement.GetProperty("id").GetString()).Should().BeFalse();
-        Assert.Equal(JsonValueKind.String, userElement.GetProperty("email").ValueKind);
-        Assert.Equal(JsonValueKind.String, userElement.GetProperty("role").ValueKind);
+        userElement.GetProperty("email").ValueKind.Should().Be(JsonValueKind.String);
+        userElement.GetProperty("role").ValueKind.Should().Be(JsonValueKind.String);
     }
 }

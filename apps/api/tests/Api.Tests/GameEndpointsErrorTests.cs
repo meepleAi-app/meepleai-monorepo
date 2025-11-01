@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Api.Infrastructure.Entities;
+using Api.Tests.Fixtures;
 using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;
@@ -12,11 +13,12 @@ namespace Api.Tests;
 /// Tests all possible error scenarios (400, 401, 403, 404, 409).
 /// Related to Issue #260 - TEST-01: Expand Integration Test Coverage.
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class GameEndpointsErrorTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    public GameEndpointsErrorTests(WebApplicationFactoryFixture fixture, ITestOutputHelper output) : base(fixture)
+    public GameEndpointsErrorTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

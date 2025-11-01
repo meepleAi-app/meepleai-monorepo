@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using Api.Tests.Fixtures;
 using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;
@@ -17,6 +18,7 @@ namespace Api.Tests;
 /// I want to ask questions about chess rules, openings, tactics, and positions
 /// So that I can improve my understanding and play better
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class ChessAgentIntegrationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
@@ -26,7 +28,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         PropertyNameCaseInsensitive = true
     };
 
-    public ChessAgentIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public ChessAgentIntegrationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

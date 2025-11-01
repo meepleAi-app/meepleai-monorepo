@@ -10,6 +10,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using FluentAssertions;
@@ -21,6 +22,7 @@ namespace Api.Tests;
 /// API-02: Integration tests for streaming explain RAG endpoint (SSE)
 /// Tests cover authentication, SSE format, event ordering, and error handling
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class StreamingRagIntegrationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
@@ -30,7 +32,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         PropertyNameCaseInsensitive = true
     };
 
-    public StreamingRagIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public StreamingRagIntegrationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using Api.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -25,6 +26,7 @@ namespace Api.Tests;
 /// I want to export multiple rule specs as a ZIP file
 /// So that I can back up or migrate game rules efficiently
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
@@ -34,7 +36,7 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
         PropertyNameCaseInsensitive = true
     };
 
-    public RuleSpecBulkExportIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public RuleSpecBulkExportIntegrationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

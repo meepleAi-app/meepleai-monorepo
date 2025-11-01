@@ -5,6 +5,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,11 +26,12 @@ namespace Api.Tests;
 /// I want to configure AI/LLM parameters via database
 /// So that I can tune model behavior without code changes or deployments
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    public LlmServiceConfigurationIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public LlmServiceConfigurationIntegrationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

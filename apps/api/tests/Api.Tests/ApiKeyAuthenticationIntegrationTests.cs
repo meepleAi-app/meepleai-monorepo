@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using FluentAssertions;
@@ -16,11 +17,12 @@ namespace Api.Tests;
 /// Tests the complete authentication flow through middleware and endpoints.
 /// Related to Issue #370 - API-01: API Foundation and Authentication Infrastructure.
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    public ApiKeyAuthenticationIntegrationTests(WebApplicationFactoryFixture fixture, ITestOutputHelper output) : base(fixture)
+    public ApiKeyAuthenticationIntegrationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using FluentAssertions;
@@ -22,7 +23,7 @@ namespace Api.Tests;
 /// I want to monitor and manage the AI response cache
 /// So that I can ensure optimal performance and troubleshoot issues
 /// </summary>
-[Collection("Sequential")]
+[Collection("Postgres Integration Tests")]
 public class CacheAdminEndpointsTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
@@ -32,7 +33,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         PropertyNameCaseInsensitive = true
     };
 
-    public CacheAdminEndpointsTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public CacheAdminEndpointsTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

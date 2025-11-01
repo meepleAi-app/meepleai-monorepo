@@ -10,6 +10,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -26,6 +27,7 @@ namespace Api.Tests;
 /// I want to get structured explanations about game rules topics
 /// So that I can understand complex concepts with proper citations
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class ExplainEndpointTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
@@ -35,7 +37,7 @@ public class ExplainEndpointTests : IntegrationTestBase
         PropertyNameCaseInsensitive = true
     };
 
-    public ExplainEndpointTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public ExplainEndpointTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using Api.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -25,6 +26,7 @@ namespace Api.Tests;
 /// I want to manage user sessions via API endpoints
 /// So that I can monitor, revoke, and control user access to the system
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class SessionManagementEndpointsTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
@@ -34,7 +36,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         PropertyNameCaseInsensitive = true
     };
 
-    public SessionManagementEndpointsTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public SessionManagementEndpointsTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using Api.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -26,6 +27,7 @@ namespace Api.Tests;
 /// I want to receive progressive QA answers via streaming
 /// So that I can see the response being generated in real-time
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
@@ -35,7 +37,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         PropertyNameCaseInsensitive = true
     };
 
-    public StreamingQaEndpointIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public StreamingQaEndpointIntegrationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

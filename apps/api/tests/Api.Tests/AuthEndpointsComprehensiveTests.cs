@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Api.Models;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using FluentAssertions;
@@ -15,11 +16,12 @@ namespace Api.Tests;
 /// Covers session lifecycle, error cases, and edge scenarios.
 /// Related to Issue #260 - TEST-01: Expand Integration Test Coverage.
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class AuthEndpointsComprehensiveTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    public AuthEndpointsComprehensiveTests(WebApplicationFactoryFixture fixture, ITestOutputHelper output) : base(fixture)
+    public AuthEndpointsComprehensiveTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

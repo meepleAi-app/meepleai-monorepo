@@ -8,6 +8,7 @@ using System.Text.Json;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using Api.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -24,6 +25,7 @@ namespace Api.Tests;
 /// I want to generate RuleSpecs from uploaded PDFs
 /// So that I can create structured game rules from rulebook documents
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class PdfIngestEndpointsTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
@@ -33,7 +35,7 @@ public class PdfIngestEndpointsTests : IntegrationTestBase
         PropertyNameCaseInsensitive = true
     };
 
-    public PdfIngestEndpointsTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public PdfIngestEndpointsTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

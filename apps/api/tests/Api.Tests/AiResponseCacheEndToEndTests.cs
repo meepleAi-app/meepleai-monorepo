@@ -4,6 +4,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using FluentAssertions;
@@ -24,11 +25,12 @@ namespace Api.Tests;
 /// - Scenario: Multiple users benefit from shared cache
 /// - Scenario: Cache respects authentication and returns cached data to all authorized users
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class AiResponseCacheEndToEndTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    public AiResponseCacheEndToEndTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public AiResponseCacheEndToEndTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

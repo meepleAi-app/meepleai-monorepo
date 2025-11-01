@@ -101,7 +101,7 @@ public class TotpServiceTests : IDisposable
         // Verify backup codes are stored hashed
         var storedCodes = await _dbContext.UserBackupCodes.Where(bc => bc.UserId == userId).ToListAsync();
         storedCodes.Count.Should().Be(10);
-        storedCodes.Should().OnlyContain(bc => Assert.NotEmpty(bc.CodeHash));
+        storedCodes.Should().OnlyContain(bc => !string.IsNullOrEmpty(bc.CodeHash));
     }
 
     [Fact]

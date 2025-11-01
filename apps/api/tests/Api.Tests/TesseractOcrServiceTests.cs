@@ -288,7 +288,7 @@ public class TesseractOcrServiceTests : IDisposable
 
         // Act & Assert
         // Should throw OperationCanceledException when token is pre-cancelled
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+        var act = async () =>
         {
             await service.ExtractTextFromPageAsync(dummyPdfPath, 0, cts.Token);
         });

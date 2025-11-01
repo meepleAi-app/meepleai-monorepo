@@ -108,8 +108,8 @@ public class GameServiceTests : IDisposable
         // TODO: Assert.Collection(
             games,
             g => g.Name).Should().Be("Alpha", g.Name),
-            g => Assert.Equal("Bravo", g.Name),
-            g => Assert.Equal("Charlie");
+            g => g.Name == "Bravo",
+            g => g.Name == "Charlie");
     }
 
     private sealed class FixedTimeProvider : TimeProvider

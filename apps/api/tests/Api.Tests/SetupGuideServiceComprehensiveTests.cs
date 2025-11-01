@@ -86,7 +86,7 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
         result.Should().NotBeNull();
         result.gameTitle.Should().Be("Unknown Game");
         result.steps.Should().NotBeEmpty();
-        result.steps.Should().OnlyContain(step => Assert.False(string.IsNullOrEmpty(step.instruction)));
+        result.steps.Should().OnlyContain(step => !string.IsNullOrEmpty(step.instruction));
     }
 
     [Fact]
@@ -114,7 +114,7 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
         result.gameTitle.Should().Be("Test Game");
         result.steps.Should().NotBeEmpty();
         result.steps.Count.Should().Be(5); // Default steps count
-        result.steps.Should().OnlyContain(step => Assert.Empty(step.references)); // Default steps have no references
+        result.steps.Should().OnlyContain(step => step.references.Length == 0); // Default steps have no references
     }
 
     [Fact]
@@ -260,7 +260,7 @@ Include expansion components if playing with expansions.";
         result.Should().NotBeNull();
         result.gameTitle.Should().Be("Resilient Game");
         result.steps.Count.Should().Be(5); // Fallback to default 5 steps
-        result.steps.Should().OnlyContain(step => Assert.False(string.IsNullOrEmpty(step.instruction)));
+        result.steps.Should().OnlyContain(step => !string.IsNullOrEmpty(step.instruction));
     }
 
     [Fact]

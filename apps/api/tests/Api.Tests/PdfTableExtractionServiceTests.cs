@@ -459,7 +459,7 @@ Row A1          Row A2
         result.AtomicRuleCount.Should().Be(3);
         result.AtomicRules.Should().Contain(rule => rule.Contains("Name: Alpha"));
         result.Diagrams.Should().NotBeEmpty();
-        result.DiagramCount.Should().BeEquivalentTo(result.Diagrams.Count);
+        result.DiagramCount.Should().Be(result.Diagrams.Count);
         result.Diagrams.Should().OnlyContain(diagram => diagram.DiagramType == "Image");
     }
 

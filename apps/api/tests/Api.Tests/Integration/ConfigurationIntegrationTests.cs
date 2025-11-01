@@ -123,7 +123,7 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
         using var scope1 = Factory.Services.CreateScope();
         var configService1 = scope1.ServiceProvider.GetRequiredService<IConfigurationService>();
         var valueDefault = await configService1.GetValueAsync<int>(uniqueKey);
-        valueDefault == null || valueDefault == 0 || valueDefault == 5.Should().BeTrue(); // Null or default
+        valueDefault.Should().Be(5); // Default value
 
         // Act 2: Add config to DB
         await PostAsJsonAuthenticatedAsync(client, _adminCookies, "/api/v1/admin/configurations", new
@@ -149,7 +149,7 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
         using var scope3 = Factory.Services.CreateScope();
         var configService3 = scope3.ServiceProvider.GetRequiredService<IConfigurationService>();
         var valueFallback = await configService3.GetValueAsync<int>(uniqueKey);
-        valueFallback == null || valueFallback == 0.Should().BeTrue(); // Back to default (no config exists)
+        valueFallback.Should().Be(5); // Back to default (no config exists)
     }
 
     [Fact]

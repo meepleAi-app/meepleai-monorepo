@@ -889,8 +889,8 @@ data: [DONE]
         var defaultCount = requestedModels.Count(m => m == "deepseek/deepseek-chat-v3.1");
 
         // With 50% traffic and 100 requests, expect 40-60 alternative model requests (allowing variance)
-        alternativeCount.Should().BeApproximately(30, TimeSpan.FromSeconds(5));
-        defaultCount.Should().BeApproximately(30, TimeSpan.FromSeconds(5));
+        alternativeCount.Should().BeCloseTo(50, 20);
+        defaultCount.Should().BeCloseTo(50, 20);
         requestedModels.Count.Should().Be(100);
     }
 

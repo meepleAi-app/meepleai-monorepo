@@ -299,7 +299,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
 
         // Should contain sources from chess knowledge base
         result.TryGetProperty("sources", out var sources).Should().BeTrue();
-        sources.GetArrayLength() >= 0.Should().BeTrue();
+        sources.GetArrayLength().Should().BeGreaterThanOrEqualTo(0);
     }
 
     /// <summary>
@@ -356,7 +356,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         historyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var history = await historyResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         history.TryGetProperty("messages", out var messages).Should().BeTrue();
-        messages.GetArrayLength() >= 2.Should().BeTrue(); // User question + assistant answer
+        messages.GetArrayLength().Should().BeGreaterThanOrEqualTo(2); // User question + assistant answer
     }
 
     /// <summary>

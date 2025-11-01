@@ -227,9 +227,9 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
         var logEvents = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
 
         // Should have Debug, Info, and Warning (Trace might be filtered)
-        e => e.Level == LogEventLevel.Debug.Should().Contain(logEvents);
-        e => e.Level == LogEventLevel.Information.Should().Contain(logEvents);
-        e => e.Level == LogEventLevel.Warning.Should().Contain(logEvents);
+        logEvents.Should().Contain(e => e.Level == LogEventLevel.Debug);
+        logEvents.Should().Contain(e => e.Level == LogEventLevel.Information);
+        logEvents.Should().Contain(e => e.Level == LogEventLevel.Warning);
     }
 
     [Fact]

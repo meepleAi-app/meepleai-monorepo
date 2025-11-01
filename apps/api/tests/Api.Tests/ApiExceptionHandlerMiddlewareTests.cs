@@ -211,9 +211,9 @@ public class ApiExceptionHandlerMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert
-        var logEntry = logger.Records.Should().ContainSingle();
-        logEntry.Message.Should().NotContain('\r');
-        logEntry.Message.Should().NotContain('\n');
+        var logEntry = logger.Records.Should().ContainSingle().Which;
+        logEntry.Message.Should().NotContain("\r");
+        logEntry.Message.Should().NotContain("\n");
 
         var sanitizedPath = maliciousPath.Replace("\r", string.Empty).Replace("\n", string.Empty);
         logEntry.Message.Should().Contain(sanitizedPath);
@@ -273,7 +273,7 @@ public class ApiExceptionHandlerMiddlewareTests
         // Non-/api/* paths should throw the exception instead of handling it
         // The test framework will catch the exception thrown by the endpoint
         var act = async () => await client.GetAsync("/health");
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Be("Test error");
     }
 
@@ -334,7 +334,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
         errorResponse.Should().NotBeNull();
-        errorResponse.Timestamp.Should().BeApproximately(beforeRequest.AddSeconds(-1), TimeSpan.FromSeconds(5));
+        errorResponse.Timestamp.Should().BeCloseTo(beforeRequest.AddSeconds(-1), TimeSpan.FromSeconds(5));
     }
 
     [Fact]
@@ -391,7 +391,7 @@ public class ApiExceptionHandlerMiddlewareTests
 
         // Act & Assert
         var act = async () => await client.GetAsync(path);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Be("Test error");
     }
 

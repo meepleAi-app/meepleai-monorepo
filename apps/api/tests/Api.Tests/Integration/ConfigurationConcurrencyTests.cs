@@ -131,7 +131,7 @@ public class ConfigurationConcurrencyTests : ConfigIntegrationTestBase
         var results = await Task.WhenAll(update1, update2);
 
         // Assert: Both succeed (last write wins behavior)
-        results.Should().OnlyContain(r => r.StatusCode is HttpStatusCode.OK or HttpStatusCode.Conflict);
+        results.Should().OnlyContain(r => r.StatusCode == HttpStatusCode.OK || r.StatusCode == HttpStatusCode.Conflict);
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public class ConfigurationConcurrencyTests : ConfigIntegrationTestBase
 
                 // Read config - should not throw or return corrupted data
                 var value = await configService.GetValueAsync<int>("Consistency:TestConfig");
-                value == null || value >= 100.Should().BeTrue();
+                value.Should().BeGreaterThanOrEqualTo(100);
             });
         }
 
@@ -233,7 +233,7 @@ public class ConfigurationConcurrencyTests : ConfigIntegrationTestBase
         var results = await Task.WhenAll(tasks);
 
         // Assert: All instances get consistent value
-        results.Should().OnlyContain(value => value).Should().Be(100);
+        results.Should().OnlyContain(value => value == 100);
         results.Length.Should().Be(5);
     }
 }

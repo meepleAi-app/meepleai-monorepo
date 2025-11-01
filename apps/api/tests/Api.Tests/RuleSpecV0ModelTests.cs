@@ -179,7 +179,7 @@ public class RuleSpecV0ModelTests
         step.Id.Should().Be("step-1");
         step.Text.Should().Be("Distribute cards");
         step.Order.Should().Be(1);
-        step.Components.Should().Be(components);
+        step.Components.Should().BeEquivalentTo(components);
     }
 
     #endregion

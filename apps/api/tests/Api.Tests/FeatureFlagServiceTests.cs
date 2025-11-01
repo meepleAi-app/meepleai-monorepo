@@ -401,8 +401,8 @@ public class FeatureFlagServiceTests
         result.Count.Should().Be(3);
 
         // Global flags
-        f => f.FeatureName == "Features.Feature1" && f.IsEnabled && f.RoleRestriction == null.Should().Contain(result);
-        f => f.FeatureName == "Features.Feature2" && !f.IsEnabled && f.RoleRestriction == null.Should().Contain(result);
+        result.Should().Contain(f => f.FeatureName == "Features.Feature1" && f.IsEnabled && f.RoleRestriction == null);
+        result.Should().Contain(f => f.FeatureName == "Features.Feature2" && !f.IsEnabled && f.RoleRestriction == null);
 
         // Role-specific flag
         var adminFlag = result.FirstOrDefault(f => f.RoleRestriction == "Admin");

@@ -85,7 +85,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         string.IsNullOrWhiteSpace(script.GetString()).Should().BeFalse();
 
         result.TryGetProperty("citations", out var citations).Should().BeTrue();
-        citations.GetArrayLength() > 0.Should().BeTrue();
+        (citations.GetArrayLength() > 0).Should().BeTrue();
 
         result.TryGetProperty("estimatedReadingTimeMinutes", out _).Should().BeTrue();
     }
@@ -235,7 +235,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         outline.TryGetProperty("mainTopic", out var mainTopic).Should().BeTrue();
         mainTopic.GetString().Should().Be("setup");
         outline.TryGetProperty("sections", out var sections).Should().BeTrue();
-        sections.GetArrayLength() >= 0.Should().BeTrue();
+        sections.GetArrayLength().Should().BeGreaterThanOrEqualTo(0);
 
         result.TryGetProperty("script", out _).Should().BeTrue();
         result.TryGetProperty("citations", out _).Should().BeTrue();

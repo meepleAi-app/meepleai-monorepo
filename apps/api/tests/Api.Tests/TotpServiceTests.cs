@@ -96,7 +96,7 @@ public class TotpServiceTests : IDisposable
         // Verify secret is stored encrypted
         var userAfter = await _dbContext.Users.FindAsync(userId);
         userAfter?.TotpSecretEncrypted.Should().NotBeNull();
-        userAfter.TotpSecretEncrypted.Should().NotBe(result.Secret); // Should be encrypted
+        userAfter!.TotpSecretEncrypted.Should().NotBe(result.Secret); // Should be encrypted
 
         // Verify backup codes are stored hashed
         var storedCodes = await _dbContext.UserBackupCodes.Where(bc => bc.UserId == userId).ToListAsync();

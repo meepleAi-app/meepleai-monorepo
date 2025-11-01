@@ -236,6 +236,6 @@ public class ConfigurationPerformanceTests : ConfigIntegrationTestBase
 
         // Assert: All requests complete within 200ms total, no exceptions
         (sw.ElapsedMilliseconds < 200).Should().BeTrue($"Concurrent reads ({sw.ElapsedMilliseconds}ms) exceed 200ms target");
-        results.Should().OnlyContain(value => value).Should().Be("test");
+        results.Should().OnlyContain(value => value == "test");
     }
 }

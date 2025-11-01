@@ -158,7 +158,7 @@ public class TextChunkingServiceTests
 
             // The overlap should be approximately the specified overlap
             var actualOverlap = firstChunk.CharEnd - secondChunk.CharStart;
-            actualOverlap.Should().BeApproximately(0, TimeSpan.FromSeconds(5)); // Allow some tolerance
+            actualOverlap.Should().BeCloseTo(50, 10); // Allow some tolerance for sentence boundary
         }
     }
 

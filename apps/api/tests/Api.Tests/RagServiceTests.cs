@@ -1220,7 +1220,7 @@ ANSWER:",
         // Assert
         // Script contains 2 chunks with ~200 words each = ~400 words total
         // At 200 words/minute, should be ~2 minutes
-        result.estimatedReadingTimeMinutes.Should().BeApproximately(1, TimeSpan.FromSeconds(5)); // Allow some variance for header text
+        result.estimatedReadingTimeMinutes.Should().BeCloseTo(2, 1); // Allow some variance for header text
     }
 
     [Fact]

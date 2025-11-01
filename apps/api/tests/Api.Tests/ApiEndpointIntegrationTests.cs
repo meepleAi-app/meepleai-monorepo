@@ -239,7 +239,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
     private static void AssertSessionCookieSecure(HttpResponseMessage response)
     {
         response.Headers.TryGetValues("Set-Cookie", out var values).Should().BeTrue();
-        var sessionCookie = values.Where(value => value.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal)).Should().ContainSingle().Subject;
+        var sessionCookie = values!.Where(value => value.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal)).Should().ContainSingle().Subject;
         sessionCookie.Should().Contain("secure");
         sessionCookie.Should().Contain("samesite=none");
     }

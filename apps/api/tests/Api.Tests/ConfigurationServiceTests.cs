@@ -154,7 +154,7 @@ public class ConfigurationServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await _service.CreateConfigurationAsync(request, _testUserId);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("already exists");
     }
 
@@ -169,7 +169,7 @@ public class ConfigurationServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await _service.CreateConfigurationAsync(request, _testUserId);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("validation failed");
     }
 
@@ -327,7 +327,7 @@ public class ConfigurationServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await _service.UpdateConfigurationAsync(config.Id, updateRequest, _testUserId);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("validation failed");
     }
 
@@ -789,7 +789,7 @@ public class ConfigurationServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await _service.RollbackConfigurationAsync(config.Id, 0, _testUserId);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("No previous value");
     }
 
@@ -812,7 +812,7 @@ public class ConfigurationServiceTests : IDisposable
         categories.Count.Should().Be(2);
         categories.Should().Contain("Category1");
         categories.Should().Contain("Category2");
-        categories.Should().Be(categories.OrderBy(c => c).ToList()); // Verify sorted
+        categories.Should().BeInAscendingOrder(); // Verify sorted
     }
 
     #endregion

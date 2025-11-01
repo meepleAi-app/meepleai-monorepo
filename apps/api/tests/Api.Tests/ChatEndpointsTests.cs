@@ -305,8 +305,8 @@ public class ChatEndpointsTests : IntegrationTestBase
         var agents = await response.Content.ReadFromJsonAsync<List<AgentDto>>();
         agents.Should().NotBeNull();
         agents!.Count.Should().Be(2);
-        a => a.Id == qaAgent.Id && a.Kind == "qa".Should().Contain(agents);
-        a => a.Id == explainAgent.Id && a.Kind == "explain".Should().Contain(agents);
+        agents.Should().Contain(a => a.Id == qaAgent.Id && a.Kind == "qa");
+        agents.Should().Contain(a => a.Id == explainAgent.Id && a.Kind == "explain");
     }
 
     /// <summary>

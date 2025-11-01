@@ -109,7 +109,7 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain("fileSize");
+        result.Errors.Should().ContainKey("fileSize");
         result.Errors["fileSize"].Should().Contain("must be greater than 0");
     }
 
@@ -121,7 +121,7 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain("fileSize");
+        result.Errors.Should().ContainKey("fileSize");
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain("fileSize");
+        result.Errors.Should().ContainKey("fileSize");
         result.Errors["fileSize"].Should().Contain("exceeds maximum");
     }
 
@@ -176,7 +176,7 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain("fileType");
+        result.Errors.Should().ContainKey("fileType");
         result.Errors["fileType"].Should().Contain("cannot be empty");
     }
 
@@ -188,7 +188,7 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain("fileType");
+        result.Errors.Should().ContainKey("fileType");
     }
 
     [Fact]
@@ -199,7 +199,7 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain("fileType");
+        result.Errors.Should().ContainKey("fileType");
         result.Errors["fileType"].Should().Contain("not allowed");
     }
 
@@ -235,7 +235,7 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain("stream");
+        result.Errors.Should().ContainKey("stream");
         result.Errors["stream"].Should().Contain("cannot be null");
     }
 
@@ -250,7 +250,7 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain("fileName");
+        result.Errors.Should().ContainKey("fileName");
         result.Errors["fileName"].Should().Contain("cannot be empty");
     }
 
@@ -293,7 +293,7 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain("fileFormat");
+        result.Errors.Should().ContainKey("fileFormat");
         result.Errors["fileFormat"].Should().Contain("Invalid PDF file format");
     }
 
@@ -309,7 +309,7 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain("pdfStructure");
+        result.Errors.Should().ContainKey("pdfStructure");
     }
 
     [Fact]
@@ -346,7 +346,7 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain("pageCount");
+        result.Errors.Should().ContainKey("pageCount");
         result.Errors["pageCount"].Should().Contain("must have at least 5 page(s)");
     }
 
@@ -382,7 +382,7 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain("pageCount");
+        result.Errors.Should().ContainKey("pageCount");
         result.Errors["pageCount"].Should().Contain("maximum allowed is 2");
     }
 

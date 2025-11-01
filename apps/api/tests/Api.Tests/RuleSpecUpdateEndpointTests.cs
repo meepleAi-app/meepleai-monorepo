@@ -437,9 +437,9 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
         var history = await DeserializeAsync<RuleSpecHistory>(historyResponse);
         history.Should().NotBeNull();
         history!.TotalVersions.Should().Be(3);
-        v => v.Version == "v1".Should().Contain(history.Versions);
-        v => v.Version == "v2".Should().Contain(history.Versions);
-        v => v.Version == "v3".Should().Contain(history.Versions);
+        history.Versions.Should().Contain(v => v.Version == "v1");
+        history.Versions.Should().Contain(v => v.Version == "v2");
+        history.Versions.Should().Contain(v => v.Version == "v3");
     }
 
     #endregion

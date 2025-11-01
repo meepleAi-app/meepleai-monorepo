@@ -230,9 +230,9 @@ public class ChessDatasetTests
         // Then: It should include fork, pin, and discovered check
         var tacticNames = tactics.Select(t => t.name.ToLowerInvariant()).ToList();
 
-        name => name.Contains("fork") || name.Contains("forchetta").Should().Contain(tacticNames);
-        name => name.Contains("pin") || name.Contains("inchiodatura").Should().Contain(tacticNames);
-        name => name.Contains("discovered") || name.Contains("scoperta").Should().Contain(tacticNames);
+        tacticNames.Should().Contain(name => name.Contains("fork") || name.Contains("forchetta"));
+        tacticNames.Should().Contain(name => name.Contains("pin") || name.Contains("inchiodatura"));
+        tacticNames.Should().Contain(name => name.Contains("discovered") || name.Contains("scoperta"));
     }
 
     /// <summary>

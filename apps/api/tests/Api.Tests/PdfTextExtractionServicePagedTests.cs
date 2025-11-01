@@ -214,7 +214,7 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         result.Error.Should().NotBeNull();
         result.Error.Should().Contain("failed");
         result.TotalPageCount.Should().Be(0);
-        result.PageChunks == null || result.PageChunks.Count == 0.Should().BeTrue();
+        (result.PageChunks == null || result.PageChunks.Count == 0).Should().BeTrue();
     }
 
     // ===== Edge Cases =====
@@ -279,8 +279,8 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         }
 
         // No page should have invalid page number
-        chunk => chunk.PageNumber <= 0.Should().NotContain(result.PageChunks);
-        chunk => chunk.PageNumber > 10.Should().NotContain(result.PageChunks);
+        result.PageChunks.Should().NotContain(chunk => chunk.PageNumber <= 0);
+        result.PageChunks.Should().NotContain(chunk => chunk.PageNumber > 10);
     }
 
     // ===== Validation Tests =====
@@ -390,7 +390,7 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         result.Success.Should().BeFalse();
         result.Error.Should().BeEquivalentTo("Test extraction error");
         result.TotalPageCount.Should().Be(0);
-        result.PageChunks == null || result.PageChunks.Count == 0.Should().BeTrue();
+        (result.PageChunks == null || result.PageChunks.Count == 0).Should().BeTrue();
     }
 
     /// <summary>

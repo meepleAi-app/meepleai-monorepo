@@ -403,8 +403,8 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
 
         foreach (var key in expectedKeys)
         {
-            c => c.Key == key.Should().Contain(prodConfigs);
-            c => c.Key == key.Should().Contain(devConfigs);
+            prodConfigs.Should().Contain(c => c.Key == key);
+            devConfigs.Should().Contain(c => c.Key == key);
         }
     }
 

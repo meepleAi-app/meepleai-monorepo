@@ -473,8 +473,8 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         (log.OverallConfidence < 0.60).Should().BeTrue($"Expected OverallConfidence < 0.60, but got {log.OverallConfidence:F3}");
 
         // Verify individual score components are in expected ranges
-        log.RagConfidence.Value.Should().BeApproximately(0.35, TimeSpan.FromSeconds(5)); // Average of low-quality RAG scores (0.35, 0.40, 0.45)
-        log.LlmConfidence.Value.Should().BeApproximately(0.45, TimeSpan.FromSeconds(5)); // Base 0.85 - VeryShortPenalty 0.30 - hedging ~0.05
+        log.RagConfidence.Value.Should().BeApproximately(0.35, 0.1); // Average of low-quality RAG scores (0.35, 0.40, 0.45)
+        log.LlmConfidence.Value.Should().BeApproximately(0.45, 0.1); // Base 0.85 - VeryShortPenalty 0.30 - hedging ~0.05
         log.CitationQuality.Value.Should().BeApproximately(1.0, 0.01); // 3 citations / 1 paragraph = 1.0
     }
 
@@ -547,13 +547,13 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
             .First();
 
         log.RagConfidence.Should().NotBeNull();
-        log.RagConfidence.Value.Should().BeApproximately(0.0, TimeSpan.FromSeconds(5));
+        log.RagConfidence.Value.Should().BeApproximately(0.0, 0.1);
         log.LlmConfidence.Should().NotBeNull();
-        log.LlmConfidence.Value.Should().BeApproximately(0.0, TimeSpan.FromSeconds(5));
+        log.LlmConfidence.Value.Should().BeApproximately(0.0, 0.1);
         log.CitationQuality.Should().NotBeNull();
-        log.CitationQuality.Value.Should().BeApproximately(0.0, TimeSpan.FromSeconds(5));
+        log.CitationQuality.Value.Should().BeApproximately(0.0, 0.1);
         log.OverallConfidence.Should().NotBeNull();
-        log.OverallConfidence.Value.Should().BeApproximately(0.0, TimeSpan.FromSeconds(5));
+        log.OverallConfidence.Value.Should().BeApproximately(0.0, 0.1);
     }
 
     /// <summary>
@@ -784,8 +784,8 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         report.Should().NotBeNull();
         report.TotalResponses.Should().Be(50);
         report.LowQualityCount.Should().Be(15);
-        report.AverageRagConfidence!.Value.Should().BeApproximately(0.60, TimeSpan.FromSeconds(5));
-        report.AverageOverallConfidence!.Value.Should().BeApproximately(0.60, TimeSpan.FromSeconds(5));
+        report.AverageRagConfidence!.Value.Should().BeApproximately(0.60, 0.1);
+        report.AverageOverallConfidence!.Value.Should().BeApproximately(0.60, 0.1);
     }
 
     /// <summary>

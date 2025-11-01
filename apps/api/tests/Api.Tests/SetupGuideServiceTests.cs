@@ -120,12 +120,10 @@ public class SetupGuideServiceTests : IDisposable
         result.gameTitle.Should().BeEquivalentTo("Test Board Game");
         result.steps.Should().NotBeEmpty();
         result.steps.Should().OnlyContain(step =>
-        {
-            (step.stepNumber > 0).Should().BeTrue();
-            string.IsNullOrEmpty(step.title).Should().BeFalse();
-            string.IsNullOrEmpty(step.instruction).Should().BeFalse();
-            step.references.Should().NotBeNull();
-        });
+            step.stepNumber > 0 &&
+            !string.IsNullOrEmpty(step.title) &&
+            !string.IsNullOrEmpty(step.instruction) &&
+            step.references != null);
     }
 
     [Fact]

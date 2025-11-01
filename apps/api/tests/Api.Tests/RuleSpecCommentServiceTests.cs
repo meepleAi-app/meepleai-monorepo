@@ -172,9 +172,9 @@ public class RuleSpecCommentServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => _service.AddCommentAsync(game.Id, "v99", null, user.Id, "Comment");
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
 
-        ex.Message.Should().Contain("RuleSpec version v99 not found");
+        ex.Which.Message.Should().Contain("RuleSpec version v99 not found");
     }
 
     [Fact]
@@ -201,9 +201,9 @@ public class RuleSpecCommentServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => _service.AddCommentAsync(game.Id, "v1", null, "missing-user", "Comment");
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
 
-        ex.Message.Should().Contain("User missing-user not found");
+        ex.Which.Message.Should().Contain("User missing-user not found");
     }
 
     [Fact]
@@ -441,9 +441,9 @@ public class RuleSpecCommentServiceTests : IDisposable
             "Updated text");
 
         // Assert
-        result.Id.Should().BeEquivalentTo(comment.Id);
-        result.CommentText.Should().BeEquivalentTo("Updated text");
-        result.CreatedAt.Should().BeEquivalentTo(originalCreatedAt);
+        result.Id.Should().Be(comment.Id);
+        result.CommentText.Should().Be("Updated text");
+        result.CreatedAt.Should().Be(originalCreatedAt);
         result.UpdatedAt.Should().NotBeNull();
         (result.UpdatedAt <= DateTime.UtcNow).Should().BeTrue();
 
@@ -460,9 +460,9 @@ public class RuleSpecCommentServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => _service.UpdateCommentAsync(missingId, "user-1", "New text");
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
 
-        ex.Message.Should().Contain($"Comment {missingId} not found");
+        ex.Which.Message.Should().Contain($"Comment {missingId} not found");
     }
 
     [Fact]
@@ -521,9 +521,9 @@ public class RuleSpecCommentServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => _service.UpdateCommentAsync(comment.Id, otherUser.Id, "Hijacked text");
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
 
-        ex.Message.Should().Contain($"User {otherUser.Id} is not authorized");
+        ex.Which.Message.Should().Contain($"User {otherUser.Id} is not authorized");
     }
 
     [Fact]
@@ -696,9 +696,9 @@ public class RuleSpecCommentServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => _service.DeleteCommentAsync(comment.Id, otherUser.Id, isAdmin: false);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
 
-        ex.Message.Should().Contain($"User {otherUser.Id} is not authorized");
+        ex.Which.Message.Should().Contain($"User {otherUser.Id} is not authorized");
     }
 
     [Fact]

@@ -430,7 +430,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
                 "test-template-id",
                 nonExistentVersionId,
                 _testDatasetPath);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
         exception.Which.Message.Should().Contain("not found");
     }

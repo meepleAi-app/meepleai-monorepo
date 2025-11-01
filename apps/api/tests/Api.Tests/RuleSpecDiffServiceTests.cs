@@ -262,10 +262,10 @@ public class RuleSpecDiffServiceTests
         var modifiedChange = diff.Changes.First(c => c.Type == ChangeType.Modified);
         modifiedChange.FieldChanges!.Count.Should().Be(4);
 
-        fc => fc.FieldName == "text" && fc.OldValue == "Original text" && fc.NewValue == "Modified text".Should().Contain(modifiedChange.FieldChanges);
-        fc => fc.FieldName == "section" && fc.OldValue == "Setup" && fc.NewValue == "Gameplay".Should().Contain(modifiedChange.FieldChanges);
-        fc => fc.FieldName == "page" && fc.OldValue == "1" && fc.NewValue == "2".Should().Contain(modifiedChange.FieldChanges);
-        fc => fc.FieldName == "line" && fc.OldValue == "5" && fc.NewValue == "10".Should().Contain(modifiedChange.FieldChanges);
+        modifiedChange.FieldChanges.Should().Contain(fc => fc.FieldName == "text" && fc.OldValue == "Original text" && fc.NewValue == "Modified text");
+        modifiedChange.FieldChanges.Should().Contain(fc => fc.FieldName == "section" && fc.OldValue == "Setup" && fc.NewValue == "Gameplay");
+        modifiedChange.FieldChanges.Should().Contain(fc => fc.FieldName == "page" && fc.OldValue == "1" && fc.NewValue == "2");
+        modifiedChange.FieldChanges.Should().Contain(fc => fc.FieldName == "line" && fc.OldValue == "5" && fc.NewValue == "10");
     }
 
     /// <summary>
@@ -454,9 +454,9 @@ public class RuleSpecDiffServiceTests
 
         var modifiedChange = diff.Changes.First(c => c.Type == ChangeType.Modified);
         modifiedChange.FieldChanges!.Count.Should().Be(3);
-        fc => fc.FieldName == "section" && fc.OldValue == null && fc.NewValue == "Setup".Should().Contain(modifiedChange.FieldChanges);
-        fc => fc.FieldName == "page" && fc.OldValue == null && fc.NewValue == "1".Should().Contain(modifiedChange.FieldChanges);
-        fc => fc.FieldName == "line" && fc.OldValue == null && fc.NewValue == "5".Should().Contain(modifiedChange.FieldChanges);
+        modifiedChange.FieldChanges.Should().Contain(fc => fc.FieldName == "section" && fc.OldValue == null && fc.NewValue == "Setup");
+        modifiedChange.FieldChanges.Should().Contain(fc => fc.FieldName == "page" && fc.OldValue == null && fc.NewValue == "1");
+        modifiedChange.FieldChanges.Should().Contain(fc => fc.FieldName == "line" && fc.OldValue == null && fc.NewValue == "5");
     }
 
     /// <summary>

@@ -317,7 +317,7 @@ public class PdfStorageServiceTests
 
             var gameDirectory = Path.Combine(storagePath, "game-1");
             Directory.Exists(gameDirectory).Should().BeTrue();
-            Assert.Single(Directory.GetFiles(gameDirectory));
+            Directory.GetFiles(gameDirectory).Should().ContainSingle();
 
             var stored = await dbContext.PdfDocuments.FirstAsync();
             stored.GameId.Should().Be("game-1");

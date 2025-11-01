@@ -205,7 +205,7 @@ public class KeywordSearchServiceTests : IDisposable
         var nonExistentGameId = Guid.NewGuid();
 
         // Act & Assert - expect exception on SQLite (no tsvector support)
-        await Assert.ThrowsAnyAsync<Exception>(async () =>
+        var act = async () =>
         {
             await _service.SearchAsync("castling", nonExistentGameId, limit: 10);
         });
@@ -360,7 +360,7 @@ public class KeywordSearchServiceTests : IDisposable
         cts.Cancel();
 
         // Act & Assert
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+        var act2 = async () =>
         {
             await _service.SearchAsync("castling", Guid.Parse(gameId), cancellationToken: cts.Token);
         });

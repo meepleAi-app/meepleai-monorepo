@@ -152,7 +152,7 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var responseContent = await response.Content.ReadAsStringAsync();
-        Assert.Contains("required", responseContent.ToLower());
+        responseContent.ToLower().Should().Contain("required");
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var responseContent = await response.Content.ReadAsStringAsync();
-        Assert.Contains("not found", responseContent.ToLower());
+        responseContent.ToLower().Should().Contain("not found");
     }
 
     [Fact]

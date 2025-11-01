@@ -76,7 +76,7 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
         using var document = JsonDocument.Parse(requestBody!);
         var root = document.RootElement;
 
-        Assert.Equal(testModel, root.GetProperty("model").GetString());
+        root.GetProperty("model").GetString().Should().Be(testModel);
 
         // Cleanup happens automatically via IntegrationTestBase
     }
@@ -121,7 +121,7 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
         using var document = JsonDocument.Parse(requestBody!);
         var root = document.RootElement;
 
-        Assert.Equal(testTemperature, root.GetProperty("temperature").GetDouble());
+        root.GetProperty("temperature").GetDouble().Should().Be(testTemperature);
 
         // Cleanup happens automatically via IntegrationTestBase
     }
@@ -166,7 +166,7 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
         using var document = JsonDocument.Parse(requestBody!);
         var root = document.RootElement;
 
-        Assert.Equal(testMaxTokens, root.GetProperty("max_tokens").GetInt32());
+        root.GetProperty("max_tokens").GetInt32().Should().Be(testMaxTokens);
 
         // Cleanup happens automatically via IntegrationTestBase
     }
@@ -196,9 +196,9 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
         var root = document.RootElement;
 
         // Verify hardcoded defaults from LlmService
-        Assert.Equal("deepseek/deepseek-chat-v3.1", root.GetProperty("model").GetString());
-        Assert.Equal(0.3, root.GetProperty("temperature").GetDouble());
-        Assert.Equal(500, root.GetProperty("max_tokens").GetInt32());
+        root.GetProperty("model").GetString().Should().Be("deepseek/deepseek-chat-v3.1");
+        root.GetProperty("temperature").GetDouble().Should().Be(0.3);
+        root.GetProperty("max_tokens").GetInt32().Should().Be(500);
     }
 
     /// <summary>
@@ -242,7 +242,7 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
         using var document = JsonDocument.Parse(requestBody!);
         var root = document.RootElement;
 
-        Assert.Equal(0.3, root.GetProperty("temperature").GetDouble()); // Default value
+        root.GetProperty("temperature").GetDouble().Should().Be(0.3); // Default value
 
         // Cleanup happens automatically via IntegrationTestBase
     }
@@ -287,7 +287,7 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
         using var document = JsonDocument.Parse(requestBody!);
         var root = document.RootElement;
 
-        Assert.Equal(32000, root.GetProperty("max_tokens").GetInt32()); // Capped value
+        root.GetProperty("max_tokens").GetInt32().Should().Be(32000); // Capped value
 
         // Cleanup happens automatically via IntegrationTestBase
     }
@@ -363,9 +363,9 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
         using var document = JsonDocument.Parse(requestBody!);
         var root = document.RootElement;
 
-        Assert.Equal(testModel, root.GetProperty("model").GetString());
-        Assert.Equal(testTemperature, root.GetProperty("temperature").GetDouble());
-        Assert.Equal(testMaxTokens, root.GetProperty("max_tokens").GetInt32());
+        root.GetProperty("model").GetString().Should().Be(testModel);
+        root.GetProperty("temperature").GetDouble().Should().Be(testTemperature);
+        root.GetProperty("max_tokens").GetInt32().Should().Be(testMaxTokens);
         root.GetProperty("stream").GetBoolean().Should().BeTrue();
 
         // Cleanup happens automatically via IntegrationTestBase

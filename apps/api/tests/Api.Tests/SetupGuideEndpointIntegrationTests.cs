@@ -77,7 +77,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         // And: The guide contains numbered steps
         setupGuide.Should().NotBeNull();
         setupGuide!.steps.Should().NotBeEmpty();
-        Assert.All(setupGuide.steps, step =>
+        setupGuide.steps.Should().OnlyContain(step =>
         {
             step.stepNumber > 0.Should().BeTrue();
             string.IsNullOrWhiteSpace(step.title).Should().BeFalse();
@@ -240,8 +240,8 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
             .ToListAsync();
 
         chatLogs.Should().NotBeEmpty();
-        Assert.Contains(chatLogs, log => log.Level == "user" && log.Message.Contains("Generate setup guide"));
-        Assert.Contains(chatLogs, log => log.Level == "assistant" && log.Message.Contains("Setup guide"));
+        log => log.Level == "user" && log.Message.Contains("Generate setup guide").Should().Contain(chatLogs);
+        log => log.Level == "assistant" && log.Message.Contains("Setup guide").Should().Contain(chatLogs);
     }
 
     /// <summary>

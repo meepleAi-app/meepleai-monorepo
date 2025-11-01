@@ -78,9 +78,9 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
         // Admin role has 1000 tokens by default configuration
         var expectedLimit = "1000";
 
-        Assert.Equal(expectedLimit, GetSingleHeaderValue(limitedResponse, "X-RateLimit-Limit"));
-        Assert.Equal("0", GetSingleHeaderValue(limitedResponse, "X-RateLimit-Remaining"));
-        Assert.Equal("15", GetSingleHeaderValue(limitedResponse, "Retry-After"));
+        "X-RateLimit-Limit").Should().Be(expectedLimit, GetSingleHeaderValue(limitedResponse);
+        "X-RateLimit-Remaining").Should().Be("0", GetSingleHeaderValue(limitedResponse);
+        "Retry-After").Should().Be("15", GetSingleHeaderValue(limitedResponse);
         // Cleanup happens automatically via DisposeAsync
     }
 
@@ -112,8 +112,8 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
         // Admin role has 1000 tokens by default configuration
         var expectedLimit = "1000";
 
-        Assert.Equal(expectedLimit, GetSingleHeaderValue(response, "X-RateLimit-Limit"));
-        Assert.Equal(expectedLimit, GetSingleHeaderValue(response, "X-RateLimit-Remaining"));
+        "X-RateLimit-Limit").Should().Be(expectedLimit, GetSingleHeaderValue(response);
+        "X-RateLimit-Remaining").Should().Be(expectedLimit, GetSingleHeaderValue(response);
         response.Headers.Contains("Retry-After").Should().BeFalse();
         // Cleanup happens automatically via DisposeAsync
     }
@@ -137,8 +137,8 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
         var response = await context.Client.GetAsync("/api/v1/auth/me");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        Assert.Equal(expectedLimit.ToString(CultureInfo.InvariantCulture), GetSingleHeaderValue(response, "X-RateLimit-Limit"));
-        Assert.Equal(expectedRemaining.ToString(CultureInfo.InvariantCulture), GetSingleHeaderValue(response, "X-RateLimit-Remaining"));
+        "X-RateLimit-Limit").Should().Be(expectedLimit.ToString(CultureInfo.InvariantCulture), GetSingleHeaderValue(response);
+        "X-RateLimit-Remaining").Should().Be(expectedRemaining.ToString(CultureInfo.InvariantCulture), GetSingleHeaderValue(response);
         response.Headers.Contains("Retry-After").Should().BeFalse();
     }
 
@@ -155,8 +155,8 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
         var response = await context.Client.GetAsync("/api/v1/auth/me");
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        Assert.Equal("60", GetSingleHeaderValue(response, "X-RateLimit-Limit"));
-        Assert.Equal("12", GetSingleHeaderValue(response, "X-RateLimit-Remaining"));
+        "X-RateLimit-Limit").Should().Be("60", GetSingleHeaderValue(response);
+        "X-RateLimit-Remaining").Should().Be("12", GetSingleHeaderValue(response);
         response.Headers.Contains("Retry-After").Should().BeFalse();
     }
 

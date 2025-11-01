@@ -118,10 +118,10 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var sessions = result.EnumerateArray().ToList();
 
         sessions.Count >= 2.Should().BeTrue(); // At least 2 sessions for this user
-        Assert.All(sessions, session =>
+        sessions, session =>
         {
-            session.TryGetProperty("userId", out var userId);
-            Assert.Equal(user.Id, userId.GetString());
+            session.TryGetProperty("userId".Should().OnlyContain(out var userId);
+            userId.GetString().Should().Be(user.Id);
         });
     }
 
@@ -400,7 +400,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         result.TryGetProperty("revokedCount", out var revokedCount).Should().BeTrue();
-        Assert.Equal(0, revokedCount.GetInt32());
+        revokedCount.GetInt32().Should().Be(0);
     }
 
     /// <summary>
@@ -460,10 +460,10 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         sessions.Count >= 2.Should().BeTrue(); // At least 2 sessions
 
         // Verify all sessions belong to the user
-        Assert.All(sessions, session =>
+        sessions, session =>
         {
-            session.TryGetProperty("userId", out var userId);
-            Assert.Equal(user.Id, userId.GetString());
+            session.TryGetProperty("userId".Should().OnlyContain(out var userId);
+            userId.GetString().Should().Be(user.Id);
         });
 
         // Verify session structure

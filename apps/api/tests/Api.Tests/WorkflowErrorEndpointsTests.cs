@@ -210,7 +210,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         items.GetArrayLength() >= 1.Should().BeTrue();
         foreach (var item in items.EnumerateArray())
         {
-            Assert.Equal(targetWorkflowId, item.GetProperty("workflowId").GetString());
+            item.GetProperty("workflowId").GetString().Should().Be(targetWorkflowId);
         }
     }
 
@@ -358,12 +358,12 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var root = document.RootElement;
 
-        Assert.Equal(errorId.ToString(), root.GetProperty("id").GetString());
-        Assert.Equal("test-workflow", root.GetProperty("workflowId").GetString());
-        Assert.Equal("test-exec", root.GetProperty("executionId").GetString());
-        Assert.Equal("Test error message", root.GetProperty("errorMessage").GetString());
-        Assert.Equal("Test Node", root.GetProperty("nodeName").GetString());
-        Assert.Equal(3, root.GetProperty("retryCount").GetInt32());
+        root.GetProperty("id").GetString().Should().Be(errorId.ToString());
+        root.GetProperty("workflowId").GetString().Should().Be("test-workflow");
+        root.GetProperty("executionId").GetString().Should().Be("test-exec");
+        root.GetProperty("errorMessage").GetString().Should().Be("Test error message");
+        root.GetProperty("nodeName").GetString().Should().Be("Test Node");
+        root.GetProperty("retryCount").GetInt32().Should().Be(3);
     }
 
     /// <summary>

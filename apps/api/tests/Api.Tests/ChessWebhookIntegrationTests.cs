@@ -136,7 +136,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         if (analysis.ValueKind != JsonValueKind.Null)
         {
             analysis.TryGetProperty("fenPosition", out var fen).Should().BeTrue();
-            Assert.Contains("e3", fen.GetString() ?? ""); // FEN should mention en passant square
+            fen.GetString() ?? "".Should().Contain("e3"); // FEN should mention en passant square
         }
     }
 

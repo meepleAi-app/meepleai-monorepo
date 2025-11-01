@@ -127,7 +127,7 @@ public class TestTimeProviderTests
 
         // Assert
         var now = provider.GetUtcNow();
-        Assert.Equal(new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero), now);
+        now.Should().Be(new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero));
     }
 
     [Fact]
@@ -300,7 +300,7 @@ public class TimeTestHelpersTests
 
         // Assert
         var now = provider.GetUtcNow();
-        Assert.Equal(new DateTimeOffset(2025, 1, 1, 6, 30, 15, TimeSpan.Zero), now);
+        now.Should().Be(new DateTimeOffset(2025, 1, 1, 6, 30, 15, TimeSpan.Zero));
     }
 }
 

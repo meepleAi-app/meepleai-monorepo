@@ -104,7 +104,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         response.Content.Headers.ContentType?.MediaType.Should().Be("text/event-stream");
         response.Headers.Contains("Cache-Control").Should().BeTrue();
-        Assert.Contains("no-cache", response.Headers.GetValues("Cache-Control"));
+        response.Headers.GetValues("Cache-Control").Should().Contain("no-cache");
     }
 
     [Fact]
@@ -201,7 +201,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
 
         citationsData.Should().NotBeNull();
         citationsData!.citations.Should().NotBeEmpty();
-        Assert.All(citationsData.citations, citation =>
+        citationsData.citations.Should().OnlyContain(citation =>
         {
             citation.text.Should().NotBeEmpty();
             citation.source.Should().StartWith("PDF:");
@@ -330,7 +330,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var events = await ParseSseEventsAsync(response);
 
         // Then: All events have valid timestamps
-        Assert.All(events, evt =>
+        events.Should().OnlyContain(evt =>
         {
             evt.Timestamp.Should().NotBe(default(DateTime));
             evt.Timestamp <= DateTime.UtcNow.AddSeconds(5).Should().BeTrue(); // Allow 5 sec for test execution

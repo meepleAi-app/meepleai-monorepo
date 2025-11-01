@@ -291,7 +291,7 @@ public class N8nTemplateServiceTests : IDisposable
         // Assert
         result.Should().NotBeNull();
         result.WorkflowId.Should().Be("workflow-123");
-        Assert.Contains("imported successfully", result.Message.ToLower());
+        result.Message.ToLower().Should().Contain("imported successfully");
 
         // Verify HTTP request was made
         mockHandler.Protected().Verify(
@@ -402,7 +402,7 @@ public class N8nTemplateServiceTests : IDisposable
         // Assert
         result.Valid.Should().BeFalse();
         result.Errors.Should().NotBeNull();
-        Assert.Contains(result.Errors, e => e.Contains("Invalid JSON"));
+        e => e.Contains("Invalid JSON").Should().Contain(result.Errors);
     }
 
     [Fact]
@@ -421,8 +421,8 @@ public class N8nTemplateServiceTests : IDisposable
         // Assert
         result.Valid.Should().BeFalse();
         result.Errors.Should().NotBeNull();
-        Assert.Contains(result.Errors, e => e.Contains("name"));
-        Assert.Contains(result.Errors, e => e.Contains("version"));
+        e => e.Contains("name").Should().Contain(result.Errors);
+        e => e.Contains("version").Should().Contain(result.Errors);
     }
 
     [Fact]
@@ -450,7 +450,7 @@ public class N8nTemplateServiceTests : IDisposable
         // Assert
         result.Valid.Should().BeFalse();
         result.Errors.Should().NotBeNull();
-        Assert.Contains(result.Errors, e => e.Contains("nodes"));
+        e => e.Contains("nodes").Should().Contain(result.Errors);
     }
 
     [Fact]
@@ -501,7 +501,7 @@ public class N8nTemplateServiceTests : IDisposable
 
         // Assert
         result.Valid.Should().BeFalse();
-        Assert.Contains(result.Errors!, e => e.Contains("name is required"));
+        e => e.Contains("name is required").Should().Contain(result.Errors!);
     }
 
     #endregion

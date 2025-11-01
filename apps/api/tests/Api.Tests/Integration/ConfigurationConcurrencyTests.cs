@@ -233,7 +233,7 @@ public class ConfigurationConcurrencyTests : ConfigIntegrationTestBase
         var results = await Task.WhenAll(tasks);
 
         // Assert: All instances get consistent value
-        Assert.All(results, value => Assert.Equal(100, value));
+        results.Should().OnlyContain(value => value).Should().Be(100);
         results.Length.Should().Be(5);
     }
 }

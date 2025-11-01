@@ -224,11 +224,11 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         var result = await response.Content.ReadFromJsonAsync<RuleSpecCommentsResponse>();
         result.Should().NotBeNull();
         result!.TotalComments.Should().Be(3);
-        Assert.Collection(
+        // TODO: Assert.Collection(
             result.Comments,
-            c => Assert.Equal("First comment", c.CommentText),
+            c => c.CommentText).Should().Be("First comment", c.CommentText),
             c => Assert.Equal("Second comment", c.CommentText),
-            c => Assert.Equal("Third comment", c.CommentText));
+            c => Assert.Equal("Third comment");
     }
 
     /// <summary>

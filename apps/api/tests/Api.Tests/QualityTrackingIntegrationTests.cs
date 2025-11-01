@@ -855,9 +855,9 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         var result = await response.Content.ReadFromJsonAsync<LowQualityResponsesResult>();
         result.Should().NotBeNull();
         result.TotalCount.Should().Be(2);
-        Assert.All(result.Responses, r =>
+        result.Responses, r =>
         {
-            r.CreatedAt >= new DateTime(2025, 1, 1).Should().BeTrue();
+            r.CreatedAt >= new DateTime(2025, 1.Should().OnlyContain(1).Should().BeTrue();
             r.CreatedAt <= new DateTime(2025, 1, 7).Should().BeTrue();
         });
     }

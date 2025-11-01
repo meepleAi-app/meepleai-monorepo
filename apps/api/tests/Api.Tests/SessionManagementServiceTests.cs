@@ -91,7 +91,7 @@ public class SessionManagementServiceTests : IDisposable
         result.Count.Should().Be(2);
         result[0].Id.Should().Be("session1");
         result[1].Id.Should().Be("session2");
-        Assert.All(result, s => Assert.Null(s.RevokedAt));
+        result.Should().OnlyContain(s => s.RevokedAt).Should().BeNull();
     }
 
     /// <summary>
@@ -556,10 +556,10 @@ public class SessionManagementServiceTests : IDisposable
         count.Should().Be(1);
 
         var sessions = await db.UserSessions.ToListAsync();
-        Assert.NotNull(sessions.First(s => s.Id == "inactive").RevokedAt);
-        Assert.Null(sessions.First(s => s.Id == "active").RevokedAt);
-        Assert.NotNull(sessions.First(s => s.Id == "revoked").RevokedAt); // Already revoked
-        Assert.Null(sessions.First(s => s.Id == "expired").RevokedAt); // Expired, not revoked
+        sessions.First(s => s.Id == "inactive").RevokedAt.Should().NotBeNull();
+        sessions.First(s => s.Id == "active").RevokedAt.Should().BeNull();
+        sessions.First(s => s.Id == "revoked").RevokedAt.Should().NotBeNull(); // Already revoked
+        sessions.First(s => s.Id == "expired").RevokedAt.Should().BeNull(); // Expired, not revoked
 
         // And: Cache invalidated for inactive session
         mockCache.Verify(c => c.InvalidateAsync("inactive-hash", default), Times.Once);
@@ -608,8 +608,8 @@ public class SessionManagementServiceTests : IDisposable
         count.Should().Be(1);
 
         var sessions = await db.UserSessions.ToListAsync();
-        Assert.NotNull(sessions.First(s => s.Id == "old").RevokedAt);
-        Assert.Null(sessions.First(s => s.Id == "recent").RevokedAt);
+        sessions.First(s => s.Id == "old").RevokedAt.Should().NotBeNull();
+        sessions.First(s => s.Id == "recent").RevokedAt.Should().BeNull();
     }
 
     /// <summary>

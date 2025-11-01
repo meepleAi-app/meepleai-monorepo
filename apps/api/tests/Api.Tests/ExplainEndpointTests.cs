@@ -83,7 +83,7 @@ public class ExplainEndpointTests : IntegrationTestBase
         // Verify outline structure
         result.TryGetProperty("outline", out var outline).Should().BeTrue();
         outline.TryGetProperty("mainTopic", out var mainTopic).Should().BeTrue();
-        Assert.Equal("winning conditions", mainTopic.GetString());
+        mainTopic.GetString().Should().Be("winning conditions");
         outline.TryGetProperty("sections", out var sections).Should().BeTrue();
         sections.GetArrayLength() > 0.Should().BeTrue();
 

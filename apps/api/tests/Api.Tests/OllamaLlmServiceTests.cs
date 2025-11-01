@@ -327,7 +327,7 @@ public class OllamaLlmServiceTests
 
         // Assert
         capturedRequest.Should().NotBeNull();
-        Assert.Equal("http://custom-ollama:9999/api/chat", capturedRequest.RequestUri?.ToString());
+        capturedRequest.RequestUri?.ToString().Should().Be("http://custom-ollama:9999/api/chat");
     }
 
     [Fact]
@@ -362,7 +362,7 @@ public class OllamaLlmServiceTests
 
         // Assert
         capturedRequest.Should().NotBeNull();
-        Assert.Equal("http://ollama:11434/api/chat", capturedRequest.RequestUri?.ToString());
+        capturedRequest.RequestUri?.ToString().Should().Be("http://ollama:11434/api/chat");
     }
 
     [Fact]
@@ -405,23 +405,23 @@ public class OllamaLlmServiceTests
         using var doc = JsonDocument.Parse(capturedRequestBody);
         var root = doc.RootElement;
 
-        Assert.Equal("llama3.2:3b", root.GetProperty("model").GetString());
+        root.GetProperty("model").GetString().Should().Be("llama3.2:3b");
         root.GetProperty("stream").GetBoolean().Should().BeFalse();
 
         var messages = root.GetProperty("messages");
-        Assert.Equal(2, messages.GetArrayLength());
+        messages.GetArrayLength().Should().Be(2);
 
         var systemMessage = messages[0];
-        Assert.Equal("system", systemMessage.GetProperty("role").GetString());
-        Assert.Equal(systemPrompt, systemMessage.GetProperty("content").GetString());
+        systemMessage.GetProperty("role").GetString().Should().Be("system");
+        systemMessage.GetProperty("content").GetString().Should().Be(systemPrompt);
 
         var userMessage = messages[1];
-        Assert.Equal("user", userMessage.GetProperty("role").GetString());
-        Assert.Equal(userPrompt, userMessage.GetProperty("content").GetString());
+        userMessage.GetProperty("role").GetString().Should().Be("user");
+        userMessage.GetProperty("content").GetString().Should().Be(userPrompt);
 
         var options = root.GetProperty("options");
-        Assert.Equal(0.3f, options.GetProperty("temperature").GetSingle());
-        Assert.Equal(500, options.GetProperty("num_predict").GetInt32());
+        options.GetProperty("temperature").GetSingle().Should().Be(0.3f);
+        options.GetProperty("num_predict").GetInt32().Should().Be(500);
     }
 
     [Fact]

@@ -105,11 +105,11 @@ public class GameServiceTests : IDisposable
 
         var games = await service.GetGamesAsync();
 
-        Assert.Collection(
+        // TODO: Assert.Collection(
             games,
-            g => Assert.Equal("Alpha", g.Name),
+            g => g.Name).Should().Be("Alpha", g.Name),
             g => Assert.Equal("Bravo", g.Name),
-            g => Assert.Equal("Charlie", g.Name));
+            g => Assert.Equal("Charlie");
     }
 
     private sealed class FixedTimeProvider : TimeProvider

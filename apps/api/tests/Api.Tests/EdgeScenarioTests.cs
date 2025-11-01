@@ -366,7 +366,7 @@ public class EdgeScenarioTests : IntegrationTestBase
             .Select(cookie => cookie.Split(';')[0].Split('=')[1])
             .ToList();
 
-        Assert.Equal(3, sessionTokens.Distinct().Count());
+        sessionTokens.Distinct().Count().Should().Be(3);
     }
 
     [Fact]

@@ -233,7 +233,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         // Verify all fields that n8n will transform
         result.TryGetProperty("outline", out var outline).Should().BeTrue();
         outline.TryGetProperty("mainTopic", out var mainTopic).Should().BeTrue();
-        Assert.Equal("setup", mainTopic.GetString());
+        mainTopic.GetString().Should().Be("setup");
         outline.TryGetProperty("sections", out var sections).Should().BeTrue();
         sections.GetArrayLength() >= 0.Should().BeTrue();
 
@@ -284,7 +284,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         var config = await createResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         config.TryGetProperty("id", out var configId).Should().BeTrue();
         config.TryGetProperty("name", out var name).Should().BeTrue();
-        Assert.Equal(createRequest.name, name.GetString());
+        name.GetString().Should().Be(createRequest.name);
 
         // And: Configuration is retrievable
         var getRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/admin/n8n/{configId.GetString()}");
@@ -295,7 +295,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
 
         var retrievedConfig = await getResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         retrievedConfig.TryGetProperty("webhookUrl", out var webhookUrl).Should().BeTrue();
-        Assert.Equal(createRequest.webhookUrl, webhookUrl.GetString());
+        webhookUrl.GetString().Should().Be(createRequest.webhookUrl);
     }
 
     /// <summary>

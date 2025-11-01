@@ -72,7 +72,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         // Then: SSE response is returned with correct headers
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         response.Content.Headers.ContentType?.MediaType.Should().Be("text/event-stream");
-        Assert.Contains(response.Headers, h => h.Key == "Cache-Control" && h.Value.Contains("no-cache"));
+        h => h.Key == "Cache-Control" && h.Value.Contains("no-cache").Should().Contain(response.Headers);
 
         // And: Events are streamed in correct order
         var events = await ParseSSEEventsAsync(response);
@@ -89,7 +89,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         eventTypes[^1].Should().Be(StreamingEventType.Complete);
 
         // And: All events have valid timestamps
-        Assert.All(events, evt =>
+        events.Should().OnlyContain(evt =>
         {
             evt.Timestamp > DateTime.UtcNow.AddMinutes(-1).Should().BeTrue();
             evt.Timestamp <= DateTime.UtcNow.AddSeconds(5).Should().BeTrue();
@@ -191,7 +191,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
 
             citations.Should().NotBeNull();
             citations!.citations.Should().NotBeEmpty();
-            Assert.All(citations.citations, citation =>
+            citations.citations.Should().OnlyContain(citation =>
             {
                 string.IsNullOrWhiteSpace(citation.text).Should().BeFalse();
                 string.IsNullOrWhiteSpace(citation.source).Should().BeFalse();
@@ -440,7 +440,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         var eventTasks = responses.Select(ParseSSEEventsAsync).ToArray();
         var allEvents = await Task.WhenAll(eventTasks);
 
-        Assert.All(allEvents, events => Assert.NotEmpty(events));
+        allEvents.Should().OnlyContain(events => Assert.NotEmpty(events));
     }
 
     /// <summary>

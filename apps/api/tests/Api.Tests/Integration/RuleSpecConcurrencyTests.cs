@@ -99,7 +99,7 @@ public class RuleSpecConcurrencyTests : ConfigIntegrationTestBase
         var responses = await Task.WhenAll(task1, task2);
 
         // Assert: Both operations succeeded
-        Assert.All(responses, r => Assert.Equal(HttpStatusCode.OK, r.StatusCode));
+        responses.Should().OnlyContain(r => r.StatusCode == HttpStatusCode.OK);
 
         // Verify both RuleSpecs in database
         using var scope2 = Factory.Services.CreateScope();

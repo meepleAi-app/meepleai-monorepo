@@ -317,7 +317,7 @@ public class UserManagementServiceTests : IDisposable
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.CreateUserAsync(request));
-        exception.Message.Should().Contain("already exists");
+        exception.Which.Message.Should().Contain("already exists");
     }
 
     [Fact]
@@ -412,7 +412,7 @@ public class UserManagementServiceTests : IDisposable
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.UpdateUserAsync(userId, request));
-        exception.Message.Should().Contain("already in use");
+        exception.Which.Message.Should().Contain("already in use");
     }
 
     [Fact]
@@ -477,7 +477,7 @@ public class UserManagementServiceTests : IDisposable
         // Act & Assert - trying to delete self
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.DeleteUserAsync(userId, userId));
-        exception.Message.Should().Contain("Cannot delete your own account");
+        exception.Which.Message.Should().Contain("Cannot delete your own account");
     }
 
     [Fact]
@@ -490,7 +490,7 @@ public class UserManagementServiceTests : IDisposable
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.DeleteUserAsync(adminId, requestingUserId));
-        exception.Message.Should().Contain("Cannot delete the last admin user");
+        exception.Which.Message.Should().Contain("Cannot delete the last admin user");
     }
 
     [Fact]

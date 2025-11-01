@@ -86,7 +86,8 @@ public class EmailServiceTests
         var mockConfig = CreateMockConfiguration(smtpPort: "invalid");
 
         // Act & Assert
-        Assert.Throws<FormatException>(() => new EmailService(mockConfig.Object, _mockLogger.Object));
+        var act = () => new EmailService(mockConfig.Object, _mockLogger.Object);
+        act.Should().Throw<FormatException>();
     }
 
     [Fact]
@@ -96,7 +97,8 @@ public class EmailServiceTests
         var mockConfig = CreateMockConfiguration(enableSsl: "invalid");
 
         // Act & Assert
-        Assert.Throws<FormatException>(() => new EmailService(mockConfig.Object, _mockLogger.Object));
+        var act = () => new EmailService(mockConfig.Object, _mockLogger.Object);
+        act.Should().Throw<FormatException>();
     }
 
     #endregion
@@ -119,8 +121,8 @@ public class EmailServiceTests
 
         // Act & Assert
         // Expected: SmtpClient will fail to connect, causing InvalidOperationException
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.SendPasswordResetEmailAsync(toEmail, toName, resetToken));
+        var act = async () => await service.SendPasswordResetEmailAsync(toEmail, toName, resetToken);
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Assert - Error logged
         _mockLogger.Verify(
@@ -132,7 +134,7 @@ public class EmailServiceTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
 
-        exception.Message.Should().Be("Failed to send password reset email");
+        exception.Which.Message.Should().Be("Failed to send password reset email");
     }
 
     #endregion
@@ -147,8 +149,8 @@ public class EmailServiceTests
         var service = new EmailService(mockConfig.Object, _mockLogger.Object);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.SendPasswordResetEmailAsync(null!, "Test User", "token123"));
+        var act = async () => await service.SendPasswordResetEmailAsync(null!, "Test User", "token123");
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Verify error was logged
         _mockLogger.Verify(
@@ -169,8 +171,8 @@ public class EmailServiceTests
         var service = new EmailService(mockConfig.Object, _mockLogger.Object);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.SendPasswordResetEmailAsync(string.Empty, "Test User", "token123"));
+        var act = async () => await service.SendPasswordResetEmailAsync(string.Empty, "Test User", "token123");
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Verify error was logged
         _mockLogger.Verify(
@@ -198,8 +200,8 @@ public class EmailServiceTests
         // Act & Assert
         // MailAddress constructor validates email format and throws ArgumentException
         // EmailService catches this and wraps it in InvalidOperationException
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.SendPasswordResetEmailAsync(invalidEmail, "Test User", "token123"));
+        var act = async () => await service.SendPasswordResetEmailAsync(invalidEmail, "Test User", "token123");
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Verify error was logged
         _mockLogger.Verify(
@@ -221,8 +223,8 @@ public class EmailServiceTests
 
         // Act & Assert
         // Uri.EscapeDataString throws ArgumentNullException on null input
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.SendPasswordResetEmailAsync("user@example.com", "Test User", null!));
+        var act = async () => await service.SendPasswordResetEmailAsync("user@example.com", "Test User", null!);
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Verify error was logged
         _mockLogger.Verify(
@@ -244,8 +246,8 @@ public class EmailServiceTests
 
         // Act & Assert
         // Empty string is valid for Uri.EscapeDataString, will fail later at SMTP level
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.SendPasswordResetEmailAsync("user@example.com", "Test User", string.Empty));
+        var act = async () => await service.SendPasswordResetEmailAsync("user@example.com", "Test User", string.Empty);
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Verify error was logged (SMTP error, not validation error)
         _mockLogger.Verify(
@@ -279,8 +281,8 @@ public class EmailServiceTests
         // Act & Assert
         // Uri.EscapeDataString should handle special characters without throwing
         // The actual failure will be at SMTP level (expected in unit test without real SMTP server)
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.SendPasswordResetEmailAsync("user@example.com", "Test User", tokenWithSpecialChars));
+        var act = async () => await service.SendPasswordResetEmailAsync("user@example.com", "Test User", tokenWithSpecialChars);
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Assert - Error is from SMTP, not from URL encoding
         exception.InnerException.Should().NotBeNull();
@@ -311,12 +313,12 @@ public class EmailServiceTests
 
         // Act & Assert
         // EmailService catches all exceptions (including OperationCanceledException) and wraps them
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.SendPasswordResetEmailAsync(
+        var act = async () => await service.SendPasswordResetEmailAsync(
                 "user@example.com",
                 "Test User",
                 "token123",
-                cts.Token));
+                cts.Token);
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Verify error was logged
         _mockLogger.Verify(
@@ -341,11 +343,11 @@ public class EmailServiceTests
         var service = new EmailService(mockConfig.Object, _mockLogger.Object);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.SendPasswordResetEmailAsync("user@example.com", "Test User", "token123"));
+        var act = async () => await service.SendPasswordResetEmailAsync("user@example.com", "Test User", "token123");
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Assert
-        exception.Message.Should().Be("Failed to send password reset email");
+        exception.Which.Message.Should().Be("Failed to send password reset email");
         exception.InnerException.Should().NotBeNull(); // Should contain the original SMTP exception
 
         // Verify error was logged with exception details
@@ -368,8 +370,8 @@ public class EmailServiceTests
         var testEmail = "test@example.com";
 
         // Act
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.SendPasswordResetEmailAsync(testEmail, "Test User", "token123"));
+        var act = async () => await service.SendPasswordResetEmailAsync(testEmail, "Test User", "token123");
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Assert - Verify the email address is included in the error log
         _mockLogger.Verify(
@@ -399,8 +401,8 @@ public class EmailServiceTests
         // We cannot directly verify the email body without mocking SmtpClient,
         // but we can verify that the service constructs the URL correctly by ensuring
         // no exception is thrown during URL building (before SMTP failure)
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.SendPasswordResetEmailAsync("user@example.com", "Test User", token));
+        var act = async () => await service.SendPasswordResetEmailAsync("user@example.com", "Test User", token);
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         // The URL should be: https://app.meepleai.dev/reset-password?token=test-token-123
         // This is indirectly tested - if URL building failed, we'd get a different exception type
@@ -415,8 +417,8 @@ public class EmailServiceTests
         var longToken = new string('a', 500); // 500 character token
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.SendPasswordResetEmailAsync("user@example.com", "Test User", longToken));
+        var act = async () => await service.SendPasswordResetEmailAsync("user@example.com", "Test User", longToken);
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Assert - Should fail at SMTP level, not during token processing
         _mockLogger.Verify(
@@ -442,8 +444,8 @@ public class EmailServiceTests
 
         // Act & Assert
         // Null name should be handled by MailAddress constructor and email body template
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.SendPasswordResetEmailAsync("user@example.com", null!, "token123"));
+        var act = async () => await service.SendPasswordResetEmailAsync("user@example.com", null!, "token123");
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Should fail at SMTP level, not during name processing
         _mockLogger.Verify(
@@ -464,8 +466,8 @@ public class EmailServiceTests
         var service = new EmailService(mockConfig.Object, _mockLogger.Object);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.SendPasswordResetEmailAsync("user@example.com", string.Empty, "token123"));
+        var act = async () => await service.SendPasswordResetEmailAsync("user@example.com", string.Empty, "token123");
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Should fail at SMTP level, not during name processing
         _mockLogger.Verify(
@@ -487,8 +489,8 @@ public class EmailServiceTests
         var unicodeName = "用户名 🎲"; // Chinese characters + emoji
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.SendPasswordResetEmailAsync("user@example.com", unicodeName, "token123"));
+        var act = async () => await service.SendPasswordResetEmailAsync("user@example.com", unicodeName, "token123");
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Should handle unicode correctly in email body
         _mockLogger.Verify(
@@ -510,8 +512,8 @@ public class EmailServiceTests
         var internationalEmail = "user@münchen.de"; // Internationalized domain name
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await service.SendPasswordResetEmailAsync(internationalEmail, "Test User", "token123"));
+        var act = async () => await service.SendPasswordResetEmailAsync(internationalEmail, "Test User", "token123");
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
         // MailAddress should handle IDN (Internationalized Domain Names)
         _mockLogger.Verify(

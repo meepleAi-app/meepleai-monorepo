@@ -242,7 +242,7 @@ public class QualityMetricsTests
         // Assert
         var counterMeasurements = counterCollector.GetMeasurements();
         counterMeasurements.Count.Should().Be(2);
-        Assert.All(counterMeasurements, m => Assert.Equal(1, m.Value));
+        counterMeasurements.Should().OnlyContain(m => m.Value == 1);
 
         var histogramMeasurements = histogramCollector.GetMeasurements();
         // 3 recordings × 4 dimensions = 12 measurements
@@ -277,7 +277,7 @@ public class QualityMetricsTests
 
         // Assert
         var measurements = collector.GetMeasurements();
-        Assert.All(measurements, m => Assert.Equal(0.0, m.Value));
+        measurements.Should().OnlyContain(m => m.Value == 0.0);
     }
 
     /// <summary>

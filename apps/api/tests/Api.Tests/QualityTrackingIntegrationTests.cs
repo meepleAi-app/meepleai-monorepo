@@ -652,7 +652,7 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         var result = await response.Content.ReadFromJsonAsync<LowQualityResponsesResult>();
         result.Should().NotBeNull();
         result.TotalCount.Should().Be(2);
-        Assert.All(result.Responses, r => Assert.True(r.IsLowQuality));
+        result.Responses.Should().OnlyContain(r => r.IsLowQuality);
     }
 
     /// <summary>
@@ -888,7 +888,7 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         var responses = await Task.WhenAll(tasks);
 
         // Assert
-        Assert.All(responses, r => Assert.True(r.IsSuccessStatusCode));
+        responses.Should().OnlyContain(r => r.IsSuccessStatusCode);
 
         using var scope = Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();

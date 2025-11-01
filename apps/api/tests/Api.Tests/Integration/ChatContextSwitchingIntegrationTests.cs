@@ -151,7 +151,7 @@ public class ChatContextSwitchingIntegrationTests
 
         // Assert: Only Chess chats returned
         chessChats.Count.Should().Be(2);
-        Assert.All(chessChats, chat => Assert.Equal(chess.Id, chat.GameId));
+        chessChats.Should().OnlyContain(chat => chat.GameId == chess.Id);
         c => c.Id == chessChat1.Id.Should().Contain(chessChats);
         c => c.Id == chessChat2.Id.Should().Contain(chessChats);
         c => c.Id == checkersChat.Id.Should().NotContain(chessChats);

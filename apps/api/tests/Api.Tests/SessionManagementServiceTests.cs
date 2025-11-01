@@ -155,7 +155,7 @@ public class SessionManagementServiceTests : IDisposable
 
         // When/Then: ArgumentException is thrown
         var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.GetUserSessionsAsync(userId!));
-        exception.Message.Should().Contain("User ID cannot be null or empty");
+        exception.Which.Message.Should().Contain("User ID cannot be null or empty");
     }
 
     /// <summary>
@@ -192,7 +192,7 @@ public class SessionManagementServiceTests : IDisposable
 
         // Then: Only user1's sessions are returned
         result.Count.Should().Be(2);
-        Assert.All(result, s => Assert.Equal(user1Id, s.UserId));
+        result.Should().OnlyContain(s => s.UserId == user1Id);
     }
 
     /// <summary>
@@ -245,7 +245,7 @@ public class SessionManagementServiceTests : IDisposable
 
         // When/Then: ArgumentException is thrown
         var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.GetAllSessionsAsync(limit: limit));
-        exception.Message.Should().Contain("Limit must be between 1 and 1000");
+        exception.Which.Message.Should().Contain("Limit must be between 1 and 1000");
     }
 
     /// <summary>
@@ -366,7 +366,7 @@ public class SessionManagementServiceTests : IDisposable
 
         // When/Then: ArgumentException is thrown
         var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.RevokeSessionAsync(sessionId!));
-        exception.Message.Should().Contain("Session ID cannot be null or empty");
+        exception.Which.Message.Should().Contain("Session ID cannot be null or empty");
     }
 
     /// <summary>
@@ -441,7 +441,7 @@ public class SessionManagementServiceTests : IDisposable
         count.Should().Be(2);
 
         var allSessions = await db.UserSessions.Where(s => s.UserId == userId).ToListAsync();
-        Assert.All(allSessions, s => Assert.NotNull(s.RevokedAt));
+        allSessions.Should().OnlyContain(s => s.RevokedAt != null);
 
         // And: Cache invalidated for all active sessions
         mockCache.Verify(c => c.InvalidateAsync("hash1", default), Times.Once);
@@ -498,7 +498,7 @@ public class SessionManagementServiceTests : IDisposable
 
         // When/Then: ArgumentException is thrown
         var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.RevokeAllUserSessionsAsync(userId!));
-        exception.Message.Should().Contain("User ID cannot be null or empty");
+        exception.Which.Message.Should().Contain("User ID cannot be null or empty");
     }
 
     /// <summary>

@@ -62,7 +62,7 @@ public class RuleSpecDiffServiceTests
         diff.Summary.Unchanged.Should().Be(2);
 
         // All changes should be marked as Unchanged
-        Assert.All(diff.Changes, c => Assert.Equal(ChangeType.Unchanged, c.Type));
+        diff.Changes.Should().OnlyContain(c => c.Type == ChangeType.Unchanged);
     }
 
     /// <summary>

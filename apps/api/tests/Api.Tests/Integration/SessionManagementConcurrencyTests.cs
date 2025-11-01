@@ -164,7 +164,7 @@ public class SessionManagementConcurrencyTests : ConfigIntegrationTestBase
         var results = await Task.WhenAll(task1, task2);
 
         // Assert: Both succeed
-        Assert.All(results, r => Assert.True(r.StatusCode == HttpStatusCode.OK || r.StatusCode == HttpStatusCode.NoContent));
+        results.Should().OnlyContain(r => r.StatusCode == HttpStatusCode.OK || r.StatusCode == HttpStatusCode.NoContent);
 
         // Verify all sessions revoked
         using var scope2 = Factory.Services.CreateScope();
@@ -254,7 +254,7 @@ public class SessionManagementConcurrencyTests : ConfigIntegrationTestBase
             .ToListAsync();
 
         revokedSessions.Count.Should().Be(3);
-        Assert.All(revokedSessions, s => Assert.NotNull(s.RevokedAt));
+        revokedSessions.Should().OnlyContain(s => s.RevokedAt != null);
     }
 
     /// <summary>
@@ -373,7 +373,7 @@ public class SessionManagementConcurrencyTests : ConfigIntegrationTestBase
         var results = await Task.WhenAll(tasks);
 
         // Assert: All operations succeeded
-        Assert.All(results, r => Assert.True(r.StatusCode == HttpStatusCode.OK || r.StatusCode == HttpStatusCode.NoContent));
+        results.Should().OnlyContain(r => r.StatusCode == HttpStatusCode.OK || r.StatusCode == HttpStatusCode.NoContent);
 
         // Verify per-user consistency
         using var scope2 = Factory.Services.CreateScope();

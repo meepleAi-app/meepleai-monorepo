@@ -430,7 +430,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var responses = await Task.WhenAll(tasks);
 
         // Then: All requests succeed
-        Assert.All(responses, response => Assert.Equal(HttpStatusCode.OK, response.StatusCode));
+        responses.Should().OnlyContain(response => response.StatusCode == HttpStatusCode.OK);
 
         // And: Each user receives a valid setup guide
         foreach (var response in responses)

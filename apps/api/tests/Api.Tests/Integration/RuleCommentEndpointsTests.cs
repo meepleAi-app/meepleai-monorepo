@@ -473,7 +473,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
         var allComments = await allCommentsResponse.Content.ReadFromJsonAsync<List<RuleCommentDto>>();
 
         allComments.Should().NotBeNull();
-        Assert.All(allComments[0].Replies, r => Assert.True(r.IsResolved));
+        allComments[0].Replies.Should().OnlyContain(r => r.IsResolved);
     }
 
     #endregion
@@ -589,7 +589,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
         // Then: Only line 10 comments are returned
         lineComments.Should().NotBeNull();
         lineComments.Count.Should().Be(2);
-        Assert.All(lineComments, c => Assert.Equal(10, c.LineNumber));
+        lineComments.Should().OnlyContain(c => c.LineNumber == 10);
     }
 
     /// <summary>

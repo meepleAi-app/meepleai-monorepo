@@ -133,8 +133,8 @@ public class EmbeddingServiceComprehensiveTests
             .Returns(httpClient);
 
         // Act & Assert
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object));
+        var ex = var act = () => new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object);
+        act.Should().Throw<InvalidOperationException>();
 
         ex.Message.Should().Contain("OPENAI_API_KEY not configured");
     }
@@ -152,8 +152,8 @@ public class EmbeddingServiceComprehensiveTests
             .Build();
 
         // Act & Assert
-        var ex = Assert.Throws<InvalidOperationException>(() =>
-            new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object));
+        var ex = var act = () => new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object);
+        act.Should().Throw<InvalidOperationException>();
 
         ex.Message.Should().Contain("Unsupported embedding provider");
         ex.Message.Should().Contain("invalid-provider");
@@ -202,7 +202,7 @@ public class EmbeddingServiceComprehensiveTests
         // Assert
         result.Success.Should().BeTrue();
         result.Embeddings.Count.Should().Be(100);
-        Assert.All(result.Embeddings, emb => Assert.Equal(768, emb.Length));
+        result.Embeddings.Should().OnlyContain(emb => emb.Length == 768);
     }
 
     [Fact]
@@ -270,7 +270,7 @@ public class EmbeddingServiceComprehensiveTests
         // Assert
         result.Success.Should().BeTrue();
         result.Embeddings.Count.Should().Be(100);
-        Assert.All(result.Embeddings, emb => Assert.Equal(1536, emb.Length));
+        result.Embeddings.Should().OnlyContain(emb => emb.Length == 1536);
     }
 
     [Fact]
@@ -453,8 +453,8 @@ public class EmbeddingServiceComprehensiveTests
         var results = await Task.WhenAll(tasks);
 
         // Assert
-        Assert.All(results, r => Assert.True(r.Success));
-        Assert.All(results, r => Assert.Equal(3, r.Embeddings.Count));
+        results.Should().OnlyContain(r => r.Success);
+        results.Should().OnlyContain(r => r.Embeddings.Count == 3);
     }
 
     #endregion

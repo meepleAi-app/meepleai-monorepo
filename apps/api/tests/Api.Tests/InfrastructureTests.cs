@@ -76,7 +76,7 @@ public class InfrastructureTests : IDisposable
 
         // Act & Assert
         var exception = Assert.Throws<DbUpdateException>(() => _dbContext.SaveChanges());
-        exception.InnerException?.Message ?? exception.Message.Should().Contain("UNIQUE constraint failed");
+        exception.InnerException?.Message ?? exception.Which.Message.Should().Contain("UNIQUE constraint failed");
     }
 
     /// <summary>
@@ -159,7 +159,7 @@ public class InfrastructureTests : IDisposable
 
         // Act & Assert
         var exception = Assert.Throws<DbUpdateException>(() => _dbContext.SaveChanges());
-        exception.InnerException?.Message ?? exception.Message.Should().Contain("UNIQUE constraint failed");
+        exception.InnerException?.Message ?? exception.Which.Message.Should().Contain("UNIQUE constraint failed");
     }
 
     /// <summary>
@@ -185,7 +185,7 @@ public class InfrastructureTests : IDisposable
 
         // Act & Assert
         var exception = Assert.Throws<DbUpdateException>(() => _dbContext.SaveChanges());
-        exception.InnerException?.Message ?? exception.Message.Should().Contain("NOT NULL constraint failed");
+        exception.InnerException?.Message ?? exception.Which.Message.Should().Contain("NOT NULL constraint failed");
     }
 
     /// <summary>
@@ -249,7 +249,7 @@ public class InfrastructureTests : IDisposable
 
         // Assert
         var exception = Assert.Throws<DbUpdateException>(() => _dbContext.SaveChanges());
-        exception.InnerException?.Message ?? exception.Message.Should().Contain("FOREIGN KEY constraint failed");
+        exception.InnerException?.Message ?? exception.Which.Message.Should().Contain("FOREIGN KEY constraint failed");
     }
 
     /// <summary>
@@ -294,6 +294,6 @@ public class InfrastructureTests : IDisposable
 
         // Act & Assert
         var exception = Assert.Throws<DbUpdateException>(() => _dbContext.SaveChanges());
-        exception.InnerException?.Message ?? exception.Message.Should().Contain("UNIQUE constraint failed");
+        exception.InnerException?.Message ?? exception.Which.Message.Should().Contain("UNIQUE constraint failed");
     }
 }

@@ -245,10 +245,10 @@ public class PdfTableExtractionRealWorldTests
             (harmoniesResult.TableCount > 0 || harmoniesResult.DiagramCount > 0) &&
             (lorenzoResult.TableCount > 0 || lorenzoResult.DiagramCount > 0);
 
-        Assert.True(
+        
             hasStructuredContent,
             "Both games should have at least some structured content (tables or diagrams)"
-        );
+        .Should().BeTrue();
 
         _output.WriteLine($"\n  ✓ ACCEPTANCE CRITERIA MET");
         _output.WriteLine($"    Successfully extracted structured content from 2 different game rulebooks");

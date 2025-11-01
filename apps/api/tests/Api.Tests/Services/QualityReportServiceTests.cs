@@ -96,8 +96,8 @@ public class QualityReportServiceTests : IDisposable
         await helper.StopAsync();
 
         // Assert
-        Assert.True(reportGenerationCount >= 2,
-            $"Report should be generated at least twice after 400ms (actual: {reportGenerationCount})");
+        reportGenerationCount >= 2,
+            $"Report should be generated at least twice after 400ms (actual: {reportGenerationCount})".Should().BeTrue();
     }
 
     /// <summary>

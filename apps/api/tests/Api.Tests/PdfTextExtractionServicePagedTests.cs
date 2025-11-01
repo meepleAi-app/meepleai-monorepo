@@ -182,7 +182,7 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         // Page 2: Empty
         result.PageChunks[1].PageNumber.Should().Be(2);
         result.PageChunks[1].IsEmpty.Should().BeTrue();
-        Assert.True(string.IsNullOrWhiteSpace(result.PageChunks[1].Text));
+        string.IsNullOrWhiteSpace(result.PageChunks[1].Text).Should().BeTrue();
 
         // Page 3: Has content
         result.PageChunks[2].PageNumber.Should().Be(3);

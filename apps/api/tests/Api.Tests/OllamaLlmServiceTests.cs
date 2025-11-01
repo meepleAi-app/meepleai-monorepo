@@ -406,7 +406,7 @@ public class OllamaLlmServiceTests
         var root = doc.RootElement;
 
         Assert.Equal("llama3.2:3b", root.GetProperty("model").GetString());
-        Assert.False(root.GetProperty("stream").GetBoolean());
+        root.GetProperty("stream").GetBoolean().Should().BeFalse();
 
         var messages = root.GetProperty("messages");
         Assert.Equal(2, messages.GetArrayLength());

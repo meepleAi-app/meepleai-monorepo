@@ -89,10 +89,10 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("error", out var error));
+        result.TryGetProperty("error", out var error).Should().BeTrue();
         Assert.Equal("validation_failed", error.GetString());
 
-        Assert.True(result.TryGetProperty("details", out var details));
+        result.TryGetProperty("details", out var details).Should().BeTrue();
         var detailsDict = JsonSerializer.Deserialize<Dictionary<string, string>>(details.GetRawText());
         detailsDict.Should().NotBeNull();
         detailsDict!.Keys.Should().Contain("fileSize");
@@ -137,10 +137,10 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("error", out var error));
+        result.TryGetProperty("error", out var error).Should().BeTrue();
         Assert.Equal("validation_failed", error.GetString());
 
-        Assert.True(result.TryGetProperty("details", out var details));
+        result.TryGetProperty("details", out var details).Should().BeTrue();
         var detailsDict = JsonSerializer.Deserialize<Dictionary<string, string>>(details.GetRawText());
         detailsDict.Should().NotBeNull();
         detailsDict!.Keys.Should().Contain("fileType");
@@ -185,10 +185,10 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("error", out var error));
+        result.TryGetProperty("error", out var error).Should().BeTrue();
         Assert.Equal("validation_failed", error.GetString());
 
-        Assert.True(result.TryGetProperty("details", out var details));
+        result.TryGetProperty("details", out var details).Should().BeTrue();
         var detailsDict = JsonSerializer.Deserialize<Dictionary<string, string>>(details.GetRawText());
         detailsDict.Should().NotBeNull();
         detailsDict!.Keys.Should().Contain("fileFormat");
@@ -233,7 +233,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("error", out var error));
+        result.TryGetProperty("error", out var error).Should().BeTrue();
         Assert.Equal("validation_failed", error.GetString());
     }
 
@@ -273,10 +273,10 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("error", out var error));
+        result.TryGetProperty("error", out var error).Should().BeTrue();
         Assert.Equal("validation_failed", error.GetString());
 
-        Assert.True(result.TryGetProperty("details", out var details));
+        result.TryGetProperty("details", out var details).Should().BeTrue();
         var detailsDict = JsonSerializer.Deserialize<Dictionary<string, string>>(details.GetRawText());
         detailsDict.Should().NotBeNull();
         detailsDict!.Keys.Should().Contain("file");
@@ -322,8 +322,8 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("documentId", out var docId));
-        Assert.False(string.IsNullOrWhiteSpace(docId.GetString()));
+        result.TryGetProperty("documentId", out var docId).Should().BeTrue();
+        string.IsNullOrWhiteSpace(docId.GetString()).Should().BeFalse();
 
         TrackPdfDocumentId(docId.GetString()!);
     }
@@ -367,11 +367,11 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
 
         // Verify top-level error field
-        Assert.True(result.TryGetProperty("error", out var error));
+        result.TryGetProperty("error", out var error).Should().BeTrue();
         Assert.Equal("validation_failed", error.GetString());
 
         // Verify details field exists and is an object
-        Assert.True(result.TryGetProperty("details", out var details));
+        result.TryGetProperty("details", out var details).Should().BeTrue();
         details.ValueKind.Should().Be(JsonValueKind.Object);
 
         // Verify details can be deserialized to Dictionary<string, string>
@@ -417,7 +417,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("documentId", out var docId));
+        result.TryGetProperty("documentId", out var docId).Should().BeTrue();
         TrackPdfDocumentId(docId.GetString()!);
     }
 }

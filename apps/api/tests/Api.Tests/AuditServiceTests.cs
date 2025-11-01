@@ -65,7 +65,7 @@ public class AuditServiceTests : IDisposable
         var logs = await _dbContext.AuditLogs.ToListAsync();
         logs.Should().ContainSingle();
         var log = logs[0];
-        Assert.False(string.IsNullOrWhiteSpace(log.Id));
+        string.IsNullOrWhiteSpace(log.Id).Should().BeFalse();
         log.UserId.Should().Be(userId);
         log.Action.Should().Be(action);
         log.Resource.Should().Be(resource);

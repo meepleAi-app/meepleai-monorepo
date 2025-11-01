@@ -121,18 +121,18 @@ public class ChessDatasetTests
     {
         // Given: An individual opening from the dataset
         // Then: It should have all required metadata fields populated
-        Assert.False(string.IsNullOrWhiteSpace(opening.id),
-            $"Opening '{opening.name}' (id: {opening.id}) missing id");
-        Assert.False(string.IsNullOrWhiteSpace(opening.name),
-            $"Opening (id: {opening.id}) missing name");
-        Assert.False(string.IsNullOrWhiteSpace(opening.description),
-            $"Opening '{opening.name}' (id: {opening.id}) missing description");
-        Assert.False(string.IsNullOrWhiteSpace(opening.pgn),
-            $"Opening '{opening.name}' (id: {opening.id}) missing PGN moves");
-        Assert.False(string.IsNullOrWhiteSpace(opening.fen),
-            $"Opening '{opening.name}' (id: {opening.id}) missing FEN position");
-        Assert.False(string.IsNullOrWhiteSpace(opening.strategy),
-            $"Opening '{opening.name}' (id: {opening.id}) missing strategy description");
+        string.IsNullOrWhiteSpace(opening.id),
+            $"Opening '{opening.name}' (id: {opening.id}) missing id".Should().BeFalse();
+        string.IsNullOrWhiteSpace(opening.name),
+            $"Opening (id: {opening.id}) missing name".Should().BeFalse();
+        string.IsNullOrWhiteSpace(opening.description),
+            $"Opening '{opening.name}' (id: {opening.id}) missing description".Should().BeFalse();
+        string.IsNullOrWhiteSpace(opening.pgn),
+            $"Opening '{opening.name}' (id: {opening.id}) missing PGN moves".Should().BeFalse();
+        string.IsNullOrWhiteSpace(opening.fen),
+            $"Opening '{opening.name}' (id: {opening.id}) missing FEN position".Should().BeFalse();
+        string.IsNullOrWhiteSpace(opening.strategy),
+            $"Opening '{opening.name}' (id: {opening.id}) missing strategy description".Should().BeFalse();
     }
 
     /// <summary>
@@ -157,8 +157,8 @@ public class ChessDatasetTests
         // Given: An individual opening from the dataset
         // Then: Its FEN string should be syntactically valid (6 parts separated by spaces)
         var fenParts = opening.fen.Split(' ');
-        Assert.True(fenParts.Length == 6,
-            $"Opening '{opening.name}' (id: {opening.id}) has invalid FEN format (expected 6 parts, found {fenParts.Length}): {opening.fen}");
+        fenParts.Length == 6,
+            $"Opening '{opening.name}' (id: {opening.id}) has invalid FEN format (expected 6 parts, found {fenParts.Length}): {opening.fen}".Should().BeTrue();
     }
 
     [Fact]
@@ -244,12 +244,12 @@ public class ChessDatasetTests
     {
         // Given: An individual tactic from the dataset
         // Then: It should have all required metadata fields and at least 1 example
-        Assert.False(string.IsNullOrWhiteSpace(tactic.id),
-            $"Tactic '{tactic.name}' (id: {tactic.id}) missing id");
-        Assert.False(string.IsNullOrWhiteSpace(tactic.name),
-            $"Tactic (id: {tactic.id}) missing name");
-        Assert.False(string.IsNullOrWhiteSpace(tactic.description),
-            $"Tactic '{tactic.name}' (id: {tactic.id}) missing description");
+        string.IsNullOrWhiteSpace(tactic.id),
+            $"Tactic '{tactic.name}' (id: {tactic.id}) missing id".Should().BeFalse();
+        string.IsNullOrWhiteSpace(tactic.name),
+            $"Tactic (id: {tactic.id}) missing name".Should().BeFalse();
+        string.IsNullOrWhiteSpace(tactic.description),
+            $"Tactic '{tactic.name}' (id: {tactic.id}) missing description".Should().BeFalse();
         tactic.examples.Should().NotBeNull();
         tactic.examples.Should().NotBeEmpty();
     }
@@ -263,12 +263,12 @@ public class ChessDatasetTests
     {
         // Given: An individual tactical position example
         // Then: It should have a valid FEN notation (6 parts separated by spaces)
-        Assert.False(string.IsNullOrWhiteSpace(example.fen),
-            $"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' missing FEN");
+        string.IsNullOrWhiteSpace(example.fen),
+            $"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' missing FEN".Should().BeFalse();
 
         var fenParts = example.fen.Split(' ');
-        Assert.True(fenParts.Length == 6,
-            $"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' has invalid FEN (expected 6 parts, found {fenParts.Length}): {example.fen}");
+        fenParts.Length == 6,
+            $"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' has invalid FEN (expected 6 parts, found {fenParts.Length}): {example.fen}".Should().BeTrue();
     }
 
     /// <summary>
@@ -280,10 +280,10 @@ public class ChessDatasetTests
     {
         // Given: An individual tactical position example
         // Then: It should have both solution move and explanation
-        Assert.False(string.IsNullOrWhiteSpace(example.solution),
-            $"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' missing solution");
-        Assert.False(string.IsNullOrWhiteSpace(example.explanation),
-            $"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' missing explanation");
+        string.IsNullOrWhiteSpace(example.solution),
+            $"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' missing solution".Should().BeFalse();
+        string.IsNullOrWhiteSpace(example.explanation),
+            $"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' missing explanation".Should().BeFalse();
     }
 
     [Fact]

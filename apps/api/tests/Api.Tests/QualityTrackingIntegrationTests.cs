@@ -857,8 +857,8 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         result.TotalCount.Should().Be(2);
         Assert.All(result.Responses, r =>
         {
-            Assert.True(r.CreatedAt >= new DateTime(2025, 1, 1));
-            Assert.True(r.CreatedAt <= new DateTime(2025, 1, 7));
+            r.CreatedAt >= new DateTime(2025, 1, 1).Should().BeTrue();
+            r.CreatedAt <= new DateTime(2025, 1, 7).Should().BeTrue();
         });
     }
 

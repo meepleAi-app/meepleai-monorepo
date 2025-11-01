@@ -80,7 +80,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         var entity = await db.N8nConfigs.SingleAsync(c => c.Id == dto.Id);
         entity.CreatedByUserId.Should().Be(adminUserId);
         entity.BaseUrl.Should().Be("https://n8n.local");
-        Assert.False(string.IsNullOrWhiteSpace(entity.ApiKeyEncrypted));
+        string.IsNullOrWhiteSpace(entity.ApiKeyEncrypted).Should().BeFalse();
         entity.ApiKeyEncrypted.Should().NotBe("test-api-key");
 
         // And: Config appears in list endpoint
@@ -273,7 +273,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
             var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var entity = await db.N8nConfigs.SingleAsync(c => c.Id == config.Id);
             entity.LastTestedAt.Should().NotBeNull();
-            Assert.False(string.IsNullOrWhiteSpace(entity.LastTestResult));
+            string.IsNullOrWhiteSpace(entity.LastTestResult).Should().BeFalse();
             Assert.StartsWith("Connection successful", entity.LastTestResult, StringComparison.Ordinal);
         }
     }

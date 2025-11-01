@@ -244,7 +244,7 @@ public class UserManagementServiceTests : IDisposable
         // Assert
         var userDto = result.Items.First();
         userDto.LastSeenAt.Should().NotBeNull();
-        Assert.True(userDto.LastSeenAt.Value > DateTime.UtcNow.AddHours(-3));
+        userDto.LastSeenAt.Value > DateTime.UtcNow.AddHours(-3).Should().BeTrue();
     }
 
     #endregion

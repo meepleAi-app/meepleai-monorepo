@@ -102,8 +102,8 @@ public class MdExportFormatterTests
         content.Should().Contain("Catan");
 
         // And: Messages have level 3 headers
-        Assert.True(content.Contains("### User", StringComparison.OrdinalIgnoreCase));
-        Assert.True(content.Contains("### Assistant", StringComparison.OrdinalIgnoreCase));
+        content.Contains("### User", StringComparison.OrdinalIgnoreCase).Should().BeTrue();
+        content.Contains("### Assistant", StringComparison.OrdinalIgnoreCase).Should().BeTrue();
 
         // And: Messages are separated by horizontal rules
         content.Should().Contain("---");
@@ -156,10 +156,10 @@ public class MdExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // Then: Citations are formatted as bullet list
-        Assert.True(content.Contains("**Citations:**") || content.Contains("Citations:"));
-        Assert.True(content.Contains("- **Page 12:**") || content.Contains("- Page 12:"));
+        content.Contains("**Citations:**") || content.Contains("Citations:").Should().BeTrue();
+        content.Contains("- **Page 12:**") || content.Contains("- Page 12:").Should().BeTrue();
         content.Should().Contain("Setup instructions for beginners");
-        Assert.True(content.Contains("- **Page 15:**") || content.Contains("- Page 15:"));
+        content.Contains("- **Page 15:**") || content.Contains("- Page 15:").Should().BeTrue();
         content.Should().Contain("Advanced setup variants");
     }
 
@@ -230,7 +230,7 @@ public class MdExportFormatterTests
         content.Should().Contain("Empty Game");
 
         // And: Output indicates no messages
-        Assert.True(content.Contains("No messages") || content.Contains("0 messages"));
+        content.Contains("No messages") || content.Contains("0 messages").Should().BeTrue();
     }
 
     /// <summary>
@@ -313,7 +313,7 @@ public class MdExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // Then: Header includes date range
-        Assert.True(content.Contains("2025-10-10") || content.Contains("Oct"));
+        content.Contains("2025-10-10") || content.Contains("Oct").Should().BeTrue();
 
         // And: Only filtered message is included
         content.Should().Contain("Recent message");
@@ -527,6 +527,6 @@ public class MdExportFormatterTests
         content.Should().Contain(">");
 
         // And: Includes timestamp information
-        Assert.True(content.Contains("Exported") || content.Contains("Generated"));
+        content.Contains("Exported") || content.Contains("Generated").Should().BeTrue();
     }
 }

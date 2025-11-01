@@ -72,8 +72,8 @@ public class PromptTemplateServiceTests : IDisposable
         // Assert
         template.Should().NotBeNull();
         template.QuestionType.Should().Be(QuestionType.General);
-        Assert.False(string.IsNullOrWhiteSpace(template.SystemPrompt));
-        Assert.False(string.IsNullOrWhiteSpace(template.UserPromptTemplate));
+        string.IsNullOrWhiteSpace(template.SystemPrompt).Should().BeFalse();
+        string.IsNullOrWhiteSpace(template.UserPromptTemplate).Should().BeFalse();
     }
 
     [Fact]
@@ -162,9 +162,9 @@ public class PromptTemplateServiceTests : IDisposable
         template.FewShotExamples.Should().NotBeEmpty();
         Assert.All(template.FewShotExamples, example =>
         {
-            Assert.False(string.IsNullOrWhiteSpace(example.Question));
-            Assert.False(string.IsNullOrWhiteSpace(example.Answer));
-            Assert.False(string.IsNullOrWhiteSpace(example.Category));
+            string.IsNullOrWhiteSpace(example.Question).Should().BeFalse();
+            string.IsNullOrWhiteSpace(example.Answer).Should().BeFalse();
+            string.IsNullOrWhiteSpace(example.Category).Should().BeFalse();
         });
     }
 
@@ -423,8 +423,8 @@ public class PromptTemplateServiceTests : IDisposable
 
         // Assert
         template.Should().NotBeNull();
-        Assert.False(string.IsNullOrWhiteSpace(template.SystemPrompt));
-        Assert.False(string.IsNullOrWhiteSpace(template.UserPromptTemplate));
+        string.IsNullOrWhiteSpace(template.SystemPrompt).Should().BeFalse();
+        string.IsNullOrWhiteSpace(template.UserPromptTemplate).Should().BeFalse();
     }
 
     #endregion

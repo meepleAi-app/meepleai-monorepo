@@ -122,8 +122,8 @@ public class SetupGuideServiceTests : IDisposable
         Assert.All(result.steps, step =>
         {
             step.stepNumber > 0.Should().BeTrue();
-            Assert.False(string.IsNullOrEmpty(step.title));
-            Assert.False(string.IsNullOrEmpty(step.instruction));
+            string.IsNullOrEmpty(step.title).Should().BeFalse();
+            string.IsNullOrEmpty(step.instruction).Should().BeFalse();
             step.references.Should().NotBeNull();
         });
     }

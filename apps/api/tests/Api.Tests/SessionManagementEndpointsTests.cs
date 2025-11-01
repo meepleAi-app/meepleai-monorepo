@@ -78,10 +78,10 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
 
         // Verify session structure
         var firstSession = sessions[0];
-        Assert.True(firstSession.TryGetProperty("id", out _));
-        Assert.True(firstSession.TryGetProperty("userId", out _));
-        Assert.True(firstSession.TryGetProperty("userEmail", out _));
-        Assert.True(firstSession.TryGetProperty("createdAt", out _));
+        firstSession.TryGetProperty("id", out _).Should().BeTrue();
+        firstSession.TryGetProperty("userId", out _).Should().BeTrue();
+        firstSession.TryGetProperty("userEmail", out _).Should().BeTrue();
+        firstSession.TryGetProperty("createdAt", out _).Should().BeTrue();
     }
 
     /// <summary>
@@ -350,8 +350,8 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("revokedCount", out var revokedCount));
-        Assert.True(revokedCount.GetInt32() >= 2);
+        result.TryGetProperty("revokedCount", out var revokedCount).Should().BeTrue();
+        revokedCount.GetInt32() >= 2.Should().BeTrue();
 
         // And: All sessions are revoked in database
         using (var scope = Factory.Services.CreateScope())
@@ -399,7 +399,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("revokedCount", out var revokedCount));
+        result.TryGetProperty("revokedCount", out var revokedCount).Should().BeTrue();
         Assert.Equal(0, revokedCount.GetInt32());
     }
 
@@ -468,10 +468,10 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
 
         // Verify session structure
         var firstSession = sessions[0];
-        Assert.True(firstSession.TryGetProperty("id", out _));
-        Assert.True(firstSession.TryGetProperty("createdAt", out _));
-        Assert.True(firstSession.TryGetProperty("lastSeenAt", out _));
-        Assert.False(firstSession.TryGetProperty("revokedAt", out var revokedAt) && revokedAt.ValueKind != JsonValueKind.Null);
+        firstSession.TryGetProperty("id", out _).Should().BeTrue();
+        firstSession.TryGetProperty("createdAt", out _).Should().BeTrue();
+        firstSession.TryGetProperty("lastSeenAt", out _).Should().BeTrue();
+        firstSession.TryGetProperty("revokedAt", out var revokedAt) && revokedAt.ValueKind != JsonValueKind.Null.Should().BeFalse();
     }
 
     /// <summary>

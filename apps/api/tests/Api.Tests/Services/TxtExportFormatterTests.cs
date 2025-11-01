@@ -227,7 +227,7 @@ public class TxtExportFormatterTests
         content.Should().Contain("Chat Export");
 
         // And: Output indicates no messages
-        Assert.True(content.Contains("No messages") || content.Contains("0 messages"));
+        content.Contains("No messages") || content.Contains("0 messages").Should().BeTrue();
     }
 
     /// <summary>
@@ -314,7 +314,7 @@ public class TxtExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // Then: Header indicates date range
-        Assert.True(content.Contains("2025-10-10") || content.Contains("Oct"));
+        content.Contains("2025-10-10") || content.Contains("Oct").Should().BeTrue();
 
         // And: Only filtered message is included
         content.Should().Contain("Recent message");

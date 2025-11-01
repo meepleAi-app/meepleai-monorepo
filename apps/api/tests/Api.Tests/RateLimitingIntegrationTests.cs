@@ -114,7 +114,7 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
 
         Assert.Equal(expectedLimit, GetSingleHeaderValue(response, "X-RateLimit-Limit"));
         Assert.Equal(expectedLimit, GetSingleHeaderValue(response, "X-RateLimit-Remaining"));
-        Assert.False(response.Headers.Contains("Retry-After"));
+        response.Headers.Contains("Retry-After").Should().BeFalse();
         // Cleanup happens automatically via DisposeAsync
     }
 
@@ -139,7 +139,7 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         Assert.Equal(expectedLimit.ToString(CultureInfo.InvariantCulture), GetSingleHeaderValue(response, "X-RateLimit-Limit"));
         Assert.Equal(expectedRemaining.ToString(CultureInfo.InvariantCulture), GetSingleHeaderValue(response, "X-RateLimit-Remaining"));
-        Assert.False(response.Headers.Contains("Retry-After"));
+        response.Headers.Contains("Retry-After").Should().BeFalse();
     }
 
     /// <summary>
@@ -157,7 +157,7 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         Assert.Equal("60", GetSingleHeaderValue(response, "X-RateLimit-Limit"));
         Assert.Equal("12", GetSingleHeaderValue(response, "X-RateLimit-Remaining"));
-        Assert.False(response.Headers.Contains("Retry-After"));
+        response.Headers.Contains("Retry-After").Should().BeFalse();
     }
 
     private async Task<TestClientContext> CreateClientContextAsync(UserRole? role = UserRole.Admin)

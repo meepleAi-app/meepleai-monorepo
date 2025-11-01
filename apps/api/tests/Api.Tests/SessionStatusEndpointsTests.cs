@@ -215,7 +215,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
 
         // LastSeenAt should match the extend time (within 1 second tolerance)
         var expectedTime = _timeProvider.GetUtcNow().UtcDateTime;
-        Assert.True(Math.Abs((status.LastSeenAt!.Value - expectedTime).TotalSeconds) < 1);
+        Math.Abs((status.LastSeenAt!.Value - expectedTime).TotalSeconds) < 1.Should().BeTrue();
     }
 
     [Fact]

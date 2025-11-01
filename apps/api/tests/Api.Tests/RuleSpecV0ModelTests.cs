@@ -381,9 +381,9 @@ public class RuleSpecV0ModelTests
     public void ActionType_Enum_HasAllValues()
     {
         // Assert
-        Assert.True(Enum.IsDefined(typeof(ActionType), ActionType.Mandatory));
-        Assert.True(Enum.IsDefined(typeof(ActionType), ActionType.Optional));
-        Assert.True(Enum.IsDefined(typeof(ActionType), ActionType.Triggered));
+        Enum.IsDefined(typeof(ActionType), ActionType.Mandatory).Should().BeTrue();
+        Enum.IsDefined(typeof(ActionType), ActionType.Optional).Should().BeTrue();
+        Enum.IsDefined(typeof(ActionType), ActionType.Triggered).Should().BeTrue();
     }
 
     #endregion
@@ -495,10 +495,10 @@ public class RuleSpecV0ModelTests
     public void ScoringMethod_Enum_HasAllValues()
     {
         // Assert
-        Assert.True(Enum.IsDefined(typeof(ScoringMethod), ScoringMethod.Points));
-        Assert.True(Enum.IsDefined(typeof(ScoringMethod), ScoringMethod.Elimination));
-        Assert.True(Enum.IsDefined(typeof(ScoringMethod), ScoringMethod.Objective));
-        Assert.True(Enum.IsDefined(typeof(ScoringMethod), ScoringMethod.Hybrid));
+        Enum.IsDefined(typeof(ScoringMethod), ScoringMethod.Points).Should().BeTrue();
+        Enum.IsDefined(typeof(ScoringMethod), ScoringMethod.Elimination).Should().BeTrue();
+        Enum.IsDefined(typeof(ScoringMethod), ScoringMethod.Objective).Should().BeTrue();
+        Enum.IsDefined(typeof(ScoringMethod), ScoringMethod.Hybrid).Should().BeTrue();
     }
 
     #endregion
@@ -535,11 +535,11 @@ public class RuleSpecV0ModelTests
     public void EndConditionType_Enum_HasAllValues()
     {
         // Assert
-        Assert.True(Enum.IsDefined(typeof(EndConditionType), EndConditionType.Rounds));
-        Assert.True(Enum.IsDefined(typeof(EndConditionType), EndConditionType.Points));
-        Assert.True(Enum.IsDefined(typeof(EndConditionType), EndConditionType.Elimination));
-        Assert.True(Enum.IsDefined(typeof(EndConditionType), EndConditionType.Objective));
-        Assert.True(Enum.IsDefined(typeof(EndConditionType), EndConditionType.Custom));
+        Enum.IsDefined(typeof(EndConditionType), EndConditionType.Rounds).Should().BeTrue();
+        Enum.IsDefined(typeof(EndConditionType), EndConditionType.Points).Should().BeTrue();
+        Enum.IsDefined(typeof(EndConditionType), EndConditionType.Elimination).Should().BeTrue();
+        Enum.IsDefined(typeof(EndConditionType), EndConditionType.Objective).Should().BeTrue();
+        Enum.IsDefined(typeof(EndConditionType), EndConditionType.Custom).Should().BeTrue();
     }
 
     #endregion
@@ -588,10 +588,10 @@ public class RuleSpecV0ModelTests
     public void EdgeCaseCategory_Enum_HasAllValues()
     {
         // Assert
-        Assert.True(Enum.IsDefined(typeof(EdgeCaseCategory), EdgeCaseCategory.Exception));
-        Assert.True(Enum.IsDefined(typeof(EdgeCaseCategory), EdgeCaseCategory.Clarification));
-        Assert.True(Enum.IsDefined(typeof(EdgeCaseCategory), EdgeCaseCategory.Variant));
-        Assert.True(Enum.IsDefined(typeof(EdgeCaseCategory), EdgeCaseCategory.FAQ));
+        Enum.IsDefined(typeof(EdgeCaseCategory), EdgeCaseCategory.Exception).Should().BeTrue();
+        Enum.IsDefined(typeof(EdgeCaseCategory), EdgeCaseCategory.Clarification).Should().BeTrue();
+        Enum.IsDefined(typeof(EdgeCaseCategory), EdgeCaseCategory.Variant).Should().BeTrue();
+        Enum.IsDefined(typeof(EdgeCaseCategory), EdgeCaseCategory.FAQ).Should().BeTrue();
     }
 
     #endregion

@@ -91,8 +91,8 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         // And: All events have valid timestamps
         Assert.All(events, evt =>
         {
-            Assert.True(evt.Timestamp > DateTime.UtcNow.AddMinutes(-1));
-            Assert.True(evt.Timestamp <= DateTime.UtcNow.AddSeconds(5));
+            evt.Timestamp > DateTime.UtcNow.AddMinutes(-1).Should().BeTrue();
+            evt.Timestamp <= DateTime.UtcNow.AddSeconds(5).Should().BeTrue();
         });
     }
 
@@ -179,8 +179,8 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         var hasCitations = events.Any(e => e.Type == StreamingEventType.Citations);
         var hasError = events.Any(e => e.Type == StreamingEventType.Error);
 
-        Assert.True(hasCitations || hasError,
-            "Should receive either Citations event (if vector data exists) or Error event (if no vector data)");
+        hasCitations || hasError,
+            "Should receive either Citations event (if vector data exists) or Error event (if no vector data)".Should().BeTrue();
 
         // And: If citations exist, they contain required fields
         if (hasCitations)
@@ -193,8 +193,8 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
             citations!.citations.Should().NotBeEmpty();
             Assert.All(citations.citations, citation =>
             {
-                Assert.False(string.IsNullOrWhiteSpace(citation.text));
-                Assert.False(string.IsNullOrWhiteSpace(citation.source));
+                string.IsNullOrWhiteSpace(citation.text).Should().BeFalse();
+                string.IsNullOrWhiteSpace(citation.source).Should().BeFalse();
                 citation.page >= 0.Should().BeTrue();
             });
         }
@@ -278,7 +278,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         // If no vector data, we might only have the user message
         if (assistantMessage != null)
         {
-            Assert.False(string.IsNullOrWhiteSpace(assistantMessage.Message));
+            string.IsNullOrWhiteSpace(assistantMessage.Message).Should().BeFalse();
         }
     }
 
@@ -484,8 +484,8 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
             var error = JsonSerializer.Deserialize<StreamingError>(errorJson, JsonOptions);
 
             error.Should().NotBeNull();
-            Assert.False(string.IsNullOrWhiteSpace(error!.errorMessage));
-            Assert.False(string.IsNullOrWhiteSpace(error.errorCode));
+            string.IsNullOrWhiteSpace(error!.errorMessage).Should().BeFalse();
+            string.IsNullOrWhiteSpace(error.errorCode).Should().BeFalse();
         }
     }
 

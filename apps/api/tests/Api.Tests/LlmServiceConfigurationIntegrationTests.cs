@@ -366,7 +366,7 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
         Assert.Equal(testModel, root.GetProperty("model").GetString());
         Assert.Equal(testTemperature, root.GetProperty("temperature").GetDouble());
         Assert.Equal(testMaxTokens, root.GetProperty("max_tokens").GetInt32());
-        Assert.True(root.GetProperty("stream").GetBoolean());
+        root.GetProperty("stream").GetBoolean().Should().BeTrue();
 
         // Cleanup happens automatically via IntegrationTestBase
     }

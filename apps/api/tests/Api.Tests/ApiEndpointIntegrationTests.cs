@@ -158,8 +158,8 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         var json = await response.Content.ReadAsStringAsync();
         using var document = JsonDocument.Parse(json);
 
-        Assert.True(document.RootElement.TryGetProperty("ok", out var okElement) && okElement.GetBoolean());
-        Assert.True(document.RootElement.TryGetProperty("spec", out var specElement));
+        document.RootElement.TryGetProperty("ok", out var okElement) && okElement.GetBoolean().Should().BeTrue();
+        document.RootElement.TryGetProperty("spec", out var specElement).Should().BeTrue();
         Assert.Equal("terraforming-mars", specElement.GetProperty("gameId").GetString());
         // Cleanup happens automatically via DisposeAsync
     }
@@ -238,7 +238,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
 
     private static void AssertSessionCookieSecure(HttpResponseMessage response)
     {
-        Assert.True(response.Headers.TryGetValues("Set-Cookie", out var values));
+        response.Headers.TryGetValues("Set-Cookie", out var values).Should().BeTrue();
         var sessionCookie = Assert.Single(values.Where(value => value.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal)));
         sessionCookie, StringComparison.OrdinalIgnoreCase.Should().Contain("secure");
         sessionCookie, StringComparison.OrdinalIgnoreCase.Should().Contain("samesite=none");
@@ -318,7 +318,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
 
         var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
         body.Should().NotBeNull();
-        Assert.True(body!.TryGetValue("error", out var message));
+        body!.TryGetValue("error", out var message).Should().BeTrue();
         message.Should().Be("Only administrators can assign elevated roles.");
         // Cleanup happens automatically via DisposeAsync
     }
@@ -355,7 +355,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
 
         var expiresAt = root.GetProperty("expiresAt");
         expiresAt.ValueKind.Should().Be(JsonValueKind.String);
-        Assert.True(DateTime.TryParse(expiresAt.GetString(), out _));
+        DateTime.TryParse(expiresAt.GetString(), out _).Should().BeTrue();
 
         var userElement = root.GetProperty("user");
 
@@ -366,7 +366,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
 
         "email", "id", "role" }, userProperties.Should().Be(new[] { "displayName");
 
-        Assert.False(string.IsNullOrWhiteSpace(userElement.GetProperty("id").GetString()));
+        string.IsNullOrWhiteSpace(userElement.GetProperty("id").GetString()).Should().BeFalse();
         Assert.Equal(JsonValueKind.String, userElement.GetProperty("email").ValueKind);
         Assert.Equal(JsonValueKind.String, userElement.GetProperty("role").ValueKind);
     }

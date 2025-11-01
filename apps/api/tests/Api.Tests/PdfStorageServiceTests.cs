@@ -447,7 +447,7 @@ public class PdfStorageServiceTests
                 .Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((List<string> texts, CancellationToken _) =>
                 {
-                    texts.Should().Be(chunkInputs.Select(c => c.Text));
+                    texts.Should().BeEquivalentTo(chunkInputs.Select(c => c.Text));
                     return EmbeddingResult.CreateSuccess(embeddings);
                 });
 
@@ -465,7 +465,7 @@ public class PdfStorageServiceTests
                     for (var i = 0; i < chunks.Count; i++)
                     {
                         chunks[i].Text.Should().Be(chunkInputs[i].Text);
-                        chunks[i].Embedding.Should().Be(embeddings[i]);
+                        chunks[i].Embedding.Should().BeEquivalentTo(embeddings[i]);
                     }
 
                     return IndexResult.CreateSuccess(chunks.Count);

@@ -52,8 +52,7 @@ public class CacheMetricsRecorderTests
         Action act = () => new CacheMetricsRecorder(null!, config);
 
         // Assert (Then): Throws ArgumentNullException
-        act.Should().Throw<ArgumentNullException>();
-        var exception = act.Should().Throw<ArgumentNullException>().Subject.Subject;
+        var exception = act.Should().Throw<ArgumentNullException>().Which;
         exception.ParamName.Should().Be("logger");
     }
 
@@ -65,8 +64,7 @@ public class CacheMetricsRecorderTests
         Action act = () => new CacheMetricsRecorder(_mockLogger.Object, null!);
 
         // Assert (Then): Throws ArgumentNullException
-        act.Should().Throw<ArgumentNullException>();
-        var exception = act.Should().Throw<ArgumentNullException>().Subject.Subject;
+        var exception = act.Should().Throw<ArgumentNullException>().Which;
         exception.ParamName.Should().Be("config");
     }
 

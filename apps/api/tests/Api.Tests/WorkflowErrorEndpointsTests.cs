@@ -145,9 +145,9 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         var root = document.RootElement;
 
         // And: Contains paginated results
-        root.GetProperty("totalCount").GetInt32() >= 5.Should().BeTrue();
+        root.GetProperty("totalCount").GetInt32().Should().BeGreaterThanOrEqualTo(5);
         var items = root.GetProperty("items");
-        items.GetArrayLength() >= 5.Should().BeTrue();
+        items.GetArrayLength().Should().BeGreaterThanOrEqualTo(5);
 
         // And: Errors ordered by created_at descending (newest first)
         var firstError = items[0];
@@ -207,7 +207,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var items = document.RootElement.GetProperty("items");
 
-        items.GetArrayLength() >= 1.Should().BeTrue();
+        items.GetArrayLength().Should().BeGreaterThanOrEqualTo(1);
         foreach (var item in items.EnumerateArray())
         {
             item.GetProperty("workflowId").GetString().Should().Be(targetWorkflowId);

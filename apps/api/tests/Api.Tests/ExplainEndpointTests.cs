@@ -85,7 +85,7 @@ public class ExplainEndpointTests : IntegrationTestBase
         outline.TryGetProperty("mainTopic", out var mainTopic).Should().BeTrue();
         mainTopic.GetString().Should().Be("winning conditions");
         outline.TryGetProperty("sections", out var sections).Should().BeTrue();
-        sections.GetArrayLength() > 0.Should().BeTrue();
+        sections.GetArrayLength().Should().BeGreaterThan(0);
 
         // Verify script
         result.TryGetProperty("script", out var script).Should().BeTrue();
@@ -95,17 +95,17 @@ public class ExplainEndpointTests : IntegrationTestBase
 
         // Verify citations
         result.TryGetProperty("citations", out var citations).Should().BeTrue();
-        citations.GetArrayLength() > 0.Should().BeTrue();
+        citations.GetArrayLength().Should().BeGreaterThan(0);
 
         var firstCitation = citations[0];
         firstCitation.TryGetProperty("text", out _).Should().BeTrue();
         firstCitation.TryGetProperty("source", out _).Should().BeTrue();
         firstCitation.TryGetProperty("page", out var page).Should().BeTrue();
-        page.GetInt32() > 0.Should().BeTrue();
+        page.GetInt32().Should().BeGreaterThan(0);
 
         // Verify estimated reading time
         result.TryGetProperty("estimatedReadingTimeMinutes", out var estimatedTime).Should().BeTrue();
-        estimatedTime.GetInt32() > 0.Should().BeTrue();
+        estimatedTime.GetInt32().Should().BeGreaterThan(0);
 
         // Verify optional fields
         result.TryGetProperty("confidence", out _).Should().BeTrue();

@@ -85,8 +85,8 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         result.TryGetProperty("hitRate", out var hitRate).Should().BeTrue();
 
         // Verify stats have data
-        hits.GetInt64() > 0.Should().BeTrue();
-        misses.GetInt64() >= 0.Should().BeTrue();
+        hits.GetInt64().Should().BeGreaterThan(0);
+        misses.GetInt64().Should().BeGreaterThanOrEqualTo(0);
     }
 
     /// <summary>

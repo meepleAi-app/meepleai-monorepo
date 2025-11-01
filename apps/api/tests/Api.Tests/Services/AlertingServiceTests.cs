@@ -113,16 +113,16 @@ public class AlertingServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal(alertType, result.AlertType);
-        Assert.Equal(severity, result.Severity);
-        Assert.Equal(message, result.Message);
-        Assert.True(result.IsActive);
+        result.AlertType.Should().Be(alertType);
+        result.Severity.Should().Be(severity);
+        result.Message.Should().Be(message);
+        result.IsActive.Should().BeTrue();
         result.ResolvedAt.Should().BeNull();
 
         // Verify alert was saved to database
         var savedAlert = await _dbContext.Alerts.FirstOrDefaultAsync(a => a.AlertType == alertType);
         savedAlert.Should().NotBeNull();
-        Assert.True(savedAlert.IsActive);
+        savedAlert.IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -179,9 +179,9 @@ public class AlertingServiceTests : IDisposable
 
         // Assert
         result.ChannelSent.Should().NotBeNull();
-        Assert.True(result.ChannelSent["Email"]);
-        Assert.False(result.ChannelSent["Slack"]);
-        Assert.True(result.ChannelSent["PagerDuty"]);
+        result.ChannelSent["Email"].Should().BeTrue();
+        result.ChannelSent["Slack"].Should().BeFalse();
+        result.ChannelSent["PagerDuty"].Should().BeTrue();
     }
 
     [Fact]
@@ -198,8 +198,8 @@ public class AlertingServiceTests : IDisposable
         var secondResult = await _service.SendAlertAsync(alertType, severity, "Second alert");
 
         // Assert - Returns the same alert (by ID)
-        Assert.Equal(firstAlert.Id, secondResult.Id);
-        Assert.Equal(firstAlert.Message, secondResult.Message);
+        secondResult.Id.Should().Be(firstAlert.Id);
+        secondResult.Message.Should().Be(firstAlert.Message);
 
         // Verify channels were called only once (for first alert)
         _emailChannelMock.Verify(c => c.SendAsync(
@@ -221,7 +221,7 @@ public class AlertingServiceTests : IDisposable
         var isThrottled = await _service.IsThrottledAsync(alertType);
 
         // Assert
-        Assert.True(isThrottled);
+        isThrottled.Should().BeTrue();
     }
 
     [Fact]
@@ -234,7 +234,7 @@ public class AlertingServiceTests : IDisposable
         var isThrottled = await _service.IsThrottledAsync(alertType);
 
         // Assert
-        Assert.False(isThrottled);
+        isThrottled.Should().BeFalse();
     }
 
     [Fact]
@@ -248,11 +248,11 @@ public class AlertingServiceTests : IDisposable
         var resolved = await _service.ResolveAlertAsync(alertType);
 
         // Assert
-        Assert.True(resolved);
+        resolved.Should().BeTrue();
 
         var alert = await _dbContext.Alerts.FirstOrDefaultAsync(a => a.AlertType == alertType);
         alert.Should().NotBeNull();
-        Assert.False(alert.IsActive);
+        alert.IsActive.Should().BeFalse();
         alert.ResolvedAt.Should().NotBeNull();
     }
 
@@ -266,7 +266,7 @@ public class AlertingServiceTests : IDisposable
         var resolved = await _service.ResolveAlertAsync(alertType);
 
         // Assert
-        Assert.False(resolved);
+        resolved.Should().BeFalse();
     }
 
     [Fact]
@@ -281,8 +281,8 @@ public class AlertingServiceTests : IDisposable
         var activeAlerts = await _service.GetActiveAlertsAsync();
 
         // Assert
-        Assert.Single(activeAlerts);
-        Assert.Equal("Alert2", activeAlerts[0].AlertType);
+        activeAlerts.Should().ContainSingle();
+        activeAlerts[0].AlertType.Should().Be("Alert2");
     }
 
     [Fact]
@@ -298,8 +298,8 @@ public class AlertingServiceTests : IDisposable
         var history = await _service.GetAlertHistoryAsync(fromDate, toDate);
 
         // Assert
-        Assert.Single(history);
-        Assert.Equal("HistoricalAlert", history[0].AlertType);
+        history.Should().ContainSingle();
+        history[0].AlertType.Should().Be("HistoricalAlert");
     }
 
     [Fact]

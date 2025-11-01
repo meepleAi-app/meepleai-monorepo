@@ -353,8 +353,8 @@ public class N8nTemplateServiceTests : IDisposable
 
         requestBody.Should().Contain("https://api.example.com");
         requestBody.Should().Contain("0 * * * *");
-        Assert.DoesNotContain("{{apiUrl}}", requestBody);
-        Assert.DoesNotContain("{{interval}}", requestBody);
+        requestBody.Should().NotContain("{{apiUrl}}");
+        requestBody.Should().NotContain("{{interval}}");
     }
 
     [Fact]

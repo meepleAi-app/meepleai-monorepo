@@ -139,7 +139,7 @@ public class RedisFrequencyTrackerTests
         var frequency = await tracker.GetFrequencyAsync(gameId, query);
 
         // Assert (Then): Returns correct hit count
-        Assert.Equal(15, frequency);
+        frequency.Should().Be(15);
     }
 
     [Fact]
@@ -165,7 +165,7 @@ public class RedisFrequencyTrackerTests
         var category = await tracker.ClassifyQueryAsync(gameId, query);
 
         // Assert (Then): Returns "hot"
-        Assert.Equal("hot", category);
+        category.Should().Be("hot");
     }
 
     [Theory]
@@ -198,7 +198,7 @@ public class RedisFrequencyTrackerTests
         var category = await tracker.ClassifyQueryAsync(gameId, query);
 
         // Assert (Then): Returns correct category
-        Assert.Equal(expectedCategory, category);
+        category.Should().Be(expectedCategory);
     }
 
     [Fact]
@@ -238,7 +238,7 @@ public class RedisFrequencyTrackerTests
             ),
             Times.Exactly(10)
         );
-        Assert.Equal(10.0, currentScore);
+        currentScore.Should().Be(10.0);
     }
 
     [Fact]
@@ -291,6 +291,6 @@ public class RedisFrequencyTrackerTests
         var frequency = await tracker.GetFrequencyAsync(gameId, query);
 
         // Assert (Then): Returns 0
-        Assert.Equal(0, frequency);
+        frequency.Should().Be(0);
     }
 }

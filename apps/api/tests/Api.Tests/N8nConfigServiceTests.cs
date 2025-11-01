@@ -123,14 +123,14 @@ public class N8nConfigServiceTests : IDisposable
             new CreateN8nConfigRequest("Config One", "https://example.com/", "secret", "https://webhook.test/"),
             CancellationToken.None);
 
-        Assert.Equal("Config One", result.Name);
-        Assert.Equal("https://example.com", result.BaseUrl);
-        Assert.Equal("https://webhook.test", result.WebhookUrl);
+        result.Name.Should().Be("Config One");
+        result.BaseUrl.Should().Be("https://example.com");
+        result.WebhookUrl.Should().Be("https://webhook.test");
 
         var entity = await dbContext.N8nConfigs.FirstAsync();
-        Assert.Equal("user-1", entity.CreatedByUserId);
-        Assert.True(entity.IsActive);
-        Assert.NotEqual("secret", entity.ApiKeyEncrypted);
+        entity.CreatedByUserId.Should().Be("user-1");
+        entity.IsActive.Should().BeTrue();
+        entity.ApiKeyEncrypted.Should().NotBe("secret");
     }
 
     [Fact]
@@ -154,18 +154,18 @@ public class N8nConfigServiceTests : IDisposable
             new UpdateN8nConfigRequest("Updated", "https://updated.com/", "new-secret", "https://hook/new/", false),
             CancellationToken.None);
 
-        Assert.Equal("Updated", updated.Name);
-        Assert.Equal("https://updated.com", updated.BaseUrl);
-        Assert.Equal("https://hook/new", updated.WebhookUrl);
-        Assert.False(updated.IsActive);
+        updated.Name.Should().Be("Updated");
+        updated.BaseUrl.Should().Be("https://updated.com");
+        updated.WebhookUrl.Should().Be("https://hook/new");
+        updated.IsActive.Should().BeFalse();
 
         var refreshed = await dbContext.N8nConfigs.FirstAsync();
-        Assert.Equal("Updated", refreshed.Name);
-        Assert.Equal("https://updated.com", refreshed.BaseUrl);
-        Assert.Equal("https://hook/new", refreshed.WebhookUrl);
-        Assert.False(refreshed.IsActive);
-        Assert.True(refreshed.UpdatedAt > previousUpdatedAt);
-        Assert.NotEqual(previousApiKey, refreshed.ApiKeyEncrypted);
+        refreshed.Name.Should().Be("Updated");
+        refreshed.BaseUrl.Should().Be("https://updated.com");
+        refreshed.WebhookUrl.Should().Be("https://hook/new");
+        refreshed.IsActive.Should().BeFalse();
+        refreshed.UpdatedAt > previousUpdatedAt.Should().BeTrue();
+        refreshed.ApiKeyEncrypted.Should().NotBe(previousApiKey);
     }
 
     [Fact]
@@ -205,7 +205,7 @@ public class N8nConfigServiceTests : IDisposable
 
         var deleted = await service.DeleteConfigAsync(created.Id, CancellationToken.None);
 
-        Assert.True(deleted);
+        deleted.Should().BeTrue();
         dbContext.N8nConfigs.Should().BeEmpty();
     }
 
@@ -218,6 +218,6 @@ public class N8nConfigServiceTests : IDisposable
 
         var deleted = await service.DeleteConfigAsync("missing", CancellationToken.None);
 
-        Assert.False(deleted);
+        deleted.Should().BeFalse();
     }
 }

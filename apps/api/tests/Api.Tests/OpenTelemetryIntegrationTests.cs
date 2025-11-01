@@ -37,7 +37,7 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
         var response = await _client.GetAsync("/metrics");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var content = await response.Content.ReadAsStringAsync();
         content.Should().NotBeEmpty();
@@ -60,7 +60,7 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
         var content = await response.Content.ReadAsStringAsync();
 
         // Assert - Check for standard HTTP metrics
-        Assert.Contains("http_server", content);
+        content.Should().Contain("http_server");
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
         var content = await response.Content.ReadAsStringAsync();
 
         // Assert - Check for .NET runtime metrics (using "dotnet_" prefix)
-        Assert.Contains("dotnet_gc", content);
+        content.Should().Contain("dotnet_gc");
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
         var response = await _client.GetAsync("/metrics");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Note: We can't directly verify trace filtering in integration tests
         // without access to Jaeger, but we ensure the endpoint works
@@ -108,8 +108,8 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
         var contentAfter = await metricsAfterHealthCheck.Content.ReadAsStringAsync();
 
         // Assert - Both metrics responses should be successful
-        Assert.Equal(HttpStatusCode.OK, metricsBeforeHealthCheck.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, metricsAfterHealthCheck.StatusCode);
+        metricsBeforeHealthCheck.StatusCode.Should().Be(HttpStatusCode.OK);
+        metricsAfterHealthCheck.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Note: In a real scenario, we'd parse Prometheus format and verify
         // that /health paths don't increment http_server_request_duration_seconds_count
@@ -128,15 +128,15 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
         // has actually recorded them through normal operation
 
         // At minimum, the meter should be registered even if no data yet
-        Assert.True(
+        
             content.Length > 0,
             "Metrics endpoint should return data"
-        );
+        .Should().BeTrue();
 
         // The following assertions will pass once the metrics are actually recorded:
-        // - Assert.Contains("meepleai_rag_requests_total", content);
-        // - Assert.Contains("meepleai_vector_search_total", content);
-        // - Assert.Contains("meepleai_cache_hits_total", content);
+        // - content.Should().Contain("meepleai_rag_requests_total");
+        // - content.Should().Contain("meepleai_vector_search_total");
+        // - content.Should().Contain("meepleai_cache_hits_total");
 
         // For now, we just verify the metrics endpoint is working
     }
@@ -149,8 +149,8 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
         var content = await response.Content.ReadAsStringAsync();
 
         // Assert - Verify Prometheus exposition format
-        Assert.Contains("# HELP", content); // Metric descriptions
-        Assert.Contains("# TYPE", content); // Metric types
+        content.Should().Contain("# HELP"); // Metric descriptions
+        content.Should().Contain("# TYPE"); // Metric types
 
         // Verify metric naming follows Prometheus conventions (lowercase, underscores)
         var lines = content.Split('\n');
@@ -184,11 +184,11 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
         sourceNames.Should().NotBeEmpty();
 
         // Verify all expected sources are present
-        Assert.Contains("MeepleAI.Api", sourceNames);
-        Assert.Contains("MeepleAI.Rag", sourceNames);
-        Assert.Contains("MeepleAI.VectorSearch", sourceNames);
-        Assert.Contains("MeepleAI.PdfProcessing", sourceNames);
-        Assert.Contains("MeepleAI.Cache", sourceNames);
+        sourceNames.Should().Contain("MeepleAI.Api");
+        sourceNames.Should().Contain("MeepleAI.Rag");
+        sourceNames.Should().Contain("MeepleAI.VectorSearch");
+        sourceNames.Should().Contain("MeepleAI.PdfProcessing");
+        sourceNames.Should().Contain("MeepleAI.Cache");
     }
 
     [Fact]
@@ -207,7 +207,7 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
 
         // Assert - Activity should be created
         activity.Should().NotBeNull();
-        Assert.Equal("TestTrace", activity.DisplayName);
+        activity.DisplayName.Should().Be("TestTrace");
     }
 
     [Fact]
@@ -236,7 +236,7 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
         var response = await _client.GetAsync("/health/live");
 
         // Assert - Response should be successful
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Note: We can't directly verify trace filtering without Jaeger integration,
         // but we ensure the endpoint works correctly
@@ -254,7 +254,7 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
         var response = await _client.GetAsync("/metrics");
 
         // Assert - Response should be successful
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Note: We can't directly verify trace filtering without Jaeger integration,
         // but we ensure the endpoint works correctly

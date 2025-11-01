@@ -73,10 +73,10 @@ public class FollowUpQuestionServiceTests
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal(3, result.Count);
-        Assert.Contains("How many players", result[0]);
-        Assert.Contains("tie", result[1]);
-        Assert.Contains("scoring", result[2]);
+        result.Count.Should().Be(3);
+        result[0].Should().Contain("How many players");
+        result[1].Should().Contain("tie");
+        result[2].Should().Contain("scoring");
 
         // Verify LLM was called with correct prompt structure
         _llmServiceMock.Verify(
@@ -184,10 +184,10 @@ public class FollowUpQuestionServiceTests
             maxQuestions: 10); // Request 10, but config should limit to 3
 
         // Assert
-        Assert.Equal(3, result.Count);
-        Assert.Equal("Question 1", result[0]);
-        Assert.Equal("Question 2", result[1]);
-        Assert.Equal("Question 3", result[2]);
+        result.Count.Should().Be(3);
+        result[0].Should().Be("Question 1");
+        result[1].Should().Be("Question 2");
+        result[2].Should().Be("Question 3");
     }
 
     [Fact]
@@ -220,7 +220,7 @@ public class FollowUpQuestionServiceTests
             "Game");
 
         // Assert
-        Assert.Equal(3, result.Count); // Only valid questions
+        result.Count.Should().Be(3); // Only valid questions
         Assert.All(result, q => Assert.False(string.IsNullOrWhiteSpace(q)));
     }
 
@@ -281,8 +281,8 @@ public class FollowUpQuestionServiceTests
             "Game");
 
         // Assert
-        Assert.Single(result);
-        Assert.Equal("Retry success", result[0]);
+        result.Should().ContainSingle();
+        result[0].Should().Be("Retry success");
         // Verify retry behavior implicitly - if no retry, would get null and fail
     }
 

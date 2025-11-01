@@ -60,20 +60,20 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
         var okResponse = await context.Client.GetAsync("/api/v1/logs");
 
         // Then: Request succeeds
-        Assert.Equal(HttpStatusCode.OK, okResponse.StatusCode);
+        okResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // When: User exceeds rate limit
         context.RateLimitService.EnqueueResponse(allowed: false, tokensRemaining: 0, retryAfterSeconds: 15);
         var limitedResponse = await context.Client.GetAsync("/api/v1/logs");
 
         // Then: Request returns 429 with retry-after headers
-        Assert.Equal(HttpStatusCode.TooManyRequests, limitedResponse.StatusCode);
+        limitedResponse.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
 
         var payload = await limitedResponse.Content.ReadFromJsonAsync<RateLimitErrorResponse>();
         payload.Should().NotBeNull();
-        Assert.Equal("Rate limit exceeded", payload!.error);
-        Assert.Equal(15, payload.retryAfter);
-        Assert.Contains("Too many requests", payload.message, StringComparison.OrdinalIgnoreCase);
+        payload!.error.Should().Be("Rate limit exceeded");
+        payload.retryAfter.Should().Be(15);
+        payload.message, StringComparison.OrdinalIgnoreCase.Should().Contain("Too many requests");
 
         // Admin role has 1000 tokens by default configuration
         var expectedLimit = "1000";
@@ -106,7 +106,7 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
         var response = await context.Client.GetAsync("/api/v1/logs");
 
         // Then: Request succeeds (fail-open behavior)
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: Headers show full limit available
         // Admin role has 1000 tokens by default configuration
@@ -136,7 +136,7 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
 
         var response = await context.Client.GetAsync("/api/v1/auth/me");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         Assert.Equal(expectedLimit.ToString(CultureInfo.InvariantCulture), GetSingleHeaderValue(response, "X-RateLimit-Limit"));
         Assert.Equal(expectedRemaining.ToString(CultureInfo.InvariantCulture), GetSingleHeaderValue(response, "X-RateLimit-Remaining"));
         Assert.False(response.Headers.Contains("Retry-After"));
@@ -154,7 +154,7 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
 
         var response = await context.Client.GetAsync("/api/v1/auth/me");
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         Assert.Equal("60", GetSingleHeaderValue(response, "X-RateLimit-Limit"));
         Assert.Equal("12", GetSingleHeaderValue(response, "X-RateLimit-Remaining"));
         Assert.False(response.Headers.Contains("Retry-After"));

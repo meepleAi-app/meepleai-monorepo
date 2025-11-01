@@ -60,7 +60,7 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
 
         // Act 1: Admin creates configuration (with cookies)
         var createResponse = await PostAsJsonAuthenticatedAsync(client, _adminCookies, "/api/v1/admin/configurations", configDto);
-        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var createdConfig = await createResponse.Content.ReadFromJsonAsync<SystemConfigurationDto>();
         createdConfig.Should().NotBeNull();
 
@@ -69,12 +69,12 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var dbConfig = await dbContext.SystemConfigurations.FirstOrDefaultAsync(c => c.Key == "Test:MaxValue");
         dbConfig.Should().NotBeNull();
-        Assert.Equal("999", dbConfig.Value);
+        dbConfig.Value.Should().Be("999");
 
         // Act 3: Service reads config and uses it
         var configService = scope.ServiceProvider.GetRequiredService<IConfigurationService>();
         var value = await configService.GetValueAsync<int>("Test:MaxValue");
-        Assert.Equal(999, value);
+        value.Should().Be(999);
     }
 
     [Fact]
@@ -106,10 +106,10 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
         var rateLimitService = scope.ServiceProvider.GetRequiredService<IRateLimitService>();
 
         var adminConfig = rateLimitService.GetConfigForRole("admin");
-        Assert.Equal(1000, adminConfig.MaxTokens);
+        adminConfig.MaxTokens.Should().Be(1000);
 
         var userConfig = rateLimitService.GetConfigForRole("user");
-        Assert.Equal(100, userConfig.MaxTokens);
+        userConfig.MaxTokens.Should().Be(100);
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
         using var scope1 = Factory.Services.CreateScope();
         var configService1 = scope1.ServiceProvider.GetRequiredService<IConfigurationService>();
         var valueDefault = await configService1.GetValueAsync<int>(uniqueKey);
-        Assert.True(valueDefault == null || valueDefault == 0 || valueDefault == 5); // Null or default
+        valueDefault == null || valueDefault == 0 || valueDefault == 5.Should().BeTrue(); // Null or default
 
         // Act 2: Add config to DB
         await PostAsJsonAuthenticatedAsync(client, _adminCookies, "/api/v1/admin/configurations", new
@@ -137,7 +137,7 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
         using var scope2 = Factory.Services.CreateScope();
         var configService2 = scope2.ServiceProvider.GetRequiredService<IConfigurationService>();
         var valueDB = await configService2.GetValueAsync<int>(uniqueKey);
-        Assert.Equal(10, valueDB); // From database
+        valueDB.Should().Be(10); // From database
 
         // Act 3: Delete config from DB (fallback to default)
         var getResponse = await GetAuthenticatedAsync(client, _adminCookies, "/api/v1/admin/configurations");
@@ -149,7 +149,7 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
         using var scope3 = Factory.Services.CreateScope();
         var configService3 = scope3.ServiceProvider.GetRequiredService<IConfigurationService>();
         var valueFallback = await configService3.GetValueAsync<int>(uniqueKey);
-        Assert.True(valueFallback == null || valueFallback == 0); // Back to default (no config exists)
+        valueFallback == null || valueFallback == 0.Should().BeTrue(); // Back to default (no config exists)
     }
 
     [Fact]
@@ -166,7 +166,7 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
             valueType = "int",
             category = "Test"
         });
-        Assert.Equal(HttpStatusCode.BadRequest, invalidTypeResponse.StatusCode);
+        invalidTypeResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         // Act 2: Negative value for MaxTokens (should fail validation)
         var negativeValueResponse = await PostAsJsonAuthenticatedAsync(client, _adminCookies, "/api/v1/admin/configurations", new
@@ -176,7 +176,7 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
             valueType = "int",
             category = "RateLimit"
         });
-        Assert.Equal(HttpStatusCode.BadRequest, negativeValueResponse.StatusCode);
+        negativeValueResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -198,8 +198,8 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
         var dbContext1 = scope1.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var enabledConfig = await dbContext1.SystemConfigurations.FirstOrDefaultAsync(c => c.Key == "FeatureFlags:ChatStreaming");
         enabledConfig.Should().NotBeNull();
-        Assert.Equal("true", enabledConfig.Value);
-        Assert.True(enabledConfig.IsActive);
+        enabledConfig.Value.Should().Be("true");
+        enabledConfig.IsActive.Should().BeTrue();
 
         // Act 2: Disable feature flag
         var getResponse = await GetAuthenticatedAsync(client, _adminCookies, "/api/v1/admin/configurations");
@@ -219,7 +219,7 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
         using var scope2 = Factory.Services.CreateScope();
         var dbContext2 = scope2.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var disabledConfig = await dbContext2.SystemConfigurations.FirstAsync(c => c.Id == flagConfig.Id);
-        Assert.Equal("false", disabledConfig.Value); // Value updated to false
+        disabledConfig.Value.Should().Be("false"); // Value updated to false
     }
 
     [Fact]
@@ -254,8 +254,8 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
 
         dbConfig.CreatedByUserId.Should().NotBeNull();
         dbConfig.UpdatedByUserId.Should().NotBeNull();
-        Assert.NotEqual(dbConfig.CreatedAt, dbConfig.UpdatedAt);
-        Assert.Equal("initial", dbConfig.PreviousValue); // Previous value stored for rollback
+        dbConfig.UpdatedAt.Should().NotBe(dbConfig.CreatedAt);
+        dbConfig.PreviousValue.Should().Be("initial"); // Previous value stored for rollback
     }
 
     [Fact]
@@ -281,7 +281,7 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
         var prodConfig = await dbContext.SystemConfigurations
             .FirstOrDefaultAsync(c => c.Environment == "Production");
         prodConfig.Should().NotBeNull();
-        Assert.Equal("prod-value", prodConfig.Value);
+        prodConfig.Value.Should().Be("prod-value");
     }
 
     [Fact]
@@ -321,7 +321,7 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
         using var scope = Factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var dbConfig = await dbContext.SystemConfigurations.FirstAsync(c => c.Id == created.Id);
-        Assert.Equal(3, dbConfig.Version); // Started at 1, updated twice → version 3
+        dbConfig.Version.Should().Be(3); // Started at 1, updated twice → version 3
     }
 
     [Fact]
@@ -353,8 +353,8 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var dbConfig = await dbContext.SystemConfigurations.FirstAsync(c => c.Id == created.Id);
 
-        Assert.Equal("100", dbConfig.PreviousValue); // Previous value preserved
-        Assert.Equal("200", dbConfig.Value); // Current value
+        dbConfig.PreviousValue.Should().Be("100"); // Previous value preserved
+        dbConfig.Value.Should().Be("200"); // Current value
 
         // Simulate rollback
         dbConfig.Value = dbConfig.PreviousValue!;
@@ -363,7 +363,7 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
 
         // Assert: Verify rollback successful
         var rolledBack = await dbContext.SystemConfigurations.FirstAsync(c => c.Id == created.Id);
-        Assert.Equal("100", rolledBack.Value);
+        rolledBack.Value.Should().Be("100");
     }
 
     [Fact]
@@ -387,7 +387,7 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
         using var scope1 = Factory.Services.CreateScope();
         var configService1 = scope1.ServiceProvider.GetRequiredService<IConfigurationService>();
         var activeValue = await configService1.GetValueAsync<string>("Inactive:TestConfig");
-        Assert.Equal("active-value", activeValue);
+        activeValue.Should().Be("active-value");
 
         // Act 2: Deactivate configuration
         await PutAsJsonAuthenticatedAsync(client, _adminCookies, $"/api/v1/admin/configurations/{created!.Id}", new
@@ -403,7 +403,7 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
         using var scope2 = Factory.Services.CreateScope();
         var dbContext2 = scope2.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var dbConfig = await dbContext2.SystemConfigurations.FirstAsync(c => c.Id == created!.Id);
-        Assert.False(dbConfig.IsActive); // Configuration is marked inactive
+        dbConfig.IsActive.Should().BeFalse(); // Configuration is marked inactive
 
         // Note: ConfigurationService uses caching, so it may still return cached value
         // The important thing is that IsActive is correctly stored in DB

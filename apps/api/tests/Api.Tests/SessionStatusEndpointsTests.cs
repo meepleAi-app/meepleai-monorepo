@@ -94,12 +94,12 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         var response = await client.GetAsync("/api/v1/auth/session/status");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var status = await response.Content.ReadFromJsonAsync<SessionStatusResponse>();
         status.Should().NotBeNull();
 
         // Session was just created, should have ~30 days (43200 minutes) remaining
-        Assert.InRange(status.RemainingMinutes, 43000, 43300); // Allow some tolerance
+        status.RemainingMinutes.Should().BeInRange(43000, 43300); // Allow some tolerance
         status.LastSeenAt.Should().NotBeNull();
     }
 
@@ -113,7 +113,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         var response = await client.GetAsync("/api/v1/auth/session/status");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -131,12 +131,12 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         var response = await client.GetAsync("/api/v1/auth/session/status");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var status = await response.Content.ReadFromJsonAsync<SessionStatusResponse>();
         status.Should().NotBeNull();
 
         // Should have ~30 minutes remaining
-        Assert.InRange(status.RemainingMinutes, 0, 35);
+        status.RemainingMinutes.Should().BeInRange(0, 35);
     }
 
     [Fact]
@@ -154,12 +154,12 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         var response = await client.GetAsync("/api/v1/auth/session/status");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var status = await response.Content.ReadFromJsonAsync<SessionStatusResponse>();
         status.Should().NotBeNull();
 
         // Session expired, should show 0 minutes
-        Assert.Equal(0, status.RemainingMinutes);
+        status.RemainingMinutes.Should().Be(0);
     }
 
     [Fact]
@@ -181,16 +181,16 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         var extendResponse = await client.PostAsync("/api/v1/auth/session/extend", null);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, extendResponse.StatusCode);
+        extendResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var extendedStatus = await extendResponse.Content.ReadFromJsonAsync<SessionStatusResponse>();
         extendedStatus.Should().NotBeNull();
 
         // LastSeenAt should be updated to current time
         extendedStatus.LastSeenAt.Should().NotBeNull();
-        Assert.True(extendedStatus.LastSeenAt > initialStatus!.LastSeenAt);
+        extendedStatus.LastSeenAt > initialStatus!.LastSeenAt.Should().BeTrue();
 
         // Remaining minutes should be reset to ~30 days
-        Assert.InRange(extendedStatus.RemainingMinutes, 43000, 43300);
+        extendedStatus.RemainingMinutes.Should().BeInRange(43000, 43300);
     }
 
     [Fact]
@@ -205,7 +205,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         var response = await client.PostAsync("/api/v1/auth/session/extend", null);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Verify session status reflects updated LastSeenAt
         var statusResponse = await client.GetAsync("/api/v1/auth/session/status");
@@ -228,7 +228,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         var response = await client.PostAsync("/api/v1/auth/session/extend", null);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -247,7 +247,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
 
             // Extend session
             var extendResponse = await client.PostAsync("/api/v1/auth/session/extend", null);
-            Assert.Equal(HttpStatusCode.OK, extendResponse.StatusCode);
+            extendResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
             // Verify session still has plenty of time remaining
             var statusResponse = await client.GetAsync("/api/v1/auth/session/status");
@@ -255,7 +255,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
             status.Should().NotBeNull();
 
             // After extending, should have ~30 days remaining
-            Assert.InRange(status.RemainingMinutes, 42000, 43300);
+            status.RemainingMinutes.Should().BeInRange(42000, 43300);
         }
     }
 
@@ -272,7 +272,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         };
 
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", registerPayload);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Extract session cookie
         var setCookieHeader = response.Headers.GetValues("Set-Cookie").FirstOrDefault();

@@ -57,7 +57,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Assert: Success
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     /// <summary>
@@ -80,7 +80,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Assert: Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -103,7 +103,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Assert: Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -122,7 +122,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var response = await client.GetAsync("/api/v1/admin/sessions");
 
         // Assert: Unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     #endregion
@@ -152,7 +152,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Assert: Not forbidden (should be 201 Created or 409 Conflict if exists, but not 403)
-        Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().NotBe(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -178,7 +178,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Assert: Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     #endregion
@@ -213,7 +213,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Assert: Not found (resource isolation)
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     /// <summary>
@@ -244,7 +244,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Assert: Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -274,7 +274,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Assert: Success
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     #endregion
@@ -310,7 +310,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         {
             var db = scope.ServiceProvider.GetRequiredService<Api.Infrastructure.MeepleAiDbContext>();
             var updatedUser = await db.Users.FindAsync(user.Id);
-            Assert.Equal(UserRole.User, updatedUser!.Role); // Role should still be User
+            updatedUser!.Role.Should().Be(UserRole.User); // Role should still be User
         }
     }
 
@@ -335,7 +335,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Assert: Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     #endregion
@@ -376,7 +376,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Assert: Unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -395,7 +395,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var response = await client.GetAsync("/api/v1/chats");
 
         // Assert: Unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     #endregion
@@ -418,7 +418,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var response = await client.GetAsync("/health/live");
 
         // Assert: Success
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     /// <summary>
@@ -439,7 +439,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
 
         // Assert: Not unauthorized/forbidden (likely 401 due to wrong credentials, but endpoint is accessible)
         // The endpoint itself doesn't require auth, even though login fails
-        Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().NotBe(HttpStatusCode.Forbidden);
     }
 
     #endregion
@@ -469,7 +469,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Assert: Not forbidden
-        Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().NotBe(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -492,7 +492,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Assert: Success
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     /// <summary>
@@ -515,7 +515,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Assert: Success
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     #endregion

@@ -66,10 +66,10 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Access is granted
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<RuleSpec>();
         result.Should().NotBeNull();
-        Assert.Equal(ruleSpec.Version, result!.version);
+        result!.version.Should().Be(ruleSpec.Version);
     }
 
     /// <summary>
@@ -99,13 +99,13 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Deletion succeeds
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // And: PDF is removed
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var exists = await db.PdfDocuments.AnyAsync(p => p.Id == pdf.Id);
-        Assert.False(exists);
+        exists.Should().BeFalse();
     }
 
     /// <summary>
@@ -132,7 +132,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Game is created
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
         var game = await response.Content.ReadFromJsonAsync<GameResponse>();
         game.Should().NotBeNull();
         TrackGameId(game!.Id);
@@ -163,7 +163,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Access is granted
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     #endregion
@@ -194,7 +194,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Game is created
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
         var game = await response.Content.ReadFromJsonAsync<GameResponse>();
         game.Should().NotBeNull();
         TrackGameId(game!.Id);
@@ -235,7 +235,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: RuleSpec is updated
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     /// <summary>
@@ -264,13 +264,13 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Access is denied
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         // And: PDF still exists
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var exists = await db.PdfDocuments.AnyAsync(p => p.Id == pdf.Id);
-        Assert.True(exists);
+        exists.Should().BeTrue();
     }
 
     /// <summary>
@@ -297,7 +297,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Deletion succeeds
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
     /// <summary>
@@ -325,7 +325,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Access is granted
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     #endregion
@@ -358,13 +358,13 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Access is denied
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         // And: PDF still exists
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var exists = await db.PdfDocuments.AnyAsync(p => p.Id == pdf.Id);
-        Assert.True(exists);
+        exists.Should().BeTrue();
     }
 
     /// <summary>
@@ -391,7 +391,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Deletion succeeds
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
     /// <summary>
@@ -418,7 +418,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Access is denied
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -442,7 +442,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Access is denied
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -471,7 +471,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Access is denied
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     #endregion
@@ -505,7 +505,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Access is denied
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         // And: Audit log contains ACCESS_DENIED entry
         using var scope = Factory.Services.CreateScope();
@@ -520,9 +520,9 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
             .FirstOrDefaultAsync();
 
         auditLog.Should().NotBeNull();
-        Assert.Equal(attacker.Id, auditLog!.UserId);
-        Assert.Equal("Denied", auditLog.Result);
-        Assert.Contains("scope", auditLog.Details ?? "", StringComparison.OrdinalIgnoreCase);
+        auditLog!.UserId.Should().Be(attacker.Id);
+        auditLog.Result.Should().Be("Denied");
+        auditLog.Details ?? "", StringComparison.OrdinalIgnoreCase.Should().Contain("scope");
     }
 
     #endregion
@@ -567,11 +567,11 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
             var response = await client.SendAsync(request);
 
             // Then: All users can access games
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
 
             var games = await response.Content.ReadFromJsonAsync<List<GameResponse>>();
             games.Should().NotBeNull();
-            Assert.Contains(games!, g => g.Id == game.Id);
+            g => g.Id == game.Id.Should().Contain(games!);
         }
     }
 
@@ -595,7 +595,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         var response = await client.GetAsync("/api/v1/games");
 
         // Then: Access is denied
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     #endregion

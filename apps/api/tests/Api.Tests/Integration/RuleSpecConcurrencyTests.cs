@@ -109,8 +109,8 @@ public class RuleSpecConcurrencyTests : ConfigIntegrationTestBase
 
         spec1.Should().NotBeNull();
         spec2.Should().NotBeNull();
-        Assert.Equal("1.0", spec1.Version);
-        Assert.Equal("1.0", spec2.Version);
+        spec1.Version.Should().Be("1.0");
+        spec2.Version.Should().Be("1.0");
     }
 
     /// <summary>
@@ -172,7 +172,7 @@ public class RuleSpecConcurrencyTests : ConfigIntegrationTestBase
 
         // Assert: At least one succeeds (may both succeed with last-write-wins)
         var successCount = results.Count(r => r.StatusCode == HttpStatusCode.OK);
-        Assert.True(successCount >= 1, "At least one update should succeed");
+        successCount >= 1, "At least one update should succeed".Should().BeTrue();
 
         // Verify database state is consistent
         using var scope = Factory.Services.CreateScope();
@@ -247,7 +247,7 @@ public class RuleSpecConcurrencyTests : ConfigIntegrationTestBase
 
         // Verify no duplicate versions
         var distinctVersions = allVersions.Distinct().ToList();
-        Assert.Equal(allVersions.Count, distinctVersions.Count);
+        distinctVersions.Count.Should().Be(allVersions.Count);
 
         _output.WriteLine($"Versions created: {string.Join(", ", allVersions.OrderBy(v => v))}");
         _output.WriteLine($"Success responses: {results.Count(r => r.StatusCode == HttpStatusCode.OK)}");
@@ -298,8 +298,8 @@ public class RuleSpecConcurrencyTests : ConfigIntegrationTestBase
                     .FirstOrDefaultAsync(r => r.GameId == gameId && r.Version == "1.0");
 
                 spec.Should().NotBeNull();
-                Assert.Equal(gameId, spec.GameId);
-                Assert.Equal("1.0", spec.Version);
+                spec.GameId.Should().Be(gameId);
+                spec.Version.Should().Be("1.0");
             });
         }
 
@@ -368,7 +368,7 @@ public class RuleSpecConcurrencyTests : ConfigIntegrationTestBase
             .FirstOrDefaultAsync();
 
         newSpec.Should().NotBeNull();
-        Assert.Equal("2.0", newSpec.Version);
+        newSpec.Version.Should().Be("2.0");
         Assert.Equal("Updated rule", newSpec.Atoms.First().Text);
     }
 }

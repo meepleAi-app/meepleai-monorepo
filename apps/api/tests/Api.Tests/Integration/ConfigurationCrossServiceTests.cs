@@ -62,7 +62,7 @@ public class ConfigurationCrossServiceTests : ConfigIntegrationTestBase
         var topK = await configService.GetValueAsync<int>("Rag:TopK");
 
         // Assert: Configuration successfully read
-        Assert.Equal(3, topK);
+        topK.Should().Be(3);
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public class ConfigurationCrossServiceTests : ConfigIntegrationTestBase
         var temperature = await configService.GetValueAsync<double>("Ai:DefaultTemperature");
 
         // Assert: Configuration value correct
-        Assert.Equal(0.1, temperature, precision: 2);
+        temperature, precision: 2.Should().Be(0.1);
     }
 
     [Fact]
@@ -112,8 +112,8 @@ public class ConfigurationCrossServiceTests : ConfigIntegrationTestBase
         });
 
         // Assert: Configurations created successfully
-        Assert.Equal(HttpStatusCode.Created, createResponse1.StatusCode);
-        Assert.Equal(HttpStatusCode.Created, createResponse2.StatusCode);
+        createResponse1.StatusCode.Should().Be(HttpStatusCode.Created);
+        createResponse2.StatusCode.Should().Be(HttpStatusCode.Created);
 
         // Verify stored in database
         using var scope = Factory.Services.CreateScope();
@@ -122,9 +122,9 @@ public class ConfigurationCrossServiceTests : ConfigIntegrationTestBase
         var refillRateConfig = await dbContext.SystemConfigurations.FirstOrDefaultAsync(c => c.Key == "RateLimit:RefillRate:admin");
 
         maxTokensConfig.Should().NotBeNull();
-        Assert.Equal("5", maxTokensConfig.Value);
+        maxTokensConfig.Value.Should().Be("5");
         refillRateConfig.Should().NotBeNull();
-        Assert.Equal("10.0", refillRateConfig.Value);
+        refillRateConfig.Value.Should().Be("10.0");
     }
 
     [Fact]
@@ -147,7 +147,7 @@ public class ConfigurationCrossServiceTests : ConfigIntegrationTestBase
         var maxSize = await configService.GetValueAsync<int>("PdfProcessing:MaxFileSizeBytes");
 
         // Assert: Configuration applied
-        Assert.Equal(1048576, maxSize);
+        maxSize.Should().Be(1048576);
     }
 
     [Fact]
@@ -169,7 +169,7 @@ public class ConfigurationCrossServiceTests : ConfigIntegrationTestBase
         var dbContext1 = scope1.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var enabledConfig = await dbContext1.SystemConfigurations.FirstOrDefaultAsync(c => c.Key == "FeatureFlags:ChatStreaming");
         enabledConfig.Should().NotBeNull();
-        Assert.Equal("true", enabledConfig.Value);
+        enabledConfig.Value.Should().Be("true");
 
         // Arrange: Disable feature
         var getResponse = await GetAuthenticatedAsync(client, _adminCookies, "/api/v1/admin/configurations");
@@ -188,7 +188,7 @@ public class ConfigurationCrossServiceTests : ConfigIntegrationTestBase
         using var scope2 = Factory.Services.CreateScope();
         var dbContext2 = scope2.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var disabledConfig = await dbContext2.SystemConfigurations.FirstAsync(c => c.Id == flagConfig.Id);
-        Assert.Equal("false", disabledConfig.Value); // Value updated successfully
+        disabledConfig.Value.Should().Be("false"); // Value updated successfully
     }
 
     [Fact]
@@ -211,7 +211,7 @@ public class ConfigurationCrossServiceTests : ConfigIntegrationTestBase
         var chunkSize = await configService.GetValueAsync<int>("TextChunking:ChunkSize");
 
         // Assert: Configuration value correct
-        Assert.Equal(512, chunkSize);
+        chunkSize.Should().Be(512);
     }
 
     [Fact]
@@ -248,10 +248,10 @@ public class ConfigurationCrossServiceTests : ConfigIntegrationTestBase
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         var hotReloadEntity = await dbContext.SystemConfigurations.FirstAsync(c => c.Id == hotReloadConfig!.Id);
-        Assert.False(hotReloadEntity.RequiresRestart);
+        hotReloadEntity.RequiresRestart.Should().BeFalse();
 
         var restartEntity = await dbContext.SystemConfigurations.FirstAsync(c => c.Id == restartConfig!.Id);
-        Assert.True(restartEntity.RequiresRestart);
+        restartEntity.RequiresRestart.Should().BeTrue();
     }
 
     [Fact]
@@ -286,7 +286,7 @@ public class ConfigurationCrossServiceTests : ConfigIntegrationTestBase
         var aiTemp = await configService.GetValueAsync<double>(aiKey);
 
         // Assert: Both configurations applied independently
-        Assert.Equal(8, ragTopK);
-        Assert.Equal(0.5, aiTemp, precision: 2);
+        ragTopK.Should().Be(8);
+        aiTemp, precision: 2.Should().Be(0.5);
     }
 }

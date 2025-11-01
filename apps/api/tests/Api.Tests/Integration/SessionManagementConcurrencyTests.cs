@@ -94,7 +94,7 @@ public class SessionManagementConcurrencyTests : ConfigIntegrationTestBase
         using var scope2 = Factory.Services.CreateScope();
         var db2 = scope2.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var session = await db2.UserSessions.FindAsync(sessionId);
-        Assert.NotNull(session!.RevokedAt);
+        session!.RevokedAt.Should().NotBeNull();
 
         _output.WriteLine($"Session revoked at: {session.RevokedAt}");
         _output.WriteLine($"Success responses: {results.Count(r => r.StatusCode == HttpStatusCode.OK)}");
@@ -173,7 +173,7 @@ public class SessionManagementConcurrencyTests : ConfigIntegrationTestBase
             .Where(s => s.UserId == userId && s.RevokedAt == null)
             .CountAsync();
 
-        Assert.Equal(0, remainingActive);
+        remainingActive.Should().Be(0);
     }
 
     /// <summary>
@@ -231,7 +231,7 @@ public class SessionManagementConcurrencyTests : ConfigIntegrationTestBase
                 .ToListAsync();
         }
 
-        Assert.Equal(3, sessionIds.Count);
+        sessionIds.Count.Should().Be(3);
 
         // Act: Concurrent single revoke + bulk revoke
         var client1 = Factory.CreateHttpsClient();
@@ -253,7 +253,7 @@ public class SessionManagementConcurrencyTests : ConfigIntegrationTestBase
             .Where(s => s.UserId == userId && s.RevokedAt != null)
             .ToListAsync();
 
-        Assert.Equal(3, revokedSessions.Count);
+        revokedSessions.Count.Should().Be(3);
         Assert.All(revokedSessions, s => Assert.NotNull(s.RevokedAt));
     }
 
@@ -329,7 +329,7 @@ public class SessionManagementConcurrencyTests : ConfigIntegrationTestBase
             .Where(s => sessionIds.Contains(s.Id) && s.RevokedAt != null)
             .CountAsync();
 
-        Assert.Equal(5, revokedCount);
+        revokedCount.Should().Be(5);
         _output.WriteLine($"Successfully revoked {revokedCount} inactive sessions");
     }
 
@@ -384,7 +384,7 @@ public class SessionManagementConcurrencyTests : ConfigIntegrationTestBase
             var activeCount = await db2.UserSessions
                 .Where(s => s.UserId == userId && s.RevokedAt == null)
                 .CountAsync();
-            Assert.Equal(0, activeCount);
+            activeCount.Should().Be(0);
         }
     }
 }

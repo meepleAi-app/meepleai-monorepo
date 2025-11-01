@@ -91,24 +91,24 @@ public class LogsEndpointTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Logs are returned sorted by newest first
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var entries = await response.Content.ReadFromJsonAsync<List<LogEntryResponse>>();
 
         entries.Should().NotBeNull();
-        Assert.Equal(2, entries!.Count);
+        entries!.Count.Should().Be(2);
 
         var newest = entries[0];
-        Assert.Equal($"req-002-{TestRunId}", newest.RequestId);
-        Assert.Equal("ERROR", newest.Level);
-        Assert.Equal("Explain setup", newest.Message);
-        Assert.Equal(user2.Id, newest.UserId);
-        Assert.Equal("demo-chess", newest.GameId);
+        newest.RequestId.Should().Be($"req-002-{TestRunId}");
+        newest.Level.Should().Be("ERROR");
+        newest.Message.Should().Be("Explain setup");
+        newest.UserId.Should().Be(user2.Id);
+        newest.GameId.Should().Be("demo-chess");
 
         var older = entries[1];
-        Assert.Equal($"req-001-{TestRunId}", older.RequestId);
-        Assert.Equal("INFO", older.Level);
-        Assert.Equal("Two players.", older.Message);
+        older.RequestId.Should().Be($"req-001-{TestRunId}");
+        older.Level.Should().Be("INFO");
+        older.Message.Should().Be("Two players.");
         // Cleanup happens automatically via DisposeAsync
     }
 
@@ -128,7 +128,7 @@ public class LogsEndpointTests : IntegrationTestBase
         var response = await client.GetAsync("/api/v1/logs");
 
         // Then: Request is unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     public static IEnumerable<object[]> NonAdminRoles => new[]
@@ -160,7 +160,7 @@ public class LogsEndpointTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Request is forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         // Cleanup happens automatically via DisposeAsync
     }
 }

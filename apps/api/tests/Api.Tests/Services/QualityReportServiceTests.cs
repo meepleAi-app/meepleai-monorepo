@@ -218,16 +218,16 @@ public class QualityReportServiceTests : IDisposable
         var report = await reportService.GenerateReportAsync(startDate, endDate);
 
         // Assert
-        Assert.Equal(10, report.TotalResponses);
-        Assert.Equal(3, report.LowQualityCount);
+        report.TotalResponses.Should().Be(10);
+        report.LowQualityCount.Should().Be(3);
         report.AverageRagConfidence.Should().NotBeNull();
-        Assert.InRange(report.AverageRagConfidence.Value, 0.70, 0.80);
+        report.AverageRagConfidence.Value.Should().BeInRange(0.70, 0.80);
         report.AverageLlmConfidence.Should().NotBeNull();
-        Assert.InRange(report.AverageLlmConfidence.Value, 0.65, 0.75);
+        report.AverageLlmConfidence.Value.Should().BeInRange(0.65, 0.75);
         report.AverageCitationQuality.Should().NotBeNull();
-        Assert.InRange(report.AverageCitationQuality.Value, 0.75, 0.85);
+        report.AverageCitationQuality.Value.Should().BeInRange(0.75, 0.85);
         report.AverageOverallConfidence.Should().NotBeNull();
-        Assert.InRange(report.AverageOverallConfidence.Value, 0.70, 0.80);
+        report.AverageOverallConfidence.Value.Should().BeInRange(0.70, 0.80);
     }
 
     /// <summary>
@@ -274,8 +274,8 @@ public class QualityReportServiceTests : IDisposable
         var report = await reportService.GenerateReportAsync(startDate, endDate);
 
         // Assert
-        Assert.Equal(0, report.TotalResponses);
-        Assert.Equal(0, report.LowQualityCount);
+        report.TotalResponses.Should().Be(0);
+        report.LowQualityCount.Should().Be(0);
         report.AverageRagConfidence.Should().BeNull();
         report.AverageLlmConfidence.Should().BeNull();
         report.AverageCitationQuality.Should().BeNull();
@@ -342,9 +342,9 @@ public class QualityReportServiceTests : IDisposable
         await helper.StopAsync();
 
         // Assert
-        Assert.True(scopeCreatedCount >= 2,
-            $"Expected at least 2 scopes created, got {scopeCreatedCount}");
-        Assert.Equal(scopeCreatedCount, scopeDisposedCount);
+        scopeCreatedCount >= 2,
+            $"Expected at least 2 scopes created, got {scopeCreatedCount}".Should().BeTrue();
+        scopeDisposedCount.Should().Be(scopeCreatedCount);
     }
 
     /// <summary>
@@ -502,8 +502,8 @@ public class QualityReportServiceTests : IDisposable
         var report = await reportService.GenerateReportAsync(startDate, endDate);
 
         // Assert
-        Assert.Equal(startDate, report.StartDate);
-        Assert.Equal(endDate, report.EndDate);
+        report.StartDate.Should().Be(startDate);
+        report.EndDate.Should().Be(endDate);
     }
 
     /// <summary>
@@ -566,7 +566,7 @@ public class QualityReportServiceTests : IDisposable
         var report = await reportService.GenerateReportAsync(startDate, endDate);
 
         // Assert
-        Assert.Equal(30.0, report.LowQualityPercentage);
+        report.LowQualityPercentage.Should().Be(30.0);
     }
 
     #region Helper Methods

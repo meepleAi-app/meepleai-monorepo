@@ -70,11 +70,11 @@ public class TempSessionServiceTests : IDisposable
         // Verify token is stored hashed (not plaintext)
         var storedSession = await _dbContext.TempSessions.FirstOrDefaultAsync(ts => ts.UserId == userId);
         storedSession.Should().NotBeNull();
-        Assert.NotEqual(token, storedSession.TokenHash); // Should be hashed
-        Assert.Equal(ipAddress, storedSession.IpAddress);
-        Assert.False(storedSession.IsUsed);
+        storedSession.TokenHash.Should().NotBe(token); // Should be hashed
+        storedSession.IpAddress.Should().Be(ipAddress);
+        storedSession.IsUsed.Should().BeFalse();
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        Assert.True(storedSession.ExpiresAt > now);
+        storedSession.ExpiresAt > now.Should().BeTrue();
         Assert.True(storedSession.ExpiresAt <= now.AddMinutes(6)); // ~5 min TTL
     }
 
@@ -99,12 +99,12 @@ public class TempSessionServiceTests : IDisposable
         var result = await _tempSessionService.ValidateAndConsumeTempSessionAsync(token);
 
         // Assert
-        Assert.Equal(userId, result);
+        result.Should().Be(userId);
 
         // Verify session is marked as used
         var session = await _dbContext.TempSessions.FirstOrDefaultAsync(ts => ts.UserId == userId);
-        Assert.True(session?.IsUsed);
-        Assert.NotNull(session?.UsedAt);
+        session?.IsUsed.Should().BeTrue();
+        session?.UsedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public class TempSessionServiceTests : IDisposable
 
         // Act - First use should succeed
         var result1 = await _tempSessionService.ValidateAndConsumeTempSessionAsync(token);
-        Assert.Equal(userId, result1);
+        result1.Should().Be(userId);
 
         // Act - Second use should fail (single-use enforcement)
         var result2 = await _tempSessionService.ValidateAndConsumeTempSessionAsync(token);
@@ -226,8 +226,8 @@ public class TempSessionServiceTests : IDisposable
 
         // Assert
         var remaining = await _dbContext.TempSessions.ToListAsync();
-        Assert.Single(remaining); // Only recent session should remain
-        Assert.Equal("recent-hash", remaining[0].TokenHash);
+        remaining.Should().ContainSingle(); // Only recent session should remain
+        remaining[0].TokenHash.Should().Be("recent-hash");
     }
 
     public void Dispose()

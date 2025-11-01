@@ -125,8 +125,8 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
             ttlSeconds: 3600);
 
         // Verify both are cached
-        Assert.NotNull(await cacheService.GetAsync<QaResponse>(key1));
-        Assert.NotNull(await cacheService.GetAsync<QaResponse>(key2));
+        (await cacheService.GetAsync<QaResponse>(key1)).Should().NotBeNull();
+        (await cacheService.GetAsync<QaResponse>(key2)).Should().NotBeNull();
 
         // When: Upload PDF for game1
         var client = CreateClientWithoutCookies();
@@ -153,8 +153,8 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         // Then: Only game1 cache is invalidated
         using var newScope = Factory.Services.CreateScope();
         var newCacheService = newScope.ServiceProvider.GetRequiredService<IAiResponseCacheService>();
-        Assert.Null(await newCacheService.GetAsync<QaResponse>(key1));
-        Assert.NotNull(await newCacheService.GetAsync<QaResponse>(key2)); // Game2 cache intact
+        (await newCacheService.GetAsync<QaResponse>(key1)).Should().BeNull();
+        (await newCacheService.GetAsync<QaResponse>(key2)).Should().NotBeNull(); // Game2 cache intact
     }
 
     /// <summary>
@@ -186,9 +186,9 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
             game.Name, new System.Collections.Generic.List<SetupGuideStep>(), 10), 3600);
 
         // Verify all cached
-        Assert.NotNull(await cacheService.GetAsync<QaResponse>(qaKey));
-        Assert.NotNull(await cacheService.GetAsync<ExplainResponse>(explainKey));
-        Assert.NotNull(await cacheService.GetAsync<SetupGuideResponse>(setupKey));
+        (await cacheService.GetAsync<QaResponse>(qaKey)).Should().NotBeNull();
+        (await cacheService.GetAsync<ExplainResponse>(explainKey)).Should().NotBeNull();
+        (await cacheService.GetAsync<SetupGuideResponse>(setupKey)).Should().NotBeNull();
 
         // When: Upload PDF
         var client = CreateClientWithoutCookies();
@@ -215,9 +215,9 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         // Then: All endpoint caches invalidated
         using var newScope = Factory.Services.CreateScope();
         var newCacheService = newScope.ServiceProvider.GetRequiredService<IAiResponseCacheService>();
-        Assert.Null(await newCacheService.GetAsync<QaResponse>(qaKey));
-        Assert.Null(await newCacheService.GetAsync<ExplainResponse>(explainKey));
-        Assert.Null(await newCacheService.GetAsync<SetupGuideResponse>(setupKey));
+        (await newCacheService.GetAsync<QaResponse>(qaKey)).Should().BeNull();
+        (await newCacheService.GetAsync<ExplainResponse>(explainKey)).Should().BeNull();
+        (await newCacheService.GetAsync<SetupGuideResponse>(setupKey)).Should().BeNull();
     }
 
     #endregion
@@ -249,7 +249,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         await cacheService.SetAsync(cacheKey, new QaResponse("Old answer", Array.Empty<Snippet>()), 3600);
 
         // Verify cache exists
-        Assert.NotNull(await cacheService.GetAsync<QaResponse>(cacheKey));
+        (await cacheService.GetAsync<QaResponse>(cacheKey)).Should().NotBeNull();
 
         // When: Update rule spec
         var client = CreateClientWithoutCookies();
@@ -309,7 +309,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         await cacheService.SetAsync(cacheKey, new QaResponse(cachedAnswer, Array.Empty<Snippet>()), 3600);
 
         // Verify cache exists
-        Assert.NotNull(await cacheService.GetAsync<QaResponse>(cacheKey));
+        (await cacheService.GetAsync<QaResponse>(cacheKey)).Should().NotBeNull();
 
         // When: Call QA endpoint with bypassCache=true
         var client = CreateClientWithoutCookies();

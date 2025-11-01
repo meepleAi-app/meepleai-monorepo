@@ -67,7 +67,7 @@ public class ApiKeyAuthenticationMiddlewareTests
         await middleware.InvokeAsync(context, service);
 
         // Assert
-        var entry = Assert.Single(logger.Entries.Where(e => e.LogLevel == LogLevel.Information));
+        var entry = logger.Entries.Where(e => e.LogLevel == LogLevel.Information).Should().ContainSingle().Subject;
         Assert.Equal("/api/datafetch", entry.GetStateValue("Path"));
     }
 

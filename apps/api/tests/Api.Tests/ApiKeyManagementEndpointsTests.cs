@@ -61,7 +61,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var result = await response.Content.ReadFromJsonAsync<CreateApiKeyResponse>();
         result.Should().NotBeNull();
         result.PlaintextKey.Should().NotBeNull();
-        Assert.StartsWith("mpl_live_", result.PlaintextKey);
+        result.PlaintextKey.Should().StartWith("mpl_live_");
         result.ApiKey.KeyName.Should().Be("Production Key");
         result.ApiKey.Scopes.Length.Should().Be(2);
         result.ApiKey.IsActive.Should().BeTrue();
@@ -145,7 +145,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
 
         var result = await response.Content.ReadFromJsonAsync<CreateApiKeyResponse>();
         result.Should().NotBeNull();
-        Assert.StartsWith($"mpl_{environment}_", result.PlaintextKey);
+        result.PlaintextKey.Should().StartWith($"mpl_{environment}_");
     }
 
     #endregion

@@ -279,7 +279,7 @@ public class OpenTelemetryTracingTests
         {
             sourceName.Should().NotBeNull();
             sourceName.Should().NotBeEmpty();
-            Assert.StartsWith("MeepleAI.", sourceName);
+            sourceName.Should().StartWith("MeepleAI.");
         }
     }
 }

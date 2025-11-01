@@ -279,7 +279,7 @@ public class PdfTableExtractionRealWorldTests
                 _output.WriteLine($"  {rule}");
 
                 // Each rule should reference its source page
-                Assert.Matches(@"\[Table on page \d+\]", rule);
+                rule.Should().MatchRegex(@"\[Table on page \d+\]");
 
                 // Each rule should have at least one key-value pair
                 rule.Should().Contain(":");

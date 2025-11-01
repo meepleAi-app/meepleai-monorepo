@@ -126,7 +126,7 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
         var logged = await _dbContext.WorkflowErrorLogs.FirstOrDefaultAsync();
         logged.Should().NotBeNull();
         logged.ErrorMessage.Length <= 5000 + 20.Should().BeTrue(); // +20 for "... [truncated]"
-        Assert.EndsWith("... [truncated]", logged.ErrorMessage);
+        logged.ErrorMessage.Should().EndWith("... [truncated]");
     }
 
     [Fact]

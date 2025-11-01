@@ -144,7 +144,7 @@ public class ChessDatasetTests
     {
         // Given: An individual opening from the dataset
         // Then: Its PGN notation should be syntactically valid (start with move number)
-        Assert.Matches(@"^[1-9]\.", opening.pgn);
+        opening.pgn.Should().MatchRegex(@"^[1-9]\.");
     }
 
     /// <summary>

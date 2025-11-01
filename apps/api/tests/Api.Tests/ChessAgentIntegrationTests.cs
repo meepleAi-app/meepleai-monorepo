@@ -76,7 +76,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         Assert.All(result.sources, source =>
         {
             source.text.Should().NotBeEmpty();
-            Assert.StartsWith("ChessKnowledge:", source.source);
+            source.source.Should().StartWith("ChessKnowledge:");
         });
 
         // And: Confidence is reported

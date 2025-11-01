@@ -137,7 +137,7 @@ public class TestTimeProviderTests
         using var provider = new TestTimeProvider();
 
         // Act & Assert
-        var act = () => provider.Advance(TimeSpan.FromMinutes(-5)));
+        var act = () => provider.Advance(TimeSpan.FromMinutes(-5));
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
@@ -328,9 +328,8 @@ public class TimeAssertionsTests
         var expected = new DateTimeOffset(2025, 1, 1, 12, 0, 5, TimeSpan.Zero); // 5 seconds diff
 
         // Act & Assert
-        var act = () =>
+        var act = () => TimeAssertions.AssertTimeNear(actual, expected, TimeSpan.FromSeconds(1));
         act.Should().Throw<ArgumentOutOfRangeException>();
-            TimeAssertions.AssertTimeNear(actual, expected, TimeSpan.FromSeconds(1)));
     }
 
     [Fact]

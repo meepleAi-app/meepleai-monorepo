@@ -342,7 +342,9 @@ public class FollowUpQuestionServiceTests
                 "Answer",
                 new List<Snippet>(),
                 "Game");
-        });
+        };
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -362,7 +364,7 @@ public class FollowUpQuestionServiceTests
         var service = CreateService();
 
         // Act & Assert
-        var act2 = async () =>
+        var act = async () =>
         {
             await service.GenerateQuestionsAsync(
                 "Test",
@@ -370,7 +372,9 @@ public class FollowUpQuestionServiceTests
                 new List<Snippet>(),
                 "Game",
                 ct: cts.Token);
-        });
+        };
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     private FollowUpQuestionService CreateService(

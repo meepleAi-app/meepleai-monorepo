@@ -99,8 +99,8 @@ public class OcrFallbackTests : IDisposable
         _output.WriteLine($"Characters extracted: {result.CharacterCount}");
         _output.WriteLine($"Extracted text: {result.ExtractedText}");
 
-        result.Success, "Extraction should succeed".Should().BeTrue();
-        result.UsedOcr, "OCR fallback should be triggered for scanned PDF".Should().BeTrue();
+        result.Success.Should().BeTrue("Extraction should succeed");
+        result.UsedOcr.Should().BeTrue("OCR fallback should be triggered for scanned PDF");
         result.OcrConfidence.Should().NotBeNull();
         (result.OcrConfidence > 0).Should().BeTrue("OCR confidence should be > 0");
         (result.CharacterCount > 0).Should().BeTrue("Should extract some text via OCR");
@@ -109,8 +109,7 @@ public class OcrFallbackTests : IDisposable
         // (exact match not guaranteed due to OCR accuracy)
         var extractedLower = result.ExtractedText.ToLower();
         
-            extractedLower.Contains("scanned") || extractedLower.Contains("document") || extractedLower.Contains("ocr"),
-            "OCR should recognize at least some words from the image".Should().BeTrue();
+            (extractedLower.Contains("scanned") || extractedLower.Contains("document") || extractedLower.Contains("ocr")).Should().BeTrue("OCR should recognize at least some words from the image");
     }
 
     [Fact]
@@ -143,8 +142,8 @@ public class OcrFallbackTests : IDisposable
         _output.WriteLine($"Used OCR: {result.UsedOcr}");
         _output.WriteLine($"Characters extracted: {result.CharacterCount}");
 
-        result.Success, "Extraction should succeed".Should().BeTrue();
-        result.UsedOcr, "OCR should NOT be used when service is null".Should().BeFalse();
+        result.Success.Should().BeTrue("Extraction should succeed");
+        result.UsedOcr.Should().BeFalse("OCR should NOT be used when service is null");
         result.OcrConfidence.Should().BeNull();
     }
 

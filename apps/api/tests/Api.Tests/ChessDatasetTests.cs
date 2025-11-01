@@ -107,9 +107,9 @@ public class ChessDatasetTests
         // Then: It should include Italian Game, Spanish Opening, and Sicilian Defense
         var openingNames = openings.Select(o => o.name.ToLowerInvariant()).ToList();
 
-        name => name.Contains("italian").Should().Contain(openingNames);
-        name => name.Contains("spanish") || name.Contains("ruy lopez").Should().Contain(openingNames);
-        name => name.Contains("sicilian").Should().Contain(openingNames);
+        openingNames.Should().Contain(name => name.Contains("italian"));
+        openingNames.Should().Contain(name => name.Contains("spanish") || name.Contains("ruy lopez"));
+        openingNames.Should().Contain(name => name.Contains("sicilian"));
     }
 
     /// <summary>
@@ -188,7 +188,7 @@ public class ChessDatasetTests
 
         // When: I search for Sicilian Defense
         var sicilian = openings.FirstOrDefault(o =>
-            o.name.Contains("Sicilian", StringComparison.OrdinalIgnoreCase));
+            o.name.Contains("Sicilian"));
 
         // Then: It should exist and have correct first moves
         sicilian.Should().NotBeNull();
@@ -296,7 +296,7 @@ public class ChessDatasetTests
 
         // Then: It should have at least 2 examples
         fork.Should().NotBeNull();
-        fork!.examples.Count.Should().BeGreaterOrEqualTo(2,
+        fork!.examples.Count.Should().BeGreaterThanOrEqualTo(2,
             $"Fork tactic should have at least 2 examples, found {fork.examples.Count}");
     }
 

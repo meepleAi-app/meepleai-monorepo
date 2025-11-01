@@ -190,9 +190,25 @@ public class DynamicTtlStrategyTests
         Func<Task> act = async () => await strategy.CalculateTtlAsync(hitCount);
 
         // Assert (Then): Throws ArgumentException
-        var exception = await act.Should().ThrowAsync<ArgumentException>();
-        exception = exception.Which;
+        var exception = await act.Should().ThrowAsync<ArgumentException>().Subject;
         exception.Which.Message.Should().Contain("hitCount");
         exception.Which.Message.Should().Contain("cannot be negative");
+    }
+
+    [Fact]
+    public void GetTtl_WithInvalidStrategy_ThrowsArgumentException()
+    {
+        // Arrange
+        var config = Options.Create(new CacheConfiguration
+        {
+            TtlStrategy = "InvalidStrategy",
+            DefaultTtlSeconds = 300
+        });
+        var strategy = new DynamicTtlStrategy(config);
+
+        // Act & Assert
+        var action = () => strategy.GetTtl("test-key");
+        action.Should().Throw<ArgumentException>()
+            .WithMessage("Unknown TTL strategy: InvalidStrategy*");
     }
 }

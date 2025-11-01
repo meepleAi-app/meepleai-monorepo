@@ -292,8 +292,8 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
 
         var result = await response.Content.ReadFromJsonAsync<ApiKeyDto>();
         result.Should().NotBeNull();
-        result.Id.Should().Be(key.Id);
-        result.KeyName.Should().Be("Test Key");
+        result.Id.Should().BeEquivalentTo(key.Id);
+        result.KeyName.Should().BeEquivalentTo("Test Key");
         result.Scopes.Length.Should().Be(2);
     }
 
@@ -371,7 +371,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
 
         var result = await response.Content.ReadFromJsonAsync<ApiKeyDto>();
         result.Should().NotBeNull();
-        result.KeyName.Should().Be("Updated Name");
+        result.KeyName.Should().BeEquivalentTo("Updated Name");
         result.Scopes.Length.Should().Be(3);
         result.Scopes.Should().Contain("admin");
         result.Quota.Should().NotBeNull();
@@ -467,7 +467,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var result = await response.Content.ReadFromJsonAsync<RotateApiKeyResponse>();
         result.Should().NotBeNull();
         result.PlaintextKey.Should().NotBe(oldPlaintextKey);
-        result.RevokedKeyId.Should().Be(oldKey.Id);
+        result.RevokedKeyId.Should().BeEquivalentTo(oldKey.Id);
         result.NewApiKey.KeyName.Should().Be("Original Key (Rotated)");
         result.NewApiKey.Scopes.Length.Should().Be(2);
 
@@ -631,7 +631,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         result.Should().NotBeNull();
         result.MaxRequestsPerDay.Should().Be(1000);
         result.MaxRequestsPerHour.Should().Be(100);
-        result.ResetsAt.Should().NotBeNull();
+        result.ResetsAt.Should().NotBe(default(DateTime));
     }
 
     [Fact]

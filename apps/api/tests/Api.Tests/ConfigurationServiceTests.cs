@@ -128,11 +128,11 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.Key.Should().Be("Test:Setting");
-        result.Value.Should().Be("100");
-        result.ValueType.Should().Be("int");
+        result.Key.Should().BeEquivalentTo("Test:Setting");
+        result.Value.Should().BeEquivalentTo("100");
+        result.ValueType.Should().BeEquivalentTo("int");
         result.Version.Should().Be(1);
-        result.CreatedByUserId.Should().Be(_testUserId);
+        result.CreatedByUserId.Should().BeEquivalentTo(_testUserId);
 
         // Verify in database
         var dbEntity = await _dbContext.SystemConfigurations.FirstOrDefaultAsync(c => c.Id == result.Id);
@@ -154,8 +154,7 @@ public class ConfigurationServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await _service.CreateConfigurationAsync(request, _testUserId);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
-
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
         exception.Which.Message.Should().Contain("already exists");
     }
 
@@ -170,8 +169,7 @@ public class ConfigurationServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await _service.CreateConfigurationAsync(request, _testUserId);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
-
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
         exception.Which.Message.Should().Contain("validation failed");
     }
 
@@ -190,8 +188,8 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(config.Id);
-        result.Key.Should().Be("Test:Key");
+        result.Id.Should().BeEquivalentTo(config.Id);
+        result.Key.Should().BeEquivalentTo("Test:Key");
     }
 
     [Fact]
@@ -215,8 +213,8 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.Key.Should().Be("Test:Key");
-        result.Value.Should().Be("value");
+        result.Key.Should().BeEquivalentTo("Test:Key");
+        result.Value.Should().BeEquivalentTo("value");
     }
 
     [Fact]
@@ -231,8 +229,8 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert - Should return Production-specific value, not "All"
         result.Should().NotBeNull();
-        result.Value.Should().Be("prod-value");
-        result.Environment.Should().Be("Production");
+        result.Value.Should().BeEquivalentTo("prod-value");
+        result.Environment.Should().BeEquivalentTo("Production");
     }
 
     [Fact]
@@ -301,10 +299,10 @@ public class ConfigurationServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.Value.Should().Be("new-value");
+        result.Value.Should().BeEquivalentTo("new-value");
         result.Version.Should().Be(2); // Incremented from 1 to 2
-        result.PreviousValue.Should().Be("original-value");
-        result.UpdatedByUserId.Should().Be(_testUserId);
+        result.PreviousValue.Should().BeEquivalentTo("original-value");
+        result.UpdatedByUserId.Should().BeEquivalentTo(_testUserId);
     }
 
     [Fact]
@@ -329,8 +327,7 @@ public class ConfigurationServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await _service.UpdateConfigurationAsync(config.Id, updateRequest, _testUserId);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
-
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
         exception.Which.Message.Should().Contain("validation failed");
     }
 
@@ -380,7 +377,7 @@ public class ConfigurationServiceTests : IDisposable
         result.Should().NotBeNull();
         result.IsActive.Should().BeFalse();
         result.LastToggledAt.Should().NotBeNull();
-        result.UpdatedByUserId.Should().Be(_testUserId);
+        result.UpdatedByUserId.Should().BeEquivalentTo(_testUserId);
     }
 
     [Fact]
@@ -665,7 +662,7 @@ public class ConfigurationServiceTests : IDisposable
         result.Configurations.Count.Should().Be(2);
         result.Configurations.Should().OnlyContain(c =>
             c.Environment == "Production" || c.Environment == "All");
-        result.Environment.Should().Be("Production");
+        result.Environment.Should().BeEquivalentTo("Production");
     }
 
     [Fact]
@@ -792,8 +789,7 @@ public class ConfigurationServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await _service.RollbackConfigurationAsync(config.Id, 0, _testUserId);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
-
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
         exception.Which.Message.Should().Contain("No previous value");
     }
 

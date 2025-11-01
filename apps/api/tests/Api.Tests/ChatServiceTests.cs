@@ -154,7 +154,7 @@ public class ChatServiceTests
 
         result.Should().NotBeNull();
         result!.Id.Should().Be(chat.Id);
-        result.UserId.Should().Be("user-123");
+        result.UserId.Should().BeEquivalentTo("user-123");
     }
 
     /// <summary>

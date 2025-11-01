@@ -64,7 +64,7 @@ public class ChessAgentServiceTests
         var result = await _service.AskAsync(request);
 
         // Assert
-        result.answer.Should().Be("Please provide a question.");
+        result.answer.Should().BeEquivalentTo("Please provide a question.");
         result.suggestedMoves.Should().BeEmpty();
         result.sources.Should().BeEmpty();
         result.promptTokens.Should().Be(0);
@@ -80,7 +80,7 @@ public class ChessAgentServiceTests
         var result = await _service.AskAsync(request);
 
         // Assert
-        result.answer.Should().Be("Please provide a question.");
+        result.answer.Should().BeEquivalentTo("Please provide a question.");
         result.suggestedMoves.Should().BeEmpty();
         result.sources.Should().BeEmpty();
     }
@@ -116,7 +116,7 @@ public class ChessAgentServiceTests
         var result = await _service.AskAsync(request);
 
         // Assert
-        result.answer.Should().Be("Knights move in L-shape");
+        result.answer.Should().BeEquivalentTo("Knights move in L-shape");
         result.promptTokens.Should().Be(10);
         result.completionTokens.Should().Be(5);
         result.totalTokens.Should().Be(15);
@@ -247,7 +247,7 @@ public class ChessAgentServiceTests
         var result = await _service.AskAsync(request);
 
         // Assert
-        result.answer.Should().Be("I don't have enough information to answer that question about chess.");
+        result.answer.Should().BeEquivalentTo("I don't have enough information to answer that question about chess.");
         result.sources.Should().BeEmpty();
         result.suggestedMoves.Should().BeEmpty();
 
@@ -275,7 +275,7 @@ public class ChessAgentServiceTests
         var result = await _service.AskAsync(request);
 
         // Assert
-        result.answer.Should().Be("I don't have enough information to answer that question about chess.");
+        result.answer.Should().BeEquivalentTo("I don't have enough information to answer that question about chess.");
         result.sources.Should().BeEmpty();
     }
 
@@ -359,7 +359,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
         result.analysis.Should().NotBeNull();
         result.analysis!.fenPosition.Should().Be(fenPosition);
         result.analysis.evaluationSummary.Should().NotBeNull();
-        result.analysis.evaluationSummary.Should().Contain("advantage", StringComparison.OrdinalIgnoreCase);
+        result.analysis.evaluationSummary.Should().Contain("advantage");
         result.analysis.keyConsiderations.Should().NotBeEmpty();
         c => c.Contains("king safety").Should().Contain(result.analysis.keyConsiderations);
         c => c.Contains("development").Should().Contain(result.analysis.keyConsiderations);
@@ -474,7 +474,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
         var result = await _service.AskAsync(request);
 
         // Assert
-        result.answer.Should().Be("Unable to generate answer.");
+        result.answer.Should().BeEquivalentTo("Unable to generate answer.");
         result.sources.Should().ContainSingle(); // Should still include sources from knowledge base
         result.sources[0].text.Should().Be("Fork is a tactic");
 
@@ -503,7 +503,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
         var result = await _service.AskAsync(request);
 
         // Assert
-        result.answer.Should().Be("An error occurred while processing your question.");
+        result.answer.Should().BeEquivalentTo("An error occurred while processing your question.");
         result.sources.Should().BeEmpty();
         result.suggestedMoves.Should().BeEmpty();
 

@@ -109,7 +109,7 @@ public class PdfTextExtractionServiceTests : IDisposable
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("File path is required");
+        result.ErrorMessage.Should().BeEquivalentTo("File path is required");
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public class PdfTextExtractionServiceTests : IDisposable
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("File path is required");
+        result.ErrorMessage.Should().BeEquivalentTo("File path is required");
     }
 
     [Fact]
@@ -131,7 +131,7 @@ public class PdfTextExtractionServiceTests : IDisposable
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("File path is required");
+        result.ErrorMessage.Should().BeEquivalentTo("File path is required");
     }
 
     [Fact]
@@ -248,7 +248,7 @@ public class PdfTextExtractionServiceTests : IDisposable
 
         // Assert
         result.Success.Should().BeTrue();
-        result.ExtractedText.Should().Be(string.Empty);
+        result.ExtractedText.Should().BeEquivalentTo(string.Empty);
         result.PageCount.Should().Be(0);
         result.CharacterCount.Should().Be(0);
     }
@@ -297,7 +297,7 @@ public class PdfTextExtractionServiceTests : IDisposable
         // Assert
         result.Success.Should().BeTrue();
         (result.CharacterCount > 0).Should().BeTrue();
-        result.CharacterCount.Should().Be(result.ExtractedText.Length);
+        result.CharacterCount.Should().BeEquivalentTo(result.ExtractedText.Length);
     }
 
     [Fact]
@@ -411,7 +411,7 @@ public class PdfTextExtractionServiceTests : IDisposable
         // Assert
         result.Success.Should().BeTrue();
         result.ErrorMessage.Should().BeNull();
-        result.ExtractedText.Should().Be("test text");
+        result.ExtractedText.Should().BeEquivalentTo("test text");
         result.PageCount.Should().Be(5);
         result.CharacterCount.Should().Be(100);
     }
@@ -424,8 +424,8 @@ public class PdfTextExtractionServiceTests : IDisposable
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("test error");
-        result.ExtractedText.Should().Be(string.Empty);
+        result.ErrorMessage.Should().BeEquivalentTo("test error");
+        result.ExtractedText.Should().BeEquivalentTo(string.Empty);
         result.PageCount.Should().Be(0);
         result.CharacterCount.Should().Be(0);
     }
@@ -451,6 +451,6 @@ public class PdfTextExtractionServiceTests : IDisposable
         result.Success.Should().BeFalse();
         result.PageCount.Should().Be(0);
         result.CharacterCount.Should().Be(0);
-        result.ExtractedText.Should().Be(string.Empty);
+        result.ExtractedText.Should().BeEquivalentTo(string.Empty);
     }
 }

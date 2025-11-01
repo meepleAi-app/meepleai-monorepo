@@ -564,7 +564,7 @@ public class StreamingRagServiceTests
 
         outlineData.outline.sections.Should().ContainSingle();
         outlineData.outline.sections[0].Should().EndWith("...");
-        outlineData.outline.sections[0].Length <= 60.Should().BeTrue();
+        (outlineData.outline.sections[0].Length <= 60).Should().BeTrue();
     }
 
     [Fact]

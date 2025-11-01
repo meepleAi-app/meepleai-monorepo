@@ -154,7 +154,7 @@ public class SessionManagementServiceTests : IDisposable
         var service = CreateService(db);
 
         // When/Then: ArgumentException is thrown
-        var exception = var act = async () => service.GetUserSessionsAsync(userId!);
+        var act = async () => service.GetUserSessionsAsync(userId!);
         await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("User ID cannot be null or empty");
     }
@@ -245,7 +245,7 @@ public class SessionManagementServiceTests : IDisposable
         var service = CreateService(db);
 
         // When/Then: ArgumentException is thrown
-        var exception = var act = async () => service.GetAllSessionsAsync(limit: limit);
+        var act = async () => service.GetAllSessionsAsync(limit: limit);
         await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("Limit must be between 1 and 1000");
     }
@@ -367,7 +367,7 @@ public class SessionManagementServiceTests : IDisposable
         var service = CreateService(db);
 
         // When/Then: ArgumentException is thrown
-        var exception = var act = async () => service.RevokeSessionAsync(sessionId!);
+        var act = async () => service.RevokeSessionAsync(sessionId!);
         await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("Session ID cannot be null or empty");
     }
@@ -501,7 +501,7 @@ public class SessionManagementServiceTests : IDisposable
         var service = CreateService(db);
 
         // When/Then: ArgumentException is thrown
-        var exception = var act = async () => service.RevokeAllUserSessionsAsync(userId!);
+        var act = async () => service.RevokeAllUserSessionsAsync(userId!);
         await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("User ID cannot be null or empty");
     }

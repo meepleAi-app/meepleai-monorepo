@@ -545,7 +545,7 @@ public class PdfValidationServiceTests : IDisposable
         // Assert
         result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
-        result.Metadata.Should().Be(metadata);
+        result.Metadata.Should().BeEquivalentTo(metadata);
     }
 
     [Fact]
@@ -563,7 +563,7 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Be(errors);
+        result.Errors.Should().BeEquivalentTo(errors);
         result.Metadata.Should().BeNull();
     }
 }

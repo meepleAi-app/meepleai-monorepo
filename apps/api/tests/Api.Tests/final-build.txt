@@ -1,0 +1,48 @@
+  Individuazione dei progetti da ripristinare...
+  Tutti i progetti sono aggiornati per il ripristino.
+  Api -> D:\Repositories\meepleai-monorepo\apps\api\src\Api\bin\Debug\net9.0\Api.dll
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Services\KeywordSearchServiceTests.cs(211,10): error CS1003: Errore di sintassi. È previsto ',' [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Services\TxtExportFormatterTests.cs(271,28): error CS1002: È previsto un punto e virgola (;) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Services\TxtExportFormatterTests.cs(271,28): error CS1513: È previsto il segno } [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Services\KeywordSearchServiceTests.cs(366,10): error CS1003: Errore di sintassi. È previsto ',' [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Services\UserManagementServiceTests.cs(318,29): error CS1002: È previsto un punto e virgola (;) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Services\UserManagementServiceTests.cs(413,29): error CS1002: È previsto un punto e virgola (;) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\StreamingQaServiceTests.cs(379,35): error CS1002: È previsto un punto e virgola (;) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Services\UserManagementServiceTests.cs(478,29): error CS1002: È previsto un punto e virgola (;) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\StreamingQaServiceTests.cs(379,35): error CS1513: È previsto il segno } [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Services\UserManagementServiceTests.cs(491,29): error CS1002: È previsto un punto e virgola (;) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\StreamingQaServiceTests.cs(696,36): error CS1002: È previsto un punto e virgola (;) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\StreamingQaServiceTests.cs(696,36): error CS1513: È previsto il segno } [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\StreamingQaServiceTests.cs(858,10): error CS1003: Errore di sintassi. È previsto ',' [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\SessionManagementEndpointsTests.cs(121,17): error CS1002: È previsto un punto e virgola (;) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\SessionManagementEndpointsTests.cs(121,17): error CS1513: È previsto il segno } [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\SessionManagementEndpointsTests.cs(123,81): error CS1026: È previsto il segno ) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\SessionManagementEndpointsTests.cs(125,10): error CS1002: È previsto un punto e virgola (;) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\SessionManagementEndpointsTests.cs(125,10): error CS1513: È previsto il segno } [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\TesseractOcrServiceTests.cs(294,10): error CS1003: Errore di sintassi. È previsto ',' [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+
+Compilazione NON RIUSCITA.
+
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Services\KeywordSearchServiceTests.cs(211,10): error CS1003: Errore di sintassi. È previsto ',' [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Services\TxtExportFormatterTests.cs(271,28): error CS1002: È previsto un punto e virgola (;) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Services\TxtExportFormatterTests.cs(271,28): error CS1513: È previsto il segno } [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Services\KeywordSearchServiceTests.cs(366,10): error CS1003: Errore di sintassi. È previsto ',' [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Services\UserManagementServiceTests.cs(318,29): error CS1002: È previsto un punto e virgola (;) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Services\UserManagementServiceTests.cs(413,29): error CS1002: È previsto un punto e virgola (;) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\StreamingQaServiceTests.cs(379,35): error CS1002: È previsto un punto e virgola (;) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Services\UserManagementServiceTests.cs(478,29): error CS1002: È previsto un punto e virgola (;) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\StreamingQaServiceTests.cs(379,35): error CS1513: È previsto il segno } [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Services\UserManagementServiceTests.cs(491,29): error CS1002: È previsto un punto e virgola (;) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\StreamingQaServiceTests.cs(696,36): error CS1002: È previsto un punto e virgola (;) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\StreamingQaServiceTests.cs(696,36): error CS1513: È previsto il segno } [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\StreamingQaServiceTests.cs(858,10): error CS1003: Errore di sintassi. È previsto ',' [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\SessionManagementEndpointsTests.cs(121,17): error CS1002: È previsto un punto e virgola (;) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\SessionManagementEndpointsTests.cs(121,17): error CS1513: È previsto il segno } [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\SessionManagementEndpointsTests.cs(123,81): error CS1026: È previsto il segno ) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\SessionManagementEndpointsTests.cs(125,10): error CS1002: È previsto un punto e virgola (;) [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\SessionManagementEndpointsTests.cs(125,10): error CS1513: È previsto il segno } [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\TesseractOcrServiceTests.cs(294,10): error CS1003: Errore di sintassi. È previsto ',' [D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\Api.Tests.csproj]
+    Avvisi: 0
+    Errori: 19
+
+Tempo trascorso 00:00:01.50

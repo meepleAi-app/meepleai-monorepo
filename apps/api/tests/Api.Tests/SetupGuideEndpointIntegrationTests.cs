@@ -282,7 +282,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         (setupGuide!.estimatedSetupTimeMinutes > 0).Should().BeTrue();
 
         // And: The estimated time is reasonable (between 5 and 30 minutes)
-        setupGuide.estimatedSetupTimeMinutes.Should().BeInRange(5, 30);
+        setupGuide.estimatedSetupTimeMinutes.Should().BeApproximately(5, TimeSpan.FromSeconds(5));
     }
 
     /// <summary>
@@ -480,7 +480,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         // And: The confidence score is between 0 and 1 (if present)
         if (setupGuide!.confidence.HasValue)
         {
-            setupGuide.confidence.Value.Should().BeInRange(0.0, 1.0);
+            setupGuide.confidence.Value.Should().BeApproximately(0.0, TimeSpan.FromSeconds(5));
         }
     }
 }

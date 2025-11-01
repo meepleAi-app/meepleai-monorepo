@@ -226,10 +226,10 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         result!.TotalComments.Should().Be(3);
         // TODO: // Assert.Collection converted to indexed assertions
         // 
-            result.Comments,
-            c => c.CommentText).Should().Be("First comment", c.CommentText),
-            c => c.CommentText == "Second comment",
-            c => c.CommentText == "Third comment");
+            result.Comments.Should().SatisfyRespectively(
+            c => c.CommentText.Should().Be("First comment"),
+            c => c.CommentText.Should().Be("Second comment"),
+            c => c.CommentText.Should().Be("Third comment"));
     }
 
     /// <summary>

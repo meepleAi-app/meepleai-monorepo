@@ -73,7 +73,7 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
         payload.Should().NotBeNull();
         payload!.error.Should().Be("Rate limit exceeded");
         payload.retryAfter.Should().Be(15);
-        payload.message, StringComparison.OrdinalIgnoreCase.Should().Contain("Too many requests");
+        payload.message.Should().Contain("Too many requests");
 
         // Admin role has 1000 tokens by default configuration
         var expectedLimit = "1000";

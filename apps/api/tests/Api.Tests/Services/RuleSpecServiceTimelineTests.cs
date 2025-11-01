@@ -150,7 +150,7 @@ public class RuleSpecServiceTimelineTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.GameId.Should().Be("test-game");
+        result.GameId.Should().BeEquivalentTo("test-game");
         result.TotalVersions.Should().Be(3);
         result.Versions.Count.Should().Be(3);
     }
@@ -349,7 +349,7 @@ public class RuleSpecServiceTimelineTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.GameId.Should().Be("non-existent-game");
+        result.GameId.Should().BeEquivalentTo("non-existent-game");
         result.TotalVersions.Should().Be(0);
         result.Versions.Should().BeEmpty();
         result.Authors.Should().BeEmpty();

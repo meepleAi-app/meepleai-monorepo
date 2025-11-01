@@ -68,7 +68,7 @@ public class OllamaLlmServiceTests
 
         // Assert
         result.Success.Should().BeTrue();
-        result.Response.Should().Be("The answer is 4.");
+        result.Response.Should().BeEquivalentTo("The answer is 4.");
         result.Usage.Should().NotBeNull();
         result.Usage.PromptTokens.Should().Be(10);
         result.Usage.CompletionTokens.Should().Be(5);
@@ -90,7 +90,7 @@ public class OllamaLlmServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("No user prompt provided");
+        result.ErrorMessage.Should().BeEquivalentTo("No user prompt provided");
         result.Response.Should().BeEmpty();
     }
 
@@ -105,7 +105,7 @@ public class OllamaLlmServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("No user prompt provided");
+        result.ErrorMessage.Should().BeEquivalentTo("No user prompt provided");
     }
 
     [Fact]
@@ -119,7 +119,7 @@ public class OllamaLlmServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("No user prompt provided");
+        result.ErrorMessage.Should().BeEquivalentTo("No user prompt provided");
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public class OllamaLlmServiceTests
 
         // Assert
         result.Success.Should().BeTrue();
-        result.Response.Should().Be("4");
+        result.Response.Should().BeEquivalentTo("4");
     }
 
     [Fact]
@@ -197,7 +197,7 @@ public class OllamaLlmServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("No response returned from Ollama");
+        result.ErrorMessage.Should().BeEquivalentTo("No response returned from Ollama");
     }
 
     [Fact]
@@ -219,7 +219,7 @@ public class OllamaLlmServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("No response returned from Ollama");
+        result.ErrorMessage.Should().BeEquivalentTo("No response returned from Ollama");
     }
 
     [Fact]
@@ -240,7 +240,7 @@ public class OllamaLlmServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("Request timed out");
+        result.ErrorMessage.Should().BeEquivalentTo("Request timed out");
     }
 
     [Fact]
@@ -444,7 +444,7 @@ public class OllamaLlmServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("Request timed out");
+        result.ErrorMessage.Should().BeEquivalentTo("Request timed out");
     }
 
     [Fact]
@@ -469,7 +469,7 @@ public class OllamaLlmServiceTests
 
         // Assert
         result.Success.Should().BeTrue();
-        result.Response.Should().Be(longResponse);
+        result.Response.Should().BeEquivalentTo(longResponse);
         result.Usage?.CompletionTokens.Should().Be(1250);
     }
 

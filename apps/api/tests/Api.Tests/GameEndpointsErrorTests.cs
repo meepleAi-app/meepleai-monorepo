@@ -125,11 +125,9 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         // Then: System should validate (BadRequest) or auto-generate ID (Created)
         // NOTE: Current implementation auto-generates ID from name if gameId is empty
         // This test documents the actual behavior - consider adding validation in future
-        
-            response.StatusCode == HttpStatusCode.BadRequest ||
-            response.StatusCode == HttpStatusCode.Created,
-            $"Expected BadRequest or Created, got {response.StatusCode}"
-        .Should().BeTrue();
+        (response.StatusCode == HttpStatusCode.BadRequest ||
+            response.StatusCode == HttpStatusCode.Created)
+            .Should().BeTrue($"Expected BadRequest or Created, got {response.StatusCode}");
     }
 
     [Fact]
@@ -150,11 +148,9 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         // Then: System should return conflict or auto-generate new ID
         // NOTE: Current implementation may auto-generate ID if provided gameId conflicts
         // This test documents the actual behavior - consider strict validation in future
-        
-            response.StatusCode == HttpStatusCode.Conflict ||
-            response.StatusCode == HttpStatusCode.Created,
-            $"Expected Conflict or Created, got {response.StatusCode}"
-        .Should().BeTrue();
+        (response.StatusCode == HttpStatusCode.Conflict ||
+            response.StatusCode == HttpStatusCode.Created)
+            .Should().BeTrue($"Expected Conflict or Created, got {response.StatusCode}");
     }
 
     [Fact]
@@ -174,12 +170,10 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         // Then: System should validate (BadRequest) or sanitize/auto-generate ID (Created)
         // NOTE: Current implementation may accept and sanitize the gameId
         // This test documents the actual behavior - consider strict format validation in future
-        
-            response.StatusCode == HttpStatusCode.BadRequest ||
+        (response.StatusCode == HttpStatusCode.BadRequest ||
             response.StatusCode == HttpStatusCode.Conflict ||
-            response.StatusCode == HttpStatusCode.Created,
-            $"Expected BadRequest, Conflict, or Created, got {response.StatusCode}"
-        .Should().BeTrue();
+            response.StatusCode == HttpStatusCode.Created)
+            .Should().BeTrue($"Expected BadRequest, Conflict, or Created, got {response.StatusCode}");
     }
 
     #endregion

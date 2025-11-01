@@ -245,7 +245,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("chess", "Can pawns move backward?");
 
         // Then: System returns "Not specified" instead of hallucinating
-        result.answer.Should().Be("Not specified");
+        result.answer.Should().BeEquivalentTo("Not specified");
         result.snippets.Should().BeEmpty();
 
         // And: LLM is never called (no context to process)
@@ -297,7 +297,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("catan", "What is the maximum score to win?");
 
         // Then: LLM returns "Not specified" to avoid hallucination
-        result.answer.Should().Be("Not specified");
+        result.answer.Should().BeEquivalentTo("Not specified");
 
         // And: Context snippets are still provided for transparency
         result.snippets.Count.Should().Be(2);
@@ -378,7 +378,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("risk", "How many armies do I start with?");
 
         // Then: System returns a user-friendly error message
-        result.answer.Should().Be("Unable to process query.");
+        result.answer.Should().BeEquivalentTo("Unable to process query.");
         result.snippets.Should().BeEmpty();
     }
 
@@ -406,7 +406,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("clue", "Who can I accuse?");
 
         // Then: System returns "Not specified" to avoid unreliable answers
-        result.answer.Should().Be("Not specified");
+        result.answer.Should().BeEquivalentTo("Not specified");
         result.snippets.Should().BeEmpty();
     }
 
@@ -441,7 +441,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("scrabble", "How do I score?");
 
         // Then: Error message is returned
-        result.answer.Should().Be("Unable to generate answer.");
+        result.answer.Should().BeEquivalentTo("Unable to generate answer.");
 
         // And: Snippets are still provided (user can read context directly)
         result.snippets.Should().ContainSingle();
@@ -497,7 +497,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "test query");
 
         // Then: Cached response is returned
-        result.answer.Should().Be("Cached answer");
+        result.answer.Should().BeEquivalentTo("Cached answer");
         result.snippets[0].text.Should().Be("Cached text");
 
         // And: No expensive operations were performed

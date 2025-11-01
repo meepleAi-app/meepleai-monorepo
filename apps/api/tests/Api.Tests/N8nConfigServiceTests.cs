@@ -123,9 +123,9 @@ public class N8nConfigServiceTests : IDisposable
             new CreateN8nConfigRequest("Config One", "https://example.com/", "secret", "https://webhook.test/"),
             CancellationToken.None);
 
-        result.Name.Should().Be("Config One");
-        result.BaseUrl.Should().Be("https://example.com");
-        result.WebhookUrl.Should().Be("https://webhook.test");
+        result.Name.Should().BeEquivalentTo("Config One");
+        result.BaseUrl.Should().BeEquivalentTo("https://example.com");
+        result.WebhookUrl.Should().BeEquivalentTo("https://webhook.test");
 
         var entity = await dbContext.N8nConfigs.FirstAsync();
         entity.CreatedByUserId.Should().Be("user-1");

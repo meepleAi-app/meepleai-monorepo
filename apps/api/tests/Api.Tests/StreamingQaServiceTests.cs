@@ -241,7 +241,7 @@ ANSWER:",
         // Verify StateUpdate
         var stateUpdate = events[0].Data as StreamingStateUpdate;
         stateUpdate.Should().NotBeNull();
-        stateUpdate!.message.Should().Contain("cache", StringComparison.OrdinalIgnoreCase);
+        stateUpdate!.message.ToLower().Should().Contain("cache");
 
         // Verify Citations
         var citations = events[1].Data as StreamingCitations;
@@ -252,6 +252,8 @@ ANSWER:",
         // Verify Tokens (words split with spaces)
         var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
         tokenEvents.Count.Should().Be(5); // "This" "game" "supports" "2-4" "players."
+        var tokens = tokenEvents.Select(e => (e.Data as StreamingToken)!.token).ToList();
+        string.Join("", tokens).Should().Be("This game supports 2-4 players.");
 
         // Verify Complete
         var complete = events[^1].Data as StreamingComplete;
@@ -369,7 +371,7 @@ ANSWER:",
         var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
         tokenEvents.Count.Should().Be(5);
         var tokens = tokenEvents.Select(e => (e.Data as StreamingToken)!.token).ToList();
-        tokens.Should().Be(llmTokens);
+        tokens.Should().BeEquivalentTo(llmTokens);
 
         // Verify Complete
         var complete = events[^1].Data as StreamingComplete;
@@ -489,7 +491,7 @@ ANSWER:",
         }
 
         // Assert
-        e => e.Type == StreamingEventType.Error.Should().Contain(events);
+        events.Should().Contain(e => e.Type == StreamingEventType.Error);
         var errorEvent = events.First(e => e.Type == StreamingEventType.Error);
         var error = errorEvent.Data as StreamingError;
         error.Should().NotBeNull();
@@ -855,11 +857,12 @@ ANSWER:",
                     cts.Cancel();
                 }
             }
-        });
+        };
 
         // Assert
+        await act.Should().ThrowAsync<OperationCanceledException>();
         // Should have received some events before cancellation
-        events.Count.Should().BeInRange(1, 10);
+        events.Count.Should().BeApproximately(1, TimeSpan.FromSeconds(5));
     }
 
     /// <summary>

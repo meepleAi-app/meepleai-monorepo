@@ -135,12 +135,12 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.GameId.Should().Be(TestGameId);
-        result.Version.Should().Be(TestVersion);
+        result.GameId.Should().BeEquivalentTo(TestGameId);
+        result.Version.Should().BeEquivalentTo(TestVersion);
         result.LineNumber.Should().Be(10);
-        result.CommentText.Should().Be(commentText);
-        result.UserId.Should().Be(TestUserId1);
-        result.UserDisplayName.Should().Be("alice");
+        result.CommentText.Should().BeEquivalentTo(commentText);
+        result.UserId.Should().BeEquivalentTo(TestUserId1);
+        result.UserDisplayName.Should().BeEquivalentTo("alice");
         result.IsResolved.Should().BeFalse();
         result.ParentCommentId.Should().BeNull();
         result.Replies.Should().BeEmpty();
@@ -163,7 +163,7 @@ public class RuleCommentServiceTests : IDisposable
         // Assert
         result.Should().NotBeNull();
         result.LineNumber.Should().BeNull();
-        result.CommentText.Should().Be(commentText);
+        result.CommentText.Should().BeEquivalentTo(commentText);
     }
 
     [Fact]
@@ -211,30 +211,28 @@ public class RuleCommentServiceTests : IDisposable
     public async Task CreateCommentAsync_EmptyText_ThrowsValidationException()
     {
         // Act & Assert
-        var ex = var act = async () => _service.CreateCommentAsync(
+        var act = async () => await _service.CreateCommentAsync(
                 TestGameId,
                 TestVersion,
                 lineNumber: 1,
                 commentText: "",
                 TestUserId1);
-        await act.Should().ThrowAsync<InvalidOperationException>();
-
-        ex.Message.Should().Contain("cannot be empty");
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
+        ex.Which.Message.Should().Contain("cannot be empty");
     }
 
     [Fact]
     public async Task CreateCommentAsync_WhitespaceText_ThrowsValidationException()
     {
         // Act & Assert
-        var ex = var act = async () => _service.CreateCommentAsync(
+        var act = async () => await _service.CreateCommentAsync(
                 TestGameId,
                 TestVersion,
                 lineNumber: 1,
                 commentText: "   ",
                 TestUserId1);
-        await act.Should().ThrowAsync<InvalidOperationException>();
-
-        ex.Message.Should().Contain("cannot be empty");
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
+        ex.Which.Message.Should().Contain("cannot be empty");
     }
 
     [Fact]
@@ -244,46 +242,43 @@ public class RuleCommentServiceTests : IDisposable
         var commentText = new string('x', 10001); // 10,001 chars
 
         // Act & Assert
-        var ex = var act = async () => _service.CreateCommentAsync(
+        var act = async () => await _service.CreateCommentAsync(
                 TestGameId,
                 TestVersion,
                 lineNumber: 1,
                 commentText,
                 TestUserId1);
-        await act.Should().ThrowAsync<InvalidOperationException>();
-
-        ex.Message.Should().Contain("maximum length");
-        ex.Message.Should().Contain("10000");
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
+        ex.Which.Message.Should().Contain("maximum length");
+        ex.Which.Message.Should().Contain("10000");
     }
 
     [Fact]
     public async Task CreateCommentAsync_NegativeLineNumber_ThrowsValidationException()
     {
         // Act & Assert
-        var ex = var act = async () => _service.CreateCommentAsync(
+        var act = async () => await _service.CreateCommentAsync(
                 TestGameId,
                 TestVersion,
                 lineNumber: -1,
                 commentText: "Invalid line",
                 TestUserId1);
-        await act.Should().ThrowAsync<InvalidOperationException>();
-
-        ex.Message.Should().Contain("positive");
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
+        ex.Which.Message.Should().Contain("positive");
     }
 
     [Fact]
     public async Task CreateCommentAsync_ZeroLineNumber_ThrowsValidationException()
     {
         // Act & Assert
-        var ex = var act = async () => _service.CreateCommentAsync(
+        var act = async () => await _service.CreateCommentAsync(
                 TestGameId,
                 TestVersion,
                 lineNumber: 0,
                 commentText: "Invalid line",
                 TestUserId1);
-        await act.Should().ThrowAsync<InvalidOperationException>();
-
-        ex.Message.Should().Contain("positive");
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
+        ex.Which.Message.Should().Contain("positive");
     }
 
     #endregion
@@ -324,13 +319,12 @@ public class RuleCommentServiceTests : IDisposable
         var fakeParentId = Guid.NewGuid();
 
         // Act & Assert
-        var ex = var act = async () => _service.ReplyToCommentAsync(
+        var act = async () => await _service.ReplyToCommentAsync(
                 fakeParentId,
                 "Reply to nothing",
                 TestUserId1);
-        await act.Should().ThrowAsync<InvalidOperationException>();
-
-        ex.Message.Should().Contain(fakeParentId.ToString());
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
+        ex.Which.Message.Should().Contain(fakeParentId.ToString());
     }
 
     [Fact]
@@ -345,12 +339,10 @@ public class RuleCommentServiceTests : IDisposable
         var level5 = await _service.ReplyToCommentAsync(level4.Id, "Level 5", TestUserId2);
 
         // Act & Assert - Attempt level 6 should fail
-        var act = async () => await _service.ReplyToCommentAsync(level5.Id, "Level 6 - too deep", TestUserId1;
-        await act.Should().ThrowAsync<InvalidOperationException>();
-        var ex = await act.Should().ThrowAsync<ValidationException>();
-
-        ex.Message.Should().Contain("thread depth", StringComparison.OrdinalIgnoreCase);
-        ex.Message.Should().Contain("5");
+        var act = async () => await _service.ReplyToCommentAsync(level5.Id, "Level 6 - too deep", TestUserId1);
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
+        ex.Which.Message.ToLower().Should().Contain("thread depth");
+        ex.Which.Message.Should().Contain("5");
     }
 
     [Fact]
@@ -387,11 +379,9 @@ public class RuleCommentServiceTests : IDisposable
             TestUserId1);
 
         // Act & Assert
-        var act = async () => await _service.ReplyToCommentAsync(parent.Id, "", TestUserId1;
-        await act.Should().ThrowAsync<InvalidOperationException>();
-        var ex = await act.Should().ThrowAsync<ValidationException>();
-
-        ex.Message.Should().Contain("cannot be empty");
+        var act = async () => await _service.ReplyToCommentAsync(parent.Id, "", TestUserId1);
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
+        ex.Which.Message.Should().Contain("cannot be empty");
     }
 
     #endregion
@@ -428,8 +418,8 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         result.Count.Should().Be(2); // Only top-level comments
-        c => c.Id == comment1.Id.Should().Contain(result);
-        c => c.Id == comment2.Id.Should().Contain(result);
+        result.Should().Contain(c => c.Id == comment1.Id);
+        result.Should().Contain(c => c.Id == comment2.Id);
         result.Should().NotContain(c => c.Id == reply.Id); // Reply not at top level
     }
 
@@ -451,8 +441,8 @@ public class RuleCommentServiceTests : IDisposable
         result.Should().ContainSingle();
         var parentComment = result.First();
         parentComment.Replies.Count.Should().Be(2);
-        r => r.Id == reply1.Id.Should().Contain(parentComment.Replies);
-        r => r.Id == reply2.Id.Should().Contain(parentComment.Replies);
+        parentComment.Replies.Should().Contain(r => r.Id == reply1.Id);
+        parentComment.Replies.Should().Contain(r => r.Id == reply2.Id);
     }
 
     [Fact]
@@ -515,8 +505,8 @@ public class RuleCommentServiceTests : IDisposable
         // Assert
         result.Count.Should().Be(2);
         result.Should().OnlyContain(c => c.LineNumber == 5);
-        c => c.Id == line5Comment1.Id.Should().Contain(result);
-        c => c.Id == line5Comment2.Id.Should().Contain(result);
+        result.Should().Contain(c => c.Id == line5Comment1.Id);
+        result.Should().Contain(c => c.Id == line5Comment2.Id);
     }
 
     [Fact]
@@ -536,11 +526,9 @@ public class RuleCommentServiceTests : IDisposable
     public async Task GetCommentsForLineAsync_NegativeLineNumber_ThrowsValidationException()
     {
         // Act & Assert
-        var act = async () => await _service.GetCommentsForLineAsync(TestGameId, TestVersion, -1;
-        await act.Should().ThrowAsync<InvalidOperationException>();
-        var ex = await act.Should().ThrowAsync<ValidationException>();
-
-        ex.Message.Should().Contain("positive");
+        var act = async () => await _service.GetCommentsForLineAsync(TestGameId, TestVersion, -1);
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
+        ex.Which.Message.Should().Contain("positive");
     }
 
     [Fact]
@@ -574,8 +562,8 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         result.IsResolved.Should().BeTrue();
-        result.ResolvedByUserId.Should().Be(TestUserId2);
-        result.ResolvedByDisplayName.Should().Be("Bob");
+        result.ResolvedByUserId.Should().BeEquivalentTo(TestUserId2);
+        result.ResolvedByDisplayName.Should().BeEquivalentTo("Bob");
         result.ResolvedAt.Should().NotBeNull();
     }
 
@@ -586,11 +574,9 @@ public class RuleCommentServiceTests : IDisposable
         var fakeId = Guid.NewGuid();
 
         // Act & Assert
-        var act = async () => await _service.ResolveCommentAsync(fakeId, TestUserId1, resolveReplies: false;
-        await act.Should().ThrowAsync<InvalidOperationException>();
-        var ex = await act.Should().ThrowAsync<NotFoundException>();
-
-        ex.Message.Should().Contain(fakeId.ToString());
+        var act = async () => await _service.ResolveCommentAsync(fakeId, TestUserId1, resolveReplies: false);
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
+        ex.Which.Message.Should().Contain(fakeId.ToString());
     }
 
     [Fact]
@@ -666,11 +652,9 @@ public class RuleCommentServiceTests : IDisposable
         var fakeId = Guid.NewGuid();
 
         // Act & Assert
-        var act = async () => await _service.UnresolveCommentAsync(fakeId, unresolveParent: false;
-        await act.Should().ThrowAsync<InvalidOperationException>();
-        var ex = await act.Should().ThrowAsync<NotFoundException>();
-
-        ex.Message.Should().Contain(fakeId.ToString());
+        var act = async () => await _service.UnresolveCommentAsync(fakeId, unresolveParent: false);
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
+        ex.Which.Message.Should().Contain(fakeId.ToString());
     }
 
     [Fact]

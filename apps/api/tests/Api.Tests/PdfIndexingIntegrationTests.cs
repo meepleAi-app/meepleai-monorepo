@@ -137,9 +137,9 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
         var searchResult = await searchResponse.Content.ReadAsStringAsync();
         // The response should reference tic-tac-toe concepts, not chess
-        searchResult.Should().Contain("three in a row", StringComparison.OrdinalIgnoreCase);
-        searchResult, StringComparison.OrdinalIgnoreCase.Should().NotContain("knight");
-        searchResult, StringComparison.OrdinalIgnoreCase.Should().NotContain("checkmate");
+        searchResult.Should().Contain("three in a row");
+        searchResult.Should().NotContain("knight", StringComparison.OrdinalIgnoreCase);
+        searchResult.Should().NotContain("checkmate", StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion
@@ -264,7 +264,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
         var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>();
         errorResponse.Should().NotBeNull();
-        errorResponse.Error.Should().Contain("text extraction", StringComparison.OrdinalIgnoreCase);
+        errorResponse.Error.Should().Contain("text extraction");
     }
 
     /// <summary>

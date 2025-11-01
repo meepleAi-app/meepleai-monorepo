@@ -426,7 +426,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         var nonExistentVersionId = "non-existent-version";
 
         // Act & Assert
-        var exception = var act = async () => _service.EvaluateAsync(
+        var act = async () => _service.EvaluateAsync(
                 "test-template-id",
                 nonExistentVersionId,
                 _testDatasetPath);
@@ -505,7 +505,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         // Assert
         comparison.Recommendation.Should().Be(ComparisonRecommendation.Activate);
         (comparison.Deltas.AvgConfidenceDelta >= 0.10).Should().BeTrue(); // Confidence improved by 0.16
-        comparison.RecommendationReason.Should().Contain("improvement", StringComparison.OrdinalIgnoreCase);
+        comparison.RecommendationReason.Should().Contain("improvement");
     }
 
     [Fact]
@@ -575,7 +575,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         comparison.Recommendation.Should().Be(ComparisonRecommendation.Reject);
         (comparison.Deltas.AccuracyDelta < 0).Should().BeTrue(); // 50% - 100% = -50%
         // With only 2 test cases, candidate fails 80% threshold (50% < 80%), so rejection is due to threshold failure
-        comparison.RecommendationReason.Should().Contain("failed quality threshold", StringComparison.OrdinalIgnoreCase);
+        comparison.RecommendationReason.Should().Contain("failed quality threshold");
     }
 
     [Fact]
@@ -642,7 +642,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
 
         // Assert
         comparison.Recommendation.Should().Be(ComparisonRecommendation.ManualReview);
-        comparison.RecommendationReason.Should().Contain("manual review", StringComparison.OrdinalIgnoreCase);
+        comparison.RecommendationReason.Should().Contain("manual review");
     }
 
     #endregion

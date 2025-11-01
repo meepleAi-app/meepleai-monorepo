@@ -122,7 +122,7 @@ public class TesseractOcrServiceTests : IDisposable
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("PDF path is required");
+        result.ErrorMessage.Should().BeEquivalentTo("PDF path is required");
     }
 
     [Fact]
@@ -136,7 +136,7 @@ public class TesseractOcrServiceTests : IDisposable
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("PDF path is required");
+        result.ErrorMessage.Should().BeEquivalentTo("PDF path is required");
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public class TesseractOcrServiceTests : IDisposable
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("PDF path is required");
+        result.ErrorMessage.Should().BeEquivalentTo("PDF path is required");
     }
 
     [Fact]
@@ -209,7 +209,7 @@ public class TesseractOcrServiceTests : IDisposable
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("PDF path is required");
+        result.ErrorMessage.Should().BeEquivalentTo("PDF path is required");
     }
 
     [Fact]
@@ -223,7 +223,7 @@ public class TesseractOcrServiceTests : IDisposable
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("PDF path is required");
+        result.ErrorMessage.Should().BeEquivalentTo("PDF path is required");
     }
 
     [Fact]
@@ -237,7 +237,7 @@ public class TesseractOcrServiceTests : IDisposable
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("PDF path is required");
+        result.ErrorMessage.Should().BeEquivalentTo("PDF path is required");
     }
 
     [Fact]
@@ -291,7 +291,8 @@ public class TesseractOcrServiceTests : IDisposable
         var act = async () =>
         {
             await service.ExtractTextFromPageAsync(dummyPdfPath, 0, cts.Token);
-        });
+        };
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
     [Fact]

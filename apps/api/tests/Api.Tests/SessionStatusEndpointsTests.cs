@@ -99,7 +99,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         status.Should().NotBeNull();
 
         // Session was just created, should have ~30 days (43200 minutes) remaining
-        status.RemainingMinutes.Should().BeInRange(43000, 43300); // Allow some tolerance
+        status.RemainingMinutes.Should().BeApproximately(43000, TimeSpan.FromSeconds(5)); // Allow some tolerance
         status.LastSeenAt.Should().NotBeNull();
     }
 
@@ -136,7 +136,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         status.Should().NotBeNull();
 
         // Should have ~30 minutes remaining
-        status.RemainingMinutes.Should().BeInRange(0, 35);
+        status.RemainingMinutes.Should().BeApproximately(0, TimeSpan.FromSeconds(5));
     }
 
     [Fact]
@@ -190,7 +190,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         (extendedStatus.LastSeenAt > initialStatus!.LastSeenAt).Should().BeTrue();
 
         // Remaining minutes should be reset to ~30 days
-        extendedStatus.RemainingMinutes.Should().BeInRange(43000, 43300);
+        extendedStatus.RemainingMinutes.Should().BeApproximately(43000, TimeSpan.FromSeconds(5));
     }
 
     [Fact]
@@ -255,7 +255,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
             status.Should().NotBeNull();
 
             // After extending, should have ~30 days remaining
-            status.RemainingMinutes.Should().BeInRange(42000, 43300);
+            status.RemainingMinutes.Should().BeApproximately(42000, TimeSpan.FromSeconds(5));
         }
     }
 

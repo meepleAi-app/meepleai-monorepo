@@ -82,7 +82,7 @@ public class SetupGuideServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.gameTitle.Should().Be("Unknown Game");
+        result.gameTitle.Should().BeEquivalentTo("Unknown Game");
         result.steps.Should().NotBeEmpty();
         (result.estimatedSetupTimeMinutes > 0).Should().BeTrue();
     }
@@ -117,7 +117,7 @@ public class SetupGuideServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.gameTitle.Should().Be("Test Board Game");
+        result.gameTitle.Should().BeEquivalentTo("Test Board Game");
         result.steps.Should().NotBeEmpty();
         result.steps.Should().OnlyContain(step =>
         {
@@ -186,7 +186,7 @@ Each player takes a player board and starting components.";
 
         // Assert
         result.Should().NotBeNull();
-        result.gameTitle.Should().Be("Advanced Strategy Game");
+        result.gameTitle.Should().BeEquivalentTo("Advanced Strategy Game");
         result.steps.Should().NotBeEmpty();
         result.confidence.Should().NotBeNull();
         result.totalTokens.Should().Be(180); // LLM was used

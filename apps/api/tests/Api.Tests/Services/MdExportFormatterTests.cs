@@ -102,7 +102,7 @@ public class MdExportFormatterTests
         content.Should().Contain("Catan");
 
         // And: Messages have level 3 headers
-        content.Contains("### User", StringComparison.OrdinalIgnoreCase).Should().BeTrue();
+        content.Contains("### User").Should().BeTrue();
         content.Contains("### Assistant", StringComparison.OrdinalIgnoreCase).Should().BeTrue();
 
         // And: Messages are separated by horizontal rules
@@ -482,9 +482,9 @@ public class MdExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // Then: All message types have headings
-        content.Should().Contain("User", StringComparison.OrdinalIgnoreCase);
-        content.Should().Contain("Assistant", StringComparison.OrdinalIgnoreCase);
-        content.Should().Contain("System", StringComparison.OrdinalIgnoreCase);
+        content.Should().Contain("User");
+        content.Should().Contain("Assistant");
+        content.Should().Contain("System");
 
         // And: Message content is present
         content.Should().Contain("User message");

@@ -210,7 +210,7 @@ public class RagServiceMultilingualTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.answer.Should().Be("Risposta italiana");
+        result.answer.Should().BeEquivalentTo("Risposta italiana");
         capturedEmbeddingLanguage.Should().Be("it");
         capturedSearchLanguage.Should().Be("it");
     }
@@ -261,7 +261,7 @@ public class RagServiceMultilingualTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.answer.Should().Be("Answer");
+        result.answer.Should().BeEquivalentTo("Answer");
         capturedLanguage.Should().Be(language);
     }
 
@@ -306,7 +306,7 @@ public class RagServiceMultilingualTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.answer.Should().Be("English answer");
+        result.answer.Should().BeEquivalentTo("English answer");
         capturedLanguage.Should().Be("en");
     }
 
@@ -387,7 +387,7 @@ public class RagServiceMultilingualTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.answer.Should().Be("Risposta italiana dalla cache");
+        result.answer.Should().BeEquivalentTo("Risposta italiana dalla cache");
 
         // Verify services were NOT called
         _embeddingMock.Verify(
@@ -596,7 +596,7 @@ public class RagServiceMultilingualTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.script.Should().Be("Explication française du cache");
+        result.script.Should().BeEquivalentTo("Explication française du cache");
 
         // Verify services were NOT called
         _embeddingMock.Verify(
@@ -644,7 +644,7 @@ public class RagServiceMultilingualTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.answer.Should().Be("Unable to process query.");
+        result.answer.Should().BeEquivalentTo("Unable to process query.");
     }
 
     /// <summary>
@@ -680,7 +680,7 @@ public class RagServiceMultilingualTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.answer.Should().Be("Not specified");
+        result.answer.Should().BeEquivalentTo("Not specified");
     }
 
     #endregion

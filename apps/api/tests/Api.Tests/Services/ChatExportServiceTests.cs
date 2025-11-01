@@ -153,7 +153,7 @@ public class ChatExportServiceTests : IDisposable
 
         // Then: NotFound result is returned
         result.Success.Should().BeFalse();
-        result.Error.Should().Be("not_found");
+        result.Error.Should().BeEquivalentTo("not_found");
         result.Stream.Should().BeNull();
 
         // And: No formatter is called
@@ -180,7 +180,7 @@ public class ChatExportServiceTests : IDisposable
 
         // Then: UnsupportedFormat result is returned
         result.Success.Should().BeFalse();
-        result.Error.Should().Be("unsupported_format");
+        result.Error.Should().BeEquivalentTo("unsupported_format");
         result.Stream.Should().BeNull();
 
         // And: Error message lists supported formats
@@ -232,8 +232,8 @@ public class ChatExportServiceTests : IDisposable
 
         // And: Success result with stream is returned
         result.Success.Should().BeTrue();
-        result.Stream.Should().Be(exportStream);
-        result.ContentType.Should().Be("text/plain");
+        result.Stream.Should().BeEquivalentTo(exportStream);
+        result.ContentType.Should().BeEquivalentTo("text/plain");
     }
 
     /// <summary>
@@ -254,7 +254,7 @@ public class ChatExportServiceTests : IDisposable
 
         // Then: NotFound result is returned (not Forbidden for security)
         result.Success.Should().BeFalse();
-        result.Error.Should().Be("not_found");
+        result.Error.Should().BeEquivalentTo("not_found");
 
         // And: No formatter is called
         _pdfFormatterMock.Verify(
@@ -339,7 +339,7 @@ public class ChatExportServiceTests : IDisposable
 
         // Then: GenerationFailed result is returned
         result.Success.Should().BeFalse();
-        result.Error.Should().Be("generation_failed");
+        result.Error.Should().BeEquivalentTo("generation_failed");
 
         // And: Error message includes exception details
         result.ErrorDetails ?? "".Should().Contain("PDF generation failed");
@@ -447,7 +447,7 @@ public class ChatExportServiceTests : IDisposable
 
         // And: Export succeeds
         result.Success.Should().BeTrue();
-        result.ContentType.Should().Be("text/markdown");
+        result.ContentType.Should().BeEquivalentTo("text/markdown");
     }
 
     /// <summary>
@@ -565,7 +565,7 @@ public class ChatExportServiceTests : IDisposable
 
         // And: Export succeeds with correct content type
         result.Success.Should().BeTrue();
-        result.ContentType.Should().Be(expectedContentType);
+        result.ContentType.Should().BeEquivalentTo(expectedContentType);
     }
 
     /// <summary>

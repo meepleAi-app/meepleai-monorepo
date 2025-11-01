@@ -247,7 +247,7 @@ public class RagEvaluationServiceTests : IDisposable
         result.RelevantRetrievedCount.Should().Be(2); // 2 relevant docs retrieved
 
         // Recall = 2/4 = 0.5
-        result.RecallAtK.Should().Be(0.5);
+        result.RecallAtK.Should().BeEquivalentTo(0.5);
         report.AvgRecallAtK.Should().Be(0.5);
     }
 

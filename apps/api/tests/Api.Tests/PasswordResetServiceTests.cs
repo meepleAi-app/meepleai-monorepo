@@ -176,8 +176,7 @@ public class PasswordResetServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await service.RequestPasswordResetAsync(null!);
-        var exception = await act.Should().ThrowAsync<ArgumentException>();
-
+        var exception = await act.Should().ThrowAsync<ArgumentException>().Subject;
         exception.Which.Message.Should().Contain("Email is required");
     }
 
@@ -201,8 +200,7 @@ public class PasswordResetServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await service.RequestPasswordResetAsync(string.Empty);
-        var exception = await act.Should().ThrowAsync<ArgumentException>();
-
+        var exception = await act.Should().ThrowAsync<ArgumentException>().Subject;
         exception.Which.Message.Should().Contain("Email is required");
     }
 
@@ -228,8 +226,7 @@ public class PasswordResetServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await service.RequestPasswordResetAsync(ValidEmail);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
-
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
         exception.Which.Message.Should().Contain("Too many password reset requests");
 
         // Verify warning log was written
@@ -817,7 +814,7 @@ public class PasswordResetServiceTests : IDisposable
 
         // Assert
         result.Success.Should().BeTrue();
-        result.UserId.Should().Be("user1");
+        result.UserId.Should().BeEquivalentTo("user1");
 
         var updatedUser = await db.Users.FindAsync("user1");
         updatedUser!.PasswordHash.Should().NotBe(originalPasswordHash);
@@ -928,8 +925,7 @@ public class PasswordResetServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await service.ResetPasswordAsync(null!, ValidPassword);
-        var exception = await act.Should().ThrowAsync<ArgumentException>();
-
+        var exception = await act.Should().ThrowAsync<ArgumentException>().Subject;
         exception.Which.Message.Should().Contain("Token is required");
     }
 
@@ -953,8 +949,7 @@ public class PasswordResetServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await service.ResetPasswordAsync(string.Empty, ValidPassword);
-        var exception = await act.Should().ThrowAsync<ArgumentException>();
-
+        var exception = await act.Should().ThrowAsync<ArgumentException>().Subject;
         exception.Which.Message.Should().Contain("Token is required");
     }
 
@@ -978,8 +973,7 @@ public class PasswordResetServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await service.ResetPasswordAsync("some-token", null!);
-        var exception = await act.Should().ThrowAsync<ArgumentException>();
-
+        var exception = await act.Should().ThrowAsync<ArgumentException>().Subject;
         exception.Which.Message.Should().Contain("Password must be at least 8 characters");
     }
 
@@ -1003,8 +997,7 @@ public class PasswordResetServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await service.ResetPasswordAsync("some-token", "Pass12"); // 6 chars
-        var exception = await act.Should().ThrowAsync<ArgumentException>();
-
+        var exception = await act.Should().ThrowAsync<ArgumentException>().Subject;
         exception.Which.Message.Should().Contain("Password must be at least 8 characters");
     }
 
@@ -1032,8 +1025,7 @@ public class PasswordResetServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await service.ResetPasswordAsync("some-token", weakPassword);
-        var exception = await act.Should().ThrowAsync<ArgumentException>();
-
+        var exception = await act.Should().ThrowAsync<ArgumentException>().Subject;
         exception.Which.Message.Should().Contain("Password must contain at least one uppercase letter, one lowercase letter, and one number");
     }
 
@@ -1293,7 +1285,7 @@ public class PasswordResetServiceTests : IDisposable
 
         // Assert
         result.Success.Should().BeTrue();
-        result.UserId.Should().Be("user1");
+        result.UserId.Should().BeEquivalentTo("user1");
 
         var updatedUser = await db.Users.FindAsync("user1");
         updatedUser!.PasswordHash.Should().NotBe("original-hash");

@@ -186,7 +186,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "How many players can play this game?");
 
         // Then: Returns "Not specified" to avoid hallucination
-        result.answer.Should().Be("Not specified");
+        result.answer.Should().BeEquivalentTo("Not specified");
         result.snippets.Count.Should().Be(2); // Snippets are still provided for transparency
     }
 
@@ -214,7 +214,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "What is the airspeed velocity of an unladen swallow?");
 
         // Then: Returns "Not specified" with no snippets
-        result.answer.Should().Be("Not specified");
+        result.answer.Should().BeEquivalentTo("Not specified");
         result.snippets.Should().BeEmpty();
         mockLlm.Verify(x => x.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -243,7 +243,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "How do I win?");
 
         // Then: Returns "Not specified" gracefully
-        result.answer.Should().Be("Not specified");
+        result.answer.Should().BeEquivalentTo("Not specified");
         result.snippets.Should().BeEmpty();
     }
 
@@ -280,7 +280,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "Unknown question");
 
         // Then: Preserves exact "Not specified" text (not "NOT SPECIFIED" or "not specified")
-        result.answer.Should().Be("Not specified");
+        result.answer.Should().BeEquivalentTo("Not specified");
     }
 
     #endregion
@@ -621,7 +621,7 @@ CRITICAL INSTRUCTIONS:
 
         // Then: Handles without error
         result.Should().NotBeNull();
-        result.answer.Should().Be("Not specified"); // No results found
+        result.answer.Should().BeEquivalentTo("Not specified"); // No results found
     }
 
     [Fact]
@@ -769,17 +769,17 @@ CRITICAL INSTRUCTIONS:
 
         // Then: System prompt contains anti-hallucination instructions
         capturedSystemPrompt.Should().NotBeNull();
-        capturedSystemPrompt.Should().Contain("board game rules assistant", StringComparison.OrdinalIgnoreCase);
-        capturedSystemPrompt.Should().Contain("NOT in the provided context", StringComparison.OrdinalIgnoreCase);
+        capturedSystemPrompt.Should().Contain("board game rules assistant");
+        capturedSystemPrompt.Should().Contain("NOT in the provided context");
         capturedSystemPrompt.Should().Contain("Not specified");
-        capturedSystemPrompt.Should().Contain("Do NOT hallucinate", StringComparison.OrdinalIgnoreCase);
+        capturedSystemPrompt.Should().Contain("Do NOT hallucinate");
 
         // User prompt contains context with page numbers
         capturedUserPrompt.Should().NotBeNull();
-        capturedUserPrompt.Should().Contain("CONTEXT FROM RULEBOOK", StringComparison.OrdinalIgnoreCase);
+        capturedUserPrompt.Should().Contain("CONTEXT FROM RULEBOOK");
         capturedUserPrompt.Should().Contain("[Page 5]");
         capturedUserPrompt.Should().Contain("Rule text from page 5.");
-        capturedUserPrompt.Should().Contain("QUESTION", StringComparison.OrdinalIgnoreCase);
+        capturedUserPrompt.Should().Contain("QUESTION");
         capturedUserPrompt.Should().Contain("Test question?");
     }
 

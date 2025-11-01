@@ -118,11 +118,11 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var sessions = result.EnumerateArray().ToList();
 
         (sessions.Count >= 2).Should().BeTrue(); // At least 2 sessions for this user
-        sessions, session =>
+        foreach (var session in sessions)
         {
-            session.TryGetProperty("userId".Should().OnlyContain(out var userId);
+            session.TryGetProperty("userId", out var userId).Should().BeTrue();
             userId.GetString().Should().Be(user.Id);
-        });
+        }
     }
 
     /// <summary>
@@ -351,7 +351,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         result.TryGetProperty("revokedCount", out var revokedCount).Should().BeTrue();
-        revokedCount.GetInt32() >= 2.Should().BeTrue();
+        (revokedCount.GetInt32() >= 2).Should().BeTrue();
 
         // And: All sessions are revoked in database
         using (var scope = Factory.Services.CreateScope())
@@ -460,18 +460,18 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         (sessions.Count >= 2).Should().BeTrue(); // At least 2 sessions
 
         // Verify all sessions belong to the user
-        sessions, session =>
+        foreach (var session in sessions)
         {
-            session.TryGetProperty("userId".Should().OnlyContain(out var userId);
+            session.TryGetProperty("userId", out var userId).Should().BeTrue();
             userId.GetString().Should().Be(user.Id);
-        });
+        }
 
         // Verify session structure
         var firstSession = sessions[0];
         firstSession.TryGetProperty("id", out _).Should().BeTrue();
         firstSession.TryGetProperty("createdAt", out _).Should().BeTrue();
         firstSession.TryGetProperty("lastSeenAt", out _).Should().BeTrue();
-        firstSession.TryGetProperty("revokedAt", out var revokedAt) && revokedAt.ValueKind != JsonValueKind.Null.Should().BeFalse();
+        (firstSession.TryGetProperty("revokedAt", out var revokedAt) && revokedAt.ValueKind != JsonValueKind.Null).Should().BeFalse();
     }
 
     /// <summary>

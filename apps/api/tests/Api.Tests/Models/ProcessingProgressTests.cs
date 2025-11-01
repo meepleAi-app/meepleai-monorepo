@@ -88,7 +88,7 @@ public class ProcessingProgressTests
 
         // Assert
         estimate.Should().NotBeNull();
-        estimate.Value.TotalSeconds, 0.1.Should().Be(60);
+        estimate.Value.TotalSeconds.Should().BeApproximately(60, 0.1);
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public class ProcessingProgressTests
 
         // Assert
         estimate.Should().NotBeNull();
-        estimate.Value.TotalSeconds, 0.1.Should().Be(90);
+        estimate.Value.TotalSeconds.Should().BeApproximately(90, 0.1);
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public class ProcessingProgressTests
 
         // Assert
         estimate.Should().NotBeNull();
-        estimate.Value.TotalSeconds, 0.1.Should().Be(30);
+        estimate.Value.TotalSeconds.Should().BeApproximately(30, 0.1);
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public class ProcessingProgressTests
 
         // Assert
         estimate.Should().NotBeNull();
-        estimate.Value.TotalSeconds, 0.1.Should().Be(9);
+        estimate.Value.TotalSeconds.Should().BeApproximately(9, 0.1);
     }
 
     [Fact]

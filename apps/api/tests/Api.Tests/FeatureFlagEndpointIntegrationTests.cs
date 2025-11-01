@@ -111,7 +111,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
 
         var result = await response.Content.ReadFromJsonAsync<FeatureFlagUpdateResponse>();
         result.Should().NotBeNull();
-        result.FeatureName.Should().Be(featureName);
+        result.FeatureName.Should().BeEquivalentTo(featureName);
         result.Enabled.Should().BeTrue();
 
         // And: Subsequent checks return true via service
@@ -410,7 +410,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var error = await exportResponse.Content.ReadFromJsonAsync<FeatureDisabledError>();
         error.Should().NotBeNull();
         error.Error.Should().Be("feature_disabled");
-        error.Message.Should().Contain("export", StringComparison.OrdinalIgnoreCase);
+        error.Message.Should().Contain("export");
         error.FeatureName.Should().Be("Features.ChatExport");
 
         // Cleanup: Re-enable

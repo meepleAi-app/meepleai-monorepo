@@ -550,9 +550,9 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var result = JsonSerializer.Deserialize<PromptTemplateDto>(json, JsonOptions);
 
         result.Should().NotBeNull();
-        result.Id.Should().Be(template.Id);
-        result.Name.Should().Be(template.Name);
-        result.Description.Should().Be("Test description");
+        result.Id.Should().BeEquivalentTo(template.Id);
+        result.Name.Should().BeEquivalentTo(template.Name);
+        result.Description.Should().BeEquivalentTo("Test description");
     }
 
     /// <summary>

@@ -84,7 +84,7 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.gameTitle.Should().Be("Unknown Game");
+        result.gameTitle.Should().BeEquivalentTo("Unknown Game");
         result.steps.Should().NotBeEmpty();
         result.steps.Should().OnlyContain(step => !string.IsNullOrEmpty(step.instruction));
     }
@@ -111,7 +111,7 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.gameTitle.Should().Be("Test Game");
+        result.gameTitle.Should().BeEquivalentTo("Test Game");
         result.steps.Should().NotBeEmpty();
         result.steps.Count.Should().Be(5); // Default steps count
         result.steps.Should().OnlyContain(step => step.references.Length == 0); // Default steps have no references
@@ -175,7 +175,7 @@ Shuffle all card decks thoroughly and place them face-down near the board.";
 
         // Assert
         result.Should().NotBeNull();
-        result.gameTitle.Should().Be("Advanced Strategy Game");
+        result.gameTitle.Should().BeEquivalentTo("Advanced Strategy Game");
         result.steps.Count.Should().Be(3);
         result.totalTokens.Should().Be(250);
         result.promptTokens.Should().Be(150);
@@ -258,7 +258,7 @@ Include expansion components if playing with expansions.";
 
         // Assert
         result.Should().NotBeNull();
-        result.gameTitle.Should().Be("Resilient Game");
+        result.gameTitle.Should().BeEquivalentTo("Resilient Game");
         result.steps.Count.Should().Be(5); // Fallback to default 5 steps
         result.steps.Should().OnlyContain(step => !string.IsNullOrEmpty(step.instruction));
     }
@@ -294,7 +294,7 @@ Include expansion components if playing with expansions.";
 
         // Assert
         result.Should().NotBeNull();
-        result.gameTitle.Should().Be("Cached Game");
+        result.gameTitle.Should().BeEquivalentTo("Cached Game");
         result.steps.Should().ContainSingle();
         result.steps[0].title.Should().Be("Cached Step");
 
@@ -355,7 +355,7 @@ Include expansion components if playing with expansions.";
 
         // Assert: Service gracefully falls back to default steps even when embedding fails
         result.Should().NotBeNull();
-        result.gameTitle.Should().Be("Embedding Fail Game");
+        result.gameTitle.Should().BeEquivalentTo("Embedding Fail Game");
         result.steps.Should().NotBeEmpty();
         result.steps.Count.Should().Be(5); // Default steps
         (result.estimatedSetupTimeMinutes >= 5).Should().BeTrue(); // Minimum 5 minutes
@@ -420,7 +420,7 @@ Include expansion components if playing with expansions.";
 
         // Assert
         result.steps.Should().ContainSingle();
-        result.steps[0].instruction.Length <= 500.Should().BeTrue(); // Max 500 chars
+        (result.steps[0].instruction.Length <= 500).Should().BeTrue();
         result.steps[0].instruction.Should().EndWith("...");
     }
 
@@ -498,7 +498,7 @@ Do this quickly.";
         // Assert: When LLM response can't be parsed, service returns empty steps (not default steps)
         // Note: This differs from LLM failure (when LLM call fails), which returns default steps
         result.Should().NotBeNull();
-        result.gameTitle.Should().Be("Parsing Challenge Game");
+        result.gameTitle.Should().BeEquivalentTo("Parsing Challenge Game");
         result.steps.Should().BeEmpty(); // Malformed response results in empty steps
         result.totalTokens.Should().Be(150); // But tokens were still used
     }
@@ -596,6 +596,6 @@ Second instruction.";
 
         // Assert
         result.Should().NotBeNull();
-        result.gameTitle.Should().Be("Unknown Game");
+        result.gameTitle.Should().BeEquivalentTo("Unknown Game");
     }
 }

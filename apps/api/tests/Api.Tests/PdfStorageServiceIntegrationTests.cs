@@ -82,16 +82,16 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
             backgroundService.PendingTasks.Should().Be(0);
 
             // Assert chunking, embedding and qdrant services resolved from scope were used
-            var chunkingService = Assert.Single(scopeFactory.ChunkingServices.Where(c => c.PrepareForEmbeddingCallCount > 0 && c.ChunkTextCallCount > 0));
+            var chunkingService = scopeFactory.ChunkingServices.Where(c => c.PrepareForEmbeddingCallCount > 0 && c.ChunkTextCallCount > 0).Should().ContainSingle().Subject;
             chunkingService.LastText.Should().Be("chunk-one\nchunk-two");
             chunkingService.LastChunkText.Should().Be("chunk-one\nchunk-two");
             chunkingService.PrepareForEmbeddingCallCount.Should().Be(1);
             chunkingService.ChunkTextCallCount.Should().Be(1);
 
-            var embeddingService = Assert.Single(scopeFactory.EmbeddingServices.Where(e => e.GenerateEmbeddingsCallCount > 0));
+            var embeddingService = scopeFactory.EmbeddingServices.Where(e => e.GenerateEmbeddingsCallCount > 0).Should().ContainSingle().Subject;
             "chunk-two" }, embeddingService.LastRequestedTexts.Should().Be(new[] { "chunk-one");
 
-            var qdrantService = Assert.Single(scopeFactory.QdrantServices.Where(q => q.IndexCallCount > 0));
+            var qdrantService = scopeFactory.QdrantServices.Where(q => q.IndexCallCount > 0).Should().ContainSingle().Subject;
             qdrantService.LastGameId.Should().Be("game-1");
             qdrantService.LastPdfId.Should().Be(uploadResult.Document!.Id);
             qdrantService.LastChunks!.Count.Should().Be(2);

@@ -275,7 +275,7 @@ public class ChatServiceTests
         var result = await service.DeleteChatAsync(chat.Id, "user-123");
 
         result.Should().BeTrue();
-        Assert.Null(await dbContext.Chats.FindAsync(chat.Id));
+        (await dbContext.Chats.FindAsync(chat.Id)).Should().BeNull();
     }
 
     /// <summary>

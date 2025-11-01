@@ -212,8 +212,8 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
                 "cached", new System.Collections.Generic.List<Snippet>(), 1), 3600);
 
             // Verify cache exists
-            Assert.NotNull(await cacheService.GetAsync<QaResponse>(qaKey));
-            Assert.NotNull(await cacheService.GetAsync<ExplainResponse>(explainKey));
+            (await cacheService.GetAsync<QaResponse>(qaKey)).Should().NotBeNull();
+            (await cacheService.GetAsync<ExplainResponse>(explainKey)).Should().NotBeNull();
         }
 
         // When: Admin deletes game cache
@@ -236,8 +236,8 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
             var qaKey = cacheService.GenerateQaCacheKey(game.Id, "test query");
             var explainKey = cacheService.GenerateExplainCacheKey(game.Id, "test topic");
 
-            Assert.Null(await cacheService.GetAsync<QaResponse>(qaKey));
-            Assert.Null(await cacheService.GetAsync<ExplainResponse>(explainKey));
+            (await cacheService.GetAsync<QaResponse>(qaKey)).Should().BeNull();
+            (await cacheService.GetAsync<ExplainResponse>(explainKey)).Should().BeNull();
         }
     }
 
@@ -321,7 +321,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
             await cacheService.SetAsync(qaKey, new QaResponse("cached with pdf tag", Array.Empty<Snippet>()), 3600);
 
             // Verify cache exists
-            Assert.NotNull(await cacheService.GetAsync<QaResponse>(qaKey));
+            (await cacheService.GetAsync<QaResponse>(qaKey)).Should().NotBeNull();
         }
 
         // When: Admin deletes by PDF tag
@@ -340,7 +340,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         {
             var cacheService = newScope.ServiceProvider.GetRequiredService<IAiResponseCacheService>();
             var qaKey = cacheService.GenerateQaCacheKey(game.Id, "pdf question");
-            Assert.Null(await cacheService.GetAsync<QaResponse>(qaKey));
+            (await cacheService.GetAsync<QaResponse>(qaKey)).Should().BeNull();
         }
     }
 
@@ -509,8 +509,8 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
                 3600);
 
             // Verify both cached
-            Assert.NotNull(await cacheService.GetAsync<QaResponse>(key1));
-            Assert.NotNull(await cacheService.GetAsync<QaResponse>(key2));
+            (await cacheService.GetAsync<QaResponse>(key1)).Should().NotBeNull();
+            (await cacheService.GetAsync<QaResponse>(key2)).Should().NotBeNull();
         }
 
         // When: Invalidate pdf1 tag
@@ -527,8 +527,8 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
             var key1 = cacheService.GenerateQaCacheKey(game.Id, "pdf1 question");
             var key2 = cacheService.GenerateQaCacheKey(game.Id, "pdf2 question");
 
-            Assert.Null(await cacheService.GetAsync<QaResponse>(key1)); // Invalidated
-            Assert.NotNull(await cacheService.GetAsync<QaResponse>(key2)); // Still cached
+            (await cacheService.GetAsync<QaResponse>(key1)).Should().BeNull(); // Invalidated
+            (await cacheService.GetAsync<QaResponse>(key2)).Should().NotBeNull(); // Still cached
         }
     }
 

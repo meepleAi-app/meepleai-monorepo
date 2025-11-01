@@ -421,7 +421,7 @@ public class ApiExceptionHandlerMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert
-        var entry = Assert.Single(logger.Records.Where(e => e.Level == LogLevel.Error));
+        var entry = logger.Records.Where(e => e.Level == LogLevel.Error).Should().ContainSingle().Subject;
         var sanitizedPath = entry.GetStateValue("Path");
 
         sanitizedPath.Should().Be("/api/unsafepath");

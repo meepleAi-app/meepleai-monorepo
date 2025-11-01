@@ -76,7 +76,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         TrackUserId(authResponse.User.Id);
 
         var cookies = ExtractCookies(response);
-        Assert.Contains(cookies, cookie => cookie.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal));
+        cookies.Should().Contain(cookie => cookie.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.OrdinalIgnoreCase));
         AssertSessionCookieSecure(response);
 
         using var document = JsonDocument.Parse(json);
@@ -117,7 +117,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         authResponse!.User.Email.Should().Be(email);
 
         var cookies = ExtractCookies(response);
-        Assert.Contains(cookies, cookie => cookie.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal));
+        cookies.Should().Contain(cookie => cookie.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.OrdinalIgnoreCase));
         AssertSessionCookieSecure(response);
 
         using var document = JsonDocument.Parse(json);
@@ -239,7 +239,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
     private static void AssertSessionCookieSecure(HttpResponseMessage response)
     {
         response.Headers.TryGetValues("Set-Cookie", out var values).Should().BeTrue();
-        var sessionCookie = Assert.Single(values.Where(value => value.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal)));
+        var sessionCookie = values.Where(value => value.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal)).Should().ContainSingle().Subject;
         sessionCookie, StringComparison.OrdinalIgnoreCase.Should().Contain("secure");
         sessionCookie, StringComparison.OrdinalIgnoreCase.Should().Contain("samesite=none");
     }

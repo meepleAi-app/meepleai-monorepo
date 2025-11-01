@@ -61,7 +61,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         // Verify cache exists
         var cached = await cacheService.GetAsync<QaResponse>(cacheKey);
         cached.Should().NotBeNull();
-        Assert.Equal("Cached answer", cached.answer);
+        cached.answer.Should().Be("Cached answer");
 
         // When: Upload PDF for the game
         var client = CreateClientWithoutCookies();
@@ -142,7 +142,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         request.Content = content;
 
         var response = await client.SendAsync(request);
-        Assert.True(response.IsSuccessStatusCode);
+        response.IsSuccessStatusCode.Should().BeTrue();
 
         var result = await response.Content.ReadFromJsonAsync<PdfUploadResponse>();
         if (result != null)
@@ -204,7 +204,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         request.Content = content;
 
         var response = await client.SendAsync(request);
-        Assert.True(response.IsSuccessStatusCode);
+        response.IsSuccessStatusCode.Should().BeTrue();
 
         var result = await response.Content.ReadFromJsonAsync<PdfUploadResponse>();
         if (result != null)
@@ -266,8 +266,8 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Rule spec update might return 200 or 204
-        Assert.True(response.IsSuccessStatusCode,
-            $"Rule spec update failed with status {response.StatusCode}");
+        response.IsSuccessStatusCode,
+            $"Rule spec update failed with status {response.StatusCode}".Should().BeTrue();
 
         // Then: Cache is invalidated
         using var newScope = Factory.Services.CreateScope();
@@ -330,17 +330,17 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         {
             var result = await response.Content.ReadAsStringAsync();
             // The response should NOT be the exact cached answer
-            Assert.DoesNotContain(cachedAnswer, result);
+            result.Should().NotContain(cachedAnswer);
         }
         else
         {
             // If QA fails (e.g., no LLM configured), that's acceptable for this test
             // The important part is that cache was bypassed
             var statusCode = response.StatusCode;
-            Assert.True(statusCode == System.Net.HttpStatusCode.OK ||
+            statusCode == System.Net.HttpStatusCode.OK ||
                        statusCode == System.Net.HttpStatusCode.ServiceUnavailable ||
                        statusCode == System.Net.HttpStatusCode.InternalServerError,
-                       $"Unexpected status code: {statusCode}");
+                       $"Unexpected status code: {statusCode}".Should().BeTrue();
         }
     }
 
@@ -390,7 +390,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         var response2 = await client.SendAsync(request2);
 
         // Both requests should have similar success status (or both fail if no LLM)
-        Assert.Equal(response1.IsSuccessStatusCode, response2.IsSuccessStatusCode);
+        response2.IsSuccessStatusCode.Should().Be(response1.IsSuccessStatusCode);
     }
 
     #endregion

@@ -90,7 +90,7 @@ public class PdfExportFormatterTests
 
         // Then: Valid PDF stream is returned
         stream.Should().NotBeNull();
-        Assert.True(stream.Length > 0);
+        stream.Length > 0.Should().BeTrue();
 
         // And: Stream starts with PDF magic bytes
         stream.Position = 0;
@@ -98,7 +98,7 @@ public class PdfExportFormatterTests
         await stream.ReadAsync(buffer, 0, 5);
         var magicBytes = System.Text.Encoding.ASCII.GetString(buffer);
 
-        Assert.Equal("%PDF-", magicBytes);
+        magicBytes.Should().Be("%PDF-");
     }
 
     /// <summary>
@@ -131,7 +131,7 @@ public class PdfExportFormatterTests
         stream.Should().NotBeNull();
 
         // And: PDF size is reasonable (should be several KB for 150 messages)
-        Assert.True(stream.Length > 5000, $"Expected PDF > 5KB, got {stream.Length} bytes");
+        stream.Length > 5000, $"Expected PDF > 5KB, got {stream.Length} bytes".Should().BeTrue();
 
         // And: Verify it's a valid PDF
         stream.Position = 0;
@@ -179,7 +179,7 @@ public class PdfExportFormatterTests
 
         // Then: PDF is generated successfully
         stream.Should().NotBeNull();
-        Assert.True(stream.Length > 0);
+        stream.Length > 0.Should().BeTrue();
 
         // And: Verify it's a valid PDF with content
         stream.Position = 0;
@@ -189,7 +189,7 @@ public class PdfExportFormatterTests
 
         // Note: Verifying actual citation content would require PDF parsing library
         // For now, we verify the PDF is generated and contains data
-        Assert.True(stream.Length > 1000, "PDF should contain citation data");
+        stream.Length > 1000, "PDF should contain citation data".Should().BeTrue();
     }
 
     /// <summary>
@@ -211,7 +211,7 @@ public class PdfExportFormatterTests
 
         // Then: Valid PDF stream is returned
         stream.Should().NotBeNull();
-        Assert.True(stream.Length > 0);
+        stream.Length > 0.Should().BeTrue();
 
         // And: PDF is valid (starts with magic bytes)
         stream.Position = 0;
@@ -260,7 +260,7 @@ public class PdfExportFormatterTests
 
         // Then: PDF is generated
         stream.Should().NotBeNull();
-        Assert.True(stream.Length > 0);
+        stream.Length > 0.Should().BeTrue();
 
         // And: Valid PDF structure
         stream.Position = 0;
@@ -286,10 +286,10 @@ public class PdfExportFormatterTests
         var contentType = _formatter.ContentType;
 
         // Then: Format is "pdf"
-        Assert.Equal("pdf", format);
+        format.Should().Be("pdf");
 
         // And: ContentType is "application/pdf"
-        Assert.Equal("application/pdf", contentType);
+        contentType.Should().Be("application/pdf");
     }
 
     /// <summary>
@@ -330,7 +330,7 @@ public class PdfExportFormatterTests
 
         // Then: PDF is generated without errors
         stream.Should().NotBeNull();
-        Assert.True(stream.Length > 0);
+        stream.Length > 0.Should().BeTrue();
 
         // And: Valid PDF structure
         stream.Position = 0;
@@ -370,7 +370,7 @@ public class PdfExportFormatterTests
 
         // Then: PDF generation does not crash
         stream.Should().NotBeNull();
-        Assert.True(stream.Length > 0);
+        stream.Length > 0.Should().BeTrue();
 
         // And: Valid PDF is generated
         stream.Position = 0;
@@ -413,7 +413,7 @@ public class PdfExportFormatterTests
 
         // Then: PDF handles long content
         stream.Should().NotBeNull();
-        Assert.True(stream.Length > 0);
+        stream.Length > 0.Should().BeTrue();
 
         // And: PDF is valid
         stream.Position = 0;
@@ -422,7 +422,7 @@ public class PdfExportFormatterTests
         Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(buffer));
 
         // And: PDF size reflects content (should be larger for long content)
-        Assert.True(stream.Length > 10000, $"Expected large PDF, got {stream.Length} bytes");
+        stream.Length > 10000, $"Expected large PDF, got {stream.Length} bytes".Should().BeTrue();
     }
 
     /// <summary>
@@ -471,7 +471,7 @@ public class PdfExportFormatterTests
 
         // Then: PDF is generated
         stream.Should().NotBeNull();
-        Assert.True(stream.Length > 0);
+        stream.Length > 0.Should().BeTrue();
 
         // And: Valid PDF structure
         stream.Position = 0;

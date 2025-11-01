@@ -35,7 +35,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var response = await client.PostAsync("/api/v1/ingest/pdf", content);
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -125,7 +125,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     #endregion
@@ -142,7 +142,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var response = await client.PostAsync("/api/v1/ingest/pdf/test-pdf-id/index", null);
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -176,7 +176,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns not found
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -196,7 +196,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     #endregion
@@ -213,7 +213,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var response = await client.PostAsync("/api/v1/ingest/pdf/test-pdf-id/rulespec", null);
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -230,7 +230,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -247,7 +247,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     #endregion
@@ -264,7 +264,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var response = await client.GetAsync("/pdfs/test-pdf-id/text");
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -281,7 +281,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns not found
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     #endregion

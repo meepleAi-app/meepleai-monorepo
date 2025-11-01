@@ -82,9 +82,9 @@ public class SetupGuideServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Unknown Game", result.gameTitle);
+        result.gameTitle.Should().Be("Unknown Game");
         result.steps.Should().NotBeEmpty();
-        Assert.True(result.estimatedSetupTimeMinutes > 0);
+        result.estimatedSetupTimeMinutes > 0.Should().BeTrue();
     }
 
     [Fact]
@@ -117,11 +117,11 @@ public class SetupGuideServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Test Board Game", result.gameTitle);
+        result.gameTitle.Should().Be("Test Board Game");
         result.steps.Should().NotBeEmpty();
         Assert.All(result.steps, step =>
         {
-            Assert.True(step.stepNumber > 0);
+            step.stepNumber > 0.Should().BeTrue();
             Assert.False(string.IsNullOrEmpty(step.title));
             Assert.False(string.IsNullOrEmpty(step.instruction));
             step.references.Should().NotBeNull();
@@ -186,11 +186,11 @@ Each player takes a player board and starting components.";
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Advanced Strategy Game", result.gameTitle);
+        result.gameTitle.Should().Be("Advanced Strategy Game");
         result.steps.Should().NotBeEmpty();
         result.confidence.Should().NotBeNull();
-        Assert.Equal(180, result.totalTokens); // LLM was used
-        Assert.Equal(2, result.steps.Count); // LLM generated 2 steps
+        result.totalTokens.Should().Be(180); // LLM was used
+        result.steps.Count.Should().Be(2); // LLM generated 2 steps
 
         // Verify steps have references from RAG
         var stepsWithReferences = result.steps.Where(s => s.references.Count > 0).ToList();
@@ -198,9 +198,9 @@ Each player takes a player board and starting components.";
 
         // Verify step structure
         var firstStep = result.steps.First();
-        Assert.Equal(1, firstStep.stepNumber);
-        Assert.Equal("Setup Game Board", firstStep.title);
-        Assert.Contains("center", firstStep.instruction);
+        firstStep.stepNumber.Should().Be(1);
+        firstStep.title.Should().Be("Setup Game Board");
+        firstStep.instruction.Should().Contain("center");
     }
 
     [Fact]
@@ -219,11 +219,11 @@ Each player takes a player board and starting components.";
         );
 
         // Assert
-        Assert.Equal(1, step.stepNumber);
-        Assert.Equal("Prepare Components", step.title);
-        Assert.Equal("Sort all components by type", step.instruction);
-        Assert.Single(step.references);
-        Assert.False(step.isOptional);
+        step.stepNumber.Should().Be(1);
+        step.title.Should().Be("Prepare Components");
+        step.instruction.Should().Be("Sort all components by type");
+        step.references.Should().ContainSingle();
+        step.isOptional.Should().BeFalse();
     }
 
     [Fact]
@@ -249,9 +249,9 @@ Each player takes a player board and starting components.";
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
-        Assert.True(result.estimatedSetupTimeMinutes > 0);
+        result.estimatedSetupTimeMinutes > 0.Should().BeTrue();
         // Default steps are 5, so estimated time should be around 10 minutes (2 min per step)
-        Assert.Equal(10, result.estimatedSetupTimeMinutes);
+        result.estimatedSetupTimeMinutes.Should().Be(10);
 
         await Task.CompletedTask;
     }

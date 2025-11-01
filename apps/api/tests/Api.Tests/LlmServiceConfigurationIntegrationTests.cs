@@ -70,7 +70,7 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
         var result = await llmService.GenerateCompletionAsync("system", "test prompt");
 
         // Then: The database model value is used
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
@@ -115,7 +115,7 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
         var result = await llmService.GenerateCompletionAsync("system", "test prompt");
 
         // Then: The database temperature value is used
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
@@ -160,7 +160,7 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
         var result = await llmService.GenerateCompletionAsync("system", "test prompt");
 
         // Then: The database max_tokens value is used
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
@@ -189,7 +189,7 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
         var result = await llmService.GenerateCompletionAsync("system", "test prompt");
 
         // Then: Hardcoded default values are used
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
@@ -236,7 +236,7 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
         var result = await llmService.GenerateCompletionAsync("system", "test prompt");
 
         // Then: The hardcoded default temperature is used
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
@@ -281,7 +281,7 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
         var result = await llmService.GenerateCompletionAsync("system", "test prompt");
 
         // Then: max_tokens is capped at the maximum allowed value
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
@@ -403,8 +403,8 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
 
         foreach (var key in expectedKeys)
         {
-            Assert.Contains(prodConfigs, c => c.Key == key);
-            Assert.Contains(devConfigs, c => c.Key == key);
+            c => c.Key == key.Should().Contain(prodConfigs);
+            c => c.Key == key.Should().Contain(devConfigs);
         }
     }
 

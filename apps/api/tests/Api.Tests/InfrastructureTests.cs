@@ -76,7 +76,7 @@ public class InfrastructureTests : IDisposable
 
         // Act & Assert
         var exception = Assert.Throws<DbUpdateException>(() => _dbContext.SaveChanges());
-        Assert.Contains("UNIQUE constraint failed", exception.InnerException?.Message ?? exception.Message);
+        exception.InnerException?.Message ?? exception.Message.Should().Contain("UNIQUE constraint failed");
     }
 
     /// <summary>
@@ -159,7 +159,7 @@ public class InfrastructureTests : IDisposable
 
         // Act & Assert
         var exception = Assert.Throws<DbUpdateException>(() => _dbContext.SaveChanges());
-        Assert.Contains("UNIQUE constraint failed", exception.InnerException?.Message ?? exception.Message);
+        exception.InnerException?.Message ?? exception.Message.Should().Contain("UNIQUE constraint failed");
     }
 
     /// <summary>
@@ -185,7 +185,7 @@ public class InfrastructureTests : IDisposable
 
         // Act & Assert
         var exception = Assert.Throws<DbUpdateException>(() => _dbContext.SaveChanges());
-        Assert.Contains("NOT NULL constraint failed", exception.InnerException?.Message ?? exception.Message);
+        exception.InnerException?.Message ?? exception.Message.Should().Contain("NOT NULL constraint failed");
     }
 
     /// <summary>
@@ -220,7 +220,7 @@ public class InfrastructureTests : IDisposable
         savedUser.Should().NotBeNull();
         // Note: In production with PostgreSQL, MaxLength would be enforced.
         // SQLite stores the full email length for testing purposes.
-        Assert.Equal(longEmail, savedUser.Email);
+        savedUser.Email.Should().Be(longEmail);
     }
 
     /// <summary>
@@ -249,7 +249,7 @@ public class InfrastructureTests : IDisposable
 
         // Assert
         var exception = Assert.Throws<DbUpdateException>(() => _dbContext.SaveChanges());
-        Assert.Contains("FOREIGN KEY constraint failed", exception.InnerException?.Message ?? exception.Message);
+        exception.InnerException?.Message ?? exception.Message.Should().Contain("FOREIGN KEY constraint failed");
     }
 
     /// <summary>
@@ -294,6 +294,6 @@ public class InfrastructureTests : IDisposable
 
         // Act & Assert
         var exception = Assert.Throws<DbUpdateException>(() => _dbContext.SaveChanges());
-        Assert.Contains("UNIQUE constraint failed", exception.InnerException?.Message ?? exception.Message);
+        exception.InnerException?.Message ?? exception.Message.Should().Contain("UNIQUE constraint failed");
     }
 }

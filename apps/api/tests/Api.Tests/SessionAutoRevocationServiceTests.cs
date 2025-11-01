@@ -312,7 +312,7 @@ public class SessionAutoRevocationServiceTests : IDisposable
         var revokedCount = await sessionMgmt.RevokeInactiveSessionsAsync();
 
         // Then: No sessions should be revoked
-        Assert.Equal(0, revokedCount);
+        revokedCount.Should().Be(0);
     }
 
     #endregion
@@ -453,7 +453,7 @@ public class SessionAutoRevocationServiceTests : IDisposable
         var completed = await Task.WhenAny(stopTask, Task.Delay(TimeSpan.FromSeconds(5)));
 
         // Then: Service stops within reasonable time
-        Assert.Equal(stopTask, completed);
+        completed.Should().Be(stopTask);
         await stopTask; // Ensure no exceptions
     }
 
@@ -503,14 +503,14 @@ public class SessionAutoRevocationServiceTests : IDisposable
         var revokedCount = await sessionMgmt.RevokeInactiveSessionsAsync();
 
         // Then: Only the inactive session is revoked
-        Assert.Equal(1, revokedCount);
+        revokedCount.Should().Be(1);
 
         var sessions = await _dbContext.UserSessions.ToListAsync();
         var active = sessions.First(s => s.Id == "sess-active");
         var inactive = sessions.First(s => s.Id == "sess-inactive");
 
         active.RevokedAt.Should().BeNull();
-        Assert.NotNull(inactive.RevokedAt);
+        inactive.RevokedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -546,7 +546,7 @@ public class SessionAutoRevocationServiceTests : IDisposable
         var revokedCount = await sessionMgmt.RevokeInactiveSessionsAsync();
 
         // Then: Only the 2 inactive sessions are revoked
-        Assert.Equal(2, revokedCount);
+        revokedCount.Should().Be(2);
 
         var allSessions = await _dbContext.UserSessions.ToListAsync();
         Assert.Null(allSessions.First(s => s.Id == "u1-s1").RevokedAt);

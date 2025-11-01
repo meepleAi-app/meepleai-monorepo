@@ -95,7 +95,7 @@ public class PdfTableExtractionRealWorldTests
         var result = await _service.ExtractStructuredContentAsync(pdfPath);
 
         // Assert
-        Assert.True(result.Success, $"Extraction should succeed. Error: {result.ErrorMessage}");
+        result.Success, $"Extraction should succeed. Error: {result.ErrorMessage}".Should().BeTrue();
 
         _output.WriteLine($"Harmonies Rulebook Analysis:");
         _output.WriteLine($"  Tables found: {result.TableCount}");
@@ -132,10 +132,10 @@ public class PdfTableExtractionRealWorldTests
 
         // PDF-03 Acceptance Criteria: Must extract tabular data
         // Harmonies is a complex modern board game, should have structured content
-        Assert.True(
+        
             result.TableCount > 0 || result.DiagramCount > 0,
             "Should extract at least tables or diagrams from Harmonies rulebook"
-        );
+        .Should().BeTrue();
     }
 
     [Fact]
@@ -154,7 +154,7 @@ public class PdfTableExtractionRealWorldTests
         var result = await _service.ExtractStructuredContentAsync(pdfPath);
 
         // Assert
-        Assert.True(result.Success, $"Extraction should succeed. Error: {result.ErrorMessage}");
+        result.Success, $"Extraction should succeed. Error: {result.ErrorMessage}".Should().BeTrue();
 
         _output.WriteLine($"Lorenzo Rulebook Analysis:");
         _output.WriteLine($"  Tables found: {result.TableCount}");
@@ -191,10 +191,10 @@ public class PdfTableExtractionRealWorldTests
 
         // PDF-03 Acceptance Criteria: Must extract tabular data
         // Lorenzo il Magnifico is a complex board game, should have structured content
-        Assert.True(
+        
             result.TableCount > 0 || result.DiagramCount > 0,
             "Should extract at least tables or diagrams from Lorenzo rulebook"
-        );
+        .Should().BeTrue();
     }
 
     [Fact]
@@ -237,8 +237,8 @@ public class PdfTableExtractionRealWorldTests
         _output.WriteLine($"    Atomic Rules: {lorenzoResult.AtomicRuleCount}");
 
         // Both extractions must succeed
-        Assert.True(harmoniesResult.Success, "Harmonies extraction should succeed");
-        Assert.True(lorenzoResult.Success, "Lorenzo extraction should succeed");
+        harmoniesResult.Success, "Harmonies extraction should succeed".Should().BeTrue();
+        lorenzoResult.Success, "Lorenzo extraction should succeed".Should().BeTrue();
 
         // At least one should have structured content
         var hasStructuredContent =
@@ -282,7 +282,7 @@ public class PdfTableExtractionRealWorldTests
                 Assert.Matches(@"\[Table on page \d+\]", rule);
 
                 // Each rule should have at least one key-value pair
-                Assert.Contains(":", rule);
+                rule.Should().Contain(":");
             }
 
             // Rules should not be empty strings
@@ -321,11 +321,11 @@ public class PdfTableExtractionRealWorldTests
                 _output.WriteLine($"    Has Image Data: {diagram.ImageData != null && diagram.ImageData.Length > 0}");
 
                 // Validate diagram metadata
-                Assert.True(diagram.PageNumber > 0, "Page number should be positive");
+                diagram.PageNumber > 0, "Page number should be positive".Should().BeTrue();
                 diagram.DiagramType.Should().NotBeEmpty();
                 diagram.Description.Should().NotBeEmpty();
-                Assert.True(diagram.Width >= 0, "Width should be non-negative");
-                Assert.True(diagram.Height >= 0, "Height should be non-negative");
+                diagram.Width >= 0, "Width should be non-negative".Should().BeTrue();
+                diagram.Height >= 0, "Height should be non-negative".Should().BeTrue();
             }
 
             _output.WriteLine($"\n  Total diagrams found: {result.DiagramCount}");
@@ -361,12 +361,12 @@ public class PdfTableExtractionRealWorldTests
                 _output.WriteLine($"    Row count: {table.RowCount}");
 
                 // Headers should match column count
-                Assert.Equal(table.ColumnCount, table.Headers.Count);
+                table.Headers.Count.Should().Be(table.ColumnCount);
 
                 // All rows should have the same number of columns
                 foreach (var row in table.Rows)
                 {
-                    Assert.Equal(table.ColumnCount, row.Length);
+                    row.Length.Should().Be(table.ColumnCount);
                 }
 
                 _output.WriteLine($"    ✓ Consistent column structure");

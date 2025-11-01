@@ -66,20 +66,20 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Comment is created with HTTP 201
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var comment = await response.Content.ReadFromJsonAsync<RuleSpecComment>();
         comment.Should().NotBeNull();
-        Assert.Equal("This rule needs clarification", comment!.CommentText);
-        Assert.Equal("atom-1", comment.AtomId);
-        Assert.Equal(user.Id, comment.UserId);
+        comment!.CommentText.Should().Be("This rule needs clarification");
+        comment.AtomId.Should().Be("atom-1");
+        comment.UserId.Should().Be(user.Id);
 
         // And: Comment is persisted in database
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var entity = await db.RuleSpecComments.FirstOrDefaultAsync(c => c.Id == comment.Id);
         entity.Should().NotBeNull();
-        Assert.Equal("This rule needs clarification", entity!.CommentText);
+        entity!.CommentText.Should().Be("This rule needs clarification");
     }
 
     /// <summary>
@@ -115,12 +115,12 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Comment is created without AtomId
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var comment = await response.Content.ReadFromJsonAsync<RuleSpecComment>();
         comment.Should().NotBeNull();
-        Assert.Null(comment!.AtomId);
-        Assert.Equal("Overall, this version looks good", comment.CommentText);
+        comment!.AtomId.Should().BeNull();
+        this version looks good", comment.CommentText.Should().Be("Overall);
     }
 
     /// <summary>
@@ -156,7 +156,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Request is forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -219,11 +219,11 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: All comments are returned ordered by creation time
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<RuleSpecCommentsResponse>();
         result.Should().NotBeNull();
-        Assert.Equal(3, result!.TotalComments);
+        result!.TotalComments.Should().Be(3);
         Assert.Collection(
             result.Comments,
             c => Assert.Equal("First comment", c.CommentText),
@@ -278,12 +278,12 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Comment is updated successfully
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var updated = await response.Content.ReadFromJsonAsync<RuleSpecComment>();
         updated.Should().NotBeNull();
-        Assert.Equal("Updated text", updated!.CommentText);
-        Assert.NotNull(updated.UpdatedAt);
+        updated!.CommentText.Should().Be("Updated text");
+        updated.UpdatedAt.Should().NotBeNull();
     }
 
     /// <summary>
@@ -333,7 +333,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Request is forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -380,7 +380,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Comment is deleted successfully
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // And: Comment is removed from database
         using (var scope = Factory.Services.CreateScope())
@@ -435,7 +435,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Comment is deleted successfully
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         using (var scope = Factory.Services.CreateScope())
         {
@@ -489,7 +489,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Request is forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -512,7 +512,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
             $"/api/v1/games/{game.Id}/rulespec/versions/{ruleSpec.Version}/comments");
 
         // Then: Request is unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -545,7 +545,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Request returns BadRequest
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     /// <summary>
@@ -577,6 +577,6 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Request returns BadRequest
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 }

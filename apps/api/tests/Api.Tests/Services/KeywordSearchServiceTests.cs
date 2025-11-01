@@ -258,8 +258,8 @@ public class KeywordSearchServiceTests : IDisposable
         // The actual tsquery building logic is tested in integration tests
         var query = "castling king";
         // Expected tsquery: "castling & king" (AND operator)
-        Assert.Contains("castling", query);
-        Assert.Contains("king", query);
+        query.Should().Contain("castling");
+        query.Should().Contain("king");
     }
 
     [Fact]
@@ -269,8 +269,8 @@ public class KeywordSearchServiceTests : IDisposable
         var query = "en passant";
         var phraseSearch = true;
         // Expected tsquery: "en <-> passant" (proximity operator)
-        Assert.Contains("en", query);
-        Assert.Contains("passant", query);
+        query.Should().Contain("en");
+        query.Should().Contain("passant");
     }
 
     [Fact]
@@ -288,8 +288,8 @@ public class KeywordSearchServiceTests : IDisposable
         // Testing tsquery operator sanitization
         var queryWithOperators = "king & queen | rook ! bishop";
         // Should remove: & | ! operators
-        Assert.Contains("king", queryWithOperators);
-        Assert.Contains("queen", queryWithOperators);
+        queryWithOperators.Should().Contain("king");
+        queryWithOperators.Should().Contain("queen");
     }
 
     [Fact]
@@ -299,10 +299,10 @@ public class KeywordSearchServiceTests : IDisposable
         var query = "castling king rook";
         var terms = query.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList();
 
-        Assert.Equal(3, terms.Count);
-        Assert.Contains("castling", terms);
-        Assert.Contains("king", terms);
-        Assert.Contains("rook", terms);
+        terms.Count.Should().Be(3);
+        terms.Should().Contain("castling");
+        terms.Should().Contain("king");
+        terms.Should().Contain("rook");
     }
 
     [Fact]
@@ -315,7 +315,7 @@ public class KeywordSearchServiceTests : IDisposable
         // When phraseSearch is true, entire phrase should be one term
         if (phraseSearch)
         {
-            Assert.Contains(" ", query); // Phrase contains space
+            query.Should().Contain(" "); // Phrase contains space
         }
     }
 
@@ -326,10 +326,10 @@ public class KeywordSearchServiceTests : IDisposable
         var query = "en passant a the";
         var terms = query.Split(' ').Where(t => t.Length > 2).ToList();
 
-        Assert.DoesNotContain("a", terms);
-        Assert.DoesNotContain("en", terms); // "en" has length 2, should be filtered
-        Assert.Contains("passant", terms);
-        Assert.Contains("the", terms); // "the" has length 3, should be included (>2 means >= 3)
+        terms.Should().NotContain("a");
+        terms.Should().NotContain("en"); // "en" has length 2, should be filtered
+        terms.Should().Contain("passant");
+        terms.Should().Contain("the"); // "the" has length 3, should be included (>2 means >= 3)
     }
 
     [Fact]

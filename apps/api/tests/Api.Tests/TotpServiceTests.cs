@@ -80,12 +80,12 @@ public class TotpServiceTests : IDisposable
         result.Should().NotBeNull();
         result.Secret.Should().NotBeEmpty();
         result.QrCodeUrl.Should().NotBeEmpty();
-        Assert.Equal(10, result.BackupCodes.Count);
+        result.BackupCodes.Count.Should().Be(10);
 
         // Verify QR code URL format
         Assert.StartsWith("otpauth://totp/MeepleAI:", result.QrCodeUrl);
-        Assert.Contains(userEmail, result.QrCodeUrl);
-        Assert.Contains("secret=", result.QrCodeUrl);
+        result.QrCodeUrl.Should().Contain(userEmail);
+        result.QrCodeUrl.Should().Contain("secret=");
 
         // Verify backup codes format (XXXX-XXXX)
         foreach (var code in result.BackupCodes)
@@ -95,12 +95,12 @@ public class TotpServiceTests : IDisposable
 
         // Verify secret is stored encrypted
         var userAfter = await _dbContext.Users.FindAsync(userId);
-        Assert.NotNull(userAfter?.TotpSecretEncrypted);
-        Assert.NotEqual(result.Secret, userAfter.TotpSecretEncrypted); // Should be encrypted
+        userAfter?.TotpSecretEncrypted.Should().NotBeNull();
+        userAfter.TotpSecretEncrypted.Should().NotBe(result.Secret); // Should be encrypted
 
         // Verify backup codes are stored hashed
         var storedCodes = await _dbContext.UserBackupCodes.Where(bc => bc.UserId == userId).ToListAsync();
-        Assert.Equal(10, storedCodes.Count);
+        storedCodes.Count.Should().Be(10);
         Assert.All(storedCodes, bc => Assert.NotEmpty(bc.CodeHash));
     }
 
@@ -128,10 +128,10 @@ public class TotpServiceTests : IDisposable
         var result = await _totpService.EnableTwoFactorAsync(userId, validCode);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         var userAfter = await _dbContext.Users.FindAsync(userId);
-        Assert.True(userAfter?.IsTwoFactorEnabled);
-        Assert.NotNull(userAfter?.TwoFactorEnabledAt);
+        userAfter?.IsTwoFactorEnabled.Should().BeTrue();
+        userAfter?.TwoFactorEnabledAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -155,9 +155,9 @@ public class TotpServiceTests : IDisposable
         var result = await _totpService.EnableTwoFactorAsync(userId, "000000"); // Invalid code
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
         var userAfter = await _dbContext.Users.FindAsync(userId);
-        Assert.False(userAfter?.IsTwoFactorEnabled);
+        userAfter?.IsTwoFactorEnabled.Should().BeFalse();
     }
 
     [Fact]
@@ -181,11 +181,11 @@ public class TotpServiceTests : IDisposable
 
         // Act - First use should succeed
         var result1 = await _totpService.VerifyBackupCodeAsync(userId, backupCode);
-        Assert.True(result1);
+        result1.Should().BeTrue();
 
         // Act - Second use should fail (single-use enforcement)
         var result2 = await _totpService.VerifyBackupCodeAsync(userId, backupCode);
-        Assert.False(result2);
+        result2.Should().BeFalse();
 
         // Verify code is marked as used
         var storedCodes = await _dbContext.UserBackupCodes
@@ -221,9 +221,9 @@ public class TotpServiceTests : IDisposable
 
         // Assert
         var userAfter = await _dbContext.Users.FindAsync(userId);
-        Assert.False(userAfter?.IsTwoFactorEnabled);
-        Assert.Null(userAfter?.TotpSecretEncrypted);
-        Assert.Null(userAfter?.TwoFactorEnabledAt);
+        userAfter?.IsTwoFactorEnabled.Should().BeFalse();
+        userAfter?.TotpSecretEncrypted.Should().BeNull();
+        userAfter?.TwoFactorEnabledAt.Should().BeNull();
 
         // Verify all backup codes deleted
         var backupCodes = await _dbContext.UserBackupCodes.Where(bc => bc.UserId == userId).ToListAsync();
@@ -257,9 +257,9 @@ public class TotpServiceTests : IDisposable
         var status = await _totpService.GetTwoFactorStatusAsync(userId);
 
         // Assert
-        Assert.True(status.IsEnabled);
+        status.IsEnabled.Should().BeTrue();
         status.EnabledAt.Should().NotBeNull();
-        Assert.Equal(8, status.UnusedBackupCodesCount); // 10 - 2 used
+        status.UnusedBackupCodesCount.Should().Be(8); // 10 - 2 used
     }
 
     // Helper: Generate valid TOTP code

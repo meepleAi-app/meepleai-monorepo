@@ -42,7 +42,7 @@ public class FeatureFlagServiceTests
         var result = await _service.IsEnabledAsync("Features.TestFeature");
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class FeatureFlagServiceTests
         var result = await _service.IsEnabledAsync("Features.TestFeature");
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public class FeatureFlagServiceTests
         var result = await _service.IsEnabledAsync("Features.UnknownFeature");
 
         // Assert
-        Assert.False(result); // Default: feature disabled (fail-safe)
+        result.Should().BeFalse(); // Default: feature disabled (fail-safe)
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public class FeatureFlagServiceTests
         var result = await _service.IsEnabledAsync(featureName, role);
 
         // Assert
-        Assert.True(result); // Role-specific flag takes precedence
+        result.Should().BeTrue(); // Role-specific flag takes precedence
         _configServiceMock.Verify(x => x.GetValueAsync<bool?>($"{featureName}.{role}", null, null), Times.Once);
         _configServiceMock.Verify(x => x.GetValueAsync<bool?>(featureName, null, null), Times.Never); // Should not check global
     }
@@ -116,7 +116,7 @@ public class FeatureFlagServiceTests
         var result = await _service.IsEnabledAsync(featureName, role);
 
         // Assert
-        Assert.True(result); // Falls back to global flag
+        result.Should().BeTrue(); // Falls back to global flag
         _configServiceMock.Verify(x => x.GetValueAsync<bool?>($"{featureName}.{role}", null, null), Times.Once);
         _configServiceMock.Verify(x => x.GetValueAsync<bool?>(featureName, null, null), Times.Once);
     }
@@ -138,7 +138,7 @@ public class FeatureFlagServiceTests
         var result = await _service.IsEnabledAsync(featureName, role);
 
         // Assert
-        Assert.False(result); // Role-specific override takes precedence
+        result.Should().BeFalse(); // Role-specific override takes precedence
     }
 
     #endregion
@@ -398,17 +398,17 @@ public class FeatureFlagServiceTests
         var result = await _service.GetAllFeatureFlagsAsync();
 
         // Assert
-        Assert.Equal(3, result.Count);
+        result.Count.Should().Be(3);
 
         // Global flags
-        Assert.Contains(result, f => f.FeatureName == "Features.Feature1" && f.IsEnabled && f.RoleRestriction == null);
-        Assert.Contains(result, f => f.FeatureName == "Features.Feature2" && !f.IsEnabled && f.RoleRestriction == null);
+        f => f.FeatureName == "Features.Feature1" && f.IsEnabled && f.RoleRestriction == null.Should().Contain(result);
+        f => f.FeatureName == "Features.Feature2" && !f.IsEnabled && f.RoleRestriction == null.Should().Contain(result);
 
         // Role-specific flag
         var adminFlag = result.FirstOrDefault(f => f.RoleRestriction == "Admin");
         adminFlag.Should().NotBeNull();
-        Assert.Equal("Features.AdminFeature", adminFlag.FeatureName);
-        Assert.True(adminFlag.IsEnabled);
+        adminFlag.FeatureName.Should().Be("Features.AdminFeature");
+        adminFlag.IsEnabled.Should().BeTrue();
     }
 
     [Fact]
@@ -436,10 +436,10 @@ public class FeatureFlagServiceTests
         var result = await _service.GetAllFeatureFlagsAsync();
 
         // Assert
-        Assert.Single(result);
-        Assert.Equal("Features.TestFeature", result[0].FeatureName);
-        Assert.Equal("Editor", result[0].RoleRestriction);
-        Assert.True(result[0].IsEnabled);
+        result.Should().ContainSingle();
+        result[0].FeatureName.Should().Be("Features.TestFeature");
+        result[0].RoleRestriction.Should().Be("Editor");
+        result[0].IsEnabled.Should().BeTrue();
     }
 
     [Fact]
@@ -467,8 +467,8 @@ public class FeatureFlagServiceTests
         var result = await _service.GetAllFeatureFlagsAsync();
 
         // Assert
-        Assert.Single(result);
-        Assert.False(result[0].IsEnabled); // Invalid value treated as false
+        result.Should().ContainSingle();
+        result[0].IsEnabled.Should().BeFalse(); // Invalid value treated as false
     }
 
     #endregion
@@ -492,7 +492,7 @@ public class FeatureFlagServiceTests
         var result = await _service.IsEnabledAsync(featureName, role);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         _configServiceMock.Verify(x => x.GetValueAsync<bool?>(roleKey, null, null), Times.Once);
     }
 
@@ -507,7 +507,7 @@ public class FeatureFlagServiceTests
         var result = await _service.IsEnabledAsync("Features.GlobalFeature", role: null);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         // Should only check global, not any role-specific keys
         _configServiceMock.Verify(x => x.GetValueAsync<bool?>("Features.GlobalFeature", null, null), Times.Once);
         _configServiceMock.Verify(x => x.GetValueAsync<bool?>(It.Is<string>(k => k.Contains(".")), null, null), Times.Once); // Only one call

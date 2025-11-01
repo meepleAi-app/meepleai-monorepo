@@ -123,9 +123,9 @@ public class PdfIndexingServiceTests : IDisposable
         var result = await _service.IndexPdfAsync("pdf-1");
 
         // THEN: The indexing should succeed
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.VectorDocumentId.Should().NotBeNull();
-        Assert.Equal(2, result.ChunkCount);
+        result.ChunkCount.Should().Be(2);
         result.IndexedAt.Should().NotBeNull();
 
         // AND: The VectorDocumentEntity should be persisted with status "completed"
@@ -133,15 +133,15 @@ public class PdfIndexingServiceTests : IDisposable
             .FirstOrDefaultAsync(v => v.Id == result.VectorDocumentId);
 
         vectorDoc.Should().NotBeNull();
-        Assert.Equal("completed", vectorDoc.IndexingStatus);
-        Assert.Equal("tic-tac-toe", vectorDoc.GameId);
-        Assert.Equal("pdf-1", vectorDoc.PdfDocumentId);
-        Assert.Equal(2, vectorDoc.ChunkCount);
-        Assert.Equal(extractedText.Length, vectorDoc.TotalCharacters);
+        vectorDoc.IndexingStatus.Should().Be("completed");
+        vectorDoc.GameId.Should().Be("tic-tac-toe");
+        vectorDoc.PdfDocumentId.Should().Be("pdf-1");
+        vectorDoc.ChunkCount.Should().Be(2);
+        vectorDoc.TotalCharacters.Should().Be(extractedText.Length);
         vectorDoc.IndexedAt.Should().NotBeNull();
         vectorDoc.IndexingError.Should().BeNull();
-        Assert.Equal("openai/text-embedding-3-small", vectorDoc.EmbeddingModel);
-        Assert.Equal(1536, vectorDoc.EmbeddingDimensions);
+        vectorDoc.EmbeddingModel.Should().Be("openai/text-embedding-3-small");
+        vectorDoc.EmbeddingDimensions.Should().Be(1536);
     }
 
     /// <summary>
@@ -186,9 +186,9 @@ public class PdfIndexingServiceTests : IDisposable
         var result = await _service.IndexPdfAsync("pdf-2");
 
         // THEN: Should return failure with appropriate error code
-        Assert.False(result.Success);
-        Assert.Equal(PdfIndexingErrorCode.TextExtractionRequired, result.ErrorCode);
-        Assert.Contains("text extraction required", result.ErrorMessage!, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(PdfIndexingErrorCode.TextExtractionRequired);
+        result.ErrorMessage!, StringComparison.OrdinalIgnoreCase.Should().Contain("text extraction required");
     }
 
     /// <summary>
@@ -201,9 +201,9 @@ public class PdfIndexingServiceTests : IDisposable
         var result = await _service.IndexPdfAsync("non-existent-pdf");
 
         // THEN: Should return failure with PdfNotFound error code
-        Assert.False(result.Success);
-        Assert.Equal(PdfIndexingErrorCode.PdfNotFound, result.ErrorCode);
-        Assert.Contains("not found", result.ErrorMessage!, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(PdfIndexingErrorCode.PdfNotFound);
+        result.ErrorMessage!, StringComparison.OrdinalIgnoreCase.Should().Contain("not found");
     }
 
     /// <summary>
@@ -276,7 +276,7 @@ public class PdfIndexingServiceTests : IDisposable
         var result = await _service.IndexPdfAsync("pdf-3");
 
         // THEN: Should succeed and update the same VectorDocumentEntity
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.VectorDocumentId.Should().NotBeNull();
 
         // Verify Qdrant delete was called (idempotency cleanup)
@@ -285,7 +285,7 @@ public class PdfIndexingServiceTests : IDisposable
         // Should have only ONE VectorDocumentEntity for this PDF
         var vectorDocCount = await _db.Set<VectorDocumentEntity>()
             .CountAsync(v => v.PdfDocumentId == "pdf-3");
-        Assert.Equal(1, vectorDocCount);
+        vectorDocCount.Should().Be(1);
     }
 
     /// <summary>
@@ -338,16 +338,16 @@ public class PdfIndexingServiceTests : IDisposable
         var result = await _service.IndexPdfAsync("pdf-4");
 
         // THEN: Should fail with appropriate error code
-        Assert.False(result.Success);
-        Assert.Equal(PdfIndexingErrorCode.EmbeddingFailed, result.ErrorCode);
-        Assert.Contains("Embedding generation failed", result.ErrorMessage!);
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(PdfIndexingErrorCode.EmbeddingFailed);
+        result.ErrorMessage!.Should().Contain("Embedding generation failed");
 
         // AND: VectorDocumentEntity should be marked as "failed"
         var vectorDoc = await _db.Set<VectorDocumentEntity>()
             .FirstOrDefaultAsync(v => v.PdfDocumentId == "pdf-4");
 
         vectorDoc.Should().NotBeNull();
-        Assert.Equal("failed", vectorDoc.IndexingStatus);
+        vectorDoc.IndexingStatus.Should().Be("failed");
         vectorDoc.IndexingError.Should().NotBeNull();
     }
 }

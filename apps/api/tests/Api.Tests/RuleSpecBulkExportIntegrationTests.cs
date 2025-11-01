@@ -97,24 +97,24 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/rulespecs/bulk/export", request);
 
         // Then: A ZIP file is returned with valid content
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("application/zip", response.Content.Headers.ContentType?.MediaType);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("application/zip");
 
         var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"');
         fileName.Should().NotBeNull();
-        Assert.Contains("meepleai-rulespecs-", fileName);
+        fileName.Should().Contain("meepleai-rulespecs-");
         Assert.EndsWith(".zip", fileName);
 
         var zipBytes = await response.Content.ReadAsByteArrayAsync();
-        Assert.True(zipBytes.Length > 0);
+        zipBytes.Length > 0.Should().BeTrue();
 
         // Verify ZIP structure
         using var memoryStream = new MemoryStream(zipBytes);
         using var archive = new ZipArchive(memoryStream, ZipArchiveMode.Read);
 
-        Assert.Single(archive.Entries);
+        archive.Entries.Should().ContainSingle();
         var entry = archive.Entries[0];
-        Assert.Contains("chess-export", entry.Name);
+        entry.Name.Should().Contain("chess-export");
         Assert.EndsWith(".json", entry.Name);
 
         // Verify JSON content
@@ -124,9 +124,9 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
         var exportedSpec = JsonSerializer.Deserialize<RuleSpec>(json, JsonOptions);
 
         exportedSpec.Should().NotBeNull();
-        Assert.Equal(game.Id, exportedSpec!.gameId);
-        Assert.Equal("v1", exportedSpec.version);
-        Assert.Equal(2, exportedSpec.rules.Count);
+        exportedSpec!.gameId.Should().Be(game.Id);
+        exportedSpec.version.Should().Be("v1");
+        exportedSpec.rules.Count.Should().Be(2);
     }
 
     /// <summary>
@@ -178,13 +178,13 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/rulespecs/bulk/export", request);
 
         // Then: A ZIP file with all three specs is returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var zipBytes = await response.Content.ReadAsByteArrayAsync();
         using var memoryStream = new MemoryStream(zipBytes);
         using var archive = new ZipArchive(memoryStream, ZipArchiveMode.Read);
 
-        Assert.Equal(3, archive.Entries.Count);
+        archive.Entries.Count.Should().Be(3);
         Assert.Contains(archive.Entries, e => e.Name.Contains("game1"));
         Assert.Contains(archive.Entries, e => e.Name.Contains("game2"));
         Assert.Contains(archive.Entries, e => e.Name.Contains("game3"));
@@ -215,7 +215,7 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/rulespecs/bulk/export", request);
 
         // Then: Request is forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -239,7 +239,7 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/rulespecs/bulk/export", request);
 
         // Then: Request is unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -267,7 +267,7 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/rulespecs/bulk/export", request);
 
         // Then: Request is rejected as bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     /// <summary>
@@ -295,7 +295,7 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/rulespecs/bulk/export", request);
 
         // Then: Request returns internal server error
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
     }
 
 }

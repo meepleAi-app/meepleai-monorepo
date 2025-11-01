@@ -63,18 +63,18 @@ public class AuditServiceTests : IDisposable
 
         // Assert
         var logs = await _dbContext.AuditLogs.ToListAsync();
-        Assert.Single(logs);
+        logs.Should().ContainSingle();
         var log = logs[0];
         Assert.False(string.IsNullOrWhiteSpace(log.Id));
-        Assert.Equal(userId, log.UserId);
-        Assert.Equal(action, log.Action);
-        Assert.Equal(resource, log.Resource);
-        Assert.Equal(resourceId, log.ResourceId);
-        Assert.Equal("Success", log.Result);
-        Assert.Equal("Test details", log.Details);
+        log.UserId.Should().Be(userId);
+        log.Action.Should().Be(action);
+        log.Resource.Should().Be(resource);
+        log.ResourceId.Should().Be(resourceId);
+        log.Result.Should().Be("Success");
+        log.Details.Should().Be("Test details");
         log.IpAddress.Should().BeNull();
         log.UserAgent.Should().BeNull();
-        Assert.True(log.CreatedAt <= DateTime.UtcNow);
+        log.CreatedAt <= DateTime.UtcNow.Should().BeTrue();
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public class AuditServiceTests : IDisposable
 
         // Assert
         var log = await _dbContext.AuditLogs.FirstAsync();
-        Assert.True(log.CreatedAt >= before && log.CreatedAt <= after);
+        log.CreatedAt >= before && log.CreatedAt <= after.Should().BeTrue();
     }
 
     [Fact]
@@ -121,13 +121,13 @@ public class AuditServiceTests : IDisposable
 
         // Assert
         var logs = await _dbContext.AuditLogs.ToListAsync();
-        Assert.Single(logs);
-        Assert.Equal(userId, logs[0].UserId);
-        Assert.Equal("ACCESS_DENIED", logs[0].Action);
-        Assert.Equal(resource, logs[0].Resource);
-        Assert.Equal("Denied", logs[0].Result);
-        Assert.Contains(requiredScope, logs[0].Details);
-        Assert.Contains(userScope, logs[0].Details);
+        logs.Should().ContainSingle();
+        logs[0].UserId.Should().Be(userId);
+        logs[0].Action.Should().Be("ACCESS_DENIED");
+        logs[0].Resource.Should().Be(resource);
+        logs[0].Result.Should().Be("Denied");
+        logs[0].Details.Should().Contain(requiredScope);
+        logs[0].Details.Should().Contain(userScope);
     }
 
     [Fact]
@@ -150,8 +150,8 @@ public class AuditServiceTests : IDisposable
 
         // Assert
         var log = await _dbContext.AuditLogs.FirstAsync();
-        Assert.Equal(ipAddress, log.IpAddress);
-        Assert.Equal(userAgent, log.UserAgent);
+        log.IpAddress.Should().Be(ipAddress);
+        log.UserAgent.Should().Be(userAgent);
     }
 
     [Fact]
@@ -173,9 +173,9 @@ public class AuditServiceTests : IDisposable
 
         // Assert
         var log = await _dbContext.AuditLogs.FirstAsync();
-        Assert.Equal(ipAddress, log.IpAddress);
-        Assert.Equal(userAgent, log.UserAgent);
-        Assert.Equal("game-456", log.ResourceId);
+        log.IpAddress.Should().Be(ipAddress);
+        log.UserAgent.Should().Be(userAgent);
+        log.ResourceId.Should().Be("game-456");
     }
 
     [Fact]

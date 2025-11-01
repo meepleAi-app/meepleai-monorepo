@@ -210,9 +210,9 @@ public class RagServiceMultilingualTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Risposta italiana", result.answer);
-        Assert.Equal("it", capturedEmbeddingLanguage);
-        Assert.Equal("it", capturedSearchLanguage);
+        result.answer.Should().Be("Risposta italiana");
+        capturedEmbeddingLanguage.Should().Be("it");
+        capturedSearchLanguage.Should().Be("it");
     }
 
     /// <summary>
@@ -261,8 +261,8 @@ public class RagServiceMultilingualTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Answer", result.answer);
-        Assert.Equal(language, capturedLanguage);
+        result.answer.Should().Be("Answer");
+        capturedLanguage.Should().Be(language);
     }
 
     /// <summary>
@@ -306,8 +306,8 @@ public class RagServiceMultilingualTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("English answer", result.answer);
-        Assert.Equal("en", capturedLanguage);
+        result.answer.Should().Be("English answer");
+        capturedLanguage.Should().Be("en");
     }
 
     #endregion
@@ -355,10 +355,10 @@ public class RagServiceMultilingualTests : IDisposable
         await _service.AskAsync("chess", "knight move", language: "en");
 
         // Assert
-        Assert.Equal(2, capturedCacheKeys.Count);
-        Assert.Contains(":lang:it", capturedCacheKeys[0]);
-        Assert.Contains(":lang:en", capturedCacheKeys[1]);
-        Assert.NotEqual(capturedCacheKeys[0], capturedCacheKeys[1]);
+        capturedCacheKeys.Count.Should().Be(2);
+        capturedCacheKeys[0].Should().Contain(":lang:it");
+        capturedCacheKeys[1].Should().Contain(":lang:en");
+        capturedCacheKeys[1].Should().NotBe(capturedCacheKeys[0]);
     }
 
     /// <summary>
@@ -387,7 +387,7 @@ public class RagServiceMultilingualTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Risposta italiana dalla cache", result.answer);
+        result.answer.Should().Be("Risposta italiana dalla cache");
 
         // Verify services were NOT called
         _embeddingMock.Verify(
@@ -465,9 +465,9 @@ public class RagServiceMultilingualTests : IDisposable
         // Assert
         result.Should().NotBeNull();
         result.script.Should().NotBeEmpty();
-        Assert.Contains("Rochade", result.script);
-        Assert.Equal("de", capturedEmbeddingLanguage);
-        Assert.Equal("de", capturedSearchLanguage);
+        result.script.Should().Contain("Rochade");
+        capturedEmbeddingLanguage.Should().Be("de");
+        capturedSearchLanguage.Should().Be("de");
     }
 
     /// <summary>
@@ -512,8 +512,8 @@ public class RagServiceMultilingualTests : IDisposable
         // Assert
         result.Should().NotBeNull();
         result.script.Should().NotBeEmpty();
-        Assert.Contains("castling", result.script);
-        Assert.Equal("en", capturedLanguage);
+        result.script.Should().Contain("castling");
+        capturedLanguage.Should().Be("en");
     }
 
     #endregion
@@ -561,10 +561,10 @@ public class RagServiceMultilingualTests : IDisposable
         await _service.ExplainAsync("chess", "castling", language: "es");
 
         // Assert
-        Assert.Equal(2, capturedCacheKeys.Count);
-        Assert.Contains(":lang:fr", capturedCacheKeys[0]);
-        Assert.Contains(":lang:es", capturedCacheKeys[1]);
-        Assert.NotEqual(capturedCacheKeys[0], capturedCacheKeys[1]);
+        capturedCacheKeys.Count.Should().Be(2);
+        capturedCacheKeys[0].Should().Contain(":lang:fr");
+        capturedCacheKeys[1].Should().Contain(":lang:es");
+        capturedCacheKeys[1].Should().NotBe(capturedCacheKeys[0]);
     }
 
     /// <summary>
@@ -596,7 +596,7 @@ public class RagServiceMultilingualTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Explication française du cache", result.script);
+        result.script.Should().Be("Explication française du cache");
 
         // Verify services were NOT called
         _embeddingMock.Verify(
@@ -644,7 +644,7 @@ public class RagServiceMultilingualTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Unable to process query.", result.answer);
+        result.answer.Should().Be("Unable to process query.");
     }
 
     /// <summary>
@@ -680,7 +680,7 @@ public class RagServiceMultilingualTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Not specified", result.answer);
+        result.answer.Should().Be("Not specified");
     }
 
     #endregion

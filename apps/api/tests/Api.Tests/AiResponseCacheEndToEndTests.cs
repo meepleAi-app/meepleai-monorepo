@@ -57,7 +57,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var response1 = await client.SendAsync(request1);
 
         // Then: First request succeeds
-        Assert.Equal(HttpStatusCode.OK, response1.StatusCode);
+        response1.StatusCode.Should().Be(HttpStatusCode.OK);
         var qaResponse1 = await response1.Content.ReadFromJsonAsync<QaResponse>();
         qaResponse1.Should().NotBeNull();
 
@@ -69,12 +69,12 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var response2 = await client.SendAsync(request2);
 
         // Then: Second request returns same cached response
-        Assert.Equal(HttpStatusCode.OK, response2.StatusCode);
+        response2.StatusCode.Should().Be(HttpStatusCode.OK);
         var qaResponse2 = await response2.Content.ReadFromJsonAsync<QaResponse>();
         qaResponse2.Should().NotBeNull();
 
         // And: Responses are identical (cached)
-        Assert.Equal(qaResponse1.answer, qaResponse2.answer);
+        qaResponse2.answer.Should().Be(qaResponse1.answer);
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         // Then: Both users get the same cached response
         qaResponse1.Should().NotBeNull();
         qaResponse2.Should().NotBeNull();
-        Assert.Equal(qaResponse1.answer, qaResponse2.answer);
+        qaResponse2.answer.Should().Be(qaResponse1.answer);
     }
 
     [Fact]
@@ -151,7 +151,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
             else
             {
                 // Then: All variations return the same cached response
-                Assert.Equal(firstResponse.answer, qaResponse!.answer);
+                qaResponse!.answer.Should().Be(firstResponse.answer);
             }
         }
     }
@@ -191,8 +191,8 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         // Then: Both responses are identical (cached)
         explainResponse1.Should().NotBeNull();
         explainResponse2.Should().NotBeNull();
-        Assert.Equal(explainResponse1.script, explainResponse2.script);
-        Assert.Equal(explainResponse1.outline.mainTopic, explainResponse2.outline.mainTopic);
+        explainResponse2.script.Should().Be(explainResponse1.script);
+        explainResponse2.outline.mainTopic.Should().Be(explainResponse1.outline.mainTopic);
     }
 
     #endregion
@@ -230,14 +230,14 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         // Then: Both responses are identical (cached)
         setupResponse1.Should().NotBeNull();
         setupResponse2.Should().NotBeNull();
-        Assert.Equal(setupResponse1.gameTitle, setupResponse2.gameTitle);
-        Assert.Equal(setupResponse1.steps.Count, setupResponse2.steps.Count);
+        setupResponse2.gameTitle.Should().Be(setupResponse1.gameTitle);
+        setupResponse2.steps.Count.Should().Be(setupResponse1.steps.Count);
 
         // And: Step content is identical
         for (int i = 0; i < setupResponse1.steps.Count; i++)
         {
-            Assert.Equal(setupResponse1.steps[i].title, setupResponse2.steps[i].title);
-            Assert.Equal(setupResponse1.steps[i].instruction, setupResponse2.steps[i].instruction);
+            setupResponse2.steps[i].title.Should().Be(setupResponse1.steps[i].title);
+            setupResponse2.steps[i].instruction.Should().Be(setupResponse1.steps[i].instruction);
         }
     }
 
@@ -281,7 +281,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var response2 = await client.SendAsync(request2);
 
         // Then: Request succeeds (cache miss forces new response generation)
-        Assert.Equal(HttpStatusCode.OK, response2.StatusCode);
+        response2.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -321,7 +321,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         explainRequest2.Content = JsonContent.Create(new { gameId = game.Id, topic = "Test Topic" });
         var response = await client.SendAsync(explainRequest2);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     #endregion
@@ -401,14 +401,14 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
                 request.Content = JsonContent.Create(new { gameId = game.Id, query });
 
                 var response = await client.SendAsync(request);
-                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
 
                 requestsMade++;
             }
         }
 
         // Then: All requests completed successfully
-        Assert.Equal(totalRequests, requestsMade);
+        requestsMade.Should().Be(totalRequests);
 
         // And: Cache hit rate should be ~95% (95 hits out of 100)
         // First occurrence of each query: 5 misses
@@ -434,7 +434,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns 401 Unauthorized (caching doesn't bypass auth)
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     // Note: API needs game existence validation - currently returns 200 for nonexistent games
@@ -456,10 +456,10 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns appropriate error (likely 404 or 400)
-        Assert.True(
+        
             response.StatusCode == HttpStatusCode.NotFound ||
             response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 404 or 400, got {response.StatusCode}");
+            $"Expected 404 or 400, got {response.StatusCode}".Should().BeTrue();
     }
 
     // Note: API needs query validation - currently accepts empty queries
@@ -481,7 +481,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns validation error (400)
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     #endregion

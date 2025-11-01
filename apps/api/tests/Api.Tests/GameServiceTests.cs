@@ -45,11 +45,11 @@ public class GameServiceTests : IDisposable
 
         var game = await service.CreateGameAsync("  My Game  ", "My Game.ID  ");
 
-        Assert.Equal("my-game-id", game.Id);
-        Assert.Equal("My Game", game.Name);
+        game.Id.Should().Be("my-game-id");
+        game.Name.Should().Be("My Game");
 
         var stored = await dbContext.Games.FirstAsync();
-        Assert.Equal("my-game-id", stored.Id);
+        stored.Id.Should().Be("my-game-id");
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public class GameServiceTests : IDisposable
 
         var game = await service.CreateGameAsync("Timed Game", null);
 
-        Assert.Equal(fixedTime.UtcDateTime, game.CreatedAt);
+        game.CreatedAt.Should().Be(fixedTime.UtcDateTime);
     }
 
     [Fact]

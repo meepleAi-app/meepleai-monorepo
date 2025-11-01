@@ -169,8 +169,8 @@ public class PdfStorageServiceTests
 
             var result = await service.UploadPdfAsync("game-1", "user", null!, CancellationToken.None);
 
-            Assert.False(result.Success);
-            Assert.Contains("No file provided", result.Message);
+            result.Success.Should().BeFalse();
+            result.Message.Should().Contain("No file provided");
             backgroundMock.Verify(b => b.Execute(It.IsAny<Func<Task>>()), Times.Never);
         }
         finally
@@ -203,8 +203,8 @@ public class PdfStorageServiceTests
 
             var result = await service.UploadPdfAsync("game-1", "user", mockFile.Object, CancellationToken.None);
 
-            Assert.False(result.Success);
-            Assert.Contains("File is too large", result.Message);
+            result.Success.Should().BeFalse();
+            result.Message.Should().Contain("File is too large");
             backgroundMock.Verify(b => b.Execute(It.IsAny<Func<Task>>()), Times.Never);
         }
         finally
@@ -237,8 +237,8 @@ public class PdfStorageServiceTests
 
             var result = await service.UploadPdfAsync("game-1", "user", mockFile.Object, CancellationToken.None);
 
-            Assert.False(result.Success);
-            Assert.Contains("Invalid file type", result.Message);
+            result.Success.Should().BeFalse();
+            result.Message.Should().Contain("Invalid file type");
             backgroundMock.Verify(b => b.Execute(It.IsAny<Func<Task>>()), Times.Never);
         }
         finally
@@ -266,8 +266,8 @@ public class PdfStorageServiceTests
 
             var result = await service.UploadPdfAsync("unknown", "user", file, CancellationToken.None);
 
-            Assert.False(result.Success);
-            Assert.Contains("Game not found", result.Message);
+            result.Success.Should().BeFalse();
+            result.Message.Should().Contain("Game not found");
             backgroundMock.Verify(b => b.Execute(It.IsAny<Func<Task>>()), Times.Never);
         }
         finally
@@ -311,18 +311,18 @@ public class PdfStorageServiceTests
 
             var result = await service.UploadPdfAsync("game-1", "user", file, CancellationToken.None);
 
-            Assert.True(result.Success);
+            result.Success.Should().BeTrue();
             result.Document.Should().NotBeNull();
-            Assert.Equal("rules.pdf", result.Document!.FileName);
+            result.Document!.FileName.Should().Be("rules.pdf");
 
             var gameDirectory = Path.Combine(storagePath, "game-1");
             Assert.True(Directory.Exists(gameDirectory));
             Assert.Single(Directory.GetFiles(gameDirectory));
 
             var stored = await dbContext.PdfDocuments.FirstAsync();
-            Assert.Equal("game-1", stored.GameId);
-            Assert.Equal("application/pdf", stored.ContentType);
-            Assert.Equal("user", stored.UploadedByUserId);
+            stored.GameId.Should().Be("game-1");
+            stored.ContentType.Should().Be("application/pdf");
+            stored.UploadedByUserId.Should().Be("user");
 
             scheduledTask.Should().NotBeNull();
 
@@ -447,7 +447,7 @@ public class PdfStorageServiceTests
                 .Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((List<string> texts, CancellationToken _) =>
                 {
-                    Assert.Equal(chunkInputs.Select(c => c.Text), texts);
+                    texts.Should().Be(chunkInputs.Select(c => c.Text));
                     return EmbeddingResult.CreateSuccess(embeddings);
                 });
 
@@ -460,12 +460,12 @@ public class PdfStorageServiceTests
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync((string gameId, string pdfId, List<DocumentChunk> chunks, CancellationToken _) =>
                 {
-                    Assert.Equal("game-1", gameId);
-                    Assert.Equal(chunkInputs.Count, chunks.Count);
+                    gameId.Should().Be("game-1");
+                    chunks.Count.Should().Be(chunkInputs.Count);
                     for (var i = 0; i < chunks.Count; i++)
                     {
-                        Assert.Equal(chunkInputs[i].Text, chunks[i].Text);
-                        Assert.Equal(embeddings[i], chunks[i].Embedding);
+                        chunks[i].Text.Should().Be(chunkInputs[i].Text);
+                        chunks[i].Embedding.Should().Be(embeddings[i]);
                     }
 
                     return IndexResult.CreateSuccess(chunks.Count);
@@ -486,8 +486,8 @@ public class PdfStorageServiceTests
             var file = CreateFormFile("rules.pdf", "application/pdf", new byte[] { 1, 2, 3, 4 });
             var uploadResult = await service.UploadPdfAsync("game-1", "user", file, CancellationToken.None);
 
-            Assert.True(uploadResult.Success);
-            Assert.Single(scheduledTasks);
+            uploadResult.Success.Should().BeTrue();
+            scheduledTasks.Should().ContainSingle();
 
             var extractionTask = scheduledTasks.Single();
             await extractionTask();
@@ -497,7 +497,7 @@ public class PdfStorageServiceTests
                 Times.AtLeastOnce);
 
             var processedDoc = await dbContext.PdfDocuments.SingleAsync();
-            Assert.Equal("completed", processedDoc.ProcessingStatus);
+            processedDoc.ProcessingStatus.Should().Be("completed");
             processedDoc.ProcessedAt.Should().NotBeNull();
             qdrantMock.Verify(
                 q => q.IndexDocumentChunksAsync(

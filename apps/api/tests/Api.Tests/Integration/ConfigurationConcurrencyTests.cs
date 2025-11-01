@@ -84,8 +84,8 @@ public class ConfigurationConcurrencyTests : ConfigIntegrationTestBase
 
         config1.Should().NotBeNull();
         config2.Should().NotBeNull();
-        Assert.Equal("value1", config1.Value);
-        Assert.Equal("value2", config2.Value);
+        config1.Value.Should().Be("value1");
+        config2.Value.Should().Be("value2");
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public class ConfigurationConcurrencyTests : ConfigIntegrationTestBase
 
                 // Read config - should not throw or return corrupted data
                 var value = await configService.GetValueAsync<int>("Consistency:TestConfig");
-                Assert.True(value == null || value >= 100);
+                value == null || value >= 100.Should().BeTrue();
             });
         }
 
@@ -185,7 +185,7 @@ public class ConfigurationConcurrencyTests : ConfigIntegrationTestBase
         using var scope1 = Factory.Services.CreateScope();
         var configService1 = scope1.ServiceProvider.GetRequiredService<IConfigurationService>();
         var cachedValue = await configService1.GetValueAsync<string>("Cache:TestConfig");
-        Assert.Equal("cached-value", cachedValue);
+        cachedValue.Should().Be("cached-value");
 
         // Act: Update configuration (should invalidate cache)
         var getResponse = await GetAuthenticatedAsync(client, _adminCookies, "/api/v1/admin/configurations");
@@ -205,7 +205,7 @@ public class ConfigurationConcurrencyTests : ConfigIntegrationTestBase
         using var scope2 = Factory.Services.CreateScope();
         var configService2 = scope2.ServiceProvider.GetRequiredService<IConfigurationService>();
         var newValue = await configService2.GetValueAsync<string>("Cache:TestConfig");
-        Assert.Equal("new-value", newValue);
+        newValue.Should().Be("new-value");
     }
 
     [Fact]
@@ -234,6 +234,6 @@ public class ConfigurationConcurrencyTests : ConfigIntegrationTestBase
 
         // Assert: All instances get consistent value
         Assert.All(results, value => Assert.Equal(100, value));
-        Assert.Equal(5, results.Length);
+        results.Length.Should().Be(5);
     }
 }

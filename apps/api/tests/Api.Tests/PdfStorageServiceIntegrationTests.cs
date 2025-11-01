@@ -72,36 +72,36 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
             // Act - upload triggers background extraction
             var uploadResult = await service.UploadPdfAsync("game-1", "user-1", file, CancellationToken.None);
 
-            Assert.True(uploadResult.Success);
-            Assert.Equal(1, backgroundService.PendingTasks);
+            uploadResult.Success.Should().BeTrue();
+            backgroundService.PendingTasks.Should().Be(1);
 
             // Execute extraction task
             await backgroundService.ExecuteNextAsync();
 
-            Assert.Equal(1, backgroundService.ExecutedTasksCount);
-            Assert.Equal(0, backgroundService.PendingTasks);
+            backgroundService.ExecutedTasksCount.Should().Be(1);
+            backgroundService.PendingTasks.Should().Be(0);
 
             // Assert chunking, embedding and qdrant services resolved from scope were used
             var chunkingService = Assert.Single(scopeFactory.ChunkingServices.Where(c => c.PrepareForEmbeddingCallCount > 0 && c.ChunkTextCallCount > 0));
-            Assert.Equal("chunk-one\nchunk-two", chunkingService.LastText);
-            Assert.Equal("chunk-one\nchunk-two", chunkingService.LastChunkText);
-            Assert.Equal(1, chunkingService.PrepareForEmbeddingCallCount);
-            Assert.Equal(1, chunkingService.ChunkTextCallCount);
+            chunkingService.LastText.Should().Be("chunk-one\nchunk-two");
+            chunkingService.LastChunkText.Should().Be("chunk-one\nchunk-two");
+            chunkingService.PrepareForEmbeddingCallCount.Should().Be(1);
+            chunkingService.ChunkTextCallCount.Should().Be(1);
 
             var embeddingService = Assert.Single(scopeFactory.EmbeddingServices.Where(e => e.GenerateEmbeddingsCallCount > 0));
-            Assert.Equal(new[] { "chunk-one", "chunk-two" }, embeddingService.LastRequestedTexts);
+            "chunk-two" }, embeddingService.LastRequestedTexts.Should().Be(new[] { "chunk-one");
 
             var qdrantService = Assert.Single(scopeFactory.QdrantServices.Where(q => q.IndexCallCount > 0));
-            Assert.Equal("game-1", qdrantService.LastGameId);
-            Assert.Equal(uploadResult.Document!.Id, qdrantService.LastPdfId);
-            Assert.Equal(2, qdrantService.LastChunks!.Count);
+            qdrantService.LastGameId.Should().Be("game-1");
+            qdrantService.LastPdfId.Should().Be(uploadResult.Document!.Id);
+            qdrantService.LastChunks!.Count.Should().Be(2);
             Assert.All(qdrantService.LastChunks!, chunk => Assert.Equal(2, chunk.Embedding.Length));
 
             await using var verificationContext = CreateScopedDbContext();
             var vectorDoc = await verificationContext.VectorDocuments.SingleAsync();
-            Assert.Equal("completed", vectorDoc.IndexingStatus);
-            Assert.Equal(2, vectorDoc.ChunkCount);
-            Assert.Equal("chunk-one\nchunk-two".Length, vectorDoc.TotalCharacters);
+            vectorDoc.IndexingStatus.Should().Be("completed");
+            vectorDoc.ChunkCount.Should().Be(2);
+            vectorDoc.TotalCharacters.Should().Be("chunk-one\nchunk-two".Length);
         }
         finally
         {

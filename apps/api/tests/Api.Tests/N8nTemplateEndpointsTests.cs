@@ -35,7 +35,7 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         var response = await client.GetAsync("/api/v1/n8n/templates");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         var response = await client.GetAsync("/api/v1/n8n/templates");
 
         // Assert
-        Assert.True(response.IsSuccessStatusCode);
+        response.IsSuccessStatusCode.Should().BeTrue();
         var content = await response.Content.ReadAsStringAsync();
         var templates = JsonSerializer.Deserialize<List<WorkflowTemplateDto>>(
             content,
@@ -69,7 +69,7 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         var response = await client.GetAsync("/api/v1/n8n/templates?category=integration");
 
         // Assert
-        Assert.True(response.IsSuccessStatusCode);
+        response.IsSuccessStatusCode.Should().BeTrue();
         var content = await response.Content.ReadAsStringAsync();
         var templates = JsonSerializer.Deserialize<List<WorkflowTemplateDto>>(
             content,
@@ -90,14 +90,14 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         var response = await client.GetAsync($"/api/v1/n8n/templates/{templateId}");
 
         // Assert
-        Assert.True(response.IsSuccessStatusCode);
+        response.IsSuccessStatusCode.Should().BeTrue();
         var content = await response.Content.ReadAsStringAsync();
         var template = JsonSerializer.Deserialize<WorkflowTemplateDetailDto>(
             content,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
         template.Should().NotBeNull();
-        Assert.Equal(templateId, template!.Id);
+        template!.Id.Should().Be(templateId);
         template.Workflow.Should().NotBeNull();
     }
 
@@ -111,7 +111,7 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         var response = await client.GetAsync("/api/v1/n8n/templates/nonexistent-template");
 
         // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -127,7 +127,7 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         var response = await client.PostAsync("/api/v1/n8n/templates/test/import", content);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         var response = await client.PostAsync("/api/v1/n8n/templates/bgg-game-sync/import", httpContent);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var responseContent = await response.Content.ReadAsStringAsync();
         Assert.Contains("required", responseContent.ToLower());
     }
@@ -168,7 +168,7 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         var response = await client.PostAsync("/api/v1/n8n/templates/nonexistent/import", content);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var responseContent = await response.Content.ReadAsStringAsync();
         Assert.Contains("not found", responseContent.ToLower());
     }
@@ -186,7 +186,7 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         var response = await client.PostAsync("/api/v1/n8n/templates/validate", content);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         var response = await client.PostAsync("/api/v1/n8n/templates/validate", content);
 
         // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -233,14 +233,14 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         var response = await client.PostAsync("/api/v1/n8n/templates/validate", httpContent);
 
         // Assert
-        Assert.True(response.IsSuccessStatusCode);
+        response.IsSuccessStatusCode.Should().BeTrue();
         var responseContent = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<ValidateTemplateResponse>(
             responseContent,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
         result.Should().NotBeNull();
-        Assert.True(result!.Valid);
+        result!.Valid.Should().BeTrue();
     }
 
     #region Helper Methods

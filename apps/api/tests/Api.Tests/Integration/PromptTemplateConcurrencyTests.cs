@@ -130,7 +130,7 @@ public class PromptTemplateConcurrencyTests : ConfigIntegrationTestBase
 
         // Assert: At least one succeeds
         var successCount = results.Count(r => r.StatusCode == HttpStatusCode.OK);
-        Assert.True(successCount >= 1, "At least one activation should succeed");
+        successCount >= 1, "At least one activation should succeed".Should().BeTrue();
 
         // Verify exactly one version is active
         using var scope2 = Factory.Services.CreateScope();
@@ -139,7 +139,7 @@ public class PromptTemplateConcurrencyTests : ConfigIntegrationTestBase
             .Where(v => v.TemplateId == templateId && v.IsActive)
             .ToListAsync();
 
-        Assert.Single(activeVersions);
+        activeVersions.Should().ContainSingle();
         _output.WriteLine($"Active version: {activeVersions[0].VersionNumber}");
     }
 
@@ -236,7 +236,7 @@ public class PromptTemplateConcurrencyTests : ConfigIntegrationTestBase
         using var scope2 = Factory.Services.CreateScope();
         var db2 = scope2.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var version = await db2.PromptVersions.FindAsync(versionId);
-        Assert.True(version!.IsActive);
+        version!.IsActive.Should().BeTrue();
     }
 
     /// <summary>
@@ -318,7 +318,7 @@ public class PromptTemplateConcurrencyTests : ConfigIntegrationTestBase
                 .FirstOrDefaultAsync();
 
             cachedVersion.Should().NotBeNull();
-            Assert.Equal("Cached version", cachedVersion.Content);
+            cachedVersion.Content.Should().Be("Cached version");
         }
 
         // Act: Activate version 2 (should invalidate cache)
@@ -335,8 +335,8 @@ public class PromptTemplateConcurrencyTests : ConfigIntegrationTestBase
             .FirstOrDefaultAsync();
 
         newVersion.Should().NotBeNull();
-        Assert.Equal(2, newVersion.VersionNumber);
-        Assert.Equal("New version", newVersion.Content);
+        newVersion.VersionNumber.Should().Be(2);
+        newVersion.Content.Should().Be("New version");
     }
 
     /// <summary>
@@ -407,6 +407,6 @@ public class PromptTemplateConcurrencyTests : ConfigIntegrationTestBase
 
         // Assert: All instances get consistent value
         Assert.All(results, content => Assert.Equal("Distributed content", content));
-        Assert.Equal(5, results.Length);
+        results.Length.Should().Be(5);
     }
 }

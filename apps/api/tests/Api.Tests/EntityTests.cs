@@ -31,9 +31,9 @@ public class EntityTests
         game.RuleSpecs.Should().NotBeNull();
         game.Agents.Should().NotBeNull();
         game.Chats.Should().NotBeNull();
-        Assert.Equal("game-1", game.Id);
-        Assert.Equal("Test Game", game.Name);
-        Assert.True(game.CreatedAt <= DateTime.UtcNow);
+        game.Id.Should().Be("game-1");
+        game.Name.Should().Be("Test Game");
+        game.CreatedAt <= DateTime.UtcNow.Should().BeTrue();
     }
 
     [Fact]
@@ -45,10 +45,10 @@ public class EntityTests
             GameId = "game-1"
         };
 
-        Assert.NotEqual(Guid.Empty, chat.Id);
-        Assert.Equal("agent-1", chat.AgentId);
-        Assert.Equal("game-1", chat.GameId);
-        Assert.True(chat.StartedAt <= DateTime.UtcNow);
+        chat.Id.Should().NotBe(Guid.Empty);
+        chat.AgentId.Should().Be("agent-1");
+        chat.GameId.Should().Be("game-1");
+        chat.StartedAt <= DateTime.UtcNow.Should().BeTrue();
         chat.Logs.Should().NotBeNull();
         chat.Logs.Should().BeEmpty();
     }
@@ -66,8 +66,8 @@ public class EntityTests
             UploadedByUserId = "user-1"
         };
 
-        Assert.Equal("application/pdf", document.ContentType);
-        Assert.Equal("pending", document.ProcessingStatus);
+        document.ContentType.Should().Be("application/pdf");
+        document.ProcessingStatus.Should().Be("pending");
         document.ExtractedText.Should().BeNull();
         document.ExtractedTables.Should().BeNull();
         document.Metadata.Should().BeNull();
@@ -87,13 +87,13 @@ public class EntityTests
         };
 
         Assert.False(string.IsNullOrWhiteSpace(log.Id));
-        Assert.Equal("user-1", log.UserId);
-        Assert.Equal("Test", log.Action);
-        Assert.Equal("Game", log.Resource);
-        Assert.Equal("game-1", log.ResourceId);
-        Assert.Equal("Success", log.Result);
-        Assert.Equal("Performed action", log.Details);
-        Assert.True(log.CreatedAt <= DateTime.UtcNow);
+        log.UserId.Should().Be("user-1");
+        log.Action.Should().Be("Test");
+        log.Resource.Should().Be("Game");
+        log.ResourceId.Should().Be("game-1");
+        log.Result.Should().Be("Success");
+        log.Details.Should().Be("Performed action");
+        log.CreatedAt <= DateTime.UtcNow.Should().BeTrue();
         log.IpAddress.Should().BeNull();
         log.UserAgent.Should().BeNull();
     }

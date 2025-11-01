@@ -215,8 +215,8 @@ public class N8nTemplateServiceTests : IDisposable
         var parameters = new Dictionary<string, string>();
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.ImportTemplateAsync("nonexistent", parameters, "user123"));
+        var act = async () => _service.ImportTemplateAsync("nonexistent", parameters, "user123");
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -235,8 +235,8 @@ public class N8nTemplateServiceTests : IDisposable
         };
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.ImportTemplateAsync("test", parameters, "user123"));
+        var ex = var act = async () => _service.ImportTemplateAsync("test", parameters, "user123");
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         ex.Message.Should().Contain("param1");
     }
@@ -249,8 +249,8 @@ public class N8nTemplateServiceTests : IDisposable
         var parameters = new Dictionary<string, string>();
 
         // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.ImportTemplateAsync("test", parameters, "user123"));
+        var ex = var act = async () => _service.ImportTemplateAsync("test", parameters, "user123");
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         ex.Message.Should().Contain("No active n8n configuration");
     }
@@ -382,8 +382,8 @@ public class N8nTemplateServiceTests : IDisposable
             .Returns(httpClient);
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.ImportTemplateAsync("test", new Dictionary<string, string>(), "user123"));
+        var act = async () => _service.ImportTemplateAsync("test", new Dictionary<string, string>(), "user123");
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     #endregion

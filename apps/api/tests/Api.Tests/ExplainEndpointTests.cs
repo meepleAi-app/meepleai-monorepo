@@ -171,7 +171,7 @@ public class ExplainEndpointTests : IntegrationTestBase
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         result.TryGetProperty("script", out var script).Should().BeTrue();
-        Assert.Contains("Please provide a topic", script.GetString(), StringComparison.OrdinalIgnoreCase);
+        script.GetString().Should().Contain("Please provide a topic");
     }
 
     /// <summary>
@@ -213,7 +213,7 @@ public class ExplainEndpointTests : IntegrationTestBase
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         result.TryGetProperty("script", out var script).Should().BeTrue();
-        Assert.Contains("No relevant information found", script.GetString(), StringComparison.OrdinalIgnoreCase);
+        script.GetString().Should().Contain("No relevant information found");
     }
 
     /// <summary>
@@ -249,7 +249,7 @@ public class ExplainEndpointTests : IntegrationTestBase
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         result.TryGetProperty("error", out var error).Should().BeTrue();
-        Assert.Contains("gameId is required", error.GetString(), StringComparison.OrdinalIgnoreCase);
+        error.GetString().Should().Contain("gameId is required");
     }
 
     /// <summary>

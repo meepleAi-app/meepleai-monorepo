@@ -286,7 +286,7 @@ public class PdfTableExtractionRealWorldTests
             }
 
             // Rules should not be empty strings
-            Assert.All(result.AtomicRules, rule => Assert.False(string.IsNullOrWhiteSpace(rule)));
+            result.AtomicRules.Should().OnlyContain(rule => !string.IsNullOrWhiteSpace(rule));
 
             _output.WriteLine($"\n  Total atomic rules generated: {result.AtomicRuleCount}");
             _output.WriteLine($"  ✓ All rules are well-formatted with page references and key-value pairs");

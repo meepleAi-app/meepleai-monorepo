@@ -185,10 +185,11 @@ public class N8nConfigServiceTests : IDisposable
             new CreateN8nConfigRequest("Second", "https://two.com", "key2", null),
             CancellationToken.None);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.UpdateConfigAsync(
+        var act = async () => service.UpdateConfigAsync(
             first.Id,
             new UpdateN8nConfigRequest("Second", null, null, null, null),
-            CancellationToken.None));
+            CancellationToken.None);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]

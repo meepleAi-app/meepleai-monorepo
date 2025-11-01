@@ -84,19 +84,19 @@ public class RuleSpecCommentServiceTests : IDisposable
             "This is a test comment");
 
         // Assert
-        Assert.NotEqual(Guid.Empty, result.Id);
-        Assert.Equal(game.Id, result.GameId);
-        Assert.Equal("v1", result.Version);
-        Assert.Equal("atom-1", result.AtomId);
-        Assert.Equal(user.Id, result.UserId);
-        Assert.Equal("User One", result.UserDisplayName);
-        Assert.Equal("This is a test comment", result.CommentText);
-        Assert.True(result.CreatedAt <= DateTime.UtcNow);
+        result.Id.Should().NotBe(Guid.Empty);
+        result.GameId.Should().Be(game.Id);
+        result.Version.Should().Be("v1");
+        result.AtomId.Should().Be("atom-1");
+        result.UserId.Should().Be(user.Id);
+        result.UserDisplayName.Should().Be("User One");
+        result.CommentText.Should().Be("This is a test comment");
+        result.CreatedAt <= DateTime.UtcNow.Should().BeTrue();
         result.UpdatedAt.Should().BeNull();
 
         var savedComment = await _dbContext.RuleSpecComments.FirstAsync();
-        Assert.Equal(result.Id, savedComment.Id);
-        Assert.Equal("This is a test comment", savedComment.CommentText);
+        savedComment.Id.Should().Be(result.Id);
+        savedComment.CommentText.Should().Be("This is a test comment");
     }
 
     [Fact]
@@ -142,7 +142,7 @@ public class RuleSpecCommentServiceTests : IDisposable
 
         // Assert
         result.AtomId.Should().BeNull();
-        Assert.Equal("Version-level comment", result.CommentText);
+        result.CommentText.Should().Be("Version-level comment");
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public class RuleSpecCommentServiceTests : IDisposable
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.AddCommentAsync(game.Id, "v99", null, user.Id, "Comment"));
 
-        Assert.Contains("RuleSpec version v99 not found", ex.Message);
+        ex.Message.Should().Contain("RuleSpec version v99 not found");
     }
 
     [Fact]
@@ -203,7 +203,7 @@ public class RuleSpecCommentServiceTests : IDisposable
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.AddCommentAsync(game.Id, "v1", null, "missing-user", "Comment"));
 
-        Assert.Contains("User missing-user not found", ex.Message);
+        ex.Message.Should().Contain("User missing-user not found");
     }
 
     [Fact]
@@ -248,7 +248,7 @@ public class RuleSpecCommentServiceTests : IDisposable
             "Comment");
 
         // Assert
-        Assert.Equal("user1@example.com", result.UserDisplayName);
+        result.UserDisplayName.Should().Be("user1@example.com");
     }
 
     [Fact]
@@ -331,28 +331,28 @@ public class RuleSpecCommentServiceTests : IDisposable
         var result = await _service.GetCommentsForVersionAsync(game.Id, "v1");
 
         // Assert
-        Assert.Equal(game.Id, result.GameId);
-        Assert.Equal("v1", result.Version);
-        Assert.Equal(3, result.TotalComments);
+        result.GameId.Should().Be(game.Id);
+        result.Version.Should().Be("v1");
+        result.TotalComments.Should().Be(3);
         Assert.Collection(
             result.Comments,
             c =>
             {
-                Assert.Equal("First comment", c.CommentText);
-                Assert.Equal("User One", c.UserDisplayName);
-                Assert.Equal("atom-1", c.AtomId);
+                c.CommentText.Should().Be("First comment");
+                c.UserDisplayName.Should().Be("User One");
+                c.AtomId.Should().Be("atom-1");
             },
             c =>
             {
-                Assert.Equal("Second comment", c.CommentText);
-                Assert.Equal("User Two", c.UserDisplayName);
+                c.CommentText.Should().Be("Second comment");
+                c.UserDisplayName.Should().Be("User Two");
                 c.AtomId.Should().BeNull();
             },
             c =>
             {
-                Assert.Equal("Third comment", c.CommentText);
-                Assert.Equal("User One", c.UserDisplayName);
-                Assert.Equal("atom-1", c.AtomId);
+                c.CommentText.Should().Be("Third comment");
+                c.UserDisplayName.Should().Be("User One");
+                c.AtomId.Should().Be("atom-1");
             });
     }
 
@@ -382,10 +382,10 @@ public class RuleSpecCommentServiceTests : IDisposable
         var result = await _service.GetCommentsForVersionAsync(game.Id, "v1");
 
         // Assert
-        Assert.Equal(game.Id, result.GameId);
-        Assert.Equal("v1", result.Version);
+        result.GameId.Should().Be(game.Id);
+        result.Version.Should().Be("v1");
         result.Comments.Should().BeEmpty();
-        Assert.Equal(0, result.TotalComments);
+        result.TotalComments.Should().Be(0);
     }
 
     [Fact]
@@ -441,15 +441,15 @@ public class RuleSpecCommentServiceTests : IDisposable
             "Updated text");
 
         // Assert
-        Assert.Equal(comment.Id, result.Id);
-        Assert.Equal("Updated text", result.CommentText);
-        Assert.Equal(originalCreatedAt, result.CreatedAt);
-        Assert.NotNull(result.UpdatedAt);
-        Assert.True(result.UpdatedAt <= DateTime.UtcNow);
+        result.Id.Should().Be(comment.Id);
+        result.CommentText.Should().Be("Updated text");
+        result.CreatedAt.Should().Be(originalCreatedAt);
+        result.UpdatedAt.Should().NotBeNull();
+        result.UpdatedAt <= DateTime.UtcNow.Should().BeTrue();
 
         var savedComment = await _dbContext.RuleSpecComments.FirstAsync();
-        Assert.Equal("Updated text", savedComment.CommentText);
-        Assert.NotNull(savedComment.UpdatedAt);
+        savedComment.CommentText.Should().Be("Updated text");
+        savedComment.UpdatedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -462,7 +462,7 @@ public class RuleSpecCommentServiceTests : IDisposable
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.UpdateCommentAsync(missingId, "user-1", "New text"));
 
-        Assert.Contains($"Comment {missingId} not found", ex.Message);
+        ex.Message.Should().Contain($"Comment {missingId} not found");
     }
 
     [Fact]
@@ -523,7 +523,7 @@ public class RuleSpecCommentServiceTests : IDisposable
         var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(
             () => _service.UpdateCommentAsync(comment.Id, otherUser.Id, "Hijacked text"));
 
-        Assert.Contains($"User {otherUser.Id} is not authorized", ex.Message);
+        ex.Message.Should().Contain($"User {otherUser.Id} is not authorized");
     }
 
     [Fact]
@@ -574,7 +574,7 @@ public class RuleSpecCommentServiceTests : IDisposable
         var result = await _service.DeleteCommentAsync(comment.Id, user.Id, isAdmin: false);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         _dbContext.RuleSpecComments.Should().BeEmpty();
     }
 
@@ -636,7 +636,7 @@ public class RuleSpecCommentServiceTests : IDisposable
         var result = await _service.DeleteCommentAsync(comment.Id, admin.Id, isAdmin: true);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         _dbContext.RuleSpecComments.Should().BeEmpty();
     }
 
@@ -698,7 +698,7 @@ public class RuleSpecCommentServiceTests : IDisposable
         var ex = await Assert.ThrowsAsync<UnauthorizedAccessException>(
             () => _service.DeleteCommentAsync(comment.Id, otherUser.Id, isAdmin: false));
 
-        Assert.Contains($"User {otherUser.Id} is not authorized", ex.Message);
+        ex.Message.Should().Contain($"User {otherUser.Id} is not authorized");
     }
 
     [Fact]
@@ -711,6 +711,6 @@ public class RuleSpecCommentServiceTests : IDisposable
         var result = await _service.DeleteCommentAsync(missingId, "user-1", isAdmin: false);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 }

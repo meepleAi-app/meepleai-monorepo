@@ -48,8 +48,8 @@ public class SessionCacheServiceTests
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal(user.Id, result!.User.Id);
-        Assert.Equal(user.Email, result.User.Email);
+        result!.User.Id.Should().Be(user.Id);
+        result.User.Email.Should().Be(user.Email);
         Assert.Equal(expiresAt.ToString("O"), result.ExpiresAt.ToString("O"));
     }
 
@@ -128,7 +128,7 @@ public class SessionCacheServiceTests
         capturedTtl.Should().NotBeNull();
         // TTL should be close to 7 days (within 1 second tolerance)
         var expectedTtl = expiresAt - DateTime.UtcNow;
-        Assert.InRange(capturedTtl!.Value.TotalSeconds, expectedTtl.TotalSeconds - 1, expectedTtl.TotalSeconds + 1);
+        capturedTtl!.Value.TotalSeconds.Should().BeInRange(expectedTtl.TotalSeconds - 1, expectedTtl.TotalSeconds + 1);
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public class SessionCacheServiceTests
         await service.InvalidateAsync(tokenHash);
 
         // Assert
-        Assert.True(deleteCalled);
+        deleteCalled.Should().BeTrue();
     }
 
     [Fact]

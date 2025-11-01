@@ -77,7 +77,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200 with stats
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("totalHits", out var hits));
@@ -125,7 +125,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200 with game1 stats only
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("totalHits", out var hits));
@@ -155,7 +155,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 403 Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -174,7 +174,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         var response = await client.GetAsync("/api/v1/admin/cache/stats");
 
         // Then: HTTP 401 Unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     #endregion
@@ -224,7 +224,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("message", out _));
@@ -263,7 +263,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200 (idempotent)
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     /// <summary>
@@ -288,7 +288,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 403 Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     #endregion
@@ -333,7 +333,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: Cache with that tag is invalidated
         using (var newScope = Factory.Services.CreateScope())
@@ -369,7 +369,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200 (even if no entries exist)
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     /// <summary>
@@ -394,7 +394,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: HTTP 403 Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -414,7 +414,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         var response = await client.DeleteAsync($"/api/v1/admin/cache/tags/{Uri.EscapeDataString(tag)}");
 
         // Then: HTTP 401 Unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     #endregion
@@ -473,8 +473,8 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         var missesAfter = stats2.GetProperty("totalMisses").GetInt64();
 
         // Stats should remain the same (history preserved)
-        Assert.Equal(hitsBefore, hitsAfter);
-        Assert.Equal(missesBefore, missesAfter);
+        hitsAfter.Should().Be(hitsBefore);
+        missesAfter.Should().Be(missesBefore);
     }
 
     /// <summary>

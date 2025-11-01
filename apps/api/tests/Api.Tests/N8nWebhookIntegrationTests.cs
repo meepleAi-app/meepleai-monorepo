@@ -72,7 +72,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: HTTP 200 with explanation
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
 
@@ -112,7 +112,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/agents/explain", request);
 
         // Then: HTTP 401
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -144,7 +144,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: HTTP 400
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("error", out var error));
@@ -186,7 +186,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: HTTP 200 with no results message
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("script", out var script));
@@ -226,7 +226,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Response has all required fields for standardized payload
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
 
@@ -279,7 +279,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         var createResponse = await client.SendAsync(httpRequest);
 
         // Then: Configuration is created
-        Assert.Equal(HttpStatusCode.OK, createResponse.StatusCode);
+        createResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var config = await createResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(config.TryGetProperty("id", out var configId));
@@ -291,7 +291,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         AddCookies(getRequest, cookies);
 
         var getResponse = await client.SendAsync(getRequest);
-        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var retrievedConfig = await getResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(retrievedConfig.TryGetProperty("webhookUrl", out var webhookUrl));

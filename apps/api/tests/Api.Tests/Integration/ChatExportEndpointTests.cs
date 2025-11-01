@@ -55,7 +55,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
         var response = await client.GetAsync($"/api/v1/chats/{chatId}/export?format=pdf");
 
         // Then: 401 Unauthorized is returned
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -108,7 +108,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: 404 Not Found is returned (not 403 for security)
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     /// <summary>
@@ -172,22 +172,22 @@ public class ChatExportEndpointTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: 200 OK is returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: Content-Type is "application/pdf"
-        Assert.Equal("application/pdf", response.Content.Headers.ContentType?.MediaType);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("application/pdf");
 
         // And: Content-Disposition header includes filename
         response.Content.Headers.ContentDisposition.Should().NotBeNull();
-        Assert.Equal("attachment", response.Content.Headers.ContentDisposition.DispositionType);
-        Assert.Contains(".pdf", response.Content.Headers.ContentDisposition.FileName);
-        Assert.Contains("chat-", response.Content.Headers.ContentDisposition.FileName);
+        response.Content.Headers.ContentDisposition.DispositionType.Should().Be("attachment");
+        response.Content.Headers.ContentDisposition.FileName.Should().Contain(".pdf");
+        response.Content.Headers.ContentDisposition.FileName.Should().Contain("chat-");
 
         // And: Response body contains PDF data
         var bytes = await response.Content.ReadAsByteArrayAsync();
-        Assert.True(bytes.Length > 0);
+        bytes.Length > 0.Should().BeTrue();
         var magicBytes = System.Text.Encoding.ASCII.GetString(bytes.Take(5).ToArray());
-        Assert.Equal("%PDF-", magicBytes);
+        magicBytes.Should().Be("%PDF-");
     }
 
     /// <summary>
@@ -251,18 +251,18 @@ public class ChatExportEndpointTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: 200 OK is returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: Content-Type is "text/plain"
-        Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("text/plain");
 
         // And: Content-Disposition includes .txt filename
         response.Content.Headers.ContentDisposition.Should().NotBeNull();
-        Assert.Contains(".txt", response.Content.Headers.ContentDisposition.FileName);
+        response.Content.Headers.ContentDisposition.FileName.Should().Contain(".txt");
 
         // And: Response body contains readable text
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Test message for TXT export", content);
+        content.Should().Contain("Test message for TXT export");
     }
 
     /// <summary>
@@ -326,19 +326,19 @@ public class ChatExportEndpointTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: 200 OK is returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: Content-Type is "text/markdown"
-        Assert.Equal("text/markdown", response.Content.Headers.ContentType?.MediaType);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("text/markdown");
 
         // And: Content-Disposition includes .md filename
         response.Content.Headers.ContentDisposition.Should().NotBeNull();
-        Assert.Contains(".md", response.Content.Headers.ContentDisposition.FileName);
+        response.Content.Headers.ContentDisposition.FileName.Should().Contain(".md");
 
         // And: Response body contains Markdown syntax
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("##", content); // Markdown heading
-        Assert.Contains("Test message for MD export", content);
+        content.Should().Contain("##"); // Markdown heading
+        content.Should().Contain("Test message for MD export");
     }
 
     /// <summary>
@@ -389,7 +389,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: 400 Bad Request is returned
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         // And: Error message mentions supported formats
         var content = await response.Content.ReadAsStringAsync();
@@ -473,12 +473,12 @@ public class ChatExportEndpointTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: 200 OK is returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: Only recent message is included
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Recent message in range", content);
-        Assert.DoesNotContain("Old message outside range", content);
+        content.Should().Contain("Recent message in range");
+        content.Should().NotContain("Old message outside range");
 
         // And: Filename includes date range
         var filename = response.Content.Headers.ContentDisposition?.FileName;
@@ -508,7 +508,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: 404 Not Found is returned
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     /// <summary>
@@ -566,15 +566,15 @@ public class ChatExportEndpointTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Filename is sanitized
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var filename = response.Content.Headers.ContentDisposition?.FileName;
         filename.Should().NotBeNull();
 
         // And: No path separators in filename
-        Assert.DoesNotContain("..", filename);
-        Assert.DoesNotContain("/", filename);
-        Assert.DoesNotContain("\\", filename);
+        filename.Should().NotContain("..");
+        filename.Should().NotContain("/");
+        filename.Should().NotContain("\\");
     }
 
     /// <summary>
@@ -643,9 +643,9 @@ public class ChatExportEndpointTests : IntegrationTestBase
         foreach (var response in responses)
         {
             var bytes = await response.Content.ReadAsByteArrayAsync();
-            Assert.True(bytes.Length > 0);
+            bytes.Length > 0.Should().BeTrue();
             var magicBytes = System.Text.Encoding.ASCII.GetString(bytes.Take(5).ToArray());
-            Assert.Equal("%PDF-", magicBytes);
+            magicBytes.Should().Be("%PDF-");
         }
     }
 }

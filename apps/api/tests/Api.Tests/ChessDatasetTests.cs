@@ -29,9 +29,9 @@ public class ChessDatasetTests
 
         // Then: It should contain complete FIDE rules
         ruleSpec.Should().NotBeNull();
-        Assert.Equal("chess", ruleSpec.gameId);
+        ruleSpec.gameId.Should().Be("chess");
         ruleSpec.metadata.Should().NotBeNull();
-        Assert.Equal("Chess", ruleSpec.metadata.name);
+        ruleSpec.metadata.name.Should().Be("Chess");
     }
 
     [Fact]
@@ -42,19 +42,19 @@ public class ChessDatasetTests
 
         // Then: It should have exactly 13 actions including all piece movements
         ruleSpec.actions.Should().NotBeNull();
-        Assert.True(ruleSpec.actions.Count >= 13, $"Expected at least 13 actions, found {ruleSpec.actions.Count}");
+        ruleSpec.actions.Count >= 13, $"Expected at least 13 actions, found {ruleSpec.actions.Count}".Should().BeTrue();
 
         var actionIds = ruleSpec.actions.Select(a => a.id).ToList();
-        Assert.Contains("move-king", actionIds);
-        Assert.Contains("move-queen", actionIds);
-        Assert.Contains("move-rook", actionIds);
-        Assert.Contains("move-bishop", actionIds);
-        Assert.Contains("move-knight", actionIds);
-        Assert.Contains("move-pawn", actionIds);
-        Assert.Contains("castle-kingside", actionIds);
-        Assert.Contains("castle-queenside", actionIds);
-        Assert.Contains("en-passant", actionIds);
-        Assert.Contains("promote-pawn", actionIds);
+        actionIds.Should().Contain("move-king");
+        actionIds.Should().Contain("move-queen");
+        actionIds.Should().Contain("move-rook");
+        actionIds.Should().Contain("move-bishop");
+        actionIds.Should().Contain("move-knight");
+        actionIds.Should().Contain("move-pawn");
+        actionIds.Should().Contain("castle-kingside");
+        actionIds.Should().Contain("castle-queenside");
+        actionIds.Should().Contain("en-passant");
+        actionIds.Should().Contain("promote-pawn");
     }
 
     [Fact]
@@ -65,12 +65,12 @@ public class ChessDatasetTests
 
         // Then: It should have 3 phases: opening, middlegame, endgame
         ruleSpec.phases.Should().NotBeNull();
-        Assert.Equal(3, ruleSpec.phases.Count);
+        ruleSpec.phases.Count.Should().Be(3);
 
         var phaseIds = ruleSpec.phases.Select(p => p.id).ToList();
-        Assert.Contains("opening", phaseIds);
-        Assert.Contains("middlegame", phaseIds);
-        Assert.Contains("endgame", phaseIds);
+        phaseIds.Should().Contain("opening");
+        phaseIds.Should().Contain("middlegame");
+        phaseIds.Should().Contain("endgame");
     }
 
     #endregion
@@ -94,8 +94,8 @@ public class ChessDatasetTests
 
         // Then: It should contain at least 20 openings (acceptance criteria)
         openings.Should().NotBeNull();
-        Assert.True(openings.Count >= 20,
-            $"Expected at least 20 openings, found {openings.Count}. Add more openings to meet acceptance criteria.");
+        openings.Count >= 20,
+            $"Expected at least 20 openings, found {openings.Count}. Add more openings to meet acceptance criteria.".Should().BeTrue();
     }
 
     [Fact]
@@ -173,11 +173,11 @@ public class ChessDatasetTests
 
         // Then: It should have the correct move sequence
         italianGame.Should().NotBeNull();
-        Assert.Contains("e4", italianGame.pgn);
-        Assert.Contains("e5", italianGame.pgn);
-        Assert.Contains("Nf3", italianGame.pgn);
-        Assert.Contains("Nc6", italianGame.pgn);
-        Assert.Contains("Bc4", italianGame.pgn);
+        italianGame.pgn.Should().Contain("e4");
+        italianGame.pgn.Should().Contain("e5");
+        italianGame.pgn.Should().Contain("Nf3");
+        italianGame.pgn.Should().Contain("Nc6");
+        italianGame.pgn.Should().Contain("Bc4");
     }
 
     [Fact]
@@ -192,8 +192,8 @@ public class ChessDatasetTests
 
         // Then: It should exist and have correct first moves
         sicilian.Should().NotBeNull();
-        Assert.Contains("e4", sicilian.pgn);
-        Assert.Contains("c5", sicilian.pgn);
+        sicilian.pgn.Should().Contain("e4");
+        sicilian.pgn.Should().Contain("c5");
     }
 
     #endregion
@@ -217,8 +217,8 @@ public class ChessDatasetTests
 
         // Then: It should contain at least 15 tactics (acceptance criteria)
         tactics.Should().NotBeNull();
-        Assert.True(tactics.Count >= 15,
-            $"Expected at least 15 tactics, found {tactics.Count}. Add more tactics to meet acceptance criteria.");
+        tactics.Count >= 15,
+            $"Expected at least 15 tactics, found {tactics.Count}. Add more tactics to meet acceptance criteria.".Should().BeTrue();
     }
 
     [Fact]
@@ -299,8 +299,8 @@ public class ChessDatasetTests
 
         // Then: It should have at least 2 examples
         fork.Should().NotBeNull();
-        Assert.True(fork.examples.Count >= 2,
-            $"Fork tactic should have at least 2 examples, found {fork.examples.Count}");
+        fork.examples.Count >= 2,
+            $"Fork tactic should have at least 2 examples, found {fork.examples.Count}".Should().BeTrue();
     }
 
     #endregion

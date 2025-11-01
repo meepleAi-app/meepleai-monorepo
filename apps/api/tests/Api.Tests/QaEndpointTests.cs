@@ -161,17 +161,17 @@ CRITICAL INSTRUCTIONS:
 
         var spec = await ruleService.GetOrCreateDemoAsync(gameId);
 
-        Assert.Equal(gameId, spec.gameId);
-        Assert.Equal(2, spec.rules.Count);
+        spec.gameId.Should().Be(gameId);
+        spec.rules.Count.Should().Be(2);
 
         var response = await ragService.AskAsync(gameId, "How many players?");
 
-        Assert.Equal("Two players.", response.answer);
-        Assert.Single(response.snippets);
-        Assert.Equal("Two players.", response.snippets[0].text);
-        Assert.Equal("PDF:pdf-demo-chess", response.snippets[0].source);
-        Assert.Equal(6, response.promptTokens);
-        Assert.Equal(4, response.completionTokens);
-        Assert.Equal(10, response.totalTokens);
+        response.answer.Should().Be("Two players.");
+        response.snippets.Should().ContainSingle();
+        response.snippets[0].text.Should().Be("Two players.");
+        response.snippets[0].source.Should().Be("PDF:pdf-demo-chess");
+        response.promptTokens.Should().Be(6);
+        response.completionTokens.Should().Be(4);
+        response.totalTokens.Should().Be(10);
     }
 }

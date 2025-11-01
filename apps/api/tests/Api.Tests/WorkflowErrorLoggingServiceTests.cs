@@ -74,11 +74,11 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
         // Assert
         var logged = await _dbContext.WorkflowErrorLogs.FirstOrDefaultAsync();
         logged.Should().NotBeNull();
-        Assert.Equal("test-workflow", logged.WorkflowId);
-        Assert.Equal("exec-123", logged.ExecutionId);
-        Assert.Equal("Test error message", logged.ErrorMessage);
-        Assert.Equal("HTTP Request", logged.NodeName);
-        Assert.Equal(1, logged.RetryCount);
+        logged.WorkflowId.Should().Be("test-workflow");
+        logged.ExecutionId.Should().Be("exec-123");
+        logged.ErrorMessage.Should().Be("Test error message");
+        logged.NodeName.Should().Be("HTTP Request");
+        logged.RetryCount.Should().Be(1);
     }
 
     [Fact]
@@ -100,10 +100,10 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
         // Assert
         var logged = await _dbContext.WorkflowErrorLogs.FirstOrDefaultAsync();
         logged.Should().NotBeNull();
-        Assert.Contains("***REDACTED***", logged.ErrorMessage);
-        Assert.DoesNotContain("sk-1234567890abcdef", logged.ErrorMessage);
-        Assert.DoesNotContain("bearer-xyz", logged.ErrorMessage);
-        Assert.DoesNotContain("secret123", logged.ErrorMessage);
+        logged.ErrorMessage.Should().Contain("***REDACTED***");
+        logged.ErrorMessage.Should().NotContain("sk-1234567890abcdef");
+        logged.ErrorMessage.Should().NotContain("bearer-xyz");
+        logged.ErrorMessage.Should().NotContain("secret123");
     }
 
     [Fact]
@@ -125,7 +125,7 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
         // Assert
         var logged = await _dbContext.WorkflowErrorLogs.FirstOrDefaultAsync();
         logged.Should().NotBeNull();
-        Assert.True(logged.ErrorMessage.Length <= 5000 + 20); // +20 for "... [truncated]"
+        logged.ErrorMessage.Length <= 5000 + 20.Should().BeTrue(); // +20 for "... [truncated]"
         Assert.EndsWith("... [truncated]", logged.ErrorMessage);
     }
 
@@ -148,7 +148,7 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
         // Assert
         var logged = await _dbContext.WorkflowErrorLogs.FirstOrDefaultAsync();
         logged.Should().NotBeNull();
-        Assert.Contains("at SomeFunction()", logged.StackTrace);
+        logged.StackTrace.Should().Contain("at SomeFunction()");
     }
 
     [Fact]
@@ -181,8 +181,8 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
         var result = await service.GetErrorsAsync(queryParams);
 
         // Assert
-        Assert.Equal(5, result.Total);
-        Assert.Equal(5, result.Items.Count);
+        result.Total.Should().Be(5);
+        result.Items.Count.Should().Be(5);
     }
 
     [Fact]
@@ -200,7 +200,7 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
         var result = await service.GetErrorsAsync(queryParams);
 
         // Assert
-        Assert.Equal(2, result.Total);
+        result.Total.Should().Be(2);
         Assert.All(result.Items, item => Assert.Equal("workflow-A", item.WorkflowId));
     }
 
@@ -225,7 +225,7 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
         var result = await service.GetErrorsAsync(queryParams);
 
         // Assert
-        Assert.Equal(2, result.Total); // Only last 2 errors
+        result.Total.Should().Be(2); // Only last 2 errors
     }
 
     [Fact]
@@ -241,10 +241,10 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
         var result = await service.GetErrorsAsync(queryParams);
 
         // Assert
-        Assert.Equal(25, result.Total);
-        Assert.Equal(10, result.Items.Count);
-        Assert.Equal(1, result.Page);
-        Assert.Equal(10, result.PageSize);
+        result.Total.Should().Be(25);
+        result.Items.Count.Should().Be(10);
+        result.Page.Should().Be(1);
+        result.PageSize.Should().Be(10);
     }
 
     [Fact]
@@ -265,9 +265,9 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
         var result = await service.GetErrorsAsync(queryParams);
 
         // Assert
-        Assert.Equal(3, result.Items.Count);
-        Assert.True(result.Items[0].CreatedAt > result.Items[1].CreatedAt);
-        Assert.True(result.Items[1].CreatedAt > result.Items[2].CreatedAt);
+        result.Items.Count.Should().Be(3);
+        result.Items[0].CreatedAt > result.Items[1].CreatedAt.Should().BeTrue();
+        result.Items[1].CreatedAt > result.Items[2].CreatedAt.Should().BeTrue();
     }
 
     [Fact]
@@ -288,8 +288,8 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
         var result2 = await service.GetErrorsAsync(queryParams);
 
         // Assert - Should return cached result (3 items, not 5)
-        Assert.Equal(3, result1.Total);
-        Assert.Equal(3, result2.Total); // Cached
+        result1.Total.Should().Be(3);
+        result2.Total.Should().Be(3); // Cached
     }
 
     [Fact]
@@ -304,8 +304,8 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal(errorId, result.Id);
-        Assert.Equal("workflow-1", result.WorkflowId);
+        result.Id.Should().Be(errorId);
+        result.WorkflowId.Should().Be("workflow-1");
     }
 
     [Fact]
@@ -371,7 +371,7 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
         var result = await service.GetErrorsAsync(queryParams);
 
         // Assert
-        Assert.Equal(2, result.Total); // Only workflow-A errors in date range
+        result.Total.Should().Be(2); // Only workflow-A errors in date range
         Assert.All(result.Items, item => Assert.Equal("workflow-A", item.WorkflowId));
     }
 

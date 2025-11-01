@@ -76,7 +76,7 @@ public class ExplainEndpointTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: HTTP 200 with structured explanation
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
 
@@ -91,7 +91,7 @@ public class ExplainEndpointTests : IntegrationTestBase
         Assert.True(result.TryGetProperty("script", out var script));
         var scriptText = script.GetString();
         Assert.False(string.IsNullOrWhiteSpace(scriptText));
-        Assert.Contains("winning conditions", scriptText, StringComparison.OrdinalIgnoreCase);
+        scriptText, StringComparison.OrdinalIgnoreCase.Should().Contain("winning conditions");
 
         // Verify citations
         Assert.True(result.TryGetProperty("citations", out var citations));
@@ -133,7 +133,7 @@ public class ExplainEndpointTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/agents/explain", request);
 
         // Then: HTTP 401
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -167,7 +167,7 @@ public class ExplainEndpointTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: HTTP 200 with error message
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("script", out var script));
@@ -209,7 +209,7 @@ public class ExplainEndpointTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: HTTP 200 with no results message
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("script", out var script));
@@ -245,7 +245,7 @@ public class ExplainEndpointTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: HTTP 400
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("error", out var error));
@@ -289,7 +289,7 @@ public class ExplainEndpointTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: HTTP 200 with explanation
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: Messages are persisted in chat
         using var scope = Factory.Services.CreateScope();
@@ -299,10 +299,10 @@ public class ExplainEndpointTests : IntegrationTestBase
             .OrderBy(l => l.CreatedAt)
             .ToListAsync();
 
-        Assert.True(chatLogs.Count >= 2); // User message + assistant response
+        chatLogs.Count >= 2.Should().BeTrue(); // User message + assistant response
 
         var userMessage = chatLogs.First(l => l.Level == "user");
-        Assert.Contains("game setup", userMessage.Message);
+        userMessage.Message.Should().Contain("game setup");
 
         var assistantMessage = chatLogs.First(l => l.Level == "assistant");
         assistantMessage.Message.Should().NotBeNull();
@@ -343,7 +343,7 @@ public class ExplainEndpointTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: HTTP 200
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: AI request is logged
         using var scope = Factory.Services.CreateScope();
@@ -354,10 +354,10 @@ public class ExplainEndpointTests : IntegrationTestBase
             .FirstOrDefaultAsync();
 
         aiLog.Should().NotBeNull();
-        Assert.Equal(game.Id, aiLog.GameId);
-        Assert.Equal("scoring", aiLog.Query);
-        Assert.Equal("Success", aiLog.Status);
-        Assert.True(aiLog.LatencyMs > 0);
+        aiLog.GameId.Should().Be(game.Id);
+        aiLog.Query.Should().Be("scoring");
+        aiLog.Status.Should().Be("Success");
+        aiLog.LatencyMs > 0.Should().BeTrue();
     }
 
     /// <summary>

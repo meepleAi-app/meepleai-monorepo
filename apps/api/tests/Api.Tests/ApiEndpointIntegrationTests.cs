@@ -62,15 +62,15 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Then: Registration succeeds
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var authResponse = JsonSerializer.Deserialize<AuthResponse>(json, JsonOptions);
 
         authResponse.Should().NotBeNull();
-        Assert.Equal(payload.Email, authResponse!.User.Email);
-        Assert.Equal(payload.DisplayName, authResponse.User.DisplayName);
-        Assert.Equal(UserRole.User.ToString(), authResponse.User.Role);
+        authResponse!.User.Email.Should().Be(payload.Email);
+        authResponse.User.DisplayName.Should().Be(payload.DisplayName);
+        authResponse.User.Role.Should().Be(UserRole.User.ToString());
 
         // And: User is tracked for automatic cleanup
         TrackUserId(authResponse.User.Id);
@@ -108,13 +108,13 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
 
         // Then: Login succeeds
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var authResponse = JsonSerializer.Deserialize<AuthResponse>(json, JsonOptions);
 
         authResponse.Should().NotBeNull();
-        Assert.Equal(email, authResponse!.User.Email);
+        authResponse!.User.Email.Should().Be(email);
 
         var cookies = ExtractCookies(response);
         Assert.Contains(cookies, cookie => cookie.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal));
@@ -153,7 +153,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Seeding succeeds
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         using var document = JsonDocument.Parse(json);
@@ -218,15 +218,15 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Structured RuleSpec is returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var ruleSpec = JsonSerializer.Deserialize<RuleSpec>(json, JsonOptions);
 
         ruleSpec.Should().NotBeNull();
-        Assert.Equal(game.Id, ruleSpec!.gameId);
-        Assert.True(ruleSpec.rules.Count >= 2);
-        Assert.Contains(ruleSpec.rules, atom => atom.page == "2");
+        ruleSpec!.gameId.Should().Be(game.Id);
+        ruleSpec.rules.Count >= 2.Should().BeTrue();
+        atom => atom.page == "2".Should().Contain(ruleSpec.rules);
         // Cleanup happens automatically via DisposeAsync
     }
 
@@ -240,8 +240,8 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
     {
         Assert.True(response.Headers.TryGetValues("Set-Cookie", out var values));
         var sessionCookie = Assert.Single(values.Where(value => value.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal)));
-        Assert.Contains("secure", sessionCookie, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("samesite=none", sessionCookie, StringComparison.OrdinalIgnoreCase);
+        sessionCookie, StringComparison.OrdinalIgnoreCase.Should().Contain("secure");
+        sessionCookie, StringComparison.OrdinalIgnoreCase.Should().Contain("samesite=none");
     }
 
     private async Task<List<string>> RegisterAndAuthenticateAsync(HttpClient client, string email, string role = "Admin")
@@ -314,12 +314,12 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", escalationPayload);
 
         // Then: Registration is rejected with Conflict
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
 
         var body = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
         body.Should().NotBeNull();
         Assert.True(body!.TryGetValue("error", out var message));
-        Assert.Equal("Only administrators can assign elevated roles.", message);
+        message.Should().Be("Only administrators can assign elevated roles.");
         // Cleanup happens automatically via DisposeAsync
     }
 
@@ -351,10 +351,10 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
             .OrderBy(name => name)
             .ToList();
 
-        Assert.Equal(new[] { "expiresAt", "user" }, topLevelProperties);
+        "user" }, topLevelProperties.Should().Be(new[] { "expiresAt");
 
         var expiresAt = root.GetProperty("expiresAt");
-        Assert.Equal(JsonValueKind.String, expiresAt.ValueKind);
+        expiresAt.ValueKind.Should().Be(JsonValueKind.String);
         Assert.True(DateTime.TryParse(expiresAt.GetString(), out _));
 
         var userElement = root.GetProperty("user");
@@ -364,7 +364,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
             .OrderBy(name => name)
             .ToList();
 
-        Assert.Equal(new[] { "displayName", "email", "id", "role" }, userProperties);
+        "email", "id", "role" }, userProperties.Should().Be(new[] { "displayName");
 
         Assert.False(string.IsNullOrWhiteSpace(userElement.GetProperty("id").GetString()));
         Assert.Equal(JsonValueKind.String, userElement.GetProperty("email").ValueKind);

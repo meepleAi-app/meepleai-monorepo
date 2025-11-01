@@ -36,7 +36,7 @@ public class LanguageDetectionServiceTests
         var result = await _service.DetectLanguageAsync(text);
 
         // Assert
-        Assert.Equal("en", result);
+        result.Should().Be("en");
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public class LanguageDetectionServiceTests
         var result = await _service.DetectLanguageAsync(text);
 
         // Assert
-        Assert.Equal("en", result);
+        result.Should().Be("en");
     }
 
     #endregion
@@ -69,7 +69,7 @@ public class LanguageDetectionServiceTests
         var result = await _service.DetectLanguageAsync(text);
 
         // Assert
-        Assert.Equal("it", result);
+        result.Should().Be("it");
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public class LanguageDetectionServiceTests
         var result = await _service.DetectLanguageAsync(text);
 
         // Assert
-        Assert.Equal("it", result);
+        result.Should().Be("it");
     }
 
     #endregion
@@ -102,7 +102,7 @@ public class LanguageDetectionServiceTests
         var result = await _service.DetectLanguageAsync(text);
 
         // Assert
-        Assert.Equal("de", result);
+        result.Should().Be("de");
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class LanguageDetectionServiceTests
         var result = await _service.DetectLanguageAsync(text);
 
         // Assert
-        Assert.Equal("de", result);
+        result.Should().Be("de");
     }
 
     #endregion
@@ -135,7 +135,7 @@ public class LanguageDetectionServiceTests
         var result = await _service.DetectLanguageAsync(text);
 
         // Assert
-        Assert.Equal("fr", result);
+        result.Should().Be("fr");
     }
 
     [Fact]
@@ -151,7 +151,7 @@ public class LanguageDetectionServiceTests
         var result = await _service.DetectLanguageAsync(text);
 
         // Assert
-        Assert.Equal("fr", result);
+        result.Should().Be("fr");
     }
 
     #endregion
@@ -168,7 +168,7 @@ public class LanguageDetectionServiceTests
         var result = await _service.DetectLanguageAsync(text);
 
         // Assert
-        Assert.Equal("es", result);
+        result.Should().Be("es");
     }
 
     [Fact]
@@ -184,7 +184,7 @@ public class LanguageDetectionServiceTests
         var result = await _service.DetectLanguageAsync(text);
 
         // Assert
-        Assert.Equal("es", result);
+        result.Should().Be("es");
     }
 
     #endregion
@@ -201,7 +201,7 @@ public class LanguageDetectionServiceTests
         var result = await _service.DetectLanguageAsync(text);
 
         // Assert
-        Assert.Equal("en", result); // Fallback to English
+        result.Should().Be("en"); // Fallback to English
     }
 
     [Fact]
@@ -214,7 +214,7 @@ public class LanguageDetectionServiceTests
         var result = await _service.DetectLanguageAsync(text);
 
         // Assert
-        Assert.Equal("en", result); // Default to English
+        result.Should().Be("en"); // Default to English
     }
 
     [Fact]
@@ -227,7 +227,7 @@ public class LanguageDetectionServiceTests
         var result = await _service.DetectLanguageAsync(text);
 
         // Assert
-        Assert.Equal("en", result); // Default to English
+        result.Should().Be("en"); // Default to English
     }
 
     [Fact]
@@ -240,7 +240,7 @@ public class LanguageDetectionServiceTests
         var result = await _service.DetectLanguageAsync(text);
 
         // Assert
-        Assert.Equal("en", result); // Default to English
+        result.Should().Be("en"); // Default to English
     }
 
     [Fact]
@@ -256,7 +256,7 @@ public class LanguageDetectionServiceTests
         var result = await _service.DetectLanguageAsync(text);
 
         // Assert
-        Assert.Equal("it", result); // Italian is dominant
+        result.Should().Be("it"); // Italian is dominant
     }
 
     #endregion
@@ -283,7 +283,7 @@ public class LanguageDetectionServiceTests
         var result = _service.IsSupportedLanguage(languageCode);
 
         // Assert
-        Assert.Equal(expected, result);
+        result.Should().Be(expected);
     }
 
     #endregion

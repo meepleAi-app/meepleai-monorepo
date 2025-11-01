@@ -45,14 +45,14 @@ public class ApiExceptionHandlerMiddlewareTests
         var response = await client.GetAsync("/api/test");
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
         errorResponse.Should().NotBeNull();
-        Assert.Equal("bad_request", errorResponse.Error);
-        Assert.Equal("Invalid request parameters", errorResponse.Message);
+        errorResponse.Error.Should().Be("bad_request");
+        errorResponse.Message.Should().Be("Invalid request parameters");
         errorResponse.CorrelationId.Should().NotBeNull();
         errorResponse.StackTrace.Should().BeNull(); // Production mode
     }
@@ -69,14 +69,14 @@ public class ApiExceptionHandlerMiddlewareTests
         var response = await client.GetAsync("/api/test");
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
         errorResponse.Should().NotBeNull();
-        Assert.Equal("bad_request", errorResponse.Error);
-        Assert.Equal("Invalid request parameters", errorResponse.Message);
+        errorResponse.Error.Should().Be("bad_request");
+        errorResponse.Message.Should().Be("Invalid request parameters");
     }
 
     [Fact]
@@ -91,14 +91,14 @@ public class ApiExceptionHandlerMiddlewareTests
         var response = await client.GetAsync("/api/test");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
         errorResponse.Should().NotBeNull();
-        Assert.Equal("forbidden", errorResponse.Error);
-        Assert.Equal("Access denied", errorResponse.Message);
+        errorResponse.Error.Should().Be("forbidden");
+        errorResponse.Message.Should().Be("Access denied");
     }
 
     [Fact]
@@ -113,14 +113,14 @@ public class ApiExceptionHandlerMiddlewareTests
         var response = await client.GetAsync("/api/test");
 
         // Assert
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
         errorResponse.Should().NotBeNull();
-        Assert.Equal("not_found", errorResponse.Error);
-        Assert.Equal("Resource not found", errorResponse.Message);
+        errorResponse.Error.Should().Be("not_found");
+        errorResponse.Message.Should().Be("Resource not found");
     }
 
     [Fact]
@@ -135,14 +135,14 @@ public class ApiExceptionHandlerMiddlewareTests
         var response = await client.GetAsync("/api/test");
 
         // Assert
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
 
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
         errorResponse.Should().NotBeNull();
-        Assert.Equal("internal_server_error", errorResponse.Error);
-        Assert.Equal("An unexpected error occurred", errorResponse.Message);
+        errorResponse.Error.Should().Be("internal_server_error");
+        errorResponse.Message.Should().Be("An unexpected error occurred");
     }
 
     [Fact]
@@ -157,14 +157,14 @@ public class ApiExceptionHandlerMiddlewareTests
         var response = await client.GetAsync("/api/test");
 
         // Assert
-        Assert.Equal(HttpStatusCode.GatewayTimeout, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.GatewayTimeout);
 
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
         errorResponse.Should().NotBeNull();
-        Assert.Equal("timeout", errorResponse.Error);
-        Assert.Equal("Request timed out", errorResponse.Message);
+        errorResponse.Error.Should().Be("timeout");
+        errorResponse.Message.Should().Be("Request timed out");
     }
 
     [Fact]
@@ -179,14 +179,14 @@ public class ApiExceptionHandlerMiddlewareTests
         var response = await client.GetAsync("/api/test");
 
         // Assert
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
 
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
         errorResponse.Should().NotBeNull();
-        Assert.Equal("internal_server_error", errorResponse.Error);
-        Assert.Equal("An unexpected error occurred", errorResponse.Message);
+        errorResponse.Error.Should().Be("internal_server_error");
+        errorResponse.Message.Should().Be("An unexpected error occurred");
     }
 
     [Fact]
@@ -211,13 +211,13 @@ public class ApiExceptionHandlerMiddlewareTests
         await middleware.InvokeAsync(context);
 
         // Assert
-        var logEntry = Assert.Single(logger.Records);
-        Assert.DoesNotContain('\r', logEntry.Message);
-        Assert.DoesNotContain('\n', logEntry.Message);
+        var logEntry = logger.Records.Should().ContainSingle();
+        logEntry.Message.Should().NotContain('\r');
+        logEntry.Message.Should().NotContain('\n');
 
         var sanitizedPath = maliciousPath.Replace("\r", string.Empty).Replace("\n", string.Empty);
-        Assert.Contains(sanitizedPath, logEntry.Message);
-        Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);
+        logEntry.Message.Should().Contain(sanitizedPath);
+        context.Response.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
     }
 
     [Fact]
@@ -232,7 +232,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var response = await client.GetAsync("/api/test");
 
         // Assert
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
 
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
@@ -275,7 +275,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             async () => await client.GetAsync("/health"));
 
-        Assert.Equal("Test error", exception.Message);
+        exception.Message.Should().Be("Test error");
     }
 
     [Fact]
@@ -290,9 +290,9 @@ public class ApiExceptionHandlerMiddlewareTests
         var response = await client.GetAsync("/api/test");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Equal("Success", content);
+        content.Should().Be("Success");
     }
 
     [Fact]
@@ -350,7 +350,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var response = await client.GetAsync("/api/test");
 
         // Assert
-        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("application/json");
     }
 
     [Theory]
@@ -369,13 +369,13 @@ public class ApiExceptionHandlerMiddlewareTests
         var response = await client.GetAsync(path);
 
         // Assert
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
 
         var content = await response.Content.ReadAsStringAsync();
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
         errorResponse.Should().NotBeNull();
-        Assert.Equal("internal_server_error", errorResponse.Error);
+        errorResponse.Error.Should().Be("internal_server_error");
     }
 
     [Theory]
@@ -394,7 +394,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             async () => await client.GetAsync(path));
 
-        Assert.Equal("Test error", exception.Message);
+        exception.Message.Should().Be("Test error");
     }
 
     [Fact]
@@ -424,7 +424,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var entry = Assert.Single(logger.Records.Where(e => e.Level == LogLevel.Error));
         var sanitizedPath = entry.GetStateValue("Path");
 
-        Assert.Equal("/api/unsafepath", sanitizedPath);
+        sanitizedPath.Should().Be("/api/unsafepath");
     }
 
     /// <summary>

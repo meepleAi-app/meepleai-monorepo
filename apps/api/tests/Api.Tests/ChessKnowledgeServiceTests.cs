@@ -50,8 +50,8 @@ public class ChessKnowledgeServiceTests
         var result = await _service.IndexChessKnowledgeAsync();
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("not found", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("not found");
     }
 
     [Fact]
@@ -64,7 +64,7 @@ public class ChessKnowledgeServiceTests
         var result = await _service.SearchChessKnowledgeAsync(query);
 
         // Assert
-        Assert.False(result.Success);
+        result.Success.Should().BeFalse();
     }
 
     [Fact]
@@ -89,9 +89,9 @@ public class ChessKnowledgeServiceTests
         var result = await _service.SearchChessKnowledgeAsync(query);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Single(result.Results);
-        Assert.True(result.Results[0].Score >= 0.8f);
+        result.Success.Should().BeTrue();
+        result.Results.Should().ContainSingle();
+        result.Results[0].Score >= 0.8f.Should().BeTrue();
 
         _embeddingServiceMock.Verify(e => e.GenerateEmbeddingAsync(query, It.IsAny<CancellationToken>()), Times.Once);
         _qdrantServiceMock.Verify(q => q.SearchByCategoryAsync("chess", embedding, 5, It.IsAny<CancellationToken>()), Times.Once);
@@ -109,7 +109,7 @@ public class ChessKnowledgeServiceTests
         var result = await _service.DeleteChessKnowledgeAsync();
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
         _qdrantServiceMock.Verify(q => q.DeleteByCategoryAsync("chess", It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -179,8 +179,8 @@ public class ChessKnowledgeServiceTests
         var totalQueries = 10;
         var precision = (double)relevantResults / totalQueries;
 
-        Assert.True(precision > requiredPrecision,
-            $"Precision {precision} should be greater than {requiredPrecision}");
+        precision > requiredPrecision,
+            $"Precision {precision} should be greater than {requiredPrecision}".Should().BeTrue();
     }
 }
 
@@ -224,7 +224,7 @@ public class ChessKnowledgeRetrievalPrecisionTests
         // Expected: each query should return at least one result with score >= 0.8
         // Precision = (number of queries with relevant results) / (total queries) > 0.8
 
-        Assert.Equal(10, sampleQuestions.Count);
+        sampleQuestions.Count.Should().Be(10);
         await Task.CompletedTask;
     }
 }

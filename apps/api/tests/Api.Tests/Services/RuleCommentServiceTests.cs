@@ -135,13 +135,13 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal(TestGameId, result.GameId);
-        Assert.Equal(TestVersion, result.Version);
-        Assert.Equal(10, result.LineNumber);
-        Assert.Equal(commentText, result.CommentText);
-        Assert.Equal(TestUserId1, result.UserId);
-        Assert.Equal("alice", result.UserDisplayName);
-        Assert.False(result.IsResolved);
+        result.GameId.Should().Be(TestGameId);
+        result.Version.Should().Be(TestVersion);
+        result.LineNumber.Should().Be(10);
+        result.CommentText.Should().Be(commentText);
+        result.UserId.Should().Be(TestUserId1);
+        result.UserDisplayName.Should().Be("alice");
+        result.IsResolved.Should().BeFalse();
         result.ParentCommentId.Should().BeNull();
         result.Replies.Should().BeEmpty();
     }
@@ -163,7 +163,7 @@ public class RuleCommentServiceTests : IDisposable
         // Assert
         result.Should().NotBeNull();
         result.LineNumber.Should().BeNull();
-        Assert.Equal(commentText, result.CommentText);
+        result.CommentText.Should().Be(commentText);
     }
 
     [Fact]
@@ -182,9 +182,9 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal(2, result.MentionedUserIds.Count);
-        Assert.Contains(TestUserId1, result.MentionedUserIds); // alice
-        Assert.Contains(TestUserId2, result.MentionedUserIds); // Bob
+        result.MentionedUserIds.Count.Should().Be(2);
+        result.MentionedUserIds.Should().Contain(TestUserId1); // alice
+        result.MentionedUserIds.Should().Contain(TestUserId2); // Bob
     }
 
     [Fact]
@@ -203,8 +203,8 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Single(result.MentionedUserIds);
-        Assert.Contains(TestUserId3, result.MentionedUserIds); // admin@example.com
+        result.MentionedUserIds.Should().ContainSingle();
+        result.MentionedUserIds.Should().Contain(TestUserId3); // admin@example.com
     }
 
     [Fact]
@@ -219,7 +219,7 @@ public class RuleCommentServiceTests : IDisposable
                 commentText: "",
                 TestUserId1));
 
-        Assert.Contains("cannot be empty", ex.Message);
+        ex.Message.Should().Contain("cannot be empty");
     }
 
     [Fact]
@@ -234,7 +234,7 @@ public class RuleCommentServiceTests : IDisposable
                 commentText: "   ",
                 TestUserId1));
 
-        Assert.Contains("cannot be empty", ex.Message);
+        ex.Message.Should().Contain("cannot be empty");
     }
 
     [Fact]
@@ -252,8 +252,8 @@ public class RuleCommentServiceTests : IDisposable
                 commentText,
                 TestUserId1));
 
-        Assert.Contains("maximum length", ex.Message);
-        Assert.Contains("10000", ex.Message);
+        ex.Message.Should().Contain("maximum length");
+        ex.Message.Should().Contain("10000");
     }
 
     [Fact]
@@ -268,7 +268,7 @@ public class RuleCommentServiceTests : IDisposable
                 commentText: "Invalid line",
                 TestUserId1));
 
-        Assert.Contains("positive", ex.Message);
+        ex.Message.Should().Contain("positive");
     }
 
     [Fact]
@@ -283,7 +283,7 @@ public class RuleCommentServiceTests : IDisposable
                 commentText: "Invalid line",
                 TestUserId1));
 
-        Assert.Contains("positive", ex.Message);
+        ex.Message.Should().Contain("positive");
     }
 
     #endregion
@@ -309,12 +309,12 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         reply.Should().NotBeNull();
-        Assert.Equal(parent.Id, reply.ParentCommentId);
-        Assert.Equal(parent.GameId, reply.GameId);
-        Assert.Equal(parent.Version, reply.Version);
-        Assert.Equal(parent.LineNumber, reply.LineNumber);
-        Assert.Equal(TestUserId2, reply.UserId);
-        Assert.Equal("Bob", reply.UserDisplayName);
+        reply.ParentCommentId.Should().Be(parent.Id);
+        reply.GameId.Should().Be(parent.GameId);
+        reply.Version.Should().Be(parent.Version);
+        reply.LineNumber.Should().Be(parent.LineNumber);
+        reply.UserId.Should().Be(TestUserId2);
+        reply.UserDisplayName.Should().Be("Bob");
     }
 
     [Fact]
@@ -330,7 +330,7 @@ public class RuleCommentServiceTests : IDisposable
                 "Reply to nothing",
                 TestUserId1));
 
-        Assert.Contains(fakeParentId.ToString(), ex.Message);
+        ex.Message.Should().Contain(fakeParentId.ToString());
     }
 
     [Fact]
@@ -348,8 +348,8 @@ public class RuleCommentServiceTests : IDisposable
         var act = async () => await _service.ReplyToCommentAsync(level5.Id, "Level 6 - too deep", TestUserId1);
         var ex = await act.Should().ThrowAsync<ValidationException>();
 
-        Assert.Contains("thread depth", ex.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("5", ex.Message);
+        ex.Message, StringComparison.OrdinalIgnoreCase.Should().Contain("thread depth");
+        ex.Message.Should().Contain("5");
     }
 
     [Fact]
@@ -370,8 +370,8 @@ public class RuleCommentServiceTests : IDisposable
             TestUserId3);
 
         // Assert
-        Assert.Single(reply.MentionedUserIds);
-        Assert.Contains(TestUserId2, reply.MentionedUserIds);
+        reply.MentionedUserIds.Should().ContainSingle();
+        reply.MentionedUserIds.Should().Contain(TestUserId2);
     }
 
     [Fact]
@@ -389,7 +389,7 @@ public class RuleCommentServiceTests : IDisposable
         var act = async () => await _service.ReplyToCommentAsync(parent.Id, "", TestUserId1);
         var ex = await act.Should().ThrowAsync<ValidationException>();
 
-        Assert.Contains("cannot be empty", ex.Message);
+        ex.Message.Should().Contain("cannot be empty");
     }
 
     #endregion
@@ -425,9 +425,9 @@ public class RuleCommentServiceTests : IDisposable
             includeResolved: true);
 
         // Assert
-        Assert.Equal(2, result.Count); // Only top-level comments
-        Assert.Contains(result, c => c.Id == comment1.Id);
-        Assert.Contains(result, c => c.Id == comment2.Id);
+        result.Count.Should().Be(2); // Only top-level comments
+        c => c.Id == comment1.Id.Should().Contain(result);
+        c => c.Id == comment2.Id.Should().Contain(result);
         result.Should().NotContain(c => c.Id == reply.Id); // Reply not at top level
     }
 
@@ -446,11 +446,11 @@ public class RuleCommentServiceTests : IDisposable
             includeResolved: true);
 
         // Assert
-        Assert.Single(result);
+        result.Should().ContainSingle();
         var parentComment = result.First();
-        Assert.Equal(2, parentComment.Replies.Count);
-        Assert.Contains(parentComment.Replies, r => r.Id == reply1.Id);
-        Assert.Contains(parentComment.Replies, r => r.Id == reply2.Id);
+        parentComment.Replies.Count.Should().Be(2);
+        r => r.Id == reply1.Id.Should().Contain(parentComment.Replies);
+        r => r.Id == reply2.Id.Should().Contain(parentComment.Replies);
     }
 
     [Fact]
@@ -468,7 +468,7 @@ public class RuleCommentServiceTests : IDisposable
             includeResolved: false);
 
         // Assert
-        Assert.Single(result);
+        result.Should().ContainSingle();
         result.First().Id.Should().Be(comment1.Id);
     }
 
@@ -489,10 +489,10 @@ public class RuleCommentServiceTests : IDisposable
             includeResolved: true);
 
         // Assert
-        Assert.Equal(3, result.Count);
-        Assert.Equal(comment1.Id, result[0].Id);
-        Assert.Equal(comment2.Id, result[1].Id);
-        Assert.Equal(comment3.Id, result[2].Id);
+        result.Count.Should().Be(3);
+        result[0].Id.Should().Be(comment1.Id);
+        result[1].Id.Should().Be(comment2.Id);
+        result[2].Id.Should().Be(comment3.Id);
     }
 
     #endregion
@@ -511,10 +511,10 @@ public class RuleCommentServiceTests : IDisposable
         var result = await _service.GetCommentsForLineAsync(TestGameId, TestVersion, 5);
 
         // Assert
-        Assert.Equal(2, result.Count);
+        result.Count.Should().Be(2);
         result.Should().OnlyContain(c => c.LineNumber == 5);
-        Assert.Contains(result, c => c.Id == line5Comment1.Id);
-        Assert.Contains(result, c => c.Id == line5Comment2.Id);
+        c => c.Id == line5Comment1.Id.Should().Contain(result);
+        c => c.Id == line5Comment2.Id.Should().Contain(result);
     }
 
     [Fact]
@@ -537,7 +537,7 @@ public class RuleCommentServiceTests : IDisposable
         var act = async () => await _service.GetCommentsForLineAsync(TestGameId, TestVersion, -1);
         var ex = await act.Should().ThrowAsync<ValidationException>();
 
-        Assert.Contains("positive", ex.Message);
+        ex.Message.Should().Contain("positive");
     }
 
     [Fact]
@@ -551,7 +551,7 @@ public class RuleCommentServiceTests : IDisposable
         var result = await _service.GetCommentsForLineAsync(TestGameId, TestVersion, 5);
 
         // Assert
-        Assert.Single(result);
+        result.Should().ContainSingle();
         result.First().Id.Should().Be(parent.Id);
         result.First().Replies.Should().ContainSingle();
     }
@@ -570,9 +570,9 @@ public class RuleCommentServiceTests : IDisposable
         var result = await _service.ResolveCommentAsync(comment.Id, TestUserId2, resolveReplies: false);
 
         // Assert
-        Assert.True(result.IsResolved);
-        Assert.Equal(TestUserId2, result.ResolvedByUserId);
-        Assert.Equal("Bob", result.ResolvedByDisplayName);
+        result.IsResolved.Should().BeTrue();
+        result.ResolvedByUserId.Should().Be(TestUserId2);
+        result.ResolvedByDisplayName.Should().Be("Bob");
         result.ResolvedAt.Should().NotBeNull();
     }
 
@@ -586,7 +586,7 @@ public class RuleCommentServiceTests : IDisposable
         var act = async () => await _service.ResolveCommentAsync(fakeId, TestUserId1, resolveReplies: false);
         var ex = await act.Should().ThrowAsync<NotFoundException>();
 
-        Assert.Contains(fakeId.ToString(), ex.Message);
+        ex.Message.Should().Contain(fakeId.ToString());
     }
 
     [Fact]
@@ -605,14 +605,14 @@ public class RuleCommentServiceTests : IDisposable
         var comments = await _service.GetCommentsForRuleSpecAsync(TestGameId, TestVersion, includeResolved: true);
         var parentComment = comments.First(c => c.Id == parent.Id);
 
-        Assert.True(parentComment.IsResolved);
-        Assert.Equal(2, parentComment.Replies.Count);
+        parentComment.IsResolved.Should().BeTrue();
+        parentComment.Replies.Count.Should().Be(2);
         parentComment.Replies.Should().OnlyContain(reply => reply.IsResolved);
 
         // Verify grandchild is also resolved by checking database directly
         var grandchildEntity = await _dbContext.RuleSpecComments.FindAsync(grandchild.Id);
         grandchildEntity.Should().NotBeNull();
-        Assert.True(grandchildEntity.IsResolved);
+        grandchildEntity.IsResolved.Should().BeTrue();
     }
 
     [Fact]
@@ -626,7 +626,7 @@ public class RuleCommentServiceTests : IDisposable
         var result = await _service.ResolveCommentAsync(parent.Id, TestUserId3, resolveReplies: false);
 
         // Assert
-        Assert.True(result.IsResolved);
+        result.IsResolved.Should().BeTrue();
 
         // Verify child is NOT resolved
         var comments = await _service.GetCommentsForRuleSpecAsync(TestGameId, TestVersion, includeResolved: true);
@@ -649,7 +649,7 @@ public class RuleCommentServiceTests : IDisposable
         var result = await _service.UnresolveCommentAsync(comment.Id, unresolveParent: false);
 
         // Assert
-        Assert.False(result.IsResolved);
+        result.IsResolved.Should().BeFalse();
         result.ResolvedByUserId.Should().BeNull();
         result.ResolvedByDisplayName.Should().BeNull();
         result.ResolvedAt.Should().BeNull();
@@ -665,7 +665,7 @@ public class RuleCommentServiceTests : IDisposable
         var act = async () => await _service.UnresolveCommentAsync(fakeId, unresolveParent: false);
         var ex = await act.Should().ThrowAsync<NotFoundException>();
 
-        Assert.Contains(fakeId.ToString(), ex.Message);
+        ex.Message.Should().Contain(fakeId.ToString());
     }
 
     [Fact]
@@ -684,8 +684,8 @@ public class RuleCommentServiceTests : IDisposable
         var parentComment = comments.First(c => c.Id == parent.Id);
         var childComment = parentComment.Replies.First(r => r.Id == child.Id);
 
-        Assert.False(parentComment.IsResolved);
-        Assert.False(childComment.IsResolved);
+        parentComment.IsResolved.Should().BeFalse();
+        childComment.IsResolved.Should().BeFalse();
     }
 
     [Fact]
@@ -704,8 +704,8 @@ public class RuleCommentServiceTests : IDisposable
         var parentComment = comments.First(c => c.Id == parent.Id);
         var childComment = parentComment.Replies.First(r => r.Id == child.Id);
 
-        Assert.True(parentComment.IsResolved); // Parent still resolved
-        Assert.False(childComment.IsResolved); // Child unresolved
+        parentComment.IsResolved.Should().BeTrue(); // Parent still resolved
+        childComment.IsResolved.Should().BeFalse(); // Child unresolved
     }
 
     [Fact]
@@ -719,7 +719,7 @@ public class RuleCommentServiceTests : IDisposable
         var result = await _service.UnresolveCommentAsync(comment.Id, unresolveParent: true);
 
         // Assert
-        Assert.False(result.IsResolved);
+        result.IsResolved.Should().BeFalse();
     }
 
     #endregion
@@ -753,8 +753,8 @@ public class RuleCommentServiceTests : IDisposable
         var result = await _service.ExtractMentionedUsersAsync("Hey @alice, check this!");
 
         // Assert
-        Assert.Single(result);
-        Assert.Contains(TestUserId1, result); // alice
+        result.Should().ContainSingle();
+        result.Should().Contain(TestUserId1); // alice
     }
 
     [Fact]
@@ -764,10 +764,10 @@ public class RuleCommentServiceTests : IDisposable
         var result = await _service.ExtractMentionedUsersAsync("@alice and @Bob, please review with @admin");
 
         // Assert
-        Assert.Equal(3, result.Count);
-        Assert.Contains(TestUserId1, result); // alice
-        Assert.Contains(TestUserId2, result); // Bob
-        Assert.Contains(TestUserId3, result); // admin
+        result.Count.Should().Be(3);
+        result.Should().Contain(TestUserId1); // alice
+        result.Should().Contain(TestUserId2); // Bob
+        result.Should().Contain(TestUserId3); // admin
     }
 
     [Fact]
@@ -777,10 +777,10 @@ public class RuleCommentServiceTests : IDisposable
         var result = await _service.ExtractMentionedUsersAsync("@ALICE @bob @Admin");
 
         // Assert
-        Assert.Equal(3, result.Count);
-        Assert.Contains(TestUserId1, result);
-        Assert.Contains(TestUserId2, result);
-        Assert.Contains(TestUserId3, result);
+        result.Count.Should().Be(3);
+        result.Should().Contain(TestUserId1);
+        result.Should().Contain(TestUserId2);
+        result.Should().Contain(TestUserId3);
     }
 
     [Fact]
@@ -790,8 +790,8 @@ public class RuleCommentServiceTests : IDisposable
         var result = await _service.ExtractMentionedUsersAsync("Contact @admin about this");
 
         // Assert
-        Assert.Single(result);
-        Assert.Contains(TestUserId3, result); // admin@example.com
+        result.Should().ContainSingle();
+        result.Should().Contain(TestUserId3); // admin@example.com
     }
 
     [Fact]
@@ -801,8 +801,8 @@ public class RuleCommentServiceTests : IDisposable
         var result = await _service.ExtractMentionedUsersAsync("@alice @alice @ALICE");
 
         // Assert
-        Assert.Single(result);
-        Assert.Contains(TestUserId1, result);
+        result.Should().ContainSingle();
+        result.Should().Contain(TestUserId1);
     }
 
     [Fact]
@@ -812,9 +812,9 @@ public class RuleCommentServiceTests : IDisposable
         var result = await _service.ExtractMentionedUsersAsync("@alice @unknownuser @Bob");
 
         // Assert
-        Assert.Equal(2, result.Count); // Only alice and Bob
-        Assert.Contains(TestUserId1, result);
-        Assert.Contains(TestUserId2, result);
+        result.Count.Should().Be(2); // Only alice and Bob
+        result.Should().Contain(TestUserId1);
+        result.Should().Contain(TestUserId2);
     }
 
     [Fact]
@@ -824,8 +824,8 @@ public class RuleCommentServiceTests : IDisposable
         var result = await _service.ExtractMentionedUsersAsync("@alice is valid but @alice! @alice? are not separate");
 
         // Assert
-        Assert.Single(result);
-        Assert.Contains(TestUserId1, result);
+        result.Should().ContainSingle();
+        result.Should().Contain(TestUserId1);
     }
 
     #endregion

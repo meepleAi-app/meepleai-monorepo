@@ -40,9 +40,9 @@ public class EdgeScenarioTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns 415 Unsupported Media Type or 400 Bad Request
-        Assert.True(response.StatusCode == HttpStatusCode.UnsupportedMediaType ||
+        response.StatusCode == HttpStatusCode.UnsupportedMediaType ||
                     response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 415 or 400, got {response.StatusCode}");
+            $"Expected 415 or 400, got {response.StatusCode}".Should().BeTrue();
     }
 
     [Fact]
@@ -60,9 +60,9 @@ public class EdgeScenarioTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns 415 Unsupported Media Type or 400 Bad Request
-        Assert.True(response.StatusCode == HttpStatusCode.UnsupportedMediaType ||
+        response.StatusCode == HttpStatusCode.UnsupportedMediaType ||
                     response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 415 or 400, got {response.StatusCode}");
+            $"Expected 415 or 400, got {response.StatusCode}".Should().BeTrue();
     }
 
     [Fact]
@@ -81,7 +81,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Request succeeds (or fails for business logic, not Content-Type)
-        Assert.NotEqual(HttpStatusCode.UnsupportedMediaType, response.StatusCode);
+        response.StatusCode.Should().NotBe(HttpStatusCode.UnsupportedMediaType);
     }
 
     #endregion
@@ -108,10 +108,10 @@ public class EdgeScenarioTests : IntegrationTestBase
 
         // Then: Server handles gracefully (may accept, truncate, or reject with 413)
         // NOTE: Actual behavior depends on server configuration
-        Assert.True(response.StatusCode == HttpStatusCode.OK ||
+        response.StatusCode == HttpStatusCode.OK ||
                     response.StatusCode == HttpStatusCode.RequestEntityTooLarge ||
                     response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected OK, 413, or 400, got {response.StatusCode}");
+            $"Expected OK, 413, or 400, got {response.StatusCode}".Should().BeTrue();
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns 400 Bad Request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     #endregion
@@ -155,7 +155,7 @@ public class EdgeScenarioTests : IntegrationTestBase
 
         // Then: Server handles gracefully (validates gameId format or processes)
         // NOTE: Should not crash or return 500
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError);
     }
 
     [Fact]
@@ -177,7 +177,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Server handles Unicode correctly (should not crash)
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError);
     }
 
     [Fact]
@@ -200,13 +200,13 @@ public class EdgeScenarioTests : IntegrationTestBase
 
         // Then: Server handles safely (parameterized queries prevent SQL injection)
         // Should not crash or return 500, and certainly should not execute SQL
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError);
 
         // And: Can still query games (proves table wasn't dropped)
         var gamesRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
         AddCookies(gamesRequest, cookies);
         var gamesResponse = await client.SendAsync(gamesRequest);
-        Assert.Equal(HttpStatusCode.OK, gamesResponse.StatusCode);
+        gamesResponse.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -228,7 +228,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Server handles safely (should escape/sanitize)
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError);
 
         // NOTE: XSS protection is primarily client-side concern,
         // but server should not execute script tags
@@ -253,7 +253,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns 400 Bad Request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -271,7 +271,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns 400 Bad Request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -297,7 +297,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Server handles gracefully (ignores unknown fields or processes normally)
-        Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError);
     }
 
     #endregion
@@ -328,12 +328,12 @@ public class EdgeScenarioTests : IntegrationTestBase
         // Then: All requests are handled correctly (no crashes)
         foreach (var response in responses)
         {
-            Assert.NotEqual(HttpStatusCode.InternalServerError, response.StatusCode);
+            response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError);
         }
 
         // And: Most should succeed (some may be rate limited)
         var successCount = responses.Count(r => r.StatusCode == HttpStatusCode.OK);
-        Assert.True(successCount > 0, "At least some concurrent requests should succeed");
+        successCount > 0, "At least some concurrent requests should succeed".Should().BeTrue();
     }
 
     [Fact]
@@ -356,7 +356,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         // Then: All logins succeed (creates multiple valid sessions)
         foreach (var response in responses)
         {
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
             Assert.True(response.Headers.Contains("Set-Cookie"), "Should set session cookie");
         }
 
@@ -393,8 +393,8 @@ public class EdgeScenarioTests : IntegrationTestBase
         var successCount = responses.Count(r => r.StatusCode == HttpStatusCode.Created);
 
         // All should succeed (or some may be rate limited)
-        Assert.True(successCount >= 2,
-            $"Expected at least 2 successes out of 3, got {successCount}");
+        successCount >= 2,
+            $"Expected at least 2 successes out of 3, got {successCount}".Should().BeTrue();
 
         // NOTE: With unique names, concurrent creation should work fine
     }

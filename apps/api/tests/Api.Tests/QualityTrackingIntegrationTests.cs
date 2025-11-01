@@ -448,7 +448,7 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         var response = await client.PostAsJsonAsync("/api/v1/agents/qa", request);
 
         // Assert
-        Assert.True(response.IsSuccessStatusCode);
+        response.IsSuccessStatusCode.Should().BeTrue();
 
         // Query database for logged request
         using var scope = Services.CreateScope();
@@ -469,13 +469,13 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         log.OverallConfidence.Should().NotBeNull();
 
         // Verify low-quality detection
-        Assert.True(log.IsLowQuality, $"Expected IsLowQuality = true, but got false. Overall confidence: {log.OverallConfidence:F3}");
-        Assert.True(log.OverallConfidence < 0.60, $"Expected OverallConfidence < 0.60, but got {log.OverallConfidence:F3}");
+        log.IsLowQuality, $"Expected IsLowQuality = true, but got false. Overall confidence: {log.OverallConfidence:F3}".Should().BeTrue();
+        log.OverallConfidence < 0.60, $"Expected OverallConfidence < 0.60, but got {log.OverallConfidence:F3}".Should().BeTrue();
 
         // Verify individual score components are in expected ranges
-        Assert.InRange(log.RagConfidence.Value, 0.35, 0.45); // Average of low-quality RAG scores (0.35, 0.40, 0.45)
-        Assert.InRange(log.LlmConfidence.Value, 0.45, 0.55); // Base 0.85 - VeryShortPenalty 0.30 - hedging ~0.05
-        Assert.Equal(1.0, log.CitationQuality.Value, 2); // 3 citations / 1 paragraph = 1.0
+        log.RagConfidence.Value.Should().BeInRange(0.35, 0.45); // Average of low-quality RAG scores (0.35, 0.40, 0.45)
+        log.LlmConfidence.Value.Should().BeInRange(0.45, 0.55); // Base 0.85 - VeryShortPenalty 0.30 - hedging ~0.05
+        log.CitationQuality.Value, 2.Should().Be(1.0); // 3 citations / 1 paragraph = 1.0
     }
 
     /// <summary>
@@ -502,7 +502,7 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         var response = await client.PostAsJsonAsync("/api/v1/agents/qa", request);
 
         // Assert
-        Assert.True(response.IsSuccessStatusCode);
+        response.IsSuccessStatusCode.Should().BeTrue();
 
         // Query database
         using var scope = Services.CreateScope();
@@ -511,8 +511,8 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
             .OrderByDescending(log => log.CreatedAt)
             .First();
 
-        Assert.False(logs.IsLowQuality);
-        Assert.True(logs.OverallConfidence >= 0.60);
+        logs.IsLowQuality.Should().BeFalse();
+        logs.OverallConfidence >= 0.60.Should().BeTrue();
     }
 
     /// <summary>
@@ -538,7 +538,7 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         var response = await client.PostAsJsonAsync("/api/v1/agents/qa", request);
 
         // Assert
-        Assert.True(response.IsSuccessStatusCode);
+        response.IsSuccessStatusCode.Should().BeTrue();
 
         using var scope = Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -547,13 +547,13 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
             .First();
 
         log.RagConfidence.Should().NotBeNull();
-        Assert.InRange(log.RagConfidence.Value, 0.0, 1.0);
+        log.RagConfidence.Value.Should().BeInRange(0.0, 1.0);
         log.LlmConfidence.Should().NotBeNull();
-        Assert.InRange(log.LlmConfidence.Value, 0.0, 1.0);
+        log.LlmConfidence.Value.Should().BeInRange(0.0, 1.0);
         log.CitationQuality.Should().NotBeNull();
-        Assert.InRange(log.CitationQuality.Value, 0.0, 1.0);
+        log.CitationQuality.Value.Should().BeInRange(0.0, 1.0);
         log.OverallConfidence.Should().NotBeNull();
-        Assert.InRange(log.OverallConfidence.Value, 0.0, 1.0);
+        log.OverallConfidence.Value.Should().BeInRange(0.0, 1.0);
     }
 
     /// <summary>
@@ -648,10 +648,10 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         var response = await client.GetAsync("/api/v1/admin/quality/low-responses");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<LowQualityResponsesResult>();
         result.Should().NotBeNull();
-        Assert.Equal(2, result.TotalCount);
+        result.TotalCount.Should().Be(2);
         Assert.All(result.Responses, r => Assert.True(r.IsLowQuality));
     }
 
@@ -692,11 +692,11 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         var response = await client.GetAsync("/api/v1/admin/quality/low-responses?limit=10&offset=0");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<LowQualityResponsesResult>();
         result.Should().NotBeNull();
-        Assert.Equal(25, result.TotalCount);
-        Assert.Equal(10, result.Responses.Count);
+        result.TotalCount.Should().Be(25);
+        result.Responses.Count.Should().Be(10);
     }
 
     /// <summary>
@@ -715,7 +715,7 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         var response = await client.GetAsync("/api/v1/admin/quality/low-responses");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -737,7 +737,7 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         var response = await client.GetAsync("/api/v1/admin/quality/low-responses");
 
         // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -779,13 +779,13 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         var response = await client.GetAsync("/api/v1/admin/quality/report?days=7");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var report = await response.Content.ReadFromJsonAsync<QualityReport>();
         report.Should().NotBeNull();
-        Assert.Equal(50, report.TotalResponses);
-        Assert.Equal(15, report.LowQualityCount);
-        Assert.InRange(report.AverageRagConfidence!.Value, 0.60, 0.75);
-        Assert.InRange(report.AverageOverallConfidence!.Value, 0.60, 0.75);
+        report.TotalResponses.Should().Be(50);
+        report.LowQualityCount.Should().Be(15);
+        report.AverageRagConfidence!.Value.Should().BeInRange(0.60, 0.75);
+        report.AverageOverallConfidence!.Value.Should().BeInRange(0.60, 0.75);
     }
 
     /// <summary>
@@ -851,10 +851,10 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         var response = await client.GetAsync("/api/v1/admin/quality/low-responses?startDate=2025-01-01&endDate=2025-01-07");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<LowQualityResponsesResult>();
         result.Should().NotBeNull();
-        Assert.Equal(2, result.TotalCount);
+        result.TotalCount.Should().Be(2);
         Assert.All(result.Responses, r =>
         {
             Assert.True(r.CreatedAt >= new DateTime(2025, 1, 1));
@@ -894,6 +894,6 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var logCount = dbContext.AiRequestLogs.Count();
 
-        Assert.True(logCount >= 10, "All concurrent requests should be logged");
+        logCount >= 10, "All concurrent requests should be logged".Should().BeTrue();
     }
 }

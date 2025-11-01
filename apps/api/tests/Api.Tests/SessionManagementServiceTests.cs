@@ -88,9 +88,9 @@ public class SessionManagementServiceTests : IDisposable
         var result = await service.GetUserSessionsAsync(userId);
 
         // Then: Only active sessions are returned, ordered by LastSeenAt
-        Assert.Equal(2, result.Count);
-        Assert.Equal("session1", result[0].Id);
-        Assert.Equal("session2", result[1].Id);
+        result.Count.Should().Be(2);
+        result[0].Id.Should().Be("session1");
+        result[1].Id.Should().Be("session2");
         Assert.All(result, s => Assert.Null(s.RevokedAt));
     }
 
@@ -131,9 +131,9 @@ public class SessionManagementServiceTests : IDisposable
         var result = await service.GetUserSessionsAsync(userId);
 
         // Then: Sessions ordered by CreatedAt (newer first)
-        Assert.Equal(2, result.Count);
-        Assert.Equal("session1", result[0].Id);
-        Assert.Equal("session2", result[1].Id);
+        result.Count.Should().Be(2);
+        result[0].Id.Should().Be("session1");
+        result[1].Id.Should().Be("session2");
     }
 
     /// <summary>
@@ -155,7 +155,7 @@ public class SessionManagementServiceTests : IDisposable
 
         // When/Then: ArgumentException is thrown
         var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.GetUserSessionsAsync(userId!));
-        Assert.Contains("User ID cannot be null or empty", exception.Message);
+        exception.Message.Should().Contain("User ID cannot be null or empty");
     }
 
     /// <summary>
@@ -191,7 +191,7 @@ public class SessionManagementServiceTests : IDisposable
         var result = await service.GetAllSessionsAsync(userId: user1Id);
 
         // Then: Only user1's sessions are returned
-        Assert.Equal(2, result.Count);
+        result.Count.Should().Be(2);
         Assert.All(result, s => Assert.Equal(user1Id, s.UserId));
     }
 
@@ -223,7 +223,7 @@ public class SessionManagementServiceTests : IDisposable
         var result = await service.GetAllSessionsAsync(limit: 5);
 
         // Then: Only 5 sessions are returned
-        Assert.Equal(5, result.Count);
+        result.Count.Should().Be(5);
     }
 
     /// <summary>
@@ -245,7 +245,7 @@ public class SessionManagementServiceTests : IDisposable
 
         // When/Then: ArgumentException is thrown
         var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.GetAllSessionsAsync(limit: limit));
-        Assert.Contains("Limit must be between 1 and 1000", exception.Message);
+        exception.Message.Should().Contain("Limit must be between 1 and 1000");
     }
 
     /// <summary>
@@ -279,14 +279,14 @@ public class SessionManagementServiceTests : IDisposable
         var result = await service.RevokeSessionAsync("session1");
 
         // Then: Session is revoked
-        Assert.True(result);
+        result.Should().BeTrue();
 
         var revokedSession = await db.UserSessions.FindAsync("session1");
-        Assert.NotNull(revokedSession!.RevokedAt);
+        revokedSession!.RevokedAt.Should().NotBeNull();
         // Check that RevokedAt was set (comparing UTC to handle timezone differences)
         var expectedTime = DateTime.Parse("2024-01-15T12:00:00Z").ToUniversalTime();
         var actualTime = revokedSession.RevokedAt!.Value.ToUniversalTime();
-        Assert.Equal(expectedTime, actualTime);
+        actualTime.Should().Be(expectedTime);
 
         // And: Cache is invalidated
         mockCache.Verify(c => c.InvalidateAsync("hash123", default), Times.Once);
@@ -320,10 +320,10 @@ public class SessionManagementServiceTests : IDisposable
         var result = await service.RevokeSessionAsync("session1");
 
         // Then: Returns false and timestamp unchanged
-        Assert.False(result);
+        result.Should().BeFalse();
 
         var sessionAfter = await db.UserSessions.FindAsync("session1");
-        Assert.Equal(originalRevokedAt, sessionAfter!.RevokedAt);
+        sessionAfter!.RevokedAt.Should().Be(originalRevokedAt);
     }
 
     /// <summary>
@@ -344,7 +344,7 @@ public class SessionManagementServiceTests : IDisposable
         var result = await service.RevokeSessionAsync("nonexistent");
 
         // Then: Returns false
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     /// <summary>
@@ -366,7 +366,7 @@ public class SessionManagementServiceTests : IDisposable
 
         // When/Then: ArgumentException is thrown
         var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.RevokeSessionAsync(sessionId!));
-        Assert.Contains("Session ID cannot be null or empty", exception.Message);
+        exception.Message.Should().Contain("Session ID cannot be null or empty");
     }
 
     /// <summary>
@@ -402,7 +402,7 @@ public class SessionManagementServiceTests : IDisposable
 
         // Then: Session is still revoked in database
         var revokedSession = await db.UserSessions.FindAsync("session1");
-        Assert.NotNull(revokedSession!.RevokedAt);
+        revokedSession!.RevokedAt.Should().NotBeNull();
     }
 
     /// <summary>
@@ -438,7 +438,7 @@ public class SessionManagementServiceTests : IDisposable
         var count = await service.RevokeAllUserSessionsAsync(userId);
 
         // Then: Both active sessions are revoked
-        Assert.Equal(2, count);
+        count.Should().Be(2);
 
         var allSessions = await db.UserSessions.Where(s => s.UserId == userId).ToListAsync();
         Assert.All(allSessions, s => Assert.NotNull(s.RevokedAt));
@@ -476,7 +476,7 @@ public class SessionManagementServiceTests : IDisposable
         var count = await service.RevokeAllUserSessionsAsync(userId);
 
         // Then: Zero sessions revoked
-        Assert.Equal(0, count);
+        count.Should().Be(0);
     }
 
     /// <summary>
@@ -498,7 +498,7 @@ public class SessionManagementServiceTests : IDisposable
 
         // When/Then: ArgumentException is thrown
         var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.RevokeAllUserSessionsAsync(userId!));
-        Assert.Contains("User ID cannot be null or empty", exception.Message);
+        exception.Message.Should().Contain("User ID cannot be null or empty");
     }
 
     /// <summary>
@@ -548,7 +548,7 @@ public class SessionManagementServiceTests : IDisposable
         var count = await service.RevokeInactiveSessionsAsync();
 
         // Then: Only the inactive session is revoked
-        Assert.Equal(1, count);
+        count.Should().Be(1);
 
         var sessions = await db.UserSessions.ToListAsync();
         Assert.NotNull(sessions.First(s => s.Id == "inactive").RevokedAt);
@@ -600,7 +600,7 @@ public class SessionManagementServiceTests : IDisposable
         var count = await service.RevokeInactiveSessionsAsync();
 
         // Then: Only the old session is revoked
-        Assert.Equal(1, count);
+        count.Should().Be(1);
 
         var sessions = await db.UserSessions.ToListAsync();
         Assert.NotNull(sessions.First(s => s.Id == "old").RevokedAt);
@@ -641,7 +641,7 @@ public class SessionManagementServiceTests : IDisposable
         var count = await service.RevokeInactiveSessionsAsync();
 
         // Then: No sessions revoked
-        Assert.Equal(0, count);
+        count.Should().Be(0);
     }
 
     // Helper methods

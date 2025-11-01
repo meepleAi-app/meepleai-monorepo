@@ -109,11 +109,11 @@ public class OAuthServiceTests : IDisposable
         var url = await _service.GetAuthorizationUrlAsync(provider, state);
 
         // Assert
-        Assert.Contains($"state={Uri.EscapeDataString(state)}", url);
-        Assert.Contains($"client_id=", url);
-        Assert.Contains($"redirect_uri=", url);
-        Assert.Contains($"scope=", url);
-        Assert.Contains($"response_type=code", url);
+        url.Should().Contain($"state={Uri.EscapeDataString(state)}");
+        url.Should().Contain($"client_id=");
+        url.Should().Contain($"redirect_uri=");
+        url.Should().Contain($"scope=");
+        url.Should().Contain($"response_type=code");
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public class OAuthServiceTests : IDisposable
         var isValid = await _service.ValidateStateAsync(state);
 
         // Assert
-        Assert.True(isValid);
+        isValid.Should().BeTrue();
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public class OAuthServiceTests : IDisposable
         var isValid = await _service.ValidateStateAsync("nonexistent-state");
 
         // Assert
-        Assert.False(isValid);
+        isValid.Should().BeFalse();
     }
 
     [Fact]
@@ -162,7 +162,7 @@ public class OAuthServiceTests : IDisposable
         var isValid = await _service.ValidateStateAsync(state);
 
         // Assert
-        Assert.False(isValid);
+        isValid.Should().BeFalse();
     }
 
     [Fact]
@@ -177,8 +177,8 @@ public class OAuthServiceTests : IDisposable
         var secondValidation = await _service.ValidateStateAsync(state);
 
         // Assert
-        Assert.True(firstValidation);
-        Assert.False(secondValidation); // State should be removed after first use
+        firstValidation.Should().BeTrue();
+        secondValidation.Should().BeFalse(); // State should be removed after first use
     }
 
     [Fact]
@@ -198,15 +198,15 @@ public class OAuthServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.True(result.IsNewUser);
-        Assert.Equal("test@example.com", result.User.Email);
+        result.IsNewUser.Should().BeTrue();
+        result.User.Email.Should().Be("test@example.com");
 
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == "test@example.com");
         user.Should().NotBeNull();
 
         var oauthAccount = await _db.OAuthAccounts.FirstOrDefaultAsync(oa => oa.UserId == user.Id);
         oauthAccount.Should().NotBeNull();
-        Assert.Equal(provider, oauthAccount.Provider);
+        oauthAccount.Provider.Should().Be(provider);
     }
 
     [Fact]
@@ -229,12 +229,12 @@ public class OAuthServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.False(result.IsNewUser);
-        Assert.Equal(user.Email, result.User.Email);
+        result.IsNewUser.Should().BeFalse();
+        result.User.Email.Should().Be(user.Email);
 
         var updatedAccount = await _db.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == existingAccount.Id);
         updatedAccount.Should().NotBeNull();
-        Assert.Contains("new-access-token", updatedAccount.AccessTokenEncrypted);
+        updatedAccount.AccessTokenEncrypted.Should().Contain("new-access-token");
     }
 
     [Fact]
@@ -255,12 +255,12 @@ public class OAuthServiceTests : IDisposable
         var result = await _service.HandleCallbackAsync(provider, code, state);
 
         // Assert
-        Assert.False(result.IsNewUser);
-        Assert.Equal(existingUser.Id, result.User.Id);
+        result.IsNewUser.Should().BeFalse();
+        result.User.Id.Should().Be(existingUser.Id);
 
         var oauthAccounts = await _db.OAuthAccounts.Where(oa => oa.UserId == existingUser.Id).ToListAsync();
-        Assert.Single(oauthAccounts);
-        Assert.Equal("github", oauthAccounts[0].Provider);
+        oauthAccounts.Should().ContainSingle();
+        oauthAccounts[0].Provider.Should().Be("github");
     }
 
     [Fact]
@@ -314,9 +314,9 @@ public class OAuthServiceTests : IDisposable
         var accounts = await _service.GetLinkedAccountsAsync(user.Id);
 
         // Assert
-        Assert.Equal(2, accounts.Count);
-        Assert.Contains(accounts, a => a.Provider == "google");
-        Assert.Contains(accounts, a => a.Provider == "discord");
+        accounts.Count.Should().Be(2);
+        a => a.Provider == "google".Should().Contain(accounts);
+        a => a.Provider == "discord".Should().Contain(accounts);
     }
 
     [Fact]
@@ -352,7 +352,7 @@ public class OAuthServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("new-access-token", result.AccessToken);
+        result.AccessToken.Should().Be("new-access-token");
     }
 
     [Fact]
@@ -439,8 +439,8 @@ public class OAuthServiceTests : IDisposable
         // Assert
         var updated = await _db.OAuthAccounts.FirstOrDefaultAsync(oa => oa.Id == account.Id);
         updated.Should().NotBeNull();
-        Assert.NotEqual(oldAccessToken, updated.AccessTokenEncrypted);
-        Assert.Contains("refreshed-access-token", updated.AccessTokenEncrypted);
+        updated.AccessTokenEncrypted.Should().NotBe(oldAccessToken);
+        updated.AccessTokenEncrypted.Should().Contain("refreshed-access-token");
     }
 
     // Helper methods

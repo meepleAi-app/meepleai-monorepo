@@ -40,11 +40,11 @@ public class ConfigurationMigrationTests : AdminTestFixture
 
         // Assert: Table exists and is queryable (migrations applied successfully)
         // The fact that we can query it means the table was created during test initialization
-        Assert.True(true); // If we got here, migrations applied successfully
+        true.Should().BeTrue(); // If we got here, migrations applied successfully
 
         // Verify we can create a record
         var canCreate = await CanCreateSystemConfiguration(dbContext, testEmail);
-        Assert.True(canCreate, "Should be able to create system_configurations records");
+        canCreate, "Should be able to create system_configurations records".Should().BeTrue();
     }
 
     [Fact]
@@ -81,8 +81,8 @@ public class ConfigurationMigrationTests : AdminTestFixture
         // Assert: All operations succeeded - table structure is valid
         var saved = await dbContext.SystemConfigurations.FirstOrDefaultAsync(c => c.Key == "Migration:Test");
         saved.Should().NotBeNull();
-        Assert.Equal("test", saved.Value);
-        Assert.Equal(userId, saved.CreatedByUserId);
+        saved.Value.Should().Be("test");
+        saved.CreatedByUserId.Should().Be(userId);
     }
 
     private async Task<bool> CanCreateSystemConfiguration(MeepleAiDbContext dbContext, string userEmail)

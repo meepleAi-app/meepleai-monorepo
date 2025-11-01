@@ -83,11 +83,11 @@ public class AdminStatsServiceTests : IDisposable
         // Assert
         result.Should().NotBeNull();
         result.Metrics.Should().NotBeNull();
-        Assert.Equal(3, result.Metrics.TotalUsers);
-        Assert.Equal(2, result.Metrics.ActiveSessions); // Only non-revoked sessions
-        Assert.Equal(5, result.Metrics.TotalPdfDocuments);
-        Assert.Equal(10, result.Metrics.TotalChatMessages);
-        Assert.True(result.Metrics.TotalRagRequests > 0);
+        result.Metrics.TotalUsers.Should().Be(3);
+        result.Metrics.ActiveSessions.Should().Be(2); // Only non-revoked sessions
+        result.Metrics.TotalPdfDocuments.Should().Be(5);
+        result.Metrics.TotalChatMessages.Should().Be(10);
+        result.Metrics.TotalRagRequests > 0.Should().BeTrue();
     }
 
     [Fact]
@@ -147,7 +147,7 @@ public class AdminStatsServiceTests : IDisposable
         var result = await _service.GetDashboardStatsAsync(queryParams, CancellationToken.None);
 
         // Assert
-        Assert.Equal(2, result.Metrics.ActiveSessions);
+        result.Metrics.ActiveSessions.Should().Be(2);
     }
 
     [Fact]
@@ -186,17 +186,17 @@ public class AdminStatsServiceTests : IDisposable
         var result = await _service.GetDashboardStatsAsync(queryParams, CancellationToken.None);
 
         // Assert
-        Assert.Equal(8, result.UserTrend.Count); // 7 days + today (8 days total)
+        result.UserTrend.Count.Should().Be(8); // 7 days + today (8 days total)
 
         // Check that missing dates have zero counts
         var dayMinus6 = result.UserTrend.FirstOrDefault(d => d.Date.Date == now.AddDays(-6).Date);
         dayMinus6.Should().NotBeNull();
-        Assert.Equal(0, dayMinus6.Count);
+        dayMinus6.Count.Should().Be(0);
 
         // Check that dates with data have correct counts
         var dayMinus5 = result.UserTrend.FirstOrDefault(d => d.Date.Date == now.AddDays(-5).Date);
         dayMinus5.Should().NotBeNull();
-        Assert.Equal(1, dayMinus5.Count);
+        dayMinus5.Count.Should().Be(1);
     }
 
     [Fact]
@@ -256,7 +256,7 @@ public class AdminStatsServiceTests : IDisposable
         // Assert
         var todayPdfs = result.PdfUploadTrend.FirstOrDefault(d => d.Date.Date == now.Date);
         todayPdfs.Should().NotBeNull();
-        Assert.Equal(1, todayPdfs.Count); // Only game1 PDF
+        todayPdfs.Count.Should().Be(1); // Only game1 PDF
     }
 
     [Fact]
@@ -285,8 +285,8 @@ public class AdminStatsServiceTests : IDisposable
         var result2 = await _service.GetDashboardStatsAsync(queryParams, CancellationToken.None);
 
         // Assert - Should return same count (cached)
-        Assert.Equal(result1.Metrics.TotalUsers, result2.Metrics.TotalUsers);
-        Assert.Equal(3, result2.Metrics.TotalUsers); // Still 3, not 4
+        result2.Metrics.TotalUsers.Should().Be(result1.Metrics.TotalUsers);
+        result2.Metrics.TotalUsers.Should().Be(3); // Still 3, not 4
     }
 
     [Fact]
@@ -301,10 +301,10 @@ public class AdminStatsServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Contains("Metric,Value", result);
-        Assert.Contains("Total Users,", result);
-        Assert.Contains("Active Sessions,", result);
-        Assert.Contains("User Registrations - Date,Count,Average", result);
+        Value", result.Should().Contain("Metric);
+        ", result.Should().Contain("Total Users);
+        ", result.Should().Contain("Active Sessions);
+        Count,Average", result.Should().Contain("User Registrations - Date);
     }
 
     [Fact]
@@ -319,9 +319,9 @@ public class AdminStatsServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Contains("\"metrics\"", result);
-        Assert.Contains("\"userTrend\"", result);
-        Assert.Contains("\"totalUsers\"", result);
+        result.Should().Contain("\"metrics\"");
+        result.Should().Contain("\"userTrend\"");
+        result.Should().Contain("\"totalUsers\"");
         // Verify it's valid JSON
         var deserialized = System.Text.Json.JsonSerializer.Deserialize<DashboardStatsDto>(result);
         deserialized.Should().NotBeNull();
@@ -381,7 +381,7 @@ public class AdminStatsServiceTests : IDisposable
         var result = await _service.GetDashboardStatsAsync(queryParams, CancellationToken.None);
 
         // Assert
-        Assert.Equal(0.85, result.Metrics.AverageConfidenceScore, 2); // (0.8 + 0.9) / 2 = 0.85
+        result.Metrics.AverageConfidenceScore, 2.Should().Be(0.85); // (0.8 + 0.9) / 2 = 0.85
     }
 
     [Fact]
@@ -423,7 +423,7 @@ public class AdminStatsServiceTests : IDisposable
         var result = await _service.GetDashboardStatsAsync(queryParams, CancellationToken.None);
 
         // Assert
-        Assert.Equal(500, result.Metrics.TotalTokensUsed); // 100 + 250 + 150
+        result.Metrics.TotalTokensUsed.Should().Be(500); // 100 + 250 + 150
     }
 
     [Fact]
@@ -474,8 +474,8 @@ public class AdminStatsServiceTests : IDisposable
 
         // Assert
         var userTrendWithData = result.UserTrend.Where(d => d.Count > 0).ToList();
-        Assert.Single(userTrendWithData); // Only 1 admin user registered
-        Assert.Equal(1, userTrendWithData[0].Count);
+        userTrendWithData.Should().ContainSingle(); // Only 1 admin user registered
+        userTrendWithData[0].Count.Should().Be(1);
     }
 
     [Fact]
@@ -489,14 +489,14 @@ public class AdminStatsServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal(0, result.Metrics.TotalUsers);
-        Assert.Equal(0, result.Metrics.ActiveSessions);
-        Assert.Equal(0, result.Metrics.TotalPdfDocuments);
-        Assert.Equal(0, result.Metrics.TotalChatMessages);
-        Assert.Equal(0.0, result.Metrics.AverageConfidenceScore);
+        result.Metrics.TotalUsers.Should().Be(0);
+        result.Metrics.ActiveSessions.Should().Be(0);
+        result.Metrics.TotalPdfDocuments.Should().Be(0);
+        result.Metrics.TotalChatMessages.Should().Be(0);
+        result.Metrics.AverageConfidenceScore.Should().Be(0.0);
 
         // UserTrend should have 31 days (30 days + today) with zero counts
-        Assert.Equal(31, result.UserTrend.Count);
+        result.UserTrend.Count.Should().Be(31);
         Assert.All(result.UserTrend, point => Assert.Equal(0, point.Count));
     }
 

@@ -33,7 +33,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.GetAsync("/api/v1/games");
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     #endregion
@@ -51,7 +51,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/games", payload);
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -69,7 +69,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -105,7 +105,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -125,11 +125,11 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         // Then: System should validate (BadRequest) or auto-generate ID (Created)
         // NOTE: Current implementation auto-generates ID from name if gameId is empty
         // This test documents the actual behavior - consider adding validation in future
-        Assert.True(
+        
             response.StatusCode == HttpStatusCode.BadRequest ||
             response.StatusCode == HttpStatusCode.Created,
             $"Expected BadRequest or Created, got {response.StatusCode}"
-        );
+        .Should().BeTrue();
     }
 
     [Fact]
@@ -150,11 +150,11 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         // Then: System should return conflict or auto-generate new ID
         // NOTE: Current implementation may auto-generate ID if provided gameId conflicts
         // This test documents the actual behavior - consider strict validation in future
-        Assert.True(
+        
             response.StatusCode == HttpStatusCode.Conflict ||
             response.StatusCode == HttpStatusCode.Created,
             $"Expected Conflict or Created, got {response.StatusCode}"
-        );
+        .Should().BeTrue();
     }
 
     [Fact]
@@ -174,12 +174,12 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         // Then: System should validate (BadRequest) or sanitize/auto-generate ID (Created)
         // NOTE: Current implementation may accept and sanitize the gameId
         // This test documents the actual behavior - consider strict format validation in future
-        Assert.True(
+        
             response.StatusCode == HttpStatusCode.BadRequest ||
             response.StatusCode == HttpStatusCode.Conflict ||
             response.StatusCode == HttpStatusCode.Created,
             $"Expected BadRequest, Conflict, or Created, got {response.StatusCode}"
-        );
+        .Should().BeTrue();
     }
 
     #endregion
@@ -196,7 +196,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.GetAsync("/api/v1/games/test-game/pdfs");
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -213,7 +213,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns OK with empty list (graceful handling)
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     #endregion
@@ -230,7 +230,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.GetAsync("/api/v1/games/test-game/rulespec");
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -247,7 +247,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns not found
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     #endregion
@@ -265,7 +265,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.PutAsJsonAsync("/api/v1/games/test-game/rulespec", payload);
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -284,7 +284,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -303,7 +303,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     #endregion
@@ -320,7 +320,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.GetAsync("/api/v1/games/test-game/rulespec/history");
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -338,7 +338,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     #endregion
@@ -355,7 +355,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.GetAsync("/api/v1/games/test-game/rulespec/versions/1.0.0");
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -373,7 +373,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -391,7 +391,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns not found
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     #endregion
@@ -408,7 +408,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.GetAsync("/api/v1/games/test-game/rulespec/diff?from=1.0.0&to=2.0.0");
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -426,7 +426,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -444,7 +444,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -462,7 +462,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -480,7 +480,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: System returns not found
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     #endregion
@@ -497,7 +497,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var response = await client.GetAsync("/api/v1/games/test-game/agents");
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     #endregion

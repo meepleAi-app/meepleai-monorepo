@@ -121,29 +121,29 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         var result = await _service.ExtractPagedTextAsync(pdfPath);
 
         // Assert: Verify page-aware extraction
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.Error.Should().BeNull();
-        Assert.Equal(3, result.TotalPageCount);
+        result.TotalPageCount.Should().Be(3);
         result.PageChunks.Should().NotBeNull();
-        Assert.Equal(3, result.PageChunks.Count);
+        result.PageChunks.Count.Should().Be(3);
 
         // Verify page 1
-        Assert.Equal(1, result.PageChunks[0].PageNumber);
-        Assert.Contains("Page one", result.PageChunks[0].Text);
-        Assert.Contains("Setup instructions", result.PageChunks[0].Text);
-        Assert.False(result.PageChunks[0].IsEmpty);
+        result.PageChunks[0].PageNumber.Should().Be(1);
+        result.PageChunks[0].Text.Should().Contain("Page one");
+        result.PageChunks[0].Text.Should().Contain("Setup instructions");
+        result.PageChunks[0].IsEmpty.Should().BeFalse();
 
         // Verify page 2
-        Assert.Equal(2, result.PageChunks[1].PageNumber);
-        Assert.Contains("Page two", result.PageChunks[1].Text);
-        Assert.Contains("How to play", result.PageChunks[1].Text);
-        Assert.False(result.PageChunks[1].IsEmpty);
+        result.PageChunks[1].PageNumber.Should().Be(2);
+        result.PageChunks[1].Text.Should().Contain("Page two");
+        result.PageChunks[1].Text.Should().Contain("How to play");
+        result.PageChunks[1].IsEmpty.Should().BeFalse();
 
         // Verify page 3
-        Assert.Equal(3, result.PageChunks[2].PageNumber);
-        Assert.Contains("Page three", result.PageChunks[2].Text);
-        Assert.Contains("Winning conditions", result.PageChunks[2].Text);
-        Assert.False(result.PageChunks[2].IsEmpty);
+        result.PageChunks[2].PageNumber.Should().Be(3);
+        result.PageChunks[2].Text.Should().Contain("Page three");
+        result.PageChunks[2].Text.Should().Contain("Winning conditions");
+        result.PageChunks[2].IsEmpty.Should().BeFalse();
     }
 
     /// <summary>
@@ -170,24 +170,24 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         var result = await _service.ExtractPagedTextAsync(pdfPath);
 
         // Assert: Empty page should be tracked with correct page number
-        Assert.True(result.Success);
-        Assert.Equal(3, result.TotalPageCount);
-        Assert.Equal(3, result.PageChunks.Count);
+        result.Success.Should().BeTrue();
+        result.TotalPageCount.Should().Be(3);
+        result.PageChunks.Count.Should().Be(3);
 
         // Page 1: Has content
-        Assert.Equal(1, result.PageChunks[0].PageNumber);
-        Assert.False(result.PageChunks[0].IsEmpty);
-        Assert.Contains("First page", result.PageChunks[0].Text);
+        result.PageChunks[0].PageNumber.Should().Be(1);
+        result.PageChunks[0].IsEmpty.Should().BeFalse();
+        result.PageChunks[0].Text.Should().Contain("First page");
 
         // Page 2: Empty
-        Assert.Equal(2, result.PageChunks[1].PageNumber);
-        Assert.True(result.PageChunks[1].IsEmpty);
+        result.PageChunks[1].PageNumber.Should().Be(2);
+        result.PageChunks[1].IsEmpty.Should().BeTrue();
         Assert.True(string.IsNullOrWhiteSpace(result.PageChunks[1].Text));
 
         // Page 3: Has content
-        Assert.Equal(3, result.PageChunks[2].PageNumber);
-        Assert.False(result.PageChunks[2].IsEmpty);
-        Assert.Contains("Third page", result.PageChunks[2].Text);
+        result.PageChunks[2].PageNumber.Should().Be(3);
+        result.PageChunks[2].IsEmpty.Should().BeFalse();
+        result.PageChunks[2].Text.Should().Contain("Third page");
     }
 
     /// <summary>
@@ -210,11 +210,11 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         var result = await _service.ExtractPagedTextAsync(pdfPath);
 
         // Assert: Failure with structured error
-        Assert.False(result.Success);
+        result.Success.Should().BeFalse();
         result.Error.Should().NotBeNull();
-        Assert.Contains("failed", result.Error, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(0, result.TotalPageCount);
-        Assert.True(result.PageChunks == null || result.PageChunks.Count == 0);
+        result.Error, StringComparison.OrdinalIgnoreCase.Should().Contain("failed");
+        result.TotalPageCount.Should().Be(0);
+        result.PageChunks == null || result.PageChunks.Count == 0.Should().BeTrue();
     }
 
     // ===== Edge Cases =====
@@ -238,11 +238,11 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         var result = await _service.ExtractPagedTextAsync(pdfPath);
 
         // Assert: Single page with number 1
-        Assert.True(result.Success);
-        Assert.Equal(1, result.TotalPageCount);
-        Assert.Single(result.PageChunks);
-        Assert.Equal(1, result.PageChunks[0].PageNumber);
-        Assert.Contains("Only one page", result.PageChunks[0].Text);
+        result.Success.Should().BeTrue();
+        result.TotalPageCount.Should().Be(1);
+        result.PageChunks.Should().ContainSingle();
+        result.PageChunks[0].PageNumber.Should().Be(1);
+        result.PageChunks[0].Text.Should().Contain("Only one page");
     }
 
     /// <summary>
@@ -267,20 +267,20 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         var result = await _service.ExtractPagedTextAsync(pdfPath);
 
         // Assert: All 10 pages with correct numbers
-        Assert.True(result.Success);
-        Assert.Equal(10, result.TotalPageCount);
-        Assert.Equal(10, result.PageChunks.Count);
+        result.Success.Should().BeTrue();
+        result.TotalPageCount.Should().Be(10);
+        result.PageChunks.Count.Should().Be(10);
 
         // Verify each page has sequential number
         for (int i = 0; i < 10; i++)
         {
-            Assert.Equal(i + 1, result.PageChunks[i].PageNumber);
-            Assert.Contains($"page {i + 1}", result.PageChunks[i].Text);
+            result.PageChunks[i].PageNumber.Should().Be(i + 1);
+            result.PageChunks[i].Text.Should().Contain($"page {i + 1}");
         }
 
         // No page should have invalid page number
-        Assert.DoesNotContain(result.PageChunks, chunk => chunk.PageNumber <= 0);
-        Assert.DoesNotContain(result.PageChunks, chunk => chunk.PageNumber > 10);
+        chunk => chunk.PageNumber <= 0.Should().NotContain(result.PageChunks);
+        chunk => chunk.PageNumber > 10.Should().NotContain(result.PageChunks);
     }
 
     // ===== Validation Tests =====
@@ -299,9 +299,9 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         var result = await _service.ExtractPagedTextAsync(null!);
 
         // Assert
-        Assert.False(result.Success);
+        result.Success.Should().BeFalse();
         result.Error.Should().NotBeNull();
-        Assert.Contains("required", result.Error, StringComparison.OrdinalIgnoreCase);
+        result.Error, StringComparison.OrdinalIgnoreCase.Should().Contain("required");
     }
 
     /// <summary>
@@ -317,7 +317,7 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         var result = await _service.ExtractPagedTextAsync(string.Empty);
 
         // Assert
-        Assert.False(result.Success);
+        result.Success.Should().BeFalse();
         result.Error.Should().NotBeNull();
     }
 
@@ -338,9 +338,9 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         var result = await _service.ExtractPagedTextAsync(nonExistentPath);
 
         // Assert
-        Assert.False(result.Success);
+        result.Success.Should().BeFalse();
         result.Error.Should().NotBeNull();
-        Assert.Contains("not found", result.Error, StringComparison.OrdinalIgnoreCase);
+        result.Error, StringComparison.OrdinalIgnoreCase.Should().Contain("not found");
     }
 
     // ===== Result Structure Tests =====
@@ -366,11 +366,11 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         var result = PagedExtractionResult.CreateSuccess(pageChunks, 3);
 
         // Assert: Verify all properties
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.Error.Should().BeNull();
-        Assert.Equal(3, result.TotalPageCount);
+        result.TotalPageCount.Should().Be(3);
         result.PageChunks.Should().NotBeNull();
-        Assert.Equal(3, result.PageChunks.Count);
+        result.PageChunks.Count.Should().Be(3);
         Assert.Same(pageChunks, result.PageChunks);
     }
 
@@ -387,10 +387,10 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         var result = PagedExtractionResult.CreateFailure("Test extraction error");
 
         // Assert: Verify failure properties
-        Assert.False(result.Success);
-        Assert.Equal("Test extraction error", result.Error);
-        Assert.Equal(0, result.TotalPageCount);
-        Assert.True(result.PageChunks == null || result.PageChunks.Count == 0);
+        result.Success.Should().BeFalse();
+        result.Error.Should().Be("Test extraction error");
+        result.TotalPageCount.Should().Be(0);
+        result.PageChunks == null || result.PageChunks.Count == 0.Should().BeTrue();
     }
 
     /// <summary>
@@ -407,14 +407,14 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         var chunk = new PagedTextChunk(text, 5, 0, text.Length - 1);
 
         // Assert: Verify properties
-        Assert.Equal(5, chunk.PageNumber);
-        Assert.Equal("Sample text content", chunk.Text);
-        Assert.False(chunk.IsEmpty);
+        chunk.PageNumber.Should().Be(5);
+        chunk.Text.Should().Be("Sample text content");
+        chunk.IsEmpty.Should().BeFalse();
 
         // Empty chunk
         var emptyChunk = new PagedTextChunk("", 7, 0, 0);
-        Assert.Equal(7, emptyChunk.PageNumber);
-        Assert.True(emptyChunk.IsEmpty);
+        emptyChunk.PageNumber.Should().Be(7);
+        emptyChunk.IsEmpty.Should().BeTrue();
     }
 
     // ===== Logging Tests =====
@@ -436,7 +436,7 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         var result = await _service.ExtractPagedTextAsync(pdfPath);
 
         // Assert: Verify logging occurred
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         _loggerMock.Verify(
             x => x.Log(
                 LogLevel.Information,
@@ -466,7 +466,7 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         var result = await _service.ExtractPagedTextAsync(pdfPath);
 
         // Assert: Verify error logging
-        Assert.False(result.Success);
+        result.Success.Should().BeFalse();
         _loggerMock.Verify(
             x => x.Log(
                 LogLevel.Error,

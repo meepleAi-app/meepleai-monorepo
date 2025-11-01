@@ -165,19 +165,19 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
 
         // Assert: Dataset loaded correctly
         loadedDataset.Should().NotBeNull();
-        Assert.Equal(dataset.Name, loadedDataset.Name);
-        Assert.Equal(dataset.Queries.Count, loadedDataset.Queries.Count);
+        loadedDataset.Name.Should().Be(dataset.Name);
+        loadedDataset.Queries.Count.Should().Be(dataset.Queries.Count);
 
         // Act: Evaluate
         var report = await _evaluationService.EvaluateAsync(loadedDataset, topK: 5);
 
         // Assert: Report generated with valid metrics
         report.Should().NotBeNull();
-        Assert.Equal(loadedDataset.Queries.Count, report.TotalQueries);
-        Assert.True(report.SuccessfulQueries > 0);
-        Assert.True(report.MeanReciprocalRank >= 0.0 && report.MeanReciprocalRank <= 1.0);
-        Assert.True(report.AvgPrecisionAt5 >= 0.0 && report.AvgPrecisionAt5 <= 1.0);
-        Assert.True(report.LatencyP95 > 0); // Some latency should be recorded
+        report.TotalQueries.Should().Be(loadedDataset.Queries.Count);
+        report.SuccessfulQueries > 0.Should().BeTrue();
+        report.MeanReciprocalRank >= 0.0 && report.MeanReciprocalRank <= 1.0.Should().BeTrue();
+        report.AvgPrecisionAt5 >= 0.0 && report.AvgPrecisionAt5 <= 1.0.Should().BeTrue();
+        report.LatencyP95 > 0.Should().BeTrue(); // Some latency should be recorded
     }
 
     [Fact]
@@ -193,11 +193,11 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
 
         // Assert
         markdown.Should().NotBeNull();
-        Assert.Contains("# RAG Evaluation Report", markdown);
-        Assert.Contains("Summary", markdown);
-        Assert.Contains("Information Retrieval Metrics", markdown);
-        Assert.Contains("Performance Metrics", markdown);
-        Assert.Contains(dataset.Name, markdown);
+        markdown.Should().Contain("# RAG Evaluation Report");
+        markdown.Should().Contain("Summary");
+        markdown.Should().Contain("Information Retrieval Metrics");
+        markdown.Should().Contain("Performance Metrics");
+        markdown.Should().Contain(dataset.Name);
     }
 
     [Fact]
@@ -221,8 +221,8 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
         });
 
         deserialized.Should().NotBeNull();
-        Assert.Equal(report.DatasetName, deserialized.DatasetName);
-        Assert.Equal(report.TotalQueries, deserialized.TotalQueries);
+        deserialized.DatasetName.Should().Be(report.DatasetName);
+        deserialized.TotalQueries.Should().Be(report.TotalQueries);
     }
 
     // Note: Mock embeddings may not produce sufficient vector similarity for retrieval - ensure Qdrant running
@@ -251,15 +251,15 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
         var report = await _evaluationService!.EvaluateAsync(dataset, topK: 3);
 
         // Assert
-        Assert.Equal(1, report.SuccessfulQueries);
+        report.SuccessfulQueries.Should().Be(1);
         var result = report.QueryResults[0];
-        Assert.True(result.Success);
-        Assert.True(result.RetrievedCount > 0, "Should retrieve at least one document");
+        result.Success.Should().BeTrue();
+        result.RetrievedCount > 0, "Should retrieve at least one document".Should().BeTrue();
 
         // Since we're using mock embeddings, exact precision depends on mock implementation
         // But we can verify metrics are within valid ranges
-        Assert.True(result.PrecisionAt1 >= 0.0 && result.PrecisionAt1 <= 1.0);
-        Assert.True(result.RecallAtK >= 0.0 && result.RecallAtK <= 1.0);
+        result.PrecisionAt1 >= 0.0 && result.PrecisionAt1 <= 1.0.Should().BeTrue();
+        result.RecallAtK >= 0.0 && result.RecallAtK <= 1.0.Should().BeTrue();
     }
 
     [Fact]
@@ -282,7 +282,7 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
         var report = await _evaluationService!.EvaluateAsync(dataset, topK: 5, strictThresholds);
 
         // Assert: Should fail quality gates
-        Assert.False(report.PassedQualityGates);
+        report.PassedQualityGates.Should().BeFalse();
         report.QualityGateFailures.Should().NotBeEmpty();
     }
 
@@ -300,9 +300,9 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
         {
             if (result.Success)
             {
-                Assert.Equal(0, result.RetrievedCount);
-                Assert.Equal(0.0, result.PrecisionAt5);
-                Assert.Equal(0.0, result.ReciprocalRank);
+                result.RetrievedCount.Should().Be(0);
+                result.PrecisionAt5.Should().Be(0.0);
+                result.ReciprocalRank.Should().Be(0.0);
             }
         }
     }
@@ -318,10 +318,10 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
         var report = await _evaluationService!.EvaluateAsync(dataset, topK: 5);
 
         // Assert: Latency metrics should be calculated
-        Assert.True(report.AvgLatencyMs > 0, "Average latency should be positive");
-        Assert.True(report.LatencyP50 > 0, "p50 should be positive");
-        Assert.True(report.LatencyP95 >= report.LatencyP50, "p95 should be >= p50");
-        Assert.True(report.LatencyP99 >= report.LatencyP95, "p99 should be >= p95");
+        report.AvgLatencyMs > 0, "Average latency should be positive".Should().BeTrue();
+        report.LatencyP50 > 0, "p50 should be positive".Should().BeTrue();
+        report.LatencyP95 >= report.LatencyP50, "p95 should be >= p50".Should().BeTrue();
+        report.LatencyP99 >= report.LatencyP95, "p99 should be >= p95".Should().BeTrue();
     }
 
     // Helper methods

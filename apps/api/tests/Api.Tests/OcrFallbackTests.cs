@@ -99,11 +99,11 @@ public class OcrFallbackTests : IDisposable
         _output.WriteLine($"Characters extracted: {result.CharacterCount}");
         _output.WriteLine($"Extracted text: {result.ExtractedText}");
 
-        Assert.True(result.Success, "Extraction should succeed");
-        Assert.True(result.UsedOcr, "OCR fallback should be triggered for scanned PDF");
+        result.Success, "Extraction should succeed".Should().BeTrue();
+        result.UsedOcr, "OCR fallback should be triggered for scanned PDF".Should().BeTrue();
         result.OcrConfidence.Should().NotBeNull();
-        Assert.True(result.OcrConfidence > 0, "OCR confidence should be > 0");
-        Assert.True(result.CharacterCount > 0, "Should extract some text via OCR");
+        result.OcrConfidence > 0, "OCR confidence should be > 0".Should().BeTrue();
+        result.CharacterCount > 0, "Should extract some text via OCR".Should().BeTrue();
 
         // The OCR should recognize at least some of the text
         // (exact match not guaranteed due to OCR accuracy)
@@ -143,8 +143,8 @@ public class OcrFallbackTests : IDisposable
         _output.WriteLine($"Used OCR: {result.UsedOcr}");
         _output.WriteLine($"Characters extracted: {result.CharacterCount}");
 
-        Assert.True(result.Success, "Extraction should succeed");
-        Assert.False(result.UsedOcr, "OCR should NOT be used when service is null");
+        result.Success, "Extraction should succeed".Should().BeTrue();
+        result.UsedOcr, "OCR should NOT be used when service is null".Should().BeFalse();
         result.OcrConfidence.Should().BeNull();
     }
 

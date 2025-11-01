@@ -23,7 +23,7 @@ public class OpenTelemetryTracingTests
         // Assert
         sourceNames.Should().NotBeNull();
         sourceNames.Should().NotBeEmpty();
-        Assert.Equal(5, sourceNames.Length);
+        sourceNames.Length.Should().Be(5);
     }
 
     [Fact]
@@ -33,8 +33,8 @@ public class OpenTelemetryTracingTests
         var sourceNames = MeepleAiActivitySources.GetAllSourceNames();
 
         // Assert
-        Assert.Contains(MeepleAiActivitySources.ApiSourceName, sourceNames);
-        Assert.Equal("MeepleAI.Api", MeepleAiActivitySources.ApiSourceName);
+        sourceNames.Should().Contain(MeepleAiActivitySources.ApiSourceName);
+        MeepleAiActivitySources.ApiSourceName.Should().Be("MeepleAI.Api");
     }
 
     [Fact]
@@ -44,8 +44,8 @@ public class OpenTelemetryTracingTests
         var sourceNames = MeepleAiActivitySources.GetAllSourceNames();
 
         // Assert
-        Assert.Contains(MeepleAiActivitySources.RagSourceName, sourceNames);
-        Assert.Equal("MeepleAI.Rag", MeepleAiActivitySources.RagSourceName);
+        sourceNames.Should().Contain(MeepleAiActivitySources.RagSourceName);
+        MeepleAiActivitySources.RagSourceName.Should().Be("MeepleAI.Rag");
     }
 
     [Fact]
@@ -55,8 +55,8 @@ public class OpenTelemetryTracingTests
         var sourceNames = MeepleAiActivitySources.GetAllSourceNames();
 
         // Assert
-        Assert.Contains(MeepleAiActivitySources.VectorSearchSourceName, sourceNames);
-        Assert.Equal("MeepleAI.VectorSearch", MeepleAiActivitySources.VectorSearchSourceName);
+        sourceNames.Should().Contain(MeepleAiActivitySources.VectorSearchSourceName);
+        MeepleAiActivitySources.VectorSearchSourceName.Should().Be("MeepleAI.VectorSearch");
     }
 
     [Fact]
@@ -66,8 +66,8 @@ public class OpenTelemetryTracingTests
         var sourceNames = MeepleAiActivitySources.GetAllSourceNames();
 
         // Assert
-        Assert.Contains(MeepleAiActivitySources.PdfProcessingSourceName, sourceNames);
-        Assert.Equal("MeepleAI.PdfProcessing", MeepleAiActivitySources.PdfProcessingSourceName);
+        sourceNames.Should().Contain(MeepleAiActivitySources.PdfProcessingSourceName);
+        MeepleAiActivitySources.PdfProcessingSourceName.Should().Be("MeepleAI.PdfProcessing");
     }
 
     [Fact]
@@ -77,8 +77,8 @@ public class OpenTelemetryTracingTests
         var sourceNames = MeepleAiActivitySources.GetAllSourceNames();
 
         // Assert
-        Assert.Contains(MeepleAiActivitySources.CacheSourceName, sourceNames);
-        Assert.Equal("MeepleAI.Cache", MeepleAiActivitySources.CacheSourceName);
+        sourceNames.Should().Contain(MeepleAiActivitySources.CacheSourceName);
+        MeepleAiActivitySources.CacheSourceName.Should().Be("MeepleAI.Cache");
     }
 
     [Fact]
@@ -97,8 +97,8 @@ public class OpenTelemetryTracingTests
 
         // Assert
         activity.Should().NotBeNull();
-        Assert.Equal("TestActivity", activity.DisplayName);
-        Assert.Equal(MeepleAiActivitySources.ApiSourceName, activity.Source.Name);
+        activity.DisplayName.Should().Be("TestActivity");
+        activity.Source.Name.Should().Be(MeepleAiActivitySources.ApiSourceName);
     }
 
     [Fact]
@@ -117,8 +117,8 @@ public class OpenTelemetryTracingTests
 
         // Assert
         activity.Should().NotBeNull();
-        Assert.Equal("RagTestActivity", activity.DisplayName);
-        Assert.Equal(MeepleAiActivitySources.RagSourceName, activity.Source.Name);
+        activity.DisplayName.Should().Be("RagTestActivity");
+        activity.Source.Name.Should().Be(MeepleAiActivitySources.RagSourceName);
     }
 
     [Fact]
@@ -137,8 +137,8 @@ public class OpenTelemetryTracingTests
 
         // Assert
         activity.Should().NotBeNull();
-        Assert.Equal("VectorSearchTest", activity.DisplayName);
-        Assert.Equal(MeepleAiActivitySources.VectorSearchSourceName, activity.Source.Name);
+        activity.DisplayName.Should().Be("VectorSearchTest");
+        activity.Source.Name.Should().Be(MeepleAiActivitySources.VectorSearchSourceName);
     }
 
     [Fact]
@@ -157,8 +157,8 @@ public class OpenTelemetryTracingTests
 
         // Assert
         activity.Should().NotBeNull();
-        Assert.Equal("PdfTest", activity.DisplayName);
-        Assert.Equal(MeepleAiActivitySources.PdfProcessingSourceName, activity.Source.Name);
+        activity.DisplayName.Should().Be("PdfTest");
+        activity.Source.Name.Should().Be(MeepleAiActivitySources.PdfProcessingSourceName);
     }
 
     [Fact]
@@ -177,8 +177,8 @@ public class OpenTelemetryTracingTests
 
         // Assert
         activity.Should().NotBeNull();
-        Assert.Equal("CacheTest", activity.DisplayName);
-        Assert.Equal(MeepleAiActivitySources.CacheSourceName, activity.Source.Name);
+        activity.DisplayName.Should().Be("CacheTest");
+        activity.Source.Name.Should().Be(MeepleAiActivitySources.CacheSourceName);
     }
 
     [Fact]
@@ -230,7 +230,7 @@ public class OpenTelemetryTracingTests
         Assert.Equal(false, activity.GetTagItem("success"));
         Assert.Equal("InvalidOperationException", activity.GetTagItem("error.type"));
         Assert.Equal("Test exception message", activity.GetTagItem("error.message"));
-        Assert.Equal(ActivityStatusCode.Error, activity.Status);
+        activity.Status.Should().Be(ActivityStatusCode.Error);
     }
 
     [Fact]
@@ -256,7 +256,7 @@ public class OpenTelemetryTracingTests
         // Assert
         parentActivity.Should().NotBeNull();
         childActivity.Should().NotBeNull();
-        Assert.Equal(parentId, childParentId);
+        childParentId.Should().Be(parentId);
     }
 
     [Fact]
@@ -271,7 +271,7 @@ public class OpenTelemetryTracingTests
 
         // Assert
         activitySourceNames.Should().NotBeEmpty();
-        Assert.Equal("MeepleAI.Api", meterName);
+        meterName.Should().Be("MeepleAI.Api");
 
         // Activity sources should be distinct operations, not the same as the meter name
         // (though they can share the same base namespace)

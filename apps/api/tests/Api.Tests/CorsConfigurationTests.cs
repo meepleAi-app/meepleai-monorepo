@@ -44,6 +44,6 @@ public class CorsConfigurationTests : IClassFixture<WebApplicationFactoryFixture
         var policy = await corsPolicyProvider.GetPolicyAsync(new DefaultHttpContext(), "web");
 
         policy.Should().NotBeNull();
-        Assert.Contains(origin, policy!.Origins);
+        policy!.Origins.Should().Contain(origin);
     }
 }

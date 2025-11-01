@@ -89,10 +89,10 @@ public class UserManagementServiceTests : IDisposable
             limit: 20);
 
         // Assert
-        Assert.Equal(3, result.Total);
-        Assert.Equal(3, result.Items.Count);
-        Assert.Equal(1, result.Page);
-        Assert.Equal(20, result.PageSize);
+        result.Total.Should().Be(3);
+        result.Items.Count.Should().Be(3);
+        result.Page.Should().Be(1);
+        result.PageSize.Should().Be(20);
     }
 
     [Fact]
@@ -111,9 +111,9 @@ public class UserManagementServiceTests : IDisposable
             limit: 20);
 
         // Assert
-        Assert.Equal(1, result.Total);
-        Assert.Single(result.Items);
-        Assert.Contains("admin", result.Items[0].Email, StringComparison.OrdinalIgnoreCase);
+        result.Total.Should().Be(1);
+        result.Items.Should().ContainSingle();
+        result.Items[0].Email, StringComparison.OrdinalIgnoreCase.Should().Contain("admin");
     }
 
     [Fact]
@@ -132,9 +132,9 @@ public class UserManagementServiceTests : IDisposable
             limit: 20);
 
         // Assert
-        Assert.Equal(1, result.Total);
-        Assert.Single(result.Items);
-        Assert.Contains("Administrator", result.Items[0].DisplayName, StringComparison.OrdinalIgnoreCase);
+        result.Total.Should().Be(1);
+        result.Items.Should().ContainSingle();
+        result.Items[0].DisplayName, StringComparison.OrdinalIgnoreCase.Should().Contain("Administrator");
     }
 
     [Fact]
@@ -153,9 +153,9 @@ public class UserManagementServiceTests : IDisposable
             limit: 20);
 
         // Assert
-        Assert.Equal(1, result.Total);
-        Assert.Single(result.Items);
-        Assert.Equal("Admin", result.Items[0].Role);
+        result.Total.Should().Be(1);
+        result.Items.Should().ContainSingle();
+        result.Items[0].Role.Should().Be("Admin");
     }
 
     [Fact]
@@ -174,10 +174,10 @@ public class UserManagementServiceTests : IDisposable
             limit: 1);
 
         // Assert
-        Assert.Equal(3, result.Total);
-        Assert.Single(result.Items);
-        Assert.Equal(2, result.Page);
-        Assert.Equal(1, result.PageSize);
+        result.Total.Should().Be(3);
+        result.Items.Should().ContainSingle();
+        result.Page.Should().Be(2);
+        result.PageSize.Should().Be(1);
     }
 
     [Theory]
@@ -204,8 +204,8 @@ public class UserManagementServiceTests : IDisposable
             limit: 20);
 
         // Assert
-        Assert.Equal(3, result.Total);
-        Assert.Equal(3, result.Items.Count);
+        result.Total.Should().Be(3);
+        result.Items.Count.Should().Be(3);
         // Verify items are actually sorted (basic check)
         result.Items.Should().NotBeNull();
     }
@@ -267,14 +267,14 @@ public class UserManagementServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal(request.Email, result.Email);
-        Assert.Equal(request.DisplayName, result.DisplayName);
-        Assert.Equal("User", result.Role);
+        result.Email.Should().Be(request.Email);
+        result.DisplayName.Should().Be(request.DisplayName);
+        result.Role.Should().Be("User");
 
         // Verify user exists in database
         var dbUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
         dbUser.Should().NotBeNull();
-        Assert.Equal(UserRole.User, dbUser.Role);
+        dbUser.Role.Should().Be(UserRole.User);
     }
 
     [Fact]
@@ -293,12 +293,12 @@ public class UserManagementServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Admin", result.Role);
+        result.Role.Should().Be("Admin");
 
         // Verify database
         var dbUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
         dbUser.Should().NotBeNull();
-        Assert.Equal(UserRole.Admin, dbUser.Role);
+        dbUser.Role.Should().Be(UserRole.Admin);
     }
 
     [Fact]
@@ -317,7 +317,7 @@ public class UserManagementServiceTests : IDisposable
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.CreateUserAsync(request));
-        Assert.Contains("already exists", exception.Message);
+        exception.Message.Should().Contain("already exists");
     }
 
     [Fact]
@@ -336,14 +336,14 @@ public class UserManagementServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal(request.Email, result.Email);
-        Assert.Equal(request.DisplayName, result.DisplayName);
-        Assert.Equal("Editor", result.Role);
+        result.Email.Should().Be(request.Email);
+        result.DisplayName.Should().Be(request.DisplayName);
+        result.Role.Should().Be("Editor");
 
         // Verify database
         var dbUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
         dbUser.Should().NotBeNull();
-        Assert.Equal(UserRole.Editor, dbUser.Role);
+        dbUser.Role.Should().Be(UserRole.Editor);
     }
 
     #endregion
@@ -365,15 +365,15 @@ public class UserManagementServiceTests : IDisposable
         var result = await _service.UpdateUserAsync(userId, request);
 
         // Assert
-        Assert.Equal("updated@example.com", result.Email);
-        Assert.Equal("Updated Name", result.DisplayName);
-        Assert.Equal("Editor", result.Role);
+        result.Email.Should().Be("updated@example.com");
+        result.DisplayName.Should().Be("Updated Name");
+        result.Role.Should().Be("Editor");
 
         // Verify database was updated
         var dbUser = await _dbContext.Users.FindAsync(userId);
-        Assert.Equal("updated@example.com", dbUser!.Email);
-        Assert.Equal("Updated Name", dbUser.DisplayName);
-        Assert.Equal(UserRole.Editor, dbUser.Role);
+        dbUser!.Email.Should().Be("updated@example.com");
+        dbUser.DisplayName.Should().Be("Updated Name");
+        dbUser.Role.Should().Be(UserRole.Editor);
     }
 
     [Fact]
@@ -391,9 +391,9 @@ public class UserManagementServiceTests : IDisposable
         var result = await _service.UpdateUserAsync(userId, request);
 
         // Assert
-        Assert.Equal("original@example.com", result.Email); // Unchanged
-        Assert.Equal("New Name Only", result.DisplayName); // Updated
-        Assert.Equal("User", result.Role); // Unchanged
+        result.Email.Should().Be("original@example.com"); // Unchanged
+        result.DisplayName.Should().Be("New Name Only"); // Updated
+        result.Role.Should().Be("User"); // Unchanged
     }
 
     [Fact]
@@ -412,7 +412,7 @@ public class UserManagementServiceTests : IDisposable
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.UpdateUserAsync(userId, request));
-        Assert.Contains("already in use", exception.Message);
+        exception.Message.Should().Contain("already in use");
     }
 
     [Fact]
@@ -446,7 +446,7 @@ public class UserManagementServiceTests : IDisposable
         var result = await _service.UpdateUserAsync(userId, request);
 
         // Assert
-        Assert.Equal("User", result.Role); // Role unchanged
+        result.Role.Should().Be("User"); // Role unchanged
     }
 
     #endregion
@@ -477,7 +477,7 @@ public class UserManagementServiceTests : IDisposable
         // Act & Assert - trying to delete self
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.DeleteUserAsync(userId, userId));
-        Assert.Contains("Cannot delete your own account", exception.Message);
+        exception.Message.Should().Contain("Cannot delete your own account");
     }
 
     [Fact]
@@ -490,7 +490,7 @@ public class UserManagementServiceTests : IDisposable
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => _service.DeleteUserAsync(adminId, requestingUserId));
-        Assert.Contains("Cannot delete the last admin user", exception.Message);
+        exception.Message.Should().Contain("Cannot delete the last admin user");
     }
 
     [Fact]

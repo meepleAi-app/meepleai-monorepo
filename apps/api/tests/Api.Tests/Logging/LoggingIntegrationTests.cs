@@ -58,7 +58,7 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
         var requestLog = logEvents.FirstOrDefault(e => e.Properties.ContainsKey("CorrelationId"));
         requestLog.Should().NotBeNull();
         var loggedCorrelationId = requestLog.Properties["CorrelationId"].ToString().Trim('"');
-        Assert.Equal(correlationId, loggedCorrelationId);
+        loggedCorrelationId.Should().Be(correlationId);
     }
 
     [Fact]
@@ -136,13 +136,13 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
         var passwordProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Password");
         passwordProp.Should().NotBeNull();
         var scalarValue = Assert.IsType<ScalarValue>(passwordProp.Value);
-        Assert.Equal("[REDACTED]", scalarValue.Value);
+        scalarValue.Value.Should().Be("[REDACTED]");
 
         // Username should still be visible
         var usernameProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Username");
         usernameProp.Should().NotBeNull();
         var usernameValue = Assert.IsType<ScalarValue>(usernameProp.Value);
-        Assert.Equal("admin", usernameValue.Value);
+        usernameValue.Value.Should().Be("admin");
     }
 
     [Fact]
@@ -163,7 +163,7 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
 
         // The API key should be redacted in the rendered message
         var renderedMessage = apiLog.RenderMessage();
-        Assert.DoesNotContain(apiKey, renderedMessage);
+        renderedMessage.Should().NotContain(apiKey);
     }
 
     [Fact]
@@ -189,7 +189,7 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
         var connStringProp = structureValue.Properties.FirstOrDefault(p => p.Name == "ConnectionString");
         connStringProp.Should().NotBeNull();
         var scalarValue = Assert.IsType<ScalarValue>(connStringProp.Value);
-        Assert.Equal("[REDACTED]", scalarValue.Value); // Property name contains sensitive keyword
+        scalarValue.Value.Should().Be("[REDACTED]"); // Property name contains sensitive keyword
     }
 
     [Fact]
@@ -205,9 +205,9 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
         var correlationId2 = response2.Headers.GetValues("X-Correlation-Id").First();
         var correlationId3 = response3.Headers.GetValues("X-Correlation-Id").First();
 
-        Assert.NotEqual(correlationId1, correlationId2);
-        Assert.NotEqual(correlationId2, correlationId3);
-        Assert.NotEqual(correlationId1, correlationId3);
+        correlationId2.Should().NotBe(correlationId1);
+        correlationId3.Should().NotBe(correlationId2);
+        correlationId3.Should().NotBe(correlationId1);
     }
 
     [Fact]
@@ -227,9 +227,9 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
         var logEvents = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
 
         // Should have Debug, Info, and Warning (Trace might be filtered)
-        Assert.Contains(logEvents, e => e.Level == LogEventLevel.Debug);
-        Assert.Contains(logEvents, e => e.Level == LogEventLevel.Information);
-        Assert.Contains(logEvents, e => e.Level == LogEventLevel.Warning);
+        e => e.Level == LogEventLevel.Debug.Should().Contain(logEvents);
+        e => e.Level == LogEventLevel.Information.Should().Contain(logEvents);
+        e => e.Level == LogEventLevel.Warning.Should().Contain(logEvents);
     }
 
     [Fact]

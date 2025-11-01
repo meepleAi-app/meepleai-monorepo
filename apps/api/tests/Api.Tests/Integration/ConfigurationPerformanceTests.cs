@@ -117,7 +117,7 @@ public class ConfigurationPerformanceTests : ConfigIntegrationTestBase
 
         // Assert: Query completes in < 100ms
         Assert.True(sw.ElapsedMilliseconds < 100, $"Query time ({sw.ElapsedMilliseconds}ms) exceeds 100ms target");
-        Assert.Equal(100, configs.Count);
+        configs.Count.Should().Be(100);
     }
 
     [Fact]

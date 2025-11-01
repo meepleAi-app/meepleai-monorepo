@@ -21,7 +21,7 @@ public class ContractModelTests
         var response = new IngestPdfResponse("job-123");
 
         // Assert
-        Assert.Equal("job-123", response.jobId);
+        response.jobId.Should().Be("job-123");
     }
 
     [Fact]
@@ -33,8 +33,8 @@ public class ContractModelTests
         var response3 = new IngestPdfResponse("job-456");
 
         // Assert
-        Assert.Equal(response1, response2);
-        Assert.NotEqual(response1, response3);
+        response2.Should().Be(response1);
+        response3.Should().NotBe(response1);
     }
 
     [Fact]
@@ -47,8 +47,8 @@ public class ContractModelTests
         var modified = original with { jobId = "job-456" };
 
         // Assert
-        Assert.Equal("job-456", modified.jobId);
-        Assert.Equal("job-123", original.jobId); // Original unchanged
+        modified.jobId.Should().Be("job-456");
+        original.jobId.Should().Be("job-123"); // Original unchanged
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public class ContractModelTests
         var stringRepresentation = response.ToString();
 
         // Assert
-        Assert.Contains("job-789", stringRepresentation);
+        stringRepresentation.Should().Contain("job-789");
     }
 
     #endregion
@@ -77,8 +77,8 @@ public class ContractModelTests
         var request = new QaRequest("game-123", "How do I win?", Guid.NewGuid());
 
         // Assert
-        Assert.Equal("game-123", request.gameId);
-        Assert.Equal("How do I win?", request.query);
+        request.gameId.Should().Be("game-123");
+        request.query.Should().Be("How do I win?");
         request.chatId.Should().NotBeNull();
     }
 
@@ -89,8 +89,8 @@ public class ContractModelTests
         var request = new QaRequest("game-123", "test query");
 
         // Assert
-        Assert.Equal("game-123", request.gameId);
-        Assert.Equal("test query", request.query);
+        request.gameId.Should().Be("game-123");
+        request.query.Should().Be("test query");
         request.chatId.Should().BeNull();
     }
 
@@ -124,15 +124,15 @@ public class ContractModelTests
             metadata: metadata);
 
         // Assert
-        Assert.Equal("The answer is 42.", response.answer);
-        Assert.Equal(2, response.snippets.Count);
-        Assert.Equal(100, response.promptTokens);
-        Assert.Equal(50, response.completionTokens);
-        Assert.Equal(150, response.totalTokens);
-        Assert.Equal(0.95, response.confidence);
+        response.answer.Should().Be("The answer is 42.");
+        response.snippets.Count.Should().Be(2);
+        response.promptTokens.Should().Be(100);
+        response.completionTokens.Should().Be(50);
+        response.totalTokens.Should().Be(150);
+        response.confidence.Should().Be(0.95);
         response.metadata.Should().NotBeNull();
-        Assert.Equal(2, response.metadata.Count);
-        Assert.Equal("anthropic/claude-3.5-sonnet", response.metadata["model"]);
+        response.metadata.Count.Should().Be(2);
+        response.metadata["model"].Should().Be("anthropic/claude-3.5-sonnet");
     }
 
     [Fact]
@@ -142,11 +142,11 @@ public class ContractModelTests
         var response = new QaResponse("Answer", Array.Empty<Snippet>());
 
         // Assert
-        Assert.Equal("Answer", response.answer);
+        response.answer.Should().Be("Answer");
         response.snippets.Should().BeEmpty();
-        Assert.Equal(0, response.promptTokens);
-        Assert.Equal(0, response.completionTokens);
-        Assert.Equal(0, response.totalTokens);
+        response.promptTokens.Should().Be(0);
+        response.completionTokens.Should().Be(0);
+        response.totalTokens.Should().Be(0);
         response.confidence.Should().BeNull();
         response.metadata.Should().BeNull();
     }
@@ -162,10 +162,10 @@ public class ContractModelTests
         var snippet = new Snippet("Rule text here", "PDF:game-rules-v2.pdf", 15, 42, 0.85f);
 
         // Assert
-        Assert.Equal("Rule text here", snippet.text);
-        Assert.Equal("PDF:game-rules-v2.pdf", snippet.source);
-        Assert.Equal(15, snippet.page);
-        Assert.Equal(42, snippet.line);
+        snippet.text.Should().Be("Rule text here");
+        snippet.source.Should().Be("PDF:game-rules-v2.pdf");
+        snippet.page.Should().Be(15);
+        snippet.line.Should().Be(42);
     }
 
     [Fact]
@@ -177,8 +177,8 @@ public class ContractModelTests
         var snippet3 = new Snippet("Different", "Source", 1, 2, 0.85f);
 
         // Assert
-        Assert.Equal(snippet1, snippet2);
-        Assert.NotEqual(snippet1, snippet3);
+        snippet2.Should().Be(snippet1);
+        snippet3.Should().NotBe(snippet1);
     }
 
     #endregion
@@ -193,9 +193,9 @@ public class ContractModelTests
         var request = new ExplainRequest("game-456", "combat mechanics", chatId);
 
         // Assert
-        Assert.Equal("game-456", request.gameId);
-        Assert.Equal("combat mechanics", request.topic);
-        Assert.Equal(chatId, request.chatId);
+        request.gameId.Should().Be("game-456");
+        request.topic.Should().Be("combat mechanics");
+        request.chatId.Should().Be(chatId);
     }
 
     #endregion
@@ -221,15 +221,15 @@ public class ContractModelTests
             confidence: 0.88);
 
         // Assert
-        Assert.Equal("Combat", response.outline.mainTopic);
-        Assert.Equal(3, response.outline.sections.Count);
-        Assert.Equal("Full script content here", response.script);
-        Assert.Single(response.citations);
-        Assert.Equal(5, response.estimatedReadingTimeMinutes);
-        Assert.Equal(120, response.promptTokens);
-        Assert.Equal(80, response.completionTokens);
-        Assert.Equal(200, response.totalTokens);
-        Assert.Equal(0.88, response.confidence);
+        response.outline.mainTopic.Should().Be("Combat");
+        response.outline.sections.Count.Should().Be(3);
+        response.script.Should().Be("Full script content here");
+        response.citations.Should().ContainSingle();
+        response.estimatedReadingTimeMinutes.Should().Be(5);
+        response.promptTokens.Should().Be(120);
+        response.completionTokens.Should().Be(80);
+        response.totalTokens.Should().Be(200);
+        response.confidence.Should().Be(0.88);
     }
 
     #endregion
@@ -244,8 +244,8 @@ public class ContractModelTests
         var request = new SetupGuideRequest("game-789", chatId);
 
         // Assert
-        Assert.Equal("game-789", request.gameId);
-        Assert.Equal(chatId, request.chatId);
+        request.gameId.Should().Be("game-789");
+        request.chatId.Should().Be(chatId);
     }
 
     #endregion
@@ -273,13 +273,13 @@ public class ContractModelTests
             confidence: 0.92);
 
         // Assert
-        Assert.Equal("Test Game", response.gameTitle);
-        Assert.Equal(2, response.steps.Count);
-        Assert.Equal(10, response.estimatedSetupTimeMinutes);
-        Assert.Equal(50, response.promptTokens);
-        Assert.Equal(30, response.completionTokens);
-        Assert.Equal(80, response.totalTokens);
-        Assert.Equal(0.92, response.confidence);
+        response.gameTitle.Should().Be("Test Game");
+        response.steps.Count.Should().Be(2);
+        response.estimatedSetupTimeMinutes.Should().Be(10);
+        response.promptTokens.Should().Be(50);
+        response.completionTokens.Should().Be(30);
+        response.totalTokens.Should().Be(80);
+        response.confidence.Should().Be(0.92);
     }
 
     #endregion
@@ -301,11 +301,11 @@ public class ContractModelTests
             isOptional: true);
 
         // Assert
-        Assert.Equal(3, step.stepNumber);
-        Assert.Equal("Distribute Cards", step.title);
-        Assert.Equal("Give each player 7 cards", step.instruction);
-        Assert.Single(step.references);
-        Assert.True(step.isOptional);
+        step.stepNumber.Should().Be(3);
+        step.title.Should().Be("Distribute Cards");
+        step.instruction.Should().Be("Give each player 7 cards");
+        step.references.Should().ContainSingle();
+        step.isOptional.Should().BeTrue();
     }
 
     #endregion
@@ -331,13 +331,13 @@ public class ContractModelTests
             UpdatedAt: now);
 
         // Assert
-        Assert.Equal("config-123", dto.Id);
-        Assert.Equal("Production Workflow", dto.Name);
-        Assert.Equal("https://n8n.example.com", dto.BaseUrl);
-        Assert.Equal("https://n8n.example.com/webhook/abc", dto.WebhookUrl);
-        Assert.True(dto.IsActive);
-        Assert.Equal(now, dto.LastTestedAt);
-        Assert.Equal("Success", dto.LastTestResult);
+        dto.Id.Should().Be("config-123");
+        dto.Name.Should().Be("Production Workflow");
+        dto.BaseUrl.Should().Be("https://n8n.example.com");
+        dto.WebhookUrl.Should().Be("https://n8n.example.com/webhook/abc");
+        dto.IsActive.Should().BeTrue();
+        dto.LastTestedAt.Should().Be(now);
+        dto.LastTestResult.Should().Be("Success");
     }
 
     #endregion
@@ -355,10 +355,10 @@ public class ContractModelTests
             WebhookUrl: "https://test.n8n.io/webhook/test");
 
         // Assert
-        Assert.Equal("Test Config", request.Name);
-        Assert.Equal("https://test.n8n.io", request.BaseUrl);
-        Assert.Equal("test-api-key-123", request.ApiKey);
-        Assert.Equal("https://test.n8n.io/webhook/test", request.WebhookUrl);
+        request.Name.Should().Be("Test Config");
+        request.BaseUrl.Should().Be("https://test.n8n.io");
+        request.ApiKey.Should().Be("test-api-key-123");
+        request.WebhookUrl.Should().Be("https://test.n8n.io/webhook/test");
     }
 
     #endregion
@@ -376,9 +376,9 @@ public class ContractModelTests
             chatId: chatId);
 
         // Assert
-        Assert.Equal("Is this checkmate?", request.question);
-        Assert.Equal("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", request.fenPosition);
-        Assert.Equal(chatId, request.chatId);
+        request.question.Should().Be("Is this checkmate?");
+        request.fenPosition.Should().Be("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        request.chatId.Should().Be(chatId);
     }
 
     [Fact]
@@ -388,7 +388,7 @@ public class ContractModelTests
         var request = new ChessAgentRequest(question: "What is castling?");
 
         // Assert
-        Assert.Equal("What is castling?", request.question);
+        request.question.Should().Be("What is castling?");
         request.fenPosition.Should().BeNull();
         request.chatId.Should().BeNull();
     }
@@ -422,15 +422,15 @@ public class ContractModelTests
             metadata: metadata);
 
         // Assert
-        Assert.Equal("Consider controlling the center.", response.answer);
+        response.answer.Should().Be("Consider controlling the center.");
         response.analysis.Should().NotBeNull();
-        Assert.Equal("White has slight advantage", response.analysis.evaluationSummary);
-        Assert.Equal(3, response.suggestedMoves.Count);
-        Assert.Single(response.sources);
-        Assert.Equal(200, response.promptTokens);
-        Assert.Equal(150, response.completionTokens);
-        Assert.Equal(350, response.totalTokens);
-        Assert.Equal(0.90, response.confidence);
+        response.analysis.evaluationSummary.Should().Be("White has slight advantage");
+        response.suggestedMoves.Count.Should().Be(3);
+        response.sources.Should().ContainSingle();
+        response.promptTokens.Should().Be(200);
+        response.completionTokens.Should().Be(150);
+        response.totalTokens.Should().Be(350);
+        response.confidence.Should().Be(0.90);
         response.metadata.Should().NotBeNull();
     }
 
@@ -457,13 +457,13 @@ public class ContractModelTests
             LastMessageAt: lastMessageAt);
 
         // Assert
-        Assert.Equal(chatId, dto.Id);
-        Assert.Equal("game-123", dto.GameId);
-        Assert.Equal("Chess", dto.GameName);
-        Assert.Equal("agent-qa", dto.AgentId);
-        Assert.Equal("Q&A Assistant", dto.AgentName);
-        Assert.Equal(startedAt, dto.StartedAt);
-        Assert.Equal(lastMessageAt, dto.LastMessageAt);
+        dto.Id.Should().Be(chatId);
+        dto.GameId.Should().Be("game-123");
+        dto.GameName.Should().Be("Chess");
+        dto.AgentId.Should().Be("agent-qa");
+        dto.AgentName.Should().Be("Q&A Assistant");
+        dto.StartedAt.Should().Be(startedAt);
+        dto.LastMessageAt.Should().Be(lastMessageAt);
     }
 
     #endregion
@@ -482,11 +482,11 @@ public class ContractModelTests
             gameId: "game-789");
 
         // Assert
-        Assert.Equal("msg-123", request.messageId);
-        Assert.Equal("qa", request.endpoint);
-        Assert.Equal("helpful", request.outcome);
-        Assert.Equal("user-456", request.userId);
-        Assert.Equal("game-789", request.gameId);
+        request.messageId.Should().Be("msg-123");
+        request.endpoint.Should().Be("qa");
+        request.outcome.Should().Be("helpful");
+        request.userId.Should().Be("user-456");
+        request.gameId.Should().Be("game-789");
     }
 
     [Fact]
@@ -518,9 +518,9 @@ public class ContractModelTests
             LatencyMs: 125);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal("Connection successful", result.Message);
-        Assert.Equal(125, result.LatencyMs);
+        result.Success.Should().BeTrue();
+        result.Message.Should().Be("Connection successful");
+        result.LatencyMs.Should().Be(125);
     }
 
     [Fact]
@@ -533,8 +533,8 @@ public class ContractModelTests
             LatencyMs: null);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("Connection timeout", result.Message);
+        result.Success.Should().BeFalse();
+        result.Message.Should().Be("Connection timeout");
         result.LatencyMs.Should().BeNull();
     }
 

@@ -193,28 +193,28 @@ CRITICAL INSTRUCTIONS:
 
         // Then: System returns a grounded answer with citations
         result.Should().NotBeNull();
-        Assert.NotEqual("Not specified", result.answer);
-        Assert.Contains("2-8 players", result.answer);
+        result.answer.Should().NotBe("Not specified");
+        result.answer.Should().Contain("2-8 players");
 
         // And: Snippets are provided with proper structure
-        Assert.Equal(3, result.snippets.Count);
-        Assert.Equal("Monopoly is a multiplayer economics-themed board game for 2-8 players.", result.snippets[0].text);
-        Assert.Equal("PDF:pdf-mono-rules", result.snippets[0].source);
-        Assert.Equal(1, result.snippets[0].page);
+        result.snippets.Count.Should().Be(3);
+        result.snippets[0].text.Should().Be("Monopoly is a multiplayer economics-themed board game for 2-8 players.");
+        result.snippets[0].source.Should().Be("PDF:pdf-mono-rules");
+        result.snippets[0].page.Should().Be(1);
 
         // And: Token usage is accurately tracked
-        Assert.Equal(312, result.promptTokens);
-        Assert.Equal(18, result.completionTokens);
-        Assert.Equal(330, result.totalTokens);
+        result.promptTokens.Should().Be(312);
+        result.completionTokens.Should().Be(18);
+        result.totalTokens.Should().Be(330);
 
         // And: Confidence score reflects search quality
         result.confidence.Should().NotBeNull();
-        Assert.Equal(0.94, result.confidence.Value, precision: 2);
+        result.confidence.Value, precision: 2.Should().Be(0.94);
 
         // And: Metadata is preserved
         result.metadata.Should().NotBeNull();
-        Assert.Equal("anthropic/claude-3-5-sonnet-20241022", result.metadata["model"]);
-        Assert.Equal("end_turn", result.metadata["finish_reason"]);
+        result.metadata["model"].Should().Be("anthropic/claude-3-5-sonnet-20241022");
+        result.metadata["finish_reason"].Should().Be("end_turn");
     }
 
     #endregion
@@ -245,7 +245,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("chess", "Can pawns move backward?");
 
         // Then: System returns "Not specified" instead of hallucinating
-        Assert.Equal("Not specified", result.answer);
+        result.answer.Should().Be("Not specified");
         result.snippets.Should().BeEmpty();
 
         // And: LLM is never called (no context to process)
@@ -297,11 +297,11 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("catan", "What is the maximum score to win?");
 
         // Then: LLM returns "Not specified" to avoid hallucination
-        Assert.Equal("Not specified", result.answer);
+        result.answer.Should().Be("Not specified");
 
         // And: Context snippets are still provided for transparency
-        Assert.Equal(2, result.snippets.Count);
-        Assert.Equal("Place the game board on a flat surface.", result.snippets[0].text);
+        result.snippets.Count.Should().Be(2);
+        result.snippets[0].text.Should().Be("Place the game board on a flat surface.");
     }
 
     #endregion
@@ -343,15 +343,15 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("dnd", "How do I make an attack roll?");
 
         // Then: Snippets are provided from all source PDFs
-        Assert.Equal(3, result.snippets.Count);
-        Assert.Equal("PDF:pdf-players-handbook", result.snippets[0].source);
-        Assert.Equal("PDF:pdf-dm-guide", result.snippets[1].source);
-        Assert.Equal("PDF:pdf-xanathar", result.snippets[2].source);
+        result.snippets.Count.Should().Be(3);
+        result.snippets[0].source.Should().Be("PDF:pdf-players-handbook");
+        result.snippets[1].source.Should().Be("PDF:pdf-dm-guide");
+        result.snippets[2].source.Should().Be("PDF:pdf-xanathar");
 
         // And: Each snippet has correct page numbers
-        Assert.Equal(45, result.snippets[0].page);
-        Assert.Equal(112, result.snippets[1].page);
-        Assert.Equal(23, result.snippets[2].page);
+        result.snippets[0].page.Should().Be(45);
+        result.snippets[1].page.Should().Be(112);
+        result.snippets[2].page.Should().Be(23);
     }
 
     #endregion
@@ -378,7 +378,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("risk", "How many armies do I start with?");
 
         // Then: System returns a user-friendly error message
-        Assert.Equal("Unable to process query.", result.answer);
+        result.answer.Should().Be("Unable to process query.");
         result.snippets.Should().BeEmpty();
     }
 
@@ -406,7 +406,7 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("clue", "Who can I accuse?");
 
         // Then: System returns "Not specified" to avoid unreliable answers
-        Assert.Equal("Not specified", result.answer);
+        result.answer.Should().Be("Not specified");
         result.snippets.Should().BeEmpty();
     }
 
@@ -441,11 +441,11 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("scrabble", "How do I score?");
 
         // Then: Error message is returned
-        Assert.Equal("Unable to generate answer.", result.answer);
+        result.answer.Should().Be("Unable to generate answer.");
 
         // And: Snippets are still provided (user can read context directly)
-        Assert.Single(result.snippets);
-        Assert.Equal("Relevant rule text.", result.snippets[0].text);
+        result.snippets.Should().ContainSingle();
+        result.snippets[0].text.Should().Be("Relevant rule text.");
     }
 
     #endregion
@@ -497,8 +497,8 @@ CRITICAL INSTRUCTIONS:
         var result = await ragService.AskAsync("game1", "test query");
 
         // Then: Cached response is returned
-        Assert.Equal("Cached answer", result.answer);
-        Assert.Equal("Cached text", result.snippets[0].text);
+        result.answer.Should().Be("Cached answer");
+        result.snippets[0].text.Should().Be("Cached text");
 
         // And: No expensive operations were performed
         mockEmbedding.Verify(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);

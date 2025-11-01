@@ -62,7 +62,7 @@ public class LlmServiceConfigurationTests
         var result = await service.GenerateCompletionAsync("system", "user prompt");
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
@@ -134,7 +134,7 @@ public class LlmServiceConfigurationTests
         var result = await service.GenerateCompletionAsync("system", "user prompt");
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
@@ -156,7 +156,7 @@ public class LlmServiceConfigurationTests
         var result = await service.GenerateCompletionAsync("system", "user prompt");
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
@@ -189,7 +189,7 @@ public class LlmServiceConfigurationTests
         var result = await service.GenerateCompletionAsync("system", "user prompt");
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
@@ -259,7 +259,7 @@ public class LlmServiceConfigurationTests
         var result = await service.GenerateCompletionAsync("system", "user prompt");
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
@@ -300,7 +300,7 @@ public class LlmServiceConfigurationTests
         var result = await service.GenerateCompletionAsync("system", "user prompt");
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
@@ -311,12 +311,12 @@ public class LlmServiceConfigurationTests
         if (invalidMaxTokens <= 0)
         {
             // Should use default for invalid values
-            Assert.Equal(500, actualMaxTokens);
+            actualMaxTokens.Should().Be(500);
         }
         else
         {
             // Should cap at upper bound
-            Assert.Equal(32000, actualMaxTokens);
+            actualMaxTokens.Should().Be(32000);
         }
 
         // Verify warning was logged
@@ -352,7 +352,7 @@ public class LlmServiceConfigurationTests
         var result = await service.GenerateCompletionAsync("system", "user prompt");
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
@@ -391,7 +391,7 @@ public class LlmServiceConfigurationTests
         var result = await service.GenerateCompletionAsync("system", "user prompt");
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);

@@ -136,7 +136,7 @@ public class EmbeddingServiceComprehensiveTests
         var ex = Assert.Throws<InvalidOperationException>(() =>
             new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object));
 
-        Assert.Contains("OPENAI_API_KEY not configured", ex.Message);
+        ex.Message.Should().Contain("OPENAI_API_KEY not configured");
     }
 
     [Fact]
@@ -155,8 +155,8 @@ public class EmbeddingServiceComprehensiveTests
         var ex = Assert.Throws<InvalidOperationException>(() =>
             new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object));
 
-        Assert.Contains("Unsupported embedding provider", ex.Message);
-        Assert.Contains("invalid-provider", ex.Message);
+        ex.Message.Should().Contain("Unsupported embedding provider");
+        ex.Message.Should().Contain("invalid-provider");
     }
 
     [Fact]
@@ -200,8 +200,8 @@ public class EmbeddingServiceComprehensiveTests
         var result = await service.GenerateEmbeddingsAsync(texts);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(100, result.Embeddings.Count);
+        result.Success.Should().BeTrue();
+        result.Embeddings.Count.Should().Be(100);
         Assert.All(result.Embeddings, emb => Assert.Equal(768, emb.Length));
     }
 
@@ -216,9 +216,9 @@ public class EmbeddingServiceComprehensiveTests
         var result = await service.GenerateEmbeddingsAsync(texts);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Single(result.Embeddings);
-        Assert.Equal(768, result.Embeddings[0].Length);
+        result.Success.Should().BeTrue();
+        result.Embeddings.Should().ContainSingle();
+        result.Embeddings[0].Length.Should().Be(768);
     }
 
     [Fact]
@@ -232,8 +232,8 @@ public class EmbeddingServiceComprehensiveTests
         var result = await service.GenerateEmbeddingsAsync(texts);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("No embedding returned from Ollama", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("No embedding returned from Ollama");
     }
 
     [Fact]
@@ -249,8 +249,8 @@ public class EmbeddingServiceComprehensiveTests
         var result = await service.GenerateEmbeddingsAsync(texts, cts.Token);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("timed out", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("timed out");
     }
 
     #endregion
@@ -268,8 +268,8 @@ public class EmbeddingServiceComprehensiveTests
         var result = await service.GenerateEmbeddingsAsync(texts);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(100, result.Embeddings.Count);
+        result.Success.Should().BeTrue();
+        result.Embeddings.Count.Should().Be(100);
         Assert.All(result.Embeddings, emb => Assert.Equal(1536, emb.Length));
     }
 
@@ -284,8 +284,8 @@ public class EmbeddingServiceComprehensiveTests
         var result = await service.GenerateEmbeddingsAsync(texts);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("No embeddings returned from OpenAI", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("No embeddings returned from OpenAI");
     }
 
     [Fact]
@@ -301,8 +301,8 @@ public class EmbeddingServiceComprehensiveTests
         var result = await service.GenerateEmbeddingsAsync(texts, cts.Token);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("timed out", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("timed out");
     }
 
     #endregion
@@ -319,9 +319,9 @@ public class EmbeddingServiceComprehensiveTests
         var result = await service.GenerateEmbeddingAsync("Test text");
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Single(result.Embeddings);
-        Assert.Equal(768, result.Embeddings[0].Length);
+        result.Success.Should().BeTrue();
+        result.Embeddings.Should().ContainSingle();
+        result.Embeddings[0].Length.Should().Be(768);
     }
 
     [Fact]
@@ -334,9 +334,9 @@ public class EmbeddingServiceComprehensiveTests
         var result = await service.GenerateEmbeddingAsync("Test text");
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Single(result.Embeddings);
-        Assert.Equal(1536, result.Embeddings[0].Length);
+        result.Success.Should().BeTrue();
+        result.Embeddings.Should().ContainSingle();
+        result.Embeddings[0].Length.Should().Be(1536);
     }
 
     #endregion
@@ -354,8 +354,8 @@ public class EmbeddingServiceComprehensiveTests
         var result = await service.GenerateEmbeddingsAsync(texts);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("No texts provided", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("No texts provided");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -369,8 +369,8 @@ public class EmbeddingServiceComprehensiveTests
         var result = await service.GenerateEmbeddingsAsync(null!);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("No texts provided", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("No texts provided");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -385,8 +385,8 @@ public class EmbeddingServiceComprehensiveTests
         var result = await service.GenerateEmbeddingsAsync(texts);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("API error: 500", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("API error: 500");
     }
 
     [Fact]
@@ -400,8 +400,8 @@ public class EmbeddingServiceComprehensiveTests
         var result = await service.GenerateEmbeddingsAsync(texts);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("API error: 401", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("API error: 401");
     }
 
     [Fact]
@@ -415,8 +415,8 @@ public class EmbeddingServiceComprehensiveTests
         var result = await service.GenerateEmbeddingsAsync(texts);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("error", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage, StringComparison.OrdinalIgnoreCase.Should().Contain("error");
     }
 
     [Fact]
@@ -430,8 +430,8 @@ public class EmbeddingServiceComprehensiveTests
         var result = await service.GenerateEmbeddingsAsync(texts);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("error", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage, StringComparison.OrdinalIgnoreCase.Should().Contain("error");
     }
 
     #endregion

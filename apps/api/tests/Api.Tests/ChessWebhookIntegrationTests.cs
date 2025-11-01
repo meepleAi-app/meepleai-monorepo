@@ -71,7 +71,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: HTTP 200 with chess analysis
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
 
@@ -80,10 +80,10 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         Assert.False(string.IsNullOrWhiteSpace(answer.GetString()));
 
         Assert.True(result.TryGetProperty("suggestedMoves", out var moves));
-        Assert.True(moves.ValueKind == JsonValueKind.Array);
+        moves.ValueKind == JsonValueKind.Array.Should().BeTrue();
 
         Assert.True(result.TryGetProperty("sources", out var sources));
-        Assert.True(sources.ValueKind == JsonValueKind.Array);
+        sources.ValueKind == JsonValueKind.Array.Should().BeTrue();
 
         // Verify metadata fields for tracking
         Assert.True(result.TryGetProperty("promptTokens", out _));
@@ -124,7 +124,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: HTTP 200 with positional analysis
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
 
@@ -161,7 +161,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/agents/chess", request);
 
         // Then: HTTP 401
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -193,7 +193,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: HTTP 400
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("error", out var error));
@@ -232,7 +232,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Response has all required fields for standardized payload
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
 
@@ -241,10 +241,10 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         Assert.False(string.IsNullOrWhiteSpace(answer.GetString()));
 
         Assert.True(result.TryGetProperty("suggestedMoves", out var moves));
-        Assert.True(moves.ValueKind == JsonValueKind.Array);
+        moves.ValueKind == JsonValueKind.Array.Should().BeTrue();
 
         Assert.True(result.TryGetProperty("sources", out var sources));
-        Assert.True(sources.ValueKind == JsonValueKind.Array);
+        sources.ValueKind == JsonValueKind.Array.Should().BeTrue();
 
         // Optional analysis field
         Assert.True(result.TryGetProperty("analysis", out _));
@@ -287,7 +287,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Returns opening information
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("answer", out var answer));
@@ -344,14 +344,14 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: HTTP 200 and conversation is persisted
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Verify chat history contains the interaction
         var historyRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats/{chatId}");
         AddCookies(historyRequest, cookies);
         var historyResponse = await client.SendAsync(historyRequest);
 
-        Assert.Equal(HttpStatusCode.OK, historyResponse.StatusCode);
+        historyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var history = await historyResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(history.TryGetProperty("messages", out var messages));
         Assert.True(messages.GetArrayLength() >= 2); // User question + assistant answer

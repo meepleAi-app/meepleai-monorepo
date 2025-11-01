@@ -38,7 +38,7 @@ public class EmbeddingDimensionsDebugTest
         _output.WriteLine($"Model: {modelName}");
         _output.WriteLine($"Config[EMBEDDING_DIMENSIONS]: {config["EMBEDDING_DIMENSIONS"]}");
 
-        Assert.Equal(768, result);
+        result.Should().Be(768);
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class EmbeddingDimensionsDebugTest
         _output.WriteLine($"Config[EMBEDDING_DIMENSIONS]: {config["EMBEDDING_DIMENSIONS"]}");
 
         // FIX: Now rejects 0 and falls back to model detection (768)
-        Assert.Equal(768, result);
+        result.Should().Be(768);
     }
 
     [Fact]
@@ -102,6 +102,6 @@ public class EmbeddingDimensionsDebugTest
 
         // Current bug: Code looks for EMBEDDING_DIMENSIONS (flat), but config has Embedding:Dimensions (nested)
         // So it falls back to model name detection and returns 768
-        Assert.Equal(768, result);
+        result.Should().Be(768);
     }
 }

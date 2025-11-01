@@ -128,13 +128,13 @@ ANSWER:",
         }
 
         // Assert
-        Assert.Single(events);
-        Assert.Equal(StreamingEventType.Error, events[0].Type);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be(StreamingEventType.Error);
 
         var errorData = events[0].Data as StreamingError;
         errorData.Should().NotBeNull();
-        Assert.Equal("Please provide a question.", errorData!.errorMessage);
-        Assert.Equal("EMPTY_QUERY", errorData.errorCode);
+        errorData!.errorMessage.Should().Be("Please provide a question.");
+        errorData.errorCode.Should().Be("EMPTY_QUERY");
     }
 
     /// <summary>
@@ -170,8 +170,8 @@ ANSWER:",
         }
 
         // Assert
-        Assert.Single(events);
-        Assert.Equal(StreamingEventType.Error, events[0].Type);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be(StreamingEventType.Error);
     }
 
     /// <summary>
@@ -233,33 +233,33 @@ ANSWER:",
 
         // Verify event sequence
         var eventTypes = events.Select(e => e.Type).ToList();
-        Assert.Equal(StreamingEventType.StateUpdate, eventTypes[0]);
-        Assert.Equal(StreamingEventType.Citations, eventTypes[1]);
-        Assert.Contains(StreamingEventType.Token, eventTypes);
-        Assert.Equal(StreamingEventType.Complete, eventTypes[^1]);
+        eventTypes[0].Should().Be(StreamingEventType.StateUpdate);
+        eventTypes[1].Should().Be(StreamingEventType.Citations);
+        eventTypes.Should().Contain(StreamingEventType.Token);
+        eventTypes[^1].Should().Be(StreamingEventType.Complete);
 
         // Verify StateUpdate
         var stateUpdate = events[0].Data as StreamingStateUpdate;
         stateUpdate.Should().NotBeNull();
-        Assert.Contains("cache", stateUpdate!.message, StringComparison.OrdinalIgnoreCase);
+        stateUpdate!.message, StringComparison.OrdinalIgnoreCase.Should().Contain("cache");
 
         // Verify Citations
         var citations = events[1].Data as StreamingCitations;
         citations.Should().NotBeNull();
-        Assert.Single(citations!.citations);
-        Assert.Equal("Cached snippet", citations.citations[0].text);
+        citations!.citations.Should().ContainSingle();
+        citations.citations[0].text.Should().Be("Cached snippet");
 
         // Verify Tokens (words split with spaces)
         var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
-        Assert.Equal(5, tokenEvents.Count); // "This" "game" "supports" "2-4" "players."
+        tokenEvents.Count.Should().Be(5); // "This" "game" "supports" "2-4" "players."
 
         // Verify Complete
         var complete = events[^1].Data as StreamingComplete;
         complete.Should().NotBeNull();
-        Assert.Equal(10, complete!.promptTokens);
-        Assert.Equal(8, complete.completionTokens);
-        Assert.Equal(18, complete.totalTokens);
-        Assert.Equal(0.95, complete.confidence);
+        complete!.promptTokens.Should().Be(10);
+        complete.completionTokens.Should().Be(8);
+        complete.totalTokens.Should().Be(18);
+        complete.confidence.Should().Be(0.95);
 
         // Verify no embedding/qdrant/llm calls were made (cache hit)
         mockEmbedding.VerifyNoOtherCalls();
@@ -350,33 +350,33 @@ ANSWER:",
 
         // Verify event types in order
         var eventTypes = events.Select(e => e.Type).ToList();
-        Assert.Equal(StreamingEventType.StateUpdate, eventTypes[0]); // "Generating embeddings..."
-        Assert.Equal(StreamingEventType.StateUpdate, eventTypes[1]); // "Searching vector database..."
-        Assert.Equal(StreamingEventType.Citations, eventTypes[2]);
-        Assert.Equal(StreamingEventType.StateUpdate, eventTypes[3]); // "Generating answer..."
-        Assert.Equal(StreamingEventType.Token, eventTypes[4]); // First token
-        Assert.Equal(StreamingEventType.Complete, eventTypes[^1]);
+        eventTypes[0].Should().Be(StreamingEventType.StateUpdate); // "Generating embeddings..."
+        eventTypes[1].Should().Be(StreamingEventType.StateUpdate); // "Searching vector database..."
+        eventTypes[2].Should().Be(StreamingEventType.Citations);
+        eventTypes[3].Should().Be(StreamingEventType.StateUpdate); // "Generating answer..."
+        eventTypes[4].Should().Be(StreamingEventType.Token); // First token
+        eventTypes[^1].Should().Be(StreamingEventType.Complete);
 
         // Verify Citations
         var citations = events[2].Data as StreamingCitations;
         citations.Should().NotBeNull();
-        Assert.Equal(3, citations!.citations.Count);
-        Assert.Equal("This game supports 2-4 players.", citations.citations[0].text);
-        Assert.Equal("PDF:pdf-1", citations.citations[0].source);
-        Assert.Equal(1, citations.citations[0].page);
+        citations!.citations.Count.Should().Be(3);
+        citations.citations[0].text.Should().Be("This game supports 2-4 players.");
+        citations.citations[0].source.Should().Be("PDF:pdf-1");
+        citations.citations[0].page.Should().Be(1);
 
         // Verify Tokens
         var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
-        Assert.Equal(5, tokenEvents.Count);
+        tokenEvents.Count.Should().Be(5);
         var tokens = tokenEvents.Select(e => (e.Data as StreamingToken)!.token).ToList();
-        Assert.Equal(llmTokens, tokens);
+        tokens.Should().Be(llmTokens);
 
         // Verify Complete
         var complete = events[^1].Data as StreamingComplete;
         complete.Should().NotBeNull();
-        Assert.Equal(5, complete!.completionTokens); // 5 tokens
-        Assert.Equal(5, complete.totalTokens);
-        Assert.Equal(0.95, complete.confidence!.Value, precision: 2); // Max score from search results (with floating point tolerance)
+        complete!.completionTokens.Should().Be(5); // 5 tokens
+        complete.totalTokens.Should().Be(5);
+        complete.confidence!.Value, precision: 2.Should().Be(0.95); // Max score from search results (with floating point tolerance)
 
         // Verify cache write
         mockCache.Verify(
@@ -435,14 +435,14 @@ ANSWER:",
         }
 
         // Assert
-        Assert.Equal(2, events.Count);
-        Assert.Equal(StreamingEventType.StateUpdate, events[0].Type); // "Generating embeddings..."
-        Assert.Equal(StreamingEventType.Error, events[1].Type);
+        events.Count.Should().Be(2);
+        events[0].Type.Should().Be(StreamingEventType.StateUpdate); // "Generating embeddings..."
+        events[1].Type.Should().Be(StreamingEventType.Error);
 
         var error = events[1].Data as StreamingError;
         error.Should().NotBeNull();
-        Assert.Equal("Unable to process query.", error!.errorMessage);
-        Assert.Equal("EMBEDDING_FAILED", error.errorCode);
+        error!.errorMessage.Should().Be("Unable to process query.");
+        error.errorCode.Should().Be("EMBEDDING_FAILED");
     }
 
     /// <summary>
@@ -489,11 +489,11 @@ ANSWER:",
         }
 
         // Assert
-        Assert.Contains(events, e => e.Type == StreamingEventType.Error);
+        e => e.Type == StreamingEventType.Error.Should().Contain(events);
         var errorEvent = events.First(e => e.Type == StreamingEventType.Error);
         var error = errorEvent.Data as StreamingError;
         error.Should().NotBeNull();
-        Assert.Equal("EMBEDDING_FAILED", error!.errorCode);
+        error!.errorCode.Should().Be("EMBEDDING_FAILED");
     }
 
     /// <summary>
@@ -553,8 +553,8 @@ ANSWER:",
         errorEvent.Should().NotBeNull();
         var error = errorEvent!.Data as StreamingError;
         error.Should().NotBeNull();
-        Assert.Contains("No relevant information found", error!.errorMessage);
-        Assert.Equal("NO_RESULTS", error.errorCode);
+        error!.errorMessage.Should().Contain("No relevant information found");
+        error.errorCode.Should().Be("NO_RESULTS");
     }
 
     /// <summary>
@@ -614,7 +614,7 @@ ANSWER:",
         errorEvent.Should().NotBeNull();
         var error = errorEvent!.Data as StreamingError;
         error.Should().NotBeNull();
-        Assert.Equal("NO_RESULTS", error!.errorCode);
+        error!.errorCode.Should().Be("NO_RESULTS");
     }
 
     /// <summary>
@@ -693,7 +693,7 @@ ANSWER:",
         var completeEvent = events.First(e => e.Type == StreamingEventType.Complete);
         var complete = completeEvent.Data as StreamingComplete;
         complete.Should().NotBeNull();
-        Assert.Equal(0.98, complete!.confidence!.Value, precision: 2); // Max score (with floating point tolerance)
+        complete!.confidence!.Value, precision: 2.Should().Be(0.98); // Max score (with floating point tolerance)
     }
 
     /// <summary>
@@ -769,13 +769,13 @@ ANSWER:",
 
         // Assert
         var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
-        Assert.Equal(5, tokenEvents.Count);
+        tokenEvents.Count.Should().Be(5);
 
         var completeEvent = events.First(e => e.Type == StreamingEventType.Complete);
         var complete = completeEvent.Data as StreamingComplete;
         complete.Should().NotBeNull();
-        Assert.Equal(5, complete!.completionTokens);
-        Assert.Equal(5, complete.totalTokens);
+        complete!.completionTokens.Should().Be(5);
+        complete.totalTokens.Should().Be(5);
     }
 
     /// <summary>
@@ -859,7 +859,7 @@ ANSWER:",
 
         // Assert
         // Should have received some events before cancellation
-        Assert.InRange(events.Count, 1, 10);
+        events.Count.Should().BeInRange(1, 10);
     }
 
     /// <summary>

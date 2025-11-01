@@ -55,16 +55,16 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
             $"/api/v1/games/{gameId}/rulespec/history",
             editor.Cookies);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var history = await DeserializeAsync<RuleSpecHistory>(response);
         history.Should().NotBeNull();
-        Assert.Equal(gameId, history!.GameId);
-        Assert.Equal(3, history.TotalVersions);
-        Assert.Equal(3, history.Versions.Count);
-        Assert.Contains(history.Versions, v => v.Version == "v1");
-        Assert.Contains(history.Versions, v => v.Version == "v2");
-        Assert.Contains(history.Versions, v => v.Version == "v3");
+        history!.GameId.Should().Be(gameId);
+        history.TotalVersions.Should().Be(3);
+        history.Versions.Count.Should().Be(3);
+        v => v.Version == "v1".Should().Contain(history.Versions);
+        v => v.Version == "v2".Should().Contain(history.Versions);
+        v => v.Version == "v3".Should().Contain(history.Versions);
     }
 
     [Fact]
@@ -78,7 +78,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         using var client = Factory.CreateHttpsClient();
         var response = await client.GetAsync($"/api/v1/games/{gameId}/rulespec/history");
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
             $"/api/v1/games/{gameId}/rulespec/history",
             viewer.Cookies);
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -116,13 +116,13 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
             $"/api/v1/games/{gameId}/rulespec/versions/v2",
             editor.Cookies);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var ruleSpec = await DeserializeAsync<RuleSpec>(response);
         ruleSpec.Should().NotBeNull();
-        Assert.Equal(gameId, ruleSpec!.gameId);
-        Assert.Equal("v2", ruleSpec.version);
-        Assert.Equal(2, ruleSpec.rules.Count);
+        ruleSpec!.gameId.Should().Be(gameId);
+        ruleSpec.version.Should().Be("v2");
+        ruleSpec.rules.Count.Should().Be(2);
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
             $"/api/v1/games/{gameId}/rulespec/versions/v99",
             editor.Cookies);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         using var client = Factory.CreateHttpsClient();
         var response = await client.GetAsync($"/api/v1/games/{gameId}/rulespec/versions/v1");
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
             $"/api/v1/games/{gameId}/rulespec/versions/v1",
             viewer.Cookies);
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
             $"/api/v1/games/{gameId}/rulespec/diff",
             editor.Cookies);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -212,7 +212,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
             $"/api/v1/games/{gameId}/rulespec/diff?from=v1&to=v42",
             editor.Cookies);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -231,23 +231,23 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
             $"/api/v1/games/{gameId}/rulespec/diff?from=v1&to=v2",
             editor.Cookies);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var diff = await DeserializeAsync<RuleSpecDiff>(response);
         diff.Should().NotBeNull();
-        Assert.Equal(gameId, diff!.GameId);
-        Assert.Equal("v1", diff.FromVersion);
-        Assert.Equal("v2", diff.ToVersion);
+        diff!.GameId.Should().Be(gameId);
+        diff.FromVersion.Should().Be("v1");
+        diff.ToVersion.Should().Be("v2");
 
-        Assert.Equal(3, diff.Summary.TotalChanges);
-        Assert.Equal(1, diff.Summary.Added);
-        Assert.Equal(1, diff.Summary.Modified);
-        Assert.Equal(1, diff.Summary.Deleted);
+        diff.Summary.TotalChanges.Should().Be(3);
+        diff.Summary.Added.Should().Be(1);
+        diff.Summary.Modified.Should().Be(1);
+        diff.Summary.Deleted.Should().Be(1);
 
-        Assert.Contains(diff.Changes, change =>
-            change.Type == ChangeType.Added && change.NewAtom == "endgame");
-        Assert.Contains(diff.Changes, change =>
-            change.Type == ChangeType.Deleted && change.OldAtom == "scoring");
+        change =>
+            change.Type == ChangeType.Added && change.NewAtom == "endgame".Should().Contain(diff.Changes);
+        change =>
+            change.Type == ChangeType.Deleted && change.OldAtom == "scoring".Should().Contain(diff.Changes);
         Assert.Contains(diff.Changes, change =>
             change.Type == ChangeType.Modified &&
             change.OldAtom == "setup" &&
@@ -266,7 +266,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         using var client = Factory.CreateHttpsClient();
         var response = await client.GetAsync($"/api/v1/games/{gameId}/rulespec/diff?from=v1&to=v2");
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -285,7 +285,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
             $"/api/v1/games/{gameId}/rulespec/diff?from=v1&to=v2",
             viewer.Cookies);
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     private async Task CreateGameAsync(string gameId, string name)

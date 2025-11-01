@@ -39,9 +39,9 @@ public class QdrantClientAdapterTests
                 return new QdrantClient(host, port, useHttps);
             });
 
-        Assert.Equal("example.com", capturedHost);
-        Assert.Equal(7654, capturedPort);
-        Assert.False(capturedUseHttps);
+        capturedHost.Should().Be("example.com");
+        capturedPort.Should().Be(7654);
+        capturedUseHttps.Should().BeFalse();
     }
 
     [Fact]
@@ -68,8 +68,8 @@ public class QdrantClientAdapterTests
                 return new QdrantClient("localhost", 1, false);
             });
 
-        Assert.Equal(7777, capturedPort);
-        Assert.True(capturedUseHttps);
+        capturedPort.Should().Be(7777);
+        capturedUseHttps.Should().BeTrue();
     }
 
     [Fact]
@@ -93,6 +93,6 @@ public class QdrantClientAdapterTests
                 return new QdrantClient("localhost", 1, false);
             });
 
-        Assert.Equal(6334, capturedPort);
+        capturedPort.Should().Be(6334);
     }
 }

@@ -71,10 +71,10 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        result.ValueKind == JsonValueKind.Array.Should().BeTrue();
+        (result.ValueKind == JsonValueKind.Array).Should().BeTrue();
 
         var sessions = result.EnumerateArray().ToList();
-        sessions.Count >= 3.Should().BeTrue(); // At least admin + 2 users
+        (sessions.Count >= 3).Should().BeTrue(); // At least admin + 2 users
 
         // Verify session structure
         var firstSession = sessions[0];
@@ -117,7 +117,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         var sessions = result.EnumerateArray().ToList();
 
-        sessions.Count >= 2.Should().BeTrue(); // At least 2 sessions for this user
+        (sessions.Count >= 2).Should().BeTrue(); // At least 2 sessions for this user
         sessions, session =>
         {
             session.TryGetProperty("userId".Should().OnlyContain(out var userId);
@@ -153,7 +153,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         var sessions = result.EnumerateArray().ToList();
 
-        sessions.Count <= 5.Should().BeTrue();
+        (sessions.Count <= 5).Should().BeTrue();
     }
 
     /// <summary>
@@ -338,7 +338,7 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
                 .CountAsync();
         }
 
-        sessionCountBefore >= 2.Should().BeTrue();
+        (sessionCountBefore >= 2).Should().BeTrue();
 
         // When: Admin revokes all user sessions
         var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/users/{user.Id}/sessions");
@@ -454,10 +454,10 @@ public class SessionManagementEndpointsTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        result.ValueKind == JsonValueKind.Array.Should().BeTrue();
+        (result.ValueKind == JsonValueKind.Array).Should().BeTrue();
 
         var sessions = result.EnumerateArray().ToList();
-        sessions.Count >= 2.Should().BeTrue(); // At least 2 sessions
+        (sessions.Count >= 2).Should().BeTrue(); // At least 2 sessions
 
         // Verify all sessions belong to the user
         sessions, session =>

@@ -97,7 +97,7 @@ public class CorsValidationTests : IntegrationTestBase
         // Then: Returns either 204 (CORS preflight handled) or 405 (no OPTIONS handler)
         // NOTE: ASP.NET Core CORS middleware may handle OPTIONS automatically
         response.StatusCode == HttpStatusCode.NoContent ||
-                    response.StatusCode == HttpStatusCode.MethodNotAllowed.Should().BeTrue();
+                    (response.StatusCode == HttpStatusCode.MethodNotAllowed).Should().BeTrue();
     }
 
     #endregion
@@ -233,7 +233,7 @@ public class CorsValidationTests : IntegrationTestBase
 
         // Then: Returns either 204 (CORS preflight handled) or 405 (no OPTIONS handler)
         response.StatusCode == HttpStatusCode.NoContent ||
-                    response.StatusCode == HttpStatusCode.MethodNotAllowed.Should().BeTrue();
+                    (response.StatusCode == HttpStatusCode.MethodNotAllowed).Should().BeTrue();
     }
 
     [Fact]
@@ -275,7 +275,7 @@ public class CorsValidationTests : IntegrationTestBase
 
         // Then: Returns either 204 (CORS preflight handled) or 405 (no OPTIONS handler)
         response.StatusCode == HttpStatusCode.NoContent ||
-                    response.StatusCode == HttpStatusCode.MethodNotAllowed.Should().BeTrue();
+                    (response.StatusCode == HttpStatusCode.MethodNotAllowed).Should().BeTrue();
     }
 
     [Fact]
@@ -292,7 +292,7 @@ public class CorsValidationTests : IntegrationTestBase
 
         // Then: Returns either 204 (CORS preflight handled) or 405 (no OPTIONS handler)
         response.StatusCode == HttpStatusCode.NoContent ||
-                    response.StatusCode == HttpStatusCode.MethodNotAllowed.Should().BeTrue();
+                    (response.StatusCode == HttpStatusCode.MethodNotAllowed).Should().BeTrue();
     }
 
     #endregion

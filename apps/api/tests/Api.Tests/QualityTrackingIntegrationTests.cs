@@ -470,7 +470,7 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
 
         // Verify low-quality detection
         log.IsLowQuality, $"Expected IsLowQuality = true, but got false. Overall confidence: {log.OverallConfidence:F3}".Should().BeTrue();
-        log.OverallConfidence < 0.60, $"Expected OverallConfidence < 0.60, but got {log.OverallConfidence:F3}".Should().BeTrue();
+        (log.OverallConfidence < 0.60).Should().BeTrue($"Expected OverallConfidence < 0.60, but got {log.OverallConfidence:F3}");
 
         // Verify individual score components are in expected ranges
         log.RagConfidence.Value.Should().BeInRange(0.35, 0.45); // Average of low-quality RAG scores (0.35, 0.40, 0.45)
@@ -512,7 +512,7 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
             .First();
 
         logs.IsLowQuality.Should().BeFalse();
-        logs.OverallConfidence >= 0.60.Should().BeTrue();
+        (logs.OverallConfidence >= 0.60).Should().BeTrue();
     }
 
     /// <summary>
@@ -894,6 +894,6 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var logCount = dbContext.AiRequestLogs.Count();
 
-        logCount >= 10, "All concurrent requests should be logged".Should().BeTrue();
+        (logCount >= 10).Should().BeTrue("All concurrent requests should be logged");
     }
 }

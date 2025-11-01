@@ -410,7 +410,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var error = await exportResponse.Content.ReadFromJsonAsync<FeatureDisabledError>();
         error.Should().NotBeNull();
         error.Error.Should().Be("feature_disabled");
-        error.Message, StringComparison.OrdinalIgnoreCase.Should().Contain("export");
+        error.Message.Should().Contain("export", StringComparison.OrdinalIgnoreCase);
         error.FeatureName.Should().Be("Features.ChatExport");
 
         // Cleanup: Re-enable
@@ -439,7 +439,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var allFlags = await featureFlags.GetAllFeatureFlagsAsync();
 
         // Then: All 8 seeded flags exist
-        allFlags.Count >= 8, $"Expected >= 8 flags, found {allFlags.Count}".Should().BeTrue();
+        (allFlags.Count >= 8).Should().BeTrue($"Expected >= 8 flags, found {allFlags.Count}");
 
         // Verify specific flags with default values
         var expectedFlags = new[]

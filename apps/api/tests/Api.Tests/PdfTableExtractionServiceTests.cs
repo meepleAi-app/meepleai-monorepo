@@ -130,14 +130,14 @@ public class PdfTableExtractionServiceTests : IDisposable
         result.Tables.Should().NotBeEmpty();
 
         var table = result.Tables.First();
-        "Task", "Count" }, table.Headers.Should().Be(new[] { "Phase");
+        table.Headers.Should().BeEquivalentTo(new[] { "Phase", "Task", "Count" });
         table.Headers.Count.Should().Be(table.ColumnCount);
-        table.RowCount >= 1.Should().BeTrue();
-        result.AtomicRules.Count >= table.RowCount.Should().BeTrue();
+        (table.RowCount >= 1).Should().BeTrue();
+        (result.AtomicRules.Count >= table.RowCount).Should().BeTrue();
         result.AtomicRules.Should().Contain(rule => rule.Contains("Setup", StringComparison.OrdinalIgnoreCase));
 
         result.Diagrams.Should().NotBeEmpty();
-        diagram => diagram.Width > 0 && diagram.Height > 0.Should().Contain(result.Diagrams);
+        result.Diagrams.Should().Contain(diagram => diagram.Width > 0 && diagram.Height > 0);
     }
 
     [Fact]
@@ -161,14 +161,14 @@ Row A1          Row A2
 
         var firstTable = tables[0];
         firstTable.ColumnCount.Should().Be(3);
-        "Header 2", "Header 3" }, firstTable.Headers.Should().Be(new[] { "Header 1");
+        firstTable.Headers.Should().BeEquivalentTo(new[] { "Header 1", "Header 2", "Header 3" });
         firstTable.RowCount.Should().Be(2);
         firstTable.Rows.Should().NotContain(row => row.All(string.IsNullOrWhiteSpace));
         firstTable.Rows[1][2].Should().Be(string.Empty);
 
         var secondTable = tables[1];
         secondTable.ColumnCount.Should().Be(2);
-        "Next Header 2" }, secondTable.Headers.Should().Be(new[] { "Next Header 1");
+        secondTable.Headers.Should().BeEquivalentTo(new[] { "Next Header 1", "Next Header 2" });
         secondTable.RowCount.Should().Be(1);
         secondTable.Rows[0][0].Should().Be("Row A1");
         secondTable.Rows[0][1].Should().Be("Row A2");
@@ -215,7 +215,7 @@ Row A1          Row A2
             // Assert
             result.Success.Should().BeFalse();
             result.ErrorMessage.Should().NotBeNull();
-            result.ErrorMessage, StringComparison.OrdinalIgnoreCase.Should().Contain("Extraction failed");
+            result.ErrorMessage.Should().Contain("Extraction failed", StringComparison.OrdinalIgnoreCase);
 
             _mockLogger.Verify(
                 x => x.Log(
@@ -323,7 +323,7 @@ Row A1          Row A2
         // Assert
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().NotBeNull();
-        result.ErrorMessage, StringComparison.OrdinalIgnoreCase.Should().Contain("path is required");
+        result.ErrorMessage.Should().Contain("path is required", StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -349,7 +349,7 @@ Row A1          Row A2
         // Assert
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().NotBeNull();
-        result.ErrorMessage, StringComparison.OrdinalIgnoreCase.Should().Contain("not found");
+        result.ErrorMessage.Should().Contain("not found", StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -454,7 +454,7 @@ Row A1          Row A2
         result.TableCount.Should().Be(1);
         result.Tables.Count.Should().Be(result.TableCount);
         var table = result.Tables.Should().ContainSingle().Subject;
-        "Value" }, table.Headers.Should().Be(new[] { "Name");
+        table.Headers.Should().BeEquivalentTo(new[] { "Name", "Value" });
         table.RowCount.Should().Be(3);
         result.AtomicRuleCount.Should().Be(3);
         result.AtomicRules.Should().Contain(rule => rule.Contains("Name: Alpha", StringComparison.OrdinalIgnoreCase));
@@ -478,9 +478,9 @@ Row A1          Row A2
         result.Tables.Should().NotBeEmpty();
 
         var table = result.Tables.First();
-        "Task", "Count" }, table.Headers.Should().Be(new[] { "Phase");
+        table.Headers.Should().BeEquivalentTo(new[] { "Phase", "Task", "Count" });
         table.Headers.Count.Should().Be(table.ColumnCount);
-        table.RowCount >= 1.Should().BeTrue();
+        (table.RowCount >= 1).Should().BeTrue();
         table.Rows.Should().OnlyContain(row => row.Length == table.ColumnCount);
         table.Rows.Should().Contain(row =>
             row.Length == table.ColumnCount &&

@@ -290,8 +290,8 @@ public class OllamaLlmServiceTests
         result.Success.Should().BeTrue();
         result.Usage.Should().NotBeNull();
         // Estimated tokens should be > 0 (roughly length/4)
-        result.Usage.PromptTokens > 0.Should().BeTrue();
-        result.Usage.CompletionTokens > 0.Should().BeTrue();
+        (result.Usage.PromptTokens > 0).Should().BeTrue();
+        (result.Usage.CompletionTokens > 0).Should().BeTrue();
         result.Usage.TotalTokens.Should().Be(result.Usage.PromptTokens + result.Usage.CompletionTokens);
     }
 

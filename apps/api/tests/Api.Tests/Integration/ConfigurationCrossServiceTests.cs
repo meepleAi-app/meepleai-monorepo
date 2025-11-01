@@ -85,7 +85,7 @@ public class ConfigurationCrossServiceTests : ConfigIntegrationTestBase
         var temperature = await configService.GetValueAsync<double>("Ai:DefaultTemperature");
 
         // Assert: Configuration value correct
-        temperature, precision: 2.Should().Be(0.1);
+        temperature.Should().BeApproximately(0.1, 2);
     }
 
     [Fact]
@@ -287,6 +287,6 @@ public class ConfigurationCrossServiceTests : ConfigIntegrationTestBase
 
         // Assert: Both configurations applied independently
         ragTopK.Should().Be(8);
-        aiTemp, precision: 2.Should().Be(0.5);
+        aiTemp.Should().BeApproximately(0.5, 2);
     }
 }

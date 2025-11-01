@@ -164,7 +164,7 @@ public class N8nConfigServiceTests : IDisposable
         refreshed.BaseUrl.Should().Be("https://updated.com");
         refreshed.WebhookUrl.Should().Be("https://hook/new");
         refreshed.IsActive.Should().BeFalse();
-        refreshed.UpdatedAt > previousUpdatedAt.Should().BeTrue();
+        (refreshed.UpdatedAt > previousUpdatedAt).Should().BeTrue();
         refreshed.ApiKeyEncrypted.Should().NotBe(previousApiKey);
     }
 

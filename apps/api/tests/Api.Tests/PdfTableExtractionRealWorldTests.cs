@@ -95,7 +95,7 @@ public class PdfTableExtractionRealWorldTests
         var result = await _service.ExtractStructuredContentAsync(pdfPath);
 
         // Assert
-        result.Success, $"Extraction should succeed. Error: {result.ErrorMessage}".Should().BeTrue();
+        result.Success.Should().BeTrue($"Extraction should succeed. Error: {result.ErrorMessage}");
 
         _output.WriteLine($"Harmonies Rulebook Analysis:");
         _output.WriteLine($"  Tables found: {result.TableCount}");
@@ -132,10 +132,8 @@ public class PdfTableExtractionRealWorldTests
 
         // PDF-03 Acceptance Criteria: Must extract tabular data
         // Harmonies is a complex modern board game, should have structured content
-        
-            result.TableCount > 0 || result.DiagramCount > 0,
-            "Should extract at least tables or diagrams from Harmonies rulebook"
-        .Should().BeTrue();
+        (result.TableCount > 0 || result.DiagramCount > 0)
+            .Should().BeTrue("Should extract at least tables or diagrams from Harmonies rulebook");
     }
 
     [Fact]
@@ -154,7 +152,7 @@ public class PdfTableExtractionRealWorldTests
         var result = await _service.ExtractStructuredContentAsync(pdfPath);
 
         // Assert
-        result.Success, $"Extraction should succeed. Error: {result.ErrorMessage}".Should().BeTrue();
+        result.Success.Should().BeTrue($"Extraction should succeed. Error: {result.ErrorMessage}");
 
         _output.WriteLine($"Lorenzo Rulebook Analysis:");
         _output.WriteLine($"  Tables found: {result.TableCount}");
@@ -237,8 +235,8 @@ public class PdfTableExtractionRealWorldTests
         _output.WriteLine($"    Atomic Rules: {lorenzoResult.AtomicRuleCount}");
 
         // Both extractions must succeed
-        harmoniesResult.Success, "Harmonies extraction should succeed".Should().BeTrue();
-        lorenzoResult.Success, "Lorenzo extraction should succeed".Should().BeTrue();
+        harmoniesResult.Success.Should().BeTrue("Harmonies extraction should succeed");
+        lorenzoResult.Success.Should().BeTrue("Lorenzo extraction should succeed");
 
         // At least one should have structured content
         var hasStructuredContent =
@@ -321,11 +319,11 @@ public class PdfTableExtractionRealWorldTests
                 _output.WriteLine($"    Has Image Data: {diagram.ImageData != null && diagram.ImageData.Length > 0}");
 
                 // Validate diagram metadata
-                diagram.PageNumber > 0, "Page number should be positive".Should().BeTrue();
+                (diagram.PageNumber > 0).Should().BeTrue("Page number should be positive");
                 diagram.DiagramType.Should().NotBeEmpty();
                 diagram.Description.Should().NotBeEmpty();
-                diagram.Width >= 0, "Width should be non-negative".Should().BeTrue();
-                diagram.Height >= 0, "Height should be non-negative".Should().BeTrue();
+                (diagram.Width >= 0).Should().BeTrue("Width should be non-negative");
+                (diagram.Height >= 0).Should().BeTrue("Height should be non-negative");
             }
 
             _output.WriteLine($"\n  Total diagrams found: {result.DiagramCount}");

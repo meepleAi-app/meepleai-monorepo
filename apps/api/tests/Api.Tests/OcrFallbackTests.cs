@@ -102,8 +102,8 @@ public class OcrFallbackTests : IDisposable
         result.Success, "Extraction should succeed".Should().BeTrue();
         result.UsedOcr, "OCR fallback should be triggered for scanned PDF".Should().BeTrue();
         result.OcrConfidence.Should().NotBeNull();
-        result.OcrConfidence > 0, "OCR confidence should be > 0".Should().BeTrue();
-        result.CharacterCount > 0, "Should extract some text via OCR".Should().BeTrue();
+        (result.OcrConfidence > 0).Should().BeTrue("OCR confidence should be > 0");
+        (result.CharacterCount > 0).Should().BeTrue("Should extract some text via OCR");
 
         // The OCR should recognize at least some of the text
         // (exact match not guaranteed due to OCR accuracy)

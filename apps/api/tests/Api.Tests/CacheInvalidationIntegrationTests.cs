@@ -79,8 +79,8 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Accept both 200 OK and 202 Accepted as success
-        response.IsSuccessStatusCode,
-            $"PDF upload failed with status {response.StatusCode}: {await response.Content.ReadAsStringAsync()}".Should().BeTrue();
+        response.IsSuccessStatusCode.Should().BeTrue(
+            $"PDF upload failed with status {response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
 
         // Track PDF document for cleanup
         var result = await response.Content.ReadFromJsonAsync<PdfUploadResponse>();
@@ -266,8 +266,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Rule spec update might return 200 or 204
-        response.IsSuccessStatusCode,
-            $"Rule spec update failed with status {response.StatusCode}".Should().BeTrue();
+        response.IsSuccessStatusCode.Should().BeTrue($"Rule spec update failed with status {response.StatusCode}");
 
         // Then: Cache is invalidated
         using var newScope = Factory.Services.CreateScope();
@@ -337,10 +336,10 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
             // If QA fails (e.g., no LLM configured), that's acceptable for this test
             // The important part is that cache was bypassed
             var statusCode = response.StatusCode;
-            statusCode == System.Net.HttpStatusCode.OK ||
+            (statusCode == System.Net.HttpStatusCode.OK ||
                        statusCode == System.Net.HttpStatusCode.ServiceUnavailable ||
-                       statusCode == System.Net.HttpStatusCode.InternalServerError,
-                       $"Unexpected status code: {statusCode}".Should().BeTrue();
+                       statusCode == System.Net.HttpStatusCode.InternalServerError).Should().BeTrue(
+                       $"Unexpected status code: {statusCode}");
         }
     }
 

@@ -91,7 +91,7 @@ public class ExplainEndpointTests : IntegrationTestBase
         result.TryGetProperty("script", out var script).Should().BeTrue();
         var scriptText = script.GetString();
         string.IsNullOrWhiteSpace(scriptText).Should().BeFalse();
-        scriptText, StringComparison.OrdinalIgnoreCase.Should().Contain("winning conditions");
+        scriptText.Should().Contain("winning conditions", StringComparison.OrdinalIgnoreCase);
 
         // Verify citations
         result.TryGetProperty("citations", out var citations).Should().BeTrue();
@@ -299,7 +299,7 @@ public class ExplainEndpointTests : IntegrationTestBase
             .OrderBy(l => l.CreatedAt)
             .ToListAsync();
 
-        chatLogs.Count >= 2.Should().BeTrue(); // User message + assistant response
+        (chatLogs.Count >= 2).Should().BeTrue(); // User message + assistant response
 
         var userMessage = chatLogs.First(l => l.Level == "user");
         userMessage.Message.Should().Contain("game setup");
@@ -357,7 +357,7 @@ public class ExplainEndpointTests : IntegrationTestBase
         aiLog.GameId.Should().Be(game.Id);
         aiLog.Query.Should().Be("scoring");
         aiLog.Status.Should().Be("Success");
-        aiLog.LatencyMs > 0.Should().BeTrue();
+        (aiLog.LatencyMs > 0).Should().BeTrue();
     }
 
     /// <summary>

@@ -42,7 +42,7 @@ public class ChessDatasetTests
 
         // Then: It should have exactly 13 actions including all piece movements
         ruleSpec.actions.Should().NotBeNull();
-        ruleSpec.actions.Count >= 13, $"Expected at least 13 actions, found {ruleSpec.actions.Count}".Should().BeTrue();
+        (ruleSpec.actions.Count >= 13).Should().BeTrue($"Expected at least 13 actions, found {ruleSpec.actions.Count}");
 
         var actionIds = ruleSpec.actions.Select(a => a.id).ToList();
         actionIds.Should().Contain("move-king");
@@ -94,8 +94,8 @@ public class ChessDatasetTests
 
         // Then: It should contain at least 20 openings (acceptance criteria)
         openings.Should().NotBeNull();
-        openings.Count >= 20,
-            $"Expected at least 20 openings, found {openings.Count}. Add more openings to meet acceptance criteria.".Should().BeTrue();
+        (openings.Count >= 20).Should().BeTrue(
+            $"Expected at least 20 openings, found {openings.Count}. Add more openings to meet acceptance criteria.");
     }
 
     [Fact]
@@ -121,18 +121,18 @@ public class ChessDatasetTests
     {
         // Given: An individual opening from the dataset
         // Then: It should have all required metadata fields populated
-        string.IsNullOrWhiteSpace(opening.id),
-            $"Opening '{opening.name}' (id: {opening.id}) missing id".Should().BeFalse();
-        string.IsNullOrWhiteSpace(opening.name),
-            $"Opening (id: {opening.id}) missing name".Should().BeFalse();
-        string.IsNullOrWhiteSpace(opening.description),
-            $"Opening '{opening.name}' (id: {opening.id}) missing description".Should().BeFalse();
-        string.IsNullOrWhiteSpace(opening.pgn),
-            $"Opening '{opening.name}' (id: {opening.id}) missing PGN moves".Should().BeFalse();
-        string.IsNullOrWhiteSpace(opening.fen),
-            $"Opening '{opening.name}' (id: {opening.id}) missing FEN position".Should().BeFalse();
-        string.IsNullOrWhiteSpace(opening.strategy),
-            $"Opening '{opening.name}' (id: {opening.id}) missing strategy description".Should().BeFalse();
+        string.IsNullOrWhiteSpace(opening.id).Should().BeFalse(
+            $"Opening '{opening.name}' (id: {opening.id}) missing id");
+        string.IsNullOrWhiteSpace(opening.name).Should().BeFalse(
+            $"Opening (id: {opening.id}) missing name");
+        string.IsNullOrWhiteSpace(opening.description).Should().BeFalse(
+            $"Opening '{opening.name}' (id: {opening.id}) missing description");
+        string.IsNullOrWhiteSpace(opening.pgn).Should().BeFalse(
+            $"Opening '{opening.name}' (id: {opening.id}) missing PGN moves");
+        string.IsNullOrWhiteSpace(opening.fen).Should().BeFalse(
+            $"Opening '{opening.name}' (id: {opening.id}) missing FEN position");
+        string.IsNullOrWhiteSpace(opening.strategy).Should().BeFalse(
+            $"Opening '{opening.name}' (id: {opening.id}) missing strategy description");
     }
 
     /// <summary>
@@ -157,8 +157,8 @@ public class ChessDatasetTests
         // Given: An individual opening from the dataset
         // Then: Its FEN string should be syntactically valid (6 parts separated by spaces)
         var fenParts = opening.fen.Split(' ');
-        fenParts.Length == 6,
-            $"Opening '{opening.name}' (id: {opening.id}) has invalid FEN format (expected 6 parts, found {fenParts.Length}): {opening.fen}".Should().BeTrue();
+        (fenParts.Length == 6).Should().BeTrue(
+            $"Opening '{opening.name}' (id: {opening.id}) has invalid FEN format (expected 6 parts, found {fenParts.Length}): {opening.fen}");
     }
 
     [Fact]
@@ -217,8 +217,8 @@ public class ChessDatasetTests
 
         // Then: It should contain at least 15 tactics (acceptance criteria)
         tactics.Should().NotBeNull();
-        tactics.Count >= 15,
-            $"Expected at least 15 tactics, found {tactics.Count}. Add more tactics to meet acceptance criteria.".Should().BeTrue();
+        (tactics.Count >= 15).Should().BeTrue(
+            $"Expected at least 15 tactics, found {tactics.Count}. Add more tactics to meet acceptance criteria.");
     }
 
     [Fact]
@@ -244,12 +244,12 @@ public class ChessDatasetTests
     {
         // Given: An individual tactic from the dataset
         // Then: It should have all required metadata fields and at least 1 example
-        string.IsNullOrWhiteSpace(tactic.id),
-            $"Tactic '{tactic.name}' (id: {tactic.id}) missing id".Should().BeFalse();
-        string.IsNullOrWhiteSpace(tactic.name),
-            $"Tactic (id: {tactic.id}) missing name".Should().BeFalse();
-        string.IsNullOrWhiteSpace(tactic.description),
-            $"Tactic '{tactic.name}' (id: {tactic.id}) missing description".Should().BeFalse();
+        string.IsNullOrWhiteSpace(tactic.id).Should().BeFalse(
+            $"Tactic '{tactic.name}' (id: {tactic.id}) missing id");
+        string.IsNullOrWhiteSpace(tactic.name).Should().BeFalse(
+            $"Tactic (id: {tactic.id}) missing name");
+        string.IsNullOrWhiteSpace(tactic.description).Should().BeFalse(
+            $"Tactic '{tactic.name}' (id: {tactic.id}) missing description");
         tactic.examples.Should().NotBeNull();
         tactic.examples.Should().NotBeEmpty();
     }
@@ -263,12 +263,11 @@ public class ChessDatasetTests
     {
         // Given: An individual tactical position example
         // Then: It should have a valid FEN notation (6 parts separated by spaces)
-        string.IsNullOrWhiteSpace(example.fen),
-            $"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' missing FEN".Should().BeFalse();
+        string.IsNullOrWhiteSpace(example.fen).Should().BeFalse($"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' missing FEN");
 
         var fenParts = example.fen.Split(' ');
-        fenParts.Length == 6,
-            $"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' has invalid FEN (expected 6 parts, found {fenParts.Length}): {example.fen}".Should().BeTrue();
+        fenParts.Length.Should().Be(6,
+            $"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' has invalid FEN (expected 6 parts, found {fenParts.Length}): {example.fen}");
     }
 
     /// <summary>
@@ -280,10 +279,8 @@ public class ChessDatasetTests
     {
         // Given: An individual tactical position example
         // Then: It should have both solution move and explanation
-        string.IsNullOrWhiteSpace(example.solution),
-            $"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' missing solution".Should().BeFalse();
-        string.IsNullOrWhiteSpace(example.explanation),
-            $"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' missing explanation".Should().BeFalse();
+        string.IsNullOrWhiteSpace(example.solution).Should().BeFalse($"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' missing solution");
+        string.IsNullOrWhiteSpace(example.explanation).Should().BeFalse($"Tactic '{tacticName}' (id: {tacticId}) example '{example.id}' missing explanation");
     }
 
     [Fact]
@@ -299,8 +296,8 @@ public class ChessDatasetTests
 
         // Then: It should have at least 2 examples
         fork.Should().NotBeNull();
-        fork.examples.Count >= 2,
-            $"Fork tactic should have at least 2 examples, found {fork.examples.Count}".Should().BeTrue();
+        fork!.examples.Count.Should().BeGreaterOrEqualTo(2,
+            $"Fork tactic should have at least 2 examples, found {fork.examples.Count}");
     }
 
     #endregion

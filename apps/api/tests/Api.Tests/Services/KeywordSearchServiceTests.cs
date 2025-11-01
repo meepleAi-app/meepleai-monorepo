@@ -208,7 +208,7 @@ public class KeywordSearchServiceTests : IDisposable
         var act = async () =>
         {
             await _service.SearchAsync("castling", nonExistentGameId, limit: 10);
-        });
+        };
     }
 
     [Fact]
@@ -363,7 +363,7 @@ public class KeywordSearchServiceTests : IDisposable
         var act2 = async () =>
         {
             await _service.SearchAsync("castling", Guid.Parse(gameId), cancellationToken: cts.Token);
-        });
+        };
     }
 
     public void Dispose()

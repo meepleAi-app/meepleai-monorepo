@@ -233,11 +233,9 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
 
         // Then: System returns bad request or unauthorized
-        
-            response.StatusCode == HttpStatusCode.BadRequest ||
-            response.StatusCode == HttpStatusCode.Unauthorized,
-            $"Expected BadRequest or Unauthorized, got {response.StatusCode}"
-        .Should().BeTrue();
+        (response.StatusCode == HttpStatusCode.BadRequest ||
+            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue(
+            $"Expected BadRequest or Unauthorized, got {response.StatusCode}");
     }
 
     #endregion

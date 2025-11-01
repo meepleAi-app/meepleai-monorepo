@@ -80,10 +80,10 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         string.IsNullOrWhiteSpace(answer.GetString()).Should().BeFalse();
 
         result.TryGetProperty("suggestedMoves", out var moves).Should().BeTrue();
-        moves.ValueKind == JsonValueKind.Array.Should().BeTrue();
+        (moves.ValueKind == JsonValueKind.Array).Should().BeTrue();
 
         result.TryGetProperty("sources", out var sources).Should().BeTrue();
-        sources.ValueKind == JsonValueKind.Array.Should().BeTrue();
+        (sources.ValueKind == JsonValueKind.Array).Should().BeTrue();
 
         // Verify metadata fields for tracking
         result.TryGetProperty("promptTokens", out _).Should().BeTrue();
@@ -241,10 +241,10 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         string.IsNullOrWhiteSpace(answer.GetString()).Should().BeFalse();
 
         result.TryGetProperty("suggestedMoves", out var moves).Should().BeTrue();
-        moves.ValueKind == JsonValueKind.Array.Should().BeTrue();
+        (moves.ValueKind == JsonValueKind.Array).Should().BeTrue();
 
         result.TryGetProperty("sources", out var sources).Should().BeTrue();
-        sources.ValueKind == JsonValueKind.Array.Should().BeTrue();
+        (sources.ValueKind == JsonValueKind.Array).Should().BeTrue();
 
         // Optional analysis field
         result.TryGetProperty("analysis", out _).Should().BeTrue();

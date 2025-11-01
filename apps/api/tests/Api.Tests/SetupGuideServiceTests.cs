@@ -84,7 +84,7 @@ public class SetupGuideServiceTests : IDisposable
         result.Should().NotBeNull();
         result.gameTitle.Should().Be("Unknown Game");
         result.steps.Should().NotBeEmpty();
-        result.estimatedSetupTimeMinutes > 0.Should().BeTrue();
+        (result.estimatedSetupTimeMinutes > 0).Should().BeTrue();
     }
 
     [Fact]
@@ -121,7 +121,7 @@ public class SetupGuideServiceTests : IDisposable
         result.steps.Should().NotBeEmpty();
         result.steps.Should().OnlyContain(step =>
         {
-            step.stepNumber > 0.Should().BeTrue();
+            (step.stepNumber > 0).Should().BeTrue();
             string.IsNullOrEmpty(step.title).Should().BeFalse();
             string.IsNullOrEmpty(step.instruction).Should().BeFalse();
             step.references.Should().NotBeNull();
@@ -249,7 +249,7 @@ Each player takes a player board and starting components.";
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
-        result.estimatedSetupTimeMinutes > 0.Should().BeTrue();
+        (result.estimatedSetupTimeMinutes > 0).Should().BeTrue();
         // Default steps are 5, so estimated time should be around 10 minutes (2 min per step)
         result.estimatedSetupTimeMinutes.Should().Be(10);
 

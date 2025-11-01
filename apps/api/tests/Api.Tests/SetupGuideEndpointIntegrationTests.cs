@@ -79,7 +79,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         setupGuide!.steps.Should().NotBeEmpty();
         setupGuide.steps.Should().OnlyContain(step =>
         {
-            step.stepNumber > 0.Should().BeTrue();
+            (step.stepNumber > 0).Should().BeTrue();
             string.IsNullOrWhiteSpace(step.title).Should().BeFalse();
             string.IsNullOrWhiteSpace(step.instruction).Should().BeFalse();
             step.references.Should().NotBeNull();
@@ -279,7 +279,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var setupGuide = JsonSerializer.Deserialize<SetupGuideResponse>(json, JsonOptions);
 
         setupGuide.Should().NotBeNull();
-        setupGuide!.estimatedSetupTimeMinutes > 0.Should().BeTrue();
+        (setupGuide!.estimatedSetupTimeMinutes > 0).Should().BeTrue();
 
         // And: The estimated time is reasonable (between 5 and 30 minutes)
         setupGuide.estimatedSetupTimeMinutes.Should().BeInRange(5, 30);
@@ -371,7 +371,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         log.UserId.Should().Be(user.Id);
         log.GameId.Should().Be(game.Id);
         log.Endpoint.Should().Be("setup");
-        log.LatencyMs > 0.Should().BeTrue();
+        (log.LatencyMs > 0).Should().BeTrue();
     }
 
     /// <summary>

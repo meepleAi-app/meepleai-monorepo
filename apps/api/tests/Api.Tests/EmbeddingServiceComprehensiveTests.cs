@@ -416,7 +416,7 @@ public class EmbeddingServiceComprehensiveTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage, StringComparison.OrdinalIgnoreCase.Should().Contain("error");
+        result.ErrorMessage.Should().Contain("error", StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -431,7 +431,7 @@ public class EmbeddingServiceComprehensiveTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage, StringComparison.OrdinalIgnoreCase.Should().Contain("error");
+        result.ErrorMessage.Should().Contain("error", StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

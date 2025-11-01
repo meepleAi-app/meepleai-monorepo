@@ -385,10 +385,10 @@ public class SeedDataTests : IntegrationTestBase
             .CountAsync();
 
         // Then: Minimum counts are met
-        userCount >= 3, $"Expected at least 3 demo users, found {userCount}".Should().BeTrue();
-        gameCount >= 2, $"Expected at least 2 demo games, found {gameCount}".Should().BeTrue();
-        ruleSpecCount >= 2, $"Expected at least 2 demo rule specs, found {ruleSpecCount}".Should().BeTrue();
-        agentCount >= 4, $"Expected at least 4 demo agents, found {agentCount}".Should().BeTrue();
+        (userCount >= 3).Should().BeTrue($"Expected at least 3 demo users, found {userCount}");
+        (gameCount >= 2).Should().BeTrue($"Expected at least 2 demo games, found {gameCount}");
+        (ruleSpecCount >= 2).Should().BeTrue($"Expected at least 2 demo rule specs, found {ruleSpecCount}");
+        (agentCount >= 4).Should().BeTrue($"Expected at least 4 demo agents, found {agentCount}");
     }
 
     #endregion

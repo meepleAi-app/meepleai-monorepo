@@ -166,7 +166,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
             scriptChunkCount++;
             idx++;
         }
-        scriptChunkCount > 0, "Expected at least one ScriptChunk event".Should().BeTrue();
+        (scriptChunkCount > 0).Should().BeTrue("Expected at least one ScriptChunk event");
 
         // Complete
         eventTypes[^1].Should().Be(StreamingEventType.Complete);
@@ -205,7 +205,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         {
             citation.text.Should().NotBeEmpty();
             citation.source.Should().StartWith("PDF:");
-            citation.page > 0.Should().BeTrue();
+            (citation.page > 0).Should().BeTrue();
         });
     }
 
@@ -305,8 +305,8 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
             ((JsonElement)completeEvent.Data!).GetRawText(), JsonOptions);
 
         completeData.Should().NotBeNull();
-        completeData!.estimatedReadingTimeMinutes > 0.Should().BeTrue();
-        completeData.confidence >= 0 && completeData.confidence <= 1.Should().BeTrue();
+        (completeData!.estimatedReadingTimeMinutes > 0).Should().BeTrue();
+        (completeData.confidence >= 0 && completeData.confidence <= 1).Should().BeTrue();
     }
 
     [Fact]

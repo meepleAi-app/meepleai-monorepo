@@ -40,9 +40,9 @@ public class EdgeScenarioTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns 415 Unsupported Media Type or 400 Bad Request
-        response.StatusCode == HttpStatusCode.UnsupportedMediaType ||
-                    response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 415 or 400, got {response.StatusCode}".Should().BeTrue();
+        (response.StatusCode == HttpStatusCode.UnsupportedMediaType ||
+                    response.StatusCode == HttpStatusCode.BadRequest).Should().BeTrue(
+            $"Expected 415 or 400, got {response.StatusCode}");
     }
 
     [Fact]
@@ -60,9 +60,9 @@ public class EdgeScenarioTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns 415 Unsupported Media Type or 400 Bad Request
-        response.StatusCode == HttpStatusCode.UnsupportedMediaType ||
-                    response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 415 or 400, got {response.StatusCode}".Should().BeTrue();
+        (response.StatusCode == HttpStatusCode.UnsupportedMediaType ||
+                    response.StatusCode == HttpStatusCode.BadRequest).Should().BeTrue(
+            $"Expected 415 or 400, got {response.StatusCode}");
     }
 
     [Fact]
@@ -108,10 +108,10 @@ public class EdgeScenarioTests : IntegrationTestBase
 
         // Then: Server handles gracefully (may accept, truncate, or reject with 413)
         // NOTE: Actual behavior depends on server configuration
-        response.StatusCode == HttpStatusCode.OK ||
+        (response.StatusCode == HttpStatusCode.OK ||
                     response.StatusCode == HttpStatusCode.RequestEntityTooLarge ||
-                    response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected OK, 413, or 400, got {response.StatusCode}".Should().BeTrue();
+                    response.StatusCode == HttpStatusCode.BadRequest).Should().BeTrue(
+            $"Expected OK, 413, or 400, got {response.StatusCode}");
     }
 
     [Fact]
@@ -333,7 +333,7 @@ public class EdgeScenarioTests : IntegrationTestBase
 
         // And: Most should succeed (some may be rate limited)
         var successCount = responses.Count(r => r.StatusCode == HttpStatusCode.OK);
-        successCount > 0, "At least some concurrent requests should succeed".Should().BeTrue();
+        (successCount > 0).Should().BeTrue("At least some concurrent requests should succeed");
     }
 
     [Fact]

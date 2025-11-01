@@ -483,8 +483,8 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var result = JsonSerializer.Deserialize<PromptTemplateListResponse>(json, JsonOptions);
 
         result.Should().NotBeNull();
-        result.TotalCount >= 2.Should().BeTrue();
-        result.Templates.Count >= 2.Should().BeTrue();
+        (result.TotalCount >= 2).Should().BeTrue();
+        (result.Templates.Count >= 2).Should().BeTrue();
     }
 
     /// <summary>
@@ -517,7 +517,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var result = JsonSerializer.Deserialize<PromptTemplateListResponse>(json, JsonOptions);
 
         result.Should().NotBeNull();
-        result.Templates.Count >= 1.Should().BeTrue();
+        (result.Templates.Count >= 1).Should().BeTrue();
         result.Templates.Should().OnlyContain(t => t.Category == "qa");
     }
 

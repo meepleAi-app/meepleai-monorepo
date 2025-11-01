@@ -277,7 +277,7 @@ public class PdfValidationServiceTests : IDisposable
         result.IsValid.Should().BeTrue();
         result.Errors.Should().BeEmpty();
         result.Metadata.Should().NotBeNull();
-        result.Metadata.PageCount >= 1.Should().BeTrue();
+        (result.Metadata.PageCount >= 1).Should().BeTrue();
         result.Metadata.PdfVersion.Should().NotBeEmpty();
     }
 
@@ -410,7 +410,7 @@ public class PdfValidationServiceTests : IDisposable
         result.Metadata.Should().NotBeNull();
         result.Metadata.PageCount.Should().Be(3);
         result.Metadata.PdfVersion.Should().NotBeEmpty();
-        result.Metadata.FileSizeBytes > 0.Should().BeTrue();
+        (result.Metadata.FileSizeBytes > 0).Should().BeTrue();
     }
 
     // ===== PDF Version Validation Tests =====
@@ -454,7 +454,7 @@ public class PdfValidationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Count > 0.Should().BeTrue();
+        (result.Errors.Count > 0).Should().BeTrue();
     }
 
     // ===== Configuration Tests =====

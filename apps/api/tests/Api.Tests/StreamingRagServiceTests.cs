@@ -291,7 +291,7 @@ public class StreamingRagServiceTests
                 scriptChunkCount++;
             }
         }
-        scriptChunkCount > 0.Should().BeTrue();
+        (scriptChunkCount > 0).Should().BeTrue();
 
         // Last event should be Complete
         eventTypes[^1].Should().Be(StreamingEventType.Complete);
@@ -419,7 +419,7 @@ public class StreamingRagServiceTests
 
         // Assert
         var scriptChunkEvents = events.Where(e => e.Type == StreamingEventType.ScriptChunk).ToList();
-        scriptChunkEvents.Count > 1.Should().BeTrue(); // Should have multiple chunks
+        (scriptChunkEvents.Count > 1).Should().BeTrue(); // Should have multiple chunks
 
         for (int i = 0; i < scriptChunkEvents.Count; i++)
         {
@@ -465,12 +465,12 @@ public class StreamingRagServiceTests
         var completeEvent = events.First(e => e.Type == StreamingEventType.Complete);
         var completeData = completeEvent.Data.Should().BeOfType<StreamingComplete>().Subject;
 
-        completeData.estimatedReadingTimeMinutes > 0.Should().BeTrue();
+        (completeData.estimatedReadingTimeMinutes > 0).Should().BeTrue();
         completeData.promptTokens.Should().Be(0); // Non-LLM explain doesn't use tokens
         completeData.completionTokens.Should().Be(0);
         completeData.totalTokens.Should().Be(0);
         completeData.confidence.Should().NotBeNull();
-        completeData.confidence.Value, precision: 2.Should().Be(0.92); // Max score
+        completeData.confidence.Value.Should().BeApproximately(0.92, 2); // Max score
     }
 
     [Fact]

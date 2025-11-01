@@ -541,7 +541,7 @@ CRITICAL INSTRUCTIONS:
 
         // Then: Confidence score is the maximum from search results
         result.confidence.Should().NotBeNull();
-        result.confidence.Value, precision: 2.Should().Be(0.92);
+        result.confidence.Value.Should().BeApproximately(0.92, 2);
     }
 
     [Fact]
@@ -696,7 +696,7 @@ CRITICAL INSTRUCTIONS:
 
         // Then: Answer is preserved (no artificial truncation at service level)
         result.Should().NotBeNull();
-        result.answer.Length > 1000.Should().BeTrue(); // Long answer preserved
+        (result.answer.Length > 1000).Should().BeTrue(); // Long answer preserved
     }
 
     [Fact]
@@ -769,17 +769,17 @@ CRITICAL INSTRUCTIONS:
 
         // Then: System prompt contains anti-hallucination instructions
         capturedSystemPrompt.Should().NotBeNull();
-        capturedSystemPrompt, StringComparison.OrdinalIgnoreCase.Should().Contain("board game rules assistant");
-        capturedSystemPrompt, StringComparison.OrdinalIgnoreCase.Should().Contain("NOT in the provided context");
+        capturedSystemPrompt.Should().Contain("board game rules assistant", StringComparison.OrdinalIgnoreCase);
+        capturedSystemPrompt.Should().Contain("NOT in the provided context", StringComparison.OrdinalIgnoreCase);
         capturedSystemPrompt.Should().Contain("Not specified");
-        capturedSystemPrompt, StringComparison.OrdinalIgnoreCase.Should().Contain("Do NOT hallucinate");
+        capturedSystemPrompt.Should().Contain("Do NOT hallucinate", StringComparison.OrdinalIgnoreCase);
 
         // User prompt contains context with page numbers
         capturedUserPrompt.Should().NotBeNull();
-        capturedUserPrompt, StringComparison.OrdinalIgnoreCase.Should().Contain("CONTEXT FROM RULEBOOK");
+        capturedUserPrompt.Should().Contain("CONTEXT FROM RULEBOOK", StringComparison.OrdinalIgnoreCase);
         capturedUserPrompt.Should().Contain("[Page 5]");
         capturedUserPrompt.Should().Contain("Rule text from page 5.");
-        capturedUserPrompt, StringComparison.OrdinalIgnoreCase.Should().Contain("QUESTION");
+        capturedUserPrompt.Should().Contain("QUESTION", StringComparison.OrdinalIgnoreCase);
         capturedUserPrompt.Should().Contain("Test question?");
     }
 

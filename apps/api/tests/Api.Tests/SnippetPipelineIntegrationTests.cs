@@ -209,7 +209,7 @@ CRITICAL INSTRUCTIONS:
 
         // And: Confidence score reflects search quality
         result.confidence.Should().NotBeNull();
-        result.confidence.Value, precision: 2.Should().Be(0.94);
+        result.confidence.Value.Should().BeApproximately(0.94, 2);
 
         // And: Metadata is preserved
         result.metadata.Should().NotBeNull();

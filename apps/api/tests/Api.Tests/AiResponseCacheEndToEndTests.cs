@@ -363,8 +363,8 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         // Then: Cached request should be faster (or at least not significantly slower)
         // Note: In test environment with mocks, this might not show dramatic difference
         // But the test validates the flow works correctly
-        secondRequestTime <= firstRequestTime * 2,
-            $"Cached request ({secondRequestTime}ms) took longer than 2x first request ({firstRequestTime}ms)".Should().BeTrue();
+        (secondRequestTime <= firstRequestTime * 2).Should().BeTrue(
+            $"Cached request ({secondRequestTime}ms) took longer than 2x first request ({firstRequestTime}ms)");
     }
 
     [Fact]
@@ -456,10 +456,9 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns appropriate error (likely 404 or 400)
-        
-            response.StatusCode == HttpStatusCode.NotFound ||
-            response.StatusCode == HttpStatusCode.BadRequest,
-            $"Expected 404 or 400, got {response.StatusCode}".Should().BeTrue();
+        (response.StatusCode == HttpStatusCode.NotFound ||
+            response.StatusCode == HttpStatusCode.BadRequest).Should().BeTrue(
+            $"Expected 404 or 400, got {response.StatusCode}");
     }
 
     // Note: API needs query validation - currently accepts empty queries

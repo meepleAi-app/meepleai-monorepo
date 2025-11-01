@@ -426,11 +426,11 @@ public class MdExportFormatterTests
 
         // And: Messages have proper headings (###)
         var headingCount = content.Split("###").Length - 1;
-        headingCount >= 5, $"Expected at least 5 headings, found {headingCount}".Should().BeTrue();
+        (headingCount >= 5).Should().BeTrue($"Expected at least 5 headings, found {headingCount}");
 
         // And: Messages are separated by horizontal rules
         var separatorCount = content.Split("---").Length - 1;
-        separatorCount >= 4, $"Expected at least 4 separators, found {separatorCount}".Should().BeTrue();
+        (separatorCount >= 4).Should().BeTrue($"Expected at least 4 separators, found {separatorCount}");
     }
 
     /// <summary>
@@ -482,9 +482,9 @@ public class MdExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // Then: All message types have headings
-        content, StringComparison.OrdinalIgnoreCase.Should().Contain("User");
-        content, StringComparison.OrdinalIgnoreCase.Should().Contain("Assistant");
-        content, StringComparison.OrdinalIgnoreCase.Should().Contain("System");
+        content.Should().Contain("User", StringComparison.OrdinalIgnoreCase);
+        content.Should().Contain("Assistant", StringComparison.OrdinalIgnoreCase);
+        content.Should().Contain("System", StringComparison.OrdinalIgnoreCase);
 
         // And: Message content is present
         content.Should().Contain("User message");

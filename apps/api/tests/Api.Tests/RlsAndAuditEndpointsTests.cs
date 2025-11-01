@@ -522,7 +522,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         auditLog.Should().NotBeNull();
         auditLog!.UserId.Should().Be(attacker.Id);
         auditLog.Result.Should().Be("Denied");
-        auditLog.Details ?? "", StringComparison.OrdinalIgnoreCase.Should().Contain("scope");
+        auditLog.Details ?? "".Should().Contain("scope", StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

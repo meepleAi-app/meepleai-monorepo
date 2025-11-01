@@ -80,7 +80,7 @@ public class ConfigurationPerformanceTests : ConfigIntegrationTestBase
         _output.WriteLine($"Max Latency: {latencies.Max():F2}ms");
 
         // Assert: p95 latency < 50ms
-        p95Latency < 50, $"P95 latency ({p95Latency:F2}ms) exceeds 50ms target".Should().BeTrue();
+        (p95Latency < 50).Should().BeTrue($"P95 latency ({p95Latency:F2}ms) exceeds 50ms target");
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public class ConfigurationPerformanceTests : ConfigIntegrationTestBase
         _output.WriteLine($"Query time for 100 configs: {sw.ElapsedMilliseconds}ms");
 
         // Assert: Query completes in < 100ms
-        sw.ElapsedMilliseconds < 100, $"Query time ({sw.ElapsedMilliseconds}ms) exceeds 100ms target".Should().BeTrue();
+        (sw.ElapsedMilliseconds < 100).Should().BeTrue($"Query time ({sw.ElapsedMilliseconds}ms) exceeds 100ms target");
         configs.Count.Should().Be(100);
     }
 
@@ -158,7 +158,7 @@ public class ConfigurationPerformanceTests : ConfigIntegrationTestBase
         _output.WriteLine($"Cache speedup: {firstReadSw.ElapsedMilliseconds / avgCachedLatency:F1}x");
 
         // Assert: Cached reads should be significantly faster (cache hit ratio >90%)
-        avgCachedLatency < 10, $"Cached read latency ({avgCachedLatency:F2}ms) suggests low cache hit ratio".Should().BeTrue();
+        (avgCachedLatency < 10).Should().BeTrue($"Cached read latency ({avgCachedLatency:F2}ms) suggests low cache hit ratio");
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public class ConfigurationPerformanceTests : ConfigIntegrationTestBase
         _output.WriteLine($"Bulk update of 50 configs: {sw.ElapsedMilliseconds}ms");
 
         // Assert: Bulk update completes in < 500ms
-        sw.ElapsedMilliseconds < 500, $"Bulk update time ({sw.ElapsedMilliseconds}ms) exceeds 500ms target".Should().BeTrue();
+        (sw.ElapsedMilliseconds < 500).Should().BeTrue($"Bulk update time ({sw.ElapsedMilliseconds}ms) exceeds 500ms target");
     }
 
     [Fact]
@@ -235,7 +235,7 @@ public class ConfigurationPerformanceTests : ConfigIntegrationTestBase
         _output.WriteLine($"Avg per request: {sw.ElapsedMilliseconds / 100.0:F2}ms");
 
         // Assert: All requests complete within 200ms total, no exceptions
-        sw.ElapsedMilliseconds < 200, $"Concurrent reads ({sw.ElapsedMilliseconds}ms) exceed 200ms target".Should().BeTrue();
+        (sw.ElapsedMilliseconds < 200).Should().BeTrue($"Concurrent reads ({sw.ElapsedMilliseconds}ms) exceed 200ms target");
         results.Should().OnlyContain(value => value).Should().Be("test");
     }
 }

@@ -167,7 +167,7 @@ public class TestTimeProviderTests
         var timestamp2 = provider.GetTimestamp();
 
         // Assert
-        timestamp2 > timestamp1.Should().BeTrue();
+        (timestamp2 > timestamp1).Should().BeTrue();
     }
 
     [Fact]
@@ -183,7 +183,7 @@ public class TestTimeProviderTests
         var elapsed = provider.GetElapsedTime(start, end);
 
         // Assert
-        elapsed.TotalSeconds >= 4.9 && elapsed.TotalSeconds <= 5.1.Should().BeTrue();
+        (elapsed.TotalSeconds >= 4.9 && elapsed.TotalSeconds <= 5.1).Should().BeTrue();
     }
 
     [Fact]

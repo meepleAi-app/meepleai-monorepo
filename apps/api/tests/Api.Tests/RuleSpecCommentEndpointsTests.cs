@@ -120,7 +120,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         var comment = await response.Content.ReadFromJsonAsync<RuleSpecComment>();
         comment.Should().NotBeNull();
         comment!.AtomId.Should().BeNull();
-        this version looks good", comment.CommentText.Should().Be("Overall);
+        comment.CommentText.Should().Be("Overall this version looks good");
     }
 
     /// <summary>

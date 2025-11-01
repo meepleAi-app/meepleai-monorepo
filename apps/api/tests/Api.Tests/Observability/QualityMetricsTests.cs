@@ -43,18 +43,22 @@ public class QualityMetricsTests
 
         // Assert
         var measurements = collector.GetMeasurements();
-        m =>
-            m.Tags["dimension"]?.ToString() == "rag_confidence" &&
-            Math.Abs(m.Value - 0.85) < 0.001.Should().Contain(measurements);
-        m =>
-            m.Tags["dimension"]?.ToString() == "llm_confidence" &&
-            Math.Abs(m.Value - 0.80) < 0.001.Should().Contain(measurements);
-        m =>
-            m.Tags["dimension"]?.ToString() == "citation_quality" &&
-            Math.Abs(m.Value - 0.90) < 0.001.Should().Contain(measurements);
-        m =>
-            m.Tags["dimension"]?.ToString() == "overall_confidence" &&
-            Math.Abs(m.Value - 0.85) < 0.001.Should().Contain(measurements);
+        measurements.Should().Contain(m =>
+            m.Tags != null && m.Tags.ContainsKey("dimension") &&
+            m.Tags["dimension"]!.ToString() == "rag_confidence" &&
+            Math.Abs(m.Value - 0.85) < 0.001);
+        measurements.Should().Contain(m =>
+            m.Tags != null && m.Tags.ContainsKey("dimension") &&
+            m.Tags["dimension"]!.ToString() == "llm_confidence" &&
+            Math.Abs(m.Value - 0.80) < 0.001);
+        measurements.Should().Contain(m =>
+            m.Tags != null && m.Tags.ContainsKey("dimension") &&
+            m.Tags["dimension"]!.ToString() == "citation_quality" &&
+            Math.Abs(m.Value - 0.90) < 0.001);
+        measurements.Should().Contain(m =>
+            m.Tags != null && m.Tags.ContainsKey("dimension") &&
+            m.Tags["dimension"]!.ToString() == "overall_confidence" &&
+            Math.Abs(m.Value - 0.85) < 0.001);
     }
 
     /// <summary>
@@ -148,12 +152,10 @@ public class QualityMetricsTests
         // Assert
         var measurements = collector.GetMeasurements();
         measurements.Should().OnlyContain(m =>
-        {
-            m.Tags.Keys.Should().Contain("agent.type");
-            m.Tags["agent.type"]?.ToString().Should().Be("qa");
-            m.Tags.Keys.Should().Contain("operation");
-            m.Tags["operation"]?.ToString().Should().Be("answer");
-        });
+            m.Tags != null && m.Tags.ContainsKey("agent.type") &&
+            m.Tags["agent.type"]!.ToString() == "qa" &&
+            m.Tags.ContainsKey("operation") &&
+            m.Tags["operation"]!.ToString() == "answer");
     }
 
     /// <summary>
@@ -188,10 +190,8 @@ public class QualityMetricsTests
         // Assert
         var measurements = collector.GetMeasurements();
         measurements.Should().OnlyContain(m =>
-        {
-            m.Tags.Keys.Should().Contain("quality_tier");
-            m.Tags["quality_tier"]?.ToString().Should().Be(expectedTier);
-        });
+            m.Tags != null && m.Tags.ContainsKey("quality_tier") &&
+            m.Tags["quality_tier"]!.ToString() == expectedTier);
     }
 
     /// <summary>
@@ -308,8 +308,8 @@ public class QualityMetricsTests
 
         // Assert
         var measurements = collector.GetMeasurements();
-        var qaMeasurements = measurements.Where(m => m.Tags["agent.type"]?.ToString() == "qa").ToList();
-        var explainMeasurements = measurements.Where(m => m.Tags["agent.type"]?.ToString() == "explain").ToList();
+        var qaMeasurements = measurements.Where(m => m.Tags != null && m.Tags.ContainsKey("agent.type") && m.Tags["agent.type"]?.ToString() == "qa").ToList();
+        var explainMeasurements = measurements.Where(m => m.Tags != null && m.Tags.ContainsKey("agent.type") && m.Tags["agent.type"]?.ToString() == "explain").ToList();
 
         qaMeasurements.Count.Should().Be(4); // 4 dimensions
         explainMeasurements.Count.Should().Be(4); // 4 dimensions

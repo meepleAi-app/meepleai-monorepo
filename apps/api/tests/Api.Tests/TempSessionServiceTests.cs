@@ -75,7 +75,7 @@ public class TempSessionServiceTests : IDisposable
         storedSession.IsUsed.Should().BeFalse();
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         (storedSession.ExpiresAt > now).Should().BeTrue();
-        storedSession.ExpiresAt <= now.AddMinutes(6).Should().BeTrue(); // ~5 min TTL
+        (storedSession.ExpiresAt <= now.AddMinutes(6)).Should().BeTrue(); // ~5 min TTL
     }
 
     [Fact]

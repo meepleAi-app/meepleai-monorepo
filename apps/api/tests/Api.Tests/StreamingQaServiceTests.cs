@@ -862,7 +862,7 @@ ANSWER:",
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
         // Should have received some events before cancellation
-        events.Count.Should().BeApproximately(1, TimeSpan.FromSeconds(5));
+        events.Count.Should().BeCloseTo(1, 2);
     }
 
     /// <summary>

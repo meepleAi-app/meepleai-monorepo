@@ -93,8 +93,8 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
             .ToListAsync();
 
         auditLogs.Count.Should().Be(2); // template_created + version_created
-        a => a.Action == "template_created".Should().Contain(auditLogs);
-        a => a.Action == "version_created".Should().Contain(auditLogs);
+        auditLogs.Should().Contain(a => a.Action == "template_created");
+        auditLogs.Should().Contain(a => a.Action == "version_created");
     }
 
     /// <summary>
@@ -282,8 +282,8 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
             .Take(3)
             .ToListAsync();
 
-        a => a.Action == "version_activated" && a.VersionId == version2.Id.Should().Contain(auditLogs);
-        a => a.Action == "version_deactivated" && a.VersionId == version1.Id.Should().Contain(auditLogs);
+        auditLogs.Should().Contain(a => a.Action == "version_activated" && a.VersionId == version2.Id);
+        auditLogs.Should().Contain(a => a.Action == "version_deactivated" && a.VersionId == version1.Id);
     }
 
     /// <summary>

@@ -330,9 +330,9 @@ public class ChessAgentServiceTests
         var result = await _service.AskAsync(request);
 
         // Assert
-        m => m.Contains("e4") && m.Contains("Controls the center").Should().Contain(result.suggestedMoves);
-        m => m.Contains("Nf3") && m.Contains("Develops a piece").Should().Contain(result.suggestedMoves);
-        m => m.Contains("d4") && m.Contains("central pawn").Should().Contain(result.suggestedMoves);
+        result.suggestedMoves.Should().Contain(m => m.Contains("e4") && m.Contains("Controls the center"));
+        result.suggestedMoves.Should().Contain(m => m.Contains("Nf3") && m.Contains("Develops a piece"));
+        result.suggestedMoves.Should().Contain(m => m.Contains("d4") && m.Contains("central pawn"));
         (result.suggestedMoves.Count >= 3).Should().BeTrue();
     }
 
@@ -361,8 +361,8 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
         result.analysis.evaluationSummary.Should().NotBeNull();
         result.analysis.evaluationSummary.Should().Contain("advantage");
         result.analysis.keyConsiderations.Should().NotBeEmpty();
-        c => c.Contains("king safety").Should().Contain(result.analysis.keyConsiderations);
-        c => c.Contains("development").Should().Contain(result.analysis.keyConsiderations);
+        result.analysis.keyConsiderations.Should().Contain(c => c.Contains("king safety"));
+        result.analysis.keyConsiderations.Should().Contain(c => c.Contains("development"));
     }
 
     [Fact]

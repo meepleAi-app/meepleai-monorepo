@@ -184,9 +184,9 @@ public class ChatExportServiceTests : IDisposable
         result.Stream.Should().BeNull();
 
         // And: Error message lists supported formats
-        result.ErrorDetails ?? "".Should().Contain("pdf");
-        result.ErrorDetails ?? "".Should().Contain("txt");
-        result.ErrorDetails ?? "".Should().Contain("md");
+        (result.ErrorDetails ?? "").Should().Contain("pdf");
+        (result.ErrorDetails ?? "").Should().Contain("txt");
+        (result.ErrorDetails ?? "").Should().Contain("md");
     }
 
     /// <summary>
@@ -232,7 +232,7 @@ public class ChatExportServiceTests : IDisposable
 
         // And: Success result with stream is returned
         result.Success.Should().BeTrue();
-        result.Stream.Should().BeEquivalentTo(exportStream);
+        result.Stream.Should().BeSameAs(exportStream);
         result.ContentType.Should().BeEquivalentTo("text/plain");
     }
 
@@ -342,7 +342,7 @@ public class ChatExportServiceTests : IDisposable
         result.Error.Should().BeEquivalentTo("generation_failed");
 
         // And: Error message includes exception details
-        result.ErrorDetails ?? "".Should().Contain("PDF generation failed");
+        (result.ErrorDetails ?? "").Should().Contain("PDF generation failed");
     }
 
     /// <summary>

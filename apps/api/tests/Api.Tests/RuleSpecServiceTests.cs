@@ -162,8 +162,8 @@ public class RuleSpecServiceTests : IDisposable
         var entity = await _dbContext.RuleSpecs.Include(r => r.Atoms)
             .SingleAsync(r => r.GameId == game.Id && r.Version == "v2");
         entity.Atoms.Count.Should().Be(2);
-        a => a.Key == "a1" && a.Text == "First rule".Should().Contain(entity.Atoms);
-        a => a.Key == "a2" && a.Text == "Second rule".Should().Contain(entity.Atoms);
+        entity.Atoms.Should().Contain(a => a.Key == "a1" && a.Text == "First rule");
+        entity.Atoms.Should().Contain(a => a.Key == "a2" && a.Text == "Second rule");
 
         _cacheMock.Verify(x => x.InvalidateGameAsync(game.Id, It.IsAny<CancellationToken>()), Times.Once);
         entity.CreatedByUserId.Should().Be(user.Id);
@@ -676,8 +676,8 @@ public class RuleSpecServiceTests : IDisposable
         using var archive = new ZipArchive(memoryStream, ZipArchiveMode.Read);
 
         archive.Entries.Count.Should().Be(2);
-        e => e.Name == "chess_v1.json".Should().Contain(archive.Entries);
-        e => e.Name == "checkers_v2.json".Should().Contain(archive.Entries);
+        archive.Entries.Should().Contain(e => e.Name == "chess_v1.json");
+        archive.Entries.Should().Contain(e => e.Name == "checkers_v2.json");
     }
 
     [Fact]

@@ -78,12 +78,10 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         setupGuide.Should().NotBeNull();
         setupGuide!.steps.Should().NotBeEmpty();
         setupGuide.steps.Should().OnlyContain(step =>
-        {
-            (step.stepNumber > 0).Should().BeTrue();
-            string.IsNullOrWhiteSpace(step.title).Should().BeFalse();
-            string.IsNullOrWhiteSpace(step.instruction).Should().BeFalse();
-            step.references.Should().NotBeNull();
-        });
+            step.stepNumber > 0 &&
+            !string.IsNullOrWhiteSpace(step.title) &&
+            !string.IsNullOrWhiteSpace(step.instruction) &&
+            step.references != null);
 
         // And: Each step has title, instruction, and references
         var firstStep = setupGuide.steps[0];
@@ -240,8 +238,8 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
             .ToListAsync();
 
         chatLogs.Should().NotBeEmpty();
-        log => log.Level == "user" && log.Message.Contains("Generate setup guide").Should().Contain(chatLogs);
-        log => log.Level == "assistant" && log.Message.Contains("Setup guide").Should().Contain(chatLogs);
+        chatLogs.Should().Contain(log => log.Level == "user" && log.Message.Contains("Generate setup guide"));
+        chatLogs.Should().Contain(log => log.Level == "assistant" && log.Message.Contains("Setup guide"));
     }
 
     /// <summary>
@@ -282,7 +280,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         (setupGuide!.estimatedSetupTimeMinutes > 0).Should().BeTrue();
 
         // And: The estimated time is reasonable (between 5 and 30 minutes)
-        setupGuide.estimatedSetupTimeMinutes.Should().BeApproximately(5, TimeSpan.FromSeconds(5));
+        setupGuide.estimatedSetupTimeMinutes.Should().BeCloseTo(15, 10);
     }
 
     /// <summary>
@@ -324,7 +322,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         // And: Total tokens equals prompt tokens plus completion tokens (if LLM was used)
         if (setupGuide!.totalTokens > 0)
         {
-            setupGuide.promptTokens + setupGuide.completionTokens.Should().Be(setupGuide.totalTokens);
+            (setupGuide.promptTokens + setupGuide.completionTokens).Should().Be(setupGuide.totalTokens);
         }
     }
 
@@ -480,7 +478,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         // And: The confidence score is between 0 and 1 (if present)
         if (setupGuide!.confidence.HasValue)
         {
-            setupGuide.confidence.Value.Should().BeApproximately(0.0, TimeSpan.FromSeconds(5));
+            setupGuide.confidence.Value.Should().BeApproximately(0.75, 0.25);
         }
     }
 }

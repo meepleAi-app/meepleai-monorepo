@@ -297,7 +297,7 @@ public class PdfTextExtractionServiceTests : IDisposable
         // Assert
         result.Success.Should().BeTrue();
         (result.CharacterCount > 0).Should().BeTrue();
-        result.CharacterCount.Should().BeEquivalentTo(result.ExtractedText.Length);
+        result.CharacterCount.Should().Be(result.ExtractedText.Length);
     }
 
     [Fact]

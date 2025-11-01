@@ -185,9 +185,9 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
         using var archive = new ZipArchive(memoryStream, ZipArchiveMode.Read);
 
         archive.Entries.Count.Should().Be(3);
-        e => e.Name.Contains("game1").Should().Contain(archive.Entries);
-        e => e.Name.Contains("game2").Should().Contain(archive.Entries);
-        e => e.Name.Contains("game3").Should().Contain(archive.Entries);
+        archive.Entries.Should().Contain(e => e.Name.Contains("game1"));
+        archive.Entries.Should().Contain(e => e.Name.Contains("game2"));
+        archive.Entries.Should().Contain(e => e.Name.Contains("game3"));
     }
 
     /// <summary>

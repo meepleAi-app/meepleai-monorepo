@@ -114,7 +114,7 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
         result.gameTitle.Should().BeEquivalentTo("Test Game");
         result.steps.Should().NotBeEmpty();
         result.steps.Count.Should().Be(5); // Default steps count
-        result.steps.Should().OnlyContain(step => step.references.Length == 0); // Default steps have no references
+        result.steps.Should().OnlyContain(step => step.references.Count == 0); // Default steps have no references
     }
 
     [Fact]

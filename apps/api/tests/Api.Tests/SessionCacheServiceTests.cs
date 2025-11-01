@@ -128,7 +128,7 @@ public class SessionCacheServiceTests
         capturedTtl.Should().NotBeNull();
         // TTL should be close to 7 days (within 1 second tolerance)
         var expectedTtl = expiresAt - DateTime.UtcNow;
-        capturedTtl!.Value.TotalSeconds.Should().BeApproximately(expectedTtl.TotalSeconds - 1, TimeSpan.FromSeconds(5));
+        capturedTtl!.Value.TotalSeconds.Should().BeApproximately(expectedTtl.TotalSeconds - 1, 5.0);
     }
 
     [Fact]

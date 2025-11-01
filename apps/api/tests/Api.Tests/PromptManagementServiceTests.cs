@@ -101,8 +101,8 @@ public class PromptManagementServiceTests : IDisposable
         // Verify audit logs
         var auditLogs = await _db.PromptAuditLogs.Where(a => a.TemplateId == response.Template.Id).ToListAsync();
         auditLogs.Count.Should().Be(2); // template_created + version_created
-        a => a.Action == "template_created".Should().Contain(auditLogs);
-        a => a.Action == "version_created".Should().Contain(auditLogs);
+        auditLogs.Should().Contain(a => a.Action == "template_created");
+        auditLogs.Should().Contain(a => a.Action == "version_created");
     }
 
     [Fact]
@@ -125,7 +125,7 @@ public class PromptManagementServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await _service.CreatePromptTemplateAsync(request2, _testUserId);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("already exists");
     }
 
@@ -235,8 +235,8 @@ public class PromptManagementServiceTests : IDisposable
             .OrderBy(a => a.ChangedAt)
             .ToListAsync();
 
-        a => a.Action == "version_deactivated" && a.VersionId == templateResponse.InitialVersion.Id.Should().Contain(auditLogs);
-        a => a.Action == "version_activated" && a.VersionId == version2.Id.Should().Contain(auditLogs);
+        auditLogs.Should().Contain(a => a.Action == "version_deactivated" && a.VersionId == templateResponse.InitialVersion.Id);
+        auditLogs.Should().Contain(a => a.Action == "version_activated" && a.VersionId == version2.Id);
     }
 
     [Fact]
@@ -250,7 +250,7 @@ public class PromptManagementServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await _service.CreatePromptVersionAsync("non-existent-id", request, _testUserId);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("not found");
     }
 
@@ -418,7 +418,7 @@ public class PromptManagementServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await _service.ActivateVersionAsync(templateResponse.Template.Id, "non-existent-version-id", _testUserId);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("not found");
     }
 
@@ -498,7 +498,7 @@ public class PromptManagementServiceTests : IDisposable
         // Verify logs are ordered by timestamp descending (most recent first)
         for (int i = 0; i < auditLog.Logs.Count - 1; i++)
         {
-            auditLog.Logs[i].ChangedAt >= auditLog.Logs[i + 1].ChangedAt.Should().BeTrue();
+            (auditLog.Logs[i].ChangedAt >= auditLog.Logs[i + 1].ChangedAt).Should().BeTrue();
         }
 
         // Verify action types

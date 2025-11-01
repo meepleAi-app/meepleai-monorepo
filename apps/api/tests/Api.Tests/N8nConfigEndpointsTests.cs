@@ -91,7 +91,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         using var listDocument = JsonDocument.Parse(await listResponse.Content.ReadAsStringAsync());
         var configs = listDocument.RootElement.GetProperty("configs");
-        element => element.GetProperty("id").GetString() == dto.Id.Should().Contain(configs.EnumerateArray());
+        configs.EnumerateArray().Should().Contain(element => element.GetProperty("id").GetString() == dto.Id);
     }
 
     /// <summary>
@@ -264,7 +264,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         var result = await response.Content.ReadFromJsonAsync<N8nTestResult>(JsonOptions);
         result.Should().NotBeNull();
         result!.Success.Should().BeTrue();
-        result.Message.Should().StartWith("Connection successful", StringComparison.Ordinal);
+        result.Message.Should().StartWith("Connection successful");
         result.LatencyMs.HasValue.Should().BeTrue();
 
         // And: Test metadata is persisted
@@ -274,7 +274,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
             var entity = await db.N8nConfigs.SingleAsync(c => c.Id == config.Id);
             entity.LastTestedAt.Should().NotBeNull();
             string.IsNullOrWhiteSpace(entity.LastTestResult).Should().BeFalse();
-            entity.LastTestResult.Should().StartWith("Connection successful", StringComparison.Ordinal);
+            entity.LastTestResult.Should().StartWith("Connection successful");
         }
     }
 

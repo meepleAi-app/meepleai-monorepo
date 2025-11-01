@@ -161,11 +161,9 @@ public class PromptTemplateServiceTests : IDisposable
         template.Should().NotBeNull();
         template.FewShotExamples.Should().NotBeEmpty();
         template.FewShotExamples.Should().OnlyContain(example =>
-        {
-            string.IsNullOrWhiteSpace(example.Question).Should().BeFalse();
-            string.IsNullOrWhiteSpace(example.Answer).Should().BeFalse();
-            string.IsNullOrWhiteSpace(example.Category).Should().BeFalse();
-        });
+            !string.IsNullOrWhiteSpace(example.Question) &&
+            !string.IsNullOrWhiteSpace(example.Answer) &&
+            !string.IsNullOrWhiteSpace(example.Category));
     }
 
     [Fact]

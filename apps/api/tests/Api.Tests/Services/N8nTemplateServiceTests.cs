@@ -236,9 +236,9 @@ public class N8nTemplateServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => _service.ImportTemplateAsync("test", parameters, "user123");
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
 
-        ex.Message.Should().Contain("param1");
+        ex.Which.Message.Should().Contain("param1");
     }
 
     [Fact]
@@ -250,9 +250,9 @@ public class N8nTemplateServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => _service.ImportTemplateAsync("test", parameters, "user123");
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
 
-        ex.Message.Should().Contain("No active n8n configuration");
+        ex.Which.Message.Should().Contain("No active n8n configuration");
     }
 
     [Fact]
@@ -402,7 +402,7 @@ public class N8nTemplateServiceTests : IDisposable
         // Assert
         result.Valid.Should().BeFalse();
         result.Errors.Should().NotBeNull();
-        e => e.Contains("Invalid JSON").Should().Contain(result.Errors);
+        result.Errors.Should().Contain(e => e.Contains("Invalid JSON"));
     }
 
     [Fact]
@@ -421,8 +421,8 @@ public class N8nTemplateServiceTests : IDisposable
         // Assert
         result.Valid.Should().BeFalse();
         result.Errors.Should().NotBeNull();
-        e => e.Contains("name").Should().Contain(result.Errors);
-        e => e.Contains("version").Should().Contain(result.Errors);
+        result.Errors.Should().Contain(e => e.Contains("name"));
+        result.Errors.Should().Contain(e => e.Contains("version"));
     }
 
     [Fact]
@@ -450,7 +450,7 @@ public class N8nTemplateServiceTests : IDisposable
         // Assert
         result.Valid.Should().BeFalse();
         result.Errors.Should().NotBeNull();
-        e => e.Contains("nodes").Should().Contain(result.Errors);
+        result.Errors.Should().Contain(e => e.Contains("nodes"));
     }
 
     [Fact]
@@ -501,7 +501,7 @@ public class N8nTemplateServiceTests : IDisposable
 
         // Assert
         result.Valid.Should().BeFalse();
-        e => e.Contains("name is required").Should().Contain(result.Errors!);
+        result.Errors!.Should().Contain(e => e.Contains("name is required"));
     }
 
     #endregion

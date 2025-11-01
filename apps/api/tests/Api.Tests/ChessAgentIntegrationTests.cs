@@ -74,10 +74,8 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         // And: Sources are cited
         result.sources.Should().NotBeEmpty();
         result.sources.Should().OnlyContain(source =>
-        {
-            source.text.Should().NotBeEmpty();
-            source.source.Should().StartWith("ChessKnowledge:");
-        });
+            !string.IsNullOrEmpty(source.text) &&
+            source.source.StartsWith("ChessKnowledge:"));
 
         // And: Confidence is reported
         result.confidence.Should().NotBeNull();
@@ -320,7 +318,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         result.Should().NotBeNull();
         (result!.promptTokens > 0).Should().BeTrue();
         (result.completionTokens > 0).Should().BeTrue();
-        result.totalTokens.Should().BeEquivalentTo(result.promptTokens + result.completionTokens);
+        result.totalTokens.Should().Be(result.promptTokens + result.completionTokens);
     }
 
     /// <summary>
@@ -372,7 +370,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         secondResult!.answer.Should().Be(firstResult!.answer);
 
         // And: Token usage remains the same (cached)
-        secondResult.promptTokens.Should().BeEquivalentTo(firstResult.promptTokens);
-        secondResult.completionTokens.Should().BeEquivalentTo(firstResult.completionTokens);
+        secondResult.promptTokens.Should().Be(firstResult.promptTokens);
+        secondResult.completionTokens.Should().Be(firstResult.completionTokens);
     }
 }

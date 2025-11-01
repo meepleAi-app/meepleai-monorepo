@@ -220,13 +220,13 @@ public class QualityReportServiceTests : IDisposable
         report.TotalResponses.Should().Be(10);
         report.LowQualityCount.Should().Be(3);
         report.AverageRagConfidence.Should().NotBeNull();
-        report.AverageRagConfidence.Value.Should().BeApproximately(0.70, TimeSpan.FromSeconds(5));
+        report.AverageRagConfidence.Value.Should().BeApproximately(0.70, 0.05);
         report.AverageLlmConfidence.Should().NotBeNull();
-        report.AverageLlmConfidence.Value.Should().BeApproximately(0.65, TimeSpan.FromSeconds(5));
+        report.AverageLlmConfidence.Value.Should().BeApproximately(0.65, 0.05);
         report.AverageCitationQuality.Should().NotBeNull();
-        report.AverageCitationQuality.Value.Should().BeApproximately(0.75, TimeSpan.FromSeconds(5));
+        report.AverageCitationQuality.Value.Should().BeApproximately(0.75, 0.05);
         report.AverageOverallConfidence.Should().NotBeNull();
-        report.AverageOverallConfidence.Value.Should().BeApproximately(0.70, TimeSpan.FromSeconds(5));
+        report.AverageOverallConfidence.Value.Should().BeApproximately(0.70, 0.05);
     }
 
     /// <summary>

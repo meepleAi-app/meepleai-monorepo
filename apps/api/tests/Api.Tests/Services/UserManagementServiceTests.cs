@@ -244,7 +244,7 @@ public class UserManagementServiceTests : IDisposable
         // Assert
         var userDto = result.Items.First();
         userDto.LastSeenAt.Should().NotBeNull();
-        userDto.LastSeenAt.Value > DateTime.UtcNow.AddHours(-3).Should().BeTrue();
+        userDto.LastSeenAt.Value.Should().BeAfter(DateTime.UtcNow.AddHours(-3));
     }
 
     #endregion
@@ -316,7 +316,7 @@ public class UserManagementServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => _service.CreateUserAsync(request);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("already exists");
     }
 
@@ -411,7 +411,7 @@ public class UserManagementServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => _service.UpdateUserAsync(userId, request);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("already in use");
     }
 
@@ -476,7 +476,7 @@ public class UserManagementServiceTests : IDisposable
 
         // Act & Assert - trying to delete self
         var act = async () => _service.DeleteUserAsync(userId, userId);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("Cannot delete your own account");
     }
 
@@ -489,7 +489,7 @@ public class UserManagementServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => _service.DeleteUserAsync(adminId, requestingUserId);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("Cannot delete the last admin user");
     }
 

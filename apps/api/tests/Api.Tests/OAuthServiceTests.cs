@@ -315,8 +315,8 @@ public class OAuthServiceTests : IDisposable
 
         // Assert
         accounts.Count.Should().Be(2);
-        a => a.Provider == "google".Should().Contain(accounts);
-        a => a.Provider == "discord".Should().Contain(accounts);
+        accounts.Should().Contain(a => a.Provider == "google");
+        accounts.Should().Contain(a => a.Provider == "discord");
     }
 
     [Fact]

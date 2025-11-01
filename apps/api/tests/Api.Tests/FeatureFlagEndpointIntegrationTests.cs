@@ -225,7 +225,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         configuration.Should().NotBeNull();
         new[] { environment, "All" }.Contains(configuration!.Environment).Should().BeTrue();
         bool.Parse(configuration.Value).Should().BeFalse();
-        await featureFlags.IsEnabledAsync("Features.PdfUpload").Should().BeFalse();
+        (await featureFlags.IsEnabledAsync("Features.PdfUpload")).Should().BeFalse();
 
         try
         {
@@ -327,7 +327,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var getRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/features");
         var getResponse = await SendWithCookiesAsync(client, getRequest, adminCookies);
         var listResult = await getResponse.Content.ReadFromJsonAsync<FeatureFlagsListResponse>();
-        f => f.FeatureName == featureName && f.IsEnabled.Should().Contain(listResult!.Features);
+        listResult!.Features.Should().Contain(f => f.FeatureName == featureName && f.IsEnabled);
     }
 
     #endregion

@@ -138,8 +138,8 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var searchResult = await searchResponse.Content.ReadAsStringAsync();
         // The response should reference tic-tac-toe concepts, not chess
         searchResult.Should().Contain("three in a row");
-        searchResult.Should().NotContain("knight", StringComparison.OrdinalIgnoreCase);
-        searchResult.Should().NotContain("checkmate", StringComparison.OrdinalIgnoreCase);
+        searchResult.ToLower().Should().NotContain("knight");
+        searchResult.ToLower().Should().NotContain("checkmate");
     }
 
     #endregion

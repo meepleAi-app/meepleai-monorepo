@@ -522,7 +522,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
         auditLog.Should().NotBeNull();
         auditLog!.UserId.Should().Be(attacker.Id);
         auditLog.Result.Should().Be("Denied");
-        auditLog.Details ?? "".Should().Contain("scope");
+        (auditLog.Details ?? "").Should().Contain("scope");
     }
 
     #endregion
@@ -571,7 +571,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
 
             var games = await response.Content.ReadFromJsonAsync<List<GameResponse>>();
             games.Should().NotBeNull();
-            g => g.Id == game.Id.Should().Contain(games!);
+            games!.Should().Contain(g => g.Id == game.Id);
         }
     }
 

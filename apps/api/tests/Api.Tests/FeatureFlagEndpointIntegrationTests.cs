@@ -223,9 +223,9 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         await SetFeatureFlagAsync(configurationService, "Features.PdfUpload", false, adminUserId, environment);
         var configuration = await configurationService.GetConfigurationByKeyAsync("Features.PdfUpload", environment);
         configuration.Should().NotBeNull();
-        Assert.True(new[] { environment, "All" }.Contains(configuration!.Environment));
-        Assert.False(bool.Parse(configuration.Value));
-        Assert.False(await featureFlags.IsEnabledAsync("Features.PdfUpload"));
+        new[] { environment, "All" }.Contains(configuration!.Environment).Should().BeTrue();
+        bool.Parse(configuration.Value).Should().BeFalse();
+        await featureFlags.IsEnabledAsync("Features.PdfUpload").Should().BeFalse();
 
         try
         {

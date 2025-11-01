@@ -38,16 +38,16 @@ public class RateLimitingTests : IntegrationTestBase
 
         // Then: Rate limit headers are present
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        Assert.True(response.Headers.Contains("X-RateLimit-Limit"));
-        Assert.True(response.Headers.Contains("X-RateLimit-Remaining"));
+        response.Headers.Contains("X-RateLimit-Limit").Should().BeTrue();
+        response.Headers.Contains("X-RateLimit-Remaining").Should().BeTrue();
 
         // And: Headers have valid values
         var limit = response.Headers.GetValues("X-RateLimit-Limit").FirstOrDefault();
         var remaining = response.Headers.GetValues("X-RateLimit-Remaining").FirstOrDefault();
         limit.Should().NotBeNull();
         remaining.Should().NotBeNull();
-        Assert.True(int.TryParse(limit, out var limitValue));
-        Assert.True(int.TryParse(remaining, out var remainingValue));
+        int.TryParse(limit, out var limitValue).Should().BeTrue();
+        int.TryParse(remaining, out var remainingValue).Should().BeTrue();
         limitValue > 0.Should().BeTrue();
         remainingValue >= 0.Should().BeTrue();
     }
@@ -63,8 +63,8 @@ public class RateLimitingTests : IntegrationTestBase
 
         // Then: Rate limit headers are present
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        Assert.True(response.Headers.Contains("X-RateLimit-Limit"));
-        Assert.True(response.Headers.Contains("X-RateLimit-Remaining"));
+        response.Headers.Contains("X-RateLimit-Limit").Should().BeTrue();
+        response.Headers.Contains("X-RateLimit-Remaining").Should().BeTrue();
 
         // And: Anonymous limit is applied (60 burst, 1/sec)
         var limit = response.Headers.GetValues("X-RateLimit-Limit").FirstOrDefault();
@@ -169,8 +169,8 @@ public class RateLimitingTests : IntegrationTestBase
 
         // If rate limiting is enforced, we should see 429 responses
         // If disabled in tests, all will be 200
-        Assert.True(rateLimitedResponses > 0 || successResponses == responses.Count,
-            $"Expected either rate limiting (429) or all success (200). Got {rateLimitedResponses} rate limited, {successResponses} success");
+        rateLimitedResponses > 0 || successResponses == responses.Count,
+            $"Expected either rate limiting (429) or all success (200). Got {rateLimitedResponses} rate limited, {successResponses} success".Should().BeTrue();
     }
 
     [Fact]
@@ -200,11 +200,11 @@ public class RateLimitingTests : IntegrationTestBase
         if (rateLimitedResponse != null)
         {
             rateLimitedResponse.StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
-            Assert.True(rateLimitedResponse.Headers.Contains("Retry-After"));
+            rateLimitedResponse.Headers.Contains("Retry-After").Should().BeTrue();
 
             var retryAfter = rateLimitedResponse.Headers.GetValues("Retry-After").FirstOrDefault();
             retryAfter.Should().NotBeNull();
-            Assert.True(int.TryParse(retryAfter, out var seconds));
+            int.TryParse(retryAfter, out var seconds).Should().BeTrue();
             seconds > 0.Should().BeTrue();
         }
         // NOTE: If not rate limited, rate limiting is disabled/high in test environment

@@ -108,9 +108,9 @@ public class OcrFallbackTests : IDisposable
         // The OCR should recognize at least some of the text
         // (exact match not guaranteed due to OCR accuracy)
         var extractedLower = result.ExtractedText.ToLower();
-        Assert.True(
+        
             extractedLower.Contains("scanned") || extractedLower.Contains("document") || extractedLower.Contains("ocr"),
-            "OCR should recognize at least some words from the image");
+            "OCR should recognize at least some words from the image".Should().BeTrue();
     }
 
     [Fact]

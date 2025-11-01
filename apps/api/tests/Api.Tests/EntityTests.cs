@@ -86,7 +86,7 @@ public class EntityTests
             Details = "Performed action"
         };
 
-        Assert.False(string.IsNullOrWhiteSpace(log.Id));
+        string.IsNullOrWhiteSpace(log.Id).Should().BeFalse();
         log.UserId.Should().Be("user-1");
         log.Action.Should().Be("Test");
         log.Resource.Should().Be("Game");

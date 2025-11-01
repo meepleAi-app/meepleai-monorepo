@@ -80,13 +80,13 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("totalHits", out var hits));
-        Assert.True(result.TryGetProperty("totalMisses", out var misses));
-        Assert.True(result.TryGetProperty("hitRate", out var hitRate));
+        result.TryGetProperty("totalHits", out var hits).Should().BeTrue();
+        result.TryGetProperty("totalMisses", out var misses).Should().BeTrue();
+        result.TryGetProperty("hitRate", out var hitRate).Should().BeTrue();
 
         // Verify stats have data
-        Assert.True(hits.GetInt64() > 0);
-        Assert.True(misses.GetInt64() >= 0);
+        hits.GetInt64() > 0.Should().BeTrue();
+        misses.GetInt64() >= 0.Should().BeTrue();
     }
 
     /// <summary>
@@ -128,7 +128,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("totalHits", out var hits));
+        result.TryGetProperty("totalHits", out var hits).Should().BeTrue();
 
         // Game1 should have 2 hits (not 5 which would include game2)
         Assert.Equal(2, hits.GetInt64());
@@ -227,7 +227,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("message", out _));
+        result.TryGetProperty("message", out _).Should().BeTrue();
 
         // And: Cache is invalidated
         using (var newScope = Factory.Services.CreateScope())

@@ -79,8 +79,8 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Accept both 200 OK and 202 Accepted as success
-        Assert.True(response.IsSuccessStatusCode,
-            $"PDF upload failed with status {response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
+        response.IsSuccessStatusCode,
+            $"PDF upload failed with status {response.StatusCode}: {await response.Content.ReadAsStringAsync()}".Should().BeTrue();
 
         // Track PDF document for cleanup
         var result = await response.Content.ReadFromJsonAsync<PdfUploadResponse>();

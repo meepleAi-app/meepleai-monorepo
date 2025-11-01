@@ -357,7 +357,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         foreach (var response in responses)
         {
             response.StatusCode.Should().Be(HttpStatusCode.OK);
-            Assert.True(response.Headers.Contains("Set-Cookie"), "Should set session cookie");
+            response.Headers.Contains("Set-Cookie"), "Should set session cookie".Should().BeTrue();
         }
 
         // And: Each login creates a distinct session token

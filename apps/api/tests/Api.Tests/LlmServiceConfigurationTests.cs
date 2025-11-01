@@ -109,7 +109,7 @@ public class LlmServiceConfigurationTests
         Assert.Equal("database-streaming-model", root.GetProperty("model").GetString());
         Assert.Equal(0.8, root.GetProperty("temperature").GetDouble());
         Assert.Equal(600, root.GetProperty("max_tokens").GetInt32());
-        Assert.True(root.GetProperty("stream").GetBoolean());
+        root.GetProperty("stream").GetBoolean().Should().BeTrue();
     }
 
     #endregion

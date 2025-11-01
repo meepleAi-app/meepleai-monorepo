@@ -149,9 +149,9 @@ startxref
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("documentId", out var docId));
-        Assert.True(result.TryGetProperty("fileName", out var fileName));
-        Assert.False(string.IsNullOrWhiteSpace(docId.GetString()));
+        result.TryGetProperty("documentId", out var docId).Should().BeTrue();
+        result.TryGetProperty("fileName", out var fileName).Should().BeTrue();
+        string.IsNullOrWhiteSpace(docId.GetString()).Should().BeFalse();
         Assert.Equal("chess-rules.pdf", fileName.GetString());
 
         // And: PDF is saved in database
@@ -202,7 +202,7 @@ startxref
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("documentId", out var docId));
+        result.TryGetProperty("documentId", out var docId).Should().BeTrue();
         TrackPdfDocumentId(docId.GetString()!);
     }
 
@@ -300,7 +300,7 @@ startxref
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var error = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(error.TryGetProperty("error", out var errorMsg));
+        error.TryGetProperty("error", out var errorMsg).Should().BeTrue();
         Assert.Contains("gameId is required", errorMsg.GetString(), StringComparison.OrdinalIgnoreCase);
     }
 
@@ -377,7 +377,7 @@ startxref
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("pdfs", out var pdfsElement));
+        result.TryGetProperty("pdfs", out var pdfsElement).Should().BeTrue();
 
         var pdfs = pdfsElement.EnumerateArray().ToList();
         pdfs.Count.Should().Be(3);
@@ -388,10 +388,10 @@ startxref
         Assert.Equal("rules-v1.pdf", pdfs[2].GetProperty("fileName").GetString());
 
         // Verify required fields
-        Assert.True(pdfs[0].TryGetProperty("id", out _));
-        Assert.True(pdfs[0].TryGetProperty("fileSizeBytes", out _));
-        Assert.True(pdfs[0].TryGetProperty("uploadedAt", out _));
-        Assert.True(pdfs[0].TryGetProperty("uploadedByUserId", out _));
+        pdfs[0].TryGetProperty("id", out _).Should().BeTrue();
+        pdfs[0].TryGetProperty("fileSizeBytes", out _).Should().BeTrue();
+        pdfs[0].TryGetProperty("uploadedAt", out _).Should().BeTrue();
+        pdfs[0].TryGetProperty("uploadedByUserId", out _).Should().BeTrue();
     }
 
     /// <summary>
@@ -422,7 +422,7 @@ startxref
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("pdfs", out var pdfsElement));
+        result.TryGetProperty("pdfs", out var pdfsElement).Should().BeTrue();
 
         var pdfs = pdfsElement.EnumerateArray().ToList();
         pdfs.Should().BeEmpty();
@@ -501,13 +501,13 @@ startxref
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("processingStatus", out var status));
+        result.TryGetProperty("processingStatus", out var status).Should().BeTrue();
         Assert.Equal("completed", status.GetString());
-        Assert.True(result.TryGetProperty("extractedText", out var text));
+        result.TryGetProperty("extractedText", out var text).Should().BeTrue();
         Assert.Contains("extracted text", text.GetString(), StringComparison.OrdinalIgnoreCase);
-        Assert.True(result.TryGetProperty("pageCount", out var pageCount));
+        result.TryGetProperty("pageCount", out var pageCount).Should().BeTrue();
         Assert.Equal(10, pageCount.GetInt32());
-        Assert.True(result.TryGetProperty("characterCount", out var charCount));
+        result.TryGetProperty("characterCount", out var charCount).Should().BeTrue();
         Assert.Equal(500, charCount.GetInt32());
     }
 
@@ -560,7 +560,7 @@ startxref
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("processingStatus", out var status));
+        result.TryGetProperty("processingStatus", out var status).Should().BeTrue();
         Assert.Equal("pending", status.GetString());
 
         // extractedText should be null or missing
@@ -621,9 +621,9 @@ startxref
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("processingStatus", out var status));
+        result.TryGetProperty("processingStatus", out var status).Should().BeTrue();
         Assert.Equal("failed", status.GetString());
-        Assert.True(result.TryGetProperty("processingError", out var error));
+        result.TryGetProperty("processingError", out var error).Should().BeTrue();
         Assert.Equal("Corrupted PDF file", error.GetString());
     }
 
@@ -651,7 +651,7 @@ startxref
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         var error = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(error.TryGetProperty("error", out var errorMsg));
+        error.TryGetProperty("error", out var errorMsg).Should().BeTrue();
         Assert.Contains("not found", errorMsg.GetString(), StringComparison.OrdinalIgnoreCase);
     }
 

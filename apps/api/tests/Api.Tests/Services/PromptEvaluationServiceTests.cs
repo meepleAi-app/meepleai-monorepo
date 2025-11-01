@@ -267,7 +267,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         // Assert
         result.Metrics.Accuracy.Should().Be(100.0);
         result.TotalQueries.Should().Be(2);
-        Assert.True(result.QueryResults.All(q => q.IsAccurate));
+        result.QueryResults.All(q => q.IsAccurate).Should().BeTrue();
     }
 
     [Fact]

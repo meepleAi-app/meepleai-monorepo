@@ -43,10 +43,10 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
         content.Should().NotBeEmpty();
 
         // Verify it's Prometheus format (starts with # HELP or metric name)
-        Assert.True(
+        
             content.Contains("# HELP") || content.Contains("# TYPE"),
             "Response should be in Prometheus metrics format"
-        );
+        .Should().BeTrue();
     }
 
     [Fact]
@@ -162,10 +162,10 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
             // Metric lines should start with lowercase letters (Prometheus convention)
             if (line.Length > 0 && char.IsLetter(line[0]))
             {
-                Assert.False(
+                
                     char.IsUpper(line[0]),
                     $"Metric name should start with lowercase letter: {line}"
-                );
+                .Should().BeFalse();
             }
         }
     }

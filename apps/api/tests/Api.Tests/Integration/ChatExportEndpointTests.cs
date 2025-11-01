@@ -393,10 +393,10 @@ public class ChatExportEndpointTests : IntegrationTestBase
 
         // And: Error message mentions supported formats
         var content = await response.Content.ReadAsStringAsync();
-        Assert.True(
+        
             content.Contains("pdf", StringComparison.OrdinalIgnoreCase) ||
             content.Contains("txt", StringComparison.OrdinalIgnoreCase) ||
-            content.Contains("md", StringComparison.OrdinalIgnoreCase));
+            content.Contains("md", StringComparison.OrdinalIgnoreCase).Should().BeTrue();
     }
 
     /// <summary>

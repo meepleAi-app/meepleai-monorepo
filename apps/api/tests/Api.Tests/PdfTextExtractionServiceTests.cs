@@ -273,7 +273,7 @@ public class PdfTextExtractionServiceTests : IDisposable
         // Assert
         result.Success.Should().BeTrue();
         // Whitespace should be normalized away
-        Assert.True(string.IsNullOrWhiteSpace(result.ExtractedText));
+        string.IsNullOrWhiteSpace(result.ExtractedText).Should().BeTrue();
     }
 
     [Fact]

@@ -49,7 +49,7 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
         }
 
         // Assert - check correlation header
-        Assert.True(response.Headers.Contains("X-Correlation-Id"));
+        response.Headers.Contains("X-Correlation-Id").Should().BeTrue();
         var correlationId = response.Headers.GetValues("X-Correlation-Id").First();
         correlationId.Should().NotBeEmpty();
 
@@ -128,20 +128,20 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
         var loginLog = logEvents.FirstOrDefault(e => e.MessageTemplate.Text.Contains("Login attempt"));
 
         loginLog.Should().NotBeNull();
-        Assert.True(loginLog.Properties.ContainsKey("LoginAttempt"));
+        loginLog.Properties.ContainsKey("LoginAttempt").Should().BeTrue();
 
         var loginAttemptProp = loginLog.Properties["LoginAttempt"];
-        var structureValue = Assert.IsType<StructureValue>(loginAttemptProp);
+        var structureValue = loginAttemptProp.Should().BeOfType<StructureValue>().Subject;
 
         var passwordProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Password");
         passwordProp.Should().NotBeNull();
-        var scalarValue = Assert.IsType<ScalarValue>(passwordProp.Value);
+        var scalarValue = passwordProp.Value.Should().BeOfType<ScalarValue>().Subject;
         scalarValue.Value.Should().Be("[REDACTED]");
 
         // Username should still be visible
         var usernameProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Username");
         usernameProp.Should().NotBeNull();
-        var usernameValue = Assert.IsType<ScalarValue>(usernameProp.Value);
+        var usernameValue = usernameProp.Value.Should().BeOfType<ScalarValue>().Subject;
         usernameValue.Value.Should().Be("admin");
     }
 
@@ -181,14 +181,14 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
         var configLog = logEvents.FirstOrDefault(e => e.MessageTemplate.Text.Contains("Database config"));
 
         configLog.Should().NotBeNull();
-        Assert.True(configLog.Properties.ContainsKey("Config"));
+        configLog.Properties.ContainsKey("Config").Should().BeTrue();
 
         var configProp = configLog.Properties["Config"];
-        var structureValue = Assert.IsType<StructureValue>(configProp);
+        var structureValue = configProp.Should().BeOfType<StructureValue>().Subject;
 
         var connStringProp = structureValue.Properties.FirstOrDefault(p => p.Name == "ConnectionString");
         connStringProp.Should().NotBeNull();
-        var scalarValue = Assert.IsType<ScalarValue>(connStringProp.Value);
+        var scalarValue = connStringProp.Value.Should().BeOfType<ScalarValue>().Subject;
         scalarValue.Value.Should().Be("[REDACTED]"); // Property name contains sensitive keyword
     }
 
@@ -255,10 +255,10 @@ public class LoggingIntegrationTests : IClassFixture<LoggingTestFactory>, IDispo
         var sensitiveLog = logEvents.FirstOrDefault(e => e.MessageTemplate.Text.Contains("Sensitive data test"));
 
         sensitiveLog.Should().NotBeNull();
-        Assert.True(sensitiveLog.Properties.ContainsKey("SensitiveData"));
+        sensitiveLog.Properties.ContainsKey("SensitiveData").Should().BeTrue();
 
         var dataProp = sensitiveLog.Properties["SensitiveData"];
-        var structureValue = Assert.IsType<StructureValue>(dataProp);
+        var structureValue = dataProp.Should().BeOfType<StructureValue>().Subject;
 
         // Password should be redacted
         var passwordProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Password");

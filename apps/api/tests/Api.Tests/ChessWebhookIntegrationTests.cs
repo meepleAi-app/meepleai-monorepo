@@ -76,19 +76,19 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
 
         // Verify chess response structure (matches what n8n will receive)
-        Assert.True(result.TryGetProperty("answer", out var answer));
-        Assert.False(string.IsNullOrWhiteSpace(answer.GetString()));
+        result.TryGetProperty("answer", out var answer).Should().BeTrue();
+        string.IsNullOrWhiteSpace(answer.GetString()).Should().BeFalse();
 
-        Assert.True(result.TryGetProperty("suggestedMoves", out var moves));
+        result.TryGetProperty("suggestedMoves", out var moves).Should().BeTrue();
         moves.ValueKind == JsonValueKind.Array.Should().BeTrue();
 
-        Assert.True(result.TryGetProperty("sources", out var sources));
+        result.TryGetProperty("sources", out var sources).Should().BeTrue();
         sources.ValueKind == JsonValueKind.Array.Should().BeTrue();
 
         // Verify metadata fields for tracking
-        Assert.True(result.TryGetProperty("promptTokens", out _));
-        Assert.True(result.TryGetProperty("completionTokens", out _));
-        Assert.True(result.TryGetProperty("totalTokens", out _));
+        result.TryGetProperty("promptTokens", out _).Should().BeTrue();
+        result.TryGetProperty("completionTokens", out _).Should().BeTrue();
+        result.TryGetProperty("totalTokens", out _).Should().BeTrue();
     }
 
     /// <summary>
@@ -128,14 +128,14 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
 
-        Assert.True(result.TryGetProperty("answer", out var answer));
-        Assert.False(string.IsNullOrWhiteSpace(answer.GetString()));
+        result.TryGetProperty("answer", out var answer).Should().BeTrue();
+        string.IsNullOrWhiteSpace(answer.GetString()).Should().BeFalse();
 
         // Should include analysis object with FEN
-        Assert.True(result.TryGetProperty("analysis", out var analysis));
+        result.TryGetProperty("analysis", out var analysis).Should().BeTrue();
         if (analysis.ValueKind != JsonValueKind.Null)
         {
-            Assert.True(analysis.TryGetProperty("fenPosition", out var fen));
+            analysis.TryGetProperty("fenPosition", out var fen).Should().BeTrue();
             Assert.Contains("e3", fen.GetString() ?? ""); // FEN should mention en passant square
         }
     }
@@ -196,7 +196,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("error", out var error));
+        result.TryGetProperty("error", out var error).Should().BeTrue();
         Assert.Contains("question", error.GetString() ?? "", StringComparison.OrdinalIgnoreCase);
     }
 
@@ -237,23 +237,23 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
 
         // Verify all fields that n8n will transform
-        Assert.True(result.TryGetProperty("answer", out var answer));
-        Assert.False(string.IsNullOrWhiteSpace(answer.GetString()));
+        result.TryGetProperty("answer", out var answer).Should().BeTrue();
+        string.IsNullOrWhiteSpace(answer.GetString()).Should().BeFalse();
 
-        Assert.True(result.TryGetProperty("suggestedMoves", out var moves));
+        result.TryGetProperty("suggestedMoves", out var moves).Should().BeTrue();
         moves.ValueKind == JsonValueKind.Array.Should().BeTrue();
 
-        Assert.True(result.TryGetProperty("sources", out var sources));
+        result.TryGetProperty("sources", out var sources).Should().BeTrue();
         sources.ValueKind == JsonValueKind.Array.Should().BeTrue();
 
         // Optional analysis field
-        Assert.True(result.TryGetProperty("analysis", out _));
+        result.TryGetProperty("analysis", out _).Should().BeTrue();
 
         // Metadata fields (required for tracking)
-        Assert.True(result.TryGetProperty("promptTokens", out _));
-        Assert.True(result.TryGetProperty("completionTokens", out _));
-        Assert.True(result.TryGetProperty("totalTokens", out _));
-        Assert.True(result.TryGetProperty("confidence", out _));
+        result.TryGetProperty("promptTokens", out _).Should().BeTrue();
+        result.TryGetProperty("completionTokens", out _).Should().BeTrue();
+        result.TryGetProperty("totalTokens", out _).Should().BeTrue();
+        result.TryGetProperty("confidence", out _).Should().BeTrue();
     }
 
     /// <summary>
@@ -290,14 +290,14 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("answer", out var answer));
+        result.TryGetProperty("answer", out var answer).Should().BeTrue();
 
         var answerText = answer.GetString() ?? "";
-        Assert.False(string.IsNullOrWhiteSpace(answerText));
+        string.IsNullOrWhiteSpace(answerText).Should().BeFalse();
 
         // Should contain sources from chess knowledge base
-        Assert.True(result.TryGetProperty("sources", out var sources));
-        Assert.True(sources.GetArrayLength() >= 0);
+        result.TryGetProperty("sources", out var sources).Should().BeTrue();
+        sources.GetArrayLength() >= 0.Should().BeTrue();
     }
 
     /// <summary>
@@ -353,8 +353,8 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
 
         historyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var history = await historyResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(history.TryGetProperty("messages", out var messages));
-        Assert.True(messages.GetArrayLength() >= 2); // User question + assistant answer
+        history.TryGetProperty("messages", out var messages).Should().BeTrue();
+        messages.GetArrayLength() >= 2.Should().BeTrue(); // User question + assistant answer
     }
 
     /// <summary>

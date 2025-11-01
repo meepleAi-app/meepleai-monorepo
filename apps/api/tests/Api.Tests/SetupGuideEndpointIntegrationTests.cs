@@ -80,8 +80,8 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         Assert.All(setupGuide.steps, step =>
         {
             step.stepNumber > 0.Should().BeTrue();
-            Assert.False(string.IsNullOrWhiteSpace(step.title));
-            Assert.False(string.IsNullOrWhiteSpace(step.instruction));
+            string.IsNullOrWhiteSpace(step.title).Should().BeFalse();
+            string.IsNullOrWhiteSpace(step.instruction).Should().BeFalse();
             step.references.Should().NotBeNull();
         });
 

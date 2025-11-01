@@ -103,7 +103,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         // Then: Returns correct SSE headers
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         response.Content.Headers.ContentType?.MediaType.Should().Be("text/event-stream");
-        Assert.True(response.Headers.Contains("Cache-Control"));
+        response.Headers.Contains("Cache-Control").Should().BeTrue();
         Assert.Contains("no-cache", response.Headers.GetValues("Cache-Control"));
     }
 
@@ -333,7 +333,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         Assert.All(events, evt =>
         {
             evt.Timestamp.Should().NotBe(default(DateTime));
-            Assert.True(evt.Timestamp <= DateTime.UtcNow.AddSeconds(5)); // Allow 5 sec for test execution
+            evt.Timestamp <= DateTime.UtcNow.AddSeconds(5).Should().BeTrue(); // Allow 5 sec for test execution
         });
     }
 
@@ -393,9 +393,9 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var json = rawContent.Substring(jsonStart, jsonEnd - jsonStart);
 
         var parsed = JsonDocument.Parse(json);
-        Assert.True(parsed.RootElement.TryGetProperty("Type", out _));
-        Assert.True(parsed.RootElement.TryGetProperty("Data", out _));
-        Assert.True(parsed.RootElement.TryGetProperty("Timestamp", out _));
+        parsed.RootElement.TryGetProperty("Type", out _).Should().BeTrue();
+        parsed.RootElement.TryGetProperty("Data", out _).Should().BeTrue();
+        parsed.RootElement.TryGetProperty("Timestamp", out _).Should().BeTrue();
     }
 
     // Helper methods

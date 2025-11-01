@@ -106,7 +106,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<PagedResult<UserDto>>(JsonOptions);
         result.Should().NotBeNull();
-        Assert.True(result.Items.Any(u => u.Email.Contains(uniqueIdentifier)));
+        result.Items.Any(u => u.Email.Contains(uniqueIdentifier)).Should().BeTrue();
     }
 
     /// <summary>

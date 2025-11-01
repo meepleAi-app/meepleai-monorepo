@@ -88,7 +88,7 @@ public class SessionManagementConcurrencyTests : ConfigIntegrationTestBase
 
         // Assert: At least one success (others may be 200 or 404 if already revoked)
         var successOrNotFoundCount = results.Count(r => r.StatusCode == HttpStatusCode.OK || r.StatusCode == HttpStatusCode.NotFound);
-        Assert.True(successOrNotFoundCount == 5, "All requests should succeed (idempotent)");
+        successOrNotFoundCount == 5, "All requests should succeed (idempotent)".Should().BeTrue();
 
         // Verify session is revoked exactly once
         using var scope2 = Factory.Services.CreateScope();

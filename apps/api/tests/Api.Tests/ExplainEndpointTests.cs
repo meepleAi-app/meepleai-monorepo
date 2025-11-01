@@ -81,34 +81,34 @@ public class ExplainEndpointTests : IntegrationTestBase
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
 
         // Verify outline structure
-        Assert.True(result.TryGetProperty("outline", out var outline));
-        Assert.True(outline.TryGetProperty("mainTopic", out var mainTopic));
+        result.TryGetProperty("outline", out var outline).Should().BeTrue();
+        outline.TryGetProperty("mainTopic", out var mainTopic).Should().BeTrue();
         Assert.Equal("winning conditions", mainTopic.GetString());
-        Assert.True(outline.TryGetProperty("sections", out var sections));
-        Assert.True(sections.GetArrayLength() > 0);
+        outline.TryGetProperty("sections", out var sections).Should().BeTrue();
+        sections.GetArrayLength() > 0.Should().BeTrue();
 
         // Verify script
-        Assert.True(result.TryGetProperty("script", out var script));
+        result.TryGetProperty("script", out var script).Should().BeTrue();
         var scriptText = script.GetString();
-        Assert.False(string.IsNullOrWhiteSpace(scriptText));
+        string.IsNullOrWhiteSpace(scriptText).Should().BeFalse();
         scriptText, StringComparison.OrdinalIgnoreCase.Should().Contain("winning conditions");
 
         // Verify citations
-        Assert.True(result.TryGetProperty("citations", out var citations));
-        Assert.True(citations.GetArrayLength() > 0);
+        result.TryGetProperty("citations", out var citations).Should().BeTrue();
+        citations.GetArrayLength() > 0.Should().BeTrue();
 
         var firstCitation = citations[0];
-        Assert.True(firstCitation.TryGetProperty("text", out _));
-        Assert.True(firstCitation.TryGetProperty("source", out _));
-        Assert.True(firstCitation.TryGetProperty("page", out var page));
-        Assert.True(page.GetInt32() > 0);
+        firstCitation.TryGetProperty("text", out _).Should().BeTrue();
+        firstCitation.TryGetProperty("source", out _).Should().BeTrue();
+        firstCitation.TryGetProperty("page", out var page).Should().BeTrue();
+        page.GetInt32() > 0.Should().BeTrue();
 
         // Verify estimated reading time
-        Assert.True(result.TryGetProperty("estimatedReadingTimeMinutes", out var estimatedTime));
-        Assert.True(estimatedTime.GetInt32() > 0);
+        result.TryGetProperty("estimatedReadingTimeMinutes", out var estimatedTime).Should().BeTrue();
+        estimatedTime.GetInt32() > 0.Should().BeTrue();
 
         // Verify optional fields
-        Assert.True(result.TryGetProperty("confidence", out _));
+        result.TryGetProperty("confidence", out _).Should().BeTrue();
     }
 
     /// <summary>
@@ -170,7 +170,7 @@ public class ExplainEndpointTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("script", out var script));
+        result.TryGetProperty("script", out var script).Should().BeTrue();
         Assert.Contains("Please provide a topic", script.GetString(), StringComparison.OrdinalIgnoreCase);
     }
 
@@ -212,7 +212,7 @@ public class ExplainEndpointTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("script", out var script));
+        result.TryGetProperty("script", out var script).Should().BeTrue();
         Assert.Contains("No relevant information found", script.GetString(), StringComparison.OrdinalIgnoreCase);
     }
 
@@ -248,7 +248,7 @@ public class ExplainEndpointTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("error", out var error));
+        result.TryGetProperty("error", out var error).Should().BeTrue();
         Assert.Contains("gameId is required", error.GetString(), StringComparison.OrdinalIgnoreCase);
     }
 

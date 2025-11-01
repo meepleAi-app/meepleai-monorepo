@@ -363,8 +363,8 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         // Then: Cached request should be faster (or at least not significantly slower)
         // Note: In test environment with mocks, this might not show dramatic difference
         // But the test validates the flow works correctly
-        Assert.True(secondRequestTime <= firstRequestTime * 2,
-            $"Cached request ({secondRequestTime}ms) took longer than 2x first request ({firstRequestTime}ms)");
+        secondRequestTime <= firstRequestTime * 2,
+            $"Cached request ({secondRequestTime}ms) took longer than 2x first request ({firstRequestTime}ms)".Should().BeTrue();
     }
 
     [Fact]

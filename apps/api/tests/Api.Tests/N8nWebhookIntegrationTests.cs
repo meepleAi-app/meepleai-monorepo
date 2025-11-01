@@ -77,17 +77,17 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
 
         // Verify explain response structure (matches what n8n will receive)
-        Assert.True(result.TryGetProperty("outline", out var outline));
-        Assert.True(outline.TryGetProperty("mainTopic", out _));
-        Assert.True(outline.TryGetProperty("sections", out _));
+        result.TryGetProperty("outline", out var outline).Should().BeTrue();
+        outline.TryGetProperty("mainTopic", out _).Should().BeTrue();
+        outline.TryGetProperty("sections", out _).Should().BeTrue();
 
-        Assert.True(result.TryGetProperty("script", out var script));
-        Assert.False(string.IsNullOrWhiteSpace(script.GetString()));
+        result.TryGetProperty("script", out var script).Should().BeTrue();
+        string.IsNullOrWhiteSpace(script.GetString()).Should().BeFalse();
 
-        Assert.True(result.TryGetProperty("citations", out var citations));
-        Assert.True(citations.GetArrayLength() > 0);
+        result.TryGetProperty("citations", out var citations).Should().BeTrue();
+        citations.GetArrayLength() > 0.Should().BeTrue();
 
-        Assert.True(result.TryGetProperty("estimatedReadingTimeMinutes", out _));
+        result.TryGetProperty("estimatedReadingTimeMinutes", out _).Should().BeTrue();
     }
 
     /// <summary>
@@ -147,7 +147,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("error", out var error));
+        result.TryGetProperty("error", out var error).Should().BeTrue();
         Assert.Contains("gameId", error.GetString(), StringComparison.OrdinalIgnoreCase);
     }
 
@@ -189,7 +189,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(result.TryGetProperty("script", out var script));
+        result.TryGetProperty("script", out var script).Should().BeTrue();
         Assert.Contains("No relevant information found", script.GetString(), StringComparison.OrdinalIgnoreCase);
     }
 
@@ -231,20 +231,20 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
 
         // Verify all fields that n8n will transform
-        Assert.True(result.TryGetProperty("outline", out var outline));
-        Assert.True(outline.TryGetProperty("mainTopic", out var mainTopic));
+        result.TryGetProperty("outline", out var outline).Should().BeTrue();
+        outline.TryGetProperty("mainTopic", out var mainTopic).Should().BeTrue();
         Assert.Equal("setup", mainTopic.GetString());
-        Assert.True(outline.TryGetProperty("sections", out var sections));
-        Assert.True(sections.GetArrayLength() >= 0);
+        outline.TryGetProperty("sections", out var sections).Should().BeTrue();
+        sections.GetArrayLength() >= 0.Should().BeTrue();
 
-        Assert.True(result.TryGetProperty("script", out _));
-        Assert.True(result.TryGetProperty("citations", out _));
-        Assert.True(result.TryGetProperty("estimatedReadingTimeMinutes", out _));
+        result.TryGetProperty("script", out _).Should().BeTrue();
+        result.TryGetProperty("citations", out _).Should().BeTrue();
+        result.TryGetProperty("estimatedReadingTimeMinutes", out _).Should().BeTrue();
 
         // Metadata fields (optional but should be present for tracking)
-        Assert.True(result.TryGetProperty("promptTokens", out _));
-        Assert.True(result.TryGetProperty("completionTokens", out _));
-        Assert.True(result.TryGetProperty("totalTokens", out _));
+        result.TryGetProperty("promptTokens", out _).Should().BeTrue();
+        result.TryGetProperty("completionTokens", out _).Should().BeTrue();
+        result.TryGetProperty("totalTokens", out _).Should().BeTrue();
     }
 
     /// <summary>
@@ -282,8 +282,8 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         createResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var config = await createResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(config.TryGetProperty("id", out var configId));
-        Assert.True(config.TryGetProperty("name", out var name));
+        config.TryGetProperty("id", out var configId).Should().BeTrue();
+        config.TryGetProperty("name", out var name).Should().BeTrue();
         Assert.Equal(createRequest.name, name.GetString());
 
         // And: Configuration is retrievable
@@ -294,7 +294,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var retrievedConfig = await getResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
-        Assert.True(retrievedConfig.TryGetProperty("webhookUrl", out var webhookUrl));
+        retrievedConfig.TryGetProperty("webhookUrl", out var webhookUrl).Should().BeTrue();
         Assert.Equal(createRequest.webhookUrl, webhookUrl.GetString());
     }
 

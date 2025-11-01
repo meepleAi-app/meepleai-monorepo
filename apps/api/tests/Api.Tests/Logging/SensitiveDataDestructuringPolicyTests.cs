@@ -37,16 +37,16 @@ public class SensitiveDataDestructuringPolicyTests
         // Assert
         success.Should().BeTrue();
         result.Should().NotBeNull();
-        var structureValue = Assert.IsType<StructureValue>(result);
+        var structureValue = result.Should().BeOfType<StructureValue>().Subject;
 
         var passwordProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Password");
         passwordProp.Should().NotBeNull();
-        var scalarValue = Assert.IsType<ScalarValue>(passwordProp.Value);
+        var scalarValue = passwordProp.Value.Should().BeOfType<ScalarValue>().Subject;
         scalarValue.Value.Should().Be("[REDACTED]");
 
         var usernameProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Username");
         usernameProp.Should().NotBeNull();
-        var usernameValue = Assert.IsType<ScalarValue>(usernameProp.Value);
+        var usernameValue = usernameProp.Value.Should().BeOfType<ScalarValue>().Subject;
         usernameValue.Value.Should().Be("admin");
     }
 
@@ -62,11 +62,11 @@ public class SensitiveDataDestructuringPolicyTests
         // Assert
         success.Should().BeTrue();
         result.Should().NotBeNull();
-        var structureValue = Assert.IsType<StructureValue>(result);
+        var structureValue = result.Should().BeOfType<StructureValue>().Subject;
 
         var apiKeyProp = structureValue.Properties.FirstOrDefault(p => p.Name == "ApiKey");
         apiKeyProp.Should().NotBeNull();
-        var scalarValue = Assert.IsType<ScalarValue>(apiKeyProp.Value);
+        var scalarValue = apiKeyProp.Value.Should().BeOfType<ScalarValue>().Subject;
         scalarValue.Value.Should().Be("[REDACTED]");
     }
 
@@ -101,16 +101,16 @@ public class SensitiveDataDestructuringPolicyTests
         // Assert
         success.Should().BeTrue();
         result.Should().NotBeNull();
-        var structureValue = Assert.IsType<StructureValue>(result);
+        var structureValue = result.Should().BeOfType<StructureValue>().Subject;
 
         var sensitiveProp = structureValue.Properties.FirstOrDefault(p => p.Name == propertyName);
         sensitiveProp.Should().NotBeNull();
-        var scalarValue = Assert.IsType<ScalarValue>(sensitiveProp.Value);
+        var scalarValue = sensitiveProp.Value.Should().BeOfType<ScalarValue>().Subject;
         scalarValue.Value.Should().Be("[REDACTED]");
 
         var safeProp = structureValue.Properties.FirstOrDefault(p => p.Name == "SafeProperty");
         safeProp.Should().NotBeNull();
-        var safeValue = Assert.IsType<ScalarValue>(safeProp.Value);
+        var safeValue = safeProp.Value.Should().BeOfType<ScalarValue>().Subject;
         safeValue.Value.Should().Be("safe-value");
     }
 
@@ -128,11 +128,11 @@ public class SensitiveDataDestructuringPolicyTests
         // Assert
         success.Should().BeTrue();
         result.Should().NotBeNull();
-        var structureValue = Assert.IsType<StructureValue>(result);
+        var structureValue = result.Should().BeOfType<StructureValue>().Subject;
 
         var messageProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Message");
         messageProp.Should().NotBeNull();
-        var scalarValue = Assert.IsType<ScalarValue>(messageProp.Value);
+        var scalarValue = messageProp.Value.Should().BeOfType<ScalarValue>().Subject;
         var message = scalarValue.Value?.ToString();
         message.Should().NotBeNull();
         message.Should().Contain("[REDACTED]");
@@ -153,11 +153,11 @@ public class SensitiveDataDestructuringPolicyTests
         // Assert
         success.Should().BeTrue();
         result.Should().NotBeNull();
-        var structureValue = Assert.IsType<StructureValue>(result);
+        var structureValue = result.Should().BeOfType<StructureValue>().Subject;
 
         var headerProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Header");
         headerProp.Should().NotBeNull();
-        var scalarValue = Assert.IsType<ScalarValue>(headerProp.Value);
+        var scalarValue = headerProp.Value.Should().BeOfType<ScalarValue>().Subject;
         var header = scalarValue.Value?.ToString();
         header.Should().NotBeNull();
         header.Should().Contain("Bearer [REDACTED]");
@@ -175,11 +175,11 @@ public class SensitiveDataDestructuringPolicyTests
         // Assert
         success.Should().BeTrue();
         result.Should().NotBeNull();
-        var structureValue = Assert.IsType<StructureValue>(result);
+        var structureValue = result.Should().BeOfType<StructureValue>().Subject;
 
         var connProp = structureValue.Properties.FirstOrDefault(p => p.Name == "ConnectionString");
         connProp.Should().NotBeNull();
-        var scalarValue = Assert.IsType<ScalarValue>(connProp.Value);
+        var scalarValue = connProp.Value.Should().BeOfType<ScalarValue>().Subject;
         scalarValue.Value.Should().Be("[REDACTED]"); // Property name contains "password"
     }
 
@@ -195,11 +195,11 @@ public class SensitiveDataDestructuringPolicyTests
         // Assert
         success.Should().BeTrue();
         result.Should().NotBeNull();
-        var structureValue = Assert.IsType<StructureValue>(result);
+        var structureValue = result.Should().BeOfType<StructureValue>().Subject;
 
         var messageProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Message");
         messageProp.Should().NotBeNull();
-        var scalarValue = Assert.IsType<ScalarValue>(messageProp.Value);
+        var scalarValue = messageProp.Value.Should().BeOfType<ScalarValue>().Subject;
         var message = scalarValue.Value?.ToString();
         message.Should().NotBeNull();
         message.Should().Contain("[REDACTED]");
@@ -224,30 +224,30 @@ public class SensitiveDataDestructuringPolicyTests
         // Assert
         success.Should().BeTrue();
         result.Should().NotBeNull();
-        var structureValue = Assert.IsType<StructureValue>(result);
+        var structureValue = result.Should().BeOfType<StructureValue>().Subject;
 
         // Username should be visible
         var usernameProp = structureValue.Properties.FirstOrDefault(p => p.Name == "username");
         usernameProp.Should().NotBeNull();
-        var usernameValue = Assert.IsType<ScalarValue>(usernameProp.Value);
+        var usernameValue = usernameProp.Value.Should().BeOfType<ScalarValue>().Subject;
         usernameValue.Value.Should().Be("admin");
 
         // Password should be redacted
         var passwordProp = structureValue.Properties.FirstOrDefault(p => p.Name == "password");
         passwordProp.Should().NotBeNull();
-        var passwordValue = Assert.IsType<ScalarValue>(passwordProp.Value);
+        var passwordValue = passwordProp.Value.Should().BeOfType<ScalarValue>().Subject;
         passwordValue.Value.Should().Be("[REDACTED]");
 
         // API key should be redacted
         var apiKeyProp = structureValue.Properties.FirstOrDefault(p => p.Name == "api_key");
         apiKeyProp.Should().NotBeNull();
-        var apiKeyValue = Assert.IsType<ScalarValue>(apiKeyProp.Value);
+        var apiKeyValue = apiKeyProp.Value.Should().BeOfType<ScalarValue>().Subject;
         apiKeyValue.Value.Should().Be("[REDACTED]");
 
         // Description should be visible
         var descProp = structureValue.Properties.FirstOrDefault(p => p.Name == "description");
         descProp.Should().NotBeNull();
-        var descValue = Assert.IsType<ScalarValue>(descProp.Value);
+        var descValue = descProp.Value.Should().BeOfType<ScalarValue>().Subject;
         descValue.Value.Should().Be("Test user");
     }
 
@@ -271,16 +271,16 @@ public class SensitiveDataDestructuringPolicyTests
         // Assert
         success.Should().BeTrue();
         result.Should().NotBeNull();
-        var structureValue = Assert.IsType<StructureValue>(result);
+        var structureValue = result.Should().BeOfType<StructureValue>().Subject;
 
         // Check nested credentials
         var credentialsProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Credentials");
         credentialsProp.Should().NotBeNull();
-        var credentialsValue = Assert.IsType<StructureValue>(credentialsProp.Value);
+        var credentialsValue = credentialsProp.Value.Should().BeOfType<StructureValue>().Subject;
 
         var passwordProp = credentialsValue.Properties.FirstOrDefault(p => p.Name == "Password");
         passwordProp.Should().NotBeNull();
-        var passwordValue = Assert.IsType<ScalarValue>(passwordProp.Value);
+        var passwordValue = passwordProp.Value.Should().BeOfType<ScalarValue>().Subject;
         passwordValue.Value.Should().Be("[REDACTED]");
     }
 
@@ -345,11 +345,11 @@ public class SensitiveDataDestructuringPolicyTests
         // Assert
         success.Should().BeTrue();
         result.Should().NotBeNull();
-        var structureValue = Assert.IsType<StructureValue>(result);
+        var structureValue = result.Should().BeOfType<StructureValue>().Subject;
 
         var prop = structureValue.Properties.FirstOrDefault(p => p.Name == upperProp);
         prop.Should().NotBeNull();
-        var scalarValue = Assert.IsType<ScalarValue>(prop.Value);
+        var scalarValue = prop.Value.Should().BeOfType<ScalarValue>().Subject;
         scalarValue.Value.Should().Be("[REDACTED]");
     }
 }

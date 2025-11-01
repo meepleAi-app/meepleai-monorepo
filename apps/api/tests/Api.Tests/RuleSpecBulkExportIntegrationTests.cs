@@ -103,7 +103,7 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
         var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"');
         fileName.Should().NotBeNull();
         fileName.Should().Contain("meepleai-rulespecs-");
-        Assert.EndsWith(".zip", fileName);
+        fileName.Should().EndWith(".zip");
 
         var zipBytes = await response.Content.ReadAsByteArrayAsync();
         zipBytes.Length > 0.Should().BeTrue();
@@ -115,7 +115,7 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
         archive.Entries.Should().ContainSingle();
         var entry = archive.Entries[0];
         entry.Name.Should().Contain("chess-export");
-        Assert.EndsWith(".json", entry.Name);
+        entry.Name.Should().EndWith(".json");
 
         // Verify JSON content
         using var entryStream = entry.Open();

@@ -83,14 +83,14 @@ public class TotpServiceTests : IDisposable
         result.BackupCodes.Count.Should().Be(10);
 
         // Verify QR code URL format
-        Assert.StartsWith("otpauth://totp/MeepleAI:", result.QrCodeUrl);
+        result.QrCodeUrl.Should().StartWith("otpauth://totp/MeepleAI:");
         result.QrCodeUrl.Should().Contain(userEmail);
         result.QrCodeUrl.Should().Contain("secret=");
 
         // Verify backup codes format (XXXX-XXXX)
         foreach (var code in result.BackupCodes)
         {
-            Assert.Matches(@"^[A-Z0-9]{4}-[A-Z0-9]{4}$", code);
+            code.Should().MatchRegex(@"^[A-Z0-9]{4}-[A-Z0-9]{4}$");
         }
 
         // Verify secret is stored encrypted

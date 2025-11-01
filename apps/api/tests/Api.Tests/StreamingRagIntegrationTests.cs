@@ -204,7 +204,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         Assert.All(citationsData.citations, citation =>
         {
             citation.text.Should().NotBeEmpty();
-            Assert.StartsWith("PDF:", citation.source);
+            citation.source.Should().StartWith("PDF:");
             citation.page > 0.Should().BeTrue();
         });
     }
@@ -384,8 +384,8 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var rawContent = await response.Content.ReadAsStringAsync();
 
         // Then: SSE format is correct (data: {json}\n\n)
-        Assert.StartsWith("data: ", rawContent);
-        Assert.EndsWith("\n\n", rawContent);
+        rawContent.Should().StartWith("data: ");
+        rawContent.Should().EndWith("\n\n");
 
         // And: Can parse as valid JSON
         var jsonStart = rawContent.IndexOf('{');

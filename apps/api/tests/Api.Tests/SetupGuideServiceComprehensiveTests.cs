@@ -421,7 +421,7 @@ Include expansion components if playing with expansions.";
         // Assert
         result.steps.Should().ContainSingle();
         result.steps[0].instruction.Length <= 500.Should().BeTrue(); // Max 500 chars
-        Assert.EndsWith("...", result.steps[0].instruction);
+        result.steps[0].instruction.Should().EndWith("...");
     }
 
     [Fact]

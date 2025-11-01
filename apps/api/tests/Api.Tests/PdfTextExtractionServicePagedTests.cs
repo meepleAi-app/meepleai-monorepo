@@ -371,7 +371,7 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         result.TotalPageCount.Should().Be(3);
         result.PageChunks.Should().NotBeNull();
         result.PageChunks.Count.Should().Be(3);
-        Assert.Same(pageChunks, result.PageChunks);
+        result.PageChunks.Should().BeSameAs(pageChunks);
     }
 
     /// <summary>

@@ -49,7 +49,7 @@ public class DynamicTtlStrategyTests
         var ttl = await strategy.CalculateTtlAsync(hitCount);
 
         // Assert (Then): TTL = 24 hours
-        Assert.Equal(TimeSpan.FromHours(24), ttl);
+        ttl.Should().Be(TimeSpan.FromHours(24));
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public class DynamicTtlStrategyTests
         var ttl = await strategy.CalculateTtlAsync(hitCount);
 
         // Assert (Then): TTL = 6 hours
-        Assert.Equal(TimeSpan.FromHours(6), ttl);
+        ttl.Should().Be(TimeSpan.FromHours(6));
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class DynamicTtlStrategyTests
         var ttl = await strategy.CalculateTtlAsync(hitCount);
 
         // Assert (Then): TTL = 1 hour
-        Assert.Equal(TimeSpan.FromHours(1), ttl);
+        ttl.Should().Be(TimeSpan.FromHours(1));
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class DynamicTtlStrategyTests
         var ttl = await strategy.CalculateTtlAsync(hitCount);
 
         // Assert (Then): TTL = 1 hour (cold default)
-        Assert.Equal(TimeSpan.FromHours(1), ttl);
+        ttl.Should().Be(TimeSpan.FromHours(1));
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public class DynamicTtlStrategyTests
         var ttl = await strategy.CalculateTtlAsync(hitCount);
 
         // Assert (Then): Classified as warm, TTL = 12 hours
-        Assert.Equal(TimeSpan.FromHours(12), ttl);
+        ttl.Should().Be(TimeSpan.FromHours(12));
     }
 
     [Theory]
@@ -167,7 +167,7 @@ public class DynamicTtlStrategyTests
         var ttl = await strategy.CalculateTtlAsync(hitCount);
 
         // Assert (Then): Correct classification and TTL
-        Assert.Equal(TimeSpan.FromHours(expectedHours), ttl);
+        ttl.Should().Be(TimeSpan.FromHours(expectedHours));
     }
 
     [Fact]
@@ -191,7 +191,7 @@ public class DynamicTtlStrategyTests
 
         // Assert (Then): Throws ArgumentException
         var exception = await Assert.ThrowsAsync<ArgumentException>(act);
-        Assert.Contains("hitCount", exception.Message);
-        Assert.Contains("cannot be negative", exception.Message);
+        exception.Message.Should().Contain("hitCount");
+        exception.Message.Should().Contain("cannot be negative");
     }
 }

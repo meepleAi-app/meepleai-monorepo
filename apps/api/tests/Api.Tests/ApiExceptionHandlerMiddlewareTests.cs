@@ -335,7 +335,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
         errorResponse.Should().NotBeNull();
-        Assert.InRange(errorResponse.Timestamp, beforeRequest.AddSeconds(-1), afterRequest.AddSeconds(1));
+        errorResponse.Timestamp.Should().BeInRange(beforeRequest.AddSeconds(-1), afterRequest.AddSeconds(1));
     }
 
     [Fact]

@@ -561,7 +561,7 @@ public class PromptTemplateServiceTests : IDisposable
             .Where(v => v.TemplateId == templateId)
             .ToListAsync();
 
-        Assert.Single(allVersions.Where(v => v.IsActive));
+        allVersions.Where(v => v.IsActive).Should().ContainSingle();
         allVersions.First(v => v.IsActive).Id.Should().Be(versionId);
 
         // Verify cache invalidation

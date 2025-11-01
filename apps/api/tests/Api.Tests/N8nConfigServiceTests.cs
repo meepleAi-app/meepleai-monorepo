@@ -91,7 +91,7 @@ public class N8nConfigServiceTests : IDisposable
             new CreateN8nConfigRequest("NoKey", "https://example.com", "secret", null),
             CancellationToken.None);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(act);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public class N8nConfigServiceTests : IDisposable
             new CreateN8nConfigRequest("Placeholder", "https://example.com", "secret", null),
             CancellationToken.None);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(act);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]

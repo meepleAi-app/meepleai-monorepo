@@ -190,7 +190,8 @@ public class DynamicTtlStrategyTests
         Func<Task> act = async () => await strategy.CalculateTtlAsync(hitCount);
 
         // Assert (Then): Throws ArgumentException
-        var exception = await Assert.ThrowsAsync<ArgumentException>(act);
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
+        exception = exception.Which;
         exception.Which.Message.Should().Contain("hitCount");
         exception.Which.Message.Should().Contain("cannot be negative");
     }

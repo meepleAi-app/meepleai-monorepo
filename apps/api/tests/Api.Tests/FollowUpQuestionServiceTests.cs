@@ -335,7 +335,7 @@ public class FollowUpQuestionServiceTests
         var service = CreateService(config: Options.Create(config));
 
         // Act & Assert
-        await Assert.ThrowsAsync<Exception>(async () =>
+        var act = async () =>
         {
             await service.GenerateQuestionsAsync(
                 "Test",
@@ -362,7 +362,7 @@ public class FollowUpQuestionServiceTests
         var service = CreateService();
 
         // Act & Assert
-        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+        var act2 = async () =>
         {
             await service.GenerateQuestionsAsync(
                 "Test",

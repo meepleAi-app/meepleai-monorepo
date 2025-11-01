@@ -36,7 +36,7 @@ public class VerifyPasswordHashTest
         _output.WriteLine($"Written to: {outputPath}");
 
         // Verify it works
-        Assert.True(VerifyPassword(password, encoded));
+        VerifyPassword(password, encoded).Should().BeTrue();
     }
 
     [Fact]

@@ -75,9 +75,9 @@ public class InfrastructureTests : IDisposable
         _dbContext.Users.Add(user2);
 
         // Act & Assert
-        var exception = var act = () => _dbContext.SaveChanges();
-        act.Should().Throw<DbUpdateException>();
-        exception.InnerException?.Message ?? exception.Which.Message.Should().Contain("UNIQUE constraint failed");
+        var act = () => _dbContext.SaveChanges();
+        var exception = act.Should().Throw<DbUpdateException>();
+        (exception.Which.InnerException?.Message ?? exception.Which.Message).Should().Contain("UNIQUE constraint failed");
     }
 
     /// <summary>
@@ -159,9 +159,9 @@ public class InfrastructureTests : IDisposable
         _dbContext.Games.Add(game2);
 
         // Act & Assert
-        var exception = var act = () => _dbContext.SaveChanges();
-        act.Should().Throw<DbUpdateException>();
-        exception.InnerException?.Message ?? exception.Which.Message.Should().Contain("UNIQUE constraint failed");
+        var act = () => _dbContext.SaveChanges();
+        var exception = act.Should().Throw<DbUpdateException>();
+        (exception.Which.InnerException?.Message ?? exception.Which.Message).Should().Contain("UNIQUE constraint failed");
     }
 
     /// <summary>
@@ -186,9 +186,9 @@ public class InfrastructureTests : IDisposable
         _dbContext.Users.Add(user);
 
         // Act & Assert
-        var exception = var act = () => _dbContext.SaveChanges();
-        act.Should().Throw<DbUpdateException>();
-        exception.InnerException?.Message ?? exception.Which.Message.Should().Contain("NOT NULL constraint failed");
+        var act = () => _dbContext.SaveChanges();
+        var exception = act.Should().Throw<DbUpdateException>();
+        (exception.Which.InnerException?.Message ?? exception.Which.Message).Should().Contain("NOT NULL constraint failed");
     }
 
     /// <summary>
@@ -251,9 +251,9 @@ public class InfrastructureTests : IDisposable
         _dbContext.ApiKeys.Add(apiKey);
 
         // Assert
-        var exception = var act = () => _dbContext.SaveChanges();
-        act.Should().Throw<DbUpdateException>();
-        exception.InnerException?.Message ?? exception.Which.Message.Should().Contain("FOREIGN KEY constraint failed");
+        var act = () => _dbContext.SaveChanges();
+        var exception = act.Should().Throw<DbUpdateException>();
+        (exception.Which.InnerException?.Message ?? exception.Which.Message).Should().Contain("FOREIGN KEY constraint failed");
     }
 
     /// <summary>
@@ -297,8 +297,8 @@ public class InfrastructureTests : IDisposable
         _dbContext.RuleSpecs.Add(ruleSpec2);
 
         // Act & Assert
-        var exception = var act = () => _dbContext.SaveChanges();
-        act.Should().Throw<DbUpdateException>();
-        exception.InnerException?.Message ?? exception.Which.Message.Should().Contain("UNIQUE constraint failed");
+        var act = () => _dbContext.SaveChanges();
+        var exception = act.Should().Throw<DbUpdateException>();
+        (exception.Which.InnerException?.Message ?? exception.Which.Message).Should().Contain("UNIQUE constraint failed");
     }
 }

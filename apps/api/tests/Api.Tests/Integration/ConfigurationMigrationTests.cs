@@ -44,7 +44,7 @@ public class ConfigurationMigrationTests : AdminTestFixture
 
         // Verify we can create a record
         var canCreate = await CanCreateSystemConfiguration(dbContext, testEmail);
-        canCreate, "Should be able to create system_configurations records".Should().BeTrue();
+        canCreate.Should().BeTrue("Should be able to create system_configurations records");
     }
 
     [Fact]

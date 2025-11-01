@@ -357,7 +357,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         foreach (var response in responses)
         {
             response.StatusCode.Should().Be(HttpStatusCode.OK);
-            response.Headers.Contains("Set-Cookie"), "Should set session cookie".Should().BeTrue();
+            response.Headers.Contains("Set-Cookie").Should().BeTrue("Should set session cookie");
         }
 
         // And: Each login creates a distinct session token
@@ -393,8 +393,8 @@ public class EdgeScenarioTests : IntegrationTestBase
         var successCount = responses.Count(r => r.StatusCode == HttpStatusCode.Created);
 
         // All should succeed (or some may be rate limited)
-        successCount >= 2,
-            $"Expected at least 2 successes out of 3, got {successCount}".Should().BeTrue();
+        successCount.Should().BeGreaterThanOrEqualTo(2,
+            $"Expected at least 2 successes out of 3, got {successCount}");
 
         // NOTE: With unique names, concurrent creation should work fine
     }

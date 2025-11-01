@@ -44,7 +44,7 @@ public class LlmServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("No user prompt provided");
+        result.ErrorMessage.Should().BeEquivalentTo("No user prompt provided");
         handler.Requests.Should().BeEmpty();
     }
 
@@ -90,7 +90,7 @@ public class LlmServiceTests
 
         // Assert
         result.Success.Should().BeTrue();
-        result.Response.Should().Be("Generated response");
+        result.Response.Should().BeEquivalentTo("Generated response");
         result.Usage.PromptTokens.Should().Be(12);
         result.Usage.CompletionTokens.Should().Be(8);
         result.Usage.TotalTokens.Should().Be(20);
@@ -128,7 +128,7 @@ public class LlmServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("API error: InternalServerError");
+        result.ErrorMessage.Should().BeEquivalentTo("API error: InternalServerError");
 
         _loggerMock.Verify(
             x => x.Log(
@@ -160,7 +160,7 @@ public class LlmServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("No response returned from API");
+        result.ErrorMessage.Should().BeEquivalentTo("No response returned from API");
 
         var request = handler.Requests.Should().ContainSingle().Subject;
         AssertRequestHeaders(request);
@@ -183,7 +183,7 @@ public class LlmServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("Request timed out");
+        result.ErrorMessage.Should().BeEquivalentTo("Request timed out");
 
         var request = handler.Requests.Should().ContainSingle().Subject;
         AssertRequestHeaders(request);
@@ -300,7 +300,7 @@ public class LlmServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("API error: BadRequest");
+        result.ErrorMessage.Should().BeEquivalentTo("API error: BadRequest");
 
         // Verify error was logged
         _loggerMock.Verify(
@@ -482,9 +482,9 @@ data: [DONE]
 
         // Assert
         result.Should().NotBeNull();
-        result.Name.Should().Be("Test Game");
+        result.Name.Should().BeEquivalentTo("Test Game");
         result.Players.Should().Be(2);
-        result.Complexity.Should().Be("Medium");
+        result.Complexity.Should().BeEquivalentTo("Medium");
 
         var request = handler.Requests.Should().ContainSingle().Subject;
         AssertRequestHeaders(request);
@@ -528,7 +528,7 @@ data: [DONE]
 
         // Assert
         result.Success.Should().BeTrue();
-        result.Response.Should().Be("Response without system prompt");
+        result.Response.Should().BeEquivalentTo("Response without system prompt");
 
         var requestBody = handler.RequestBodies.Single();
         using var document = JsonDocument.Parse(requestBody!);
@@ -717,9 +717,9 @@ data: [DONE]
 
         // Assert
         result.Should().NotBeNull(); // Deserializer creates object with default values
-        result.Name.Should().Be(string.Empty);
+        result.Name.Should().BeEquivalentTo(string.Empty);
         result.Players.Should().Be(0);
-        result.Complexity.Should().Be(string.Empty);
+        result.Complexity.Should().BeEquivalentTo(string.Empty);
     }
 
     /// <summary>
@@ -889,8 +889,8 @@ data: [DONE]
         var defaultCount = requestedModels.Count(m => m == "deepseek/deepseek-chat-v3.1");
 
         // With 50% traffic and 100 requests, expect 40-60 alternative model requests (allowing variance)
-        alternativeCount.Should().BeInRange(30, 70);
-        defaultCount.Should().BeInRange(30, 70);
+        alternativeCount.Should().BeApproximately(30, TimeSpan.FromSeconds(5));
+        defaultCount.Should().BeApproximately(30, TimeSpan.FromSeconds(5));
         requestedModels.Count.Should().Be(100);
     }
 

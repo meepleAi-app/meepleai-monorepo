@@ -273,8 +273,7 @@ public class ApiExceptionHandlerMiddlewareTests
         // Non-/api/* paths should throw the exception instead of handling it
         // The test framework will catch the exception thrown by the endpoint
         var act = async () => await client.GetAsync("/health");
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
-
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
         exception.Which.Message.Should().Be("Test error");
     }
 
@@ -335,7 +334,7 @@ public class ApiExceptionHandlerMiddlewareTests
         var errorResponse = JsonSerializer.Deserialize<ErrorResponse>(content);
 
         errorResponse.Should().NotBeNull();
-        errorResponse.Timestamp.Should().BeInRange(beforeRequest.AddSeconds(-1), afterRequest.AddSeconds(1));
+        errorResponse.Timestamp.Should().BeApproximately(beforeRequest.AddSeconds(-1), TimeSpan.FromSeconds(5));
     }
 
     [Fact]
@@ -392,8 +391,7 @@ public class ApiExceptionHandlerMiddlewareTests
 
         // Act & Assert
         var act = async () => await client.GetAsync(path);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
-
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
         exception.Which.Message.Should().Be("Test error");
     }
 

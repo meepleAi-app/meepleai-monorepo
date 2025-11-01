@@ -123,7 +123,7 @@ public class TextChunkingServiceTests
         // Verify chunk sizes are approximately correct (accounting for overlap reduction)
         foreach (var chunk in chunks.Take(chunks.Count - 1)) // Except last chunk
         {
-            chunk.Text.Length <= customChunkSize + 10.Should().BeTrue(); // Small tolerance for boundary adjustment
+            (chunk.Text.Length <= customChunkSize + 10).Should().BeTrue(); // Small tolerance for boundary adjustment
         }
     }
 
@@ -158,7 +158,7 @@ public class TextChunkingServiceTests
 
             // The overlap should be approximately the specified overlap
             var actualOverlap = firstChunk.CharEnd - secondChunk.CharStart;
-            actualOverlap.Should().BeInRange(0, overlap + 10); // Allow some tolerance
+            actualOverlap.Should().BeApproximately(0, TimeSpan.FromSeconds(5)); // Allow some tolerance
         }
     }
 
@@ -366,7 +366,7 @@ public class TextChunkingServiceTests
         var pageNumbers = chunks.Select(c => c.Page).Distinct().ToList();
 
         (pageNumbers.Count >= 2).Should().BeTrue("Should span multiple pages");
-        pageNumbers.Max().Should().BeGreaterOrEqualTo(2, "Should reach at least page 2");
+        pageNumbers.Max().Should().BeGreaterThanOrEqualTo(2, "Should reach at least page 2");
 
         // Verify pages are in ascending order
         int previousPage = 0;
@@ -460,7 +460,7 @@ public class TextChunkingServiceTests
         // Verify chunk sizes
         foreach (var input in inputs.Take(inputs.Count - 1))
         {
-            input.Text.Length <= customChunkSize + 20.Should().BeTrue(); // Tolerance for boundary adjustment
+            (input.Text.Length <= customChunkSize + 20).Should().BeTrue(); // Tolerance for boundary adjustment
         }
     }
 

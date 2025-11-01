@@ -105,11 +105,8 @@ public class GameServiceTests : IDisposable
 
         var games = await service.GetGamesAsync();
 
-        // TODO: Assert.Collection(
-            games,
-            g => g.Name).Should().Be("Alpha", g.Name),
-            g => g.Name == "Bravo",
-            g => g.Name == "Charlie");
+        games.Should().HaveCount(3);
+        games.Select(g => g.Name).Should().BeEquivalentTo(new[] { "Alpha", "Bravo", "Charlie" });
     }
 
     private sealed class FixedTimeProvider : TimeProvider

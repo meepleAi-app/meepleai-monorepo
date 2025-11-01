@@ -1,0 +1,955 @@
+using Api.Infrastructure;
+using Api.Models;
+using Api.Services;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Moq;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Xunit;
+using FluentAssertions;
+using Xunit.Abstractions;
+
+namespace Api.Tests;
+
+/// <summary>
+/// CHAT-01: Comprehensive unit tests for StreamingQaService.
+/// AI-07.1: Updated to support prompt template service
+/// Tests streaming QA functionality with Server-Sent Events (SSE).
+/// </summary>
+public class StreamingQaServiceTests
+{
+    private readonly ITestOutputHelper _output;
+
+    private readonly Mock<ILogger<StreamingQaService>> _mockLogger = new();
+
+    /// <summary>
+    /// Creates a mock IPromptTemplateService with default fallback behavior
+    /// </summary>
+    private static Mock<IPromptTemplateService> CreatePromptTemplateMock()
+    {
+        var mock = new Mock<IPromptTemplateService>();
+
+        // Default template with fallback prompts
+        var defaultTemplate = new PromptTemplate
+        {
+            SystemPrompt = @"You are a board game rules assistant. Your job is to answer questions about board game rules based ONLY on the provided context from the rulebook.
+
+CRITICAL INSTRUCTIONS:
+- If the answer to the question is clearly found in the provided context, answer it concisely and accurately.
+- If the answer is NOT in the provided context or you're uncertain, respond with EXACTLY: ""Not specified""
+- Do NOT make assumptions or use external knowledge about the game.
+- Do NOT hallucinate or invent information.
+- Keep your answers brief and to the point (2-3 sentences maximum).
+- Reference page numbers when relevant.",
+            UserPromptTemplate = @"CONTEXT FROM RULEBOOK:
+{context}
+
+QUESTION:
+{query}
+
+ANSWER:",
+            FewShotExamples = new List<FewShotExample>()
+        };
+
+        mock.Setup(m => m.ClassifyQuestion(It.IsAny<string>()))
+            .Returns(QuestionType.General);
+
+        mock.Setup(m => m.GetTemplateAsync(It.IsAny<Guid?>(), It.IsAny<QuestionType>()))
+            .ReturnsAsync(defaultTemplate);
+
+        mock.Setup(m => m.RenderSystemPrompt(It.IsAny<PromptTemplate>()))
+            .Returns<PromptTemplate>(t => t.SystemPrompt);
+
+        mock.Setup(m => m.RenderUserPrompt(It.IsAny<PromptTemplate>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns<PromptTemplate, string, string>((t, c, q) =>
+                t.UserPromptTemplate.Replace("{context}", c).Replace("{query}", q));
+
+        return mock;
+    }
+
+    private static MeepleAiDbContext CreateInMemoryContext()
+    {
+        var connection = new SqliteConnection("Filename=:memory:");
+        connection.Open();
+
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        var context = new MeepleAiDbContext(options);
+        context.Database.EnsureCreated();
+        return context;
+    }
+
+    private static Mock<IAiResponseCacheService> CreateCacheMock()
+    {
+        var mock = new Mock<IAiResponseCacheService>();
+        mock
+            .Setup(x => x.InvalidateGameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        return mock;
+    }
+
+    /// <summary>
+    /// Test: AskStreamAsync with empty query returns error event
+    /// Given an empty query
+    /// When streaming QA is requested
+    /// Then an Error event is emitted with appropriate message
+    /// </summary>
+    [Fact]
+    public async Task AskStreamAsync_WithEmptyQuery_ReturnsErrorEvent()
+    {
+        // Arrange
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var mockQdrant = new Mock<IQdrantService>();
+        var mockLlm = new Mock<ILlmService>();
+        var mockCache = CreateCacheMock();
+
+        var service = new StreamingQaService(
+            dbContext,
+            mockEmbedding.Object,
+            mockQdrant.Object,
+            mockLlm.Object,
+            mockCache.Object,
+            CreatePromptTemplateMock().Object,
+            _mockLogger.Object);
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in service.AskStreamAsync("game1", "", chatId: null, CancellationToken.None))
+        {
+            events.Add(evt);
+        }
+
+        // Assert
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be(StreamingEventType.Error);
+
+        var errorData = events[0].Data as StreamingError;
+        errorData.Should().NotBeNull();
+        errorData!.errorMessage.Should().Be("Please provide a question.");
+        errorData.errorCode.Should().Be("EMPTY_QUERY");
+    }
+
+    /// <summary>
+    /// Test: AskStreamAsync with whitespace query returns error event
+    /// Given a whitespace-only query
+    /// When streaming QA is requested
+    /// Then an Error event is emitted
+    /// </summary>
+    [Fact]
+    public async Task AskStreamAsync_WithWhitespaceQuery_ReturnsErrorEvent()
+    {
+        // Arrange
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var mockQdrant = new Mock<IQdrantService>();
+        var mockLlm = new Mock<ILlmService>();
+        var mockCache = CreateCacheMock();
+
+        var service = new StreamingQaService(
+            dbContext,
+            mockEmbedding.Object,
+            mockQdrant.Object,
+            mockLlm.Object,
+            mockCache.Object,
+            CreatePromptTemplateMock().Object,
+            _mockLogger.Object);
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in service.AskStreamAsync("game1", "   ", chatId: null, CancellationToken.None))
+        {
+            events.Add(evt);
+        }
+
+        // Assert
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be(StreamingEventType.Error);
+    }
+
+    /// <summary>
+    /// Test: AskStreamAsync with cached response simulates streaming
+    /// Given a cached QA response exists
+    /// When streaming QA is requested
+    /// Then events are emitted: StateUpdate -> Citations -> Token(s) -> Complete
+    /// And answer is split into word tokens
+    /// </summary>
+    [Fact]
+    public async Task AskStreamAsync_WithCachedResponse_SimulatesStreaming()
+    {
+        // Arrange
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>(MockBehavior.Strict);
+        var mockQdrant = new Mock<IQdrantService>(MockBehavior.Strict);
+        var mockLlm = new Mock<ILlmService>(MockBehavior.Strict);
+        var mockCache = CreateCacheMock();
+
+        const string gameId = "game1";
+        const string query = "How many players?";
+        const string cacheKey = "qa::game1::players";
+
+        var cachedResponse = new QaResponse(
+            "This game supports 2-4 players.",
+            new List<Snippet> { new("Cached snippet", "PDF:cached", 1, 0, 0.85f) },
+            promptTokens: 10,
+            completionTokens: 8,
+            totalTokens: 18,
+            confidence: 0.95,
+            metadata: null
+        );
+
+        mockCache
+            .Setup(x => x.GenerateQaCacheKey(gameId, query))
+            .Returns(cacheKey);
+        mockCache
+            .Setup(x => x.GetAsync<QaResponse>(cacheKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cachedResponse);
+
+        var service = new StreamingQaService(
+            dbContext,
+            mockEmbedding.Object,
+            mockQdrant.Object,
+            mockLlm.Object,
+            mockCache.Object,
+            CreatePromptTemplateMock().Object,
+            _mockLogger.Object);
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in service.AskStreamAsync(gameId, query, chatId: null, CancellationToken.None))
+        {
+            events.Add(evt);
+        }
+
+        // Assert
+        events.Should().NotBeEmpty();
+
+        // Verify event sequence
+        var eventTypes = events.Select(e => e.Type).ToList();
+        eventTypes[0].Should().Be(StreamingEventType.StateUpdate);
+        eventTypes[1].Should().Be(StreamingEventType.Citations);
+        eventTypes.Should().Contain(StreamingEventType.Token);
+        eventTypes[^1].Should().Be(StreamingEventType.Complete);
+
+        // Verify StateUpdate
+        var stateUpdate = events[0].Data as StreamingStateUpdate;
+        stateUpdate.Should().NotBeNull();
+        stateUpdate!.message, StringComparison.OrdinalIgnoreCase.Should().Contain("cache");
+
+        // Verify Citations
+        var citations = events[1].Data as StreamingCitations;
+        citations.Should().NotBeNull();
+        citations!.citations.Should().ContainSingle();
+        citations.citations[0].text.Should().Be("Cached snippet");
+
+        // Verify Tokens (words split with spaces)
+        var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
+        tokenEvents.Count.Should().Be(5); // "This" "game" "supports" "2-4" "players."
+
+        // Verify Complete
+        var complete = events[^1].Data as StreamingComplete;
+        complete.Should().NotBeNull();
+        complete!.promptTokens.Should().Be(10);
+        complete.completionTokens.Should().Be(8);
+        complete.totalTokens.Should().Be(18);
+        complete.confidence.Should().Be(0.95);
+
+        // Verify no embedding/qdrant/llm calls were made (cache hit)
+        mockEmbedding.VerifyNoOtherCalls();
+        mockQdrant.VerifyNoOtherCalls();
+        mockLlm.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// Test: AskStreamAsync with successful flow emits correct event sequence
+    /// Given valid query and RAG pipeline succeeds
+    /// When streaming QA is requested
+    /// Then events are emitted in order: StateUpdate(embedding) -> StateUpdate(search) -> Citations -> StateUpdate(generating) -> Token(s) -> Complete
+    /// And response is cached
+    /// </summary>
+    [Fact]
+    public async Task AskStreamAsync_WithSuccessfulFlow_EmitsCorrectEventSequence()
+    {
+        // Arrange
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
+
+        var searchResults = new List<SearchResultItem>
+        {
+            new() { Text = "This game supports 2-4 players.", PdfId = "pdf-1", Page = 1, Score = 0.95f },
+            new() { Text = "Each player starts with 5 cards.", PdfId = "pdf-1", Page = 2, Score = 0.85f },
+            new() { Text = "The game takes about 30 minutes.", PdfId = "pdf-1", Page = 3, Score = 0.75f }
+        };
+
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
+            .Setup(x => x.SearchAsync(
+                It.IsAny<string>(),
+                It.IsAny<float[]>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
+
+        var mockLlm = new Mock<ILlmService>();
+        var llmTokens = new[] { "This ", "game ", "supports ", "2-4 ", "players." };
+        mockLlm
+            .Setup(x => x.GenerateCompletionStreamAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(ToAsyncEnumerable(llmTokens));
+
+        var mockCache = CreateCacheMock();
+        const string gameId = "game1";
+        const string query = "How many players?";
+        const string cacheKey = "qa::game1::players";
+
+        mockCache
+            .Setup(x => x.GenerateQaCacheKey(gameId, query))
+            .Returns(cacheKey);
+        mockCache
+            .Setup(x => x.GetAsync<QaResponse>(cacheKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QaResponse?)null); // Cache miss
+        mockCache
+            .Setup(x => x.SetAsync(
+                cacheKey,
+                It.IsAny<QaResponse>(),
+                86400,
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var service = new StreamingQaService(
+            dbContext,
+            mockEmbedding.Object,
+            mockQdrant.Object,
+            mockLlm.Object,
+            mockCache.Object,
+            CreatePromptTemplateMock().Object,
+            _mockLogger.Object);
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in service.AskStreamAsync(gameId, query, chatId: null, CancellationToken.None))
+        {
+            events.Add(evt);
+        }
+
+        // Assert
+        events.Should().NotBeEmpty();
+
+        // Verify event types in order
+        var eventTypes = events.Select(e => e.Type).ToList();
+        eventTypes[0].Should().Be(StreamingEventType.StateUpdate); // "Generating embeddings..."
+        eventTypes[1].Should().Be(StreamingEventType.StateUpdate); // "Searching vector database..."
+        eventTypes[2].Should().Be(StreamingEventType.Citations);
+        eventTypes[3].Should().Be(StreamingEventType.StateUpdate); // "Generating answer..."
+        eventTypes[4].Should().Be(StreamingEventType.Token); // First token
+        eventTypes[^1].Should().Be(StreamingEventType.Complete);
+
+        // Verify Citations
+        var citations = events[2].Data as StreamingCitations;
+        citations.Should().NotBeNull();
+        citations!.citations.Count.Should().Be(3);
+        citations.citations[0].text.Should().Be("This game supports 2-4 players.");
+        citations.citations[0].source.Should().Be("PDF:pdf-1");
+        citations.citations[0].page.Should().Be(1);
+
+        // Verify Tokens
+        var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
+        tokenEvents.Count.Should().Be(5);
+        var tokens = tokenEvents.Select(e => (e.Data as StreamingToken)!.token).ToList();
+        tokens.Should().Be(llmTokens);
+
+        // Verify Complete
+        var complete = events[^1].Data as StreamingComplete;
+        complete.Should().NotBeNull();
+        complete!.completionTokens.Should().Be(5); // 5 tokens
+        complete.totalTokens.Should().Be(5);
+        complete.confidence!.Value, precision: 2.Should().Be(0.95); // Max score from search results (with floating point tolerance)
+
+        // Verify cache write
+        mockCache.Verify(
+            x => x.SetAsync(
+                cacheKey,
+                It.Is<QaResponse>(r =>
+                    r.answer == "This game supports 2-4 players." &&
+                    r.snippets.Count == 3 &&
+                    r.completionTokens == 5),
+                86400,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// Test: AskStreamAsync with embedding failure returns error event
+    /// Given embedding service fails
+    /// When streaming QA is requested
+    /// Then StateUpdate event is emitted followed by Error event
+    /// </summary>
+    [Fact]
+    public async Task AskStreamAsync_WithEmbeddingFailure_ReturnsErrorEvent()
+    {
+        // Arrange
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateFailure("Embedding service unavailable"));
+
+        var mockQdrant = new Mock<IQdrantService>();
+        var mockLlm = new Mock<ILlmService>();
+        var mockCache = CreateCacheMock();
+
+        mockCache
+            .Setup(x => x.GenerateQaCacheKey(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns("cache-key");
+        mockCache
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QaResponse?)null);
+
+        var service = new StreamingQaService(
+            dbContext,
+            mockEmbedding.Object,
+            mockQdrant.Object,
+            mockLlm.Object,
+            mockCache.Object,
+            CreatePromptTemplateMock().Object,
+            _mockLogger.Object);
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in service.AskStreamAsync("game1", "test query", chatId: null, CancellationToken.None))
+        {
+            events.Add(evt);
+        }
+
+        // Assert
+        events.Count.Should().Be(2);
+        events[0].Type.Should().Be(StreamingEventType.StateUpdate); // "Generating embeddings..."
+        events[1].Type.Should().Be(StreamingEventType.Error);
+
+        var error = events[1].Data as StreamingError;
+        error.Should().NotBeNull();
+        error!.errorMessage.Should().Be("Unable to process query.");
+        error.errorCode.Should().Be("EMBEDDING_FAILED");
+    }
+
+    /// <summary>
+    /// Test: AskStreamAsync with empty embeddings returns error event
+    /// Given embedding service returns empty list
+    /// When streaming QA is requested
+    /// Then Error event is emitted
+    /// </summary>
+    [Fact]
+    public async Task AskStreamAsync_WithEmptyEmbeddings_ReturnsErrorEvent()
+    {
+        // Arrange
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]>()));
+
+        var mockQdrant = new Mock<IQdrantService>();
+        var mockLlm = new Mock<ILlmService>();
+        var mockCache = CreateCacheMock();
+
+        mockCache
+            .Setup(x => x.GenerateQaCacheKey(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns("cache-key");
+        mockCache
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QaResponse?)null);
+
+        var service = new StreamingQaService(
+            dbContext,
+            mockEmbedding.Object,
+            mockQdrant.Object,
+            mockLlm.Object,
+            mockCache.Object,
+            CreatePromptTemplateMock().Object,
+            _mockLogger.Object);
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in service.AskStreamAsync("game1", "test query", chatId: null, CancellationToken.None))
+        {
+            events.Add(evt);
+        }
+
+        // Assert
+        e => e.Type == StreamingEventType.Error.Should().Contain(events);
+        var errorEvent = events.First(e => e.Type == StreamingEventType.Error);
+        var error = errorEvent.Data as StreamingError;
+        error.Should().NotBeNull();
+        error!.errorCode.Should().Be("EMBEDDING_FAILED");
+    }
+
+    /// <summary>
+    /// Test: AskStreamAsync with search failure returns error event
+    /// Given Qdrant search fails
+    /// When streaming QA is requested
+    /// Then Error event is emitted with NO_RESULTS code
+    /// </summary>
+    [Fact]
+    public async Task AskStreamAsync_WithSearchFailure_ReturnsErrorEvent()
+    {
+        // Arrange
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
+
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
+            .Setup(x => x.SearchAsync(
+                It.IsAny<string>(),
+                It.IsAny<float[]>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SearchResult.CreateFailure("Vector database unavailable"));
+
+        var mockLlm = new Mock<ILlmService>();
+        var mockCache = CreateCacheMock();
+
+        mockCache
+            .Setup(x => x.GenerateQaCacheKey(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns("cache-key");
+        mockCache
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QaResponse?)null);
+
+        var service = new StreamingQaService(
+            dbContext,
+            mockEmbedding.Object,
+            mockQdrant.Object,
+            mockLlm.Object,
+            mockCache.Object,
+            CreatePromptTemplateMock().Object,
+            _mockLogger.Object);
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in service.AskStreamAsync("game1", "test query", chatId: null, CancellationToken.None))
+        {
+            events.Add(evt);
+        }
+
+        // Assert
+        var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
+        errorEvent.Should().NotBeNull();
+        var error = errorEvent!.Data as StreamingError;
+        error.Should().NotBeNull();
+        error!.errorMessage.Should().Contain("No relevant information found");
+        error.errorCode.Should().Be("NO_RESULTS");
+    }
+
+    /// <summary>
+    /// Test: AskStreamAsync with empty search results returns error event
+    /// Given Qdrant returns empty results
+    /// When streaming QA is requested
+    /// Then Error event is emitted
+    /// </summary>
+    [Fact]
+    public async Task AskStreamAsync_WithEmptySearchResults_ReturnsErrorEvent()
+    {
+        // Arrange
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
+
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
+            .Setup(x => x.SearchAsync(
+                It.IsAny<string>(),
+                It.IsAny<float[]>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>()));
+
+        var mockLlm = new Mock<ILlmService>();
+        var mockCache = CreateCacheMock();
+
+        mockCache
+            .Setup(x => x.GenerateQaCacheKey(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns("cache-key");
+        mockCache
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QaResponse?)null);
+
+        var service = new StreamingQaService(
+            dbContext,
+            mockEmbedding.Object,
+            mockQdrant.Object,
+            mockLlm.Object,
+            mockCache.Object,
+            CreatePromptTemplateMock().Object,
+            _mockLogger.Object);
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in service.AskStreamAsync("game1", "test query", chatId: null, CancellationToken.None))
+        {
+            events.Add(evt);
+        }
+
+        // Assert
+        var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
+        errorEvent.Should().NotBeNull();
+        var error = errorEvent!.Data as StreamingError;
+        error.Should().NotBeNull();
+        error!.errorCode.Should().Be("NO_RESULTS");
+    }
+
+    /// <summary>
+    /// Test: AskStreamAsync calculates confidence from max search score
+    /// Given search results with varying scores
+    /// When streaming completes
+    /// Then Complete event contains confidence equal to max score
+    /// </summary>
+    [Fact]
+    public async Task AskStreamAsync_CalculatesConfidenceFromMaxScore()
+    {
+        // Arrange
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
+
+        var searchResults = new List<SearchResultItem>
+        {
+            new() { Text = "Low score", PdfId = "pdf-1", Page = 1, Score = 0.65f },
+            new() { Text = "High score", PdfId = "pdf-1", Page = 2, Score = 0.98f }, // Max
+            new() { Text = "Medium score", PdfId = "pdf-1", Page = 3, Score = 0.75f }
+        };
+
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
+            .Setup(x => x.SearchAsync(
+                It.IsAny<string>(),
+                It.IsAny<float[]>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
+
+        var mockLlm = new Mock<ILlmService>();
+        mockLlm
+            .Setup(x => x.GenerateCompletionStreamAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(ToAsyncEnumerable(new[] { "Answer" }));
+
+        var mockCache = CreateCacheMock();
+        mockCache
+            .Setup(x => x.GenerateQaCacheKey(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns("cache-key");
+        mockCache
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QaResponse?)null);
+        mockCache
+            .Setup(x => x.SetAsync(
+                It.IsAny<string>(),
+                It.IsAny<QaResponse>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var service = new StreamingQaService(
+            dbContext,
+            mockEmbedding.Object,
+            mockQdrant.Object,
+            mockLlm.Object,
+            mockCache.Object,
+            CreatePromptTemplateMock().Object,
+            _mockLogger.Object);
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in service.AskStreamAsync("game1", "test", chatId: null, CancellationToken.None))
+        {
+            events.Add(evt);
+        }
+
+        // Assert
+        var completeEvent = events.First(e => e.Type == StreamingEventType.Complete);
+        var complete = completeEvent.Data as StreamingComplete;
+        complete.Should().NotBeNull();
+        complete!.confidence!.Value, precision: 2.Should().Be(0.98); // Max score (with floating point tolerance)
+    }
+
+    /// <summary>
+    /// Test: AskStreamAsync counts tokens correctly
+    /// Given LLM streams multiple tokens
+    /// When streaming completes
+    /// Then Complete event contains correct token count
+    /// </summary>
+    [Fact]
+    public async Task AskStreamAsync_CountsTokensCorrectly()
+    {
+        // Arrange
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
+
+        var searchResults = new List<SearchResultItem>
+        {
+            new() { Text = "Result", PdfId = "pdf-1", Page = 1, Score = 0.95f }
+        };
+
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
+            .Setup(x => x.SearchAsync(
+                It.IsAny<string>(),
+                It.IsAny<float[]>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
+
+        var mockLlm = new Mock<ILlmService>();
+        var llmTokens = new[] { "One", " two", " three", " four", " five" };
+        mockLlm
+            .Setup(x => x.GenerateCompletionStreamAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(ToAsyncEnumerable(llmTokens));
+
+        var mockCache = CreateCacheMock();
+        mockCache
+            .Setup(x => x.GenerateQaCacheKey(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns("cache-key");
+        mockCache
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QaResponse?)null);
+        mockCache
+            .Setup(x => x.SetAsync(
+                It.IsAny<string>(),
+                It.IsAny<QaResponse>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var service = new StreamingQaService(
+            dbContext,
+            mockEmbedding.Object,
+            mockQdrant.Object,
+            mockLlm.Object,
+            mockCache.Object,
+            CreatePromptTemplateMock().Object,
+            _mockLogger.Object);
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in service.AskStreamAsync("game1", "test", chatId: null, CancellationToken.None))
+        {
+            events.Add(evt);
+        }
+
+        // Assert
+        var tokenEvents = events.Where(e => e.Type == StreamingEventType.Token).ToList();
+        tokenEvents.Count.Should().Be(5);
+
+        var completeEvent = events.First(e => e.Type == StreamingEventType.Complete);
+        var complete = completeEvent.Data as StreamingComplete;
+        complete.Should().NotBeNull();
+        complete!.completionTokens.Should().Be(5);
+        complete.totalTokens.Should().Be(5);
+    }
+
+    /// <summary>
+    /// Test: AskStreamAsync supports cancellation
+    /// Given streaming is in progress
+    /// When cancellation is requested
+    /// Then streaming stops gracefully
+    /// </summary>
+    [Fact]
+    public async Task AskStreamAsync_SupportsCancellation()
+    {
+        // Arrange
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
+
+        var searchResults = new List<SearchResultItem>
+        {
+            new() { Text = "Result", PdfId = "pdf-1", Page = 1, Score = 0.95f }
+        };
+
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
+            .Setup(x => x.SearchAsync(
+                It.IsAny<string>(),
+                It.IsAny<float[]>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
+
+        var mockLlm = new Mock<ILlmService>();
+        // Simulate long streaming that will be cancelled
+        mockLlm
+            .Setup(x => x.GenerateCompletionStreamAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Returns((string s, string u, CancellationToken ct) =>
+            {
+                var tokens = Enumerable.Range(1, 100).Select(i => $"token{i} ");
+                return ToAsyncEnumerable(tokens);
+            });
+
+        var mockCache = CreateCacheMock();
+        mockCache
+            .Setup(x => x.GenerateQaCacheKey(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns("cache-key");
+        mockCache
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QaResponse?)null);
+
+        var service = new StreamingQaService(
+            dbContext,
+            mockEmbedding.Object,
+            mockQdrant.Object,
+            mockLlm.Object,
+            mockCache.Object,
+            CreatePromptTemplateMock().Object,
+            _mockLogger.Object);
+
+        using var cts = new CancellationTokenSource();
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        var act = async () =>
+        {
+            await foreach (var evt in service.AskStreamAsync("game1", "test", chatId: null, cts.Token))
+            {
+                events.Add(evt);
+
+                // Cancel after receiving a few events
+                if (events.Count == 5)
+                {
+                    cts.Cancel();
+                }
+            }
+        });
+
+        // Assert
+        // Should have received some events before cancellation
+        events.Count.Should().BeInRange(1, 10);
+    }
+
+    /// <summary>
+    /// Test: AskStreamAsync caches response with correct TTL
+    /// Given successful streaming completion
+    /// When response is cached
+    /// Then cache TTL is 24 hours (86400 seconds)
+    /// </summary>
+    [Fact]
+    public async Task AskStreamAsync_CachesResponseWith24HourTTL()
+    {
+        // Arrange
+        await using var dbContext = CreateInMemoryContext();
+        var mockEmbedding = new Mock<IEmbeddingService>();
+        var embedding = new float[] { 0.1f, 0.2f, 0.3f };
+        mockEmbedding
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { embedding }));
+
+        var searchResults = new List<SearchResultItem>
+        {
+            new() { Text = "Result", PdfId = "pdf-1", Page = 1, Score = 0.95f }
+        };
+
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
+            .Setup(x => x.SearchAsync(
+                It.IsAny<string>(),
+                It.IsAny<float[]>(),
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(SearchResult.CreateSuccess(searchResults));
+
+        var mockLlm = new Mock<ILlmService>();
+        mockLlm
+            .Setup(x => x.GenerateCompletionStreamAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(ToAsyncEnumerable(new[] { "Answer" }));
+
+        var mockCache = CreateCacheMock();
+        const string cacheKey = "qa::game1::test";
+        mockCache
+            .Setup(x => x.GenerateQaCacheKey("game1", "test"))
+            .Returns(cacheKey);
+        mockCache
+            .Setup(x => x.GetAsync<QaResponse>(cacheKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QaResponse?)null);
+        mockCache
+            .Setup(x => x.SetAsync(
+                cacheKey,
+                It.IsAny<QaResponse>(),
+                86400, // 24 hours
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var service = new StreamingQaService(
+            dbContext,
+            mockEmbedding.Object,
+            mockQdrant.Object,
+            mockLlm.Object,
+            mockCache.Object,
+            CreatePromptTemplateMock().Object,
+            _mockLogger.Object);
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in service.AskStreamAsync("game1", "test", chatId: null, CancellationToken.None))
+        {
+            events.Add(evt);
+        }
+
+        // Assert
+        mockCache.Verify(
+            x => x.SetAsync(
+                cacheKey,
+                It.IsAny<QaResponse>(),
+                86400, // Verify 24-hour TTL
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // Helper method to convert array to async enumerable
+    private static async IAsyncEnumerable<T> ToAsyncEnumerable<T>(IEnumerable<T> items)
+    {
+        foreach (var item in items)
+        {
+            await Task.Yield(); // Simulate async
+            yield return item;
+        }
+    }
+}

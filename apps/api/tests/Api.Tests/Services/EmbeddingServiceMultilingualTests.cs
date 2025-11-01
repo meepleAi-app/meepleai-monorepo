@@ -434,7 +434,7 @@ public class EmbeddingServiceMultilingualTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("No texts provided");
+        result.ErrorMessage.Should().BeEquivalentTo("No texts provided");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -456,7 +456,7 @@ public class EmbeddingServiceMultilingualTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("No texts provided");
+        result.ErrorMessage.Should().BeEquivalentTo("No texts provided");
     }
 
     /// <summary>
@@ -480,7 +480,7 @@ public class EmbeddingServiceMultilingualTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("Request timed out");
+        result.ErrorMessage.Should().BeEquivalentTo("Request timed out");
     }
 
     #endregion

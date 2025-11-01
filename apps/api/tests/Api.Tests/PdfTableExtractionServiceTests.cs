@@ -134,7 +134,7 @@ public class PdfTableExtractionServiceTests : IDisposable
         table.Headers.Count.Should().Be(table.ColumnCount);
         (table.RowCount >= 1).Should().BeTrue();
         (result.AtomicRules.Count >= table.RowCount).Should().BeTrue();
-        result.AtomicRules.Should().Contain(rule => rule.Contains("Setup", StringComparison.OrdinalIgnoreCase));
+        result.AtomicRules.Should().Contain(rule => rule.Contains("Setup"));
 
         result.Diagrams.Should().NotBeEmpty();
         result.Diagrams.Should().Contain(diagram => diagram.Width > 0 && diagram.Height > 0);
@@ -215,7 +215,7 @@ Row A1          Row A2
             // Assert
             result.Success.Should().BeFalse();
             result.ErrorMessage.Should().NotBeNull();
-            result.ErrorMessage.Should().Contain("Extraction failed", StringComparison.OrdinalIgnoreCase);
+            result.ErrorMessage.Should().Contain("Extraction failed");
 
             _mockLogger.Verify(
                 x => x.Log(
@@ -323,7 +323,7 @@ Row A1          Row A2
         // Assert
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().NotBeNull();
-        result.ErrorMessage.Should().Contain("path is required", StringComparison.OrdinalIgnoreCase);
+        result.ErrorMessage.Should().Contain("path is required");
     }
 
     [Fact]
@@ -349,7 +349,7 @@ Row A1          Row A2
         // Assert
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().NotBeNull();
-        result.ErrorMessage.Should().Contain("not found", StringComparison.OrdinalIgnoreCase);
+        result.ErrorMessage.Should().Contain("not found");
     }
 
     [Fact]
@@ -405,7 +405,7 @@ Row A1          Row A2
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be(errorMessage);
+        result.ErrorMessage.Should().BeEquivalentTo(errorMessage);
         result.Tables.Should().BeEmpty();
         result.Diagrams.Should().BeEmpty();
         result.AtomicRules.Should().BeEmpty();
@@ -457,9 +457,9 @@ Row A1          Row A2
         table.Headers.Should().BeEquivalentTo(new[] { "Name", "Value" });
         table.RowCount.Should().Be(3);
         result.AtomicRuleCount.Should().Be(3);
-        result.AtomicRules.Should().Contain(rule => rule.Contains("Name: Alpha", StringComparison.OrdinalIgnoreCase));
+        result.AtomicRules.Should().Contain(rule => rule.Contains("Name: Alpha"));
         result.Diagrams.Should().NotBeEmpty();
-        result.DiagramCount.Should().Be(result.Diagrams.Count);
+        result.DiagramCount.Should().BeEquivalentTo(result.Diagrams.Count);
         result.Diagrams.Should().OnlyContain(diagram => diagram.DiagramType == "Image");
     }
 
@@ -488,8 +488,8 @@ Row A1          Row A2
             row.Any(value => !string.IsNullOrWhiteSpace(value)));
 
         result.AtomicRules.Should().NotBeEmpty();
-        result.AtomicRules.Should().Contain(rule => rule.Contains("Setup", StringComparison.OrdinalIgnoreCase));
-        result.AtomicRules.Should().Contain(rule => rule.Contains("Round Start", StringComparison.OrdinalIgnoreCase));
+        result.AtomicRules.Should().Contain(rule => rule.Contains("Setup"));
+        result.AtomicRules.Should().Contain(rule => rule.Contains("Round Start"));
 
         result.Diagrams.Should().NotBeEmpty();
     }

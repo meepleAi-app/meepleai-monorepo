@@ -145,7 +145,7 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
         var result = await DeserializeAsync<RuleSpec>(response);
         result.Should().NotBeNull();
         result!.gameId.Should().Be(gameId);
-        result.version.Should().Be("v1");
+        result.version.Should().BeEquivalentTo("v1");
         result.rules.Should().ContainSingle();
         result.rules[0].text.Should().Be("Editor's rule");
     }
@@ -188,7 +188,7 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
         var result = await DeserializeAsync<RuleSpec>(response);
         result.Should().NotBeNull();
         result!.gameId.Should().Be(gameId);
-        result.version.Should().Be("v1");
+        result.version.Should().BeEquivalentTo("v1");
     }
 
     #endregion

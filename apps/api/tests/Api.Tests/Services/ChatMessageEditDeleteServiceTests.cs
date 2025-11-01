@@ -186,7 +186,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
 
         // When: UpdateMessageAsync is called
         // Then: InvalidOperationException is thrown
-        var exception = var act = async () => _chatService.UpdateMessageAsync(chatId, aiMessage.Id, "New content", userId);
+        var act = async () => _chatService.UpdateMessageAsync(chatId, aiMessage.Id, "New content", userId);
         await act.Should().ThrowAsync<InvalidOperationException>();
 
         exception.Which.Message.Should().Contain("AI-generated messages cannot be edited");
@@ -218,7 +218,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
 
         // When: User B tries to edit user A's message
         // Then: UnauthorizedAccessException is thrown
-        var exception = var act = async () => _chatService.UpdateMessageAsync(chatId, messageId, "New content", userB.Id);
+        var act = async () => _chatService.UpdateMessageAsync(chatId, messageId, "New content", userB.Id);
         await act.Should().ThrowAsync<InvalidOperationException>();
 
         exception.Which.Message.Should().Contain("You can only edit your own messages");
@@ -239,7 +239,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
 
         // When: UpdateMessageAsync is called with invalid messageId
         // Then: KeyNotFoundException is thrown
-        var exception = var act = async () => _chatService.UpdateMessageAsync(chatId, invalidMessageId, "New content", userId);
+        var act = async () => _chatService.UpdateMessageAsync(chatId, invalidMessageId, "New content", userId);
         await act.Should().ThrowAsync<InvalidOperationException>();
 
         exception.Which.Message.Should().Contain($"Message {invalidMessageId} not found");
@@ -366,7 +366,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
 
         // When: Non-admin user B tries to delete user A's message
         // Then: UnauthorizedAccessException is thrown
-        var exception = var act = async () => _chatService.DeleteMessageAsync(chatId, messageId, userB.Id, isAdmin: false);
+        var act = async () => _chatService.DeleteMessageAsync(chatId, messageId, userB.Id, isAdmin: false);
         await act.Should().ThrowAsync<InvalidOperationException>();
 
         exception.Which.Message.Should().Contain("You can only delete your own messages");
@@ -387,7 +387,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
 
         // When: DeleteMessageAsync is called with invalid messageId
         // Then: KeyNotFoundException is thrown
-        var exception = var act = async () => _chatService.DeleteMessageAsync(chatId, invalidMessageId, userId, isAdmin: false);
+        var act = async () => _chatService.DeleteMessageAsync(chatId, invalidMessageId, userId, isAdmin: false);
         await act.Should().ThrowAsync<InvalidOperationException>();
 
         exception.Which.Message.Should().Contain($"Message {invalidMessageId} not found");

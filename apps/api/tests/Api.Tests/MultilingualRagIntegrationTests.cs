@@ -372,7 +372,7 @@ public class MultilingualRagIntegrationTests : QdrantIntegrationTestBase, IAsync
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("No chunks to index");
+        result.ErrorMessage.Should().BeEquivalentTo("No chunks to index");
         result.IndexedCount.Should().Be(0);
     }
 

@@ -469,13 +469,13 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         log.OverallConfidence.Should().NotBeNull();
 
         // Verify low-quality detection
-        log.IsLowQuality, $"Expected IsLowQuality = true, but got false. Overall confidence: {log.OverallConfidence:F3}".Should().BeTrue();
+        log.IsLowQuality.Should().BeTrue($"Expected IsLowQuality = true, but got false. Overall confidence: {log.OverallConfidence:F3}");
         (log.OverallConfidence < 0.60).Should().BeTrue($"Expected OverallConfidence < 0.60, but got {log.OverallConfidence:F3}");
 
         // Verify individual score components are in expected ranges
-        log.RagConfidence.Value.Should().BeInRange(0.35, 0.45); // Average of low-quality RAG scores (0.35, 0.40, 0.45)
-        log.LlmConfidence.Value.Should().BeInRange(0.45, 0.55); // Base 0.85 - VeryShortPenalty 0.30 - hedging ~0.05
-        log.CitationQuality.Value, 2.Should().Be(1.0); // 3 citations / 1 paragraph = 1.0
+        log.RagConfidence.Value.Should().BeApproximately(0.35, TimeSpan.FromSeconds(5)); // Average of low-quality RAG scores (0.35, 0.40, 0.45)
+        log.LlmConfidence.Value.Should().BeApproximately(0.45, TimeSpan.FromSeconds(5)); // Base 0.85 - VeryShortPenalty 0.30 - hedging ~0.05
+        log.CitationQuality.Value.Should().BeApproximately(1.0, 0.01); // 3 citations / 1 paragraph = 1.0
     }
 
     /// <summary>
@@ -547,13 +547,13 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
             .First();
 
         log.RagConfidence.Should().NotBeNull();
-        log.RagConfidence.Value.Should().BeInRange(0.0, 1.0);
+        log.RagConfidence.Value.Should().BeApproximately(0.0, TimeSpan.FromSeconds(5));
         log.LlmConfidence.Should().NotBeNull();
-        log.LlmConfidence.Value.Should().BeInRange(0.0, 1.0);
+        log.LlmConfidence.Value.Should().BeApproximately(0.0, TimeSpan.FromSeconds(5));
         log.CitationQuality.Should().NotBeNull();
-        log.CitationQuality.Value.Should().BeInRange(0.0, 1.0);
+        log.CitationQuality.Value.Should().BeApproximately(0.0, TimeSpan.FromSeconds(5));
         log.OverallConfidence.Should().NotBeNull();
-        log.OverallConfidence.Value.Should().BeInRange(0.0, 1.0);
+        log.OverallConfidence.Value.Should().BeApproximately(0.0, TimeSpan.FromSeconds(5));
     }
 
     /// <summary>
@@ -784,8 +784,8 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         report.Should().NotBeNull();
         report.TotalResponses.Should().Be(50);
         report.LowQualityCount.Should().Be(15);
-        report.AverageRagConfidence!.Value.Should().BeInRange(0.60, 0.75);
-        report.AverageOverallConfidence!.Value.Should().BeInRange(0.60, 0.75);
+        report.AverageRagConfidence!.Value.Should().BeApproximately(0.60, TimeSpan.FromSeconds(5));
+        report.AverageOverallConfidence!.Value.Should().BeApproximately(0.60, TimeSpan.FromSeconds(5));
     }
 
     /// <summary>
@@ -855,11 +855,9 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         var result = await response.Content.ReadFromJsonAsync<LowQualityResponsesResult>();
         result.Should().NotBeNull();
         result.TotalCount.Should().Be(2);
-        result.Responses, r =>
-        {
-            r.CreatedAt >= new DateTime(2025, 1.Should().OnlyContain(1).Should().BeTrue();
-            r.CreatedAt <= new DateTime(2025, 1, 7).Should().BeTrue();
-        });
+        result.Responses.Should().OnlyContain(r =>
+            r.CreatedAt >= new DateTime(2025, 1, 1) &&
+            r.CreatedAt <= new DateTime(2025, 1, 7));
     }
 
     /// <summary>

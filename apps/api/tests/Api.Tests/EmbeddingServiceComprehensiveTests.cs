@@ -133,10 +133,9 @@ public class EmbeddingServiceComprehensiveTests
             .Returns(httpClient);
 
         // Act & Assert
-        var ex = var act = () => new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object);
-        act.Should().Throw<InvalidOperationException>();
-
-        ex.Message.Should().Contain("OPENAI_API_KEY not configured");
+        var act = () => new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*OPENAI_API_KEY not configured*");
     }
 
     [Fact]
@@ -152,11 +151,9 @@ public class EmbeddingServiceComprehensiveTests
             .Build();
 
         // Act & Assert
-        var ex = var act = () => new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object);
-        act.Should().Throw<InvalidOperationException>();
-
-        ex.Message.Should().Contain("Unsupported embedding provider");
-        ex.Message.Should().Contain("invalid-provider");
+        var act = () => new EmbeddingService(_httpClientFactoryMock.Object, config, _mockLogger.Object);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*Unsupported embedding provider*invalid-provider*");
     }
 
     [Fact]
@@ -355,7 +352,7 @@ public class EmbeddingServiceComprehensiveTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("No texts provided");
+        result.ErrorMessage.Should().BeEquivalentTo("No texts provided");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -370,7 +367,7 @@ public class EmbeddingServiceComprehensiveTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("No texts provided");
+        result.ErrorMessage.Should().BeEquivalentTo("No texts provided");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -416,7 +413,7 @@ public class EmbeddingServiceComprehensiveTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("error", StringComparison.OrdinalIgnoreCase);
+        result.ErrorMessage.Should().Contain("error");
     }
 
     [Fact]
@@ -431,7 +428,7 @@ public class EmbeddingServiceComprehensiveTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Contain("error", StringComparison.OrdinalIgnoreCase);
+        result.ErrorMessage.Should().Contain("error");
     }
 
     #endregion

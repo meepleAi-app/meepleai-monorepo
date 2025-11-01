@@ -125,8 +125,7 @@ public class PromptManagementServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await _service.CreatePromptTemplateAsync(request2, _testUserId);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
-
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
         exception.Which.Message.Should().Contain("already exists");
     }
 
@@ -251,8 +250,7 @@ public class PromptManagementServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await _service.CreatePromptVersionAsync("non-existent-id", request, _testUserId);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
-
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
         exception.Which.Message.Should().Contain("not found");
     }
 
@@ -420,8 +418,7 @@ public class PromptManagementServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await _service.ActivateVersionAsync(templateResponse.Template.Id, "non-existent-version-id", _testUserId);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
-
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
         exception.Which.Message.Should().Contain("not found");
     }
 

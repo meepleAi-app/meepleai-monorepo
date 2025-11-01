@@ -69,7 +69,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
 
         result.Should().NotBeNull();
         result!.answer.Should().NotBeEmpty();
-        result.answer.Should().Contain("passant", StringComparison.OrdinalIgnoreCase);
+        result.answer.Should().Contain("passant");
 
         // And: Sources are cited
         result.sources.Should().NotBeEmpty();
@@ -115,7 +115,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         var result = JsonSerializer.Deserialize<ChessAgentResponse>(json, JsonOptions);
 
         result.Should().NotBeNull();
-        result!.answer.Should().Contain("Italian", StringComparison.OrdinalIgnoreCase);
+        result!.answer.Should().Contain("Italian");
         (result.answer.Length > 50).Should().BeTrue(); // Substantial explanation
     }
 
@@ -231,7 +231,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         var result = JsonSerializer.Deserialize<ChessAgentResponse>(json, JsonOptions);
 
         result.Should().NotBeNull();
-        result!.answer.Should().Contain("fork", StringComparison.OrdinalIgnoreCase);
+        result!.answer.Should().Contain("fork");
         (result.answer.Length > 50).Should().BeTrue(); // Substantial explanation
     }
 
@@ -320,7 +320,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         result.Should().NotBeNull();
         (result!.promptTokens > 0).Should().BeTrue();
         (result.completionTokens > 0).Should().BeTrue();
-        result.totalTokens.Should().Be(result.promptTokens + result.completionTokens);
+        result.totalTokens.Should().BeEquivalentTo(result.promptTokens + result.completionTokens);
     }
 
     /// <summary>
@@ -372,7 +372,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         secondResult!.answer.Should().Be(firstResult!.answer);
 
         // And: Token usage remains the same (cached)
-        secondResult.promptTokens.Should().Be(firstResult.promptTokens);
-        secondResult.completionTokens.Should().Be(firstResult.completionTokens);
+        secondResult.promptTokens.Should().BeEquivalentTo(firstResult.promptTokens);
+        secondResult.completionTokens.Should().BeEquivalentTo(firstResult.completionTokens);
     }
 }

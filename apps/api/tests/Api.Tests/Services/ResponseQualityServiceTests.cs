@@ -46,10 +46,10 @@ public class ResponseQualityServiceTests
         var scores = service.CalculateQualityScores(ragResults, citations, responseText);
 
         // Assert
-        scores.RagConfidence.Should().BeInRange(0.84, 0.86);
-        scores.LlmConfidence.Should().BeInRange(0.75, 0.95);
-        scores.CitationQuality.Should().BeInRange(0.95, 1.0);
-        scores.OverallConfidence.Should().BeInRange(0.80, 0.90);
+        scores.RagConfidence.Should().BeApproximately(0.84, TimeSpan.FromSeconds(5));
+        scores.LlmConfidence.Should().BeApproximately(0.75, TimeSpan.FromSeconds(5));
+        scores.CitationQuality.Should().BeApproximately(0.95, TimeSpan.FromSeconds(5));
+        scores.OverallConfidence.Should().BeApproximately(0.80, TimeSpan.FromSeconds(5));
         scores.IsLowQuality.Should().BeFalse();
     }
 
@@ -85,10 +85,10 @@ public class ResponseQualityServiceTests
         var scores = service.CalculateQualityScores(ragResults, citations, responseText);
 
         // Assert
-        scores.RagConfidence.Should().BeInRange(0.25, 0.35);
-        scores.LlmConfidence.Should().BeInRange(0.35, 0.45);  // Adjusted to match calculation
-        scores.CitationQuality.Should().BeInRange(0.30, 0.40);
-        scores.OverallConfidence.Should().BeInRange(0.30, 0.45);
+        scores.RagConfidence.Should().BeApproximately(0.25, TimeSpan.FromSeconds(5));
+        scores.LlmConfidence.Should().BeApproximately(0.35, TimeSpan.FromSeconds(5));  // Adjusted to match calculation
+        scores.CitationQuality.Should().BeApproximately(0.30, TimeSpan.FromSeconds(5));
+        scores.OverallConfidence.Should().BeApproximately(0.30, TimeSpan.FromSeconds(5));
         scores.IsLowQuality.Should().BeTrue();
     }
 
@@ -196,7 +196,7 @@ public class ResponseQualityServiceTests
         var scores = service.CalculateQualityScores(ragResults, citations, responseText);
 
         // Assert
-        scores.OverallConfidence.Should().BeInRange(0.90, 1.0);
+        scores.OverallConfidence.Should().BeApproximately(0.90, TimeSpan.FromSeconds(5));
         scores.IsLowQuality.Should().BeFalse();
     }
 
@@ -221,8 +221,7 @@ public class ResponseQualityServiceTests
         var scoresWithoutHedging = service.CalculateQualityScores(ragResults, citations, responseWithoutHedging);
 
         // Assert
-        scoresWithHedging.LlmConfidence < scoresWithoutHedging.LlmConfidence,
-            "Hedging phrases should reduce LLM confidence".Should().BeTrue();
+        (scoresWithHedging.LlmConfidence < scoresWithoutHedging.LlmConfidence).Should().BeTrue("Hedging phrases should reduce LLM confidence");
     }
 
     /// <summary>
@@ -251,7 +250,7 @@ public class ResponseQualityServiceTests
         var scores = service.CalculateQualityScores(ragResults, citations, responseText);
 
         // Assert
-        scores.CitationQuality.Should().BeInRange(0.95, 1.0);
+        scores.CitationQuality.Should().BeApproximately(0.95, TimeSpan.FromSeconds(5));
     }
 
     /// <summary>
@@ -288,7 +287,7 @@ public class ResponseQualityServiceTests
         // This test will need tuning after implementation to hit exactly 0.60
         // For now, we test the principle that 0.60 is the boundary
         // Act & Assert will be refined during GREEN phase
-        true, "Placeholder - will implement precise boundary test in GREEN phase".Should().BeTrue();
+        true.Should().BeTrue("Placeholder - will implement precise boundary test in GREEN phase");
     }
 
     /// <summary>
@@ -341,7 +340,7 @@ public class ResponseQualityServiceTests
         var scores = service.CalculateQualityScores(ragResults, citations, responseText);
 
         // Assert
-        scores.RagConfidence.Should().BeInRange(0.88, 0.92);
+        scores.RagConfidence.Should().BeApproximately(0.88, TimeSpan.FromSeconds(5));
         (scores.LlmConfidence < 0.60).Should().BeTrue("Short response with hedging should have low LLM confidence");
         // Overall should consider all dimensions
         (scores.OverallConfidence > 0.0 && scores.OverallConfidence < 1.0).Should().BeTrue();

@@ -91,7 +91,7 @@ public class ExplainEndpointTests : IntegrationTestBase
         result.TryGetProperty("script", out var script).Should().BeTrue();
         var scriptText = script.GetString();
         string.IsNullOrWhiteSpace(scriptText).Should().BeFalse();
-        scriptText.Should().Contain("winning conditions", StringComparison.OrdinalIgnoreCase);
+        scriptText.Should().Contain("winning conditions");
 
         // Verify citations
         result.TryGetProperty("citations", out var citations).Should().BeTrue();

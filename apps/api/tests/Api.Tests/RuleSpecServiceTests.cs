@@ -61,8 +61,8 @@ public class RuleSpecServiceTests : IDisposable
 
         var result = await _service.GetOrCreateDemoAsync(gameId);
 
-        result.gameId.Should().Be(gameId);
-        result.version.Should().Be("v0-demo");
+        result.gameId.Should().BeEquivalentTo(gameId);
+        result.version.Should().BeEquivalentTo("v0-demo");
         result.rules.Should().HaveCount(2);
         result.rules[0].id.Should().Be("r1");
         result.rules[0].text.Should().Be("Two players.");
@@ -113,7 +113,7 @@ public class RuleSpecServiceTests : IDisposable
 
         var result = await _service.GetOrCreateDemoAsync(game.Id);
 
-        result.version.Should().Be("v1");
+        result.version.Should().BeEquivalentTo("v1");
         result.rules.Should().ContainSingle();
         result.rules[0].text.Should().Be("Existing rule.");
         (await _dbContext.RuleSpecs.CountAsync()).Should().Be(1);
@@ -155,8 +155,8 @@ public class RuleSpecServiceTests : IDisposable
 
         var result = await _service.UpdateRuleSpecAsync(game.Id, model, user.Id);
 
-        result.gameId.Should().Be(game.Id);
-        result.version.Should().Be("v2");
+        result.gameId.Should().BeEquivalentTo(game.Id);
+        result.version.Should().BeEquivalentTo("v2");
         result.rules.Count.Should().Be(2);
 
         var entity = await _dbContext.RuleSpecs.Include(r => r.Atoms)
@@ -224,8 +224,8 @@ public class RuleSpecServiceTests : IDisposable
 
         var result = await _service.UpdateRuleSpecAsync(game.Id, model, user.Id);
 
-        result.gameId.Should().Be(game.Id);
-        result.version.Should().Be("v2");
+        result.gameId.Should().BeEquivalentTo(game.Id);
+        result.version.Should().BeEquivalentTo("v2");
 
         var saved = await _dbContext.RuleSpecs
             .SingleAsync(r => r.GameId == game.Id && r.Version == "v2");
@@ -400,7 +400,7 @@ public class RuleSpecServiceTests : IDisposable
 
         var result = await _service.GenerateRuleSpecFromPdfAsync(pdf.Id);
 
-        result.gameId.Should().Be(game.Id);
+        result.gameId.Should().BeEquivalentTo(game.Id);
         result.version.Should().StartWith("ingest-");
         result.rules.Count.Should().Be(2);
         result.rules[0].id.Should().Be("r1");
@@ -551,10 +551,10 @@ public class RuleSpecServiceTests : IDisposable
 
         var result = await _service.GenerateRuleSpecFromPdfAsync(pdf.Id);
 
-        result.gameId.Should().Be(game.Id);
+        result.gameId.Should().BeEquivalentTo(game.Id);
         (result.rules.Count >= 2).Should().BeTrue();
-        result.rules.Should().Contain(atom => atom.text.Contains("Rule one", StringComparison.OrdinalIgnoreCase));
-        result.rules.Should().Contain(atom => atom.text.Contains("Rule two", StringComparison.OrdinalIgnoreCase));
+        result.rules.Should().Contain(atom => atom.text.Contains("Rule one"));
+        result.rules.Should().Contain(atom => atom.text.Contains("Rule two"));
         result.rules.Should().OnlyContain(atom => atom.section == null);
     }
 

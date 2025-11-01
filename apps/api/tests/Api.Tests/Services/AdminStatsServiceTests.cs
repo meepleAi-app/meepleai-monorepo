@@ -381,7 +381,7 @@ public class AdminStatsServiceTests : IDisposable
         var result = await _service.GetDashboardStatsAsync(queryParams, CancellationToken.None);
 
         // Assert
-        result.Metrics.AverageConfidenceScore, 2.Should().Be(0.85); // (0.8 + 0.9) / 2 = 0.85
+        result.Metrics.AverageConfidenceScore.Should().BeApproximately(0.85, 0.01); // (0.8 + 0.9) / 2 = 0.85
     }
 
     [Fact]

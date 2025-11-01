@@ -187,8 +187,8 @@ public class PdfIndexingServiceTests : IDisposable
 
         // THEN: Should return failure with appropriate error code
         result.Success.Should().BeFalse();
-        result.ErrorCode.Should().Be(PdfIndexingErrorCode.TextExtractionRequired);
-        result.ErrorMessage!.Should().Contain("text extraction required", StringComparison.OrdinalIgnoreCase);
+        result.ErrorCode.Should().BeEquivalentTo(PdfIndexingErrorCode.TextExtractionRequired);
+        result.ErrorMessage!.Should().Contain("text extraction required");
     }
 
     /// <summary>
@@ -202,8 +202,8 @@ public class PdfIndexingServiceTests : IDisposable
 
         // THEN: Should return failure with PdfNotFound error code
         result.Success.Should().BeFalse();
-        result.ErrorCode.Should().Be(PdfIndexingErrorCode.PdfNotFound);
-        result.ErrorMessage!.Should().Contain("not found", StringComparison.OrdinalIgnoreCase);
+        result.ErrorCode.Should().BeEquivalentTo(PdfIndexingErrorCode.PdfNotFound);
+        result.ErrorMessage!.Should().Contain("not found");
     }
 
     /// <summary>
@@ -339,7 +339,7 @@ public class PdfIndexingServiceTests : IDisposable
 
         // THEN: Should fail with appropriate error code
         result.Success.Should().BeFalse();
-        result.ErrorCode.Should().Be(PdfIndexingErrorCode.EmbeddingFailed);
+        result.ErrorCode.Should().BeEquivalentTo(PdfIndexingErrorCode.EmbeddingFailed);
         result.ErrorMessage!.Should().Contain("Embedding generation failed");
 
         // AND: VectorDocumentEntity should be marked as "failed"

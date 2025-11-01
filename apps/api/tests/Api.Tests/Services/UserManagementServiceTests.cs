@@ -113,7 +113,7 @@ public class UserManagementServiceTests : IDisposable
         // Assert
         result.Total.Should().Be(1);
         result.Items.Should().ContainSingle();
-        result.Items[0].Email.Should().Contain("admin", StringComparison.OrdinalIgnoreCase);
+        result.Items[0].Email.Should().Contain("admin");
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public class UserManagementServiceTests : IDisposable
         // Assert
         result.Total.Should().Be(1);
         result.Items.Should().ContainSingle();
-        result.Items[0].DisplayName.Should().Contain("Administrator", StringComparison.OrdinalIgnoreCase);
+        result.Items[0].DisplayName.Should().Contain("Administrator");
     }
 
     [Fact]
@@ -267,9 +267,9 @@ public class UserManagementServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.Email.Should().Be(request.Email);
-        result.DisplayName.Should().Be(request.DisplayName);
-        result.Role.Should().Be("User");
+        result.Email.Should().BeEquivalentTo(request.Email);
+        result.DisplayName.Should().BeEquivalentTo(request.DisplayName);
+        result.Role.Should().BeEquivalentTo("User");
 
         // Verify user exists in database
         var dbUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
@@ -293,7 +293,7 @@ public class UserManagementServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.Role.Should().Be("Admin");
+        result.Role.Should().BeEquivalentTo("Admin");
 
         // Verify database
         var dbUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
@@ -315,7 +315,7 @@ public class UserManagementServiceTests : IDisposable
         );
 
         // Act & Assert
-        var exception = var act = async () => _service.CreateUserAsync(request);
+        var act = async () => _service.CreateUserAsync(request);
         await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("already exists");
     }
@@ -336,9 +336,9 @@ public class UserManagementServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.Email.Should().Be(request.Email);
-        result.DisplayName.Should().Be(request.DisplayName);
-        result.Role.Should().Be("Editor");
+        result.Email.Should().BeEquivalentTo(request.Email);
+        result.DisplayName.Should().BeEquivalentTo(request.DisplayName);
+        result.Role.Should().BeEquivalentTo("Editor");
 
         // Verify database
         var dbUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
@@ -365,9 +365,9 @@ public class UserManagementServiceTests : IDisposable
         var result = await _service.UpdateUserAsync(userId, request);
 
         // Assert
-        result.Email.Should().Be("updated@example.com");
-        result.DisplayName.Should().Be("Updated Name");
-        result.Role.Should().Be("Editor");
+        result.Email.Should().BeEquivalentTo("updated@example.com");
+        result.DisplayName.Should().BeEquivalentTo("Updated Name");
+        result.Role.Should().BeEquivalentTo("Editor");
 
         // Verify database was updated
         var dbUser = await _dbContext.Users.FindAsync(userId);
@@ -391,9 +391,9 @@ public class UserManagementServiceTests : IDisposable
         var result = await _service.UpdateUserAsync(userId, request);
 
         // Assert
-        result.Email.Should().Be("original@example.com"); // Unchanged
-        result.DisplayName.Should().Be("New Name Only"); // Updated
-        result.Role.Should().Be("User"); // Unchanged
+        result.Email.Should().BeEquivalentTo("original@example.com"); // Unchanged
+        result.DisplayName.Should().BeEquivalentTo("New Name Only"); // Updated
+        result.Role.Should().BeEquivalentTo("User"); // Unchanged
     }
 
     [Fact]
@@ -410,7 +410,7 @@ public class UserManagementServiceTests : IDisposable
         );
 
         // Act & Assert
-        var exception = var act = async () => _service.UpdateUserAsync(userId, request);
+        var act = async () => _service.UpdateUserAsync(userId, request);
         await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("already in use");
     }
@@ -446,7 +446,7 @@ public class UserManagementServiceTests : IDisposable
         var result = await _service.UpdateUserAsync(userId, request);
 
         // Assert
-        result.Role.Should().Be("User"); // Role unchanged
+        result.Role.Should().BeEquivalentTo("User"); // Role unchanged
     }
 
     #endregion
@@ -475,7 +475,7 @@ public class UserManagementServiceTests : IDisposable
         var userId = await SeedSingleUser("self@example.com", "Self", UserRole.Admin);
 
         // Act & Assert - trying to delete self
-        var exception = var act = async () => _service.DeleteUserAsync(userId, userId);
+        var act = async () => _service.DeleteUserAsync(userId, userId);
         await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("Cannot delete your own account");
     }
@@ -488,7 +488,7 @@ public class UserManagementServiceTests : IDisposable
         var requestingUserId = Guid.NewGuid().ToString();
 
         // Act & Assert
-        var exception = var act = async () => _service.DeleteUserAsync(adminId, requestingUserId);
+        var act = async () => _service.DeleteUserAsync(adminId, requestingUserId);
         await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("Cannot delete the last admin user");
     }

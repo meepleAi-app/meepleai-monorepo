@@ -43,10 +43,8 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
         content.Should().NotBeEmpty();
 
         // Verify it's Prometheus format (starts with # HELP or metric name)
-        
-            content.Contains("# HELP") || content.Contains("# TYPE"),
-            "Response should be in Prometheus metrics format"
-        .Should().BeTrue();
+        (content.Contains("# HELP") || content.Contains("# TYPE")).Should().BeTrue(
+            "Response should be in Prometheus metrics format");
     }
 
     [Fact]
@@ -128,10 +126,8 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
         // has actually recorded them through normal operation
 
         // At minimum, the meter should be registered even if no data yet
-        
-            content.Length > 0,
-            "Metrics endpoint should return data"
-        .Should().BeTrue();
+        (content.Length > 0).Should().BeTrue(
+            "Metrics endpoint should return data");
 
         // The following assertions will pass once the metrics are actually recorded:
         // - content.Should().Contain("meepleai_rag_requests_total");
@@ -162,10 +158,8 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
             // Metric lines should start with lowercase letters (Prometheus convention)
             if (line.Length > 0 && char.IsLetter(line[0]))
             {
-                
-                    char.IsUpper(line[0]),
-                    $"Metric name should start with lowercase letter: {line}"
-                .Should().BeFalse();
+                char.IsUpper(line[0]).Should().BeFalse(
+                    $"Metric name should start with lowercase letter: {line}");
             }
         }
     }

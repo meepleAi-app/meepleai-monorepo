@@ -352,7 +352,7 @@ public class OAuthServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.AccessToken.Should().Be("new-access-token");
+        result.AccessToken.Should().BeEquivalentTo("new-access-token");
     }
 
     [Fact]

@@ -77,7 +77,7 @@ public class EmbeddingServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("No texts provided");
+        result.ErrorMessage.Should().BeEquivalentTo("No texts provided");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -93,7 +93,7 @@ public class EmbeddingServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("No texts provided");
+        result.ErrorMessage.Should().BeEquivalentTo("No texts provided");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -171,7 +171,7 @@ public class EmbeddingServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("Request timed out");
+        result.ErrorMessage.Should().BeEquivalentTo("Request timed out");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -193,7 +193,7 @@ public class EmbeddingServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("No embeddings returned from OpenAI");
+        result.ErrorMessage.Should().BeEquivalentTo("No embeddings returned from OpenAI");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -452,7 +452,7 @@ public class EmbeddingServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("No embedding returned from Ollama");
+        result.ErrorMessage.Should().BeEquivalentTo("No embedding returned from Ollama");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -502,7 +502,7 @@ public class EmbeddingServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("No embedding returned from Ollama");
+        result.ErrorMessage.Should().BeEquivalentTo("No embedding returned from Ollama");
         result.Embeddings.Should().BeEmpty();
     }
 
@@ -523,8 +523,7 @@ public class EmbeddingServiceTests
 
         // Act & Assert
         var act = () => new EmbeddingService(httpClientFactoryMock.Object, configWithUnsupportedProvider.Object, _loggerMock.Object);
-        var exception = act.Should().Throw<InvalidOperationException>();
-
+        var exception = act.Should().Throw<InvalidOperationException>().Subject;
         exception.Which.Message.Should().Contain("Unsupported embedding provider: azure");
         exception.Which.Message.Should().Contain("Use 'ollama' or 'openai'");
     }
@@ -549,8 +548,7 @@ public class EmbeddingServiceTests
 
         // Act & Assert
         var act = () => new EmbeddingService(httpClientFactoryMock.Object, configWithoutApiKey.Object, _loggerMock.Object);
-        var exception = act.Should().Throw<InvalidOperationException>();
-
+        var exception = act.Should().Throw<InvalidOperationException>().Subject;
         exception.Which.Message.Should().Contain("OPENAI_API_KEY not configured");
     }
 
@@ -601,7 +599,7 @@ public class EmbeddingServiceTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.ErrorMessage.Should().Be("No embeddings returned from OpenAI");
+        result.ErrorMessage.Should().BeEquivalentTo("No embeddings returned from OpenAI");
         result.Embeddings.Should().BeEmpty();
     }
 

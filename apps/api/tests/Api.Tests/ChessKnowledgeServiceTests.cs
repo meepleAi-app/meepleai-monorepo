@@ -91,7 +91,7 @@ public class ChessKnowledgeServiceTests
         // Assert
         result.Success.Should().BeTrue();
         result.Results.Should().ContainSingle();
-        result.Results[0].Score >= 0.8f.Should().BeTrue();
+        (result.Results[0].Score >= 0.8f).Should().BeTrue();
 
         _embeddingServiceMock.Verify(e => e.GenerateEmbeddingAsync(query, It.IsAny<CancellationToken>()), Times.Once);
         _qdrantServiceMock.Verify(q => q.SearchByCategoryAsync("chess", embedding, 5, It.IsAny<CancellationToken>()), Times.Once);
@@ -179,8 +179,8 @@ public class ChessKnowledgeServiceTests
         var totalQueries = 10;
         var precision = (double)relevantResults / totalQueries;
 
-        precision > requiredPrecision,
-            $"Precision {precision} should be greater than {requiredPrecision}".Should().BeTrue();
+        precision.Should().BeGreaterThan(requiredPrecision,
+            $"Precision {precision} should be greater than {requiredPrecision}");
     }
 }
 

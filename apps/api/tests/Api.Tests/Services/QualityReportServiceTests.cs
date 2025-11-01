@@ -96,8 +96,7 @@ public class QualityReportServiceTests : IDisposable
         await helper.StopAsync();
 
         // Assert
-        reportGenerationCount >= 2,
-            $"Report should be generated at least twice after 400ms (actual: {reportGenerationCount})".Should().BeTrue();
+        (reportGenerationCount >= 2).Should().BeTrue($"Report should be generated at least twice after 400ms (actual: {reportGenerationCount})");
     }
 
     /// <summary>
@@ -221,13 +220,13 @@ public class QualityReportServiceTests : IDisposable
         report.TotalResponses.Should().Be(10);
         report.LowQualityCount.Should().Be(3);
         report.AverageRagConfidence.Should().NotBeNull();
-        report.AverageRagConfidence.Value.Should().BeInRange(0.70, 0.80);
+        report.AverageRagConfidence.Value.Should().BeApproximately(0.70, TimeSpan.FromSeconds(5));
         report.AverageLlmConfidence.Should().NotBeNull();
-        report.AverageLlmConfidence.Value.Should().BeInRange(0.65, 0.75);
+        report.AverageLlmConfidence.Value.Should().BeApproximately(0.65, TimeSpan.FromSeconds(5));
         report.AverageCitationQuality.Should().NotBeNull();
-        report.AverageCitationQuality.Value.Should().BeInRange(0.75, 0.85);
+        report.AverageCitationQuality.Value.Should().BeApproximately(0.75, TimeSpan.FromSeconds(5));
         report.AverageOverallConfidence.Should().NotBeNull();
-        report.AverageOverallConfidence.Value.Should().BeInRange(0.70, 0.80);
+        report.AverageOverallConfidence.Value.Should().BeApproximately(0.70, TimeSpan.FromSeconds(5));
     }
 
     /// <summary>
@@ -342,8 +341,7 @@ public class QualityReportServiceTests : IDisposable
         await helper.StopAsync();
 
         // Assert
-        scopeCreatedCount >= 2,
-            $"Expected at least 2 scopes created, got {scopeCreatedCount}".Should().BeTrue();
+        (scopeCreatedCount >= 2).Should().BeTrue($"Expected at least 2 scopes created, got {scopeCreatedCount}");
         scopeDisposedCount.Should().Be(scopeCreatedCount);
     }
 

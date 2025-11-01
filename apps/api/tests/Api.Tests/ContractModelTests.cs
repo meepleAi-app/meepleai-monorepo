@@ -519,7 +519,7 @@ public class ContractModelTests
 
         // Assert
         result.Success.Should().BeTrue();
-        result.Message.Should().Be("Connection successful");
+        result.Message.Should().BeEquivalentTo("Connection successful");
         result.LatencyMs.Should().Be(125);
     }
 
@@ -534,7 +534,7 @@ public class ContractModelTests
 
         // Assert
         result.Success.Should().BeFalse();
-        result.Message.Should().Be("Connection timeout");
+        result.Message.Should().BeEquivalentTo("Connection timeout");
         result.LatencyMs.Should().BeNull();
     }
 

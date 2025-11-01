@@ -344,7 +344,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
 
         // And: Error message mentions duplicate
         var errorContent = await response.Content.ReadAsStringAsync();
-        errorContent.Should().Contain("already exists", StringComparison.OrdinalIgnoreCase);
+        errorContent.Should().Contain("already exists");
     }
 
     /// <summary>
@@ -510,7 +510,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         // Then: Returns 400 Bad Request
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var errorContent = await response.Content.ReadAsStringAsync();
-        errorContent.Should().Contain("already in use", StringComparison.OrdinalIgnoreCase);
+        errorContent.Should().Contain("already in use");
     }
 
     /// <summary>
@@ -641,7 +641,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         // Then: Returns 400 Bad Request
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var errorContent = await response.Content.ReadAsStringAsync();
-        errorContent.Should().Contain("own account", StringComparison.OrdinalIgnoreCase);
+        errorContent.Should().Contain("own account");
     }
 
     /// <summary>

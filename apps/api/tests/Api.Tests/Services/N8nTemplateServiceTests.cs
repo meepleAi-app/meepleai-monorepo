@@ -185,8 +185,8 @@ public class N8nTemplateServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be("test-template");
-        result.Category.Should().Be("integration");
+        result.Id.Should().BeEquivalentTo("test-template");
+        result.Category.Should().BeEquivalentTo("integration");
         result.Workflow.Should().NotBeNull();
     }
 
@@ -235,7 +235,7 @@ public class N8nTemplateServiceTests : IDisposable
         };
 
         // Act & Assert
-        var ex = var act = async () => _service.ImportTemplateAsync("test", parameters, "user123");
+        var act = async () => _service.ImportTemplateAsync("test", parameters, "user123");
         await act.Should().ThrowAsync<InvalidOperationException>();
 
         ex.Message.Should().Contain("param1");
@@ -249,7 +249,7 @@ public class N8nTemplateServiceTests : IDisposable
         var parameters = new Dictionary<string, string>();
 
         // Act & Assert
-        var ex = var act = async () => _service.ImportTemplateAsync("test", parameters, "user123");
+        var act = async () => _service.ImportTemplateAsync("test", parameters, "user123");
         await act.Should().ThrowAsync<InvalidOperationException>();
 
         ex.Message.Should().Contain("No active n8n configuration");
@@ -290,7 +290,7 @@ public class N8nTemplateServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.WorkflowId.Should().Be("workflow-123");
+        result.WorkflowId.Should().BeEquivalentTo("workflow-123");
         result.Message.ToLower().Should().Contain("imported successfully");
 
         // Verify HTTP request was made

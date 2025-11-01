@@ -136,7 +136,8 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         if (analysis.ValueKind != JsonValueKind.Null)
         {
             analysis.TryGetProperty("fenPosition", out var fen).Should().BeTrue();
-            fen.GetString() ?? "".Should().Contain("e3"); // FEN should mention en passant square
+            var fenString = fen.GetString() ?? "";
+            fenString.Should().Contain("e3"); // FEN should mention en passant square
         }
     }
 
@@ -197,7 +198,8 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         result.TryGetProperty("error", out var error).Should().BeTrue();
-        error.GetString() ?? "".Should().Contain("question");
+        var errorString = error.GetString() ?? "";
+        errorString.Should().Contain("question");
     }
 
     /// <summary>

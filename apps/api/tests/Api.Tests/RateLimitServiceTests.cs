@@ -95,8 +95,8 @@ public class RateLimitServiceTests
         var result = service.GetConfigForRole(role);
 
         // Assert
-        result.MaxTokens.Should().Be(expectedTokens);
-        result.RefillRate.Should().Be(expectedRate);
+        result.MaxTokens.Should().BeEquivalentTo(expectedTokens);
+        result.RefillRate.Should().BeEquivalentTo(expectedRate);
     }
 
     private static Mock<IConnectionMultiplexer> CreateMockRedis(bool allowRequest, int tokensRemaining, int retryAfter)
@@ -249,8 +249,8 @@ public class RateLimitServiceTests
         var result = service.GetConfigForRole(role);
 
         // Assert - Configuration should be case-insensitive
-        result.MaxTokens.Should().Be(expectedTokens);
-        result.RefillRate.Should().Be(expectedRate);
+        result.MaxTokens.Should().BeEquivalentTo(expectedTokens);
+        result.RefillRate.Should().BeEquivalentTo(expectedRate);
     }
 
     /// <summary>
@@ -374,7 +374,7 @@ public class RateLimitServiceTests
 
         // Assert - Empty string should be treated as anonymous
         result.MaxTokens.Should().Be(60);
-        result.RefillRate.Should().Be(1.0);
+        result.RefillRate.Should().BeEquivalentTo(1.0);
     }
 
     #endregion

@@ -113,9 +113,9 @@ public class AlertingServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.AlertType.Should().Be(alertType);
-        result.Severity.Should().Be(severity);
-        result.Message.Should().Be(message);
+        result.AlertType.Should().BeEquivalentTo(alertType);
+        result.Severity.Should().BeEquivalentTo(severity);
+        result.Message.Should().BeEquivalentTo(message);
         result.IsActive.Should().BeTrue();
         result.ResolvedAt.Should().BeNull();
 
@@ -198,8 +198,8 @@ public class AlertingServiceTests : IDisposable
         var secondResult = await _service.SendAlertAsync(alertType, severity, "Second alert");
 
         // Assert - Returns the same alert (by ID)
-        secondResult.Id.Should().Be(firstAlert.Id);
-        secondResult.Message.Should().Be(firstAlert.Message);
+        secondResult.Id.Should().BeEquivalentTo(firstAlert.Id);
+        secondResult.Message.Should().BeEquivalentTo(firstAlert.Message);
 
         // Verify channels were called only once (for first alert)
         _emailChannelMock.Verify(c => c.SendAsync(

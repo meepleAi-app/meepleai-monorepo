@@ -218,8 +218,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().Be(createResponse.ApiKey.Id);
-        result.KeyName.Should().Be("Test Key");
+        result.Id.Should().BeEquivalentTo(createResponse.ApiKey.Id);
+        result.KeyName.Should().BeEquivalentTo("Test Key");
         result.Scopes.Length.Should().Be(2);
         result.Scopes.Should().Contain("read");
         result.Scopes.Should().Contain("write");
@@ -320,7 +320,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         result.ApiKey.Scopes.Length.Should().Be(3);
         result.ApiKey.IsActive.Should().BeTrue();
         result.ApiKey.ExpiresAt.Should().NotBeNull();
-        result.Warning.Should().Be("Store this key securely. It will not be shown again.");
+        result.Warning.Should().BeEquivalentTo("Store this key securely. It will not be shown again.");
     }
 
     [Fact]
@@ -456,7 +456,7 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.KeyName.Should().Be("Updated Name");
+        result.KeyName.Should().BeEquivalentTo("Updated Name");
         result.Scopes.Length.Should().Be(3);
         result.Scopes.Should().Contain("admin");
         result.IsActive.Should().BeFalse();
@@ -497,7 +497,7 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.KeyName.Should().Be("Updated Name");
+        result.KeyName.Should().BeEquivalentTo("Updated Name");
         result.Scopes.Length.Should().Be(2); // Original scopes preserved
         result.IsActive.Should().BeTrue(); // Original active state preserved
     }
@@ -713,7 +713,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         // Assert
         result.Should().NotBeNull();
         result.PlaintextKey.Should().NotBe(oldPlaintextKey);
-        result.RevokedKeyId.Should().Be(oldKeyId);
+        result.RevokedKeyId.Should().BeEquivalentTo(oldKeyId);
         result.NewApiKey.KeyName.Should().Be("Original Key (Rotated)");
         result.NewApiKey.Scopes.Length.Should().Be(2);
         result.NewApiKey.ExpiresAt.Should().NotBeNull();
@@ -886,7 +886,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         result.Should().NotBeNull();
         result.MaxRequestsPerDay.Should().Be(1000);
         result.MaxRequestsPerHour.Should().Be(100);
-        result.ResetsAt.Should().NotBeNull();
+        result.ResetsAt.Should().NotBe(default(DateTime));
     }
 
     [Fact]

@@ -301,8 +301,8 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
             if (result.Success)
             {
                 result.RetrievedCount.Should().Be(0);
-                result.PrecisionAt5.Should().Be(0.0);
-                result.ReciprocalRank.Should().Be(0.0);
+                result.PrecisionAt5.Should().BeEquivalentTo(0.0);
+                result.ReciprocalRank.Should().BeEquivalentTo(0.0);
             }
         }
     }

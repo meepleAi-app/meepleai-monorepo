@@ -179,8 +179,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         var hasCitations = events.Any(e => e.Type == StreamingEventType.Citations);
         var hasError = events.Any(e => e.Type == StreamingEventType.Error);
 
-        hasCitations || hasError,
-            "Should receive either Citations event (if vector data exists) or Error event (if no vector data)".Should().BeTrue();
+        (hasCitations || hasError).Should().BeTrue("Should receive either Citations event (if vector data exists) or Error event (if no vector data)");
 
         // And: If citations exist, they contain required fields
         if (hasCitations)

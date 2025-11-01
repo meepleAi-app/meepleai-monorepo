@@ -70,11 +70,11 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeTrue();
-        result.ApiKeyId.Should().Be(apiKeyEntity.Id);
-        result.UserId.Should().Be(user.Id);
-        result.UserEmail.Should().Be(user.Email);
-        result.UserDisplayName.Should().Be(user.DisplayName);
-        result.UserRole.Should().Be("User");
+        result.ApiKeyId.Should().BeEquivalentTo(apiKeyEntity.Id);
+        result.UserId.Should().BeEquivalentTo(user.Id);
+        result.UserEmail.Should().BeEquivalentTo(user.Email);
+        result.UserDisplayName.Should().BeEquivalentTo(user.DisplayName);
+        result.UserRole.Should().BeEquivalentTo("User");
         result.Scopes.Length.Should().Be(2);
         result.Scopes.Should().Contain("read");
         result.Scopes.Should().Contain("write");
@@ -99,7 +99,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.InvalidReason.Should().Be("API key is required");
+        result.InvalidReason.Should().BeEquivalentTo("API key is required");
         result.ApiKeyId.Should().BeNull();
         result.UserId.Should().BeNull();
     }
@@ -122,7 +122,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.InvalidReason.Should().Be("API key is required");
+        result.InvalidReason.Should().BeEquivalentTo("API key is required");
     }
 
     [Fact]
@@ -143,7 +143,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.InvalidReason.Should().Be("Invalid, expired, or revoked API key");
+        result.InvalidReason.Should().BeEquivalentTo("Invalid, expired, or revoked API key");
         result.ApiKeyId.Should().BeNull();
         result.UserId.Should().BeNull();
     }
@@ -185,7 +185,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.InvalidReason.Should().Be("Invalid, expired, or revoked API key");
+        result.InvalidReason.Should().BeEquivalentTo("Invalid, expired, or revoked API key");
     }
 
     [Fact]
@@ -229,7 +229,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.InvalidReason.Should().Be("Invalid, expired, or revoked API key");
+        result.InvalidReason.Should().BeEquivalentTo("Invalid, expired, or revoked API key");
     }
 
     [Fact]
@@ -270,7 +270,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.InvalidReason.Should().Be("Invalid, expired, or revoked API key");
+        result.InvalidReason.Should().BeEquivalentTo("Invalid, expired, or revoked API key");
     }
 
     [Fact]
@@ -314,7 +314,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeTrue();
-        result.UserId.Should().Be(user.Id);
+        result.UserId.Should().BeEquivalentTo(user.Id);
     }
 
     #endregion
@@ -432,7 +432,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await service.GenerateApiKeyAsync("", "Test Key", new[] { "read" });
-        var exception = await act.Should().ThrowAsync<ArgumentException>();
+        var exception = await act.Should().ThrowAsync<ArgumentException>().Subject;
         exception.Which.Message.Should().Be("User ID is required (Parameter 'userId')");
     }
 
@@ -451,7 +451,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await service.GenerateApiKeyAsync("user-id", "", new[] { "read" });
-        var exception = await act.Should().ThrowAsync<ArgumentException>();
+        var exception = await act.Should().ThrowAsync<ArgumentException>().Subject;
         exception.Which.Message.Should().Be("Key name is required (Parameter 'keyName')");
     }
 
@@ -470,7 +470,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await service.GenerateApiKeyAsync("user-id", "Test Key", new[] { "read" }, environment: "production");
-        var exception = await act.Should().ThrowAsync<ArgumentException>();
+        var exception = await act.Should().ThrowAsync<ArgumentException>().Subject;
         exception.Which.Message.Should().Be("Environment must be 'live' or 'test' (Parameter 'environment')");
     }
 
@@ -489,7 +489,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await service.GenerateApiKeyAsync("non-existent-user-id", "Test Key", new[] { "read" });
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
         exception.Which.Message.Should().StartWith("User not found:");
     }
 

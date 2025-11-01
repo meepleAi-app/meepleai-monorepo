@@ -189,10 +189,8 @@ public class PdfTableExtractionRealWorldTests
 
         // PDF-03 Acceptance Criteria: Must extract tabular data
         // Lorenzo il Magnifico is a complex board game, should have structured content
-        
-            result.TableCount > 0 || result.DiagramCount > 0,
-            "Should extract at least tables or diagrams from Lorenzo rulebook"
-        .Should().BeTrue();
+        (result.TableCount > 0 || result.DiagramCount > 0)
+            .Should().BeTrue("Should extract at least tables or diagrams from Lorenzo rulebook");
     }
 
     [Fact]
@@ -243,10 +241,8 @@ public class PdfTableExtractionRealWorldTests
             (harmoniesResult.TableCount > 0 || harmoniesResult.DiagramCount > 0) &&
             (lorenzoResult.TableCount > 0 || lorenzoResult.DiagramCount > 0);
 
-        
-            hasStructuredContent,
-            "Both games should have at least some structured content (tables or diagrams)"
-        .Should().BeTrue();
+        hasStructuredContent
+            .Should().BeTrue("Both games should have at least some structured content (tables or diagrams)");
 
         _output.WriteLine($"\n  ✓ ACCEPTANCE CRITERIA MET");
         _output.WriteLine($"    Successfully extracted structured content from 2 different game rulebooks");

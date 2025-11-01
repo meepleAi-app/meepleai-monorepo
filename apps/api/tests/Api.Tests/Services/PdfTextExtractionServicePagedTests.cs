@@ -136,7 +136,7 @@ public class PdfTextExtractionServicePagedTests
         // Assert
         result.Success.Should().BeFalse();
         result.Error.Should().NotBeNull();
-        result.Error, StringComparison.OrdinalIgnoreCase.Should().Contain("PDF extraction failed");
+        result.Error.Should().Contain("PDF extraction failed", StringComparison.OrdinalIgnoreCase);
         result.PageChunks.Should().BeEmpty();
         result.TotalPageCount.Should().Be(0);
     }
@@ -237,7 +237,7 @@ public class PdfTextExtractionServicePagedTests
         // Assert
         result.Success.Should().BeFalse();
         result.Error.Should().NotBeNull();
-        result.Error, StringComparison.OrdinalIgnoreCase.Should().Contain("file path");
+        result.Error.Should().Contain("file path", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -259,7 +259,7 @@ public class PdfTextExtractionServicePagedTests
         // Assert
         result.Success.Should().BeFalse();
         result.Error.Should().NotBeNull();
-        result.Error, StringComparison.OrdinalIgnoreCase.Should().Contain("not found");
+        result.Error.Should().Contain("not found", StringComparison.OrdinalIgnoreCase);
     }
 
     // Helper methods to create test PDFs

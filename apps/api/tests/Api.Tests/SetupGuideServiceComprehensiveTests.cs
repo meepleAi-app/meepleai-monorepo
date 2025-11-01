@@ -358,7 +358,7 @@ Include expansion components if playing with expansions.";
         result.gameTitle.Should().Be("Embedding Fail Game");
         result.steps.Should().NotBeEmpty();
         result.steps.Count.Should().Be(5); // Default steps
-        result.estimatedSetupTimeMinutes >= 5.Should().BeTrue(); // Minimum 5 minutes
+        (result.estimatedSetupTimeMinutes >= 5).Should().BeTrue(); // Minimum 5 minutes
     }
 
     [Fact]
@@ -455,7 +455,7 @@ Do this quickly.";
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
-        result.estimatedSetupTimeMinutes >= 5.Should().BeTrue(); // Minimum 5 minutes
+        (result.estimatedSetupTimeMinutes >= 5).Should().BeTrue(); // Minimum 5 minutes
     }
 
     [Fact]
@@ -532,7 +532,7 @@ Do this quickly.";
 
         // Assert
         result.confidence.Should().NotBeNull();
-        result.confidence >= 0.98.Should().BeTrue();
+        (result.confidence >= 0.98).Should().BeTrue();
     }
 
     [Fact]

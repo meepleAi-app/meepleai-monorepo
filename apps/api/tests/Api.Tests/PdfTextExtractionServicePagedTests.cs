@@ -212,7 +212,7 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         // Assert: Failure with structured error
         result.Success.Should().BeFalse();
         result.Error.Should().NotBeNull();
-        result.Error, StringComparison.OrdinalIgnoreCase.Should().Contain("failed");
+        result.Error.Should().Contain("failed", StringComparison.OrdinalIgnoreCase);
         result.TotalPageCount.Should().Be(0);
         result.PageChunks == null || result.PageChunks.Count == 0.Should().BeTrue();
     }
@@ -301,7 +301,7 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         // Assert
         result.Success.Should().BeFalse();
         result.Error.Should().NotBeNull();
-        result.Error, StringComparison.OrdinalIgnoreCase.Should().Contain("required");
+        result.Error.Should().Contain("required", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -340,7 +340,7 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         // Assert
         result.Success.Should().BeFalse();
         result.Error.Should().NotBeNull();
-        result.Error, StringComparison.OrdinalIgnoreCase.Should().Contain("not found");
+        result.Error.Should().Contain("not found", StringComparison.OrdinalIgnoreCase);
     }
 
     // ===== Result Structure Tests =====

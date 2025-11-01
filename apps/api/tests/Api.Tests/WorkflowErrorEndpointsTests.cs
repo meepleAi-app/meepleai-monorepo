@@ -154,7 +154,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         var secondError = items[1];
         var firstCreated = DateTime.Parse(firstError.GetProperty("createdAt").GetString()!);
         var secondCreated = DateTime.Parse(secondError.GetProperty("createdAt").GetString()!);
-        firstCreated >= secondCreated.Should().BeTrue();
+        (firstCreated >= secondCreated).Should().BeTrue();
     }
 
     /// <summary>
@@ -267,7 +267,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         var totalCount = document.RootElement.GetProperty("totalCount").GetInt32();
 
         // Should have at least the recent error, but not the old one
-        totalCount >= 1.Should().BeTrue();
+        (totalCount >= 1).Should().BeTrue();
     }
 
     /// <summary>

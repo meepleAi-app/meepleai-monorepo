@@ -552,7 +552,7 @@ public class RuleSpecServiceTests : IDisposable
         var result = await _service.GenerateRuleSpecFromPdfAsync(pdf.Id);
 
         result.gameId.Should().Be(game.Id);
-        result.rules.Count >= 2.Should().BeTrue();
+        (result.rules.Count >= 2).Should().BeTrue();
         result.rules.Should().Contain(atom => atom.text.Contains("Rule one", StringComparison.OrdinalIgnoreCase));
         result.rules.Should().Contain(atom => atom.text.Contains("Rule two", StringComparison.OrdinalIgnoreCase));
         result.rules.Should().OnlyContain(atom => atom.section == null);
@@ -603,7 +603,7 @@ public class RuleSpecServiceTests : IDisposable
 
         // Assert
         zipBytes.Should().NotBeNull();
-        zipBytes.Length > 0.Should().BeTrue();
+        (zipBytes.Length > 0).Should().BeTrue();
 
         // Verify ZIP structure
         using var memoryStream = new MemoryStream(zipBytes);

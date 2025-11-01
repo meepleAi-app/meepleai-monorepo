@@ -97,8 +97,8 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text);
 
         // Assert: Multiple chunks created
-        chunks.Count > 1.Should().BeTrue();
-        chunks.Count >= 3.Should().BeTrue(); // ~1500 / 512 = ~3 chunks
+        (chunks.Count > 1).Should().BeTrue();
+        (chunks.Count >= 3).Should().BeTrue(); // ~1500 / 512 = ~3 chunks
     }
 
     /// <summary>
@@ -118,7 +118,7 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text, chunkSize: customChunkSize);
 
         // Assert: More chunks due to smaller size
-        chunks.Count >= 10.Should().BeTrue(); // ~1000 / 100 = ~10 chunks
+        (chunks.Count >= 10).Should().BeTrue(); // ~1000 / 100 = ~10 chunks
 
         // Verify chunk sizes are approximately correct (accounting for overlap reduction)
         foreach (var chunk in chunks.Take(chunks.Count - 1)) // Except last chunk
@@ -145,7 +145,7 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text, chunkSize: chunkSize, overlap: overlap);
 
         // Assert: Overlapping chunks
-        chunks.Count >= 2.Should().BeTrue();
+        (chunks.Count >= 2).Should().BeTrue();
 
         // Verify overlap exists between consecutive chunks
         if (chunks.Count >= 2)
@@ -154,7 +154,7 @@ public class TextChunkingServiceTests
             var secondChunk = chunks[1];
 
             // Second chunk should start before first chunk ends (due to overlap)
-            secondChunk.CharStart < firstChunk.CharEnd.Should().BeTrue();
+            (secondChunk.CharStart < firstChunk.CharEnd).Should().BeTrue();
 
             // The overlap should be approximately the specified overlap
             var actualOverlap = firstChunk.CharEnd - secondChunk.CharStart;
@@ -210,7 +210,7 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text, chunkSize: 100);
 
         // Assert: Verify chunks break at reasonable boundaries
-        chunks.Count > 1.Should().BeTrue();
+        (chunks.Count > 1).Should().BeTrue();
 
         // First chunk should likely end at a sentence boundary
         var firstChunk = chunks[0];
@@ -236,7 +236,7 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text, chunkSize: 120);
 
         // Assert: Should have multiple chunks
-        chunks.Count >= 2.Should().BeTrue();
+        (chunks.Count >= 2).Should().BeTrue();
 
         // Verify chunks end at sentence boundaries where possible
         var chunksEndingWithPunctuation = chunks.Count(c =>
@@ -245,7 +245,7 @@ public class TextChunkingServiceTests
             c.Text.TrimEnd().EndsWith("?")
         );
 
-        chunksEndingWithPunctuation > 0, "At least some chunks should end with sentence terminators".Should().BeTrue();
+        (chunksEndingWithPunctuation > 0).Should().BeTrue("At least some chunks should end with sentence terminators");
     }
 
     #endregion
@@ -268,7 +268,7 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text, chunkSize: 100);
 
         // Assert: Multiple chunks
-        chunks.Count > 1.Should().BeTrue();
+        (chunks.Count > 1).Should().BeTrue();
 
         // Verify chunks don't split words (except last chunk)
         foreach (var chunk in chunks.Take(chunks.Count - 1))
@@ -304,7 +304,7 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text, chunkSize: 100);
 
         // Assert: Verify positions
-        chunks.Count > 1.Should().BeTrue();
+        (chunks.Count > 1).Should().BeTrue();
 
         // First chunk should start at 0
         chunks[0].CharStart.Should().Be(0);
@@ -318,7 +318,7 @@ public class TextChunkingServiceTests
 
         // Last chunk should end at text length
         var lastChunk = chunks[chunks.Count - 1];
-        lastChunk.CharEnd <= text.Length.Should().BeTrue();
+        (lastChunk.CharEnd <= text.Length).Should().BeTrue();
     }
 
     /// <summary>
@@ -365,7 +365,7 @@ public class TextChunkingServiceTests
         // Assert: Page numbers should increase
         var pageNumbers = chunks.Select(c => c.Page).Distinct().ToList();
 
-        pageNumbers.Count >= 2, "Should span multiple pages".Should().BeTrue();
+        (pageNumbers.Count >= 2).Should().BeTrue("Should span multiple pages");
         pageNumbers.Max().Should().BeGreaterOrEqualTo(2, "Should reach at least page 2");
 
         // Verify pages are in ascending order
@@ -431,9 +431,9 @@ public class TextChunkingServiceTests
         {
             input.Text.Should().NotBeNull();
             input.Text.Should().NotBeEmpty();
-            input.Page >= 1.Should().BeTrue();
-            input.CharStart >= 0.Should().BeTrue();
-            input.CharEnd > input.CharStart.Should().BeTrue();
+            (input.Page >= 1).Should().BeTrue();
+            (input.CharStart >= 0).Should().BeTrue();
+            (input.CharEnd > input.CharStart).Should().BeTrue();
         }
     }
 
@@ -455,7 +455,7 @@ public class TextChunkingServiceTests
         var inputs = _service.PrepareForEmbedding(text, customChunkSize, customOverlap);
 
         // Assert: More chunks due to smaller size
-        inputs.Count >= 10.Should().BeTrue();
+        (inputs.Count >= 10).Should().BeTrue();
 
         // Verify chunk sizes
         foreach (var input in inputs.Take(inputs.Count - 1))
@@ -585,7 +585,7 @@ public class TextChunkingServiceTests
         chunks.Should().NotBeEmpty();
 
         // Service should still produce some reasonable output
-        chunks.Count > 0.Should().BeTrue();
+        (chunks.Count > 0).Should().BeTrue();
     }
 
     /// <summary>
@@ -605,7 +605,7 @@ public class TextChunkingServiceTests
         var chunks = _service.ChunkText(text, chunkSize, overlap: 0);
 
         // Assert: Many chunks
-        chunks.Count >= 5.Should().BeTrue(); // Should create multiple chunks
+        (chunks.Count >= 5).Should().BeTrue(); // Should create multiple chunks
     }
 
     /// <summary>

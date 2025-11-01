@@ -333,7 +333,7 @@ public class ChessAgentServiceTests
         m => m.Contains("e4") && m.Contains("Controls the center").Should().Contain(result.suggestedMoves);
         m => m.Contains("Nf3") && m.Contains("Develops a piece").Should().Contain(result.suggestedMoves);
         m => m.Contains("d4") && m.Contains("central pawn").Should().Contain(result.suggestedMoves);
-        result.suggestedMoves.Count >= 3.Should().BeTrue();
+        (result.suggestedMoves.Count >= 3).Should().BeTrue();
     }
 
     [Fact]
@@ -359,7 +359,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
         result.analysis.Should().NotBeNull();
         result.analysis!.fenPosition.Should().Be(fenPosition);
         result.analysis.evaluationSummary.Should().NotBeNull();
-        result.analysis.evaluationSummary, StringComparison.OrdinalIgnoreCase.Should().Contain("advantage");
+        result.analysis.evaluationSummary.Should().Contain("advantage", StringComparison.OrdinalIgnoreCase);
         result.analysis.keyConsiderations.Should().NotBeEmpty();
         c => c.Contains("king safety").Should().Contain(result.analysis.keyConsiderations);
         c => c.Contains("development").Should().Contain(result.analysis.keyConsiderations);
@@ -442,7 +442,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
 
         // Assert
         result.confidence.Should().NotBeNull();
-        result.confidence.Value, precision: 2.Should().Be(0.92);
+        result.confidence.Value.Should().BeApproximately(0.92, 2);
     }
 
     #endregion

@@ -48,8 +48,8 @@ public class RateLimitingTests : IntegrationTestBase
         remaining.Should().NotBeNull();
         int.TryParse(limit, out var limitValue).Should().BeTrue();
         int.TryParse(remaining, out var remainingValue).Should().BeTrue();
-        limitValue > 0.Should().BeTrue();
-        remainingValue >= 0.Should().BeTrue();
+        (limitValue > 0).Should().BeTrue();
+        (remainingValue >= 0).Should().BeTrue();
     }
 
     [Fact]
@@ -169,8 +169,7 @@ public class RateLimitingTests : IntegrationTestBase
 
         // If rate limiting is enforced, we should see 429 responses
         // If disabled in tests, all will be 200
-        rateLimitedResponses > 0 || successResponses == responses.Count,
-            $"Expected either rate limiting (429) or all success (200). Got {rateLimitedResponses} rate limited, {successResponses} success".Should().BeTrue();
+        (rateLimitedResponses > 0 || successResponses == responses.Count).Should().BeTrue($"Expected either rate limiting (429) or all success (200). Got {rateLimitedResponses} rate limited, {successResponses} success");
     }
 
     [Fact]
@@ -205,7 +204,7 @@ public class RateLimitingTests : IntegrationTestBase
             var retryAfter = rateLimitedResponse.Headers.GetValues("Retry-After").FirstOrDefault();
             retryAfter.Should().NotBeNull();
             int.TryParse(retryAfter, out var seconds).Should().BeTrue();
-            seconds > 0.Should().BeTrue();
+            (seconds > 0).Should().BeTrue();
         }
         // NOTE: If not rate limited, rate limiting is disabled/high in test environment
     }
@@ -267,8 +266,7 @@ public class RateLimitingTests : IntegrationTestBase
         var secondRemaining = int.Parse(secondResponse.Headers.GetValues("X-RateLimit-Remaining").First());
 
         // NOTE: Remaining should decrease or stay same (if rate limiting disabled)
-        secondRemaining <= firstRemaining,
-            $"Expected remaining to decrease or stay same. First: {firstRemaining}, Second: {secondRemaining}".Should().BeTrue();
+        (secondRemaining <= firstRemaining).Should().BeTrue($"Expected remaining to decrease or stay same. First: {firstRemaining}, Second: {secondRemaining}");
     }
 
     [Fact]
@@ -299,8 +297,8 @@ public class RateLimitingTests : IntegrationTestBase
         var remaining2 = int.Parse(response2.Headers.GetValues("X-RateLimit-Remaining").First());
 
         // Both should have nearly full buckets (99 out of 100 for User role)
-        remaining1 > 90, $"User1 remaining: {remaining1}".Should().BeTrue();
-        remaining2 > 90, $"User2 remaining: {remaining2}".Should().BeTrue();
+        (remaining1 > 90).Should().BeTrue($"User1 remaining: {remaining1}");
+        (remaining2 > 90).Should().BeTrue($"User2 remaining: {remaining2}");
     }
 
     #endregion

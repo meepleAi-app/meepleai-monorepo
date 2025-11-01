@@ -195,7 +195,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
             {
                 string.IsNullOrWhiteSpace(citation.text).Should().BeFalse();
                 string.IsNullOrWhiteSpace(citation.source).Should().BeFalse();
-                citation.page >= 0.Should().BeTrue();
+                (citation.page >= 0).Should().BeTrue();
             });
         }
     }
@@ -328,7 +328,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         log.UserId.Should().Be(user.Id);
         log.GameId.Should().Be(game.Id);
         log.Endpoint.Should().Be("qa-stream");
-        log.LatencyMs > 0.Should().BeTrue();
+        (log.LatencyMs > 0).Should().BeTrue();
         log.Query ?? "".Should().Contain("test query");
     }
 
@@ -373,8 +373,8 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
 
             complete.Should().NotBeNull();
             // Token counts should be >= 0
-            complete!.completionTokens >= 0.Should().BeTrue();
-            complete.totalTokens >= 0.Should().BeTrue();
+            (complete!.completionTokens >= 0).Should().BeTrue();
+            (complete.totalTokens >= 0).Should().BeTrue();
         }
     }
 

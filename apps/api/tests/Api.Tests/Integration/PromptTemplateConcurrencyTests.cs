@@ -130,7 +130,7 @@ public class PromptTemplateConcurrencyTests : ConfigIntegrationTestBase
 
         // Assert: At least one succeeds
         var successCount = results.Count(r => r.StatusCode == HttpStatusCode.OK);
-        successCount >= 1, "At least one activation should succeed".Should().BeTrue();
+        (successCount >= 1).Should().BeTrue("At least one activation should succeed");
 
         // Verify exactly one version is active
         using var scope2 = Factory.Services.CreateScope();

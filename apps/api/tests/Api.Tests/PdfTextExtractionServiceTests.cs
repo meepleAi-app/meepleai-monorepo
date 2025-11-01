@@ -173,8 +173,8 @@ public class PdfTextExtractionServiceTests : IDisposable
         result.Success.Should().BeTrue();
         result.ErrorMessage.Should().BeNull();
         result.ExtractedText.Should().Contain("test PDF document");
-        result.PageCount > 0.Should().BeTrue();
-        result.CharacterCount > 0.Should().BeTrue();
+        (result.PageCount > 0).Should().BeTrue();
+        (result.CharacterCount > 0).Should().BeTrue();
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public class PdfTextExtractionServiceTests : IDisposable
         result.ExtractedText.Should().Contain("Page one");
         result.ExtractedText.Should().Contain("Page two");
         result.ExtractedText.Should().Contain("Page three");
-        result.PageCount >= 1.Should().BeTrue(); // At least one page detected
+        (result.PageCount >= 1).Should().BeTrue(); // At least one page detected
     }
 
     [Fact]
@@ -296,7 +296,7 @@ public class PdfTextExtractionServiceTests : IDisposable
 
         // Assert
         result.Success.Should().BeTrue();
-        result.CharacterCount > 0.Should().BeTrue();
+        (result.CharacterCount > 0).Should().BeTrue();
         result.CharacterCount.Should().Be(result.ExtractedText.Length);
     }
 

@@ -196,7 +196,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
             entity.WebhookUrl.Should().Be("https://n8n.updated/webhook");
             entity.IsActive.Should().BeFalse();
             entity.ApiKeyEncrypted.Should().NotBe(originalEncryptedKey);
-            entity.UpdatedAt > entity.CreatedAt.Should().BeTrue();
+            (entity.UpdatedAt > entity.CreatedAt).Should().BeTrue();
         }
     }
 
@@ -264,7 +264,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         var result = await response.Content.ReadFromJsonAsync<N8nTestResult>(JsonOptions);
         result.Should().NotBeNull();
         result!.Success.Should().BeTrue();
-        result.Message, StringComparison.Ordinal.Should().StartWith("Connection successful");
+        result.Message.Should().StartWith("Connection successful", StringComparison.Ordinal);
         result.LatencyMs.HasValue.Should().BeTrue();
 
         // And: Test metadata is persisted
@@ -274,7 +274,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
             var entity = await db.N8nConfigs.SingleAsync(c => c.Id == config.Id);
             entity.LastTestedAt.Should().NotBeNull();
             string.IsNullOrWhiteSpace(entity.LastTestResult).Should().BeFalse();
-            entity.LastTestResult, StringComparison.Ordinal.Should().StartWith("Connection successful");
+            entity.LastTestResult.Should().StartWith("Connection successful", StringComparison.Ordinal);
         }
     }
 

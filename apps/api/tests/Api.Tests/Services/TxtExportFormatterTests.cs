@@ -268,7 +268,7 @@ public class TxtExportFormatterTests
 
         // And: Messages are separated (at least 4 separators for 5 messages)
         var separatorCount = content.Split("---").Length - 1;
-        separatorCount >= 4, $"Expected at least 4 separators, found {separatorCount}".Should().BeTrue();
+        (separatorCount >= 4).Should().BeTrue($"Expected at least 4 separators, found {separatorCount}");
     }
 
     /// <summary>

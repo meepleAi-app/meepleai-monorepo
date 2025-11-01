@@ -337,7 +337,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         // Assert
         result.Passed.Should().BeFalse();
         result.Summary.Should().Contain("below threshold");
-        result.Metrics.Accuracy < 80.0.Should().BeTrue();
+        (result.Metrics.Accuracy < 80.0).Should().BeTrue();
     }
 
     [Fact]
@@ -381,9 +381,9 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         // Assert
         result.Passed.Should().BeTrue();
         result.Summary.Should().Contain("PASSED");
-        result.Metrics.Accuracy >= 80.0.Should().BeTrue();
-        result.Metrics.HallucinationRate <= 10.0.Should().BeTrue();
-        result.Metrics.AvgConfidence >= 0.70.Should().BeTrue();
+        (result.Metrics.Accuracy >= 80.0).Should().BeTrue();
+        (result.Metrics.HallucinationRate <= 10.0).Should().BeTrue();
+        (result.Metrics.AvgConfidence >= 0.70).Should().BeTrue();
     }
 
     [Fact]
@@ -504,8 +504,8 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
 
         // Assert
         comparison.Recommendation.Should().Be(ComparisonRecommendation.Activate);
-        comparison.Deltas.AvgConfidenceDelta >= 0.10.Should().BeTrue(); // Confidence improved by 0.16
-        comparison.RecommendationReason, StringComparison.OrdinalIgnoreCase.Should().Contain("improvement");
+        (comparison.Deltas.AvgConfidenceDelta >= 0.10).Should().BeTrue(); // Confidence improved by 0.16
+        comparison.RecommendationReason.Should().Contain("improvement", StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -573,9 +573,9 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
 
         // Assert
         comparison.Recommendation.Should().Be(ComparisonRecommendation.Reject);
-        comparison.Deltas.AccuracyDelta < 0.Should().BeTrue(); // 50% - 100% = -50%
+        (comparison.Deltas.AccuracyDelta < 0).Should().BeTrue(); // 50% - 100% = -50%
         // With only 2 test cases, candidate fails 80% threshold (50% < 80%), so rejection is due to threshold failure
-        comparison.RecommendationReason, StringComparison.OrdinalIgnoreCase.Should().Contain("failed quality threshold");
+        comparison.RecommendationReason.Should().Contain("failed quality threshold", StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -642,7 +642,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
 
         // Assert
         comparison.Recommendation.Should().Be(ComparisonRecommendation.ManualReview);
-        comparison.RecommendationReason, StringComparison.OrdinalIgnoreCase.Should().Contain("manual review");
+        comparison.RecommendationReason.Should().Contain("manual review", StringComparison.OrdinalIgnoreCase);
     }
 
     #endregion

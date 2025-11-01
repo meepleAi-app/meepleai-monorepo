@@ -158,7 +158,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         var json = await response.Content.ReadAsStringAsync();
         using var document = JsonDocument.Parse(json);
 
-        document.RootElement.TryGetProperty("ok", out var okElement) && okElement.GetBoolean().Should().BeTrue();
+        (document.RootElement.TryGetProperty("ok", out var okElement) && okElement.GetBoolean()).Should().BeTrue();
         document.RootElement.TryGetProperty("spec", out var specElement).Should().BeTrue();
         specElement.GetProperty("gameId").GetString().Should().Be("terraforming-mars");
         // Cleanup happens automatically via DisposeAsync
@@ -225,8 +225,8 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
 
         ruleSpec.Should().NotBeNull();
         ruleSpec!.gameId.Should().Be(game.Id);
-        ruleSpec.rules.Count >= 2.Should().BeTrue();
-        atom => atom.page == "2".Should().Contain(ruleSpec.rules);
+        (ruleSpec.rules.Count >= 2).Should().BeTrue();
+        ruleSpec.rules.Should().Contain(atom => atom.page == "2");
         // Cleanup happens automatically via DisposeAsync
     }
 
@@ -240,8 +240,8 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
     {
         response.Headers.TryGetValues("Set-Cookie", out var values).Should().BeTrue();
         var sessionCookie = values.Where(value => value.StartsWith($"{AuthService.SessionCookieName}=", StringComparison.Ordinal)).Should().ContainSingle().Subject;
-        sessionCookie, StringComparison.OrdinalIgnoreCase.Should().Contain("secure");
-        sessionCookie, StringComparison.OrdinalIgnoreCase.Should().Contain("samesite=none");
+        sessionCookie.Should().Contain("secure", StringComparison.OrdinalIgnoreCase);
+        sessionCookie.Should().Contain("samesite=none", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<List<string>> RegisterAndAuthenticateAsync(HttpClient client, string email, string role = "Admin")
@@ -351,7 +351,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
             .OrderBy(name => name)
             .ToList();
 
-        "user" }, topLevelProperties.Should().Be(new[] { "expiresAt");
+        topLevelProperties.Should().BeEquivalentTo(new[] { "expiresAt", "user" });
 
         var expiresAt = root.GetProperty("expiresAt");
         expiresAt.ValueKind.Should().Be(JsonValueKind.String);
@@ -364,7 +364,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
             .OrderBy(name => name)
             .ToList();
 
-        "email", "id", "role" }, userProperties.Should().Be(new[] { "displayName");
+        userProperties.Should().BeEquivalentTo(new[] { "displayName", "email", "id", "role" });
 
         string.IsNullOrWhiteSpace(userElement.GetProperty("id").GetString()).Should().BeFalse();
         userElement.GetProperty("email").ValueKind.Should().Be(JsonValueKind.String);

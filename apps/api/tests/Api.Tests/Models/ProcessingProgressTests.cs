@@ -130,8 +130,8 @@ public class ProcessingProgressTests
 
         // Assert
         estimate.Should().NotBeNull();
-        estimate.Value.TotalSeconds > 0.Should().BeTrue();
-        estimate.Value.TotalSeconds < 15.Should().BeTrue();
+        (estimate.Value.TotalSeconds > 0).Should().BeTrue();
+        (estimate.Value.TotalSeconds < 15).Should().BeTrue();
     }
 
     [Fact]

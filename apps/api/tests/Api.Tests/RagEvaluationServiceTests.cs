@@ -198,16 +198,16 @@ public class RagEvaluationServiceTests : IDisposable
 
         // Assert
         // MRR = 1/3 = 0.3333...
-        report.MeanReciprocalRank, precision: 4.Should().Be(1.0 / 3.0);
+        report.MeanReciprocalRank.Should().BeApproximately(1.0 / 3.0, 4);
 
         // Precision@1 = 0 (first result not relevant)
         report.AvgPrecisionAt1.Should().Be(0.0);
 
         // Precision@3 = 1/3 (1 relevant in top 3)
-        report.AvgPrecisionAt3, precision: 4.Should().Be(1.0 / 3.0);
+        report.AvgPrecisionAt3.Should().BeApproximately(1.0 / 3.0, 4);
 
         // Precision@5 = 1/3 (only 3 results total, 1 relevant)
-        report.AvgPrecisionAt5, precision: 4.Should().Be(1.0 / 3.0);
+        report.AvgPrecisionAt5.Should().BeApproximately(1.0 / 3.0, 4);
     }
 
     [Fact]
@@ -389,9 +389,9 @@ public class RagEvaluationServiceTests : IDisposable
         var report = await _service.EvaluateAsync(dataset, topK: 10);
 
         // Assert
-        report.LatencyP50 > 0.Should().BeTrue();
-        report.LatencyP95 > report.LatencyP50.Should().BeTrue(); // p95 should be higher than median
-        report.LatencyP99 > report.LatencyP95.Should().BeTrue(); // p99 should be higher than p95
+        (report.LatencyP50 > 0).Should().BeTrue();
+        (report.LatencyP95 > report.LatencyP50).Should().BeTrue(); // p95 should be higher than median
+        (report.LatencyP99 > report.LatencyP95).Should().BeTrue(); // p99 should be higher than p95
     }
 
     [Fact]

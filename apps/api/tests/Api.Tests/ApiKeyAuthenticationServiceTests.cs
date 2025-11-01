@@ -143,7 +143,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        expired, or revoked API key", result.InvalidReason.Should().Be("Invalid);
+        result.InvalidReason.Should().Be("Invalid, expired, or revoked API key");
         result.ApiKeyId.Should().BeNull();
         result.UserId.Should().BeNull();
     }
@@ -185,7 +185,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        expired, or revoked API key", result.InvalidReason.Should().Be("Invalid);
+        result.InvalidReason.Should().Be("Invalid, expired, or revoked API key");
     }
 
     [Fact]
@@ -229,7 +229,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        expired, or revoked API key", result.InvalidReason.Should().Be("Invalid);
+        result.InvalidReason.Should().Be("Invalid, expired, or revoked API key");
     }
 
     [Fact]
@@ -270,7 +270,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeFalse();
-        expired, or revoked API key", result.InvalidReason.Should().Be("Invalid);
+        result.InvalidReason.Should().Be("Invalid, expired, or revoked API key");
     }
 
     [Fact]
@@ -360,7 +360,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         // Assert
         plaintextKey.Should().NotBeNull();
         plaintextKey.Should().StartWith($"mpl_{environment}_");
-        plaintextKey.Length > 20.Should().BeTrue();
+        (plaintextKey.Length > 20).Should().BeTrue();
 
         entity.Should().NotBeNull();
         entity.UserId.Should().Be(user.Id);
@@ -688,7 +688,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         // Act - Validate (should fail)
         var validationResult2 = await service.ValidateApiKeyAsync(plaintextKey);
         validationResult2.IsValid.Should().BeFalse();
-        expired, or revoked API key", validationResult2.InvalidReason.Should().Be("Invalid);
+        validationResult2.InvalidReason.Should().Be("Invalid, expired, or revoked API key");
     }
 
     [Fact]

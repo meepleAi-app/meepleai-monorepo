@@ -69,7 +69,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         // And: Response includes paginated list
         var result = await response.Content.ReadFromJsonAsync<PagedResult<UserDto>>(JsonOptions);
         result.Should().NotBeNull();
-        result.Total >= 3.Should().BeTrue(); // At least admin + 2 users
+        (result.Total >= 3).Should().BeTrue(); // At least admin + 2 users
         result.Items.Should().NotBeEmpty();
         result.Page.Should().Be(1);
         result.PageSize.Should().Be(20);
@@ -168,7 +168,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<PagedResult<UserDto>>(JsonOptions);
         result.Should().NotBeNull();
-        result.Items.Count <= 2.Should().BeTrue();
+        (result.Items.Count <= 2).Should().BeTrue();
         result.Page.Should().Be(1);
         result.PageSize.Should().Be(2);
     }
@@ -344,7 +344,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
 
         // And: Error message mentions duplicate
         var errorContent = await response.Content.ReadAsStringAsync();
-        errorContent, StringComparison.OrdinalIgnoreCase.Should().Contain("already exists");
+        errorContent.Should().Contain("already exists", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -510,7 +510,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         // Then: Returns 400 Bad Request
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var errorContent = await response.Content.ReadAsStringAsync();
-        errorContent, StringComparison.OrdinalIgnoreCase.Should().Contain("already in use");
+        errorContent.Should().Contain("already in use", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -641,7 +641,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         // Then: Returns 400 Bad Request
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var errorContent = await response.Content.ReadAsStringAsync();
-        errorContent, StringComparison.OrdinalIgnoreCase.Should().Contain("own account");
+        errorContent.Should().Contain("own account", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

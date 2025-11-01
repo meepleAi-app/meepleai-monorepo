@@ -91,7 +91,7 @@ public class RuleSpecCommentServiceTests : IDisposable
         result.UserId.Should().Be(user.Id);
         result.UserDisplayName.Should().Be("User One");
         result.CommentText.Should().Be("This is a test comment");
-        result.CreatedAt <= DateTime.UtcNow.Should().BeTrue();
+        (result.CreatedAt <= DateTime.UtcNow).Should().BeTrue();
         result.UpdatedAt.Should().BeNull();
 
         var savedComment = await _dbContext.RuleSpecComments.FirstAsync();
@@ -445,7 +445,7 @@ public class RuleSpecCommentServiceTests : IDisposable
         result.CommentText.Should().Be("Updated text");
         result.CreatedAt.Should().Be(originalCreatedAt);
         result.UpdatedAt.Should().NotBeNull();
-        result.UpdatedAt <= DateTime.UtcNow.Should().BeTrue();
+        (result.UpdatedAt <= DateTime.UtcNow).Should().BeTrue();
 
         var savedComment = await _dbContext.RuleSpecComments.FirstAsync();
         savedComment.CommentText.Should().Be("Updated text");

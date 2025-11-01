@@ -188,7 +188,7 @@ public class PdfIndexingServiceTests : IDisposable
         // THEN: Should return failure with appropriate error code
         result.Success.Should().BeFalse();
         result.ErrorCode.Should().Be(PdfIndexingErrorCode.TextExtractionRequired);
-        result.ErrorMessage!, StringComparison.OrdinalIgnoreCase.Should().Contain("text extraction required");
+        result.ErrorMessage!.Should().Contain("text extraction required", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -203,7 +203,7 @@ public class PdfIndexingServiceTests : IDisposable
         // THEN: Should return failure with PdfNotFound error code
         result.Success.Should().BeFalse();
         result.ErrorCode.Should().Be(PdfIndexingErrorCode.PdfNotFound);
-        result.ErrorMessage!, StringComparison.OrdinalIgnoreCase.Should().Contain("not found");
+        result.ErrorMessage!.Should().Contain("not found", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

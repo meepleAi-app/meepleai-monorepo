@@ -185,7 +185,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
 
         // And: Response body contains PDF data
         var bytes = await response.Content.ReadAsByteArrayAsync();
-        bytes.Length > 0.Should().BeTrue();
+        (bytes.Length > 0).Should().BeTrue();
         var magicBytes = System.Text.Encoding.ASCII.GetString(bytes.Take(5).ToArray());
         magicBytes.Should().Be("%PDF-");
     }
@@ -643,7 +643,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
         foreach (var response in responses)
         {
             var bytes = await response.Content.ReadAsByteArrayAsync();
-            bytes.Length > 0.Should().BeTrue();
+            (bytes.Length > 0).Should().BeTrue();
             var magicBytes = System.Text.Encoding.ASCII.GetString(bytes.Take(5).ToArray());
             magicBytes.Should().Be("%PDF-");
         }

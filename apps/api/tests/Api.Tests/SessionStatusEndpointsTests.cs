@@ -187,7 +187,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
 
         // LastSeenAt should be updated to current time
         extendedStatus.LastSeenAt.Should().NotBeNull();
-        extendedStatus.LastSeenAt > initialStatus!.LastSeenAt.Should().BeTrue();
+        (extendedStatus.LastSeenAt > initialStatus!.LastSeenAt).Should().BeTrue();
 
         // Remaining minutes should be reset to ~30 days
         extendedStatus.RemainingMinutes.Should().BeInRange(43000, 43300);

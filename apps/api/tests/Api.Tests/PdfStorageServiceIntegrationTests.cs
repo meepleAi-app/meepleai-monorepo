@@ -89,7 +89,7 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
             chunkingService.ChunkTextCallCount.Should().Be(1);
 
             var embeddingService = scopeFactory.EmbeddingServices.Where(e => e.GenerateEmbeddingsCallCount > 0).Should().ContainSingle().Subject;
-            "chunk-two" }, embeddingService.LastRequestedTexts.Should().Be(new[] { "chunk-one");
+            embeddingService.LastRequestedTexts.Should().BeEquivalentTo(new[] { "chunk-one", "chunk-two" });
 
             var qdrantService = scopeFactory.QdrantServices.Where(q => q.IndexCallCount > 0).Should().ContainSingle().Subject;
             qdrantService.LastGameId.Should().Be("game-1");

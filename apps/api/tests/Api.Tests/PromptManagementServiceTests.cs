@@ -495,8 +495,8 @@ public class PromptManagementServiceTests : IDisposable
         // Assert
         auditLog.Should().NotBeNull();
         auditLog.Template.Name.Should().Be("audit-test-template");
-        auditLog.TotalCount >= 5.Should().BeTrue(); // template_created, version_created (v1), version_created (v2), version_deactivated (v1), version_activated (v2)
-        auditLog.Logs.Count >= 5.Should().BeTrue();
+        (auditLog.TotalCount >= 5).Should().BeTrue(); // template_created, version_created (v1), version_created (v2), version_deactivated (v1), version_activated (v2)
+        (auditLog.Logs.Count >= 5).Should().BeTrue();
 
         // Verify logs are ordered by timestamp descending (most recent first)
         for (int i = 0; i < auditLog.Logs.Count - 1; i++)
@@ -538,7 +538,7 @@ public class PromptManagementServiceTests : IDisposable
 
         // Assert
         auditLog.Logs.Count.Should().Be(5);
-        auditLog.TotalCount > 5.Should().BeTrue(); // Total is more than limit
+        (auditLog.TotalCount > 5).Should().BeTrue(); // Total is more than limit
     }
 
     [Fact]

@@ -688,10 +688,10 @@ public class ChatExportServiceTests : IDisposable
         // And: Filename contains truncated portion (max 50 chars of game name)
         // Format: {gameName(<=50)}-chat-{id(8)}.{ext}
         var gameNamePart = result.Filename.Split("-chat-")[0];
-        gameNamePart.Length <= 50, $"Game name part '{gameNamePart}' exceeds 50 chars: {gameNamePart.Length}".Should().BeTrue();
+        (gameNamePart.Length <= 50).Should().BeTrue($"Game name part '{gameNamePart}' exceeds 50 chars: {gameNamePart.Length}");
 
         // And: Filename is reasonable length (truncated game name + "-chat-" + 8-char ID + ".md")
-        result.Filename.Length < 80, $"Filename too long: {result.Filename.Length} chars".Should().BeTrue();
+        (result.Filename.Length < 80).Should().BeTrue($"Filename too long: {result.Filename.Length} chars");
     }
 
     /// <summary>

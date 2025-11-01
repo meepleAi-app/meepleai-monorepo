@@ -149,7 +149,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         updatedMessage.Should().NotBeNull();
         updatedMessage.Message.Should().Be(newContent);
         updatedMessage.UpdatedAt.Should().NotBeNull();
-        updatedMessage.UpdatedAt > updatedMessage.CreatedAt.Should().BeTrue();
+        (updatedMessage.UpdatedAt > updatedMessage.CreatedAt).Should().BeTrue();
 
         // Verify persistence
         var storedMessage = await _context.ChatLogs.FindAsync(messageId);
@@ -276,7 +276,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         deletedMessage!.IsDeleted.Should().BeTrue();
         deletedMessage.DeletedAt.Should().NotBeNull();
         deletedMessage.DeletedByUserId.Should().Be(userId);
-        deletedMessage.DeletedAt > deletedMessage.CreatedAt.Should().BeTrue();
+        (deletedMessage.DeletedAt > deletedMessage.CreatedAt).Should().BeTrue();
     }
 
     /// <summary>

@@ -205,7 +205,7 @@ public class AiRequestLogServiceTests : IDisposable
         stats.TotalRequests.Should().Be(3);
         stats.AvgLatencyMs.Should().Be(200);
         stats.TotalTokens.Should().Be(350);
-        stats.SuccessRate, 3.Should().Be(2d / 3d);
+        stats.SuccessRate.Should().Be(2d / 3d);
         stats.EndpointCounts["qa"].Should().Be(2);
         stats.EndpointCounts["setup"].Should().Be(1);
     }

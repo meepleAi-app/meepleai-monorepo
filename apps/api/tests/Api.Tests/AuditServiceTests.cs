@@ -74,7 +74,7 @@ public class AuditServiceTests : IDisposable
         log.Details.Should().Be("Test details");
         log.IpAddress.Should().BeNull();
         log.UserAgent.Should().BeNull();
-        log.CreatedAt <= DateTime.UtcNow.Should().BeTrue();
+        (log.CreatedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public class AuditServiceTests : IDisposable
 
         // Assert
         var log = await _dbContext.AuditLogs.FirstAsync();
-        log.CreatedAt >= before && log.CreatedAt <= after.Should().BeTrue();
+        (log.CreatedAt >= before && log.CreatedAt <= after).Should().BeTrue();
     }
 
     [Fact]

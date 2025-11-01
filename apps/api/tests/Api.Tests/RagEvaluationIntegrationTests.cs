@@ -174,10 +174,10 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
         // Assert: Report generated with valid metrics
         report.Should().NotBeNull();
         report.TotalQueries.Should().Be(loadedDataset.Queries.Count);
-        report.SuccessfulQueries > 0.Should().BeTrue();
-        report.MeanReciprocalRank >= 0.0 && report.MeanReciprocalRank <= 1.0.Should().BeTrue();
-        report.AvgPrecisionAt5 >= 0.0 && report.AvgPrecisionAt5 <= 1.0.Should().BeTrue();
-        report.LatencyP95 > 0.Should().BeTrue(); // Some latency should be recorded
+        (report.SuccessfulQueries > 0).Should().BeTrue();
+        (report.MeanReciprocalRank >= 0.0 && report.MeanReciprocalRank <= 1.0).Should().BeTrue();
+        (report.AvgPrecisionAt5 >= 0.0 && report.AvgPrecisionAt5 <= 1.0).Should().BeTrue();
+        (report.LatencyP95 > 0).Should().BeTrue(); // Some latency should be recorded
     }
 
     [Fact]
@@ -254,12 +254,12 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
         report.SuccessfulQueries.Should().Be(1);
         var result = report.QueryResults[0];
         result.Success.Should().BeTrue();
-        result.RetrievedCount > 0, "Should retrieve at least one document".Should().BeTrue();
+        (result.RetrievedCount > 0).Should().BeTrue("Should retrieve at least one document");
 
         // Since we're using mock embeddings, exact precision depends on mock implementation
         // But we can verify metrics are within valid ranges
-        result.PrecisionAt1 >= 0.0 && result.PrecisionAt1 <= 1.0.Should().BeTrue();
-        result.RecallAtK >= 0.0 && result.RecallAtK <= 1.0.Should().BeTrue();
+        (result.PrecisionAt1 >= 0.0 && result.PrecisionAt1 <= 1.0).Should().BeTrue();
+        (result.RecallAtK >= 0.0 && result.RecallAtK <= 1.0).Should().BeTrue();
     }
 
     [Fact]
@@ -318,10 +318,10 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
         var report = await _evaluationService!.EvaluateAsync(dataset, topK: 5);
 
         // Assert: Latency metrics should be calculated
-        report.AvgLatencyMs > 0, "Average latency should be positive".Should().BeTrue();
-        report.LatencyP50 > 0, "p50 should be positive".Should().BeTrue();
-        report.LatencyP95 >= report.LatencyP50, "p95 should be >= p50".Should().BeTrue();
-        report.LatencyP99 >= report.LatencyP95, "p99 should be >= p95".Should().BeTrue();
+        (report.AvgLatencyMs > 0).Should().BeTrue("Average latency should be positive");
+        (report.LatencyP50 > 0).Should().BeTrue("p50 should be positive");
+        (report.LatencyP95 >= report.LatencyP50).Should().BeTrue("p95 should be >= p50");
+        (report.LatencyP99 >= report.LatencyP95).Should().BeTrue("p99 should be >= p95");
     }
 
     // Helper methods

@@ -241,7 +241,7 @@ ANSWER:",
         // Verify StateUpdate
         var stateUpdate = events[0].Data as StreamingStateUpdate;
         stateUpdate.Should().NotBeNull();
-        stateUpdate!.message, StringComparison.OrdinalIgnoreCase.Should().Contain("cache");
+        stateUpdate!.message.Should().Contain("cache", StringComparison.OrdinalIgnoreCase);
 
         // Verify Citations
         var citations = events[1].Data as StreamingCitations;
@@ -376,7 +376,7 @@ ANSWER:",
         complete.Should().NotBeNull();
         complete!.completionTokens.Should().Be(5); // 5 tokens
         complete.totalTokens.Should().Be(5);
-        complete.confidence!.Value, precision: 2.Should().Be(0.95); // Max score from search results (with floating point tolerance)
+        complete.confidence!.Value.Should().BeApproximately(0.95, 2); // Max score from search results (with floating point tolerance)
 
         // Verify cache write
         mockCache.Verify(
@@ -693,7 +693,7 @@ ANSWER:",
         var completeEvent = events.First(e => e.Type == StreamingEventType.Complete);
         var complete = completeEvent.Data as StreamingComplete;
         complete.Should().NotBeNull();
-        complete!.confidence!.Value, precision: 2.Should().Be(0.98); // Max score (with floating point tolerance)
+        complete!.confidence!.Value.Should().BeApproximately(0.98, 2); // Max score (with floating point tolerance)
     }
 
     /// <summary>

@@ -172,7 +172,7 @@ public class RuleSpecConcurrencyTests : ConfigIntegrationTestBase
 
         // Assert: At least one succeeds (may both succeed with last-write-wins)
         var successCount = results.Count(r => r.StatusCode == HttpStatusCode.OK);
-        successCount >= 1, "At least one update should succeed".Should().BeTrue();
+        (successCount >= 1).Should().BeTrue("At least one update should succeed");
 
         // Verify database state is consistent
         using var scope = Factory.Services.CreateScope();

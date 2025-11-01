@@ -87,7 +87,7 @@ public class BackgroundTaskServiceTests
         var elapsed = DateTime.UtcNow - startTime;
 
         // Assert - Execute should return immediately (within 50ms)
-        elapsed.TotalMilliseconds < 50, $"Execute blocked for {elapsed.TotalMilliseconds}ms".Should().BeTrue();
+        (elapsed.TotalMilliseconds < 50).Should().BeTrue($"Execute blocked for {elapsed.TotalMilliseconds}ms");
     }
 
     [Fact]

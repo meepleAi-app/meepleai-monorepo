@@ -86,7 +86,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         result.Should().NotBeNull();
         result.Success.Should().BeTrue();
         result.VectorDocumentId.Should().NotBeNull();
-        result.ChunkCount > 0, "Should have created at least 1 chunk".Should().BeTrue();
+        (result.ChunkCount > 0).Should().BeTrue("Should have created at least 1 chunk");
         result.IndexedAt.Should().NotBeNull();
 
         // AND: The VectorDocumentEntity should be persisted with status "completed"
@@ -97,8 +97,8 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         vectorDoc.IndexingStatus.Should().Be("completed");
         vectorDoc.GameId.Should().Be(gameId);
         vectorDoc.PdfDocumentId.Should().Be(pdfId);
-        vectorDoc.ChunkCount > 0.Should().BeTrue();
-        vectorDoc.TotalCharacters > 0.Should().BeTrue();
+        (vectorDoc.ChunkCount > 0).Should().BeTrue();
+        (vectorDoc.TotalCharacters > 0).Should().BeTrue();
         vectorDoc.IndexedAt.Should().NotBeNull();
         vectorDoc.IndexingError.Should().BeNull();
         vectorDoc.EmbeddingModel.Should().Be("openai/text-embedding-3-small");
@@ -137,7 +137,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
         var searchResult = await searchResponse.Content.ReadAsStringAsync();
         // The response should reference tic-tac-toe concepts, not chess
-        searchResult, StringComparison.OrdinalIgnoreCase.Should().Contain("three in a row");
+        searchResult.Should().Contain("three in a row", StringComparison.OrdinalIgnoreCase);
         searchResult, StringComparison.OrdinalIgnoreCase.Should().NotContain("knight");
         searchResult, StringComparison.OrdinalIgnoreCase.Should().NotContain("checkmate");
     }
@@ -198,8 +198,8 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
         var result = await response.Content.ReadFromJsonAsync<PdfIndexingResponse>();
         result.Should().NotBeNull();
-        result.ChunkCount >= 90, $"Expected at least 90 chunks, got {result.ChunkCount}".Should().BeTrue();
-        result.ChunkCount <= 130, $"Expected at most 130 chunks, got {result.ChunkCount}".Should().BeTrue();
+        (result.ChunkCount >= 90).Should().BeTrue($"Expected at least 90 chunks, got {result.ChunkCount}");
+        (result.ChunkCount <= 130).Should().BeTrue($"Expected at most 130 chunks, got {result.ChunkCount}");
     }
 
     /// <summary>
@@ -264,7 +264,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
 
         var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>();
         errorResponse.Should().NotBeNull();
-        errorResponse.Error, StringComparison.OrdinalIgnoreCase.Should().Contain("text extraction");
+        errorResponse.Error.Should().Contain("text extraction", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

@@ -273,7 +273,7 @@ public class ResponseQualityServiceTests
         var scores = service.CalculateQualityScores(ragResults, citations, shortResponse);
 
         // Assert
-        scores.LlmConfidence < 0.60, "Very short responses should have reduced LLM confidence".Should().BeTrue();
+        (scores.LlmConfidence < 0.60).Should().BeTrue("Very short responses should have reduced LLM confidence");
     }
 
     /// <summary>
@@ -342,9 +342,9 @@ public class ResponseQualityServiceTests
 
         // Assert
         scores.RagConfidence.Should().BeInRange(0.88, 0.92);
-        scores.LlmConfidence < 0.60, "Short response with hedging should have low LLM confidence".Should().BeTrue();
+        (scores.LlmConfidence < 0.60).Should().BeTrue("Short response with hedging should have low LLM confidence");
         // Overall should consider all dimensions
-        scores.OverallConfidence > 0.0 && scores.OverallConfidence < 1.0.Should().BeTrue();
+        (scores.OverallConfidence > 0.0 && scores.OverallConfidence < 1.0).Should().BeTrue();
     }
 
     #region Helper Methods

@@ -488,7 +488,7 @@ public class RuleSpecDiffServiceTests
 
         // Assert: Changes are ordered by atom ID
         var atomIds = diff.Changes.Select(c => c.OldAtom ?? c.NewAtom).ToList();
-        "atom2", "atom3" }, atomIds.Should().Be(new[] { "atom1");
+        atomIds.Should().BeEquivalentTo(new[] { "atom1", "atom2", "atom3" });
     }
 
     #endregion

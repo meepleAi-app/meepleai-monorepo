@@ -33,7 +33,7 @@ public class EntityTests
         game.Chats.Should().NotBeNull();
         game.Id.Should().Be("game-1");
         game.Name.Should().Be("Test Game");
-        game.CreatedAt <= DateTime.UtcNow.Should().BeTrue();
+        (game.CreatedAt <= DateTime.UtcNow).Should().BeTrue();
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class EntityTests
         chat.Id.Should().NotBe(Guid.Empty);
         chat.AgentId.Should().Be("agent-1");
         chat.GameId.Should().Be("game-1");
-        chat.StartedAt <= DateTime.UtcNow.Should().BeTrue();
+        (chat.StartedAt <= DateTime.UtcNow).Should().BeTrue();
         chat.Logs.Should().NotBeNull();
         chat.Logs.Should().BeEmpty();
     }
@@ -93,7 +93,7 @@ public class EntityTests
         log.ResourceId.Should().Be("game-1");
         log.Result.Should().Be("Success");
         log.Details.Should().Be("Performed action");
-        log.CreatedAt <= DateTime.UtcNow.Should().BeTrue();
+        (log.CreatedAt <= DateTime.UtcNow).Should().BeTrue();
         log.IpAddress.Should().BeNull();
         log.UserAgent.Should().BeNull();
     }

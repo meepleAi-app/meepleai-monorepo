@@ -87,7 +87,7 @@ public class AdminStatsServiceTests : IDisposable
         result.Metrics.ActiveSessions.Should().Be(2); // Only non-revoked sessions
         result.Metrics.TotalPdfDocuments.Should().Be(5);
         result.Metrics.TotalChatMessages.Should().Be(10);
-        result.Metrics.TotalRagRequests > 0.Should().BeTrue();
+        (result.Metrics.TotalRagRequests > 0).Should().BeTrue();
     }
 
     [Fact]
@@ -301,10 +301,10 @@ public class AdminStatsServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Value", result.Should().Contain("Metric);
-        ", result.Should().Contain("Total Users);
-        ", result.Should().Contain("Active Sessions);
-        Count,Average", result.Should().Contain("User Registrations - Date);
+        result.Should().Contain("Metric,Value");
+        result.Should().Contain("Total Users,");
+        result.Should().Contain("Active Sessions,");
+        result.Should().Contain("User Registrations - Date,Count,Average");
     }
 
     [Fact]

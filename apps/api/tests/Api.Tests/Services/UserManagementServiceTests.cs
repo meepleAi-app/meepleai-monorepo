@@ -113,7 +113,7 @@ public class UserManagementServiceTests : IDisposable
         // Assert
         result.Total.Should().Be(1);
         result.Items.Should().ContainSingle();
-        result.Items[0].Email, StringComparison.OrdinalIgnoreCase.Should().Contain("admin");
+        result.Items[0].Email.Should().Contain("admin", StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public class UserManagementServiceTests : IDisposable
         // Assert
         result.Total.Should().Be(1);
         result.Items.Should().ContainSingle();
-        result.Items[0].DisplayName, StringComparison.OrdinalIgnoreCase.Should().Contain("Administrator");
+        result.Items[0].DisplayName.Should().Contain("Administrator", StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

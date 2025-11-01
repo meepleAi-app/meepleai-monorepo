@@ -106,7 +106,7 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
         fileName.Should().EndWith(".zip");
 
         var zipBytes = await response.Content.ReadAsByteArrayAsync();
-        zipBytes.Length > 0.Should().BeTrue();
+        (zipBytes.Length > 0).Should().BeTrue();
 
         // Verify ZIP structure
         using var memoryStream = new MemoryStream(zipBytes);

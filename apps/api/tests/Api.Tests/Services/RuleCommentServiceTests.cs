@@ -349,7 +349,7 @@ public class RuleCommentServiceTests : IDisposable
         await act.Should().ThrowAsync<InvalidOperationException>();
         var ex = await act.Should().ThrowAsync<ValidationException>();
 
-        ex.Message, StringComparison.OrdinalIgnoreCase.Should().Contain("thread depth");
+        ex.Message.Should().Contain("thread depth", StringComparison.OrdinalIgnoreCase);
         ex.Message.Should().Contain("5");
     }
 

@@ -148,7 +148,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         result.TryGetProperty("error", out var error).Should().BeTrue();
-        Assert.Contains("gameId", error.GetString(), StringComparison.OrdinalIgnoreCase);
+        error.GetString().Should().Contain("gameId");
     }
 
     /// <summary>
@@ -190,7 +190,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         result.TryGetProperty("script", out var script).Should().BeTrue();
-        Assert.Contains("No relevant information found", script.GetString(), StringComparison.OrdinalIgnoreCase);
+        script.GetString().Should().Contain("No relevant information found");
     }
 
     /// <summary>

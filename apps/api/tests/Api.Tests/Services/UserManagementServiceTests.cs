@@ -315,8 +315,8 @@ public class UserManagementServiceTests : IDisposable
         );
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.CreateUserAsync(request));
+        var exception = var act = async () => _service.CreateUserAsync(request);
+        await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("already exists");
     }
 
@@ -410,8 +410,8 @@ public class UserManagementServiceTests : IDisposable
         );
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.UpdateUserAsync(userId, request));
+        var exception = var act = async () => _service.UpdateUserAsync(userId, request);
+        await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("already in use");
     }
 
@@ -427,8 +427,8 @@ public class UserManagementServiceTests : IDisposable
         );
 
         // Act & Assert
-        await Assert.ThrowsAsync<KeyNotFoundException>(
-            () => _service.UpdateUserAsync(nonExistentId, request));
+        var act = async () => _service.UpdateUserAsync(nonExistentId, request);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -475,8 +475,8 @@ public class UserManagementServiceTests : IDisposable
         var userId = await SeedSingleUser("self@example.com", "Self", UserRole.Admin);
 
         // Act & Assert - trying to delete self
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.DeleteUserAsync(userId, userId));
+        var exception = var act = async () => _service.DeleteUserAsync(userId, userId);
+        await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("Cannot delete your own account");
     }
 
@@ -488,8 +488,8 @@ public class UserManagementServiceTests : IDisposable
         var requestingUserId = Guid.NewGuid().ToString();
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _service.DeleteUserAsync(adminId, requestingUserId));
+        var exception = var act = async () => _service.DeleteUserAsync(adminId, requestingUserId);
+        await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("Cannot delete the last admin user");
     }
 
@@ -519,8 +519,8 @@ public class UserManagementServiceTests : IDisposable
         var requestingUserId = Guid.NewGuid().ToString();
 
         // Act & Assert
-        await Assert.ThrowsAsync<KeyNotFoundException>(
-            () => _service.DeleteUserAsync(nonExistentId, requestingUserId));
+        var act = async () => _service.DeleteUserAsync(nonExistentId, requestingUserId);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]

@@ -201,8 +201,8 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         var invalidPath = "/nonexistent/dataset.json";
 
         // Act & Assert: Security validation happens before file existence check
-        await Assert.ThrowsAsync<SecurityException>(
-            () => _service.LoadDatasetAsync(invalidPath));
+        var act = async () => _service.LoadDatasetAsync(invalidPath);
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
@@ -215,8 +215,8 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         try
         {
             // Act & Assert
-            await Assert.ThrowsAsync<JsonException>(
-                () => _service.LoadDatasetAsync(malformedPath));
+            var act = async () => _service.LoadDatasetAsync(malformedPath);
+        await act.Should().ThrowAsync<InvalidOperationException>();
         }
         finally
         {
@@ -426,11 +426,11 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         var nonExistentVersionId = "non-existent-version";
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => _service.EvaluateAsync(
+        var exception = var act = async () => _service.EvaluateAsync(
                 "test-template-id",
                 nonExistentVersionId,
-                _testDatasetPath));
+                _testDatasetPath);
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         exception.Which.Message.Should().Contain("not found");
     }

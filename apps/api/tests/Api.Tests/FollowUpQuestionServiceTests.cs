@@ -221,7 +221,7 @@ public class FollowUpQuestionServiceTests
 
         // Assert
         result.Count.Should().Be(3); // Only valid questions
-        Assert.All(result, q => Assert.False(string.IsNullOrWhiteSpace(q)));
+        result.Should().OnlyContain(q => !string.IsNullOrWhiteSpace(q));
     }
 
     [Fact]

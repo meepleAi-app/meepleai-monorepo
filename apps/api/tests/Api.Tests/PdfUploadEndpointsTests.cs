@@ -301,7 +301,7 @@ startxref
 
         var error = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         error.TryGetProperty("error", out var errorMsg).Should().BeTrue();
-        Assert.Contains("gameId is required", errorMsg.GetString(), StringComparison.OrdinalIgnoreCase);
+        errorMsg.GetString().Should().Contain("gameId is required");
     }
 
     /// <summary>
@@ -504,7 +504,7 @@ startxref
         result.TryGetProperty("processingStatus", out var status).Should().BeTrue();
         Assert.Equal("completed", status.GetString());
         result.TryGetProperty("extractedText", out var text).Should().BeTrue();
-        Assert.Contains("extracted text", text.GetString(), StringComparison.OrdinalIgnoreCase);
+        text.GetString().Should().Contain("extracted text");
         result.TryGetProperty("pageCount", out var pageCount).Should().BeTrue();
         Assert.Equal(10, pageCount.GetInt32());
         result.TryGetProperty("characterCount", out var charCount).Should().BeTrue();
@@ -652,7 +652,7 @@ startxref
 
         var error = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         error.TryGetProperty("error", out var errorMsg).Should().BeTrue();
-        Assert.Contains("not found", errorMsg.GetString(), StringComparison.OrdinalIgnoreCase);
+        errorMsg.GetString().Should().Contain("not found");
     }
 
     /// <summary>

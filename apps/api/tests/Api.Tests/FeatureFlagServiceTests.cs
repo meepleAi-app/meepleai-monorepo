@@ -603,7 +603,7 @@ public class FeatureFlagServiceTests
         var results = await Task.WhenAll(tasks);
 
         // Assert
-        Assert.All(results, r => Assert.True(r));
+        results.Should().OnlyContain(r => r);
         // Each call should check the configuration
         _configServiceMock.Verify(x => x.GetValueAsync<bool?>("Features.ConcurrentTest", null, null), Times.Exactly(10));
     }

@@ -197,7 +197,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         result.TryGetProperty("error", out var error).Should().BeTrue();
-        Assert.Contains("question", error.GetString() ?? "", StringComparison.OrdinalIgnoreCase);
+        error.GetString() ?? "".Should().Contain("question");
     }
 
     /// <summary>

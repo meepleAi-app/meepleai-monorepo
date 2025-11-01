@@ -154,7 +154,8 @@ public class SessionManagementServiceTests : IDisposable
         var service = CreateService(db);
 
         // When/Then: ArgumentException is thrown
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.GetUserSessionsAsync(userId!));
+        var exception = var act = async () => service.GetUserSessionsAsync(userId!);
+        await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("User ID cannot be null or empty");
     }
 
@@ -244,7 +245,8 @@ public class SessionManagementServiceTests : IDisposable
         var service = CreateService(db);
 
         // When/Then: ArgumentException is thrown
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.GetAllSessionsAsync(limit: limit));
+        var exception = var act = async () => service.GetAllSessionsAsync(limit: limit);
+        await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("Limit must be between 1 and 1000");
     }
 
@@ -365,7 +367,8 @@ public class SessionManagementServiceTests : IDisposable
         var service = CreateService(db);
 
         // When/Then: ArgumentException is thrown
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.RevokeSessionAsync(sessionId!));
+        var exception = var act = async () => service.RevokeSessionAsync(sessionId!);
+        await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("Session ID cannot be null or empty");
     }
 
@@ -398,7 +401,8 @@ public class SessionManagementServiceTests : IDisposable
 
         // When: Revoking the session (cache will fail)
         // Note: In production this would be caught and logged, but for now it will throw
-        await Assert.ThrowsAsync<Exception>(() => service.RevokeSessionAsync("session1"));
+        var act = async () => service.RevokeSessionAsync("session1");
+        await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Then: Session is still revoked in database
         var revokedSession = await db.UserSessions.FindAsync("session1");
@@ -497,7 +501,8 @@ public class SessionManagementServiceTests : IDisposable
         var service = CreateService(db);
 
         // When/Then: ArgumentException is thrown
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() => service.RevokeAllUserSessionsAsync(userId!));
+        var exception = var act = async () => service.RevokeAllUserSessionsAsync(userId!);
+        await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().Contain("User ID cannot be null or empty");
     }
 

@@ -97,8 +97,8 @@ public class ChatServiceTests
         await using var dbContext = CreateInMemoryContext();
         var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.CreateChatAsync("user-123", "nonexistent", "agent-1"));
+        var act = async () => service.CreateChatAsync("user-123", "nonexistent", "agent-1");
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     /// <summary>
@@ -117,8 +117,8 @@ public class ChatServiceTests
 
         var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            service.CreateChatAsync("user-123", "catan", "nonexistent-agent"));
+        var act = async () => service.CreateChatAsync("user-123", "catan", "nonexistent-agent");
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     /// <summary>
@@ -309,8 +309,8 @@ public class ChatServiceTests
 
         var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, Mock.Of<AuditService>());
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
-            service.DeleteChatAsync(chat.Id, "user-456"));
+        var act = async () => service.DeleteChatAsync(chat.Id, "user-456");
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
     /// <summary>
@@ -421,6 +421,6 @@ public class ChatServiceTests
         agent.CreatedAt.Should().Be(existingAgent.CreatedAt); // Same instance
 
         // Verify no duplicate was created
-        Assert.Equal(1, await dbContext.Agents.CountAsync(a => a.GameId == "catan" && a.Kind == "qa"));
+        (await dbContext.Agents.CountAsync(a => a.GameId == "catan" && a.Kind == "qa")).Should().Be(1);
     }
 }

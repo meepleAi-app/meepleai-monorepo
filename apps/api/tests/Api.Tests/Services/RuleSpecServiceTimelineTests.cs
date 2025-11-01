@@ -242,9 +242,9 @@ public class RuleSpecServiceTimelineTests : IDisposable
 
         // Assert
         result.TotalVersions.Should().Be(2);
-        v => v.Version == "v1".Should().NotContain(result.Versions);
-        v => v.Version == "v2".Should().Contain(result.Versions);
-        v => v.Version == "v3".Should().Contain(result.Versions);
+        result.Versions.Should().NotContain(v => v.Version == "v1");
+        result.Versions.Should().Contain(v => v.Version == "v2");
+        result.Versions.Should().Contain(v => v.Version == "v3");
     }
 
     [Fact]
@@ -262,9 +262,9 @@ public class RuleSpecServiceTimelineTests : IDisposable
 
         // Assert
         result.TotalVersions.Should().Be(2);
-        v => v.Version == "v1".Should().Contain(result.Versions);
-        v => v.Version == "v2".Should().Contain(result.Versions);
-        v => v.Version == "v3".Should().NotContain(result.Versions);
+        result.Versions.Should().Contain(v => v.Version == "v1");
+        result.Versions.Should().Contain(v => v.Version == "v2");
+        result.Versions.Should().NotContain(v => v.Version == "v3");
     }
 
     [Fact]
@@ -281,9 +281,9 @@ public class RuleSpecServiceTimelineTests : IDisposable
 
         // Assert
         result.TotalVersions.Should().Be(2);
-        v => v.Version == "v1".Should().Contain(result.Versions);
-        v => v.Version == "v2".Should().NotContain(result.Versions);
-        v => v.Version == "v3".Should().Contain(result.Versions);
+        result.Versions.Should().Contain(v => v.Version == "v1");
+        result.Versions.Should().NotContain(v => v.Version == "v2");
+        result.Versions.Should().Contain(v => v.Version == "v3");
     }
 
     [Fact]
@@ -300,7 +300,7 @@ public class RuleSpecServiceTimelineTests : IDisposable
 
         // Assert
         result.TotalVersions.Should().Be(1);
-        v => v.Version == "v2".Should().Contain(result.Versions);
+        result.Versions.Should().Contain(v => v.Version == "v2");
     }
 
     [Fact]
@@ -317,7 +317,7 @@ public class RuleSpecServiceTimelineTests : IDisposable
 
         // Assert
         result.TotalVersions.Should().Be(1);
-        v => v.Version == "v2".Should().Contain(result.Versions);
+        result.Versions.Should().Contain(v => v.Version == "v2");
     }
 
     [Fact]
@@ -337,8 +337,8 @@ public class RuleSpecServiceTimelineTests : IDisposable
 
         // Assert
         result.TotalVersions.Should().Be(2);
-        v => v.Version == "v1".Should().Contain(result.Versions);
-        v => v.Version == "v3".Should().Contain(result.Versions);
+        result.Versions.Should().Contain(v => v.Version == "v1");
+        result.Versions.Should().Contain(v => v.Version == "v3");
     }
 
     [Fact]

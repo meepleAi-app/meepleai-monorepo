@@ -72,7 +72,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         // Then: SSE response is returned with correct headers
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         response.Content.Headers.ContentType?.MediaType.Should().Be("text/event-stream");
-        h => h.Key == "Cache-Control" && h.Value.Contains("no-cache").Should().Contain(response.Headers);
+        response.Headers.Should().Contain(h => h.Key == "Cache-Control" && h.Value.Contains("no-cache"));
 
         // And: Events are streamed in correct order
         var events = await ParseSSEEventsAsync(response);
@@ -90,10 +90,8 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
 
         // And: All events have valid timestamps
         events.Should().OnlyContain(evt =>
-        {
-            evt.Timestamp > DateTime.UtcNow.AddMinutes(-1).Should().BeTrue();
-            evt.Timestamp <= DateTime.UtcNow.AddSeconds(5).Should().BeTrue();
-        });
+            evt.Timestamp > DateTime.UtcNow.AddMinutes(-1) &&
+            evt.Timestamp <= DateTime.UtcNow.AddSeconds(5));
     }
 
     /// <summary>
@@ -191,11 +189,9 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
             citations.Should().NotBeNull();
             citations!.citations.Should().NotBeEmpty();
             citations.citations.Should().OnlyContain(citation =>
-            {
-                string.IsNullOrWhiteSpace(citation.text).Should().BeFalse();
-                string.IsNullOrWhiteSpace(citation.source).Should().BeFalse();
-                (citation.page >= 0).Should().BeTrue();
-            });
+                !string.IsNullOrWhiteSpace(citation.text) &&
+                !string.IsNullOrWhiteSpace(citation.source) &&
+                citation.page >= 0);
         }
     }
 
@@ -328,7 +324,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         log.GameId.Should().Be(game.Id);
         log.Endpoint.Should().Be("qa-stream");
         (log.LatencyMs > 0).Should().BeTrue();
-        log.Query ?? "".Should().Contain("test query");
+        (log.Query ?? "").Should().Contain("test query");
     }
 
     /// <summary>

@@ -136,27 +136,27 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         int idx = 0;
 
         // StateUpdate: Generating embeddings
-        idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.StateUpdate.Should().BeTrue();
+        (idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.StateUpdate).Should().BeTrue();
         idx++;
 
         // StateUpdate: Searching vector database
-        idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.StateUpdate.Should().BeTrue();
+        (idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.StateUpdate).Should().BeTrue();
         idx++;
 
         // Citations
-        idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.Citations.Should().BeTrue();
+        (idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.Citations).Should().BeTrue();
         idx++;
 
         // StateUpdate: Building outline
-        idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.StateUpdate.Should().BeTrue();
+        (idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.StateUpdate).Should().BeTrue();
         idx++;
 
         // Outline
-        idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.Outline.Should().BeTrue();
+        (idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.Outline).Should().BeTrue();
         idx++;
 
         // StateUpdate: Generating script
-        idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.StateUpdate.Should().BeTrue();
+        (idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.StateUpdate).Should().BeTrue();
         idx++;
 
         // One or more ScriptChunks
@@ -202,11 +202,9 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         citationsData.Should().NotBeNull();
         citationsData!.citations.Should().NotBeEmpty();
         citationsData.citations.Should().OnlyContain(citation =>
-        {
-            citation.text.Should().NotBeEmpty();
-            citation.source.Should().StartWith("PDF:");
-            (citation.page > 0).Should().BeTrue();
-        });
+            !string.IsNullOrEmpty(citation.text) &&
+            citation.source.StartsWith("PDF:") &&
+            citation.page > 0);
     }
 
     [Fact]
@@ -331,10 +329,8 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
 
         // Then: All events have valid timestamps
         events.Should().OnlyContain(evt =>
-        {
-            evt.Timestamp.Should().NotBe(default(DateTime));
-            evt.Timestamp <= DateTime.UtcNow.AddSeconds(5).Should().BeTrue(); // Allow 5 sec for test execution
-        });
+            evt.Timestamp != default(DateTime) &&
+            evt.Timestamp <= DateTime.UtcNow.AddSeconds(5));
     }
 
     [Fact]
@@ -362,7 +358,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var errorData = JsonSerializer.Deserialize<StreamingError>(
             ((JsonElement)errorEvent.Data!).GetRawText(), JsonOptions);
         errorData.Should().NotBeNull();
-        errorData!.errorCode ?? "".Should().Contain("NO_RESULTS");
+        (errorData!.errorCode ?? "").Should().Contain("NO_RESULTS");
     }
 
     [Fact]

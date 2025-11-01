@@ -2,10 +2,11 @@
   "$schema": "https://xunit.net/schema/current/xunit.runner.schema.json",
   "parallelizeAssembly": true,
   "parallelizeTestCollections": true,
-  "maxParallelThreads": 2,
+  "maxParallelThreads": 4,
   "methodDisplay": "method",
   "diagnosticMessages": false,
   "internalDiagnosticMessages": false,
   "methodTimeout": 60000,
-  "maxRetries": 0
+  "maxRetries": 0,
+  "longRunningTestSeconds": 30
 }

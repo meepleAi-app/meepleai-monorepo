@@ -9,6 +9,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -25,6 +26,7 @@ namespace Api.Tests;
 /// I want to view RuleSpec version history and compare versions
 /// So that I can track changes to game rules over time
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
@@ -34,7 +36,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         PropertyNameCaseInsensitive = true
     };
 
-    public RuleSpecHistoryIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public RuleSpecHistoryIntegrationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

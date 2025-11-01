@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Api.Infrastructure.Entities;
+using Api.Tests.Fixtures;
 using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;
@@ -12,11 +13,12 @@ namespace Api.Tests;
 /// Tests preflight requests, origin validation, credentials handling, and headers.
 /// Related to Issue #260 - TEST-01: Expand Integration Test Coverage (Phase 3).
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class CorsValidationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    public CorsValidationTests(WebApplicationFactoryFixture fixture, ITestOutputHelper output) : base(fixture)
+    public CorsValidationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -28,11 +29,12 @@ namespace Api.Tests.Integration;
 ///
 /// Test Strategy: Full HTTP stack with Testcontainers (Postgres)
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class ChatExportEndpointTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    public ChatExportEndpointTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public ChatExportEndpointTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using Api.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -25,12 +26,12 @@ namespace Api.Tests;
 /// - Unauthorized access scenarios
 /// - Resource ownership validation
 /// </summary>
-[Collection("Integration")]
+[Collection("Postgres Integration Tests")]
 public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    public AuthorizationEdgeCasesIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public AuthorizationEdgeCasesIntegrationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

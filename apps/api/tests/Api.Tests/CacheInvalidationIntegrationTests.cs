@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using FluentAssertions;
@@ -23,12 +24,12 @@ namespace Api.Tests;
 /// I want to automatically invalidate cached AI responses when underlying data changes
 /// So that users always get fresh, accurate responses
 /// </summary>
-[Collection("Sequential")]
+[Collection("Postgres Integration Tests")]
 public class CacheInvalidationIntegrationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    public CacheInvalidationIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public CacheInvalidationIntegrationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

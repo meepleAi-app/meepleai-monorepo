@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Api.Infrastructure.Entities;
+using Api.Tests.Fixtures;
 using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;
@@ -12,11 +13,12 @@ namespace Api.Tests;
 /// Tests role-based limits, rate limit headers, 429 responses, and IP-based limiting.
 /// Related to Issue #260 - TEST-01: Expand Integration Test Coverage (Phase 4).
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class RateLimitingTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    public RateLimitingTests(WebApplicationFactoryFixture fixture, ITestOutputHelper output) : base(fixture)
+    public RateLimitingTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

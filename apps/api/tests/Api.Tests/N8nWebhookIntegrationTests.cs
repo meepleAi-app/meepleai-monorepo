@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
+using Api.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using FluentAssertions;
@@ -22,6 +23,7 @@ namespace Api.Tests;
 /// I want to call the explain webhook
 /// So that I can get structured game rule explanations via n8n orchestration
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class N8nWebhookIntegrationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
@@ -31,7 +33,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         PropertyNameCaseInsensitive = true
     };
 
-    public N8nWebhookIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public N8nWebhookIntegrationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

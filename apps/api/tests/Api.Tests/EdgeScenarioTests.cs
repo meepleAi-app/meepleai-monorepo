@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using Api.Infrastructure.Entities;
+using Api.Tests.Fixtures;
 using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;
@@ -13,11 +14,12 @@ namespace Api.Tests;
 /// Tests Content-Type validation, payload size limits, special characters, malformed requests, and concurrent operations.
 /// Related to Issue #260 - TEST-01: Expand Integration Test Coverage (Phase 5).
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class EdgeScenarioTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    public EdgeScenarioTests(WebApplicationFactoryFixture fixture, ITestOutputHelper output) : base(fixture)
+    public EdgeScenarioTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

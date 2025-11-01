@@ -2,6 +2,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -25,11 +26,12 @@ namespace Api.Tests;
 /// - Demo agents are created for each game
 /// - Seed data is idempotent (can run multiple times safely)
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class SeedDataTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    public SeedDataTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public SeedDataTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

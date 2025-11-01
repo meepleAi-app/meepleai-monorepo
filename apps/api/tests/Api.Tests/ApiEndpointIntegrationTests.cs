@@ -9,6 +9,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -25,6 +26,7 @@ namespace Api.Tests;
 /// I want to interact with authentication, seeding, and ingestion endpoints
 /// So that I can manage game data and authenticate users
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class ApiEndpointIntegrationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
@@ -34,7 +36,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         PropertyNameCaseInsensitive = true
     };
 
-    public ApiEndpointIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public ApiEndpointIntegrationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

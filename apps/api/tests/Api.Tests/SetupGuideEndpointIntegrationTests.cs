@@ -8,6 +8,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -25,6 +26,7 @@ namespace Api.Tests;
 /// I want to generate step-by-step setup guides for board games using RAG + LLM
 /// So that I can prepare games quickly and correctly without reading the full rulebook
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
@@ -34,7 +36,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         PropertyNameCaseInsensitive = true
     };
 
-    public SetupGuideEndpointIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public SetupGuideEndpointIntegrationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

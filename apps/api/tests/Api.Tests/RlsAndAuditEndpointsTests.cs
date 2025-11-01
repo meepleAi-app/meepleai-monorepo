@@ -7,6 +7,7 @@ using System.Net.Http.Json;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using Api.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -28,11 +29,12 @@ namespace Api.Tests;
 /// - Editor: Can create/update own resources + read others
 /// - User: Can only access own resources
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class RlsAndAuditEndpointsTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    public RlsAndAuditEndpointsTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public RlsAndAuditEndpointsTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

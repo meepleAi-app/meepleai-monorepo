@@ -7,6 +7,7 @@ using System.Net.Http.Json;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using Api.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -23,11 +24,12 @@ namespace Api.Tests;
 /// I want to add, view, edit, and delete comments on RuleSpec versions
 /// So that I can collaborate with other users on rule specifications
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class RuleSpecCommentEndpointsTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    public RuleSpecCommentEndpointsTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public RuleSpecCommentEndpointsTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

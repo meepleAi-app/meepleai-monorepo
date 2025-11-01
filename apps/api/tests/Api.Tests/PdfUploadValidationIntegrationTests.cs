@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Api.Infrastructure.Entities;
+using Api.Tests.Fixtures;
 using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;
@@ -22,6 +23,7 @@ namespace Api.Tests;
 /// I want the system to validate PDF files before upload
 /// So that invalid files are rejected with clear error messages
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class PdfUploadValidationIntegrationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
@@ -31,7 +33,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         PropertyNameCaseInsensitive = true
     };
 
-    public PdfUploadValidationIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public PdfUploadValidationIntegrationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

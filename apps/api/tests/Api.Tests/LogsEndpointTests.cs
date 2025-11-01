@@ -7,6 +7,7 @@ using System.Net.Http.Json;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using Api.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -23,11 +24,12 @@ namespace Api.Tests;
 /// I want to view AI request logs via API
 /// So that I can monitor system usage and errors
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class LogsEndpointTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    public LogsEndpointTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public LogsEndpointTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

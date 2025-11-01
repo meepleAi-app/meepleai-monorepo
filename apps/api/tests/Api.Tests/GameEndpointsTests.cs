@@ -7,6 +7,7 @@ using System.Net.Http.Json;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using Api.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -23,11 +24,12 @@ namespace Api.Tests;
 /// I want to create and manage games via API
 /// So that users can discover and interact with board game rules
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class GameEndpointsTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    public GameEndpointsTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public GameEndpointsTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

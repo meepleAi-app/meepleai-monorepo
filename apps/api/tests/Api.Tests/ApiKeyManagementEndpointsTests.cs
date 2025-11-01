@@ -6,6 +6,7 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using Api.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using FluentAssertions;
@@ -18,11 +19,12 @@ namespace Api.Tests;
 /// Tests the complete flow through HTTP endpoints, middleware, and services.
 /// Related to Issue #259 - API-04: API Key Management and Quota System.
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class ApiKeyManagementEndpointsTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    public ApiKeyManagementEndpointsTests(WebApplicationFactoryFixture fixture, ITestOutputHelper output) : base(fixture)
+    public ApiKeyManagementEndpointsTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

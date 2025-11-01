@@ -10,6 +10,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,11 +32,12 @@ namespace Api.Tests;
 /// I want to enforce rate limits on API requests
 /// So that I can prevent abuse and ensure fair resource allocation
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class RateLimitingIntegrationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    public RateLimitingIntegrationTests(WebApplicationFactoryFixture fixture, ITestOutputHelper output) : base(fixture)
+    public RateLimitingIntegrationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
     }

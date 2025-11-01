@@ -68,9 +68,9 @@ public class LlmServiceConfigurationTests
         using var document = JsonDocument.Parse(requestBody!);
         var root = document.RootElement;
 
-        Assert.Equal("database-model", root.GetProperty("model").GetString());
-        Assert.Equal(0.5, root.GetProperty("temperature").GetDouble());
-        Assert.Equal(750, root.GetProperty("max_tokens").GetInt32());
+        root.GetProperty("model").GetString().Should().Be("database-model");
+        root.GetProperty("temperature").GetDouble().Should().Be(0.5);
+        root.GetProperty("max_tokens").GetInt32().Should().Be(750);
 
         // Verify database was queried
         _configServiceMock.Verify(x => x.GetValueAsync<string>("AI.Model", default, default), Times.Once);
@@ -106,9 +106,9 @@ public class LlmServiceConfigurationTests
         using var document = JsonDocument.Parse(requestBody!);
         var root = document.RootElement;
 
-        Assert.Equal("database-streaming-model", root.GetProperty("model").GetString());
-        Assert.Equal(0.8, root.GetProperty("temperature").GetDouble());
-        Assert.Equal(600, root.GetProperty("max_tokens").GetInt32());
+        root.GetProperty("model").GetString().Should().Be("database-streaming-model");
+        root.GetProperty("temperature").GetDouble().Should().Be(0.8);
+        root.GetProperty("max_tokens").GetInt32().Should().Be(600);
         root.GetProperty("stream").GetBoolean().Should().BeTrue();
     }
 
@@ -140,9 +140,9 @@ public class LlmServiceConfigurationTests
         using var document = JsonDocument.Parse(requestBody!);
         var root = document.RootElement;
 
-        Assert.Equal("appsettings-model", root.GetProperty("model").GetString());
-        Assert.Equal(0.7, root.GetProperty("temperature").GetDouble());
-        Assert.Equal(1000, root.GetProperty("max_tokens").GetInt32());
+        root.GetProperty("model").GetString().Should().Be("appsettings-model");
+        root.GetProperty("temperature").GetDouble().Should().Be(0.7);
+        root.GetProperty("max_tokens").GetInt32().Should().Be(1000);
     }
 
     [Fact]
@@ -162,9 +162,9 @@ public class LlmServiceConfigurationTests
         using var document = JsonDocument.Parse(requestBody!);
         var root = document.RootElement;
 
-        Assert.Equal("appsettings-model", root.GetProperty("model").GetString());
-        Assert.Equal(0.7, root.GetProperty("temperature").GetDouble());
-        Assert.Equal(1000, root.GetProperty("max_tokens").GetInt32());
+        root.GetProperty("model").GetString().Should().Be("appsettings-model");
+        root.GetProperty("temperature").GetDouble().Should().Be(0.7);
+        root.GetProperty("max_tokens").GetInt32().Should().Be(1000);
     }
 
     #endregion
@@ -196,9 +196,9 @@ public class LlmServiceConfigurationTests
         var root = document.RootElement;
 
         // Verify hardcoded defaults from LlmService
-        Assert.Equal("deepseek/deepseek-chat-v3.1", root.GetProperty("model").GetString());
-        Assert.Equal(0.3, root.GetProperty("temperature").GetDouble());
-        Assert.Equal(500, root.GetProperty("max_tokens").GetInt32());
+        root.GetProperty("model").GetString().Should().Be("deepseek/deepseek-chat-v3.1");
+        root.GetProperty("temperature").GetDouble().Should().Be(0.3);
+        root.GetProperty("max_tokens").GetInt32().Should().Be(500);
     }
 
     [Fact]
@@ -229,9 +229,9 @@ public class LlmServiceConfigurationTests
         using var document = JsonDocument.Parse(requestBody!);
         var root = document.RootElement;
 
-        Assert.Equal("deepseek/deepseek-chat-v3.1", root.GetProperty("model").GetString());
-        Assert.Equal(0.3, root.GetProperty("temperature").GetDouble());
-        Assert.Equal(500, root.GetProperty("max_tokens").GetInt32());
+        root.GetProperty("model").GetString().Should().Be("deepseek/deepseek-chat-v3.1");
+        root.GetProperty("temperature").GetDouble().Should().Be(0.3);
+        root.GetProperty("max_tokens").GetInt32().Should().Be(500);
     }
 
     #endregion
@@ -266,7 +266,7 @@ public class LlmServiceConfigurationTests
         var root = document.RootElement;
 
         // Should use hardcoded default (0.3) due to validation failure
-        Assert.Equal(0.3, root.GetProperty("temperature").GetDouble());
+        root.GetProperty("temperature").GetDouble().Should().Be(0.3);
 
         // Verify warning was logged
         _loggerMock.Verify(
@@ -358,9 +358,9 @@ public class LlmServiceConfigurationTests
         using var document = JsonDocument.Parse(requestBody!);
         var root = document.RootElement;
 
-        Assert.Equal("database-only-model", root.GetProperty("model").GetString()); // From DB
-        Assert.Equal(0.7, root.GetProperty("temperature").GetDouble());             // From appsettings
-        Assert.Equal(1000, root.GetProperty("max_tokens").GetInt32());             // From appsettings
+        root.GetProperty("model").GetString().Should().Be("database-only-model"); // From DB
+        root.GetProperty("temperature").GetDouble().Should().Be(0.7);             // From appsettings
+        root.GetProperty("max_tokens").GetInt32().Should().Be(1000);             // From appsettings
     }
 
     [Fact]
@@ -397,9 +397,9 @@ public class LlmServiceConfigurationTests
         using var document = JsonDocument.Parse(requestBody!);
         var root = document.RootElement;
 
-        Assert.Equal("database-primary-model", root.GetProperty("model").GetString()); // From DB
-        Assert.Equal(0.3, root.GetProperty("temperature").GetDouble());               // From default (DB validation failed)
-        Assert.Equal(500, root.GetProperty("max_tokens").GetInt32());                 // From default (not in appsettings)
+        root.GetProperty("model").GetString().Should().Be("database-primary-model"); // From DB
+        root.GetProperty("temperature").GetDouble().Should().Be(0.3);               // From default (DB validation failed)
+        root.GetProperty("max_tokens").GetInt32().Should().Be(500);                 // From default (not in appsettings)
     }
 
     #endregion

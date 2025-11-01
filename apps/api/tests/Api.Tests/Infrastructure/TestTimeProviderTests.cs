@@ -53,7 +53,7 @@ public class TestTimeProviderTests
 
         // Assert
         var after = provider.GetUtcNow();
-        Assert.Equal(30, (after - before).TotalSeconds);
+        (after - before).TotalSeconds.Should().Be(30);
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class TestTimeProviderTests
 
         // Assert
         var after = provider.GetUtcNow();
-        Assert.Equal(5, (after - before).TotalMinutes);
+        (after - before).TotalMinutes.Should().Be(5);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class TestTimeProviderTests
 
         // Assert
         var after = provider.GetUtcNow();
-        Assert.Equal(2, (after - before).TotalHours);
+        (after - before).TotalHours.Should().Be(2);
     }
 
     [Fact]
@@ -98,7 +98,7 @@ public class TestTimeProviderTests
 
         // Assert
         var after = provider.GetUtcNow();
-        Assert.Equal(30, (after - before).TotalDays);
+        (after - before).TotalDays.Should().Be(30);
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public class TestTimeProviderTests
         provider.SetTime(target);
 
         // Assert
-        Assert.Equal(target, provider.GetUtcNow());
+        provider.GetUtcNow().Should().Be(target);
     }
 
     [Fact]
@@ -137,7 +137,8 @@ public class TestTimeProviderTests
         using var provider = new TestTimeProvider();
 
         // Act & Assert
-        Assert.Throws<ArgumentOutOfRangeException>(() => provider.Advance(TimeSpan.FromMinutes(-5)));
+        var act = () => provider.Advance(TimeSpan.FromMinutes(-5)));
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
@@ -240,7 +241,7 @@ public class TimeTestHelpersTests
 
         // Assert
         var after = provider.GetUtcNow();
-        Assert.Equal(45, (after - before).TotalSeconds);
+        (after - before).TotalSeconds.Should().Be(45);
     }
 
     [Fact]
@@ -255,7 +256,7 @@ public class TimeTestHelpersTests
 
         // Assert
         var after = provider.GetUtcNow();
-        Assert.Equal(10, (after - before).TotalMinutes);
+        (after - before).TotalMinutes.Should().Be(10);
     }
 
     [Fact]
@@ -270,7 +271,7 @@ public class TimeTestHelpersTests
 
         // Assert
         var after = provider.GetUtcNow();
-        Assert.Equal(30, (after - before).TotalDays);
+        (after - before).TotalDays.Should().Be(30);
     }
 
     [Fact]
@@ -285,7 +286,7 @@ public class TimeTestHelpersTests
 
         // Assert
         var after = provider.GetUtcNow();
-        Assert.Equal(5, (after - before).TotalMinutes);
+        (after - before).TotalMinutes.Should().Be(5);
     }
 
     [Fact]
@@ -327,7 +328,8 @@ public class TimeAssertionsTests
         var expected = new DateTimeOffset(2025, 1, 1, 12, 0, 5, TimeSpan.Zero); // 5 seconds diff
 
         // Act & Assert
-        Assert.Throws<Xunit.Sdk.XunitException>(() =>
+        var act = () =>
+        act.Should().Throw<ArgumentOutOfRangeException>();
             TimeAssertions.AssertTimeNear(actual, expected, TimeSpan.FromSeconds(1)));
     }
 

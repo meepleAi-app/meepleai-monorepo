@@ -53,7 +53,7 @@ public class CacheMetricsRecorderTests
 
         // Assert (Then): Throws ArgumentNullException
         var exception = Assert.Throws<ArgumentNullException>(act);
-        Assert.Equal("logger", exception.ParamName);
+        exception.ParamName.Should().Be("logger");
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public class CacheMetricsRecorderTests
 
         // Assert (Then): Throws ArgumentNullException
         var exception = Assert.Throws<ArgumentNullException>(act);
-        Assert.Equal("config", exception.ParamName);
+        exception.ParamName.Should().Be("config");
     }
 
     #endregion
@@ -123,8 +123,8 @@ public class CacheMetricsRecorderTests
         stopwatch.Stop();
 
         // Assert (Then): Fire-and-forget completes in <5ms (doesn't block caller)
-        Assert.True(stopwatch.ElapsedMilliseconds < 5,
-            $"Expected <5ms, got {stopwatch.ElapsedMilliseconds}ms");
+        stopwatch.ElapsedMilliseconds < 5,
+            $"Expected <5ms, got {stopwatch.ElapsedMilliseconds}ms".Should().BeTrue();
     }
 
     #endregion

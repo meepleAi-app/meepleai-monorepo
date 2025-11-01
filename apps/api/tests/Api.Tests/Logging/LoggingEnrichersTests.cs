@@ -35,7 +35,7 @@ public class LoggingEnrichersTests
         Assert.True(logEvent.Properties.ContainsKey("CorrelationId"));
         var correlationId = logEvent.Properties["CorrelationId"];
         var scalarValue = Assert.IsType<ScalarValue>(correlationId);
-        Assert.Equal("test-trace-id-12345", scalarValue.Value);
+        scalarValue.Value.Should().Be("test-trace-id-12345");
     }
 
     [Fact]
@@ -86,15 +86,15 @@ public class LoggingEnrichersTests
 
         var userId = logEvent.Properties["UserId"];
         var scalarUserId = Assert.IsType<ScalarValue>(userId);
-        Assert.Equal("user-123", scalarUserId.Value);
+        scalarUserId.Value.Should().Be("user-123");
 
         var userEmail = logEvent.Properties["UserEmail"];
         var scalarEmail = Assert.IsType<ScalarValue>(userEmail);
-        Assert.Equal("test@example.com", scalarEmail.Value);
+        scalarEmail.Value.Should().Be("test@example.com");
 
         var userRole = logEvent.Properties["UserRole"];
         var scalarRole = Assert.IsType<ScalarValue>(userRole);
-        Assert.Equal("Admin", scalarRole.Value);
+        scalarRole.Value.Should().Be("Admin");
     }
 
     [Fact]
@@ -151,7 +151,7 @@ public class LoggingEnrichersTests
         Assert.True(logEvent.Properties.ContainsKey("Environment"));
         var environment = logEvent.Properties["Environment"];
         var scalarValue = Assert.IsType<ScalarValue>(environment);
-        Assert.Equal("Production", scalarValue.Value);
+        scalarValue.Value.Should().Be("Production");
     }
 
     [Theory]
@@ -171,7 +171,7 @@ public class LoggingEnrichersTests
         Assert.True(logEvent.Properties.ContainsKey("Environment"));
         var environment = logEvent.Properties["Environment"];
         var scalarValue = Assert.IsType<ScalarValue>(environment);
-        Assert.Equal(environmentName, scalarValue.Value);
+        scalarValue.Value.Should().Be(environmentName);
     }
 
     [Fact]
@@ -200,19 +200,19 @@ public class LoggingEnrichersTests
 
         var requestPath = logEvent.Properties["RequestPath"];
         var scalarPath = Assert.IsType<ScalarValue>(requestPath);
-        Assert.Equal("/api/v1/games", scalarPath.Value);
+        scalarPath.Value.Should().Be("/api/v1/games");
 
         var requestMethod = logEvent.Properties["RequestMethod"];
         var scalarMethod = Assert.IsType<ScalarValue>(requestMethod);
-        Assert.Equal("GET", scalarMethod.Value);
+        scalarMethod.Value.Should().Be("GET");
 
         var remoteIp = logEvent.Properties["RemoteIp"];
         var scalarIp = Assert.IsType<ScalarValue>(remoteIp);
-        Assert.Equal("192.168.1.1", scalarIp.Value);
+        scalarIp.Value.Should().Be("192.168.1.1");
 
         var userAgent = logEvent.Properties["UserAgent"];
         var scalarAgent = Assert.IsType<ScalarValue>(userAgent);
-        Assert.Equal("Mozilla/5.0 (Test)", scalarAgent.Value);
+        scalarAgent.Value.Should().Be("Mozilla/5.0 (Test)");
     }
 
     [Theory]
@@ -237,7 +237,7 @@ public class LoggingEnrichersTests
         // Assert
         Assert.True(logEvent.Properties.TryGetValue("RequestPath", out var requestPathProperty));
         var scalarPath = Assert.IsType<ScalarValue>(requestPathProperty);
-        Assert.Equal(expected, scalarPath.Value);
+        scalarPath.Value.Should().Be(expected);
     }
 
     [Fact]
@@ -280,7 +280,7 @@ public class LoggingEnrichersTests
         Assert.True(logEvent.Properties.ContainsKey("RemoteIp"));
         var remoteIp = logEvent.Properties["RemoteIp"];
         var scalarIp = Assert.IsType<ScalarValue>(remoteIp);
-        Assert.Equal("unknown", scalarIp.Value);
+        scalarIp.Value.Should().Be("unknown");
     }
 
     [Fact]

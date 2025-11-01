@@ -58,11 +58,11 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         var response = await client.PostAsJsonAsync("/api/v1/logs/workflow-error", request);
 
         // Then: Returns 200 OK
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: Response confirms logging
         var result = await response.Content.ReadAsStringAsync();
-        Assert.Contains("logged successfully", result);
+        result.Should().Contain("logged successfully");
 
         // And: Error is stored in database
         await using var scope = Factory.Services.CreateAsyncScope();
@@ -72,10 +72,10 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
             .FirstOrDefaultAsync(e => e.ExecutionId == request.ExecutionId);
 
         logged.Should().NotBeNull();
-        Assert.Equal("chess-agent-workflow", logged.WorkflowId);
-        Assert.Equal("HTTP Request failed: Connection timeout", logged.ErrorMessage);
-        Assert.Equal("API Call Node", logged.NodeName);
-        Assert.Equal(2, logged.RetryCount);
+        logged.WorkflowId.Should().Be("chess-agent-workflow");
+        logged.ErrorMessage.Should().Be("HTTP Request failed: Connection timeout");
+        logged.NodeName.Should().Be("API Call Node");
+        logged.RetryCount.Should().Be(2);
     }
 
     /// <summary>
@@ -96,7 +96,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         var response = await client.PostAsJsonAsync("/api/v1/logs/workflow-error", invalidRequest);
 
         // Then: Returns 400 Bad Request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     /// <summary>
@@ -139,7 +139,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: Returns 200 OK
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var root = document.RootElement;
@@ -154,7 +154,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         var secondError = items[1];
         var firstCreated = DateTime.Parse(firstError.GetProperty("createdAt").GetString()!);
         var secondCreated = DateTime.Parse(secondError.GetProperty("createdAt").GetString()!);
-        Assert.True(firstCreated >= secondCreated);
+        firstCreated >= secondCreated.Should().BeTrue();
     }
 
     /// <summary>
@@ -202,7 +202,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: Returns only filtered errors
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var items = document.RootElement.GetProperty("items");
@@ -261,13 +261,13 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: Returns only recent errors
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var totalCount = document.RootElement.GetProperty("totalCount").GetInt32();
 
         // Should have at least the recent error, but not the old one
-        Assert.True(totalCount >= 1);
+        totalCount >= 1.Should().BeTrue();
     }
 
     /// <summary>
@@ -291,7 +291,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         var response = await userClient.SendAsync(request);
 
         // Then: Returns 403 Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -310,7 +310,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         var response = await client.GetAsync("/api/v1/admin/workflows/errors");
 
         // Then: Returns 401 Unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -353,7 +353,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: Returns error details
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var root = document.RootElement;
@@ -389,7 +389,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         var response = await adminClient.SendAsync(request);
 
         // Then: Returns 404 Not Found
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     /// <summary>
@@ -413,7 +413,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         using var client = Factory.CreateHttpsClient();
         var response = await client.PostAsJsonAsync("/api/v1/logs/workflow-error", request);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Then: Sensitive data is redacted in database
         await using var scope = Factory.Services.CreateAsyncScope();
@@ -423,9 +423,9 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
             .FirstOrDefaultAsync(e => e.ExecutionId == request.ExecutionId);
 
         logged.Should().NotBeNull();
-        Assert.Contains("***REDACTED***", logged.ErrorMessage);
-        Assert.DoesNotContain("sk-1234567890", logged.ErrorMessage);
-        Assert.DoesNotContain("bearer-secret", logged.ErrorMessage);
-        Assert.DoesNotContain("mysecret123", logged.ErrorMessage);
+        logged.ErrorMessage.Should().Contain("***REDACTED***");
+        logged.ErrorMessage.Should().NotContain("sk-1234567890");
+        logged.ErrorMessage.Should().NotContain("bearer-secret");
+        logged.ErrorMessage.Should().NotContain("mysecret123");
     }
 }

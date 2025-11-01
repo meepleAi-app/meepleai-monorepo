@@ -21,12 +21,12 @@ public class TestTimeProviderTests
 
         // Assert
         var now = provider.GetUtcNow();
-        Assert.Equal(2025, now.Year);
-        Assert.Equal(1, now.Month);
-        Assert.Equal(1, now.Day);
-        Assert.Equal(0, now.Hour);
-        Assert.Equal(0, now.Minute);
-        Assert.Equal(0, now.Second);
+        now.Year.Should().Be(2025);
+        now.Month.Should().Be(1);
+        now.Day.Should().Be(1);
+        now.Hour.Should().Be(0);
+        now.Minute.Should().Be(0);
+        now.Second.Should().Be(0);
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class TestTimeProviderTests
 
         // Assert
         var now = provider.GetUtcNow();
-        Assert.Equal(start, now);
+        now.Should().Be(start);
     }
 
     [Fact]
@@ -151,7 +151,7 @@ public class TestTimeProviderTests
         var timestamp2 = provider.GetTimestamp();
 
         // Assert (should be same since time hasn't advanced)
-        Assert.Equal(timestamp1, timestamp2);
+        timestamp2.Should().Be(timestamp1);
     }
 
     [Fact]
@@ -166,7 +166,7 @@ public class TestTimeProviderTests
         var timestamp2 = provider.GetTimestamp();
 
         // Assert
-        Assert.True(timestamp2 > timestamp1);
+        timestamp2 > timestamp1.Should().BeTrue();
     }
 
     [Fact]
@@ -182,7 +182,7 @@ public class TestTimeProviderTests
         var elapsed = provider.GetElapsedTime(start, end);
 
         // Assert
-        Assert.True(elapsed.TotalSeconds >= 4.9 && elapsed.TotalSeconds <= 5.1);
+        elapsed.TotalSeconds >= 4.9 && elapsed.TotalSeconds <= 5.1.Should().BeTrue();
     }
 
     [Fact]
@@ -192,7 +192,7 @@ public class TestTimeProviderTests
         using var provider = new TestTimeProvider();
 
         // Assert
-        Assert.Equal(TimeZoneInfo.Utc, provider.LocalTimeZone);
+        provider.LocalTimeZone.Should().Be(TimeZoneInfo.Utc);
     }
 
     [Fact]
@@ -206,7 +206,7 @@ public class TestTimeProviderTests
         var localNow = provider.GetLocalNow();
 
         // Assert (for testing, local = UTC)
-        Assert.Equal(utcNow, localNow);
+        localNow.Should().Be(utcNow);
     }
 }
 
@@ -223,9 +223,9 @@ public class TimeTestHelpersTests
 
         // Assert
         var now = provider.GetUtcNow();
-        Assert.Equal(2025, now.Year);
-        Assert.Equal(6, now.Month);
-        Assert.Equal(15, now.Day);
+        now.Year.Should().Be(2025);
+        now.Month.Should().Be(6);
+        now.Day.Should().Be(15);
     }
 
     [Fact]

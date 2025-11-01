@@ -310,7 +310,7 @@ public class AlertingServiceTests : IDisposable
         var alertType = "TestAlert";
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _service.SendAlertAsync(alertType, "critical", "Test"));
+        var act = async () => await _service.SendAlertAsync(alertType, "critical", "Test");
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 }

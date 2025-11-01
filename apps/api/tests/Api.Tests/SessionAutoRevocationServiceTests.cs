@@ -386,9 +386,9 @@ public class SessionAutoRevocationServiceTests : IDisposable
         var sessionMgmt = CreateSessionManagementService(config);
 
         // When/Then: Calling RevokeInactiveSessionsAsync should throw (database connection is closed)
-        await Assert.ThrowsAnyAsync<Exception>(
-            async () => await sessionMgmt.RevokeInactiveSessionsAsync()
-        );
+        var act = async () => await sessionMgmt.RevokeInactiveSessionsAsync()
+        ;
+        await act.Should().ThrowAsync<Exception>();
     }
 
     #endregion

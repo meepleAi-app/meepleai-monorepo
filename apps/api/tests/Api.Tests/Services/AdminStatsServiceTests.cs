@@ -334,9 +334,9 @@ public class AdminStatsServiceTests : IDisposable
         var request = new ExportDataRequest(Format: "xml", FromDate: DateTime.UtcNow.AddDays(-7), ToDate: DateTime.UtcNow);
 
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentException>(
-            async () => await _service.ExportDashboardDataAsync(request, CancellationToken.None)
-        );
+        var act = async () => await _service.ExportDashboardDataAsync(request, CancellationToken.None)
+        ;
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -497,7 +497,7 @@ public class AdminStatsServiceTests : IDisposable
 
         // UserTrend should have 31 days (30 days + today) with zero counts
         result.UserTrend.Count.Should().Be(31);
-        Assert.All(result.UserTrend, point => Assert.Equal(0, point.Count));
+        result.UserTrend.Should().OnlyContain(point => point.Count == 0);
     }
 
     /// <summary>

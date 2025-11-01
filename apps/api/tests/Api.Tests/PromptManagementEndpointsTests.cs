@@ -518,7 +518,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
 
         result.Should().NotBeNull();
         result.Templates.Count >= 1.Should().BeTrue();
-        Assert.All(result.Templates, t => Assert.Equal("qa", t.Category));
+        result.Templates.Should().OnlyContain(t => t.Category == "qa");
     }
 
     /// <summary>

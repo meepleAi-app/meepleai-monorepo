@@ -95,7 +95,7 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
             qdrantService.LastGameId.Should().Be("game-1");
             qdrantService.LastPdfId.Should().Be(uploadResult.Document!.Id);
             qdrantService.LastChunks!.Count.Should().Be(2);
-            Assert.All(qdrantService.LastChunks!, chunk => Assert.Equal(2, chunk.Embedding.Length));
+            qdrantService.LastChunks!.Should().OnlyContain(chunk => chunk.Embedding.Length == 2);
 
             await using var verificationContext = CreateScopedDbContext();
             var vectorDoc = await verificationContext.VectorDocuments.SingleAsync();

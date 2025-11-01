@@ -76,7 +76,7 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
         templates.Should().NotBeNull();
-        Assert.All(templates!, t => Assert.Equal("integration", t.Category));
+        templates!.Should().OnlyContain(t => t.Category == "integration");
     }
 
     [Fact]

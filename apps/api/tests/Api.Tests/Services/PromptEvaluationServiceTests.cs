@@ -432,7 +432,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
                 nonExistentVersionId,
                 _testDatasetPath));
 
-        exception.Message.Should().Contain("not found");
+        exception.Which.Message.Should().Contain("not found");
     }
 
     #endregion

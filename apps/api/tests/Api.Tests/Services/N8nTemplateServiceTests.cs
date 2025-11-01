@@ -122,7 +122,7 @@ public class N8nTemplateServiceTests : IDisposable
 
         // Assert
         result.Count.Should().Be(2);
-        Assert.All(result, t => Assert.Equal("integration", t.Category));
+        result.Should().OnlyContain(t => t.Category == "integration");
     }
 
     [Fact]

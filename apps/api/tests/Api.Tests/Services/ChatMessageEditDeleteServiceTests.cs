@@ -189,7 +189,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _chatService.UpdateMessageAsync(chatId, aiMessage.Id, "New content", userId));
 
-        exception.Message.Should().Contain("AI-generated messages cannot be edited");
+        exception.Which.Message.Should().Contain("AI-generated messages cannot be edited");
     }
 
     /// <summary>
@@ -221,7 +221,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             _chatService.UpdateMessageAsync(chatId, messageId, "New content", userB.Id));
 
-        exception.Message.Should().Contain("You can only edit your own messages");
+        exception.Which.Message.Should().Contain("You can only edit your own messages");
     }
 
     /// <summary>
@@ -242,7 +242,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         var exception = await Assert.ThrowsAsync<KeyNotFoundException>(() =>
             _chatService.UpdateMessageAsync(chatId, invalidMessageId, "New content", userId));
 
-        exception.Message.Should().Contain($"Message {invalidMessageId} not found");
+        exception.Which.Message.Should().Contain($"Message {invalidMessageId} not found");
     }
 
     #endregion
@@ -369,7 +369,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             _chatService.DeleteMessageAsync(chatId, messageId, userB.Id, isAdmin: false));
 
-        exception.Message.Should().Contain("You can only delete your own messages");
+        exception.Which.Message.Should().Contain("You can only delete your own messages");
     }
 
     /// <summary>
@@ -390,7 +390,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         var exception = await Assert.ThrowsAsync<KeyNotFoundException>(() =>
             _chatService.DeleteMessageAsync(chatId, invalidMessageId, userId, isAdmin: false));
 
-        exception.Message.Should().Contain($"Message {invalidMessageId} not found");
+        exception.Which.Message.Should().Contain($"Message {invalidMessageId} not found");
     }
 
     #endregion

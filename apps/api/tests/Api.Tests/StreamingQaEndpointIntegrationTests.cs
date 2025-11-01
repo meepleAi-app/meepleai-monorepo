@@ -434,7 +434,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         var responses = await Task.WhenAll(tasks);
 
         // Then: All requests succeed
-        Assert.All(responses, response => Assert.Equal(HttpStatusCode.OK, response.StatusCode));
+        responses.Should().OnlyContain(response => response.StatusCode == HttpStatusCode.OK);
 
         // And: Each user receives streaming events
         var eventTasks = responses.Select(ParseSSEEventsAsync).ToArray();

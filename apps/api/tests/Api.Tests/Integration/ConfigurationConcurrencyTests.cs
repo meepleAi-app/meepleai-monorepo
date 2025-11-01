@@ -74,7 +74,7 @@ public class ConfigurationConcurrencyTests : ConfigIntegrationTestBase
         var responses = await Task.WhenAll(task1, task2);
 
         // Assert: Both operations succeeded
-        Assert.All(responses, r => Assert.Equal(HttpStatusCode.Created, r.StatusCode));
+        responses.Should().OnlyContain(r => r.StatusCode == HttpStatusCode.Created);
 
         // Verify both configs in database
         using var scope = Factory.Services.CreateScope();
@@ -131,7 +131,7 @@ public class ConfigurationConcurrencyTests : ConfigIntegrationTestBase
         var results = await Task.WhenAll(update1, update2);
 
         // Assert: Both succeed (last write wins behavior)
-        Assert.All(results, r => Assert.True(r.StatusCode is HttpStatusCode.OK or HttpStatusCode.Conflict));
+        results.Should().OnlyContain(r => r.StatusCode is HttpStatusCode.OK or HttpStatusCode.Conflict);
     }
 
     [Fact]

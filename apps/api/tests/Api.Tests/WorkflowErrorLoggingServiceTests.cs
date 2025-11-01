@@ -201,7 +201,7 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
 
         // Assert
         result.Total.Should().Be(2);
-        Assert.All(result.Items, item => Assert.Equal("workflow-A", item.WorkflowId));
+        result.Items.Should().OnlyContain(item => item.WorkflowId == "workflow-A");
     }
 
     [Fact]
@@ -372,7 +372,7 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
 
         // Assert
         result.Total.Should().Be(2); // Only workflow-A errors in date range
-        Assert.All(result.Items, item => Assert.Equal("workflow-A", item.WorkflowId));
+        result.Items.Should().OnlyContain(item => item.WorkflowId == "workflow-A");
     }
 
     // Helper methods

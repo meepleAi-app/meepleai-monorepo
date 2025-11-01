@@ -230,7 +230,7 @@ public class PromptTemplateConcurrencyTests : ConfigIntegrationTestBase
         var results = await Task.WhenAll(tasks);
 
         // Assert: All succeed (idempotent)
-        Assert.All(results, r => Assert.Equal(HttpStatusCode.OK, r.StatusCode));
+        results.Should().OnlyContain(r => r.StatusCode == HttpStatusCode.OK);
 
         // Verify version is active
         using var scope2 = Factory.Services.CreateScope();

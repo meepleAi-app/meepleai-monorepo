@@ -191,7 +191,7 @@ public class DynamicTtlStrategyTests
 
         // Assert (Then): Throws ArgumentException
         var exception = await Assert.ThrowsAsync<ArgumentException>(act);
-        exception.Message.Should().Contain("hitCount");
-        exception.Message.Should().Contain("cannot be negative");
+        exception.Which.Message.Should().Contain("hitCount");
+        exception.Which.Message.Should().Contain("cannot be negative");
     }
 }

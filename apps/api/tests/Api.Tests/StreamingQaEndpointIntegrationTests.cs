@@ -440,7 +440,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         var eventTasks = responses.Select(ParseSSEEventsAsync).ToArray();
         var allEvents = await Task.WhenAll(eventTasks);
 
-        allEvents.Should().OnlyContain(events => Assert.NotEmpty(events));
+        allEvents.Should().OnlyContain(events => events.Count > 0);
     }
 
     /// <summary>

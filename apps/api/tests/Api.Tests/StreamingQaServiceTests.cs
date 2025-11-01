@@ -843,7 +843,7 @@ ANSWER:",
 
         // Act
         var events = new List<RagStreamingEvent>();
-        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+        var act = async () =>
         {
             await foreach (var evt in service.AskStreamAsync("game1", "test", chatId: null, cts.Token))
             {

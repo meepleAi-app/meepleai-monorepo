@@ -46,10 +46,10 @@ public class ResponseQualityServiceTests
         var scores = service.CalculateQualityScores(ragResults, citations, responseText);
 
         // Assert
-        scores.RagConfidence.Should().BeApproximately(0.84, TimeSpan.FromSeconds(5));
-        scores.LlmConfidence.Should().BeApproximately(0.75, TimeSpan.FromSeconds(5));
-        scores.CitationQuality.Should().BeApproximately(0.95, TimeSpan.FromSeconds(5));
-        scores.OverallConfidence.Should().BeApproximately(0.80, TimeSpan.FromSeconds(5));
+        scores.RagConfidence.Should().BeApproximately(0.84, 0.05);
+        scores.LlmConfidence.Should().BeApproximately(0.75, 0.05);
+        scores.CitationQuality.Should().BeApproximately(0.95, 0.05);
+        scores.OverallConfidence.Should().BeApproximately(0.80, 0.05);
         scores.IsLowQuality.Should().BeFalse();
     }
 
@@ -85,10 +85,10 @@ public class ResponseQualityServiceTests
         var scores = service.CalculateQualityScores(ragResults, citations, responseText);
 
         // Assert
-        scores.RagConfidence.Should().BeApproximately(0.25, TimeSpan.FromSeconds(5));
-        scores.LlmConfidence.Should().BeApproximately(0.35, TimeSpan.FromSeconds(5));  // Adjusted to match calculation
-        scores.CitationQuality.Should().BeApproximately(0.30, TimeSpan.FromSeconds(5));
-        scores.OverallConfidence.Should().BeApproximately(0.30, TimeSpan.FromSeconds(5));
+        scores.RagConfidence.Should().BeApproximately(0.25, 0.05);
+        scores.LlmConfidence.Should().BeApproximately(0.35, 0.05);  // Adjusted to match calculation
+        scores.CitationQuality.Should().BeApproximately(0.30, 0.05);
+        scores.OverallConfidence.Should().BeApproximately(0.30, 0.05);
         scores.IsLowQuality.Should().BeTrue();
     }
 
@@ -196,7 +196,7 @@ public class ResponseQualityServiceTests
         var scores = service.CalculateQualityScores(ragResults, citations, responseText);
 
         // Assert
-        scores.OverallConfidence.Should().BeApproximately(0.90, TimeSpan.FromSeconds(5));
+        scores.OverallConfidence.Should().BeApproximately(0.90, 0.05);
         scores.IsLowQuality.Should().BeFalse();
     }
 
@@ -221,7 +221,7 @@ public class ResponseQualityServiceTests
         var scoresWithoutHedging = service.CalculateQualityScores(ragResults, citations, responseWithoutHedging);
 
         // Assert
-        (scoresWithHedging.LlmConfidence < scoresWithoutHedging.LlmConfidence).Should().BeTrue("Hedging phrases should reduce LLM confidence");
+        scoresWithHedging.LlmConfidence.Should().BeLessThan(scoresWithoutHedging.LlmConfidence, "Hedging phrases should reduce LLM confidence");
     }
 
     /// <summary>
@@ -250,7 +250,7 @@ public class ResponseQualityServiceTests
         var scores = service.CalculateQualityScores(ragResults, citations, responseText);
 
         // Assert
-        scores.CitationQuality.Should().BeApproximately(0.95, TimeSpan.FromSeconds(5));
+        scores.CitationQuality.Should().BeApproximately(0.95, 0.05);
     }
 
     /// <summary>
@@ -272,7 +272,7 @@ public class ResponseQualityServiceTests
         var scores = service.CalculateQualityScores(ragResults, citations, shortResponse);
 
         // Assert
-        (scores.LlmConfidence < 0.60).Should().BeTrue("Very short responses should have reduced LLM confidence");
+        scores.LlmConfidence.Should().BeLessThan(0.60, "Very short responses should have reduced LLM confidence");
     }
 
     /// <summary>
@@ -340,10 +340,10 @@ public class ResponseQualityServiceTests
         var scores = service.CalculateQualityScores(ragResults, citations, responseText);
 
         // Assert
-        scores.RagConfidence.Should().BeApproximately(0.88, TimeSpan.FromSeconds(5));
-        (scores.LlmConfidence < 0.60).Should().BeTrue("Short response with hedging should have low LLM confidence");
+        scores.RagConfidence.Should().BeApproximately(0.88, 0.05);
+        scores.LlmConfidence.Should().BeLessThan(0.60, "Short response with hedging should have low LLM confidence");
         // Overall should consider all dimensions
-        (scores.OverallConfidence > 0.0 && scores.OverallConfidence < 1.0).Should().BeTrue();
+        scores.OverallConfidence.Should().BeInRange(0.0, 1.0);
     }
 
     #region Helper Methods

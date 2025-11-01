@@ -156,10 +156,10 @@ public class MdExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // Then: Citations are formatted as bullet list
-        content.Contains("**Citations:**") || content.Contains("Citations:").Should().BeTrue();
-        content.Contains("- **Page 12:**") || content.Contains("- Page 12:").Should().BeTrue();
+        (content.Contains("**Citations:**") || content.Contains("Citations:")).Should().BeTrue();
+        (content.Contains("- **Page 12:**") || content.Contains("- Page 12:")).Should().BeTrue();
         content.Should().Contain("Setup instructions for beginners");
-        content.Contains("- **Page 15:**") || content.Contains("- Page 15:").Should().BeTrue();
+        (content.Contains("- **Page 15:**") || content.Contains("- Page 15:")).Should().BeTrue();
         content.Should().Contain("Advanced setup variants");
     }
 
@@ -230,7 +230,7 @@ public class MdExportFormatterTests
         content.Should().Contain("Empty Game");
 
         // And: Output indicates no messages
-        content.Contains("No messages") || content.Contains("0 messages").Should().BeTrue();
+        (content.Contains("No messages") || content.Contains("0 messages")).Should().BeTrue();
     }
 
     /// <summary>
@@ -313,7 +313,7 @@ public class MdExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // Then: Header includes date range
-        content.Contains("2025-10-10") || content.Contains("Oct").Should().BeTrue();
+        (content.Contains("2025-10-10") || content.Contains("Oct")).Should().BeTrue();
 
         // And: Only filtered message is included
         content.Should().Contain("Recent message");
@@ -527,6 +527,6 @@ public class MdExportFormatterTests
         content.Should().Contain(">");
 
         // And: Includes timestamp information
-        content.Contains("Exported") || content.Contains("Generated").Should().BeTrue();
+        (content.Contains("Exported") || content.Contains("Generated")).Should().BeTrue();
     }
 }

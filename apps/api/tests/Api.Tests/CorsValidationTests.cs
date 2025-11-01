@@ -38,7 +38,7 @@ public class CorsValidationTests : IntegrationTestBase
         // Then: Response is successful (either 204 or 405 depending on endpoint implementation)
         // NOTE: ASP.NET Core minimal APIs return 405 for OPTIONS if no handler exists
         // The important part is that CORS headers are present when CORS middleware processes the request
-        response.StatusCode == HttpStatusCode.NoContent || response.StatusCode == HttpStatusCode.MethodNotAllowed.Should().BeTrue();
+        (response.StatusCode == HttpStatusCode.NoContent || response.StatusCode == HttpStatusCode.MethodNotAllowed).Should().BeTrue();
 
         // CORS headers may not be present in OPTIONS response for minimal APIs without explicit OPTIONS handler
         // This is expected behavior - CORS headers are returned in actual GET/POST requests
@@ -96,8 +96,8 @@ public class CorsValidationTests : IntegrationTestBase
 
         // Then: Returns either 204 (CORS preflight handled) or 405 (no OPTIONS handler)
         // NOTE: ASP.NET Core CORS middleware may handle OPTIONS automatically
-        response.StatusCode == HttpStatusCode.NoContent ||
-                    (response.StatusCode == HttpStatusCode.MethodNotAllowed).Should().BeTrue();
+        (response.StatusCode == HttpStatusCode.NoContent ||
+                    response.StatusCode == HttpStatusCode.MethodNotAllowed).Should().BeTrue();
     }
 
     #endregion
@@ -232,8 +232,8 @@ public class CorsValidationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns either 204 (CORS preflight handled) or 405 (no OPTIONS handler)
-        response.StatusCode == HttpStatusCode.NoContent ||
-                    (response.StatusCode == HttpStatusCode.MethodNotAllowed).Should().BeTrue();
+        (response.StatusCode == HttpStatusCode.NoContent ||
+                    response.StatusCode == HttpStatusCode.MethodNotAllowed).Should().BeTrue();
     }
 
     [Fact]
@@ -274,8 +274,8 @@ public class CorsValidationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns either 204 (CORS preflight handled) or 405 (no OPTIONS handler)
-        response.StatusCode == HttpStatusCode.NoContent ||
-                    (response.StatusCode == HttpStatusCode.MethodNotAllowed).Should().BeTrue();
+        (response.StatusCode == HttpStatusCode.NoContent ||
+                    response.StatusCode == HttpStatusCode.MethodNotAllowed).Should().BeTrue();
     }
 
     [Fact]
@@ -291,8 +291,8 @@ public class CorsValidationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns either 204 (CORS preflight handled) or 405 (no OPTIONS handler)
-        response.StatusCode == HttpStatusCode.NoContent ||
-                    (response.StatusCode == HttpStatusCode.MethodNotAllowed).Should().BeTrue();
+        (response.StatusCode == HttpStatusCode.NoContent ||
+                    response.StatusCode == HttpStatusCode.MethodNotAllowed).Should().BeTrue();
     }
 
     #endregion

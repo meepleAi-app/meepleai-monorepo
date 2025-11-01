@@ -62,14 +62,14 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Answer is returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<ChessAgentResponse>(json, JsonOptions);
 
         result.Should().NotBeNull();
         result!.answer.Should().NotBeEmpty();
-        Assert.Contains("passant", result.answer, StringComparison.OrdinalIgnoreCase);
+        result.answer, StringComparison.OrdinalIgnoreCase.Should().Contain("passant");
 
         // And: Sources are cited
         result.sources.Should().NotBeEmpty();
@@ -81,7 +81,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
 
         // And: Confidence is reported
         result.confidence.Should().NotBeNull();
-        Assert.True(result.confidence > 0.0);
+        result.confidence > 0.0.Should().BeTrue();
     }
 
     /// <summary>
@@ -109,14 +109,14 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Explanation includes key moves and ideas
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<ChessAgentResponse>(json, JsonOptions);
 
         result.Should().NotBeNull();
-        Assert.Contains("Italian", result!.answer, StringComparison.OrdinalIgnoreCase);
-        Assert.True(result.answer.Length > 50); // Substantial explanation
+        result!.answer, StringComparison.OrdinalIgnoreCase.Should().Contain("Italian");
+        result.answer.Length > 50.Should().BeTrue(); // Substantial explanation
     }
 
     /// <summary>
@@ -148,13 +148,13 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Analysis includes evaluation and key considerations
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<ChessAgentResponse>(json, JsonOptions);
 
         result.Should().NotBeNull();
-        Assert.NotNull(result!.analysis);
+        result!.analysis.Should().NotBeNull();
         result.analysis!.fenPosition!.Should().NotBeEmpty();
 
         // And: Suggested moves are provided
@@ -190,7 +190,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Response includes warning about invalid FEN
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<ChessAgentResponse>(json, JsonOptions);
@@ -225,14 +225,14 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Explanation includes definition and examples
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<ChessAgentResponse>(json, JsonOptions);
 
         result.Should().NotBeNull();
-        Assert.Contains("fork", result!.answer, StringComparison.OrdinalIgnoreCase);
-        Assert.True(result.answer.Length > 50); // Substantial explanation
+        result!.answer, StringComparison.OrdinalIgnoreCase.Should().Contain("fork");
+        result.answer.Length > 50.Should().BeTrue(); // Substantial explanation
     }
 
     /// <summary>
@@ -251,7 +251,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/agents/chess", new ChessAgentRequest("Test question"));
 
         // Then: Request is rejected with 401 Unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -278,13 +278,13 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Response indicates question is required
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode); // Service returns 200 with empty answer
+        response.StatusCode.Should().Be(HttpStatusCode.OK); // Service returns 200 with empty answer
 
         var json = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<ChessAgentResponse>(json, JsonOptions);
 
         result.Should().NotBeNull();
-        Assert.Equal("Please provide a question.", result!.answer);
+        result!.answer.Should().Be("Please provide a question.");
     }
 
     /// <summary>
@@ -312,15 +312,15 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Response includes prompt, completion, and total token counts
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<ChessAgentResponse>(json, JsonOptions);
 
         result.Should().NotBeNull();
-        Assert.True(result!.promptTokens > 0);
-        Assert.True(result.completionTokens > 0);
-        Assert.Equal(result.promptTokens + result.completionTokens, result.totalTokens);
+        result!.promptTokens > 0.Should().BeTrue();
+        result.completionTokens > 0.Should().BeTrue();
+        result.totalTokens.Should().Be(result.promptTokens + result.completionTokens);
     }
 
     /// <summary>
@@ -348,7 +348,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         AddCookies(firstRequest, cookies);
 
         var firstResponse = await client.SendAsync(firstRequest);
-        Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var firstJson = await firstResponse.Content.ReadAsStringAsync();
         var firstResult = JsonSerializer.Deserialize<ChessAgentResponse>(firstJson, JsonOptions);
@@ -361,7 +361,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         AddCookies(secondRequest, cookies);
 
         var secondResponse = await client.SendAsync(secondRequest);
-        Assert.Equal(HttpStatusCode.OK, secondResponse.StatusCode);
+        secondResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var secondJson = await secondResponse.Content.ReadAsStringAsync();
         var secondResult = JsonSerializer.Deserialize<ChessAgentResponse>(secondJson, JsonOptions);
@@ -369,10 +369,10 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         // Then: Cached response is returned
         firstResult.Should().NotBeNull();
         secondResult.Should().NotBeNull();
-        Assert.Equal(firstResult!.answer, secondResult!.answer);
+        secondResult!.answer.Should().Be(firstResult!.answer);
 
         // And: Token usage remains the same (cached)
-        Assert.Equal(firstResult.promptTokens, secondResult.promptTokens);
-        Assert.Equal(firstResult.completionTokens, secondResult.completionTokens);
+        secondResult.promptTokens.Should().Be(firstResult.promptTokens);
+        secondResult.completionTokens.Should().Be(firstResult.completionTokens);
     }
 }

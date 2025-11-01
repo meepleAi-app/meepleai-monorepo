@@ -56,18 +56,18 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: API key is created successfully
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var result = await response.Content.ReadFromJsonAsync<CreateApiKeyResponse>();
         result.Should().NotBeNull();
         result.PlaintextKey.Should().NotBeNull();
         Assert.StartsWith("mpl_live_", result.PlaintextKey);
-        Assert.Equal("Production Key", result.ApiKey.KeyName);
-        Assert.Equal(2, result.ApiKey.Scopes.Length);
-        Assert.True(result.ApiKey.IsActive);
+        result.ApiKey.KeyName.Should().Be("Production Key");
+        result.ApiKey.Scopes.Length.Should().Be(2);
+        result.ApiKey.IsActive.Should().BeTrue();
         result.ApiKey.Quota.Should().NotBeNull();
-        Assert.Equal(1000, result.ApiKey.Quota.MaxRequestsPerDay);
-        Assert.Equal(100, result.ApiKey.Quota.MaxRequestsPerHour);
+        result.ApiKey.Quota.MaxRequestsPerDay.Should().Be(1000);
+        result.ApiKey.Quota.MaxRequestsPerHour.Should().Be(100);
     }
 
     [Fact]
@@ -86,7 +86,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/api-keys", request);
 
         // Then: Request is unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -112,7 +112,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Request fails with bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Theory]
@@ -141,7 +141,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: API key has correct environment prefix
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var result = await response.Content.ReadFromJsonAsync<CreateApiKeyResponse>();
         result.Should().NotBeNull();
@@ -175,14 +175,14 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Paginated list is returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<ApiKeyListResponse>();
         result.Should().NotBeNull();
-        Assert.Equal(2, result.Keys.Count);
-        Assert.Equal(3, result.TotalCount);
-        Assert.Equal(1, result.Page);
-        Assert.Equal(2, result.PageSize);
+        result.Keys.Count.Should().Be(2);
+        result.TotalCount.Should().Be(3);
+        result.Page.Should().Be(1);
+        result.PageSize.Should().Be(2);
     }
 
     [Fact]
@@ -206,12 +206,12 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Only active keys are returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<ApiKeyListResponse>();
         result.Should().NotBeNull();
-        Assert.Single(result.Keys);
-        Assert.Null(result.Keys[0].RevokedAt);
+        result.Keys.Should().ContainSingle();
+        result.Keys[0].RevokedAt.Should().BeNull();
     }
 
     [Fact]
@@ -231,12 +231,12 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Revoked keys are included
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<ApiKeyListResponse>();
         result.Should().NotBeNull();
-        Assert.Single(result.Keys);
-        Assert.NotNull(result.Keys[0].RevokedAt);
+        result.Keys.Should().ContainSingle();
+        result.Keys[0].RevokedAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -257,12 +257,12 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Only User1's keys are returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<ApiKeyListResponse>();
         result.Should().NotBeNull();
-        Assert.Single(result.Keys);
-        Assert.Equal("User1 Key", result.Keys[0].KeyName);
+        result.Keys.Should().ContainSingle();
+        result.Keys[0].KeyName.Should().Be("User1 Key");
     }
 
     #endregion
@@ -288,13 +288,13 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: API key details are returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<ApiKeyDto>();
         result.Should().NotBeNull();
-        Assert.Equal(key.Id, result.Id);
-        Assert.Equal("Test Key", result.KeyName);
-        Assert.Equal(2, result.Scopes.Length);
+        result.Id.Should().Be(key.Id);
+        result.KeyName.Should().Be("Test Key");
+        result.Scopes.Length.Should().Be(2);
     }
 
     [Fact]
@@ -311,7 +311,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Not found is returned
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -331,7 +331,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Not found is returned (authorization check)
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     #endregion
@@ -367,15 +367,15 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: API key is updated successfully
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<ApiKeyDto>();
         result.Should().NotBeNull();
-        Assert.Equal("Updated Name", result.KeyName);
-        Assert.Equal(3, result.Scopes.Length);
-        Assert.Contains("admin", result.Scopes);
+        result.KeyName.Should().Be("Updated Name");
+        result.Scopes.Length.Should().Be(3);
+        result.Scopes.Should().Contain("admin");
         result.Quota.Should().NotBeNull();
-        Assert.Equal(5000, result.Quota.MaxRequestsPerDay);
+        result.Quota.MaxRequestsPerDay.Should().Be(5000);
     }
 
     [Fact]
@@ -400,7 +400,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Not found is returned
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -428,7 +428,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Not found is returned (authorization check)
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     #endregion
@@ -462,26 +462,26 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: New key is created and old key is revoked
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<RotateApiKeyResponse>();
         result.Should().NotBeNull();
-        Assert.NotEqual(oldPlaintextKey, result.PlaintextKey);
-        Assert.Equal(oldKey.Id, result.RevokedKeyId);
-        Assert.Equal("Original Key (Rotated)", result.NewApiKey.KeyName);
-        Assert.Equal(2, result.NewApiKey.Scopes.Length);
+        result.PlaintextKey.Should().NotBe(oldPlaintextKey);
+        result.RevokedKeyId.Should().Be(oldKey.Id);
+        result.NewApiKey.KeyName.Should().Be("Original Key (Rotated)");
+        result.NewApiKey.Scopes.Length.Should().Be(2);
 
         // Verify old key cannot be used
         var testRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         testRequest.Headers.Add("X-API-Key", oldPlaintextKey);
         var testResponse = await client.SendAsync(testRequest);
-        Assert.Equal(HttpStatusCode.Unauthorized, testResponse.StatusCode);
+        testResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 
         // Verify new key works
         var newTestRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         newTestRequest.Headers.Add("X-API-Key", result.PlaintextKey);
         var newTestResponse = await client.SendAsync(newTestRequest);
-        Assert.Equal(HttpStatusCode.OK, newTestResponse.StatusCode);
+        newTestResponse.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -503,7 +503,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Not found is returned
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -528,7 +528,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Not found is returned (authorization check)
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     #endregion
@@ -554,13 +554,13 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: API key is revoked
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Verify key cannot be used
         var testRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         testRequest.Headers.Add("X-API-Key", plaintextKey);
         var testResponse = await client.SendAsync(testRequest);
-        Assert.Equal(HttpStatusCode.Unauthorized, testResponse.StatusCode);
+        testResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -577,7 +577,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Not found is returned
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -597,7 +597,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Not found is returned (authorization check)
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     #endregion
@@ -625,13 +625,13 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Usage statistics are returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<ApiKeyQuotaDto>();
         result.Should().NotBeNull();
-        Assert.Equal(1000, result.MaxRequestsPerDay);
-        Assert.Equal(100, result.MaxRequestsPerHour);
-        Assert.NotNull(result.ResetsAt);
+        result.MaxRequestsPerDay.Should().Be(1000);
+        result.MaxRequestsPerHour.Should().Be(100);
+        result.ResetsAt.Should().NotBeNull();
     }
 
     [Fact]
@@ -648,7 +648,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Not found is returned
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     #endregion
@@ -672,7 +672,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: API key is deleted permanently
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
     [Fact]
@@ -690,7 +690,7 @@ public class ApiKeyManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Forbidden is returned
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     #endregion

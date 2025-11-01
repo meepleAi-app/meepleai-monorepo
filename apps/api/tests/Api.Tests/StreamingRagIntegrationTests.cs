@@ -46,7 +46,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
             new ExplainRequest("test-game", "setup rules"));
 
         // Then: Returns 401 Unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -67,18 +67,18 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns 200 OK with SSE stream
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("text/event-stream", response.Content.Headers.ContentType?.MediaType);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("text/event-stream");
 
         var events = await ParseSseEventsAsync(response);
 
         // And: Single error event is emitted
-        Assert.Single(events);
-        Assert.Equal(StreamingEventType.Error, events[0].Type);
+        events.Should().ContainSingle();
+        events[0].Type.Should().Be(StreamingEventType.Error);
         var errorData = JsonSerializer.Deserialize<StreamingError>(
             ((JsonElement)events[0].Data!).GetRawText(), JsonOptions);
-        Assert.Equal("Please provide a topic to explain.", errorData!.errorMessage);
-        Assert.Equal("EMPTY_TOPIC", errorData.errorCode);
+        errorData!.errorMessage.Should().Be("Please provide a topic to explain.");
+        errorData.errorCode.Should().Be("EMPTY_TOPIC");
     }
 
     [Fact]
@@ -101,8 +101,8 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns correct SSE headers
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("text/event-stream", response.Content.Headers.ContentType?.MediaType);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("text/event-stream");
         Assert.True(response.Headers.Contains("Cache-Control"));
         Assert.Contains("no-cache", response.Headers.GetValues("Cache-Control"));
     }
@@ -136,27 +136,27 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         int idx = 0;
 
         // StateUpdate: Generating embeddings
-        Assert.True(idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.StateUpdate);
+        idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.StateUpdate.Should().BeTrue();
         idx++;
 
         // StateUpdate: Searching vector database
-        Assert.True(idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.StateUpdate);
+        idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.StateUpdate.Should().BeTrue();
         idx++;
 
         // Citations
-        Assert.True(idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.Citations);
+        idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.Citations.Should().BeTrue();
         idx++;
 
         // StateUpdate: Building outline
-        Assert.True(idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.StateUpdate);
+        idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.StateUpdate.Should().BeTrue();
         idx++;
 
         // Outline
-        Assert.True(idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.Outline);
+        idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.Outline.Should().BeTrue();
         idx++;
 
         // StateUpdate: Generating script
-        Assert.True(idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.StateUpdate);
+        idx < eventTypes.Count && eventTypes[idx] == StreamingEventType.StateUpdate.Should().BeTrue();
         idx++;
 
         // One or more ScriptChunks
@@ -166,10 +166,10 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
             scriptChunkCount++;
             idx++;
         }
-        Assert.True(scriptChunkCount > 0, "Expected at least one ScriptChunk event");
+        scriptChunkCount > 0, "Expected at least one ScriptChunk event".Should().BeTrue();
 
         // Complete
-        Assert.Equal(StreamingEventType.Complete, eventTypes[^1]);
+        eventTypes[^1].Should().Be(StreamingEventType.Complete);
     }
 
     [Fact]
@@ -205,7 +205,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         {
             citation.text.Should().NotBeEmpty();
             Assert.StartsWith("PDF:", citation.source);
-            Assert.True(citation.page > 0);
+            citation.page > 0.Should().BeTrue();
         });
     }
 
@@ -237,7 +237,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
             ((JsonElement)outlineEvent.Data!).GetRawText(), JsonOptions);
 
         outlineData.Should().NotBeNull();
-        Assert.Equal("game setup", outlineData!.outline.mainTopic);
+        outlineData!.outline.mainTopic.Should().Be("game setup");
         outlineData.outline.sections.Should().NotBeEmpty();
     }
 
@@ -271,8 +271,8 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
                 ((JsonElement)scriptChunkEvents[i].Data!).GetRawText(), JsonOptions);
 
             chunkData.Should().NotBeNull();
-            Assert.Equal(i, chunkData!.chunkIndex);
-            Assert.Equal(scriptChunkEvents.Count, chunkData.totalChunks);
+            chunkData!.chunkIndex.Should().Be(i);
+            chunkData.totalChunks.Should().Be(scriptChunkEvents.Count);
             chunkData.chunk.Should().NotBeEmpty();
         }
     }
@@ -305,8 +305,8 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
             ((JsonElement)completeEvent.Data!).GetRawText(), JsonOptions);
 
         completeData.Should().NotBeNull();
-        Assert.True(completeData!.estimatedReadingTimeMinutes > 0);
-        Assert.True(completeData.confidence >= 0 && completeData.confidence <= 1);
+        completeData!.estimatedReadingTimeMinutes > 0.Should().BeTrue();
+        completeData.confidence >= 0 && completeData.confidence <= 1.Should().BeTrue();
     }
 
     [Fact]
@@ -332,7 +332,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         // Then: All events have valid timestamps
         Assert.All(events, evt =>
         {
-            Assert.NotEqual(default(DateTime), evt.Timestamp);
+            evt.Timestamp.Should().NotBe(default(DateTime));
             Assert.True(evt.Timestamp <= DateTime.UtcNow.AddSeconds(5)); // Allow 5 sec for test execution
         });
     }
@@ -362,7 +362,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var errorData = JsonSerializer.Deserialize<StreamingError>(
             ((JsonElement)errorEvent.Data!).GetRawText(), JsonOptions);
         errorData.Should().NotBeNull();
-        Assert.Contains("NO_RESULTS", errorData!.errorCode ?? "");
+        errorData!.errorCode ?? "".Should().Contain("NO_RESULTS");
     }
 
     [Fact]

@@ -45,12 +45,12 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: User info is returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var authResponse = await response.Content.ReadFromJsonAsync<Api.Models.AuthResponse>();
         authResponse.Should().NotBeNull();
-        Assert.Equal(user.Email, authResponse.User.Email);
-        Assert.Equal(user.DisplayName, authResponse.User.DisplayName);
-        Assert.Equal("Editor", authResponse.User.Role);
+        authResponse.User.Email.Should().Be(user.Email);
+        authResponse.User.DisplayName.Should().Be(user.DisplayName);
+        authResponse.User.Role.Should().Be("Editor");
     }
 
     [Fact]
@@ -72,7 +72,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Games are returned successfully
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Theory]
@@ -96,7 +96,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Authentication succeeds
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     #endregion
@@ -115,7 +115,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Request is unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -128,7 +128,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var response = await client.GetAsync("/api/v1/auth/me");
 
         // Then: Request is unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -151,7 +151,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Request is unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -179,7 +179,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Request is unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -212,7 +212,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Request is unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -227,7 +227,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Falls through to cookie auth (which will fail with Unauthorized)
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     #endregion
@@ -257,11 +257,11 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: API key takes precedence (returns API key user, not cookie user)
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var authResponse = await response.Content.ReadFromJsonAsync<Api.Models.AuthResponse>();
         authResponse.Should().NotBeNull();
-        Assert.Equal(apiKeyUser.Email, authResponse.User.Email);
-        Assert.Equal("Admin", authResponse.User.Role); // API key user is Admin
+        authResponse.User.Email.Should().Be(apiKeyUser.Email);
+        authResponse.User.Role.Should().Be("Admin"); // API key user is Admin
     }
 
     [Fact]
@@ -279,11 +279,11 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Cookie authentication works
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var authResponse = await response.Content.ReadFromJsonAsync<Api.Models.AuthResponse>();
         authResponse.Should().NotBeNull();
-        Assert.Equal(user.Email, authResponse.User.Email);
-        Assert.Equal("Editor", authResponse.User.Role);
+        authResponse.User.Email.Should().Be(user.Email);
+        authResponse.User.Role.Should().Be("Editor");
     }
 
     #endregion
@@ -306,7 +306,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var request1 = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         request1.Headers.Add("X-API-Key", plaintextKey);
         var response1 = await client.SendAsync(request1);
-        Assert.Equal(HttpStatusCode.OK, response1.StatusCode);
+        response1.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: Key is revoked
         using (var scope = Factory.Services.CreateScope())
@@ -321,7 +321,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var response2 = await client.SendAsync(request2);
 
         // Then: Second request fails
-        Assert.Equal(HttpStatusCode.Unauthorized, response2.StatusCode);
+        response2.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -344,7 +344,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Request succeeds (key still valid)
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     #endregion
@@ -361,7 +361,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var response = await client.GetAsync("/health/ready");
 
         // Then: Health check works (API key middleware doesn't process it)
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -374,7 +374,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var response = await client.GetAsync("/");
 
         // Then: Root endpoint works
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     #endregion
@@ -393,12 +393,12 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Response is JSON with error details
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("application/json");
 
         var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>();
         errorResponse.Should().NotBeNull();
-        Assert.Equal("invalid_api_key", errorResponse.error);
+        errorResponse.error.Should().Be("invalid_api_key");
         errorResponse.message.Should().NotBeNull();
         errorResponse.correlationId.Should().NotBeNull();
     }

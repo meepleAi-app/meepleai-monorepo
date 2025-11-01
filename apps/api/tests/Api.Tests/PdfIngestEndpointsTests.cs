@@ -90,14 +90,14 @@ public class PdfIngestEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: RuleSpec is generated from atomic rules
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var spec = await response.Content.ReadFromJsonAsync<RuleSpec>(JsonOptions);
         spec.Should().NotBeNull();
-        Assert.Equal(game.Id, spec!.gameId);
-        Assert.Single(spec.rules);
-        Assert.Equal("Setup: Distribute four cards to each player", spec.rules[0].text);
-        Assert.Equal("4", spec.rules[0].page);
+        spec!.gameId.Should().Be(game.Id);
+        spec.rules.Should().ContainSingle();
+        spec.rules[0].text.Should().Be("Setup: Distribute four cards to each player");
+        spec.rules[0].page.Should().Be("4");
         // Cleanup happens automatically via DisposeAsync
     }
 }

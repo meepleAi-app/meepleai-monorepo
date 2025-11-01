@@ -60,21 +60,21 @@ public class ChatEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Chat is created
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var chat = await response.Content.ReadFromJsonAsync<ChatDto>();
         chat.Should().NotBeNull();
-        Assert.NotEqual(Guid.Empty, chat!.Id);
-        Assert.Equal(game.Id, chat.GameId);
-        Assert.Equal(agent.Id, chat.AgentId);
-        Assert.NotEqual(default, chat.StartedAt);
+        chat!.Id.Should().NotBe(Guid.Empty);
+        chat.GameId.Should().Be(game.Id);
+        chat.AgentId.Should().Be(agent.Id);
+        chat.StartedAt.Should().NotBe(default);
 
         // Verify persistence
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var stored = await db.Chats.FindAsync(chat.Id);
         stored.Should().NotBeNull();
-        Assert.Equal(user.Id, stored!.UserId);
+        stored!.UserId.Should().Be(user.Id);
     }
 
     /// <summary>
@@ -90,7 +90,7 @@ public class ChatEndpointsTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/chats",
             new CreateChatRequest("catan", "catan-qa"));
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -126,13 +126,13 @@ public class ChatEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Only user's chats returned, ordered by recency
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var chats = await response.Content.ReadFromJsonAsync<List<ChatDto>>();
         chats.Should().NotBeNull();
-        Assert.Equal(2, chats!.Count);
-        Assert.Equal(chat2.Id, chats[0].Id); // Most recent first
-        Assert.Equal(chat1.Id, chats[1].Id);
+        chats!.Count.Should().Be(2);
+        chats[0].Id.Should().Be(chat2.Id); // Most recent first
+        chats[1].Id.Should().Be(chat1.Id);
     }
 
     /// <summary>
@@ -182,14 +182,14 @@ public class ChatEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Full chat with history returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var chatWithHistory = await response.Content.ReadFromJsonAsync<ChatWithHistoryDto>();
         chatWithHistory.Should().NotBeNull();
-        Assert.Equal(chat.Id, chatWithHistory!.Id);
-        Assert.Equal(2, chatWithHistory.Messages.Count);
-        Assert.Equal("user", chatWithHistory.Messages[0].Level);
-        Assert.Equal("assistant", chatWithHistory.Messages[1].Level);
+        chatWithHistory!.Id.Should().Be(chat.Id);
+        chatWithHistory.Messages.Count.Should().Be(2);
+        chatWithHistory.Messages[0].Level.Should().Be("user");
+        chatWithHistory.Messages[1].Level.Should().Be("assistant");
     }
 
     /// <summary>
@@ -214,7 +214,7 @@ public class ChatEndpointsTests : IntegrationTestBase
 
         var response = await client.SendAsync(request);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     /// <summary>
@@ -239,7 +239,7 @@ public class ChatEndpointsTests : IntegrationTestBase
 
         var response = await client.SendAsync(request);
 
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Verify chat was deleted
         using var scope = Factory.Services.CreateScope();
@@ -270,7 +270,7 @@ public class ChatEndpointsTests : IntegrationTestBase
 
         var response = await client.SendAsync(request);
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         // Verify chat still exists
         using var scope = Factory.Services.CreateScope();
@@ -300,13 +300,13 @@ public class ChatEndpointsTests : IntegrationTestBase
 
         var response = await client.SendAsync(request);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var agents = await response.Content.ReadFromJsonAsync<List<AgentDto>>();
         agents.Should().NotBeNull();
-        Assert.Equal(2, agents!.Count);
-        Assert.Contains(agents, a => a.Id == qaAgent.Id && a.Kind == "qa");
-        Assert.Contains(agents, a => a.Id == explainAgent.Id && a.Kind == "explain");
+        agents!.Count.Should().Be(2);
+        a => a.Id == qaAgent.Id && a.Kind == "qa".Should().Contain(agents);
+        a => a.Id == explainAgent.Id && a.Kind == "explain".Should().Contain(agents);
     }
 
     /// <summary>
@@ -334,13 +334,13 @@ public class ChatEndpointsTests : IntegrationTestBase
 
         var response = await client.SendAsync(request);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var chats = await response.Content.ReadFromJsonAsync<List<ChatDto>>();
         chats.Should().NotBeNull();
-        Assert.Single(chats!);
-        Assert.Equal(chat1.Id, chats[0].Id);
-        Assert.Equal(game1.Id, chats[0].GameId);
+        chats!.Should().ContainSingle();
+        chats[0].Id.Should().Be(chat1.Id);
+        chats[0].GameId.Should().Be(game1.Id);
     }
 
     // Helper methods

@@ -121,8 +121,8 @@ public class TesseractOcrServiceTests : IDisposable
         var result = await service.ExtractTextFromPageAsync(null!, 0);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("PDF path is required", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("PDF path is required");
     }
 
     [Fact]
@@ -135,8 +135,8 @@ public class TesseractOcrServiceTests : IDisposable
         var result = await service.ExtractTextFromPageAsync("", 0);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("PDF path is required", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("PDF path is required");
     }
 
     [Fact]
@@ -149,8 +149,8 @@ public class TesseractOcrServiceTests : IDisposable
         var result = await service.ExtractTextFromPageAsync("   ", 0);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("PDF path is required", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("PDF path is required");
     }
 
     [Fact]
@@ -164,9 +164,9 @@ public class TesseractOcrServiceTests : IDisposable
         var result = await service.ExtractTextFromPageAsync(nonExistentPath, 0);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("PDF file not found", result.ErrorMessage);
-        Assert.Contains(nonExistentPath, result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("PDF file not found");
+        result.ErrorMessage.Should().Contain(nonExistentPath);
     }
 
     [Fact]
@@ -184,8 +184,8 @@ public class TesseractOcrServiceTests : IDisposable
 
         // Assert
         // Will fail during actual OCR processing (not a real PDF), but passes file existence check
-        Assert.False(result.Success);
-        Assert.Contains("OCR failed", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("OCR failed");
 
         // Verify error was logged
         _mockLogger.Verify(
@@ -208,8 +208,8 @@ public class TesseractOcrServiceTests : IDisposable
         var result = await service.ExtractTextFromPdfAsync(null!);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("PDF path is required", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("PDF path is required");
     }
 
     [Fact]
@@ -222,8 +222,8 @@ public class TesseractOcrServiceTests : IDisposable
         var result = await service.ExtractTextFromPdfAsync("");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("PDF path is required", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("PDF path is required");
     }
 
     [Fact]
@@ -236,8 +236,8 @@ public class TesseractOcrServiceTests : IDisposable
         var result = await service.ExtractTextFromPdfAsync("   ");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("PDF path is required", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("PDF path is required");
     }
 
     [Fact]
@@ -251,9 +251,9 @@ public class TesseractOcrServiceTests : IDisposable
         var result = await service.ExtractTextFromPdfAsync(nonExistentPath);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("PDF file not found", result.ErrorMessage);
-        Assert.Contains(nonExistentPath, result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("PDF file not found");
+        result.ErrorMessage.Should().Contain(nonExistentPath);
     }
 
     [Fact]
@@ -271,8 +271,8 @@ public class TesseractOcrServiceTests : IDisposable
 
         // Assert
         // Will fail during actual OCR processing (not a real PDF)
-        Assert.False(result.Success);
-        Assert.Contains("OCR failed", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("OCR failed");
     }
 
     [Fact]
@@ -313,7 +313,7 @@ public class TesseractOcrServiceTests : IDisposable
             var result = await service.ExtractTextFromPdfAsync(dummyPdfPath, cts.Token);
 
             // If it returns (rather than throwing), should indicate failure
-            Assert.False(result.Success);
+            result.Success.Should().BeFalse();
         }
         catch (OperationCanceledException)
         {
@@ -373,8 +373,8 @@ public class TesseractOcrServiceTests : IDisposable
 
         // Assert
         // Will fail during OCR (not real PDF), but validates input acceptance
-        Assert.False(result.Success);
-        Assert.Contains("OCR failed", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("OCR failed");
     }
 
     [Fact]
@@ -391,8 +391,8 @@ public class TesseractOcrServiceTests : IDisposable
 
         // Assert
         // Negative index will be caught during Docnet processing
-        Assert.False(result.Success);
-        Assert.Contains("OCR failed", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("OCR failed");
     }
 
     [Fact]
@@ -438,7 +438,7 @@ public class TesseractOcrServiceTests : IDisposable
             var result = await service.ExtractTextFromPageAsync(longPath, 0);
 
             // Assert
-            Assert.False(result.Success);
+            result.Success.Should().BeFalse();
         }
         catch (PathTooLongException)
         {
@@ -460,8 +460,8 @@ public class TesseractOcrServiceTests : IDisposable
         var result = await service.ExtractTextFromPageAsync(specialPath, 0);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("OCR failed", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("OCR failed");
     }
 
     public void Dispose()

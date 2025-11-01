@@ -97,17 +97,17 @@ public class TxtExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // And: Output includes header with game name
-        Assert.Contains("Catan", content);
-        Assert.Contains("Chat Export", content);
+        content.Should().Contain("Catan");
+        content.Should().Contain("Chat Export");
 
         // And: Messages are formatted with timestamp and level
-        Assert.Contains("[2025-10-18 10:05:00 UTC] USER:", content);
-        Assert.Contains("How do I setup the game?", content);
-        Assert.Contains("[2025-10-18 10:06:00 UTC] ASSISTANT:", content);
-        Assert.Contains("Place the board and distribute resources.", content);
+        content.Should().Contain("[2025-10-18 10:05:00 UTC] USER:");
+        content.Should().Contain("How do I setup the game?");
+        content.Should().Contain("[2025-10-18 10:06:00 UTC] ASSISTANT:");
+        content.Should().Contain("Place the board and distribute resources.");
 
         // And: Messages are separated by "---"
-        Assert.Contains("---", content);
+        content.Should().Contain("---");
     }
 
     /// <summary>
@@ -153,9 +153,9 @@ public class TxtExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // Then: Citations are formatted as indented list
-        Assert.Contains("Citations:", content);
-        Assert.Contains("  - Page 12: Setup instructions for beginners", content);
-        Assert.Contains("  - Page 15: Advanced setup variants", content);
+        content.Should().Contain("Citations:");
+        content.Should().Contain("  - Page 12: Setup instructions for beginners");
+        content.Should().Contain("  - Page 15: Advanced setup variants");
     }
 
     /// <summary>
@@ -197,7 +197,7 @@ public class TxtExportFormatterTests
 
         // And: Raw JSON or indication of metadata present
         // (Implementation detail: may include raw JSON or skip silently)
-        Assert.Contains("Answer with metadata", content);
+        content.Should().Contain("Answer with metadata");
     }
 
     /// <summary>
@@ -223,8 +223,8 @@ public class TxtExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // Then: Output includes header
-        Assert.Contains("Empty Game", content);
-        Assert.Contains("Chat Export", content);
+        content.Should().Contain("Empty Game");
+        content.Should().Contain("Chat Export");
 
         // And: Output indicates no messages
         Assert.True(content.Contains("No messages") || content.Contains("0 messages"));
@@ -263,12 +263,12 @@ public class TxtExportFormatterTests
         // Then: Each message is present
         for (int i = 1; i <= 5; i++)
         {
-            Assert.Contains($"Message {i}", content);
+            content.Should().Contain($"Message {i}");
         }
 
         // And: Messages are separated (at least 4 separators for 5 messages)
         var separatorCount = content.Split("---").Length - 1;
-        Assert.True(separatorCount >= 4, $"Expected at least 4 separators, found {separatorCount}");
+        separatorCount >= 4, $"Expected at least 4 separators, found {separatorCount}".Should().BeTrue();
     }
 
     /// <summary>
@@ -317,8 +317,8 @@ public class TxtExportFormatterTests
         Assert.True(content.Contains("2025-10-10") || content.Contains("Oct"));
 
         // And: Only filtered message is included
-        Assert.Contains("Recent message", content);
-        Assert.DoesNotContain("Old message", content);
+        content.Should().Contain("Recent message");
+        content.Should().NotContain("Old message");
     }
 
     /// <summary>
@@ -335,10 +335,10 @@ public class TxtExportFormatterTests
         var contentType = _formatter.ContentType;
 
         // Then: Format is "txt"
-        Assert.Equal("txt", format);
+        format.Should().Be("txt");
 
         // And: ContentType is "text/plain"
-        Assert.Equal("text/plain", contentType);
+        contentType.Should().Be("text/plain");
     }
 
     /// <summary>
@@ -390,9 +390,9 @@ public class TxtExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // Then: All levels are properly labeled
-        Assert.Contains("USER:", content);
-        Assert.Contains("ASSISTANT:", content);
-        Assert.Contains("SYSTEM:", content);
+        content.Should().Contain("USER:");
+        content.Should().Contain("ASSISTANT:");
+        content.Should().Contain("SYSTEM:");
     }
 
     /// <summary>
@@ -436,9 +436,9 @@ public class TxtExportFormatterTests
         var content = await reader.ReadToEndAsync();
 
         // Then: Special characters are preserved
-        Assert.Contains("Line 1", content);
-        Assert.Contains("Line 2", content);
-        Assert.Contains("\"Hello\"", content);
-        Assert.Contains("🎲", content);
+        content.Should().Contain("Line 1");
+        content.Should().Contain("Line 2");
+        content.Should().Contain("\"Hello\"");
+        content.Should().Contain("🎲");
     }
 }

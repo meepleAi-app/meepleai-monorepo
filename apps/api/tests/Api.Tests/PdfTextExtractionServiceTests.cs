@@ -108,8 +108,8 @@ public class PdfTextExtractionServiceTests : IDisposable
         var result = await _service.ExtractTextAsync(null!);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("File path is required", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("File path is required");
     }
 
     [Fact]
@@ -119,8 +119,8 @@ public class PdfTextExtractionServiceTests : IDisposable
         var result = await _service.ExtractTextAsync(string.Empty);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("File path is required", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("File path is required");
     }
 
     [Fact]
@@ -130,8 +130,8 @@ public class PdfTextExtractionServiceTests : IDisposable
         var result = await _service.ExtractTextAsync("   ");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("File path is required", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("File path is required");
     }
 
     [Fact]
@@ -144,8 +144,8 @@ public class PdfTextExtractionServiceTests : IDisposable
         var result = await _service.ExtractTextAsync(nonExistentPath);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("File not found", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("File not found");
     }
 
     // === Successful Extraction Tests ===
@@ -170,11 +170,11 @@ public class PdfTextExtractionServiceTests : IDisposable
         var result = await _service.ExtractTextAsync(pdfPath);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.ErrorMessage.Should().BeNull();
-        Assert.Contains("test PDF document", result.ExtractedText);
-        Assert.True(result.PageCount > 0);
-        Assert.True(result.CharacterCount > 0);
+        result.ExtractedText.Should().Contain("test PDF document");
+        result.PageCount > 0.Should().BeTrue();
+        result.CharacterCount > 0.Should().BeTrue();
     }
 
     [Fact]
@@ -198,11 +198,11 @@ public class PdfTextExtractionServiceTests : IDisposable
         var result = await _service.ExtractTextAsync(pdfPath);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Contains("Page one", result.ExtractedText);
-        Assert.Contains("Page two", result.ExtractedText);
-        Assert.Contains("Page three", result.ExtractedText);
-        Assert.True(result.PageCount >= 1); // At least one page detected
+        result.Success.Should().BeTrue();
+        result.ExtractedText.Should().Contain("Page one");
+        result.ExtractedText.Should().Contain("Page two");
+        result.ExtractedText.Should().Contain("Page three");
+        result.PageCount >= 1.Should().BeTrue(); // At least one page detected
     }
 
     [Fact]
@@ -224,9 +224,9 @@ public class PdfTextExtractionServiceTests : IDisposable
         var result = await _service.ExtractTextAsync(pdfPath);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         // After normalization, multiple spaces should be reduced
-        Assert.DoesNotContain("   ", result.ExtractedText);
+        result.ExtractedText.Should().NotContain("   ");
     }
 
     [Fact]
@@ -247,10 +247,10 @@ public class PdfTextExtractionServiceTests : IDisposable
         var result = await _service.ExtractTextAsync(pdfPath);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(string.Empty, result.ExtractedText);
-        Assert.Equal(0, result.PageCount);
-        Assert.Equal(0, result.CharacterCount);
+        result.Success.Should().BeTrue();
+        result.ExtractedText.Should().Be(string.Empty);
+        result.PageCount.Should().Be(0);
+        result.CharacterCount.Should().Be(0);
     }
 
     [Fact]
@@ -271,7 +271,7 @@ public class PdfTextExtractionServiceTests : IDisposable
         var result = await _service.ExtractTextAsync(pdfPath);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         // Whitespace should be normalized away
         Assert.True(string.IsNullOrWhiteSpace(result.ExtractedText));
     }
@@ -295,9 +295,9 @@ public class PdfTextExtractionServiceTests : IDisposable
         var result = await _service.ExtractTextAsync(pdfPath);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.True(result.CharacterCount > 0);
-        Assert.Equal(result.ExtractedText.Length, result.CharacterCount);
+        result.Success.Should().BeTrue();
+        result.CharacterCount > 0.Should().BeTrue();
+        result.CharacterCount.Should().Be(result.ExtractedText.Length);
     }
 
     [Fact]
@@ -318,7 +318,7 @@ public class PdfTextExtractionServiceTests : IDisposable
         var result = await _service.ExtractTextAsync(pdfPath);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         // Verify warning was logged
         _loggerMock.Verify(
             x => x.Log(
@@ -348,7 +348,7 @@ public class PdfTextExtractionServiceTests : IDisposable
         var result = await _service.ExtractTextAsync(pdfPath);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         // Verify info log was written
         _loggerMock.Verify(
             x => x.Log(
@@ -373,8 +373,8 @@ public class PdfTextExtractionServiceTests : IDisposable
         var result = await _service.ExtractTextAsync(pdfPath);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Failed to extract text from PDF", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Failed to extract text from PDF");
     }
 
     [Fact]
@@ -388,7 +388,7 @@ public class PdfTextExtractionServiceTests : IDisposable
         var result = await _service.ExtractTextAsync(pdfPath);
 
         // Assert
-        Assert.False(result.Success);
+        result.Success.Should().BeFalse();
         // Verify error was logged
         _loggerMock.Verify(
             x => x.Log(
@@ -409,11 +409,11 @@ public class PdfTextExtractionServiceTests : IDisposable
         var result = PdfTextExtractionResult.CreateSuccess("test text", 5, 100);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.ErrorMessage.Should().BeNull();
-        Assert.Equal("test text", result.ExtractedText);
-        Assert.Equal(5, result.PageCount);
-        Assert.Equal(100, result.CharacterCount);
+        result.ExtractedText.Should().Be("test text");
+        result.PageCount.Should().Be(5);
+        result.CharacterCount.Should().Be(100);
     }
 
     [Fact]
@@ -423,11 +423,11 @@ public class PdfTextExtractionServiceTests : IDisposable
         var result = PdfTextExtractionResult.CreateFailure("test error");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("test error", result.ErrorMessage);
-        Assert.Equal(string.Empty, result.ExtractedText);
-        Assert.Equal(0, result.PageCount);
-        Assert.Equal(0, result.CharacterCount);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("test error");
+        result.ExtractedText.Should().Be(string.Empty);
+        result.PageCount.Should().Be(0);
+        result.CharacterCount.Should().Be(0);
     }
 
     [Fact]
@@ -437,7 +437,7 @@ public class PdfTextExtractionServiceTests : IDisposable
         var result = PdfTextExtractionResult.CreateSuccess("content", 1, 7);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.ErrorMessage.Should().BeNull();
     }
 
@@ -448,9 +448,9 @@ public class PdfTextExtractionServiceTests : IDisposable
         var result = PdfTextExtractionResult.CreateFailure("error");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal(0, result.PageCount);
-        Assert.Equal(0, result.CharacterCount);
-        Assert.Equal(string.Empty, result.ExtractedText);
+        result.Success.Should().BeFalse();
+        result.PageCount.Should().Be(0);
+        result.CharacterCount.Should().Be(0);
+        result.ExtractedText.Should().Be(string.Empty);
     }
 }

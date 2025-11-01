@@ -74,15 +74,15 @@ public class ChatServiceTests
         var chat = await service.CreateChatAsync("user-123", "catan", "catan-qa");
 
         // Then: Chat is persisted with correct associations
-        Assert.NotEqual(Guid.Empty, chat.Id);
-        Assert.Equal("user-123", chat.UserId);
-        Assert.Equal("catan", chat.GameId);
-        Assert.Equal("catan-qa", chat.AgentId);
-        Assert.NotEqual(default, chat.StartedAt);
+        chat.Id.Should().NotBe(Guid.Empty);
+        chat.UserId.Should().Be("user-123");
+        chat.GameId.Should().Be("catan");
+        chat.AgentId.Should().Be("catan-qa");
+        chat.StartedAt.Should().NotBe(default);
         chat.LastMessageAt.Should().BeNull();
 
         var stored = await dbContext.Chats.FirstAsync();
-        Assert.Equal(chat.Id, stored.Id);
+        stored.Id.Should().Be(chat.Id);
     }
 
     /// <summary>
@@ -153,8 +153,8 @@ public class ChatServiceTests
         var result = await service.GetChatByIdAsync(chat.Id, "user-123");
 
         result.Should().NotBeNull();
-        Assert.Equal(chat.Id, result!.Id);
-        Assert.Equal("user-123", result.UserId);
+        result!.Id.Should().Be(chat.Id);
+        result.UserId.Should().Be("user-123");
     }
 
     /// <summary>
@@ -231,15 +231,15 @@ public class ChatServiceTests
             "How do I setup the game?",
             new { source = "test" });
 
-        Assert.NotEqual(Guid.Empty, message.Id);
-        Assert.Equal(chat.Id, message.ChatId);
-        Assert.Equal("user", message.Level);
-        Assert.Equal("How do I setup the game?", message.Message);
+        message.Id.Should().NotBe(Guid.Empty);
+        message.ChatId.Should().Be(chat.Id);
+        message.Level.Should().Be("user");
+        message.Message.Should().Be("How do I setup the game?");
         message.MetadataJson.Should().NotBeNull();
 
         // Verify LastMessageAt was updated
         var updatedChat = await dbContext.Chats.FindAsync(chat.Id);
-        Assert.NotNull(updatedChat!.LastMessageAt);
+        updatedChat!.LastMessageAt.Should().NotBeNull();
     }
 
     /// <summary>
@@ -274,7 +274,7 @@ public class ChatServiceTests
 
         var result = await service.DeleteChatAsync(chat.Id, "user-123");
 
-        Assert.True(result);
+        result.Should().BeTrue();
         Assert.Null(await dbContext.Chats.FindAsync(chat.Id));
     }
 
@@ -355,9 +355,9 @@ public class ChatServiceTests
 
         var chats = await service.GetUserChatsAsync("user-123");
 
-        Assert.Equal(2, chats.Count);
-        Assert.Equal(recentChat.Id, chats[0].Id);
-        Assert.Equal(oldChat.Id, chats[1].Id);
+        chats.Count.Should().Be(2);
+        chats[0].Id.Should().Be(recentChat.Id);
+        chats[1].Id.Should().Be(oldChat.Id);
     }
 
     /// <summary>
@@ -379,10 +379,10 @@ public class ChatServiceTests
         var agent = await service.GetOrCreateAgentAsync("catan", "qa");
 
         agent.Should().NotBeNull();
-        Assert.Equal("catan-qa", agent!.Id);
-        Assert.Equal("catan", agent.GameId);
-        Assert.Equal("Q&A Agent", agent.Name);
-        Assert.Equal("qa", agent.Kind);
+        agent!.Id.Should().Be("catan-qa");
+        agent.GameId.Should().Be("catan");
+        agent.Name.Should().Be("Q&A Agent");
+        agent.Kind.Should().Be("qa");
 
         // Verify it was persisted
         var stored = await dbContext.Agents.FindAsync("catan-qa");
@@ -417,8 +417,8 @@ public class ChatServiceTests
         var agent = await service.GetOrCreateAgentAsync("catan", "qa");
 
         agent.Should().NotBeNull();
-        Assert.Equal("catan-qa", agent!.Id);
-        Assert.Equal(existingAgent.CreatedAt, agent.CreatedAt); // Same instance
+        agent!.Id.Should().Be("catan-qa");
+        agent.CreatedAt.Should().Be(existingAgent.CreatedAt); // Same instance
 
         // Verify no duplicate was created
         Assert.Equal(1, await dbContext.Agents.CountAsync(a => a.GameId == "catan" && a.Kind == "qa"));

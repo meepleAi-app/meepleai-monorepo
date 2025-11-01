@@ -38,12 +38,12 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
 
         // Then: Session is created successfully
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: Session cookie is returned
         var cookies = GetCookiesFromResponse(response);
         cookies.Should().NotBeNull();
-        Assert.Contains("meeple_session", cookies.Keys);
+        cookies.Keys.Should().Contain("meeple_session");
 
         // And: Cookie has correct attributes (HttpOnly, Secure, SameSite)
         var sessionCookie = cookies["meeple_session"];
@@ -87,7 +87,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Request is rejected as unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -104,13 +104,13 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var logoutResponse = await client.SendAsync(logoutRequest);
 
         // Then: Logout succeeds
-        Assert.Equal(HttpStatusCode.OK, logoutResponse.StatusCode);
+        logoutResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: Session is invalidated
         var meRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         AddCookies(meRequest, cookies);
         var meResponse = await client.SendAsync(meRequest);
-        Assert.Equal(HttpStatusCode.Unauthorized, meResponse.StatusCode);
+        meResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.PostAsync("/api/v1/auth/logout", null);
 
         // Then: Logout succeeds (idempotent operation)
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -144,8 +144,8 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var secondResponse = await client.SendAsync(secondLogout);
 
         // Then: Both logout requests succeed (idempotent)
-        Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, secondResponse.StatusCode);
+        firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        secondResponse.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     #endregion
@@ -163,7 +163,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -178,7 +178,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -191,7 +191,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.PostAsync("/api/v1/auth/login", null);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -205,7 +205,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -219,7 +219,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -233,11 +233,11 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/auth/login", payload);
 
         // Then: System returns bad request or unauthorized
-        Assert.True(
+        
             response.StatusCode == HttpStatusCode.BadRequest ||
             response.StatusCode == HttpStatusCode.Unauthorized,
             $"Expected BadRequest or Unauthorized, got {response.StatusCode}"
-        );
+        .Should().BeTrue();
     }
 
     #endregion
@@ -261,7 +261,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Then: System returns conflict
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     [Fact]
@@ -280,7 +280,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -299,7 +299,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -317,7 +317,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -336,7 +336,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -355,7 +355,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -374,7 +374,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
 
         // Then: System returns bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     #endregion
@@ -395,13 +395,13 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: User info is returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var authResponse = await response.Content.ReadFromJsonAsync<AuthResponse>();
         authResponse.Should().NotBeNull();
-        Assert.Equal(user.Email, authResponse.User.Email);
-        Assert.Equal(user.DisplayName, authResponse.User.DisplayName);
-        Assert.Equal(UserRole.User.ToString(), authResponse.User.Role);
+        authResponse.User.Email.Should().Be(user.Email);
+        authResponse.User.DisplayName.Should().Be(user.DisplayName);
+        authResponse.User.Role.Should().Be(UserRole.User.ToString());
     }
 
     [Fact]
@@ -414,7 +414,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var response = await client.GetAsync("/api/v1/auth/me");
 
         // Then: System returns unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     #endregion
@@ -437,9 +437,9 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var secondCookies = GetCookiesFromResponse(secondLogin);
 
         // Then: Each login creates a different session token
-        Assert.Equal(HttpStatusCode.OK, firstLogin.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, secondLogin.StatusCode);
-        Assert.NotEqual(firstCookies["meeple_session"], secondCookies["meeple_session"]);
+        firstLogin.StatusCode.Should().Be(HttpStatusCode.OK);
+        secondLogin.StatusCode.Should().Be(HttpStatusCode.OK);
+        secondCookies["meeple_session"].Should().NotBe(firstCookies["meeple_session"]);
     }
 
     [Fact]
@@ -466,8 +466,8 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         AddCookies(secondMeRequest, new List<string>(secondCookies.Select(kv => $"{kv.Key}={kv.Value}")));
         var secondMeResponse = await client.SendAsync(secondMeRequest);
 
-        Assert.Equal(HttpStatusCode.OK, firstMeResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, secondMeResponse.StatusCode);
+        firstMeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        secondMeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     #endregion

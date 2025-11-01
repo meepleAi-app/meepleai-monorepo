@@ -51,7 +51,7 @@ public class VerifyPasswordHashTest
         _output.WriteLine($"Hash: {seedHash}");
         _output.WriteLine($"Verification Result: {result}");
 
-        Assert.True(result, "Seed data password hash should verify correctly for 'Demo123!'");
+        result, "Seed data password hash should verify correctly for 'Demo123!'".Should().BeTrue();
     }
 
     private static bool VerifyPassword(string password, string encodedHash)

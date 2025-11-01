@@ -54,13 +54,13 @@ public class SeedDataPasswordTest : IClassFixture<WebApplicationFactoryFixture>
 
         // Assert
         adminLogin.Should().NotBeNull();
-        Assert.Equal("admin@meepleai.dev", adminLogin.User.Email);
+        adminLogin.User.Email.Should().Be("admin@meepleai.dev");
 
         editorLogin.Should().NotBeNull();
-        Assert.Equal("editor@meepleai.dev", editorLogin.User.Email);
+        editorLogin.User.Email.Should().Be("editor@meepleai.dev");
 
         userLogin.Should().NotBeNull();
-        Assert.Equal("user@meepleai.dev", userLogin.User.Email);
+        userLogin.User.Email.Should().Be("user@meepleai.dev");
 
         _output.WriteLine("✓ All seed users can login successfully");
     }

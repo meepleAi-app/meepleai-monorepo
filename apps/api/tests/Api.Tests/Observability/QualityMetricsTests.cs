@@ -85,8 +85,8 @@ public class QualityMetricsTests
 
         // Assert
         var measurements = collector.GetMeasurements();
-        Assert.Single(measurements);
-        Assert.Equal(1, measurements[0].Value);
+        measurements.Should().ContainSingle();
+        measurements[0].Value.Should().Be(1);
     }
 
     /// <summary>
@@ -149,9 +149,9 @@ public class QualityMetricsTests
         var measurements = collector.GetMeasurements();
         Assert.All(measurements, m =>
         {
-            Assert.Contains("agent.type", m.Tags.Keys);
+            m.Tags.Keys.Should().Contain("agent.type");
             Assert.Equal("qa", m.Tags["agent.type"]?.ToString());
-            Assert.Contains("operation", m.Tags.Keys);
+            m.Tags.Keys.Should().Contain("operation");
             Assert.Equal("answer", m.Tags["operation"]?.ToString());
         });
     }
@@ -189,7 +189,7 @@ public class QualityMetricsTests
         var measurements = collector.GetMeasurements();
         Assert.All(measurements, m =>
         {
-            Assert.Contains("quality_tier", m.Tags.Keys);
+            m.Tags.Keys.Should().Contain("quality_tier");
             Assert.Equal(expectedTier, m.Tags["quality_tier"]?.ToString());
         });
     }
@@ -241,12 +241,12 @@ public class QualityMetricsTests
 
         // Assert
         var counterMeasurements = counterCollector.GetMeasurements();
-        Assert.Equal(2, counterMeasurements.Count);
+        counterMeasurements.Count.Should().Be(2);
         Assert.All(counterMeasurements, m => Assert.Equal(1, m.Value));
 
         var histogramMeasurements = histogramCollector.GetMeasurements();
         // 3 recordings × 4 dimensions = 12 measurements
-        Assert.Equal(12, histogramMeasurements.Count);
+        histogramMeasurements.Count.Should().Be(12);
     }
 
     /// <summary>
@@ -311,8 +311,8 @@ public class QualityMetricsTests
         var qaMeasurements = measurements.Where(m => m.Tags["agent.type"]?.ToString() == "qa").ToList();
         var explainMeasurements = measurements.Where(m => m.Tags["agent.type"]?.ToString() == "explain").ToList();
 
-        Assert.Equal(4, qaMeasurements.Count); // 4 dimensions
-        Assert.Equal(4, explainMeasurements.Count); // 4 dimensions
+        qaMeasurements.Count.Should().Be(4); // 4 dimensions
+        explainMeasurements.Count.Should().Be(4); // 4 dimensions
     }
 
     /// <summary>

@@ -35,7 +35,7 @@ public class ProcessingProgressTests
         var percent = ProcessingProgress.CalculatePercentComplete(step, pagesProcessed, totalPages);
 
         // Assert
-        Assert.Equal(expectedPercent, percent);
+        percent.Should().Be(expectedPercent);
     }
 
     [Fact]
@@ -46,7 +46,7 @@ public class ProcessingProgressTests
         var percent = ProcessingProgress.CalculatePercentComplete(ProcessingStep.Extracting, 0, 0);
 
         // Assert
-        Assert.Equal(20, percent);
+        percent.Should().Be(20);
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class ProcessingProgressTests
         var percent = ProcessingProgress.CalculatePercentComplete(ProcessingStep.Chunking, 0, -5);
 
         // Assert
-        Assert.Equal(40, percent);
+        percent.Should().Be(40);
     }
 
     [Theory]
@@ -88,7 +88,7 @@ public class ProcessingProgressTests
 
         // Assert
         estimate.Should().NotBeNull();
-        Assert.Equal(60, estimate.Value.TotalSeconds, 0.1);
+        estimate.Value.TotalSeconds, 0.1.Should().Be(60);
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public class ProcessingProgressTests
 
         // Assert
         estimate.Should().NotBeNull();
-        Assert.Equal(90, estimate.Value.TotalSeconds, 0.1);
+        estimate.Value.TotalSeconds, 0.1.Should().Be(90);
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public class ProcessingProgressTests
 
         // Assert
         estimate.Should().NotBeNull();
-        Assert.Equal(30, estimate.Value.TotalSeconds, 0.1);
+        estimate.Value.TotalSeconds, 0.1.Should().Be(30);
     }
 
     [Fact]
@@ -130,8 +130,8 @@ public class ProcessingProgressTests
 
         // Assert
         estimate.Should().NotBeNull();
-        Assert.True(estimate.Value.TotalSeconds > 0);
-        Assert.True(estimate.Value.TotalSeconds < 15);
+        estimate.Value.TotalSeconds > 0.Should().BeTrue();
+        estimate.Value.TotalSeconds < 15.Should().BeTrue();
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public class ProcessingProgressTests
 
         // Assert
         estimate.Should().NotBeNull();
-        Assert.Equal(9, estimate.Value.TotalSeconds, 0.1);
+        estimate.Value.TotalSeconds, 0.1.Should().Be(9);
     }
 
     [Fact]
@@ -167,13 +167,13 @@ public class ProcessingProgressTests
         };
 
         // Assert
-        Assert.Equal(ProcessingStep.Extracting, progress.CurrentStep);
-        Assert.Equal(35, progress.PercentComplete);
-        Assert.Equal(TimeSpan.FromMinutes(2), progress.ElapsedTime);
-        Assert.Equal(TimeSpan.FromMinutes(3), progress.EstimatedTimeRemaining);
-        Assert.Equal(7, progress.PagesProcessed);
-        Assert.Equal(20, progress.TotalPages);
-        Assert.Equal(startTime, progress.StartedAt);
+        progress.CurrentStep.Should().Be(ProcessingStep.Extracting);
+        progress.PercentComplete.Should().Be(35);
+        progress.ElapsedTime.Should().Be(TimeSpan.FromMinutes(2));
+        progress.EstimatedTimeRemaining.Should().Be(TimeSpan.FromMinutes(3));
+        progress.PagesProcessed.Should().Be(7);
+        progress.TotalPages.Should().Be(20);
+        progress.StartedAt.Should().Be(startTime);
         progress.CompletedAt.Should().BeNull();
         progress.ErrorMessage.Should().BeNull();
     }
@@ -190,8 +190,8 @@ public class ProcessingProgressTests
         };
 
         // Assert
-        Assert.Equal(ProcessingStep.Failed, progress.CurrentStep);
-        Assert.Equal("Extraction failed: file corrupted", progress.ErrorMessage);
+        progress.CurrentStep.Should().Be(ProcessingStep.Failed);
+        progress.ErrorMessage.Should().Be("Extraction failed: file corrupted");
     }
 
     [Fact]
@@ -207,8 +207,8 @@ public class ProcessingProgressTests
         };
 
         // Assert
-        Assert.Equal(ProcessingStep.Completed, progress.CurrentStep);
-        Assert.Equal(100, progress.PercentComplete);
-        Assert.Equal(completedTime, progress.CompletedAt);
+        progress.CurrentStep.Should().Be(ProcessingStep.Completed);
+        progress.PercentComplete.Should().Be(100);
+        progress.CompletedAt.Should().Be(completedTime);
     }
 }

@@ -54,7 +54,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var response = await SendWithCookiesAsync(client, request, adminCookies);
 
         // Then: I receive a list of all feature flags with their states
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<FeatureFlagsListResponse>();
         result.Should().NotBeNull();
@@ -81,7 +81,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var response = await SendWithCookiesAsync(client, request, userCookies);
 
         // Then: I receive 403 Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -107,18 +107,18 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var response = await SendWithCookiesAsync(client, request, adminCookies);
 
         // Then: The feature is enabled
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<FeatureFlagUpdateResponse>();
         result.Should().NotBeNull();
-        Assert.Equal(featureName, result.FeatureName);
-        Assert.True(result.Enabled);
+        result.FeatureName.Should().Be(featureName);
+        result.Enabled.Should().BeTrue();
 
         // And: Subsequent checks return true via service
         using var scope = Factory.Services.CreateScope();
         var featureFlags = scope.ServiceProvider.GetRequiredService<IFeatureFlagService>();
         var isEnabled = await featureFlags.IsEnabledAsync(featureName);
-        Assert.True(isEnabled);
+        isEnabled.Should().BeTrue();
     }
 
     /// <summary>
@@ -147,13 +147,13 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var response = await SendWithCookiesAsync(client, request, adminCookies);
 
         // Then: The feature is disabled
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Verify via service
         using var scope = Factory.Services.CreateScope();
         var featureFlags = scope.ServiceProvider.GetRequiredService<IFeatureFlagService>();
         var isEnabled = await featureFlags.IsEnabledAsync(featureName);
-        Assert.False(isEnabled);
+        isEnabled.Should().BeFalse();
     }
 
     #endregion
@@ -176,7 +176,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
 
         var disableRequest = CreateJsonRequest(HttpMethod.Put, "/api/v1/admin/features/Features.StreamingResponses", new { enabled = false });
         var disableResponse = await SendWithCookiesAsync(adminClient, disableRequest, adminCookies);
-        Assert.Equal(HttpStatusCode.OK, disableResponse.StatusCode);
+        disableResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: Regular user is authenticated
         using var userClient = Factory.CreateHttpsClient();
@@ -189,17 +189,17 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var response = await SendWithCookiesAsync(userClient, request, userCookies);
 
         // Then: They receive 403 Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
         error.Should().NotBeNull();
-        Assert.Equal("feature_disabled", error.Error);
-        Assert.Equal("Features.StreamingResponses", error.FeatureName);
+        error.Error.Should().Be("feature_disabled");
+        error.FeatureName.Should().Be("Features.StreamingResponses");
 
         // Cleanup: Re-enable for other tests
         var reenableRequest = CreateJsonRequest(HttpMethod.Put, "/api/v1/admin/features/Features.StreamingResponses", new { enabled = true });
         var reenableResponse = await SendWithCookiesAsync(adminClient, reenableRequest, adminCookies);
-        Assert.Equal(HttpStatusCode.OK, reenableResponse.StatusCode);
+        reenableResponse.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     /// <summary>
@@ -245,11 +245,11 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
             var response = await SendWithCookiesAsync(editorClient, request, editorCookies);
 
             // Then: They receive 403 Forbidden
-            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
             var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
             error.Should().NotBeNull();
-            Assert.Equal("feature_disabled", error.Error);
+            error.Error.Should().Be("feature_disabled");
         }
         finally
         {
@@ -285,7 +285,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var response = await SendWithCookiesAsync(userClient, request, userCookies);
 
         // Then: They receive 403 Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         // Cleanup: Re-enable
         var reenableRequest = CreateJsonRequest(HttpMethod.Put, "/api/v1/admin/features/Features.SetupGuideGeneration", new { enabled = true });
@@ -313,7 +313,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var featureName = $"Features.PersistTest{Guid.NewGuid():N}";
         var request = CreateJsonRequest(HttpMethod.Put, $"/api/v1/admin/features/{featureName}", new { enabled = true });
         var enableResponse = await SendWithCookiesAsync(client, request, adminCookies);
-        Assert.Equal(HttpStatusCode.OK, enableResponse.StatusCode);
+        enableResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // When: Feature is checked in new scope
         using var newScope = Factory.Services.CreateScope();
@@ -321,13 +321,13 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var isEnabled = await featureFlags.IsEnabledAsync(featureName);
 
         // Then: It remains enabled
-        Assert.True(isEnabled);
+        isEnabled.Should().BeTrue();
 
         // Verify via GET endpoint
         var getRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/features");
         var getResponse = await SendWithCookiesAsync(client, getRequest, adminCookies);
         var listResult = await getResponse.Content.ReadFromJsonAsync<FeatureFlagsListResponse>();
-        Assert.Contains(listResult!.Features, f => f.FeatureName == featureName && f.IsEnabled);
+        f => f.FeatureName == featureName && f.IsEnabled.Should().Contain(listResult!.Features);
     }
 
     #endregion
@@ -361,13 +361,13 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var adminEnabled = await featureFlags.IsEnabledAsync(featureName, UserRole.Admin);
 
         // Then: Returns true
-        Assert.True(adminEnabled);
+        adminEnabled.Should().BeTrue();
 
         // And: Checked with User role
         var userEnabled = await featureFlags.IsEnabledAsync(featureName, UserRole.User);
 
         // Then: Returns false
-        Assert.False(userEnabled);
+        userEnabled.Should().BeFalse();
     }
 
     #endregion
@@ -405,13 +405,13 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var exportResponse = await SendWithCookiesAsync(userClient, exportRequest, userCookies);
 
         // Then: Error response has correct format
-        Assert.Equal(HttpStatusCode.Forbidden, exportResponse.StatusCode);
+        exportResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         var error = await exportResponse.Content.ReadFromJsonAsync<FeatureDisabledError>();
         error.Should().NotBeNull();
-        Assert.Equal("feature_disabled", error.Error);
-        Assert.Contains("export", error.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal("Features.ChatExport", error.FeatureName);
+        error.Error.Should().Be("feature_disabled");
+        error.Message, StringComparison.OrdinalIgnoreCase.Should().Contain("export");
+        error.FeatureName.Should().Be("Features.ChatExport");
 
         // Cleanup: Re-enable
         var reenableRequest = CreateJsonRequest(HttpMethod.Put, "/api/v1/admin/features/Features.ChatExport", new { enabled = true });
@@ -439,7 +439,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var allFlags = await featureFlags.GetAllFeatureFlagsAsync();
 
         // Then: All 8 seeded flags exist
-        Assert.True(allFlags.Count >= 8, $"Expected >= 8 flags, found {allFlags.Count}");
+        allFlags.Count >= 8, $"Expected >= 8 flags, found {allFlags.Count}".Should().BeTrue();
 
         // Verify specific flags with default values
         var expectedFlags = new[]
@@ -461,7 +461,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
                 f.RoleRestriction == expectedRole);
 
             flag.Should().NotBeNull();
-            Assert.Equal(expectedEnabled, flag.IsEnabled);
+            flag.IsEnabled.Should().Be(expectedEnabled);
         }
     }
 
@@ -490,8 +490,8 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var result3 = await featureFlags.IsEnabledAsync(featureName);
 
         // Then: Results are consistent
-        Assert.Equal(result1, result2);
-        Assert.Equal(result2, result3);
+        result2.Should().Be(result1);
+        result3.Should().Be(result2);
     }
 
     #endregion

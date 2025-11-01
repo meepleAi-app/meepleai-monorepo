@@ -71,7 +71,7 @@ public class PromptTemplateServiceTests : IDisposable
 
         // Assert
         template.Should().NotBeNull();
-        Assert.Equal(QuestionType.General, template.QuestionType);
+        template.QuestionType.Should().Be(QuestionType.General);
         Assert.False(string.IsNullOrWhiteSpace(template.SystemPrompt));
         Assert.False(string.IsNullOrWhiteSpace(template.UserPromptTemplate));
     }
@@ -90,9 +90,9 @@ public class PromptTemplateServiceTests : IDisposable
         // Assert
         setupTemplate.Should().NotBeNull();
         gameplayTemplate.Should().NotBeNull();
-        Assert.Equal(QuestionType.Setup, setupTemplate.QuestionType);
-        Assert.Equal(QuestionType.Gameplay, gameplayTemplate.QuestionType);
-        Assert.NotEqual(setupTemplate.SystemPrompt, gameplayTemplate.SystemPrompt);
+        setupTemplate.QuestionType.Should().Be(QuestionType.Setup);
+        gameplayTemplate.QuestionType.Should().Be(QuestionType.Gameplay);
+        gameplayTemplate.SystemPrompt.Should().NotBe(setupTemplate.SystemPrompt);
     }
 
     [Fact]
@@ -108,8 +108,8 @@ public class PromptTemplateServiceTests : IDisposable
 
         // Assert
         template.Should().NotBeNull();
-        Assert.Equal(gameId, template.GameId);
-        Assert.Contains("Chess", template.SystemPrompt); // Game-specific content
+        template.GameId.Should().Be(gameId);
+        template.SystemPrompt.Should().Contain("Chess"); // Game-specific content
     }
 
     [Fact]
@@ -140,7 +140,7 @@ public class PromptTemplateServiceTests : IDisposable
 
         // Assert
         template.Should().NotBeNull();
-        Assert.Equal(QuestionType.General, template.QuestionType); // Falls back to General
+        template.QuestionType.Should().Be(QuestionType.General); // Falls back to General
     }
 
     #endregion
@@ -208,12 +208,12 @@ public class PromptTemplateServiceTests : IDisposable
         var renderedPrompt = service.RenderSystemPrompt(template);
 
         // Assert
-        Assert.Contains("You are a board game assistant", renderedPrompt);
-        Assert.Contains("EXAMPLES:", renderedPrompt);
-        Assert.Contains("How do I set up Chess?", renderedPrompt);
-        Assert.Contains("Place the board...", renderedPrompt);
-        Assert.Contains("How does a pawn move?", renderedPrompt);
-        Assert.Contains("Pawns move forward...", renderedPrompt);
+        renderedPrompt.Should().Contain("You are a board game assistant");
+        renderedPrompt.Should().Contain("EXAMPLES:");
+        renderedPrompt.Should().Contain("How do I set up Chess?");
+        renderedPrompt.Should().Contain("Place the board...");
+        renderedPrompt.Should().Contain("How does a pawn move?");
+        renderedPrompt.Should().Contain("Pawns move forward...");
     }
 
     [Fact]
@@ -232,8 +232,8 @@ public class PromptTemplateServiceTests : IDisposable
         var renderedPrompt = service.RenderSystemPrompt(template);
 
         // Assert
-        Assert.Equal("You are a board game assistant.", renderedPrompt);
-        Assert.DoesNotContain("EXAMPLES:", renderedPrompt);
+        renderedPrompt.Should().Be("You are a board game assistant.");
+        renderedPrompt.Should().NotContain("EXAMPLES:");
     }
 
     [Fact]
@@ -254,10 +254,10 @@ public class PromptTemplateServiceTests : IDisposable
         var renderedPrompt = service.RenderUserPrompt(template, context, query);
 
         // Assert
-        Assert.Contains(context, renderedPrompt);
-        Assert.Contains(query, renderedPrompt);
-        Assert.DoesNotContain("{context}", renderedPrompt);
-        Assert.DoesNotContain("{query}", renderedPrompt);
+        renderedPrompt.Should().Contain(context);
+        renderedPrompt.Should().Contain(query);
+        renderedPrompt.Should().NotContain("{context}");
+        renderedPrompt.Should().NotContain("{query}");
     }
 
     [Fact]
@@ -276,8 +276,8 @@ public class PromptTemplateServiceTests : IDisposable
         var renderedPrompt = service.RenderUserPrompt(template, "", "What is the answer?");
 
         // Assert
-        Assert.Contains("What is the answer?", renderedPrompt);
-        Assert.DoesNotContain("{query}", renderedPrompt);
+        renderedPrompt.Should().Contain("What is the answer?");
+        renderedPrompt.Should().NotContain("{query}");
     }
 
     #endregion
@@ -299,7 +299,7 @@ public class PromptTemplateServiceTests : IDisposable
         var questionType = service.ClassifyQuestion(query);
 
         // Assert
-        Assert.Equal(expected, questionType);
+        questionType.Should().Be(expected);
     }
 
     [Theory]
@@ -317,7 +317,7 @@ public class PromptTemplateServiceTests : IDisposable
         var questionType = service.ClassifyQuestion(query);
 
         // Assert
-        Assert.Equal(expected, questionType);
+        questionType.Should().Be(expected);
     }
 
     [Theory]
@@ -335,7 +335,7 @@ public class PromptTemplateServiceTests : IDisposable
         var questionType = service.ClassifyQuestion(query);
 
         // Assert
-        Assert.Equal(expected, questionType);
+        questionType.Should().Be(expected);
     }
 
     [Theory]
@@ -353,7 +353,7 @@ public class PromptTemplateServiceTests : IDisposable
         var questionType = service.ClassifyQuestion(query);
 
         // Assert
-        Assert.Equal(expected, questionType);
+        questionType.Should().Be(expected);
     }
 
     [Theory]
@@ -370,7 +370,7 @@ public class PromptTemplateServiceTests : IDisposable
         var questionType = service.ClassifyQuestion(query);
 
         // Assert
-        Assert.Equal(expected, questionType);
+        questionType.Should().Be(expected);
     }
 
     [Fact]
@@ -386,9 +386,9 @@ public class PromptTemplateServiceTests : IDisposable
         var whitespaceResult = service.ClassifyQuestion("   ");
 
         // Assert
-        Assert.Equal(QuestionType.General, nullResult);
-        Assert.Equal(QuestionType.General, emptyResult);
-        Assert.Equal(QuestionType.General, whitespaceResult);
+        nullResult.Should().Be(QuestionType.General);
+        emptyResult.Should().Be(QuestionType.General);
+        whitespaceResult.Should().Be(QuestionType.General);
     }
 
     #endregion
@@ -406,9 +406,9 @@ public class PromptTemplateServiceTests : IDisposable
 
         // Assert
         template.Should().NotBeNull();
-        Assert.Contains("board game rules assistant", template.SystemPrompt);
-        Assert.Contains("{context}", template.UserPromptTemplate);
-        Assert.Contains("{query}", template.UserPromptTemplate);
+        template.SystemPrompt.Should().Contain("board game rules assistant");
+        template.UserPromptTemplate.Should().Contain("{context}");
+        template.UserPromptTemplate.Should().Contain("{query}");
     }
 
     [Fact]
@@ -448,7 +448,7 @@ public class PromptTemplateServiceTests : IDisposable
         var result = await service.GetActivePromptAsync(templateName);
 
         // Assert
-        Assert.Equal(cachedContent, result);
+        result.Should().Be(cachedContent);
         _redisDbMock.Verify(db => db.StringGetAsync(cacheKey, It.IsAny<CommandFlags>()), Times.Once);
         // Should NOT query database on cache hit
     }
@@ -484,7 +484,7 @@ public class PromptTemplateServiceTests : IDisposable
         var result = await service.GetActivePromptAsync(templateName);
 
         // Assert
-        Assert.Equal(promptContent, result);
+        result.Should().Be(promptContent);
         _redisDbMock.Verify(db => db.StringGetAsync(cacheKey, It.IsAny<CommandFlags>()), Times.Once);
         _redisDbMock.Verify(db => db.StringSetAsync(
             It.IsAny<RedisKey>(),
@@ -515,7 +515,7 @@ public class PromptTemplateServiceTests : IDisposable
         var result = await service.GetActivePromptAsync(templateName);
 
         // Assert
-        Assert.Equal(promptContent, result);
+        result.Should().Be(promptContent);
         // Should still work despite Redis failure
     }
 
@@ -554,7 +554,7 @@ public class PromptTemplateServiceTests : IDisposable
         var result = await service.ActivateVersionAsync(templateId, versionId, userId);
 
         // Assert
-        Assert.True(result);
+        result.Should().BeTrue();
 
         // Verify only the new version is active
         var allVersions = await _dbContext.Set<PromptVersionEntity>()
@@ -574,8 +574,8 @@ public class PromptTemplateServiceTests : IDisposable
             .Where(a => a.TemplateId == templateId && a.VersionId == versionId)
             .ToListAsync();
 
-        Assert.Single(auditLogs);
-        Assert.Equal("version_activated", auditLogs[0].Action);
+        auditLogs.Should().ContainSingle();
+        auditLogs[0].Action.Should().Be("version_activated");
     }
 
     [Fact]
@@ -592,7 +592,7 @@ public class PromptTemplateServiceTests : IDisposable
         var result = await service.ActivateVersionAsync(nonExistentTemplateId, nonExistentVersionId, userId);
 
         // Assert
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]

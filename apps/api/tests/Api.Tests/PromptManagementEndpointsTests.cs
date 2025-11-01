@@ -68,7 +68,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Template is created with initial version
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var json = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<CreatePromptTemplateResponse>(json, JsonOptions);
@@ -76,14 +76,14 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         result.Should().NotBeNull();
         result.Template.Should().NotBeNull();
         result.InitialVersion.Should().NotBeNull();
-        Assert.Equal(request.Name, result.Template.Name);
-        Assert.Equal(request.Description, result.Template.Description);
-        Assert.Equal(request.Category, result.Template.Category);
-        Assert.Equal(1, result.Template.VersionCount);
-        Assert.Equal(1, result.Template.ActiveVersionNumber);
-        Assert.Equal(1, result.InitialVersion.VersionNumber);
-        Assert.Equal(request.InitialContent, result.InitialVersion.Content);
-        Assert.True(result.InitialVersion.IsActive);
+        result.Template.Name.Should().Be(request.Name);
+        result.Template.Description.Should().Be(request.Description);
+        result.Template.Category.Should().Be(request.Category);
+        result.Template.VersionCount.Should().Be(1);
+        result.Template.ActiveVersionNumber.Should().Be(1);
+        result.InitialVersion.VersionNumber.Should().Be(1);
+        result.InitialVersion.Content.Should().Be(request.InitialContent);
+        result.InitialVersion.IsActive.Should().BeTrue();
 
         // And: Audit log is recorded
         using var scope = Factory.Services.CreateScope();
@@ -92,9 +92,9 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
             .Where(a => a.TemplateId == result.Template.Id)
             .ToListAsync();
 
-        Assert.Equal(2, auditLogs.Count); // template_created + version_created
-        Assert.Contains(auditLogs, a => a.Action == "template_created");
-        Assert.Contains(auditLogs, a => a.Action == "version_created");
+        auditLogs.Count.Should().Be(2); // template_created + version_created
+        a => a.Action == "template_created".Should().Contain(auditLogs);
+        a => a.Action == "version_created".Should().Contain(auditLogs);
     }
 
     /// <summary>
@@ -127,7 +127,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Request is forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -174,10 +174,10 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest2);
 
         // Then: Request fails with bad request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var errorJson = await response.Content.ReadAsStringAsync();
-        Assert.Contains("already exists", errorJson);
+        errorJson.Should().Contain("already exists");
     }
 
     /// <summary>
@@ -214,15 +214,15 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: New version is created
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var json = await response.Content.ReadAsStringAsync();
         var version = JsonSerializer.Deserialize<PromptVersionDto>(json, JsonOptions);
 
         version.Should().NotBeNull();
-        Assert.Equal(2, version.VersionNumber);
-        Assert.Equal(versionRequest.Content, version.Content);
-        Assert.False(version.IsActive); // Not activated immediately
+        version.VersionNumber.Should().Be(2);
+        version.Content.Should().Be(versionRequest.Content);
+        version.IsActive.Should().BeFalse(); // Not activated immediately
         version.Metadata.Should().NotBeNull();
     }
 
@@ -260,20 +260,20 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Version 2 is activated
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         var json = await response.Content.ReadAsStringAsync();
         var version2 = JsonSerializer.Deserialize<PromptVersionDto>(json, JsonOptions);
 
         version2.Should().NotBeNull();
-        Assert.Equal(2, version2.VersionNumber);
-        Assert.True(version2.IsActive);
+        version2.VersionNumber.Should().Be(2);
+        version2.IsActive.Should().BeTrue();
 
         // And: Version 1 is deactivated
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var version1 = await db.PromptVersions.FirstAsync(v => v.TemplateId == template.Id && v.VersionNumber == 1);
-        Assert.False(version1.IsActive);
+        version1.IsActive.Should().BeFalse();
 
         // And: Audit logs reflect activation/deactivation
         var auditLogs = await db.PromptAuditLogs
@@ -282,8 +282,8 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
             .Take(3)
             .ToListAsync();
 
-        Assert.Contains(auditLogs, a => a.Action == "version_activated" && a.VersionId == version2.Id);
-        Assert.Contains(auditLogs, a => a.Action == "version_deactivated" && a.VersionId == version1.Id);
+        a => a.Action == "version_activated" && a.VersionId == version2.Id.Should().Contain(auditLogs);
+        a => a.Action == "version_deactivated" && a.VersionId == version1.Id.Should().Contain(auditLogs);
     }
 
     /// <summary>
@@ -321,20 +321,20 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Version 2 becomes active
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var activatedVersion = JsonSerializer.Deserialize<PromptVersionDto>(json, JsonOptions);
 
         activatedVersion.Should().NotBeNull();
-        Assert.Equal(2, activatedVersion.VersionNumber);
-        Assert.True(activatedVersion.IsActive);
+        activatedVersion.VersionNumber.Should().Be(2);
+        activatedVersion.IsActive.Should().BeTrue();
 
         // And: Version 3 is deactivated
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var v3 = await db.PromptVersions.FirstAsync(v => v.Id == version3.Id);
-        Assert.False(v3.IsActive);
+        v3.IsActive.Should().BeFalse();
 
         // And: Audit log records rollback
         var auditLog = await db.PromptAuditLogs
@@ -342,7 +342,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
             .OrderByDescending(a => a.ChangedAt)
             .FirstAsync();
 
-        Assert.Contains("Rollback", auditLog.Details!);
+        auditLog.Details!.Should().Contain("Rollback");
     }
 
     /// <summary>
@@ -370,17 +370,17 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: All versions are returned in descending order
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var history = JsonSerializer.Deserialize<PromptVersionHistoryResponse>(json, JsonOptions);
 
         history.Should().NotBeNull();
-        Assert.Equal(3, history.TotalCount);
-        Assert.Equal(3, history.Versions.Count);
-        Assert.Equal(3, history.Versions[0].VersionNumber);
-        Assert.Equal(2, history.Versions[1].VersionNumber);
-        Assert.Equal(1, history.Versions[2].VersionNumber);
+        history.TotalCount.Should().Be(3);
+        history.Versions.Count.Should().Be(3);
+        history.Versions[0].VersionNumber.Should().Be(3);
+        history.Versions[1].VersionNumber.Should().Be(2);
+        history.Versions[2].VersionNumber.Should().Be(1);
     }
 
     /// <summary>
@@ -407,14 +407,14 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Active version is returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var activeVersion = JsonSerializer.Deserialize<PromptVersionDto>(json, JsonOptions);
 
         activeVersion.Should().NotBeNull();
-        Assert.Equal(1, activeVersion.VersionNumber);
-        Assert.True(activeVersion.IsActive);
+        activeVersion.VersionNumber.Should().Be(1);
+        activeVersion.IsActive.Should().BeTrue();
     }
 
     /// <summary>
@@ -440,7 +440,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Audit log is returned with actions from template creation
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var auditLog = JsonSerializer.Deserialize<PromptAuditLogResponse>(json, JsonOptions);
@@ -450,7 +450,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         // Let's just verify the structure is correct
         auditLog.Logs.Should().NotBeNull();
         auditLog.Template.Should().NotBeNull();
-        Assert.Equal(template.Id, auditLog.Template.Id);
+        auditLog.Template.Id.Should().Be(template.Id);
     }
 
     /// <summary>
@@ -477,14 +477,14 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: All templates are returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<PromptTemplateListResponse>(json, JsonOptions);
 
         result.Should().NotBeNull();
-        Assert.True(result.TotalCount >= 2);
-        Assert.True(result.Templates.Count >= 2);
+        result.TotalCount >= 2.Should().BeTrue();
+        result.Templates.Count >= 2.Should().BeTrue();
     }
 
     /// <summary>
@@ -511,13 +511,13 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Only QA templates are returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<PromptTemplateListResponse>(json, JsonOptions);
 
         result.Should().NotBeNull();
-        Assert.True(result.Templates.Count >= 1);
+        result.Templates.Count >= 1.Should().BeTrue();
         Assert.All(result.Templates, t => Assert.Equal("qa", t.Category));
     }
 
@@ -544,15 +544,15 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Template details are returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<PromptTemplateDto>(json, JsonOptions);
 
         result.Should().NotBeNull();
-        Assert.Equal(template.Id, result.Id);
-        Assert.Equal(template.Name, result.Name);
-        Assert.Equal("Test description", result.Description);
+        result.Id.Should().Be(template.Id);
+        result.Name.Should().Be(template.Name);
+        result.Description.Should().Be("Test description");
     }
 
     /// <summary>
@@ -571,7 +571,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var response = await client.GetAsync("/api/v1/prompts");
 
         // Then: Unauthorized is returned
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -595,7 +595,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var response = await client.SendAsync(httpRequest);
 
         // Then: Not found is returned
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     // Helper methods for creating test data

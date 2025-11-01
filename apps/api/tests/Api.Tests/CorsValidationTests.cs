@@ -38,7 +38,7 @@ public class CorsValidationTests : IntegrationTestBase
         // Then: Response is successful (either 204 or 405 depending on endpoint implementation)
         // NOTE: ASP.NET Core minimal APIs return 405 for OPTIONS if no handler exists
         // The important part is that CORS headers are present when CORS middleware processes the request
-        Assert.True(response.StatusCode == HttpStatusCode.NoContent || response.StatusCode == HttpStatusCode.MethodNotAllowed);
+        response.StatusCode == HttpStatusCode.NoContent || response.StatusCode == HttpStatusCode.MethodNotAllowed.Should().BeTrue();
 
         // CORS headers may not be present in OPTIONS response for minimal APIs without explicit OPTIONS handler
         // This is expected behavior - CORS headers are returned in actual GET/POST requests
@@ -58,7 +58,7 @@ public class CorsValidationTests : IntegrationTestBase
 
         // Then: No CORS headers are returned (origin rejected)
         // Note: ASP.NET Core CORS middleware still returns 204 but without CORS headers
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
         Assert.False(response.Headers.Contains("Access-Control-Allow-Origin"));
     }
 
@@ -75,7 +75,7 @@ public class CorsValidationTests : IntegrationTestBase
 
         // Then: Returns 405 Method Not Allowed (no OPTIONS handler defined for this endpoint)
         // NOTE: ASP.NET Core minimal APIs without explicit OPTIONS handler return 405
-        Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.MethodNotAllowed);
 
         // And: No CORS headers (not treated as CORS request without Origin header)
         Assert.False(response.Headers.Contains("Access-Control-Allow-Origin"));
@@ -96,8 +96,8 @@ public class CorsValidationTests : IntegrationTestBase
 
         // Then: Returns either 204 (CORS preflight handled) or 405 (no OPTIONS handler)
         // NOTE: ASP.NET Core CORS middleware may handle OPTIONS automatically
-        Assert.True(response.StatusCode == HttpStatusCode.NoContent ||
-                    response.StatusCode == HttpStatusCode.MethodNotAllowed);
+        response.StatusCode == HttpStatusCode.NoContent ||
+                    response.StatusCode == HttpStatusCode.MethodNotAllowed.Should().BeTrue();
     }
 
     #endregion
@@ -119,13 +119,13 @@ public class CorsValidationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Response includes Allow-Credentials header
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         Assert.True(response.Headers.Contains("Access-Control-Allow-Origin"));
         Assert.True(response.Headers.Contains("Access-Control-Allow-Credentials"));
 
         // And: Allow-Credentials is set to true
         var allowCredentials = response.Headers.GetValues("Access-Control-Allow-Credentials").FirstOrDefault();
-        Assert.Equal("true", allowCredentials);
+        allowCredentials.Should().Be("true");
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public class CorsValidationTests : IntegrationTestBase
 
         // Then: Request is authenticated successfully via cookies
         // Note: May fail due to missing game data, but should not be 401 Unauthorized
-        Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().NotBe(HttpStatusCode.Unauthorized);
         Assert.True(response.Headers.Contains("Access-Control-Allow-Origin"));
         Assert.True(response.Headers.Contains("Access-Control-Allow-Credentials"));
     }
@@ -170,9 +170,9 @@ public class CorsValidationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Request is allowed
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var allowOrigin = response.Headers.GetValues("Access-Control-Allow-Origin").FirstOrDefault();
-        Assert.Equal("http://localhost:3000", allowOrigin);
+        allowOrigin.Should().Be("http://localhost:3000");
     }
 
     [Fact]
@@ -191,7 +191,7 @@ public class CorsValidationTests : IntegrationTestBase
 
         // Then: Request succeeds (CORS is browser-enforced), but no CORS headers
         // Note: Server still processes request, but browser will block the response
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         Assert.False(response.Headers.Contains("Access-Control-Allow-Origin"));
     }
 
@@ -210,7 +210,7 @@ public class CorsValidationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Request is processed (may or may not have CORS headers based on config)
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         // NOTE: This depends on whether https://localhost:3000 is in AllowedOrigins config
     }
 
@@ -232,8 +232,8 @@ public class CorsValidationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns either 204 (CORS preflight handled) or 405 (no OPTIONS handler)
-        Assert.True(response.StatusCode == HttpStatusCode.NoContent ||
-                    response.StatusCode == HttpStatusCode.MethodNotAllowed);
+        response.StatusCode == HttpStatusCode.NoContent ||
+                    response.StatusCode == HttpStatusCode.MethodNotAllowed.Should().BeTrue();
     }
 
     [Fact]
@@ -253,7 +253,7 @@ public class CorsValidationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Request is allowed (Content-Type is standard header)
-        Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().NotBe(HttpStatusCode.Unauthorized);
         Assert.True(response.Headers.Contains("Access-Control-Allow-Origin"));
     }
 
@@ -274,8 +274,8 @@ public class CorsValidationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns either 204 (CORS preflight handled) or 405 (no OPTIONS handler)
-        Assert.True(response.StatusCode == HttpStatusCode.NoContent ||
-                    response.StatusCode == HttpStatusCode.MethodNotAllowed);
+        response.StatusCode == HttpStatusCode.NoContent ||
+                    response.StatusCode == HttpStatusCode.MethodNotAllowed.Should().BeTrue();
     }
 
     [Fact]
@@ -291,8 +291,8 @@ public class CorsValidationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Returns either 204 (CORS preflight handled) or 405 (no OPTIONS handler)
-        Assert.True(response.StatusCode == HttpStatusCode.NoContent ||
-                    response.StatusCode == HttpStatusCode.MethodNotAllowed);
+        response.StatusCode == HttpStatusCode.NoContent ||
+                    response.StatusCode == HttpStatusCode.MethodNotAllowed.Should().BeTrue();
     }
 
     #endregion
@@ -313,7 +313,7 @@ public class CorsValidationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: Cookie is set with CORS headers
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         Assert.True(response.Headers.Contains("Access-Control-Allow-Origin"));
         Assert.True(response.Headers.Contains("Access-Control-Allow-Credentials"));
 
@@ -336,7 +336,7 @@ public class CorsValidationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: User info is returned with CORS headers
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         Assert.True(response.Headers.Contains("Access-Control-Allow-Origin"));
         Assert.True(response.Headers.Contains("Access-Control-Allow-Credentials"));
     }

@@ -59,7 +59,7 @@ public class RealPdfExtractionTests
         var result = await _service.ExtractTextAsync(pdfPath);
 
         // Assert & Report
-        Assert.True(result.Success, $"Extraction failed: {result.ErrorMessage}");
+        result.Success, $"Extraction failed: {result.ErrorMessage}".Should().BeTrue();
 
         _output.WriteLine("=== HARMONIES RULES EXTRACTION RESULTS ===");
         _output.WriteLine($"Success: {result.Success}");
@@ -79,8 +79,8 @@ public class RealPdfExtractionTests
         }
 
         // Baseline quality check - should extract meaningful text
-        Assert.True(result.CharacterCount > 1000,
-            $"Expected >1000 chars but got {result.CharacterCount}. Likely needs OCR.");
+        result.CharacterCount > 1000,
+            $"Expected >1000 chars but got {result.CharacterCount}. Likely needs OCR.".Should().BeTrue();
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public class RealPdfExtractionTests
         var result = await _service.ExtractTextAsync(pdfPath);
 
         // Assert & Report
-        Assert.True(result.Success, $"Extraction failed: {result.ErrorMessage}");
+        result.Success, $"Extraction failed: {result.ErrorMessage}".Should().BeTrue();
 
         _output.WriteLine("=== LORENZO RULES EXTRACTION RESULTS ===");
         _output.WriteLine($"Success: {result.Success}");
@@ -119,8 +119,8 @@ public class RealPdfExtractionTests
         }
 
         // Baseline quality check - should extract meaningful text
-        Assert.True(result.CharacterCount > 1000,
-            $"Expected >1000 chars but got {result.CharacterCount}. Likely needs OCR.");
+        result.CharacterCount > 1000,
+            $"Expected >1000 chars but got {result.CharacterCount}. Likely needs OCR.".Should().BeTrue();
     }
 
     [Fact]

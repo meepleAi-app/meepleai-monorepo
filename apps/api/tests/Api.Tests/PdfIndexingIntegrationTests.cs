@@ -80,13 +80,13 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
 
         // THEN: The request should succeed
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<PdfIndexingResponse>();
         result.Should().NotBeNull();
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.VectorDocumentId.Should().NotBeNull();
-        Assert.True(result.ChunkCount > 0, "Should have created at least 1 chunk");
+        result.ChunkCount > 0, "Should have created at least 1 chunk".Should().BeTrue();
         result.IndexedAt.Should().NotBeNull();
 
         // AND: The VectorDocumentEntity should be persisted with status "completed"
@@ -94,15 +94,15 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
             .FirstOrDefaultAsync(v => v.Id == result.VectorDocumentId);
 
         vectorDoc.Should().NotBeNull();
-        Assert.Equal("completed", vectorDoc.IndexingStatus);
-        Assert.Equal(gameId, vectorDoc.GameId);
-        Assert.Equal(pdfId, vectorDoc.PdfDocumentId);
-        Assert.True(vectorDoc.ChunkCount > 0);
-        Assert.True(vectorDoc.TotalCharacters > 0);
+        vectorDoc.IndexingStatus.Should().Be("completed");
+        vectorDoc.GameId.Should().Be(gameId);
+        vectorDoc.PdfDocumentId.Should().Be(pdfId);
+        vectorDoc.ChunkCount > 0.Should().BeTrue();
+        vectorDoc.TotalCharacters > 0.Should().BeTrue();
         vectorDoc.IndexedAt.Should().NotBeNull();
         vectorDoc.IndexingError.Should().BeNull();
-        Assert.Equal("openai/text-embedding-3-small", vectorDoc.EmbeddingModel);
-        Assert.Equal(1536, vectorDoc.EmbeddingDimensions);
+        vectorDoc.EmbeddingModel.Should().Be("openai/text-embedding-3-small");
+        vectorDoc.EmbeddingDimensions.Should().Be(1536);
     }
 
     /// <summary>
@@ -133,13 +133,13 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         });
 
         // THEN: Results should only include tic-tac-toe content
-        Assert.Equal(HttpStatusCode.OK, searchResponse.StatusCode);
+        searchResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var searchResult = await searchResponse.Content.ReadAsStringAsync();
         // The response should reference tic-tac-toe concepts, not chess
-        Assert.Contains("three in a row", searchResult, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("knight", searchResult, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("checkmate", searchResult, StringComparison.OrdinalIgnoreCase);
+        searchResult, StringComparison.OrdinalIgnoreCase.Should().Contain("three in a row");
+        searchResult, StringComparison.OrdinalIgnoreCase.Should().NotContain("knight");
+        searchResult, StringComparison.OrdinalIgnoreCase.Should().NotContain("checkmate");
     }
 
     #endregion
@@ -166,12 +166,12 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should create exactly 1 chunk
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<PdfIndexingResponse>();
         result.Should().NotBeNull();
-        Assert.Equal(1, result.ChunkCount);
-        Assert.True(result.Success);
+        result.ChunkCount.Should().Be(1);
+        result.Success.Should().BeTrue();
     }
 
     /// <summary>
@@ -194,12 +194,12 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should create many chunks (with 512 char chunks and 50 overlap, expect ~95-120 chunks)
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<PdfIndexingResponse>();
         result.Should().NotBeNull();
-        Assert.True(result.ChunkCount >= 90, $"Expected at least 90 chunks, got {result.ChunkCount}");
-        Assert.True(result.ChunkCount <= 130, $"Expected at most 130 chunks, got {result.ChunkCount}");
+        result.ChunkCount >= 90, $"Expected at least 90 chunks, got {result.ChunkCount}".Should().BeTrue();
+        result.ChunkCount <= 130, $"Expected at most 130 chunks, got {result.ChunkCount}".Should().BeTrue();
     }
 
     /// <summary>
@@ -226,16 +226,16 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should succeed and update the same VectorDocumentEntity
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<PdfIndexingResponse>();
         result.Should().NotBeNull();
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
 
         // Should have only ONE VectorDocumentEntity for this PDF
         var vectorDocCount = await _db.Set<VectorDocumentEntity>()
             .CountAsync(v => v.PdfDocumentId == pdfId);
-        Assert.Equal(1, vectorDocCount);
+        vectorDocCount.Should().Be(1);
     }
 
     #endregion
@@ -260,11 +260,11 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should return 400 Bad Request
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>();
         errorResponse.Should().NotBeNull();
-        Assert.Contains("text extraction", errorResponse.Error, StringComparison.OrdinalIgnoreCase);
+        errorResponse.Error, StringComparison.OrdinalIgnoreCase.Should().Contain("text extraction");
     }
 
     /// <summary>
@@ -284,7 +284,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var response = await _client.PostAsync($"/api/v1/ingest/pdf/{fakePdfId}/index", null);
 
         // THEN: Should return 404 Not Found
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     #endregion
@@ -309,7 +309,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should succeed
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     /// <summary>
@@ -330,7 +330,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should succeed
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     /// <summary>
@@ -351,7 +351,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should return 403 Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -371,7 +371,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         var response = await _client.PostAsync($"/api/v1/ingest/pdf/{pdfId}/index", null);
 
         // THEN: Should return 401 Unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     #endregion

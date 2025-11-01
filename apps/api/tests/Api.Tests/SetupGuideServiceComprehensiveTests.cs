@@ -84,7 +84,7 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Unknown Game", result.gameTitle);
+        result.gameTitle.Should().Be("Unknown Game");
         result.steps.Should().NotBeEmpty();
         Assert.All(result.steps, step => Assert.False(string.IsNullOrEmpty(step.instruction)));
     }
@@ -111,9 +111,9 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Test Game", result.gameTitle);
+        result.gameTitle.Should().Be("Test Game");
         result.steps.Should().NotBeEmpty();
-        Assert.Equal(5, result.steps.Count); // Default steps count
+        result.steps.Count.Should().Be(5); // Default steps count
         Assert.All(result.steps, step => Assert.Empty(step.references)); // Default steps have no references
     }
 
@@ -175,17 +175,17 @@ Shuffle all card decks thoroughly and place them face-down near the board.";
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Advanced Strategy Game", result.gameTitle);
-        Assert.Equal(3, result.steps.Count);
-        Assert.Equal(250, result.totalTokens);
-        Assert.Equal(150, result.promptTokens);
-        Assert.Equal(100, result.completionTokens);
+        result.gameTitle.Should().Be("Advanced Strategy Game");
+        result.steps.Count.Should().Be(3);
+        result.totalTokens.Should().Be(250);
+        result.promptTokens.Should().Be(150);
+        result.completionTokens.Should().Be(100);
         result.confidence.Should().NotBeNull();
 
         var firstStep = result.steps.First();
-        Assert.Equal(1, firstStep.stepNumber);
-        Assert.Equal("Place the Board", firstStep.title);
-        Assert.Contains("center of the table", firstStep.instruction);
+        firstStep.stepNumber.Should().Be(1);
+        firstStep.title.Should().Be("Place the Board");
+        firstStep.instruction.Should().Contain("center of the table");
         firstStep.references.Should().NotBeEmpty();
     }
 
@@ -223,10 +223,10 @@ Include expansion components if playing with expansions.";
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
-        Assert.Equal(2, result.steps.Count);
-        Assert.False(result.steps[0].isOptional);
-        Assert.True(result.steps[1].isOptional);
-        Assert.Equal("Add Expansion Content", result.steps[1].title); // [OPTIONAL] should be removed
+        result.steps.Count.Should().Be(2);
+        result.steps[0].isOptional.Should().BeFalse();
+        result.steps[1].isOptional.Should().BeTrue();
+        result.steps[1].title.Should().Be("Add Expansion Content"); // [OPTIONAL] should be removed
     }
 
     [Fact]
@@ -258,8 +258,8 @@ Include expansion components if playing with expansions.";
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Resilient Game", result.gameTitle);
-        Assert.Equal(5, result.steps.Count); // Fallback to default 5 steps
+        result.gameTitle.Should().Be("Resilient Game");
+        result.steps.Count.Should().Be(5); // Fallback to default 5 steps
         Assert.All(result.steps, step => Assert.False(string.IsNullOrEmpty(step.instruction)));
     }
 
@@ -294,9 +294,9 @@ Include expansion components if playing with expansions.";
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Cached Game", result.gameTitle);
-        Assert.Single(result.steps);
-        Assert.Equal("Cached Step", result.steps[0].title);
+        result.gameTitle.Should().Be("Cached Game");
+        result.steps.Should().ContainSingle();
+        result.steps[0].title.Should().Be("Cached Step");
 
         // Verify no embedding, qdrant, or LLM calls were made
         _embeddingServiceMock.VerifyNoOtherCalls();
@@ -355,10 +355,10 @@ Include expansion components if playing with expansions.";
 
         // Assert: Service gracefully falls back to default steps even when embedding fails
         result.Should().NotBeNull();
-        Assert.Equal("Embedding Fail Game", result.gameTitle);
+        result.gameTitle.Should().Be("Embedding Fail Game");
         result.steps.Should().NotBeEmpty();
-        Assert.Equal(5, result.steps.Count); // Default steps
-        Assert.True(result.estimatedSetupTimeMinutes >= 5); // Minimum 5 minutes
+        result.steps.Count.Should().Be(5); // Default steps
+        result.estimatedSetupTimeMinutes >= 5.Should().BeTrue(); // Minimum 5 minutes
     }
 
     [Fact]
@@ -383,8 +383,8 @@ Include expansion components if playing with expansions.";
         var result2 = await _service.GenerateSetupGuideAsync("game2");
 
         // Assert
-        Assert.Equal("Game One", result1.gameTitle);
-        Assert.Equal("Game Two", result2.gameTitle);
+        result1.gameTitle.Should().Be("Game One");
+        result2.gameTitle.Should().Be("Game Two");
     }
 
     [Fact]
@@ -419,8 +419,8 @@ Include expansion components if playing with expansions.";
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
-        Assert.Single(result.steps);
-        Assert.True(result.steps[0].instruction.Length <= 500); // Max 500 chars
+        result.steps.Should().ContainSingle();
+        result.steps[0].instruction.Length <= 500.Should().BeTrue(); // Max 500 chars
         Assert.EndsWith("...", result.steps[0].instruction);
     }
 
@@ -455,7 +455,7 @@ Do this quickly.";
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
-        Assert.True(result.estimatedSetupTimeMinutes >= 5); // Minimum 5 minutes
+        result.estimatedSetupTimeMinutes >= 5.Should().BeTrue(); // Minimum 5 minutes
     }
 
     [Fact]
@@ -498,9 +498,9 @@ Do this quickly.";
         // Assert: When LLM response can't be parsed, service returns empty steps (not default steps)
         // Note: This differs from LLM failure (when LLM call fails), which returns default steps
         result.Should().NotBeNull();
-        Assert.Equal("Parsing Challenge Game", result.gameTitle);
+        result.gameTitle.Should().Be("Parsing Challenge Game");
         result.steps.Should().BeEmpty(); // Malformed response results in empty steps
-        Assert.Equal(150, result.totalTokens); // But tokens were still used
+        result.totalTokens.Should().Be(150); // But tokens were still used
     }
 
     [Fact]
@@ -532,7 +532,7 @@ Do this quickly.";
 
         // Assert
         result.confidence.Should().NotBeNull();
-        Assert.True(result.confidence >= 0.98);
+        result.confidence >= 0.98.Should().BeTrue();
     }
 
     [Fact]
@@ -573,7 +573,7 @@ Second instruction.";
         var result = await _service.GenerateSetupGuideAsync(gameId);
 
         // Assert
-        Assert.Equal(2, result.steps.Count);
+        result.steps.Count.Should().Be(2);
         result.steps[0].references.Should().NotBeEmpty(); // First step gets first 3 references
         result.steps[1].references.Should().NotBeEmpty(); // Second step gets next set of references
     }
@@ -596,6 +596,6 @@ Second instruction.";
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("Unknown Game", result.gameTitle);
+        result.gameTitle.Should().Be("Unknown Game");
     }
 }

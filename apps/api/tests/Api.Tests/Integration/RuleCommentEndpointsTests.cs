@@ -125,7 +125,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
             new CreateCommentRequest(gameId, version, null, "This is a test comment"));
 
         // Then: 201 Created is returned
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         // Then: Location header contains comment URL
         response.Headers.Location.Should().NotBeNull();
@@ -134,11 +134,11 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
         // Then: Comment is stored correctly
         var comment = await response.Content.ReadFromJsonAsync<RuleCommentDto>();
         comment.Should().NotBeNull();
-        Assert.Equal(gameId, comment.GameId);
-        Assert.Equal(version, comment.Version);
-        Assert.Equal("This is a test comment", comment.CommentText);
-        Assert.Equal(user.Id, comment.UserId);
-        Assert.False(comment.IsResolved);
+        comment.GameId.Should().Be(gameId);
+        comment.Version.Should().Be(version);
+        comment.CommentText.Should().Be("This is a test comment");
+        comment.UserId.Should().Be(user.Id);
+        comment.IsResolved.Should().BeFalse();
     }
 
     /// <summary>
@@ -162,10 +162,10 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
             new CreateCommentRequest(gameId, version, 42, "Comment on line 42"));
 
         // Then: LineNumber is stored correctly
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
         var comment = await response.Content.ReadFromJsonAsync<RuleCommentDto>();
         comment.Should().NotBeNull();
-        Assert.Equal(42, comment.LineNumber);
+        comment.LineNumber.Should().Be(42);
     }
 
     /// <summary>
@@ -190,10 +190,10 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
             new CreateCommentRequest(gameId, version, null, $"Hey @{mentioned.Id}, check this out!"));
 
         // Then: Comment is created successfully
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
         var comment = await response.Content.ReadFromJsonAsync<RuleCommentDto>();
         comment.Should().NotBeNull();
-        Assert.Contains("@", comment.CommentText);
+        comment.CommentText.Should().Contain("@");
     }
 
     #endregion
@@ -227,13 +227,13 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
             new CreateReplyRequest("Reply to parent"));
 
         // Then: 201 Created is returned
-        Assert.Equal(HttpStatusCode.Created, replyResponse.StatusCode);
+        replyResponse.StatusCode.Should().Be(HttpStatusCode.Created);
 
         // Then: Reply is linked to parent
         var reply = await replyResponse.Content.ReadFromJsonAsync<RuleCommentDto>();
         reply.Should().NotBeNull();
-        Assert.Equal(parent.Id, reply.ParentCommentId);
-        Assert.Equal("Reply to parent", reply.CommentText);
+        reply.ParentCommentId.Should().Be(parent.Id);
+        reply.CommentText.Should().Be("Reply to parent");
     }
 
     /// <summary>
@@ -269,7 +269,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
             new CreateReplyRequest("Reply 2"));
 
         // Then: All replies succeed
-        Assert.Equal(HttpStatusCode.Created, reply2Response.StatusCode);
+        reply2Response.StatusCode.Should().Be(HttpStatusCode.Created);
 
         // Then: Hierarchy is correct
         var allCommentsResponse = await GetWithCookiesAsync(cookies,
@@ -277,9 +277,9 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
         var allComments = await allCommentsResponse.Content.ReadFromJsonAsync<List<RuleCommentDto>>();
 
         allComments.Should().NotBeNull();
-        Assert.Single(allComments); // Only 1 top-level comment
-        Assert.Single(allComments[0].Replies); // Parent has 1 reply
-        Assert.Single(allComments[0].Replies[0].Replies); // Reply1 has 1 reply
+        allComments.Should().ContainSingle(); // Only 1 top-level comment
+        allComments[0].Replies.Should().ContainSingle(); // Parent has 1 reply
+        allComments[0].Replies[0].Replies.Should().ContainSingle(); // Reply1 has 1 reply
     }
 
     /// <summary>
@@ -302,7 +302,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
             new CreateReplyRequest("Reply to nothing"));
 
         // Then: 404 Not Found is returned
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     /// <summary>
@@ -336,7 +336,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
             if (replyResponse.StatusCode != HttpStatusCode.Created)
             {
                 // We've hit the limit
-                Assert.Equal(HttpStatusCode.BadRequest, replyResponse.StatusCode);
+                replyResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
                 return;
             }
 
@@ -350,7 +350,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
             new CreateReplyRequest("Reply beyond limit"));
 
         // Then: 400 Bad Request is returned
-        Assert.Equal(HttpStatusCode.BadRequest, exceedResponse.StatusCode);
+        exceedResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     #endregion
@@ -383,13 +383,13 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
             $"/api/v1/comments/{comment!.Id}/resolve?resolveReplies=false", null!);
 
         // Then: 200 OK is returned
-        Assert.Equal(HttpStatusCode.OK, resolveResponse.StatusCode);
+        resolveResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Then: Comment is marked as resolved
         var resolved = await resolveResponse.Content.ReadFromJsonAsync<RuleCommentDto>();
         resolved.Should().NotBeNull();
-        Assert.True(resolved.IsResolved);
-        Assert.Equal(user.Id, resolved.ResolvedByUserId);
+        resolved.IsResolved.Should().BeTrue();
+        resolved.ResolvedByUserId.Should().Be(user.Id);
         resolved.ResolvedAt.Should().NotBeNull();
     }
 
@@ -421,12 +421,12 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
             $"/api/v1/comments/{comment.Id}/unresolve?unresolveParent=false", null!);
 
         // Then: 200 OK is returned
-        Assert.Equal(HttpStatusCode.OK, unresolveResponse.StatusCode);
+        unresolveResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Then: Comment is marked as unresolved
         var unresolved = await unresolveResponse.Content.ReadFromJsonAsync<RuleCommentDto>();
         unresolved.Should().NotBeNull();
-        Assert.False(unresolved.IsResolved);
+        unresolved.IsResolved.Should().BeFalse();
         unresolved.ResolvedByUserId.Should().BeNull();
         unresolved.ResolvedAt.Should().BeNull();
     }
@@ -463,9 +463,9 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
             $"/api/v1/comments/{parent.Id}/resolve?resolveReplies=true", null!);
 
         // Then: Parent is resolved
-        Assert.Equal(HttpStatusCode.OK, resolveResponse.StatusCode);
+        resolveResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         var resolved = await resolveResponse.Content.ReadFromJsonAsync<RuleCommentDto>();
-        Assert.True(resolved!.IsResolved);
+        resolved!.IsResolved.Should().BeTrue();
 
         // Then: All replies are also resolved
         var allCommentsResponse = await GetWithCookiesAsync(cookies,
@@ -515,8 +515,8 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
 
         // Then: Only unresolved comment is returned
         filteredComments.Should().NotBeNull();
-        Assert.Single(filteredComments);
-        Assert.Equal(unresolved!.Id, filteredComments[0].Id);
+        filteredComments.Should().ContainSingle();
+        filteredComments[0].Id.Should().Be(unresolved!.Id);
     }
 
     /// <summary>
@@ -551,7 +551,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
 
         // Then: All comments are returned
         allComments.Should().NotBeNull();
-        Assert.Equal(2, allComments.Count);
+        allComments.Count.Should().Be(2);
     }
 
     /// <summary>
@@ -588,7 +588,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
 
         // Then: Only line 10 comments are returned
         lineComments.Should().NotBeNull();
-        Assert.Equal(2, lineComments.Count);
+        lineComments.Count.Should().Be(2);
         Assert.All(lineComments, c => Assert.Equal(10, c.LineNumber));
     }
 
@@ -627,10 +627,10 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
 
         // Then: Hierarchical structure is preserved
         allComments.Should().NotBeNull();
-        Assert.Equal(2, allComments.Count); // 2 top-level comments
+        allComments.Count.Should().Be(2); // 2 top-level comments
 
         var parent1Result = allComments.First(c => c.Id == parent1.Id);
-        Assert.Single(parent1Result.Replies); // Parent 1 has 1 reply
+        parent1Result.Replies.Should().ContainSingle(); // Parent 1 has 1 reply
 
         var parent2Result = allComments.First(c => c.CommentText == "Parent 2");
         parent2Result.Replies.Should().BeEmpty(); // Parent 2 has no replies
@@ -663,8 +663,8 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
 
         // Then: Matching users are returned
         results.Should().NotBeNull();
-        Assert.Single(results);
-        Assert.Contains($"john-{TestRunId}", results[0].DisplayName);
+        results.Should().ContainSingle();
+        results[0].DisplayName.Should().Contain($"john-{TestRunId}");
     }
 
     /// <summary>
@@ -689,8 +689,8 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
 
         // Then: Matching users are returned
         results.Should().NotBeNull();
-        Assert.Single(results);
-        Assert.Contains($"test-alpha-{TestRunId}", results[0].Email);
+        results.Should().ContainSingle();
+        results[0].Email.Should().Contain($"test-alpha-{TestRunId}");
     }
 
     #endregion
@@ -715,7 +715,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
             new CreateCommentRequest("fake-game", "v1", null, "Unauthorized comment"));
 
         // Then: 401 Unauthorized is returned
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -739,7 +739,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
             new CreateCommentRequest(gameId, version, null, "Authenticated comment"));
 
         // Then: 201 Created is returned
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
     }
 
     /// <summary>
@@ -768,7 +768,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
             $"/api/v1/comments/{comment!.Id}/resolve?resolveReplies=false", null!);
 
         // Then: 200 OK is returned
-        Assert.Equal(HttpStatusCode.OK, resolveResponse.StatusCode);
+        resolveResponse.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     #endregion

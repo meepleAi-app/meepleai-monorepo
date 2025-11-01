@@ -132,7 +132,7 @@ public class EmailServiceTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
 
-        Assert.Equal("Failed to send password reset email", exception.Message);
+        exception.Message.Should().Be("Failed to send password reset email");
     }
 
     #endregion
@@ -345,7 +345,7 @@ public class EmailServiceTests
             async () => await service.SendPasswordResetEmailAsync("user@example.com", "Test User", "token123"));
 
         // Assert
-        Assert.Equal("Failed to send password reset email", exception.Message);
+        exception.Message.Should().Be("Failed to send password reset email");
         exception.InnerException.Should().NotBeNull(); // Should contain the original SMTP exception
 
         // Verify error was logged with exception details

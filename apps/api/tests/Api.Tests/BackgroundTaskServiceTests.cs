@@ -31,7 +31,7 @@ public class BackgroundTaskServiceTests
         await tcs.Task;
 
         // Assert
-        Assert.True(taskExecuted);
+        taskExecuted.Should().BeTrue();
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public class BackgroundTaskServiceTests
         var elapsed = DateTime.UtcNow - startTime;
 
         // Assert - Execute should return immediately (within 50ms)
-        Assert.True(elapsed.TotalMilliseconds < 50, $"Execute blocked for {elapsed.TotalMilliseconds}ms");
+        elapsed.TotalMilliseconds < 50, $"Execute blocked for {elapsed.TotalMilliseconds}ms".Should().BeTrue();
     }
 
     [Fact]
@@ -128,9 +128,9 @@ public class BackgroundTaskServiceTests
         await Task.WhenAll(tcs1.Task, tcs2.Task, tcs3.Task);
 
         // Assert
-        Assert.True(task1Executed);
-        Assert.True(task2Executed);
-        Assert.True(task3Executed);
+        task1Executed.Should().BeTrue();
+        task2Executed.Should().BeTrue();
+        task3Executed.Should().BeTrue();
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public class BackgroundTaskServiceTests
         await tcs.Task;
 
         // Assert
-        Assert.True(taskCompleted);
+        taskCompleted.Should().BeTrue();
     }
 
     [Fact]

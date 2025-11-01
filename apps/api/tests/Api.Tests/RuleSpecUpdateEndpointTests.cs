@@ -68,7 +68,7 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
         var response = await client.PutAsJsonAsync($"/api/v1/games/{gameId}/rulespec", ruleSpec);
 
         // Assert: Unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -104,7 +104,7 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
             ruleSpec);
 
         // Assert: Forbidden
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -140,14 +140,14 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
             ruleSpec);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await DeserializeAsync<RuleSpec>(response);
         result.Should().NotBeNull();
-        Assert.Equal(gameId, result!.gameId);
-        Assert.Equal("v1", result.version);
-        Assert.Single(result.rules);
-        Assert.Equal("Editor's rule", result.rules[0].text);
+        result!.gameId.Should().Be(gameId);
+        result.version.Should().Be("v1");
+        result.rules.Should().ContainSingle();
+        result.rules[0].text.Should().Be("Editor's rule");
     }
 
     /// <summary>
@@ -183,12 +183,12 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
             ruleSpec);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await DeserializeAsync<RuleSpec>(response);
         result.Should().NotBeNull();
-        Assert.Equal(gameId, result!.gameId);
-        Assert.Equal("v1", result.version);
+        result!.gameId.Should().Be(gameId);
+        result.version.Should().Be("v1");
     }
 
     #endregion
@@ -229,7 +229,7 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
             ruleSpec);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     /// <summary>
@@ -264,7 +264,7 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
             ruleSpec);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     /// <summary>
@@ -297,7 +297,7 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
             ruleSpec);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await DeserializeAsync<RuleSpec>(response);
         result.Should().NotBeNull();
@@ -348,11 +348,11 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
             v2);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await DeserializeAsync<RuleSpec>(response);
         result.Should().NotBeNull();
-        Assert.Equal("v2", result!.version); // Should auto-increment to v2
+        result!.version.Should().Be("v2"); // Should auto-increment to v2
     }
 
     /// <summary>
@@ -395,10 +395,10 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
             v1Duplicate);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var json = await response.Content.ReadAsStringAsync();
-        Assert.Contains("error", json);
+        json.Should().Contain("error");
     }
 
     /// <summary>
@@ -432,14 +432,14 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
             $"/api/v1/games/{gameId}/rulespec/history",
             editor.Cookies);
 
-        Assert.Equal(HttpStatusCode.OK, historyResponse.StatusCode);
+        historyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var history = await DeserializeAsync<RuleSpecHistory>(historyResponse);
         history.Should().NotBeNull();
-        Assert.Equal(3, history!.TotalVersions);
-        Assert.Contains(history.Versions, v => v.Version == "v1");
-        Assert.Contains(history.Versions, v => v.Version == "v2");
-        Assert.Contains(history.Versions, v => v.Version == "v3");
+        history!.TotalVersions.Should().Be(3);
+        v => v.Version == "v1".Should().Contain(history.Versions);
+        v => v.Version == "v2".Should().Contain(history.Versions);
+        v => v.Version == "v3".Should().Contain(history.Versions);
     }
 
     #endregion
@@ -482,34 +482,34 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
             ruleSpec);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await DeserializeAsync<RuleSpec>(response);
         result.Should().NotBeNull();
-        Assert.Equal(4, result!.rules.Count);
+        result!.rules.Count.Should().Be(4);
 
         // Verify each rule
         var r1 = result.rules.FirstOrDefault(r => r.id == "r1");
         r1.Should().NotBeNull();
-        Assert.Equal("Rule with all fields", r1!.text);
-        Assert.Equal("Setup", r1.section);
-        Assert.Equal("1", r1.page);
-        Assert.Equal("5", r1.line);
+        r1!.text.Should().Be("Rule with all fields");
+        r1.section.Should().Be("Setup");
+        r1.page.Should().Be("1");
+        r1.line.Should().Be("5");
 
         var r2 = result.rules.FirstOrDefault(r => r.id == "r2");
         r2.Should().NotBeNull();
-        Assert.Null(r2!.section);
-        Assert.Equal("2", r2.page);
+        r2!.section.Should().BeNull();
+        r2.page.Should().Be("2");
 
         var r3 = result.rules.FirstOrDefault(r => r.id == "r3");
         r3.Should().NotBeNull();
-        Assert.Equal("Gameplay", r3!.section);
+        r3!.section.Should().Be("Gameplay");
         r3.page.Should().BeNull();
         r3.line.Should().BeNull();
 
         var r4 = result.rules.FirstOrDefault(r => r.id == "r4");
         r4.Should().NotBeNull();
-        Assert.Null(r4!.section);
+        r4!.section.Should().BeNull();
         r4.page.Should().BeNull();
         r4.line.Should().BeNull();
     }
@@ -549,15 +549,15 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
             ruleSpec);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await DeserializeAsync<RuleSpec>(response);
         result.Should().NotBeNull();
 
         // Rules should be in the order they were provided
-        Assert.Equal("z-last", result!.rules[0].id);
-        Assert.Equal("a-first", result.rules[1].id);
-        Assert.Equal("m-middle", result.rules[2].id);
+        result!.rules[0].id.Should().Be("z-last");
+        result.rules[1].id.Should().Be("a-first");
+        result.rules[2].id.Should().Be("m-middle");
     }
 
     #endregion
@@ -597,12 +597,12 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
 
         var history = await DeserializeAsync<RuleSpecHistory>(historyResponse);
         history.Should().NotBeNull();
-        Assert.Single(history!.Versions);
+        history!.Versions.Should().ContainSingle();
 
         var version = history.Versions[0];
-        Assert.Equal("v1", version.Version);
+        version.Version.Should().Be("v1");
         version.CreatedBy.Should().NotBeNull();
-        Assert.Contains("Editor User", version.CreatedBy!); // User display name or email
+        version.CreatedBy!.Should().Contain("Editor User"); // User display name or email
     }
 
     /// <summary>
@@ -637,9 +637,9 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
 
         var latest = await DeserializeAsync<RuleSpec>(getResponse);
         latest.Should().NotBeNull();
-        Assert.Equal("v2", latest!.version);
-        Assert.Single(latest.rules);
-        Assert.Equal("V2", latest.rules[0].text);
+        latest!.version.Should().Be("v2");
+        latest.rules.Should().ContainSingle();
+        latest.rules[0].text.Should().Be("V2");
     }
 
     #endregion

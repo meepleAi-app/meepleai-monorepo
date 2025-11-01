@@ -27,9 +27,9 @@ public class RateLimitServiceTests
         var result = await service.CheckRateLimitAsync("test-key", 100, 1.0);
 
         // Assert
-        Assert.True(result.Allowed);
-        Assert.Equal(99, result.TokensRemaining);
-        Assert.Equal(0, result.RetryAfterSeconds);
+        result.Allowed.Should().BeTrue();
+        result.TokensRemaining.Should().Be(99);
+        result.RetryAfterSeconds.Should().Be(0);
     }
 
     [Fact]
@@ -45,9 +45,9 @@ public class RateLimitServiceTests
         var result = await service.CheckRateLimitAsync("test-key", 100, 1.0);
 
         // Assert
-        Assert.False(result.Allowed);
-        Assert.Equal(0, result.TokensRemaining);
-        Assert.Equal(5, result.RetryAfterSeconds);
+        result.Allowed.Should().BeFalse();
+        result.TokensRemaining.Should().Be(0);
+        result.RetryAfterSeconds.Should().Be(5);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class RateLimitServiceTests
         var result = await service.CheckRateLimitAsync("test-key", 100, 1.0);
 
         // Assert - should fail-open and allow request
-        Assert.True(result.Allowed);
+        result.Allowed.Should().BeTrue();
     }
 
     [Theory]
@@ -95,8 +95,8 @@ public class RateLimitServiceTests
         var result = service.GetConfigForRole(role);
 
         // Assert
-        Assert.Equal(expectedTokens, result.MaxTokens);
-        Assert.Equal(expectedRate, result.RefillRate);
+        result.MaxTokens.Should().Be(expectedTokens);
+        result.RefillRate.Should().Be(expectedRate);
     }
 
     private static Mock<IConnectionMultiplexer> CreateMockRedis(bool allowRequest, int tokensRemaining, int retryAfter)
@@ -157,8 +157,8 @@ public class RateLimitServiceTests
         var result = await service.CheckRateLimitAsync("test-key-123", 100, 1.0);
 
         // Assert - Verify rate limit denied
-        Assert.False(result.Allowed);
-        Assert.Equal(10, result.RetryAfterSeconds);
+        result.Allowed.Should().BeFalse();
+        result.RetryAfterSeconds.Should().Be(10);
 
         // Assert - Verify warning was logged
         mockLogger.Verify(
@@ -205,9 +205,9 @@ public class RateLimitServiceTests
         var result = await service.CheckRateLimitAsync("test-key", 100, 1.0);
 
         // Assert - Verify fail-open behavior
-        Assert.True(result.Allowed);
-        Assert.Equal(100, result.TokensRemaining); // Should return maxTokens
-        Assert.Equal(0, result.RetryAfterSeconds);
+        result.Allowed.Should().BeTrue();
+        result.TokensRemaining.Should().Be(100); // Should return maxTokens
+        result.RetryAfterSeconds.Should().Be(0);
 
         // Assert - Verify error was logged
         mockLogger.Verify(
@@ -249,8 +249,8 @@ public class RateLimitServiceTests
         var result = service.GetConfigForRole(role);
 
         // Assert - Configuration should be case-insensitive
-        Assert.Equal(expectedTokens, result.MaxTokens);
-        Assert.Equal(expectedRate, result.RefillRate);
+        result.MaxTokens.Should().Be(expectedTokens);
+        result.RefillRate.Should().Be(expectedRate);
     }
 
     /// <summary>
@@ -290,9 +290,9 @@ public class RateLimitServiceTests
         var result = await service.CheckRateLimitAsync("test-key", 100, 1.0);
 
         // Assert - String values should be converted correctly
-        Assert.True(result.Allowed);
-        Assert.Equal(42, result.TokensRemaining);
-        Assert.Equal(0, result.RetryAfterSeconds);
+        result.Allowed.Should().BeTrue();
+        result.TokensRemaining.Should().Be(42);
+        result.RetryAfterSeconds.Should().Be(0);
     }
 
     /// <summary>
@@ -346,12 +346,12 @@ public class RateLimitServiceTests
         var result2 = await service.CheckRateLimitAsync("user:key2", 100, 1.0);
 
         // Assert - Keys have independent rate limits
-        Assert.True(result1.Allowed);
-        Assert.Equal(50, result1.TokensRemaining);
+        result1.Allowed.Should().BeTrue();
+        result1.TokensRemaining.Should().Be(50);
 
-        Assert.False(result2.Allowed);
-        Assert.Equal(0, result2.TokensRemaining);
-        Assert.Equal(5, result2.RetryAfterSeconds);
+        result2.Allowed.Should().BeFalse();
+        result2.TokensRemaining.Should().Be(0);
+        result2.RetryAfterSeconds.Should().Be(5);
     }
 
     /// <summary>
@@ -373,8 +373,8 @@ public class RateLimitServiceTests
         var result = service.GetConfigForRole("");
 
         // Assert - Empty string should be treated as anonymous
-        Assert.Equal(60, result.MaxTokens);
-        Assert.Equal(1.0, result.RefillRate);
+        result.MaxTokens.Should().Be(60);
+        result.RefillRate.Should().Be(1.0);
     }
 
     #endregion

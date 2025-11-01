@@ -64,10 +64,10 @@ public class ChessAgentServiceTests
         var result = await _service.AskAsync(request);
 
         // Assert
-        Assert.Equal("Please provide a question.", result.answer);
+        result.answer.Should().Be("Please provide a question.");
         result.suggestedMoves.Should().BeEmpty();
         result.sources.Should().BeEmpty();
-        Assert.Equal(0, result.promptTokens);
+        result.promptTokens.Should().Be(0);
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public class ChessAgentServiceTests
         var result = await _service.AskAsync(request);
 
         // Assert
-        Assert.Equal("Please provide a question.", result.answer);
+        result.answer.Should().Be("Please provide a question.");
         result.suggestedMoves.Should().BeEmpty();
         result.sources.Should().BeEmpty();
     }
@@ -116,10 +116,10 @@ public class ChessAgentServiceTests
         var result = await _service.AskAsync(request);
 
         // Assert
-        Assert.Equal("Knights move in L-shape", result.answer);
-        Assert.Equal(10, result.promptTokens);
-        Assert.Equal(5, result.completionTokens);
-        Assert.Equal(15, result.totalTokens);
+        result.answer.Should().Be("Knights move in L-shape");
+        result.promptTokens.Should().Be(10);
+        result.completionTokens.Should().Be(5);
+        result.totalTokens.Should().Be(15);
 
         // Should not call knowledge or LLM services
         _chessKnowledgeMock.Verify(
@@ -150,7 +150,7 @@ public class ChessAgentServiceTests
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Contains("Castling", result.answer);
+        result.answer.Should().Contain("Castling");
 
         // Should cache the response with 24h TTL
         _cacheMock.Verify(
@@ -247,7 +247,7 @@ public class ChessAgentServiceTests
         var result = await _service.AskAsync(request);
 
         // Assert
-        Assert.Equal("I don't have enough information to answer that question about chess.", result.answer);
+        result.answer.Should().Be("I don't have enough information to answer that question about chess.");
         result.sources.Should().BeEmpty();
         result.suggestedMoves.Should().BeEmpty();
 
@@ -275,7 +275,7 @@ public class ChessAgentServiceTests
         var result = await _service.AskAsync(request);
 
         // Assert
-        Assert.Equal("I don't have enough information to answer that question about chess.", result.answer);
+        result.answer.Should().Be("I don't have enough information to answer that question about chess.");
         result.sources.Should().BeEmpty();
     }
 
@@ -333,7 +333,7 @@ public class ChessAgentServiceTests
         Assert.Contains(result.suggestedMoves, m => m.Contains("e4") && m.Contains("Controls the center"));
         Assert.Contains(result.suggestedMoves, m => m.Contains("Nf3") && m.Contains("Develops a piece"));
         Assert.Contains(result.suggestedMoves, m => m.Contains("d4") && m.Contains("central pawn"));
-        Assert.True(result.suggestedMoves.Count >= 3);
+        result.suggestedMoves.Count >= 3.Should().BeTrue();
     }
 
     [Fact]
@@ -357,9 +357,9 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
 
         // Assert
         result.analysis.Should().NotBeNull();
-        Assert.Equal(fenPosition, result.analysis!.fenPosition);
+        result.analysis!.fenPosition.Should().Be(fenPosition);
         result.analysis.evaluationSummary.Should().NotBeNull();
-        Assert.Contains("advantage", result.analysis.evaluationSummary, StringComparison.OrdinalIgnoreCase);
+        result.analysis.evaluationSummary, StringComparison.OrdinalIgnoreCase.Should().Contain("advantage");
         result.analysis.keyConsiderations.Should().NotBeEmpty();
         Assert.Contains(result.analysis.keyConsiderations, c => c.Contains("king safety"));
         Assert.Contains(result.analysis.keyConsiderations, c => c.Contains("development"));
@@ -383,7 +383,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
 
         // Assert
         result.analysis.Should().BeNull();
-        Assert.Contains("Italian Game", result.answer);
+        result.answer.Should().Contain("Italian Game");
     }
 
     #endregion
@@ -412,12 +412,12 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
         var result = await _service.AskAsync(request);
 
         // Assert
-        Assert.Equal(3, result.sources.Count);
-        Assert.Equal("ChessKnowledge:12", result.sources[0].source);
-        Assert.Equal(5, result.sources[0].page);
-        Assert.Equal("ChessKnowledge:13", result.sources[1].source);
-        Assert.Equal("ChessKnowledge:14", result.sources[2].source);
-        Assert.Equal(6, result.sources[2].page);
+        result.sources.Count.Should().Be(3);
+        result.sources[0].source.Should().Be("ChessKnowledge:12");
+        result.sources[0].page.Should().Be(5);
+        result.sources[1].source.Should().Be("ChessKnowledge:13");
+        result.sources[2].source.Should().Be("ChessKnowledge:14");
+        result.sources[2].page.Should().Be(6);
     }
 
     [Fact]
@@ -442,7 +442,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
 
         // Assert
         result.confidence.Should().NotBeNull();
-        Assert.Equal(0.92, result.confidence.Value, precision: 2);
+        result.confidence.Value, precision: 2.Should().Be(0.92);
     }
 
     #endregion
@@ -474,9 +474,9 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
         var result = await _service.AskAsync(request);
 
         // Assert
-        Assert.Equal("Unable to generate answer.", result.answer);
-        Assert.Single(result.sources); // Should still include sources from knowledge base
-        Assert.Equal("Fork is a tactic", result.sources[0].text);
+        result.answer.Should().Be("Unable to generate answer.");
+        result.sources.Should().ContainSingle(); // Should still include sources from knowledge base
+        result.sources[0].text.Should().Be("Fork is a tactic");
 
         // Should log error
         _loggerMock.Verify(
@@ -503,7 +503,7 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
         var result = await _service.AskAsync(request);
 
         // Assert
-        Assert.Equal("An error occurred while processing your question.", result.answer);
+        result.answer.Should().Be("An error occurred while processing your question.");
         result.sources.Should().BeEmpty();
         result.suggestedMoves.Should().BeEmpty();
 
@@ -542,9 +542,9 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
         var result = await _service.AskAsync(request);
 
         // Assert
-        Assert.Equal(150, result.promptTokens);
-        Assert.Equal(80, result.completionTokens);
-        Assert.Equal(230, result.totalTokens);
+        result.promptTokens.Should().Be(150);
+        result.completionTokens.Should().Be(80);
+        result.totalTokens.Should().Be(230);
     }
 
     [Fact]
@@ -570,9 +570,9 @@ Key considerations: king safety is good, development is ahead, threat of d4 push
 
         // Assert
         result.metadata.Should().NotBeNull();
-        Assert.Equal("anthropic/claude-3.5-sonnet", result.metadata["model"]);
-        Assert.Equal("stop", result.metadata["finish_reason"]);
-        Assert.Equal("resp_abc123", result.metadata["response_id"]);
+        result.metadata["model"].Should().Be("anthropic/claude-3.5-sonnet");
+        result.metadata["finish_reason"].Should().Be("stop");
+        result.metadata["response_id"].Should().Be("resp_abc123");
     }
 
     #endregion

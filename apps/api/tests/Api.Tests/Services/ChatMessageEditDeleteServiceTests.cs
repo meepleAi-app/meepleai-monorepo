@@ -147,15 +147,15 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
 
         // Then: Message content is updated, UpdatedAt is set
         updatedMessage.Should().NotBeNull();
-        Assert.Equal(newContent, updatedMessage.Message);
-        Assert.NotNull(updatedMessage.UpdatedAt);
-        Assert.True(updatedMessage.UpdatedAt > updatedMessage.CreatedAt);
+        updatedMessage.Message.Should().Be(newContent);
+        updatedMessage.UpdatedAt.Should().NotBeNull();
+        updatedMessage.UpdatedAt > updatedMessage.CreatedAt.Should().BeTrue();
 
         // Verify persistence
         var storedMessage = await _context.ChatLogs.FindAsync(messageId);
         storedMessage.Should().NotBeNull();
-        Assert.Equal(newContent, storedMessage!.Message);
-        Assert.NotNull(storedMessage.UpdatedAt);
+        storedMessage!.Message.Should().Be(newContent);
+        storedMessage.UpdatedAt.Should().NotBeNull();
     }
 
     /// <summary>
@@ -189,7 +189,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _chatService.UpdateMessageAsync(chatId, aiMessage.Id, "New content", userId));
 
-        Assert.Contains("AI-generated messages cannot be edited", exception.Message);
+        exception.Message.Should().Contain("AI-generated messages cannot be edited");
     }
 
     /// <summary>
@@ -221,7 +221,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             _chatService.UpdateMessageAsync(chatId, messageId, "New content", userB.Id));
 
-        Assert.Contains("You can only edit your own messages", exception.Message);
+        exception.Message.Should().Contain("You can only edit your own messages");
     }
 
     /// <summary>
@@ -242,7 +242,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         var exception = await Assert.ThrowsAsync<KeyNotFoundException>(() =>
             _chatService.UpdateMessageAsync(chatId, invalidMessageId, "New content", userId));
 
-        Assert.Contains($"Message {invalidMessageId} not found", exception.Message);
+        exception.Message.Should().Contain($"Message {invalidMessageId} not found");
     }
 
     #endregion
@@ -265,7 +265,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         var result = await _chatService.DeleteMessageAsync(chatId, messageId, userId, isAdmin: false);
 
         // Then: Message is soft-deleted
-        Assert.True(result);
+        result.Should().BeTrue();
 
         // Verify message is soft-deleted (need IgnoreQueryFilters to see it)
         var deletedMessage = await _context.ChatLogs
@@ -273,10 +273,10 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
             .FirstOrDefaultAsync(m => m.Id == messageId);
 
         deletedMessage.Should().NotBeNull();
-        Assert.True(deletedMessage!.IsDeleted);
-        Assert.NotNull(deletedMessage.DeletedAt);
-        Assert.Equal(userId, deletedMessage.DeletedByUserId);
-        Assert.True(deletedMessage.DeletedAt > deletedMessage.CreatedAt);
+        deletedMessage!.IsDeleted.Should().BeTrue();
+        deletedMessage.DeletedAt.Should().NotBeNull();
+        deletedMessage.DeletedByUserId.Should().Be(userId);
+        deletedMessage.DeletedAt > deletedMessage.CreatedAt.Should().BeTrue();
     }
 
     /// <summary>
@@ -298,7 +298,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         var result = await _chatService.DeleteMessageAsync(chatId, messageId, userId, isAdmin: false);
 
         // Then: Returns false (idempotent)
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     /// <summary>
@@ -329,15 +329,15 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         var result = await _chatService.DeleteMessageAsync(chatId, messageId, adminUser.Id, isAdmin: true);
 
         // Then: Message is deleted, DeletedByUserId is admin
-        Assert.True(result);
+        result.Should().BeTrue();
 
         var deletedMessage = await _context.ChatLogs
             .IgnoreQueryFilters()
             .FirstOrDefaultAsync(m => m.Id == messageId);
 
         deletedMessage.Should().NotBeNull();
-        Assert.True(deletedMessage!.IsDeleted);
-        Assert.Equal(adminUser.Id, deletedMessage.DeletedByUserId); // Admin's ID, not original owner
+        deletedMessage!.IsDeleted.Should().BeTrue();
+        deletedMessage.DeletedByUserId.Should().Be(adminUser.Id); // Admin's ID, not original owner
     }
 
     /// <summary>
@@ -369,7 +369,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         var exception = await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             _chatService.DeleteMessageAsync(chatId, messageId, userB.Id, isAdmin: false));
 
-        Assert.Contains("You can only delete your own messages", exception.Message);
+        exception.Message.Should().Contain("You can only delete your own messages");
     }
 
     /// <summary>
@@ -390,7 +390,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         var exception = await Assert.ThrowsAsync<KeyNotFoundException>(() =>
             _chatService.DeleteMessageAsync(chatId, invalidMessageId, userId, isAdmin: false));
 
-        Assert.Contains($"Message {invalidMessageId} not found", exception.Message);
+        exception.Message.Should().Contain($"Message {invalidMessageId} not found");
     }
 
     #endregion
@@ -427,11 +427,11 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         var invalidatedCount = await _chatService.InvalidateSubsequentMessagesAsync(chatId, 0);
 
         // Then: AI message at seq 1 is invalidated, returns 1
-        Assert.Equal(1, invalidatedCount);
+        invalidatedCount.Should().Be(1);
 
         var invalidatedMessage = await _context.ChatLogs.FindAsync(aiMessage.Id);
         invalidatedMessage.Should().NotBeNull();
-        Assert.True(invalidatedMessage!.IsInvalidated);
+        invalidatedMessage!.IsInvalidated.Should().BeTrue();
     }
 
     /// <summary>
@@ -477,13 +477,13 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         var invalidatedCount = await _chatService.InvalidateSubsequentMessagesAsync(chatId, 0);
 
         // Then: Only AI message is invalidated (count = 1)
-        Assert.Equal(1, invalidatedCount);
+        invalidatedCount.Should().Be(1);
 
         var invalidatedAiMessage = await _context.ChatLogs.FindAsync(aiMessage.Id);
-        Assert.True(invalidatedAiMessage!.IsInvalidated);
+        invalidatedAiMessage!.IsInvalidated.Should().BeTrue();
 
         var userMessage = await _context.ChatLogs.FindAsync(userMessage2.Id);
-        Assert.False(userMessage!.IsInvalidated); // User message NOT invalidated
+        userMessage!.IsInvalidated.Should().BeFalse(); // User message NOT invalidated
     }
 
     /// <summary>
@@ -502,7 +502,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         var invalidatedCount = await _chatService.InvalidateSubsequentMessagesAsync(chatId, 5);
 
         // Then: Returns 0 (no AI messages to invalidate)
-        Assert.Equal(0, invalidatedCount);
+        invalidatedCount.Should().Be(0);
     }
 
     /// <summary>
@@ -536,7 +536,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         var invalidatedCount = await _chatService.InvalidateSubsequentMessagesAsync(chatId, 0);
 
         // Then: Returns 0 (no NEW messages invalidated)
-        Assert.Equal(0, invalidatedCount);
+        invalidatedCount.Should().Be(0);
     }
 
     #endregion

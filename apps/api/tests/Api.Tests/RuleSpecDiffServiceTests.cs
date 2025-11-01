@@ -55,11 +55,11 @@ public class RuleSpecDiffServiceTests
         var diff = _service.ComputeDiff(from, to);
 
         // Assert: No changes detected
-        Assert.Equal(0, diff.Summary.TotalChanges);
-        Assert.Equal(0, diff.Summary.Added);
-        Assert.Equal(0, diff.Summary.Modified);
-        Assert.Equal(0, diff.Summary.Deleted);
-        Assert.Equal(2, diff.Summary.Unchanged);
+        diff.Summary.TotalChanges.Should().Be(0);
+        diff.Summary.Added.Should().Be(0);
+        diff.Summary.Modified.Should().Be(0);
+        diff.Summary.Deleted.Should().Be(0);
+        diff.Summary.Unchanged.Should().Be(2);
 
         // All changes should be marked as Unchanged
         Assert.All(diff.Changes, c => Assert.Equal(ChangeType.Unchanged, c.Type));
@@ -95,18 +95,18 @@ public class RuleSpecDiffServiceTests
         var diff = _service.ComputeDiff(from, to);
 
         // Assert: One addition detected
-        Assert.Equal(1, diff.Summary.Added);
-        Assert.Equal(0, diff.Summary.Modified);
-        Assert.Equal(0, diff.Summary.Deleted);
-        Assert.Equal(2, diff.Summary.Unchanged);
-        Assert.Equal(1, diff.Summary.TotalChanges);
+        diff.Summary.Added.Should().Be(1);
+        diff.Summary.Modified.Should().Be(0);
+        diff.Summary.Deleted.Should().Be(0);
+        diff.Summary.Unchanged.Should().Be(2);
+        diff.Summary.TotalChanges.Should().Be(1);
 
         // Find the added atom
         var addedChange = diff.Changes.FirstOrDefault(c => c.Type == ChangeType.Added);
         addedChange.Should().NotBeNull();
-        Assert.Equal("atom3", addedChange!.NewAtom);
+        addedChange!.NewAtom.Should().Be("atom3");
         addedChange.OldAtom.Should().BeNull();
-        Assert.Equal("New rule text", addedChange.NewValue?.text);
+        addedChange.NewValue?.text.Should().Be("New rule text");
     }
 
     /// <summary>
@@ -139,18 +139,18 @@ public class RuleSpecDiffServiceTests
         var diff = _service.ComputeDiff(from, to);
 
         // Assert: One deletion detected
-        Assert.Equal(0, diff.Summary.Added);
-        Assert.Equal(0, diff.Summary.Modified);
-        Assert.Equal(1, diff.Summary.Deleted);
-        Assert.Equal(2, diff.Summary.Unchanged);
-        Assert.Equal(1, diff.Summary.TotalChanges);
+        diff.Summary.Added.Should().Be(0);
+        diff.Summary.Modified.Should().Be(0);
+        diff.Summary.Deleted.Should().Be(1);
+        diff.Summary.Unchanged.Should().Be(2);
+        diff.Summary.TotalChanges.Should().Be(1);
 
         // Find the deleted atom
         var deletedChange = diff.Changes.FirstOrDefault(c => c.Type == ChangeType.Deleted);
         deletedChange.Should().NotBeNull();
-        Assert.Equal("atom3", deletedChange!.OldAtom);
+        deletedChange!.OldAtom.Should().Be("atom3");
         deletedChange.NewAtom.Should().BeNull();
-        Assert.Equal("Deleted rule", deletedChange.OldValue?.text);
+        deletedChange.OldValue?.text.Should().Be("Deleted rule");
     }
 
     /// <summary>
@@ -180,21 +180,21 @@ public class RuleSpecDiffServiceTests
         var diff = _service.ComputeDiff(from, to);
 
         // Assert: One modification detected
-        Assert.Equal(0, diff.Summary.Added);
-        Assert.Equal(1, diff.Summary.Modified);
-        Assert.Equal(0, diff.Summary.Deleted);
-        Assert.Equal(0, diff.Summary.Unchanged);
-        Assert.Equal(1, diff.Summary.TotalChanges);
+        diff.Summary.Added.Should().Be(0);
+        diff.Summary.Modified.Should().Be(1);
+        diff.Summary.Deleted.Should().Be(0);
+        diff.Summary.Unchanged.Should().Be(0);
+        diff.Summary.TotalChanges.Should().Be(1);
 
         // Verify field change details
         var modifiedChange = diff.Changes.First(c => c.Type == ChangeType.Modified);
         modifiedChange.FieldChanges.Should().NotBeNull();
-        Assert.Single(modifiedChange.FieldChanges!);
+        modifiedChange.FieldChanges!.Should().ContainSingle();
 
         var fieldChange = modifiedChange.FieldChanges.First();
-        Assert.Equal("text", fieldChange.FieldName);
-        Assert.Equal("Original rule text", fieldChange.OldValue);
-        Assert.Equal("Modified rule text", fieldChange.NewValue);
+        fieldChange.FieldName.Should().Be("text");
+        fieldChange.OldValue.Should().Be("Original rule text");
+        fieldChange.NewValue.Should().Be("Modified rule text");
     }
 
     /// <summary>
@@ -224,13 +224,13 @@ public class RuleSpecDiffServiceTests
         var diff = _service.ComputeDiff(from, to);
 
         // Assert: Modification with section change
-        Assert.Equal(1, diff.Summary.Modified);
+        diff.Summary.Modified.Should().Be(1);
 
         var modifiedChange = diff.Changes.First(c => c.Type == ChangeType.Modified);
         var fieldChange = modifiedChange.FieldChanges!.First();
-        Assert.Equal("section", fieldChange.FieldName);
-        Assert.Equal("Setup", fieldChange.OldValue);
-        Assert.Equal("Gameplay", fieldChange.NewValue);
+        fieldChange.FieldName.Should().Be("section");
+        fieldChange.OldValue.Should().Be("Setup");
+        fieldChange.NewValue.Should().Be("Gameplay");
     }
 
     /// <summary>
@@ -260,12 +260,12 @@ public class RuleSpecDiffServiceTests
 
         // Assert: All field changes detected
         var modifiedChange = diff.Changes.First(c => c.Type == ChangeType.Modified);
-        Assert.Equal(4, modifiedChange.FieldChanges!.Count);
+        modifiedChange.FieldChanges!.Count.Should().Be(4);
 
-        Assert.Contains(modifiedChange.FieldChanges, fc => fc.FieldName == "text" && fc.OldValue == "Original text" && fc.NewValue == "Modified text");
-        Assert.Contains(modifiedChange.FieldChanges, fc => fc.FieldName == "section" && fc.OldValue == "Setup" && fc.NewValue == "Gameplay");
-        Assert.Contains(modifiedChange.FieldChanges, fc => fc.FieldName == "page" && fc.OldValue == "1" && fc.NewValue == "2");
-        Assert.Contains(modifiedChange.FieldChanges, fc => fc.FieldName == "line" && fc.OldValue == "5" && fc.NewValue == "10");
+        fc => fc.FieldName == "text" && fc.OldValue == "Original text" && fc.NewValue == "Modified text".Should().Contain(modifiedChange.FieldChanges);
+        fc => fc.FieldName == "section" && fc.OldValue == "Setup" && fc.NewValue == "Gameplay".Should().Contain(modifiedChange.FieldChanges);
+        fc => fc.FieldName == "page" && fc.OldValue == "1" && fc.NewValue == "2".Should().Contain(modifiedChange.FieldChanges);
+        fc => fc.FieldName == "line" && fc.OldValue == "5" && fc.NewValue == "10".Should().Contain(modifiedChange.FieldChanges);
     }
 
     /// <summary>
@@ -298,13 +298,13 @@ public class RuleSpecDiffServiceTests
         var diff = _service.ComputeDiff(from, to);
 
         // Assert: All change types counted
-        Assert.Equal(1, diff.Summary.Added);    // atom4 added
-        Assert.Equal(1, diff.Summary.Modified); // atom2 modified
-        Assert.Equal(1, diff.Summary.Deleted);  // atom3 deleted
-        Assert.Equal(1, diff.Summary.Unchanged); // atom1 unchanged
-        Assert.Equal(3, diff.Summary.TotalChanges); // 1 added + 1 modified + 1 deleted
+        diff.Summary.Added.Should().Be(1);    // atom4 added
+        diff.Summary.Modified.Should().Be(1); // atom2 modified
+        diff.Summary.Deleted.Should().Be(1);  // atom3 deleted
+        diff.Summary.Unchanged.Should().Be(1); // atom1 unchanged
+        diff.Summary.TotalChanges.Should().Be(3); // 1 added + 1 modified + 1 deleted
 
-        Assert.Equal(4, diff.Changes.Count); // Total changes including unchanged
+        diff.Changes.Count.Should().Be(4); // Total changes including unchanged
     }
 
     /// <summary>
@@ -331,11 +331,11 @@ public class RuleSpecDiffServiceTests
         var diff = _service.ComputeDiff(from, to);
 
         // Assert: All atoms added
-        Assert.Equal(2, diff.Summary.Added);
-        Assert.Equal(0, diff.Summary.Modified);
-        Assert.Equal(0, diff.Summary.Deleted);
-        Assert.Equal(0, diff.Summary.Unchanged);
-        Assert.Equal(2, diff.Summary.TotalChanges);
+        diff.Summary.Added.Should().Be(2);
+        diff.Summary.Modified.Should().Be(0);
+        diff.Summary.Deleted.Should().Be(0);
+        diff.Summary.Unchanged.Should().Be(0);
+        diff.Summary.TotalChanges.Should().Be(2);
     }
 
     /// <summary>
@@ -362,11 +362,11 @@ public class RuleSpecDiffServiceTests
         var diff = _service.ComputeDiff(from, to);
 
         // Assert: All atoms deleted
-        Assert.Equal(0, diff.Summary.Added);
-        Assert.Equal(0, diff.Summary.Modified);
-        Assert.Equal(2, diff.Summary.Deleted);
-        Assert.Equal(0, diff.Summary.Unchanged);
-        Assert.Equal(2, diff.Summary.TotalChanges);
+        diff.Summary.Added.Should().Be(0);
+        diff.Summary.Modified.Should().Be(0);
+        diff.Summary.Deleted.Should().Be(2);
+        diff.Summary.Unchanged.Should().Be(0);
+        diff.Summary.TotalChanges.Should().Be(2);
     }
 
     /// <summary>
@@ -389,7 +389,7 @@ public class RuleSpecDiffServiceTests
         var diff = _service.ComputeDiff(from, to);
 
         // Assert: No changes
-        Assert.Equal(0, diff.Summary.TotalChanges);
+        diff.Summary.TotalChanges.Should().Be(0);
         diff.Changes.Should().BeEmpty();
     }
 
@@ -419,8 +419,8 @@ public class RuleSpecDiffServiceTests
         var diff = _service.ComputeDiff(from, to);
 
         // Assert: No changes detected despite null fields
-        Assert.Equal(0, diff.Summary.TotalChanges);
-        Assert.Single(diff.Changes);
+        diff.Summary.TotalChanges.Should().Be(0);
+        diff.Changes.Should().ContainSingle();
         Assert.Equal(ChangeType.Unchanged, diff.Changes.First().Type);
     }
 
@@ -450,13 +450,13 @@ public class RuleSpecDiffServiceTests
         var diff = _service.ComputeDiff(from, to);
 
         // Assert: Modifications detected
-        Assert.Equal(1, diff.Summary.Modified);
+        diff.Summary.Modified.Should().Be(1);
 
         var modifiedChange = diff.Changes.First(c => c.Type == ChangeType.Modified);
-        Assert.Equal(3, modifiedChange.FieldChanges!.Count);
-        Assert.Contains(modifiedChange.FieldChanges, fc => fc.FieldName == "section" && fc.OldValue == null && fc.NewValue == "Setup");
-        Assert.Contains(modifiedChange.FieldChanges, fc => fc.FieldName == "page" && fc.OldValue == null && fc.NewValue == "1");
-        Assert.Contains(modifiedChange.FieldChanges, fc => fc.FieldName == "line" && fc.OldValue == null && fc.NewValue == "5");
+        modifiedChange.FieldChanges!.Count.Should().Be(3);
+        fc => fc.FieldName == "section" && fc.OldValue == null && fc.NewValue == "Setup".Should().Contain(modifiedChange.FieldChanges);
+        fc => fc.FieldName == "page" && fc.OldValue == null && fc.NewValue == "1".Should().Contain(modifiedChange.FieldChanges);
+        fc => fc.FieldName == "line" && fc.OldValue == null && fc.NewValue == "5".Should().Contain(modifiedChange.FieldChanges);
     }
 
     /// <summary>
@@ -488,7 +488,7 @@ public class RuleSpecDiffServiceTests
 
         // Assert: Changes are ordered by atom ID
         var atomIds = diff.Changes.Select(c => c.OldAtom ?? c.NewAtom).ToList();
-        Assert.Equal(new[] { "atom1", "atom2", "atom3" }, atomIds);
+        "atom2", "atom3" }, atomIds.Should().Be(new[] { "atom1");
     }
 
     #endregion
@@ -518,13 +518,13 @@ public class RuleSpecDiffServiceTests
         var summary = _service.GenerateDiffSummary(diff);
 
         // Assert: Summary shows no changes
-        Assert.Contains("Difference between 1.0 and 1.0", summary);
-        Assert.Contains("Total changes: 0", summary);
-        Assert.Contains("Added: 0", summary);
-        Assert.Contains("Modified: 0", summary);
-        Assert.Contains("Deleted: 0", summary);
-        Assert.Contains("Unchanged: 1", summary);
-        Assert.DoesNotContain("Changes:", summary); // No detailed changes section
+        summary.Should().Contain("Difference between 1.0 and 1.0");
+        summary.Should().Contain("Total changes: 0");
+        summary.Should().Contain("Added: 0");
+        summary.Should().Contain("Modified: 0");
+        summary.Should().Contain("Deleted: 0");
+        summary.Should().Contain("Unchanged: 1");
+        summary.Should().NotContain("Changes:"); // No detailed changes section
     }
 
     /// <summary>
@@ -552,12 +552,12 @@ public class RuleSpecDiffServiceTests
         var summary = _service.GenerateDiffSummary(diff);
 
         // Assert: Summary includes addition
-        Assert.Contains("Total changes: 1", summary);
-        Assert.Contains("Added: 1", summary);
-        Assert.Contains("Changes:", summary);
-        Assert.Contains("+ Added: atom1", summary);
-        Assert.Contains("Text: New rule text", summary);
-        Assert.Contains("Section: Setup", summary);
+        summary.Should().Contain("Total changes: 1");
+        summary.Should().Contain("Added: 1");
+        summary.Should().Contain("Changes:");
+        summary.Should().Contain("+ Added: atom1");
+        summary.Should().Contain("Text: New rule text");
+        summary.Should().Contain("Section: Setup");
     }
 
     /// <summary>
@@ -588,11 +588,11 @@ public class RuleSpecDiffServiceTests
         var summary = _service.GenerateDiffSummary(diff);
 
         // Assert: Summary includes modification details
-        Assert.Contains("Modified: 1", summary);
-        Assert.Contains("~ Modified: atom1", summary);
-        Assert.Contains("text:", summary);
-        Assert.Contains("- Original text", summary);
-        Assert.Contains("+ Modified text", summary);
+        summary.Should().Contain("Modified: 1");
+        summary.Should().Contain("~ Modified: atom1");
+        summary.Should().Contain("text:");
+        summary.Should().Contain("- Original text");
+        summary.Should().Contain("+ Modified text");
     }
 
     /// <summary>
@@ -620,10 +620,10 @@ public class RuleSpecDiffServiceTests
         var summary = _service.GenerateDiffSummary(diff);
 
         // Assert: Summary includes deletion
-        Assert.Contains("Deleted: 1", summary);
-        Assert.Contains("- Deleted: atom1", summary);
-        Assert.Contains("Text: Deleted text", summary);
-        Assert.Contains("Section: Scoring", summary);
+        summary.Should().Contain("Deleted: 1");
+        summary.Should().Contain("- Deleted: atom1");
+        summary.Should().Contain("Text: Deleted text");
+        summary.Should().Contain("Section: Scoring");
     }
 
     /// <summary>
@@ -651,7 +651,7 @@ public class RuleSpecDiffServiceTests
         var summary = _service.GenerateDiffSummary(diff);
 
         // Assert: Null section shown as "(none)"
-        Assert.Contains("Section: (none)", summary);
+        summary.Should().Contain("Section: (none)");
     }
 
     /// <summary>
@@ -684,7 +684,7 @@ public class RuleSpecDiffServiceTests
         var summary = _service.GenerateDiffSummary(diff);
 
         // Assert: Only modified atom in changes section
-        Assert.Contains("~ Modified: atom2", summary);
+        summary.Should().Contain("~ Modified: atom2");
         Assert.DoesNotContain("atom1", summary.Split("Changes:")[1]); // atom1 not in detailed changes
     }
 

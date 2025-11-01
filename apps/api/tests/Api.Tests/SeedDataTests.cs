@@ -57,9 +57,9 @@ public class SeedDataTests : IntegrationTestBase
 
         // Then: Admin user exists with correct properties
         admin.Should().NotBeNull();
-        Assert.Equal("demo-admin-001", admin!.Id);
-        Assert.Equal("Demo Admin", admin.DisplayName);
-        Assert.Equal(UserRole.Admin, admin.Role);
+        admin!.Id.Should().Be("demo-admin-001");
+        admin.DisplayName.Should().Be("Demo Admin");
+        admin.Role.Should().Be(UserRole.Admin);
         admin.PasswordHash.Should().NotBeEmpty();
     }
 
@@ -84,9 +84,9 @@ public class SeedDataTests : IntegrationTestBase
 
         // Then: Editor user exists with correct properties
         editor.Should().NotBeNull();
-        Assert.Equal("demo-editor-001", editor!.Id);
-        Assert.Equal("Demo Editor", editor.DisplayName);
-        Assert.Equal(UserRole.Editor, editor.Role);
+        editor!.Id.Should().Be("demo-editor-001");
+        editor.DisplayName.Should().Be("Demo Editor");
+        editor.Role.Should().Be(UserRole.Editor);
         editor.PasswordHash.Should().NotBeEmpty();
     }
 
@@ -111,9 +111,9 @@ public class SeedDataTests : IntegrationTestBase
 
         // Then: Regular user exists with correct properties
         user.Should().NotBeNull();
-        Assert.Equal("demo-user-001", user!.Id);
-        Assert.Equal("Demo User", user.DisplayName);
-        Assert.Equal(UserRole.User, user.Role);
+        user!.Id.Should().Be("demo-user-001");
+        user.DisplayName.Should().Be("Demo User");
+        user.Role.Should().Be(UserRole.User);
         user.PasswordHash.Should().NotBeEmpty();
     }
 
@@ -141,7 +141,7 @@ public class SeedDataTests : IntegrationTestBase
 
         // Then: Game exists with correct properties
         game.Should().NotBeNull();
-        Assert.Equal("Tic-Tac-Toe", game!.Name);
+        game!.Name.Should().Be("Tic-Tac-Toe");
     }
 
     /// <summary>
@@ -164,7 +164,7 @@ public class SeedDataTests : IntegrationTestBase
 
         // Then: Game exists with correct properties
         game.Should().NotBeNull();
-        Assert.Equal("Chess", game!.Name);
+        game!.Name.Should().Be("Chess");
     }
 
     #endregion
@@ -193,11 +193,11 @@ public class SeedDataTests : IntegrationTestBase
 
         // Then: Rule spec exists with correct properties
         ruleSpec.Should().NotBeNull();
-        Assert.Equal("tic-tac-toe", ruleSpec!.GameId);
-        Assert.Equal("v1.0", ruleSpec.Version);
-        Assert.Equal("demo-admin-001", ruleSpec.CreatedByUserId);
+        ruleSpec!.GameId.Should().Be("tic-tac-toe");
+        ruleSpec.Version.Should().Be("v1.0");
+        ruleSpec.CreatedByUserId.Should().Be("demo-admin-001");
         ruleSpec.Game.Should().NotBeNull();
-        Assert.Equal("Tic-Tac-Toe", ruleSpec.Game.Name);
+        ruleSpec.Game.Name.Should().Be("Tic-Tac-Toe");
     }
 
     /// <summary>
@@ -222,11 +222,11 @@ public class SeedDataTests : IntegrationTestBase
 
         // Then: Rule spec exists with correct properties
         ruleSpec.Should().NotBeNull();
-        Assert.Equal("chess", ruleSpec!.GameId);
-        Assert.Equal("v1.0", ruleSpec.Version);
-        Assert.Equal("demo-admin-001", ruleSpec.CreatedByUserId);
+        ruleSpec!.GameId.Should().Be("chess");
+        ruleSpec.Version.Should().Be("v1.0");
+        ruleSpec.CreatedByUserId.Should().Be("demo-admin-001");
         ruleSpec.Game.Should().NotBeNull();
-        Assert.Equal("Chess", ruleSpec.Game.Name);
+        ruleSpec.Game.Name.Should().Be("Chess");
     }
 
     #endregion
@@ -254,17 +254,17 @@ public class SeedDataTests : IntegrationTestBase
             .ToListAsync();
 
         // Then: Two agents exist with correct properties
-        Assert.Equal(2, agents.Count);
+        agents.Count.Should().Be(2);
 
         var explainAgent = agents.FirstOrDefault(a => a.Kind == "explain");
         explainAgent.Should().NotBeNull();
-        Assert.Equal("agent-ttt-explain", explainAgent!.Id);
-        Assert.Equal("Tic-Tac-Toe Explainer", explainAgent.Name);
+        explainAgent!.Id.Should().Be("agent-ttt-explain");
+        explainAgent.Name.Should().Be("Tic-Tac-Toe Explainer");
 
         var qaAgent = agents.FirstOrDefault(a => a.Kind == "qa");
         qaAgent.Should().NotBeNull();
-        Assert.Equal("agent-ttt-qa", qaAgent!.Id);
-        Assert.Equal("Tic-Tac-Toe Q&A", qaAgent.Name);
+        qaAgent!.Id.Should().Be("agent-ttt-qa");
+        qaAgent.Name.Should().Be("Tic-Tac-Toe Q&A");
     }
 
     /// <summary>
@@ -288,17 +288,17 @@ public class SeedDataTests : IntegrationTestBase
             .ToListAsync();
 
         // Then: Two agents exist with correct properties
-        Assert.Equal(2, agents.Count);
+        agents.Count.Should().Be(2);
 
         var explainAgent = agents.FirstOrDefault(a => a.Kind == "explain");
         explainAgent.Should().NotBeNull();
-        Assert.Equal("agent-chess-explain", explainAgent!.Id);
-        Assert.Equal("Chess Explainer", explainAgent.Name);
+        explainAgent!.Id.Should().Be("agent-chess-explain");
+        explainAgent.Name.Should().Be("Chess Explainer");
 
         var qaAgent = agents.FirstOrDefault(a => a.Kind == "qa");
         qaAgent.Should().NotBeNull();
-        Assert.Equal("agent-chess-qa", qaAgent!.Id);
-        Assert.Equal("Chess Q&A", qaAgent.Name);
+        qaAgent!.Id.Should().Be("agent-chess-qa");
+        qaAgent.Name.Should().Be("Chess Q&A");
     }
 
     #endregion
@@ -326,7 +326,7 @@ public class SeedDataTests : IntegrationTestBase
             .ToListAsync();
 
         // Then: All relationships are valid
-        Assert.Equal(2, games.Count);
+        games.Count.Should().Be(2);
 
         foreach (var game in games)
         {
@@ -340,12 +340,12 @@ public class SeedDataTests : IntegrationTestBase
             var agents = await db.Agents
                 .Where(a => a.GameId == game.Id)
                 .ToListAsync();
-            Assert.Equal(2, agents.Count);
+            agents.Count.Should().Be(2);
 
             // Verify agent kinds
             var agentKinds = agents.Select(a => a.Kind).OrderBy(k => k).ToList();
-            Assert.Contains("explain", agentKinds);
-            Assert.Contains("qa", agentKinds);
+            agentKinds.Should().Contain("explain");
+            agentKinds.Should().Contain("qa");
         }
     }
 
@@ -385,10 +385,10 @@ public class SeedDataTests : IntegrationTestBase
             .CountAsync();
 
         // Then: Minimum counts are met
-        Assert.True(userCount >= 3, $"Expected at least 3 demo users, found {userCount}");
-        Assert.True(gameCount >= 2, $"Expected at least 2 demo games, found {gameCount}");
-        Assert.True(ruleSpecCount >= 2, $"Expected at least 2 demo rule specs, found {ruleSpecCount}");
-        Assert.True(agentCount >= 4, $"Expected at least 4 demo agents, found {agentCount}");
+        userCount >= 3, $"Expected at least 3 demo users, found {userCount}".Should().BeTrue();
+        gameCount >= 2, $"Expected at least 2 demo games, found {gameCount}".Should().BeTrue();
+        ruleSpecCount >= 2, $"Expected at least 2 demo rule specs, found {ruleSpecCount}".Should().BeTrue();
+        agentCount >= 4, $"Expected at least 4 demo agents, found {agentCount}".Should().BeTrue();
     }
 
     #endregion

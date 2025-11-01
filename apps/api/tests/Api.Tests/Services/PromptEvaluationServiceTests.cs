@@ -188,10 +188,10 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         var dataset = await _service.LoadDatasetAsync(_testDatasetPath);
 
         // Assert
-        Assert.Equal("test-dataset-v1", dataset.DatasetId);
-        Assert.Equal("qa-system-prompt", dataset.TemplateName);
-        Assert.Equal(2, dataset.TestCases.Count);
-        Assert.Equal("TC-001", dataset.TestCases[0].Id);
+        dataset.DatasetId.Should().Be("test-dataset-v1");
+        dataset.TemplateName.Should().Be("qa-system-prompt");
+        dataset.TestCases.Count.Should().Be(2);
+        dataset.TestCases[0].Id.Should().Be("TC-001");
     }
 
     [Fact]
@@ -265,8 +265,8 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
             _testDatasetPath);
 
         // Assert
-        Assert.Equal(100.0, result.Metrics.Accuracy);
-        Assert.Equal(2, result.TotalQueries);
+        result.Metrics.Accuracy.Should().Be(100.0);
+        result.TotalQueries.Should().Be(2);
         Assert.True(result.QueryResults.All(q => q.IsAccurate));
     }
 
@@ -307,8 +307,8 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
             _testDatasetPath);
 
         // Assert
-        Assert.Equal(50.0, result.Metrics.HallucinationRate); // 1 out of 2 queries hallucinated
-        Assert.True(result.QueryResults[1].IsHallucinated);
+        result.Metrics.HallucinationRate.Should().Be(50.0); // 1 out of 2 queries hallucinated
+        result.QueryResults[1].IsHallucinated.Should().BeTrue();
     }
 
     [Fact]
@@ -335,9 +335,9 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
             _testDatasetPath);
 
         // Assert
-        Assert.False(result.Passed);
-        Assert.Contains("below threshold", result.Summary);
-        Assert.True(result.Metrics.Accuracy < 80.0);
+        result.Passed.Should().BeFalse();
+        result.Summary.Should().Contain("below threshold");
+        result.Metrics.Accuracy < 80.0.Should().BeTrue();
     }
 
     [Fact]
@@ -379,11 +379,11 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
             _testDatasetPath);
 
         // Assert
-        Assert.True(result.Passed);
-        Assert.Contains("PASSED", result.Summary);
-        Assert.True(result.Metrics.Accuracy >= 80.0);
-        Assert.True(result.Metrics.HallucinationRate <= 10.0);
-        Assert.True(result.Metrics.AvgConfidence >= 0.70);
+        result.Passed.Should().BeTrue();
+        result.Summary.Should().Contain("PASSED");
+        result.Metrics.Accuracy >= 80.0.Should().BeTrue();
+        result.Metrics.HallucinationRate <= 10.0.Should().BeTrue();
+        result.Metrics.AvgConfidence >= 0.70.Should().BeTrue();
     }
 
     [Fact]
@@ -414,7 +414,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
             progressCallback);
 
         // Assert
-        Assert.Equal(2, progressUpdates.Count);
+        progressUpdates.Count.Should().Be(2);
         Assert.Equal((1, 2), progressUpdates[0]);
         Assert.Equal((2, 2), progressUpdates[1]);
     }
@@ -432,7 +432,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
                 nonExistentVersionId,
                 _testDatasetPath));
 
-        Assert.Contains("not found", exception.Message);
+        exception.Message.Should().Contain("not found");
     }
 
     #endregion
@@ -503,9 +503,9 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
             _testDatasetPath);
 
         // Assert
-        Assert.Equal(ComparisonRecommendation.Activate, comparison.Recommendation);
-        Assert.True(comparison.Deltas.AvgConfidenceDelta >= 0.10); // Confidence improved by 0.16
-        Assert.Contains("improvement", comparison.RecommendationReason, StringComparison.OrdinalIgnoreCase);
+        comparison.Recommendation.Should().Be(ComparisonRecommendation.Activate);
+        comparison.Deltas.AvgConfidenceDelta >= 0.10.Should().BeTrue(); // Confidence improved by 0.16
+        comparison.RecommendationReason, StringComparison.OrdinalIgnoreCase.Should().Contain("improvement");
     }
 
     [Fact]
@@ -572,10 +572,10 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
             _testDatasetPath);
 
         // Assert
-        Assert.Equal(ComparisonRecommendation.Reject, comparison.Recommendation);
-        Assert.True(comparison.Deltas.AccuracyDelta < 0); // 50% - 100% = -50%
+        comparison.Recommendation.Should().Be(ComparisonRecommendation.Reject);
+        comparison.Deltas.AccuracyDelta < 0.Should().BeTrue(); // 50% - 100% = -50%
         // With only 2 test cases, candidate fails 80% threshold (50% < 80%), so rejection is due to threshold failure
-        Assert.Contains("failed quality threshold", comparison.RecommendationReason, StringComparison.OrdinalIgnoreCase);
+        comparison.RecommendationReason, StringComparison.OrdinalIgnoreCase.Should().Contain("failed quality threshold");
     }
 
     [Fact]
@@ -641,8 +641,8 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
             _testDatasetPath);
 
         // Assert
-        Assert.Equal(ComparisonRecommendation.ManualReview, comparison.Recommendation);
-        Assert.Contains("manual review", comparison.RecommendationReason, StringComparison.OrdinalIgnoreCase);
+        comparison.Recommendation.Should().Be(ComparisonRecommendation.ManualReview);
+        comparison.RecommendationReason, StringComparison.OrdinalIgnoreCase.Should().Contain("manual review");
     }
 
     #endregion
@@ -659,12 +659,12 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         var report = _service.GenerateReport(evalResult, ReportFormat.Markdown);
 
         // Assert
-        Assert.Contains("# Prompt Evaluation Report", report);
-        Assert.Contains("## Metrics Summary", report);
-        Assert.Contains("| Metric | Value | Status |", report);
-        Assert.Contains("Accuracy", report);
-        Assert.Contains("Hallucination Rate", report);
-        Assert.Contains("## Query Breakdown", report);
+        report.Should().Contain("# Prompt Evaluation Report");
+        report.Should().Contain("## Metrics Summary");
+        report.Should().Contain("| Metric | Value | Status |");
+        report.Should().Contain("Accuracy");
+        report.Should().Contain("Hallucination Rate");
+        report.Should().Contain("## Query Breakdown");
     }
 
     [Fact]
@@ -678,9 +678,9 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
 
         // Assert: Verify it's valid JSON (don't deserialize back due to camelCase vs PascalCase)
         report.Should().NotBeNull();
-        Assert.Contains("evaluationId", report); // camelCase from JsonNamingPolicy
-        Assert.Contains("metrics", report);
-        Assert.Contains("accuracy", report);
+        report.Should().Contain("evaluationId"); // camelCase from JsonNamingPolicy
+        report.Should().Contain("metrics");
+        report.Should().Contain("accuracy");
 
         // Verify it's valid JSON syntax
         var jsonDoc = JsonDocument.Parse(report);
@@ -705,11 +705,11 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
             .FirstOrDefaultAsync(e => e.Id == evalResult.EvaluationId);
 
         stored.Should().NotBeNull();
-        Assert.Equal(evalResult.TemplateId, stored.TemplateId);
-        Assert.Equal(evalResult.VersionId, stored.VersionId);
-        Assert.Equal(evalResult.Metrics.Accuracy, stored.Accuracy);
-        Assert.Equal(evalResult.Metrics.HallucinationRate, stored.HallucinationRate);
-        Assert.Equal(evalResult.Passed, stored.Passed);
+        stored.TemplateId.Should().Be(evalResult.TemplateId);
+        stored.VersionId.Should().Be(evalResult.VersionId);
+        stored.Accuracy.Should().Be(evalResult.Metrics.Accuracy);
+        stored.HallucinationRate.Should().Be(evalResult.Metrics.HallucinationRate);
+        stored.Passed.Should().Be(evalResult.Passed);
     }
 
     [Fact]
@@ -730,11 +730,11 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         var historical = await _service.GetHistoricalResultsAsync("test-template-id", limit: 10);
 
         // Assert
-        Assert.Equal(3, historical.Count);
+        historical.Count.Should().Be(3);
         // Should be ordered by ExecutedAt DESC (newest first)
-        Assert.Equal("eval-3", historical[0].EvaluationId);
-        Assert.Equal("eval-2", historical[1].EvaluationId);
-        Assert.Equal("eval-1", historical[2].EvaluationId);
+        historical[0].EvaluationId.Should().Be("eval-3");
+        historical[1].EvaluationId.Should().Be("eval-2");
+        historical[2].EvaluationId.Should().Be("eval-1");
     }
 
     [Fact]
@@ -752,7 +752,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         var historical = await _service.GetHistoricalResultsAsync("test-template-id", limit: 2);
 
         // Assert
-        Assert.Equal(2, historical.Count);
+        historical.Count.Should().Be(2);
     }
 
     #endregion

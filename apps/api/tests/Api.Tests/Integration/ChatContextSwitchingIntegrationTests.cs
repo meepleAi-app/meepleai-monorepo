@@ -118,13 +118,13 @@ public class ChatContextSwitchingIntegrationTests
         var checkersChat = await service.CreateChatAsync(user.Id, checkers.Id, checkersAgent.Id);
 
         // Assert: Each chat has correct game association
-        Assert.NotEqual(Guid.Empty, chessChat.Id);
-        Assert.Equal(chess.Id, chessChat.GameId);
+        chessChat.Id.Should().NotBe(Guid.Empty);
+        chessChat.GameId.Should().Be(chess.Id);
 
-        Assert.NotEqual(Guid.Empty, checkersChat.Id);
-        Assert.Equal(checkers.Id, checkersChat.GameId);
+        checkersChat.Id.Should().NotBe(Guid.Empty);
+        checkersChat.GameId.Should().Be(checkers.Id);
 
-        Assert.NotEqual(chessChat.Id, checkersChat.Id);
+        checkersChat.Id.Should().NotBe(chessChat.Id);
     }
 
     /// <summary>
@@ -150,11 +150,11 @@ public class ChatContextSwitchingIntegrationTests
         var chessChats = await service.GetUserChatsByGameAsync(user.Id, chess.Id);
 
         // Assert: Only Chess chats returned
-        Assert.Equal(2, chessChats.Count);
+        chessChats.Count.Should().Be(2);
         Assert.All(chessChats, chat => Assert.Equal(chess.Id, chat.GameId));
-        Assert.Contains(chessChats, c => c.Id == chessChat1.Id);
-        Assert.Contains(chessChats, c => c.Id == chessChat2.Id);
-        Assert.DoesNotContain(chessChats, c => c.Id == checkersChat.Id);
+        c => c.Id == chessChat1.Id.Should().Contain(chessChats);
+        c => c.Id == chessChat2.Id.Should().Contain(chessChats);
+        c => c.Id == checkersChat.Id.Should().NotContain(chessChats);
     }
 
     /// <summary>
@@ -189,7 +189,7 @@ public class ChatContextSwitchingIntegrationTests
         var chessHistory = await service.GetChatHistoryAsync(chessChat.Id, user.Id);
 
         // Assert: Chess chat has only Chess messages
-        Assert.Equal(2, chessHistory.Count);
+        chessHistory.Count.Should().Be(2);
         Assert.Contains(chessHistory, msg => msg.Message.Contains("castling"));
         Assert.DoesNotContain(chessHistory, msg => msg.Message.Contains("backwards"));
 
@@ -197,7 +197,7 @@ public class ChatContextSwitchingIntegrationTests
         var checkersHistory = await service.GetChatHistoryAsync(checkersChat.Id, user.Id);
 
         // Assert: Checkers chat has only Checkers messages
-        Assert.Equal(2, checkersHistory.Count);
+        checkersHistory.Count.Should().Be(2);
         Assert.Contains(checkersHistory, msg => msg.Message.Contains("backwards"));
         Assert.DoesNotContain(checkersHistory, msg => msg.Message.Contains("castling"));
     }
@@ -239,12 +239,12 @@ public class ChatContextSwitchingIntegrationTests
 
         // Assert: Chess chat has complete Chess history
         var chessHistory = await service.GetChatHistoryAsync(chessChat.Id, user.Id);
-        Assert.Equal(4, chessHistory.Count);
+        chessHistory.Count.Should().Be(4);
         Assert.All(chessHistory, msg => Assert.Contains("chess", msg.Message.ToLower()));
 
         // Assert: Checkers chat has complete Checkers history
         var checkersHistory = await service.GetChatHistoryAsync(checkersChat.Id, user.Id);
-        Assert.Equal(3, checkersHistory.Count);
+        checkersHistory.Count.Should().Be(3);
         Assert.All(checkersHistory, msg => Assert.Contains("checkers", msg.Message.ToLower()));
     }
 
@@ -272,16 +272,16 @@ public class ChatContextSwitchingIntegrationTests
 
         // Assert: Both chats exist and are independent
         var chessChats = await service.GetUserChatsByGameAsync(user.Id, chess.Id);
-        Assert.Equal(2, chessChats.Count);
+        chessChats.Count.Should().Be(2);
 
         var history1 = await service.GetChatHistoryAsync(chessChat1.Id, user.Id);
         var history2 = await service.GetChatHistoryAsync(chessChat2.Id, user.Id);
 
-        Assert.Single(history1);
-        Assert.Contains("Opening", history1[0].Message);
+        history1.Should().ContainSingle();
+        history1[0].Message.Should().Contain("Opening");
 
-        Assert.Single(history2);
-        Assert.Contains("Endgame", history2[0].Message);
+        history2.Should().ContainSingle();
+        history2[0].Message.Should().Contain("Endgame");
     }
 
     /// <summary>
@@ -314,8 +314,8 @@ public class ChatContextSwitchingIntegrationTests
         var updatedChessChat = await dbContext.Chats.FindAsync(chessChat.Id);
         var updatedCheckersChat = await dbContext.Chats.FindAsync(checkersChat.Id);
 
-        Assert.NotNull(updatedChessChat!.LastMessageAt);
-        Assert.Null(updatedCheckersChat!.LastMessageAt);
+        updatedChessChat!.LastMessageAt.Should().NotBeNull();
+        updatedCheckersChat!.LastMessageAt.Should().BeNull();
     }
 
     /// <summary>
@@ -353,10 +353,10 @@ public class ChatContextSwitchingIntegrationTests
         var chessChats = await service.GetUserChatsByGameAsync(user.Id, chess.Id);
 
         // Assert: Chats ordered by LastMessageAt descending (most recent first)
-        Assert.Equal(3, chessChats.Count);
-        Assert.Equal(oldChat.Id, chessChats[0].Id); // Added message last, so most recent
-        Assert.Equal(midChat.Id, chessChats[1].Id);
-        Assert.Equal(recentChat.Id, chessChats[2].Id);
+        chessChats.Count.Should().Be(3);
+        chessChats[0].Id.Should().Be(oldChat.Id); // Added message last, so most recent
+        chessChats[1].Id.Should().Be(midChat.Id);
+        chessChats[2].Id.Should().Be(recentChat.Id);
     }
 
     /// <summary>
@@ -405,13 +405,13 @@ public class ChatContextSwitchingIntegrationTests
         var deleted = await service.DeleteChatAsync(chessChat.Id, user.Id);
 
         // Assert: Chess chat deleted
-        Assert.True(deleted);
+        deleted.Should().BeTrue();
         var chessChats = await service.GetUserChatsByGameAsync(user.Id, chess.Id);
         chessChats.Should().BeEmpty();
 
         // Assert: Checkers chat still exists
         var checkersChats = await service.GetUserChatsByGameAsync(user.Id, checkers.Id);
-        Assert.Single(checkersChats);
-        Assert.Equal(checkersChat.Id, checkersChats[0].Id);
+        checkersChats.Should().ContainSingle();
+        checkersChats[0].Id.Should().Be(checkersChat.Id);
     }
 }

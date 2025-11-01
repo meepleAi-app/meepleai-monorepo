@@ -67,16 +67,16 @@ public class OllamaLlmServiceTests
         var result = await service.GenerateCompletionAsync(systemPrompt, userPrompt);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal("The answer is 4.", result.Response);
+        result.Success.Should().BeTrue();
+        result.Response.Should().Be("The answer is 4.");
         result.Usage.Should().NotBeNull();
-        Assert.Equal(10, result.Usage.PromptTokens);
-        Assert.Equal(5, result.Usage.CompletionTokens);
-        Assert.Equal(15, result.Usage.TotalTokens);
+        result.Usage.PromptTokens.Should().Be(10);
+        result.Usage.CompletionTokens.Should().Be(5);
+        result.Usage.TotalTokens.Should().Be(15);
         result.Metadata.Should().NotBeNull();
-        Assert.Equal("llama3.2:3b", result.Metadata["model"]);
-        Assert.Equal("stop", result.Metadata["done_reason"]);
-        Assert.Equal("150", result.Metadata["total_duration_ms"]);
+        result.Metadata["model"].Should().Be("llama3.2:3b");
+        result.Metadata["done_reason"].Should().Be("stop");
+        result.Metadata["total_duration_ms"].Should().Be("150");
     }
 
     [Fact]
@@ -89,8 +89,8 @@ public class OllamaLlmServiceTests
         var result = await service.GenerateCompletionAsync("System prompt", "");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("No user prompt provided", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("No user prompt provided");
         result.Response.Should().BeEmpty();
     }
 
@@ -104,8 +104,8 @@ public class OllamaLlmServiceTests
         var result = await service.GenerateCompletionAsync("System prompt", "   ");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("No user prompt provided", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("No user prompt provided");
     }
 
     [Fact]
@@ -118,8 +118,8 @@ public class OllamaLlmServiceTests
         var result = await service.GenerateCompletionAsync("System prompt", null!);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("No user prompt provided", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("No user prompt provided");
     }
 
     [Fact]
@@ -144,8 +144,8 @@ public class OllamaLlmServiceTests
         var result = await service.GenerateCompletionAsync("", userPrompt);
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal("4", result.Response);
+        result.Success.Should().BeTrue();
+        result.Response.Should().Be("4");
     }
 
     [Fact]
@@ -159,8 +159,8 @@ public class OllamaLlmServiceTests
         var result = await service.GenerateCompletionAsync("System", "User prompt");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("API error: InternalServerError", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("API error: InternalServerError");
     }
 
     [Fact]
@@ -174,8 +174,8 @@ public class OllamaLlmServiceTests
         var result = await service.GenerateCompletionAsync("System", "User prompt");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("API error: BadRequest", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("API error: BadRequest");
     }
 
     [Fact]
@@ -196,8 +196,8 @@ public class OllamaLlmServiceTests
         var result = await service.GenerateCompletionAsync("System", "User prompt");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("No response returned from Ollama", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("No response returned from Ollama");
     }
 
     [Fact]
@@ -218,8 +218,8 @@ public class OllamaLlmServiceTests
         var result = await service.GenerateCompletionAsync("System", "User prompt");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("No response returned from Ollama", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("No response returned from Ollama");
     }
 
     [Fact]
@@ -239,8 +239,8 @@ public class OllamaLlmServiceTests
         var result = await service.GenerateCompletionAsync("System", "User prompt");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("Request timed out", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("Request timed out");
     }
 
     [Fact]
@@ -260,8 +260,8 @@ public class OllamaLlmServiceTests
         var result = await service.GenerateCompletionAsync("System", "User prompt");
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Contains("Error: Network error", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Error: Network error");
     }
 
     [Fact]
@@ -287,12 +287,12 @@ public class OllamaLlmServiceTests
         var result = await service.GenerateCompletionAsync(systemPrompt, userPrompt);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.Usage.Should().NotBeNull();
         // Estimated tokens should be > 0 (roughly length/4)
-        Assert.True(result.Usage.PromptTokens > 0);
-        Assert.True(result.Usage.CompletionTokens > 0);
-        Assert.Equal(result.Usage.PromptTokens + result.Usage.CompletionTokens, result.Usage.TotalTokens);
+        result.Usage.PromptTokens > 0.Should().BeTrue();
+        result.Usage.CompletionTokens > 0.Should().BeTrue();
+        result.Usage.TotalTokens.Should().Be(result.Usage.PromptTokens + result.Usage.CompletionTokens);
     }
 
     [Fact]
@@ -443,8 +443,8 @@ public class OllamaLlmServiceTests
         var result = await service.GenerateCompletionAsync("System", "User", cts.Token);
 
         // Assert
-        Assert.False(result.Success);
-        Assert.Equal("Request timed out", result.ErrorMessage);
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Be("Request timed out");
     }
 
     [Fact]
@@ -468,9 +468,9 @@ public class OllamaLlmServiceTests
         var result = await service.GenerateCompletionAsync("System", "User");
 
         // Assert
-        Assert.True(result.Success);
-        Assert.Equal(longResponse, result.Response);
-        Assert.Equal(1250, result.Usage?.CompletionTokens);
+        result.Success.Should().BeTrue();
+        result.Response.Should().Be(longResponse);
+        result.Usage?.CompletionTokens.Should().Be(1250);
     }
 
     [Fact]
@@ -493,7 +493,7 @@ public class OllamaLlmServiceTests
         var result = await service.GenerateCompletionAsync("System", userPrompt);
 
         // Assert
-        Assert.True(result.Success);
+        result.Success.Should().BeTrue();
         result.Response.Should().NotBeNull();
     }
 

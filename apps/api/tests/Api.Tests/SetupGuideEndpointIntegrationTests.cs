@@ -69,7 +69,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: A structured setup guide is returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var setupGuide = JsonSerializer.Deserialize<SetupGuideResponse>(json, JsonOptions);
@@ -79,7 +79,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         setupGuide!.steps.Should().NotBeEmpty();
         Assert.All(setupGuide.steps, step =>
         {
-            Assert.True(step.stepNumber > 0);
+            step.stepNumber > 0.Should().BeTrue();
             Assert.False(string.IsNullOrWhiteSpace(step.title));
             Assert.False(string.IsNullOrWhiteSpace(step.instruction));
             step.references.Should().NotBeNull();
@@ -87,7 +87,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
 
         // And: Each step has title, instruction, and references
         var firstStep = setupGuide.steps[0];
-        Assert.Equal(1, firstStep.stepNumber);
+        firstStep.stepNumber.Should().Be(1);
         firstStep.title.Should().NotBeNull();
         firstStep.instruction.Should().NotBeNull();
     }
@@ -108,7 +108,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/agents/setup", new SetupGuideRequest("any-game", null));
 
         // Then: The request is rejected with Unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -135,7 +135,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: The request is rejected with BadRequest
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     /// <summary>
@@ -163,14 +163,14 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: A default setup guide is returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var setupGuide = JsonSerializer.Deserialize<SetupGuideResponse>(json, JsonOptions);
 
         // And: The game title is "Unknown Game"
         setupGuide.Should().NotBeNull();
-        Assert.Equal("Unknown Game", setupGuide!.gameTitle);
+        setupGuide!.gameTitle.Should().Be("Unknown Game");
         setupGuide.steps.Should().NotBeEmpty();
     }
 
@@ -231,7 +231,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: The setup guide is returned
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: The request is logged to the chat
         var chatLogs = await db.ChatLogs
@@ -273,16 +273,16 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: The response includes estimated setup time
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var setupGuide = JsonSerializer.Deserialize<SetupGuideResponse>(json, JsonOptions);
 
         setupGuide.Should().NotBeNull();
-        Assert.True(setupGuide!.estimatedSetupTimeMinutes > 0);
+        setupGuide!.estimatedSetupTimeMinutes > 0.Should().BeTrue();
 
         // And: The estimated time is reasonable (between 5 and 30 minutes)
-        Assert.InRange(setupGuide.estimatedSetupTimeMinutes, 5, 30);
+        setupGuide.estimatedSetupTimeMinutes.Should().BeInRange(5, 30);
     }
 
     /// <summary>
@@ -314,7 +314,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: The response includes token usage information
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var setupGuide = JsonSerializer.Deserialize<SetupGuideResponse>(json, JsonOptions);
@@ -324,7 +324,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         // And: Total tokens equals prompt tokens plus completion tokens (if LLM was used)
         if (setupGuide!.totalTokens > 0)
         {
-            Assert.Equal(setupGuide.totalTokens, setupGuide.promptTokens + setupGuide.completionTokens);
+            setupGuide.promptTokens + setupGuide.completionTokens.Should().Be(setupGuide.totalTokens);
         }
     }
 
@@ -355,7 +355,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Then: The request is logged in ai_request_logs
         using var scope = Factory.Services.CreateScope();
@@ -368,10 +368,10 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         // And: The log includes user ID, game ID, endpoint, and latency
         logs.Should().NotBeEmpty();
         var log = logs.First();
-        Assert.Equal(user.Id, log.UserId);
-        Assert.Equal(game.Id, log.GameId);
-        Assert.Equal("setup", log.Endpoint);
-        Assert.True(log.LatencyMs > 0);
+        log.UserId.Should().Be(user.Id);
+        log.GameId.Should().Be(game.Id);
+        log.Endpoint.Should().Be("setup");
+        log.LatencyMs > 0.Should().BeTrue();
     }
 
     /// <summary>
@@ -469,7 +469,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var json = await response.Content.ReadAsStringAsync();
         var setupGuide = JsonSerializer.Deserialize<SetupGuideResponse>(json, JsonOptions);
@@ -480,7 +480,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         // And: The confidence score is between 0 and 1 (if present)
         if (setupGuide!.confidence.HasValue)
         {
-            Assert.InRange(setupGuide.confidence.Value, 0.0, 1.0);
+            setupGuide.confidence.Value.Should().BeInRange(0.0, 1.0);
         }
     }
 }

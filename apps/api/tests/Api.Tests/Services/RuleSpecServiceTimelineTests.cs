@@ -150,9 +150,9 @@ public class RuleSpecServiceTimelineTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("test-game", result.GameId);
-        Assert.Equal(3, result.TotalVersions);
-        Assert.Equal(3, result.Versions.Count);
+        result.GameId.Should().Be("test-game");
+        result.TotalVersions.Should().Be(3);
+        result.Versions.Count.Should().Be(3);
     }
 
     [Fact]
@@ -162,9 +162,9 @@ public class RuleSpecServiceTimelineTests : IDisposable
         var result = await _service.GetVersionTimelineAsync("test-game");
 
         // Assert
-        Assert.Equal("v1", result.Versions[0].Version);
-        Assert.Equal("v2", result.Versions[1].Version);
-        Assert.Equal("v3", result.Versions[2].Version);
+        result.Versions[0].Version.Should().Be("v1");
+        result.Versions[1].Version.Should().Be("v2");
+        result.Versions[2].Version.Should().Be("v3");
     }
 
     [Fact]
@@ -175,10 +175,10 @@ public class RuleSpecServiceTimelineTests : IDisposable
 
         // Assert
         var v3 = result.Versions.First(v => v.Version == "v3");
-        Assert.True(v3.IsCurrentVersion);
+        v3.IsCurrentVersion.Should().BeTrue();
 
         var v1 = result.Versions.First(v => v.Version == "v1");
-        Assert.False(v1.IsCurrentVersion);
+        v1.IsCurrentVersion.Should().BeFalse();
     }
 
     [Fact]
@@ -194,11 +194,11 @@ public class RuleSpecServiceTimelineTests : IDisposable
 
         var v2 = result.Versions.First(v => v.Version == "v2");
         v2.ParentVersionId.Should().NotBeNull();
-        Assert.Equal("v1", v2.ParentVersion);
+        v2.ParentVersion.Should().Be("v1");
 
         var v3 = result.Versions.First(v => v.Version == "v3");
         v3.ParentVersionId.Should().NotBeNull();
-        Assert.Equal("v2", v3.ParentVersion);
+        v3.ParentVersion.Should().Be("v2");
     }
 
     [Fact]
@@ -209,10 +209,10 @@ public class RuleSpecServiceTimelineTests : IDisposable
 
         // Assert
         var v3 = result.Versions.First(v => v.Version == "v3");
-        Assert.Equal(2, v3.MergedFromVersionIds.Count);
-        Assert.Equal(2, v3.MergedFromVersions.Count);
-        Assert.Contains("v1", v3.MergedFromVersions);
-        Assert.Contains("v2", v3.MergedFromVersions);
+        v3.MergedFromVersionIds.Count.Should().Be(2);
+        v3.MergedFromVersions.Count.Should().Be(2);
+        v3.MergedFromVersions.Should().Contain("v1");
+        v3.MergedFromVersions.Should().Contain("v2");
     }
 
     [Fact]
@@ -222,9 +222,9 @@ public class RuleSpecServiceTimelineTests : IDisposable
         var result = await _service.GetVersionTimelineAsync("test-game");
 
         // Assert
-        Assert.Equal(2, result.Authors.Count);
-        Assert.Contains("User One", result.Authors);
-        Assert.Contains("User Two", result.Authors);
+        result.Authors.Count.Should().Be(2);
+        result.Authors.Should().Contain("User One");
+        result.Authors.Should().Contain("User Two");
     }
 
     [Fact]
@@ -241,10 +241,10 @@ public class RuleSpecServiceTimelineTests : IDisposable
         var result = await _service.GetVersionTimelineAsync("test-game", filters);
 
         // Assert
-        Assert.Equal(2, result.TotalVersions);
-        Assert.DoesNotContain(result.Versions, v => v.Version == "v1");
-        Assert.Contains(result.Versions, v => v.Version == "v2");
-        Assert.Contains(result.Versions, v => v.Version == "v3");
+        result.TotalVersions.Should().Be(2);
+        v => v.Version == "v1".Should().NotContain(result.Versions);
+        v => v.Version == "v2".Should().Contain(result.Versions);
+        v => v.Version == "v3".Should().Contain(result.Versions);
     }
 
     [Fact]
@@ -261,10 +261,10 @@ public class RuleSpecServiceTimelineTests : IDisposable
         var result = await _service.GetVersionTimelineAsync("test-game", filters);
 
         // Assert
-        Assert.Equal(2, result.TotalVersions);
-        Assert.Contains(result.Versions, v => v.Version == "v1");
-        Assert.Contains(result.Versions, v => v.Version == "v2");
-        Assert.DoesNotContain(result.Versions, v => v.Version == "v3");
+        result.TotalVersions.Should().Be(2);
+        v => v.Version == "v1".Should().Contain(result.Versions);
+        v => v.Version == "v2".Should().Contain(result.Versions);
+        v => v.Version == "v3".Should().NotContain(result.Versions);
     }
 
     [Fact]
@@ -280,10 +280,10 @@ public class RuleSpecServiceTimelineTests : IDisposable
         var result = await _service.GetVersionTimelineAsync("test-game", filters);
 
         // Assert
-        Assert.Equal(2, result.TotalVersions);
-        Assert.Contains(result.Versions, v => v.Version == "v1");
-        Assert.DoesNotContain(result.Versions, v => v.Version == "v2");
-        Assert.Contains(result.Versions, v => v.Version == "v3");
+        result.TotalVersions.Should().Be(2);
+        v => v.Version == "v1".Should().Contain(result.Versions);
+        v => v.Version == "v2".Should().NotContain(result.Versions);
+        v => v.Version == "v3".Should().Contain(result.Versions);
     }
 
     [Fact]
@@ -299,8 +299,8 @@ public class RuleSpecServiceTimelineTests : IDisposable
         var result = await _service.GetVersionTimelineAsync("test-game", filters);
 
         // Assert
-        Assert.Equal(1, result.TotalVersions);
-        Assert.Contains(result.Versions, v => v.Version == "v2");
+        result.TotalVersions.Should().Be(1);
+        v => v.Version == "v2".Should().Contain(result.Versions);
     }
 
     [Fact]
@@ -316,8 +316,8 @@ public class RuleSpecServiceTimelineTests : IDisposable
         var result = await _service.GetVersionTimelineAsync("test-game", filters);
 
         // Assert
-        Assert.Equal(1, result.TotalVersions);
-        Assert.Contains(result.Versions, v => v.Version == "v2");
+        result.TotalVersions.Should().Be(1);
+        v => v.Version == "v2".Should().Contain(result.Versions);
     }
 
     [Fact]
@@ -336,9 +336,9 @@ public class RuleSpecServiceTimelineTests : IDisposable
         var result = await _service.GetVersionTimelineAsync("test-game", filters);
 
         // Assert
-        Assert.Equal(2, result.TotalVersions);
-        Assert.Contains(result.Versions, v => v.Version == "v1");
-        Assert.Contains(result.Versions, v => v.Version == "v3");
+        result.TotalVersions.Should().Be(2);
+        v => v.Version == "v1".Should().Contain(result.Versions);
+        v => v.Version == "v3".Should().Contain(result.Versions);
     }
 
     [Fact]
@@ -349,8 +349,8 @@ public class RuleSpecServiceTimelineTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal("non-existent-game", result.GameId);
-        Assert.Equal(0, result.TotalVersions);
+        result.GameId.Should().Be("non-existent-game");
+        result.TotalVersions.Should().Be(0);
         result.Versions.Should().BeEmpty();
         result.Authors.Should().BeEmpty();
     }
@@ -363,7 +363,7 @@ public class RuleSpecServiceTimelineTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        Assert.Equal(3, result.TotalVersions);
+        result.TotalVersions.Should().Be(3);
     }
 
     [Fact]
@@ -374,13 +374,13 @@ public class RuleSpecServiceTimelineTests : IDisposable
 
         // Assert
         var v1 = result.Versions.First(v => v.Version == "v1");
-        Assert.Equal(1, v1.ChangeCount);
+        v1.ChangeCount.Should().Be(1);
 
         var v2 = result.Versions.First(v => v.Version == "v2");
-        Assert.Equal(2, v2.ChangeCount);
+        v2.ChangeCount.Should().Be(2);
 
         var v3 = result.Versions.First(v => v.Version == "v3");
-        Assert.Equal(1, v3.ChangeCount);
+        v3.ChangeCount.Should().Be(1);
     }
 
     [Fact]
@@ -392,12 +392,12 @@ public class RuleSpecServiceTimelineTests : IDisposable
         // Assert
         foreach (var version in result.Versions)
         {
-            Assert.NotEqual(Guid.Empty, version.Id);
+            version.Id.Should().NotBe(Guid.Empty);
             version.Version.Should().NotBeEmpty();
             version.Title.Should().NotBeEmpty();
             version.Description.Should().NotBeEmpty();
             version.Author.Should().NotBeEmpty();
-            Assert.NotEqual(DateTime.MinValue, version.CreatedAt);
+            version.CreatedAt.Should().NotBe(DateTime.MinValue);
         }
     }
 

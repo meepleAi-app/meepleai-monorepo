@@ -146,7 +146,7 @@ startxref
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200 with documentId and fileName
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("documentId", out var docId));
@@ -159,9 +159,9 @@ startxref
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var pdf = await db.PdfDocuments.FirstOrDefaultAsync(p => p.Id == docId.GetString());
         pdf.Should().NotBeNull();
-        Assert.Equal(game.Id, pdf!.GameId);
-        Assert.Equal(admin.Id, pdf.UploadedByUserId);
-        Assert.Equal("pending", pdf.ProcessingStatus);
+        pdf!.GameId.Should().Be(game.Id);
+        pdf.UploadedByUserId.Should().Be(admin.Id);
+        pdf.ProcessingStatus.Should().Be("pending");
 
         TrackPdfDocumentId(docId.GetString()!);
     }
@@ -199,7 +199,7 @@ startxref
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("documentId", out var docId));
@@ -229,7 +229,7 @@ startxref
         var response = await client.PostAsync("/api/v1/ingest/pdf", content);
 
         // Then: HTTP 401
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -263,7 +263,7 @@ startxref
         var response = await client.SendAsync(request);
 
         // Then: HTTP 403
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     /// <summary>
@@ -297,7 +297,7 @@ startxref
         var response = await client.SendAsync(request);
 
         // Then: HTTP 400 with error message
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var error = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(error.TryGetProperty("error", out var errorMsg));
@@ -374,13 +374,13 @@ startxref
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200 with 3 PDFs ordered by uploadedAt descending
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("pdfs", out var pdfsElement));
 
         var pdfs = pdfsElement.EnumerateArray().ToList();
-        Assert.Equal(3, pdfs.Count);
+        pdfs.Count.Should().Be(3);
 
         // Verify ordering: most recent first
         Assert.Equal("rules-v3.pdf", pdfs[0].GetProperty("fileName").GetString());
@@ -419,7 +419,7 @@ startxref
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200 with empty array
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("pdfs", out var pdfsElement));
@@ -445,7 +445,7 @@ startxref
         var response = await client.GetAsync($"/api/v1/games/{game.Id}/pdfs");
 
         // Then: HTTP 401
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -498,7 +498,7 @@ startxref
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200 with extracted text details
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("processingStatus", out var status));
@@ -557,7 +557,7 @@ startxref
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200 with null extractedText
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("processingStatus", out var status));
@@ -566,7 +566,7 @@ startxref
         // extractedText should be null or missing
         if (result.TryGetProperty("extractedText", out var text))
         {
-            Assert.Equal(JsonValueKind.Null, text.ValueKind);
+            text.ValueKind.Should().Be(JsonValueKind.Null);
         }
     }
 
@@ -618,7 +618,7 @@ startxref
         var response = await client.SendAsync(request);
 
         // Then: HTTP 200 with error message
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var result = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(result.TryGetProperty("processingStatus", out var status));
@@ -648,7 +648,7 @@ startxref
         var response = await client.SendAsync(request);
 
         // Then: HTTP 404
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         var error = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         Assert.True(error.TryGetProperty("error", out var errorMsg));
@@ -671,6 +671,6 @@ startxref
         var response = await client.GetAsync("/api/v1/pdfs/some-pdf-id/text");
 
         // Then: HTTP 401
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 }

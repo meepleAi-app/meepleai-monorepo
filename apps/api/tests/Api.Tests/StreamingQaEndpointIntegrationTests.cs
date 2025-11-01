@@ -70,8 +70,8 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
 
         // Then: SSE response is returned with correct headers
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("text/event-stream", response.Content.Headers.ContentType?.MediaType);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("text/event-stream");
         Assert.Contains(response.Headers, h => h.Key == "Cache-Control" && h.Value.Contains("no-cache"));
 
         // And: Events are streamed in correct order
@@ -80,13 +80,13 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
 
         // Verify event sequence
         var eventTypes = events.Select(e => e.Type).ToList();
-        Assert.Contains(StreamingEventType.StateUpdate, eventTypes);
-        Assert.Contains(StreamingEventType.Citations, eventTypes);
-        Assert.Contains(StreamingEventType.Token, eventTypes);
-        Assert.Contains(StreamingEventType.Complete, eventTypes);
+        eventTypes.Should().Contain(StreamingEventType.StateUpdate);
+        eventTypes.Should().Contain(StreamingEventType.Citations);
+        eventTypes.Should().Contain(StreamingEventType.Token);
+        eventTypes.Should().Contain(StreamingEventType.Complete);
 
         // Complete should be last
-        Assert.Equal(StreamingEventType.Complete, eventTypes[^1]);
+        eventTypes[^1].Should().Be(StreamingEventType.Complete);
 
         // And: All events have valid timestamps
         Assert.All(events, evt =>
@@ -113,7 +113,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
             new QaRequest("any-game", "test query", chatId: null));
 
         // Then: The request is rejected with Unauthorized
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     /// <summary>
@@ -140,7 +140,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         var response = await client.SendAsync(request);
 
         // Then: The request is rejected with BadRequest
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     /// <summary>
@@ -170,7 +170,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Then: A Citations event is emitted (or error if no vector data)
         var events = await ParseSSEEventsAsync(response);
@@ -195,7 +195,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
             {
                 Assert.False(string.IsNullOrWhiteSpace(citation.text));
                 Assert.False(string.IsNullOrWhiteSpace(citation.source));
-                Assert.True(citation.page >= 0);
+                citation.page >= 0.Should().BeTrue();
             });
         }
     }
@@ -254,7 +254,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Consume the stream
         await ParseSSEEventsAsync(response);
@@ -272,7 +272,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         var assistantMessage = chatLogs.FirstOrDefault(log => log.Level == "assistant");
 
         userMessage.Should().NotBeNull();
-        Assert.Contains("How many players?", userMessage!.Message);
+        userMessage!.Message.Should().Contain("How many players?");
 
         // Assistant message may or may not exist depending on whether an answer was generated
         // If no vector data, we might only have the user message
@@ -309,7 +309,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Consume the stream
         await ParseSSEEventsAsync(response);
@@ -325,11 +325,11 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         // And: The log includes user ID, game ID, endpoint, and latency
         logs.Should().NotBeEmpty();
         var log = logs.First();
-        Assert.Equal(user.Id, log.UserId);
-        Assert.Equal(game.Id, log.GameId);
-        Assert.Equal("qa-stream", log.Endpoint);
-        Assert.True(log.LatencyMs > 0);
-        Assert.Contains("test query", log.Query ?? "");
+        log.UserId.Should().Be(user.Id);
+        log.GameId.Should().Be(game.Id);
+        log.Endpoint.Should().Be("qa-stream");
+        log.LatencyMs > 0.Should().BeTrue();
+        log.Query ?? "".Should().Contain("test query");
     }
 
     /// <summary>
@@ -359,7 +359,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: Streaming completes
         var events = await ParseSSEEventsAsync(response);
@@ -373,8 +373,8 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
 
             complete.Should().NotBeNull();
             // Token counts should be >= 0
-            Assert.True(complete!.completionTokens >= 0);
-            Assert.True(complete.totalTokens >= 0);
+            complete!.completionTokens >= 0.Should().BeTrue();
+            complete.totalTokens >= 0.Should().BeTrue();
         }
     }
 
@@ -470,7 +470,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Then: Events are received (may include Error event if services fail)
         var events = await ParseSSEEventsAsync(response);

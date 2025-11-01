@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
@@ -39,9 +40,18 @@ namespace Api.Tests;
 /// - Performance: ~5s container startup (once) + <1ms per test (transaction rollback)
 /// </summary>
 /// <summary>
-/// Minimal authentication handler for tests that does NOT authenticate requests
-/// but provides a DefaultChallengeScheme to prevent InvalidOperationException.
-/// This handler never authenticates - it exists solely to handle authorization challenges.
+/// Authentication handler for integration tests that validates session cookies.
+///
+/// Issue #620: Fixed session persistence across requests in tests.
+///
+/// Flow:
+/// 1. Check for session cookie in request
+/// 2. If present, validate via AuthService
+/// 3. If valid, create authenticated ClaimsPrincipal
+/// 4. Otherwise, return NoResult (allows 401 from authorization)
+///
+/// This ensures .RequireAuthorization() endpoints work correctly in tests
+/// by authenticating requests that have valid session cookies.
 /// </summary>
 internal class TestAuthenticationHandler : Microsoft.AspNetCore.Authentication.AuthenticationHandler<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions>
 {
@@ -53,17 +63,61 @@ internal class TestAuthenticationHandler : Microsoft.AspNetCore.Authentication.A
     {
     }
 
-    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        // If SessionAuthenticationMiddleware already authenticated the user, preserve it
-        // Otherwise, return NoResult to allow other handlers to process
-        if (Context.User?.Identity?.IsAuthenticated == true)
+        // Resolve AuthService from request scope (scoped service, cannot be injected in constructor)
+        var authService = Context.RequestServices.GetRequiredService<AuthService>();
+
+        // Try to get session cookie
+        var cookieName = Api.Routing.CookieHelpers.GetSessionCookieName(Context);
+        if (!Context.Request.Cookies.TryGetValue(cookieName, out var token) || string.IsNullOrWhiteSpace(token))
         {
-            var ticket = new AuthenticationTicket(Context.User, Scheme.Name);
-            return Task.FromResult(AuthenticateResult.Success(ticket));
+            // No cookie present - return NoResult (allows proper 401 from authorization)
+            return AuthenticateResult.NoResult();
         }
 
-        return Task.FromResult(AuthenticateResult.NoResult());
+        try
+        {
+            // Validate session via AuthService
+            var session = await authService.ValidateSessionAsync(token);
+            if (session == null)
+            {
+                // Invalid/expired session - return NoResult
+                return AuthenticateResult.NoResult();
+            }
+
+            // Create claims from validated session
+            var claims = new List<Claim>
+            {
+                // ClaimTypes constants (for OAuth endpoints, session management)
+                new(ClaimTypes.NameIdentifier, session.User.Id),
+                new(ClaimTypes.Email, session.User.Email),
+                new(ClaimTypes.Role, session.User.Role),
+
+                // JWT-style literal claims (for 2FA endpoints) - Issue #620
+                new("sub", session.User.Id),
+                new("email", session.User.Email)
+            };
+
+            if (!string.IsNullOrWhiteSpace(session.User.DisplayName))
+            {
+                claims.Add(new Claim(ClaimTypes.Name, session.User.DisplayName!));
+            }
+
+            var identity = new ClaimsIdentity(claims, Scheme.Name);
+            var principal = new ClaimsPrincipal(identity);
+            var ticket = new AuthenticationTicket(principal, Scheme.Name);
+
+            // Also store session in HttpContext.Items for endpoints that need it
+            Context.Items[nameof(ActiveSession)] = session;
+
+            return AuthenticateResult.Success(ticket);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Session validation failed in TestAuthenticationHandler");
+            return AuthenticateResult.NoResult();
+        }
     }
 
     protected override Task HandleChallengeAsync(AuthenticationProperties properties)

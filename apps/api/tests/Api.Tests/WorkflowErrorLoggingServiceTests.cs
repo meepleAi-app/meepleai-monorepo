@@ -304,8 +304,8 @@ public class WorkflowErrorLoggingServiceTests : IDisposable
 
         // Assert
         result.Should().NotBeNull();
-        result.Id.Should().BeEquivalentTo(errorId);
-        result.WorkflowId.Should().BeEquivalentTo("workflow-1");
+        result.Id.Should().Be(errorId);
+        result.WorkflowId.Should().Be("workflow-1");
     }
 
     [Fact]

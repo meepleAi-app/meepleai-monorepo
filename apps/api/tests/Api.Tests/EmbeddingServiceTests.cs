@@ -523,7 +523,7 @@ public class EmbeddingServiceTests
 
         // Act & Assert
         var act = () => new EmbeddingService(httpClientFactoryMock.Object, configWithUnsupportedProvider.Object, _loggerMock.Object);
-        var exception = act.Should().Throw<InvalidOperationException>().Subject;
+        var exception = act.Should().Throw<InvalidOperationException>();
         exception.Which.Message.Should().Contain("Unsupported embedding provider: azure");
         exception.Which.Message.Should().Contain("Use 'ollama' or 'openai'");
     }
@@ -548,7 +548,7 @@ public class EmbeddingServiceTests
 
         // Act & Assert
         var act = () => new EmbeddingService(httpClientFactoryMock.Object, configWithoutApiKey.Object, _loggerMock.Object);
-        var exception = act.Should().Throw<InvalidOperationException>().Subject;
+        var exception = act.Should().Throw<InvalidOperationException>();
         exception.Which.Message.Should().Contain("OPENAI_API_KEY not configured");
     }
 

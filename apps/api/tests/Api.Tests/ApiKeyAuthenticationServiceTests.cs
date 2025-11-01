@@ -432,7 +432,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await service.GenerateApiKeyAsync("", "Test Key", new[] { "read" });
-        var exception = await act.Should().ThrowAsync<ArgumentException>().Subject;
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
         exception.Which.Message.Should().Be("User ID is required (Parameter 'userId')");
     }
 
@@ -451,7 +451,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await service.GenerateApiKeyAsync("user-id", "", new[] { "read" });
-        var exception = await act.Should().ThrowAsync<ArgumentException>().Subject;
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
         exception.Which.Message.Should().Be("Key name is required (Parameter 'keyName')");
     }
 
@@ -470,7 +470,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await service.GenerateApiKeyAsync("user-id", "Test Key", new[] { "read" }, environment: "production");
-        var exception = await act.Should().ThrowAsync<ArgumentException>().Subject;
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
         exception.Which.Message.Should().Be("Environment must be 'live' or 'test' (Parameter 'environment')");
     }
 
@@ -489,7 +489,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await service.GenerateApiKeyAsync("non-existent-user-id", "Test Key", new[] { "read" });
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>().Subject;
+        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
         exception.Which.Message.Should().StartWith("User not found:");
     }
 

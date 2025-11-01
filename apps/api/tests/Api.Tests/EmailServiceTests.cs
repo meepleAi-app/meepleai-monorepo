@@ -285,7 +285,7 @@ public class EmailServiceTests
         var exception = await act.Should().ThrowAsync<InvalidOperationException>();
 
         // Assert - Error is from SMTP, not from URL encoding
-        exception.InnerException.Should().NotBeNull();
+        exception.Which.InnerException.Should().NotBeNull();
 
         // Verify error was logged
         _mockLogger.Verify(
@@ -348,7 +348,7 @@ public class EmailServiceTests
 
         // Assert
         exception.Which.Message.Should().Be("Failed to send password reset email");
-        exception.InnerException.Should().NotBeNull(); // Should contain the original SMTP exception
+        exception.Which.InnerException.Should().NotBeNull(); // Should contain the original SMTP exception
 
         // Verify error was logged with exception details
         _mockLogger.Verify(

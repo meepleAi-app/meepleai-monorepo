@@ -5,12 +5,16 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Text.Encodings.Web;
+using System.Threading.Tasks;
 using Api.Infrastructure;
 using Api.Models;
 using Api.Services;
 using Api.Services.Qdrant;
 using Api.Tests.Helpers;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +23,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using StackExchange.Redis;
 
@@ -33,6 +38,49 @@ namespace Api.Tests;
 /// - Provides production parity (same database as production)
 /// - Performance: ~5s container startup (once) + <1ms per test (transaction rollback)
 /// </summary>
+/// <summary>
+/// Minimal authentication handler for tests that does NOT authenticate requests
+/// but provides a DefaultChallengeScheme to prevent InvalidOperationException.
+/// This handler never authenticates - it exists solely to handle authorization challenges.
+/// </summary>
+internal class TestAuthenticationHandler : Microsoft.AspNetCore.Authentication.AuthenticationHandler<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions>
+{
+    public TestAuthenticationHandler(
+        IOptionsMonitor<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions> options,
+        ILoggerFactory logger,
+        UrlEncoder encoder)
+        : base(options, logger, encoder)
+    {
+    }
+
+    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    {
+        // If SessionAuthenticationMiddleware already authenticated the user, preserve it
+        // Otherwise, return NoResult to allow other handlers to process
+        if (Context.User?.Identity?.IsAuthenticated == true)
+        {
+            var ticket = new AuthenticationTicket(Context.User, Scheme.Name);
+            return Task.FromResult(AuthenticateResult.Success(ticket));
+        }
+
+        return Task.FromResult(AuthenticateResult.NoResult());
+    }
+
+    protected override Task HandleChallengeAsync(AuthenticationProperties properties)
+    {
+        // Return 401 without any redirect or additional processing
+        Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return Task.CompletedTask;
+    }
+
+    protected override Task HandleForbiddenAsync(AuthenticationProperties properties)
+    {
+        // Return 403 without any redirect
+        Response.StatusCode = StatusCodes.Status403Forbidden;
+        return Task.CompletedTask;
+    }
+}
+
 public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
 {
     /// <summary>
@@ -55,6 +103,20 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
 
         builder.ConfigureTestServices(services =>
         {
+            // Issue #619: Configure minimal authentication scheme for tests
+            // Production sets DefaultScheme/DefaultChallengeScheme to null, but this causes
+            // InvalidOperationException when .RequireAuthorization() endpoints try to challenge
+            // Solution: Use TestAuthenticationHandler scheme that:
+            // - Provides DefaultChallengeScheme to prevent 500 errors
+            // - Preserves authentication set by SessionAuthenticationMiddleware
+            // - Returns 401 without redirects for API endpoints
+            services.AddAuthentication(options =>
+            {
+                options.DefaultScheme = "Test";
+                options.DefaultChallengeScheme = "Test";
+            })
+            .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>("Test", _ => { });
+
             // Remove real services
             // IMPORTANT: Remove ALL DbContext-related services to prevent dual database provider registration
             // EF Core registers multiple services when AddDbContext is called, and we need to remove all of them

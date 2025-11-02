@@ -202,7 +202,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
 
         // Act & Assert: Security validation happens before file existence check
         var act = async () => _service.LoadDatasetAsync(invalidPath);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<SecurityException>();
     }
 
     [Fact]
@@ -216,7 +216,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         {
             // Act & Assert
             var act = async () => _service.LoadDatasetAsync(malformedPath);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<JsonException>();
         }
         finally
         {
@@ -430,7 +430,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
                 "test-template-id",
                 nonExistentVersionId,
                 _testDatasetPath);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
 
         exception.Which.Message.Should().Contain("not found");
     }

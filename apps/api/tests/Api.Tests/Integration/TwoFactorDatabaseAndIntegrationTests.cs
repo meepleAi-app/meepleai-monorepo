@@ -23,9 +23,11 @@ namespace Api.Tests.Integration;
 /// TEST-574: Database transaction safety + E2E integration + performance tests
 /// P1: Tests 58-61 (database transactions)
 /// P2: Tests 48-57 (E2E workflows) + Tests 62-64 (performance)
+///
+/// TEST-636: Uses TransactionalTestBase for perfect test isolation and no serialization errors
 /// </summary>
 [Collection("Postgres Integration Tests")]
-public class TwoFactorDatabaseAndIntegrationTests : IntegrationTestBase
+public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
 {
     private readonly ITestOutputHelper _output;
 

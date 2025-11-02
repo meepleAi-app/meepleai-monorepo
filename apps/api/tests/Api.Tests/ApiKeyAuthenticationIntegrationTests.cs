@@ -16,6 +16,10 @@ namespace Api.Tests;
 /// Integration tests for API key authentication via X-API-Key header.
 /// Tests the complete authentication flow through middleware and endpoints.
 /// Related to Issue #370 - API-01: API Foundation and Authentication Infrastructure.
+///
+/// TEST-640: Kept on IntegrationTestBase (not migrated)
+/// Reason: Tests HTTP middleware end-to-end, requires seed data visibility across DbContext instances
+/// TransactionalTestBase incompatible with Factory.CreateHttpsClient() pattern
 /// </summary>
 [Collection("Postgres Integration Tests")]
 public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase

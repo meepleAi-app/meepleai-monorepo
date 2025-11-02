@@ -231,6 +231,7 @@ group.MapGet("/admin/quality/low-responses", async (
 
     return Results.Ok(new LowQualityResponsesResult(totalCount, responses));
 })
+.RequireAuthorization()
 .WithTags("Admin", "Quality")
 .Produces<LowQualityResponsesResult>(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status401Unauthorized)
@@ -256,6 +257,7 @@ group.MapGet("/admin/quality/report", async (
     var report = await reportService.GenerateReportAsync(startDate, endDate);
     return Results.Ok(report);
 })
+.RequireAuthorization()
 .WithTags("Admin", "Quality")
 .Produces<QualityReport>(StatusCodes.Status200OK)
 .Produces(StatusCodes.Status401Unauthorized)
@@ -414,14 +416,8 @@ group.MapPost("/admin/n8n/{configId}/test", async (string configId, HttpContext 
 group.MapGet("/n8n/templates", async (
     string? category,
     N8nTemplateService templateService,
-    HttpContext context,
     CancellationToken ct) =>
 {
-    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-    {
-        return Results.Json(new { error = "unauthorized" }, statusCode: 401);
-    }
-
     var templates = await templateService.GetTemplatesAsync(category, ct);
     return Results.Ok(templates);
 })
@@ -433,14 +429,8 @@ group.MapGet("/n8n/templates", async (
 group.MapGet("/n8n/templates/{id}", async (
     string id,
     N8nTemplateService templateService,
-    HttpContext context,
     CancellationToken ct) =>
 {
-    if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-    {
-        return Results.Json(new { error = "unauthorized" }, statusCode: 401);
-    }
-
     var template = await templateService.GetTemplateAsync(id, ct);
     if (template == null)
     {
@@ -462,9 +452,10 @@ group.MapPost("/n8n/templates/{id}/import", async (
     ILogger<Program> logger,
     CancellationToken ct) =>
 {
+    // Extract userId from authenticated session
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
-        return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+        return Results.Problem("Session not found", statusCode: StatusCodes.Status500InternalServerError);
     }
 
     try
@@ -498,13 +489,14 @@ group.MapPost("/n8n/templates/validate", async (
     HttpContext context,
     CancellationToken ct) =>
 {
+    // Extract session for role check (RequireAuthorization ensures authentication)
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
-        return Results.Json(new { error = "unauthorized" }, statusCode: 401);
+        return Results.Problem("Session not found", statusCode: StatusCodes.Status500InternalServerError);
     }
 
     // Only admins can validate templates
-    if (session.User.Role != "Admin")
+    if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.Forbid();
     }

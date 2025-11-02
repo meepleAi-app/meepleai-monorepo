@@ -272,9 +272,11 @@ group.MapDelete("/chats/{chatId:guid}/messages/{messageId:guid}",
     .WithTags("Chat");
 
 // CHAT-05: Export chat endpoint
-group.MapPost("/chats/{chatId:guid}/export", async (
+group.MapGet("/chats/{chatId:guid}/export", async (
     Guid chatId,
-    ExportChatRequest request,
+    string format,
+    DateTime? dateFrom,
+    DateTime? dateTo,
     IChatExportService exportService,
     IFeatureFlagService featureFlags,
     HttpContext context,
@@ -299,9 +301,9 @@ group.MapPost("/chats/{chatId:guid}/export", async (
         var result = await exportService.ExportChatAsync(
             chatId,
             session.User.Id,
-            request.Format,
-            request.DateFrom,
-            request.DateTo,
+            format,
+            dateFrom,
+            dateTo,
             ct);
 
         if (!result.Success)
@@ -318,7 +320,7 @@ group.MapPost("/chats/{chatId:guid}/export", async (
         }
 
         logger.LogInformation("User {UserId} exported chat {ChatId} in {Format} format",
-            session.User.Id, chatId, request.Format);
+            session.User.Id, chatId, format);
 
         // Return stream with proper content disposition for download
         return Results.Stream(

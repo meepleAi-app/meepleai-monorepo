@@ -10,8 +10,12 @@ using Xunit;
 
 namespace Api.Tests.Integration;
 
+/// <summary>
+/// TEST-640: Migrated to TransactionalTestBase for perfect test isolation
+/// Eliminates potential serialization errors and improves cleanup performance
+/// </summary>
 [Collection("Postgres Integration Tests")]
-public class TwoFactorAuthEndpointsTests : IntegrationTestBase
+public class TwoFactorAuthEndpointsTests : TransactionalTestBase
 {
     public TwoFactorAuthEndpointsTests(PostgresCollectionFixture fixture) : base(fixture)
     {

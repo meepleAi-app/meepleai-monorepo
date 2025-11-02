@@ -25,9 +25,12 @@ namespace Api.Tests;
 /// As an administrator
 /// I want to manage user sessions via API endpoints
 /// So that I can monitor, revoke, and control user access to the system
+///
+/// TEST-640: Migrated to TransactionalTestBase for perfect test isolation
+/// Eliminates serialization errors on user_sessions table during parallel execution
 /// </summary>
 [Collection("Postgres Integration Tests")]
-public class SessionManagementEndpointsTests : IntegrationTestBase
+public class SessionManagementEndpointsTests : TransactionalTestBase
 {
     private readonly ITestOutputHelper _output;
 

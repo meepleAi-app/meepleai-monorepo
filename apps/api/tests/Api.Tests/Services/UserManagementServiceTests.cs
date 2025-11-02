@@ -428,7 +428,7 @@ public class UserManagementServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => _service.UpdateUserAsync(nonExistentId, request);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<KeyNotFoundException>();
     }
 
     [Fact]
@@ -520,7 +520,7 @@ public class UserManagementServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => _service.DeleteUserAsync(nonExistentId, requestingUserId);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<KeyNotFoundException>();
     }
 
     [Fact]

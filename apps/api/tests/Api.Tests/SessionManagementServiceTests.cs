@@ -155,7 +155,7 @@ public class SessionManagementServiceTests : IDisposable
 
         // When/Then: ArgumentException is thrown
         var act = async () => await service.GetUserSessionsAsync(userId!);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
         exception.Which.Message.Should().Contain("User ID cannot be null or empty");
     }
 
@@ -246,7 +246,7 @@ public class SessionManagementServiceTests : IDisposable
 
         // When/Then: ArgumentException is thrown
         var act = async () => await service.GetAllSessionsAsync(limit: limit);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
         exception.Which.Message.Should().Contain("Limit must be between 1 and 1000");
     }
 
@@ -368,7 +368,7 @@ public class SessionManagementServiceTests : IDisposable
 
         // When/Then: ArgumentException is thrown
         var act = async () => await service.RevokeSessionAsync(sessionId!);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
         exception.Which.Message.Should().Contain("Session ID cannot be null or empty");
     }
 
@@ -402,7 +402,7 @@ public class SessionManagementServiceTests : IDisposable
         // When: Revoking the session (cache will fail)
         // Note: In production this would be caught and logged, but for now it will throw
         var act = async () => service.RevokeSessionAsync("session1");
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<ArgumentException>();
 
         // Then: Session is still revoked in database
         var revokedSession = await db.UserSessions.FindAsync("session1");
@@ -502,7 +502,7 @@ public class SessionManagementServiceTests : IDisposable
 
         // When/Then: ArgumentException is thrown
         var act = async () => await service.RevokeAllUserSessionsAsync(userId!);
-        var exception = await act.Should().ThrowAsync<InvalidOperationException>();
+        var exception = await act.Should().ThrowAsync<ArgumentException>();
         exception.Which.Message.Should().Contain("User ID cannot be null or empty");
     }
 

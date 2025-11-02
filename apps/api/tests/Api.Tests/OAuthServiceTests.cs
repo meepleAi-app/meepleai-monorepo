@@ -121,7 +121,7 @@ public class OAuthServiceTests : IDisposable
     {
         // Act & Assert
         var act = async () => _service.GetAuthorizationUrlAsync("unsupported", "state");
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]
@@ -273,7 +273,7 @@ public class OAuthServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => _service.HandleCallbackAsync(provider, code, state);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<UnauthorizedAccessException>();
     }
 
     [Fact]

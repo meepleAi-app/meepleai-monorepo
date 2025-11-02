@@ -147,10 +147,19 @@ public class SessionManagementService : ISessionManagementService
         session.RevokedAt = now;
         await _db.SaveChangesAsync(ct);
 
-        // Invalidate cache if present
+        // Invalidate cache if present (resilient to cache failures)
         if (_sessionCache != null)
         {
-            await _sessionCache.InvalidateAsync(session.TokenHash, ct);
+            try
+            {
+                await _sessionCache.InvalidateAsync(session.TokenHash, ct);
+            }
+            catch (Exception ex)
+            {
+                // RESILIENCE: Cache failures should not prevent session revocation
+                // Database revocation already succeeded, so log warning and continue
+                _logger.LogWarning(ex, "Failed to invalidate cache for session {SessionId}, but database revocation succeeded", sessionId);
+            }
         }
 
         _logger.LogInformation("Session {SessionId} for user {UserId} revoked successfully", sessionId, session.UserId);
@@ -180,10 +189,18 @@ public class SessionManagementService : ISessionManagementService
         {
             session.RevokedAt = now;
 
-            // Invalidate cache if present
+            // Invalidate cache if present (resilient to cache failures)
             if (_sessionCache != null)
             {
-                await _sessionCache.InvalidateAsync(session.TokenHash, ct);
+                try
+                {
+                    await _sessionCache.InvalidateAsync(session.TokenHash, ct);
+                }
+                catch (Exception ex)
+                {
+                    // RESILIENCE: Cache failures should not prevent batch session revocation
+                    _logger.LogWarning(ex, "Failed to invalidate cache for session {SessionId}, continuing batch revocation", session.Id);
+                }
             }
         }
 

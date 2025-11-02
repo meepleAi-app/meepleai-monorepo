@@ -399,14 +399,18 @@ public class SessionManagementServiceTests : IDisposable
         db.UserSessions.Add(session);
         await db.SaveChangesAsync();
 
-        // When: Revoking the session (cache will fail)
-        // Note: In production this would be caught and logged, but for now it will throw
-        var act = async () => service.RevokeSessionAsync("session1");
-        await act.Should().ThrowAsync<ArgumentException>();
+        // When: Revoking the session (cache will fail but revocation should succeed)
+        var result = await service.RevokeSessionAsync("session1");
 
-        // Then: Session is still revoked in database
+        // Then: Revocation succeeds despite cache failure
+        result.Should().BeTrue();
+
+        // And: Session is revoked in database
         var revokedSession = await db.UserSessions.FindAsync("session1");
         revokedSession!.RevokedAt.Should().NotBeNull();
+
+        // And: Cache invalidation was attempted
+        mockCache.Verify(c => c.InvalidateAsync("hash123", default), Times.Once);
     }
 
     /// <summary>

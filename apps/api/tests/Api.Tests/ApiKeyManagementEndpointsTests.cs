@@ -18,9 +18,12 @@ namespace Api.Tests;
 /// Integration tests for API key management endpoints.
 /// Tests the complete flow through HTTP endpoints, middleware, and services.
 /// Related to Issue #259 - API-04: API Key Management and Quota System.
+///
+/// TEST-640: Migrated to TransactionalTestBase for perfect test isolation
+/// Eliminates serialization errors on api_keys table during parallel execution
 /// </summary>
 [Collection("Postgres Integration Tests")]
-public class ApiKeyManagementEndpointsTests : IntegrationTestBase
+public class ApiKeyManagementEndpointsTests : TransactionalTestBase
 {
     private readonly ITestOutputHelper _output;
 

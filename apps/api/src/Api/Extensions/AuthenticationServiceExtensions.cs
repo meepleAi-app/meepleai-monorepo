@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Authentication;
 using Api.Services;
 using Api.Configuration;
+using Api.Authentication;
 
 namespace Api.Extensions;
 
@@ -17,17 +19,22 @@ public static class AuthenticationServiceExtensions
         services.AddRateLimitServices();
         services.AddAlertingServices(configuration);
 
-        // Add ASP.NET Core Authentication services (required for UseAuthentication middleware)
-        // This registers IAuthenticationSchemeProvider and other authentication services
-        // Note: We use a default authentication scheme but session authentication is handled
-        // by custom SessionAuthenticationMiddleware which populates HttpContext.Items
+        // TEST-650 (#659): Add ASP.NET Core Authentication with SessionAuthenticationHandler
+        // This fixes 500 errors when .RequireAuthorization() is called on endpoints.
+        //
+        // Architecture:
+        // - SessionAuthenticationMiddleware: Runs first, populates HttpContext.Items[ActiveSession]
+        // - SessionAuthenticationHandler: Integrates with ASP.NET auth system, provides proper 401/403
+        // - Both use the same AuthService.ValidateSessionAsync() for consistency
+        //
+        // Before: DefaultChallengeScheme = null → InvalidOperationException → 500 error
+        // After: SessionAuthenticationHandler → proper 401 Unauthorized / 403 Forbidden
         services.AddAuthentication(options =>
         {
-            // No default scheme - authentication is handled by SessionAuthenticationMiddleware
-            // and ApiKeyAuthenticationMiddleware via custom middleware, not ASP.NET Core schemes
-            options.DefaultScheme = null;
-            options.DefaultChallengeScheme = null;
-        });
+            options.DefaultScheme = "SessionCookie";
+            options.DefaultChallengeScheme = "SessionCookie";
+        })
+        .AddScheme<AuthenticationSchemeOptions, SessionAuthenticationHandler>("SessionCookie", _ => { });
 
         // Add ASP.NET Core Authorization services (required for UseAuthorization middleware)
         services.AddAuthorization();

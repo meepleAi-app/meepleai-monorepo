@@ -338,7 +338,7 @@ test.describe('Setup Guide Page', () => {
       await page.waitForSelector('text=Progress:', { timeout: 15000 });
 
       // Look for AI confidence (if present)
-      const confidenceText = page.locator('text=/AI Confidence: \\d+%/'));
+      const confidenceText = page.locator('text=/AI Confidence: \\d+%/');
 
       // May or may not be visible depending on API response
       const isVisible = await confidenceText.isVisible().catch(() => false);

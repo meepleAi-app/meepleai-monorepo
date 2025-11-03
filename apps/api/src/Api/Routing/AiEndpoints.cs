@@ -275,19 +275,6 @@ group.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context,
         return Results.BadRequest(new { error = "gameId is required" });
     }
 
-    // TEST-650: Validate query parameter to prevent empty/null queries
-    if (string.IsNullOrWhiteSpace(req.query))
-    {
-        return Results.BadRequest(new { error = "query is required" });
-    }
-
-    // TEST-650: Validate game existence
-    var gameExists = await dbContext.Games.AnyAsync(g => g.Id == req.gameId, ct);
-    if (!gameExists)
-    {
-        return Results.NotFound(new { error = "Game not found", gameId = req.gameId });
-    }
-
     var startTime = DateTime.UtcNow;
     logger.LogInformation("Explain request from user {UserId} for game {GameId}: {Topic}",
         session.User.Id, req.gameId, req.topic);
@@ -768,19 +755,6 @@ group.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context
     if (string.IsNullOrWhiteSpace(req.gameId))
     {
         return Results.BadRequest(new { error = "gameId is required" });
-    }
-
-    // TEST-650: Validate query parameter to prevent empty/null queries
-    if (string.IsNullOrWhiteSpace(req.query))
-    {
-        return Results.BadRequest(new { error = "query is required" });
-    }
-
-    // TEST-650: Validate game existence
-    var gameExists = await dbContext.Games.AnyAsync(g => g.Id == req.gameId, ct);
-    if (!gameExists)
-    {
-        return Results.NotFound(new { error = "Game not found", gameId = req.gameId });
     }
 
     var startTime = DateTime.UtcNow;

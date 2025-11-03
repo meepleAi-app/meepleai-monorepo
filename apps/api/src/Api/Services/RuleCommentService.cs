@@ -129,7 +129,13 @@ public partial class RuleCommentService : IRuleCommentService
             .Include(c => c.Replies)
                 .ThenInclude(r => r.User)
             .Include(c => c.Replies)
+                .ThenInclude(r => r.Replies) // Nested replies (second level)
+                    .ThenInclude(rr => rr.User)
+            .Include(c => c.Replies)
                 .ThenInclude(r => r.ResolvedByUser)
+            .Include(c => c.Replies)
+                .ThenInclude(r => r.Replies) // Nested replies (second level)
+                    .ThenInclude(rr => rr.ResolvedByUser)
             .Include(c => c.ResolvedByUser)
             .AsNoTracking()
             .Where(c => c.GameId == gameId && c.Version == version && c.ParentCommentId == null);

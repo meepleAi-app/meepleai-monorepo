@@ -382,7 +382,7 @@ group.MapPost("/comments/{commentId}/replies", async (
         logger.LogInformation("Reply {ReplyId} created successfully", reply.Id);
         return Results.Created($"/api/v1/comments/{reply.Id}", reply);
     }
-    catch (KeyNotFoundException ex)
+    catch (NotFoundException ex)
     {
         logger.LogWarning("Comment {CommentId} not found for reply", commentId);
         return Results.NotFound(new { error = ex.Message });

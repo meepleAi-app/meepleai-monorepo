@@ -633,6 +633,31 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
             db.SystemConfigurations.Add(pdfUploadFlag);
         }
 
+        // Seed Features.ChatExport flag (TEST-650: Fix 403 Forbidden in ChatExportEndpointTests)
+        if (!db.SystemConfigurations.Any(c => c.Key == "Features.ChatExport"))
+        {
+            var chatExportFlag = new Api.Infrastructure.Entities.SystemConfigurationEntity
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                Key = "Features.ChatExport",
+                Value = "true",
+                ValueType = "Boolean",
+                Description = "Enable chat export for integration tests",
+                Category = "FeatureFlags",
+                IsActive = true,
+                RequiresRestart = false,
+                Environment = "All",
+                Version = 1,
+                CreatedAt = now,
+                UpdatedAt = now,
+                CreatedByUserId = adminUser.Id,
+                UpdatedByUserId = adminUser.Id,
+                LastToggledAt = now
+            };
+
+            db.SystemConfigurations.Add(chatExportFlag);
+        }
+
         // Seed demo rule specs
         var ticTacToeRuleSpec = new Api.Infrastructure.Entities.RuleSpecEntity
         {

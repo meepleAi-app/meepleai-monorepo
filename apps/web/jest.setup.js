@@ -305,6 +305,14 @@ if (typeof global.FileReader === 'undefined' || !global.FileReader.prototype.rea
 }
 
 beforeEach(() => {
+// Mock DOM APIs for TipTap/ProseMirror (TEST-633)
+if (typeof Range.prototype.getClientRects === 'undefined') {
+  Range.prototype.getClientRects = jest.fn().mockReturnValue([{ bottom: 0, height: 0, left: 0, right: 0, top: 0, width: 0 }]);
+}
+if (typeof Range.prototype.getBoundingClientRect === 'undefined') {
+  Range.prototype.getBoundingClientRect = jest.fn().mockReturnValue({ bottom: 0, height: 0, left: 0, right: 0, top: 0, width: 0, x: 0, y: 0, toJSON: () => ({}) });
+}
+
   const state = typeof expect !== 'undefined' ? expect.getState?.() : undefined;
   if (state?.testPath?.includes('src/pages/__tests__/admin.test.tsx')) {
     if (!process.env.NEXT_PUBLIC_API_BASE) {

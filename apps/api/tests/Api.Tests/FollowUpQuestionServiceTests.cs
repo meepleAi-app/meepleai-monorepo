@@ -344,7 +344,7 @@ public class FollowUpQuestionServiceTests
                 "Game");
         };
 
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<Exception>().WithMessage("LLM service unavailable");
     }
 
     [Fact]

@@ -429,7 +429,9 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         // Then: AI message at seq 1 is invalidated, returns 1
         invalidatedCount.Should().Be(1);
 
+        // Reload entity from database to get updated state
         var invalidatedMessage = await _context.ChatLogs.FindAsync(aiMessage.Id);
+        await _context.Entry(invalidatedMessage!).ReloadAsync();
         invalidatedMessage.Should().NotBeNull();
         invalidatedMessage!.IsInvalidated.Should().BeTrue();
     }
@@ -479,10 +481,13 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         // Then: Only AI message is invalidated (count = 1)
         invalidatedCount.Should().Be(1);
 
+        // Reload entities from database to get updated state
         var invalidatedAiMessage = await _context.ChatLogs.FindAsync(aiMessage.Id);
+        await _context.Entry(invalidatedAiMessage!).ReloadAsync();
         invalidatedAiMessage!.IsInvalidated.Should().BeTrue();
 
         var userMessage = await _context.ChatLogs.FindAsync(userMessage2.Id);
+        await _context.Entry(userMessage!).ReloadAsync();
         userMessage!.IsInvalidated.Should().BeFalse(); // User message NOT invalidated
     }
 

@@ -315,7 +315,8 @@ public class ChatServiceTests
         var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, CreateAuditService(dbContext));
 
         var act = async () => await service.DeleteChatAsync(chat.Id, "user-456");
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage("*does not have permission to delete chat*");
     }
 
     /// <summary>

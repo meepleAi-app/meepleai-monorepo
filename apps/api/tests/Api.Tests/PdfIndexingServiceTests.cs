@@ -43,6 +43,12 @@ public class PdfIndexingServiceTests : IDisposable
         _embeddingServiceMock = new Mock<IEmbeddingService>();
         _qdrantServiceMock = new Mock<IQdrantService>();
 
+        // Setup embedding service default behavior
+        _embeddingServiceMock.Setup(x => x.GetModelName())
+            .Returns("openai/text-embedding-3-small");
+        _embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions())
+            .Returns(1536);
+
         _service = new PdfIndexingService(
             _db,
             _chunkingServiceMock.Object,

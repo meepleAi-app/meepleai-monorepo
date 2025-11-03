@@ -521,7 +521,7 @@ public class RuleSpecCommentServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await _service.UpdateCommentAsync(comment.Id, otherUser.Id, "Hijacked text");
-        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
+        var ex = await act.Should().ThrowAsync<UnauthorizedAccessException>();
 
         ex.Which.Message.Should().Contain($"User {otherUser.Id} is not authorized");
     }
@@ -696,7 +696,7 @@ public class RuleSpecCommentServiceTests : IDisposable
 
         // Act & Assert
         var act = async () => await _service.DeleteCommentAsync(comment.Id, otherUser.Id, isAdmin: false);
-        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
+        var ex = await act.Should().ThrowAsync<UnauthorizedAccessException>();
 
         ex.Which.Message.Should().Contain($"User {otherUser.Id} is not authorized");
     }

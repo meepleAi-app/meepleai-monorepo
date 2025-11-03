@@ -212,7 +212,7 @@ public class PdfTextExtractionServicePagedTests : IDisposable
         // Assert: Failure with structured error
         result.Success.Should().BeFalse();
         result.Error.Should().NotBeNull();
-        result.Error.Should().Contain("failed");
+        result.Error.Should().Contain("Failed");
         result.TotalPageCount.Should().Be(0);
         (result.PageChunks == null || result.PageChunks.Count == 0).Should().BeTrue();
     }

@@ -138,7 +138,8 @@ public class CacheWarmingServiceTests : IDisposable
         using var helper = new BackgroundServiceTestHelper<CacheWarmingService>(
             service,
             _timeProvider,
-            timeout: TimeSpan.FromSeconds(5)
+            timeout: TimeSpan.FromSeconds(5),
+            processingDelayMs: 300 // Increased to allow cache warming loop completion
         );
 
         await helper.StartAsync();
@@ -189,7 +190,8 @@ public class CacheWarmingServiceTests : IDisposable
         using var helper = new BackgroundServiceTestHelper<CacheWarmingService>(
             service,
             _timeProvider,
-            timeout: TimeSpan.FromSeconds(10)
+            timeout: TimeSpan.FromSeconds(10),
+            processingDelayMs: 300 // Increased to allow cache warming loop completion
         );
 
         await helper.StartAsync();
@@ -258,7 +260,8 @@ public class CacheWarmingServiceTests : IDisposable
         using var helper = new BackgroundServiceTestHelper<CacheWarmingService>(
             service,
             _timeProvider,
-            timeout: TimeSpan.FromSeconds(10)
+            timeout: TimeSpan.FromSeconds(10),
+            processingDelayMs: 300 // Increased to allow cache warming loop completion
         );
 
         await helper.StartAsync();
@@ -340,7 +343,8 @@ public class CacheWarmingServiceTests : IDisposable
         using var helper = new BackgroundServiceTestHelper<CacheWarmingService>(
             service,
             _timeProvider,
-            timeout: TimeSpan.FromSeconds(5)
+            timeout: TimeSpan.FromSeconds(5),
+            processingDelayMs: 300 // Increased to allow cache warming loop completion
         );
 
         await helper.StartAsync();
@@ -427,7 +431,8 @@ public class CacheWarmingServiceTests : IDisposable
         using var helper = new BackgroundServiceTestHelper<CacheWarmingService>(
             service,
             _timeProvider,
-            timeout: TimeSpan.FromSeconds(5)
+            timeout: TimeSpan.FromSeconds(5),
+            processingDelayMs: 300 // Increased to allow cache warming loop completion
         );
 
         await helper.StartAsync();

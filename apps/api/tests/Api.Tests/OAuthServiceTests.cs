@@ -249,7 +249,7 @@ public class OAuthServiceTests : IDisposable
         await _service.StoreStateAsync(state);
 
         MockSuccessfulTokenExchange();
-        MockSuccessfulUserInfoRetrieval("github", "gh-123", "existing@example.com", "GitHub User");
+        MockSuccessfulUserInfoRetrieval("github", "123456789", "existing@example.com", "GitHub User");
 
         // Act
         var result = await _service.HandleCallbackAsync(provider, code, state);

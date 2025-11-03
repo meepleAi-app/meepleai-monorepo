@@ -28,8 +28,20 @@ public class N8nTemplateService
         _logger = logger;
 
         // Templates directory relative to project root
+        // During test execution, this resolves to bin/infra/n8n/templates
+        // During runtime, this resolves to project root infra/n8n/templates
         var baseDir = Directory.GetCurrentDirectory();
-        _templatesPath = Path.Combine(baseDir, "..", "..", "infra", "n8n", "templates");
+
+        // Try multiple paths to find templates directory
+        var possiblePaths = new[]
+        {
+            Path.Combine(baseDir, "infra", "n8n", "templates"),  // At root (runtime)
+            Path.Combine(baseDir, "..", "..", "..", "..", "infra", "n8n", "templates"),  // From bin/Debug/net9.0
+            Path.Combine(baseDir, "..", "..", "infra", "n8n", "templates"),  // From bin
+        };
+
+        _templatesPath = possiblePaths.FirstOrDefault(p => Directory.Exists(p))
+            ?? possiblePaths[0];  // Default to first path if none exist
 
         // Ensure templates directory exists
         if (!Directory.Exists(_templatesPath))
@@ -37,6 +49,8 @@ public class N8nTemplateService
             Directory.CreateDirectory(_templatesPath);
             _logger.LogInformation("Created templates directory at {Path}", _templatesPath);
         }
+
+        _logger.LogInformation("N8n templates directory resolved to: {Path}", Path.GetFullPath(_templatesPath));
     }
 
     /// <summary>

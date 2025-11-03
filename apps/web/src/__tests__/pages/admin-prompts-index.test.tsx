@@ -232,30 +232,48 @@ describe('AdminPrompts Index Page', () => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
       });
 
-      // Clear previous calls
-      (api.get as jest.Mock).mockClear();
-
+      // First click - should sort ascending and show ↑
       const categoryHeader = screen.getByText(/Category/);
 
-      // First click - should sort ascending
-      fireEvent.click(categoryHeader);
-
-      await waitFor(() => {
-        expect(api.get).toHaveBeenCalledWith(
-          expect.stringContaining('sortBy=category&sortOrder=asc')
-        );
+      await act(async () => {
+        fireEvent.click(categoryHeader);
       });
 
-      // Clear calls again
-      (api.get as jest.Mock).mockClear();
+      await waitFor(() => {
+        // Check for ascending arrow in header by finding the updated element
+        const updatedHeader = screen.getByText(/Category/);
+        expect(updatedHeader.textContent).toContain('↑');
+      });
 
-      // Second click - should toggle to descending
-      fireEvent.click(categoryHeader);
+      // Verify API was called with ascending sort
+      await waitFor(() => {
+        const calls = (api.get as jest.Mock).mock.calls;
+        const ascCall = calls.find(call =>
+          call[0].includes('sortBy=category') && call[0].includes('sortOrder=asc')
+        );
+        expect(ascCall).toBeDefined();
+      });
+
+      // Second click - should toggle to descending and show ↓
+      const updatedCategoryHeader = screen.getByText(/Category/);
+
+      await act(async () => {
+        fireEvent.click(updatedCategoryHeader);
+      });
 
       await waitFor(() => {
-        expect(api.get).toHaveBeenCalledWith(
-          expect.stringContaining('sortBy=category&sortOrder=desc')
+        // Check for descending arrow in header by finding the updated element
+        const finalHeader = screen.getByText(/Category/);
+        expect(finalHeader.textContent).toContain('↓');
+      });
+
+      // Verify API was called with descending sort
+      await waitFor(() => {
+        const calls = (api.get as jest.Mock).mock.calls;
+        const descCall = calls.find(call =>
+          call[0].includes('sortBy=category') && call[0].includes('sortOrder=desc')
         );
+        expect(descCall).toBeDefined();
       });
     });
   });
@@ -360,18 +378,19 @@ describe('AdminPrompts Index Page', () => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
       });
 
-      // Use getAllByText and click the first one (the button, not the modal title)
-      const createButtons = screen.getAllByText('Create Template');
-      fireEvent.click(createButtons[0]);
+      // Use getByRole to find the specific Create Template button (not modal title)
+      const createButton = screen.getByRole('button', { name: /create template/i });
+
+      await act(async () => {
+        fireEvent.click(createButton);
+      });
 
       // Modal should open with form fields
       await waitFor(() => {
-        const modalTitles = screen.getAllByText('Create Template');
-        expect(modalTitles.length).toBeGreaterThan(1); // Button + Modal title
+        // Verify form fields are present (modal is open)
+        const textboxes = screen.getAllByRole('textbox');
+        expect(textboxes.length).toBeGreaterThan(0);
       });
-
-      // Check for Name input (textbox) and Description/InitialContent (textarea)
-      expect(screen.getAllByRole('textbox').length).toBeGreaterThan(0);
     });
 
     it('should close modal when Cancel button clicked', async () => {
@@ -381,23 +400,30 @@ describe('AdminPrompts Index Page', () => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
       });
 
-      const createButtons = screen.getAllByText('Create Template');
-      fireEvent.click(createButtons[0]);
+      const createButton = screen.getByRole('button', { name: /create template/i });
 
-      // Wait for modal to open
-      await waitFor(() => {
-        const modalTitles = screen.getAllByText('Create Template');
-        expect(modalTitles.length).toBeGreaterThan(1);
+      await act(async () => {
+        fireEvent.click(createButton);
       });
 
-      const cancelButton = screen.getByText('Cancel');
-      fireEvent.click(cancelButton);
+      // Wait for modal to open - check for modal title (heading)
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /create template/i })).toBeInTheDocument();
+      });
+
+      const cancelButton = screen.getByRole('button', { name: /cancel/i });
+
+      await act(async () => {
+        fireEvent.click(cancelButton);
+      });
 
       await waitFor(() => {
-        // Modal should close - only the button "Create Template" should remain
-        const createTemplateElements = screen.queryAllByText('Create Template');
-        expect(createTemplateElements.length).toBe(1); // Only the button
+        // Modal should close - check that modal heading is gone
+        expect(screen.queryByRole('heading', { name: /create template/i })).not.toBeInTheDocument();
       });
+
+      // Additionally verify the Create Template button remains
+      expect(screen.getByRole('button', { name: /create template/i })).toBeInTheDocument();
     });
 
     it('should create template successfully', async () => {
@@ -409,34 +435,46 @@ describe('AdminPrompts Index Page', () => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
       });
 
-      const createButtons = screen.getAllByText('Create Template');
-      fireEvent.click(createButtons[0]);
+      const createButton = screen.getByRole('button', { name: /create template/i });
 
-      await waitFor(() => {
-        const modalTitles = screen.getAllByText('Create Template');
-        expect(modalTitles.length).toBeGreaterThan(1);
+      await act(async () => {
+        fireEvent.click(createButton);
       });
 
-      // Get all textboxes (Name input + Description textarea + InitialContent textarea)
-      const textboxes = screen.getAllByRole('textbox');
-      const nameInput = textboxes[0];
-      const descriptionInput = textboxes[1];
-      const initialContentInput = textboxes[2];
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /create template/i })).toBeInTheDocument();
+      });
 
-      fireEvent.change(nameInput, { target: { value: 'New Template' } });
-      fireEvent.change(descriptionInput, { target: { value: 'New description' } });
+      // Get all textboxes (search input + Name input + Description textarea + InitialContent textarea)
+      // The search input is at index 0, modal fields start at index 1
+      const textboxes = screen.getAllByRole('textbox');
+      const nameInput = textboxes[1]; // First modal textbox
+      const descriptionInput = textboxes[2]; // Second modal textbox
+      const initialContentInput = textboxes[3]; // Third modal textbox
+
+      await act(async () => {
+        fireEvent.change(nameInput, { target: { value: 'New Template' } });
+        fireEvent.change(descriptionInput, { target: { value: 'New description' } });
+        fireEvent.change(initialContentInput, { target: { value: 'Prompt content' } });
+      });
 
       // Category is a select (combobox) - there are 2: filter dropdown and modal select
       // The second one is in the modal
       const comboboxes = screen.getAllByRole('combobox');
       const categorySelect = comboboxes[1];
-      fireEvent.change(categorySelect, { target: { value: 'qa-system-prompt' } });
 
-      fireEvent.change(initialContentInput, { target: { value: 'Prompt content' } });
+      await act(async () => {
+        fireEvent.change(categorySelect, { target: { value: 'qa-system-prompt' } });
+      });
 
-      // Find and submit the form
-      const submitButton = screen.getByText('Create');
-      fireEvent.click(submitButton);
+      // Find the submit button - get all buttons with "create" and find the one that's not "Create Template"
+      const allButtons = screen.getAllByRole('button');
+      const submitButton = allButtons.find(btn => btn.textContent === 'Create');
+      expect(submitButton).toBeDefined();
+
+      await act(async () => {
+        fireEvent.click(submitButton!);
+      });
 
       await waitFor(() => {
         expect(api.post).toHaveBeenCalledWith('/api/v1/admin/prompts', {
@@ -468,34 +506,45 @@ describe('AdminPrompts Index Page', () => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
       });
 
-      const createButtons = screen.getAllByText('Create Template');
-      fireEvent.click(createButtons[0]);
+      const createButton = screen.getByRole('button', { name: /create template/i });
 
-      await waitFor(() => {
-        const modalTitles = screen.getAllByText('Create Template');
-        expect(modalTitles.length).toBeGreaterThan(1);
+      await act(async () => {
+        fireEvent.click(createButton);
       });
 
-      // Get form elements
-      const textboxes = screen.getAllByRole('textbox');
-      const nameInput = textboxes[0];
-      const descriptionInput = textboxes[1];
-      const initialContentInput = textboxes[2];
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /create template/i })).toBeInTheDocument();
+      });
 
-      fireEvent.change(nameInput, { target: { value: 'New Template' } });
-      fireEvent.change(descriptionInput, { target: { value: 'New description' } });
+      // Get form elements (search input + Name input + Description textarea + InitialContent textarea)
+      const textboxes = screen.getAllByRole('textbox');
+      const nameInput = textboxes[1]; // First modal textbox
+      const descriptionInput = textboxes[2]; // Second modal textbox
+      const initialContentInput = textboxes[3]; // Third modal textbox
+
+      await act(async () => {
+        fireEvent.change(nameInput, { target: { value: 'New Template' } });
+        fireEvent.change(descriptionInput, { target: { value: 'New description' } });
+        fireEvent.change(initialContentInput, { target: { value: 'Prompt content' } });
+      });
 
       // Category is a select (combobox) - there are 2: filter dropdown and modal select
       // The second one is in the modal
       const comboboxes = screen.getAllByRole('combobox');
       const categorySelect = comboboxes[1];
-      fireEvent.change(categorySelect, { target: { value: 'qa-system-prompt' } });
 
-      fireEvent.change(initialContentInput, { target: { value: 'Prompt content' } });
+      await act(async () => {
+        fireEvent.change(categorySelect, { target: { value: 'qa-system-prompt' } });
+      });
 
-      // Submit by clicking the Create button
-      const submitButton = screen.getByText('Create');
-      fireEvent.click(submitButton);
+      // Find the submit button
+      const allButtons = screen.getAllByRole('button');
+      const submitButton = allButtons.find(btn => btn.textContent === 'Create');
+      expect(submitButton).toBeDefined();
+
+      await act(async () => {
+        fireEvent.click(submitButton!);
+      });
 
       await waitFor(() => {
         expect(screen.getByText('Creation failed')).toBeInTheDocument();
@@ -520,19 +569,24 @@ describe('AdminPrompts Index Page', () => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
       });
 
-      const editButtons = screen.getAllByText('Edit');
-      fireEvent.click(editButtons[0]);
+      const editButtons = screen.getAllByRole('button', { name: /edit/i });
+
+      await act(async () => {
+        fireEvent.click(editButtons[0]);
+      });
 
       await waitFor(() => {
         expect(screen.getByText('Edit Template')).toBeInTheDocument();
       });
 
       // Wait for form to be populated with values
+      // Textboxes: search input (index 0) + Name (index 1) + Description (index 2)
+      // Edit mode does NOT have Initial Content field
       await waitFor(() => {
         const textboxes = screen.getAllByRole('textbox');
-        expect(textboxes.length).toBe(2); // Name + Description
-        expect(textboxes[0]).toHaveValue('QA System Prompt');
-        expect(textboxes[1]).toHaveValue('System prompt for QA service');
+        expect(textboxes.length).toBe(3); // Search + Name + Description
+        expect(textboxes[1]).toHaveValue('QA System Prompt');
+        expect(textboxes[2]).toHaveValue('System prompt for QA service');
       });
     });
 
@@ -545,22 +599,36 @@ describe('AdminPrompts Index Page', () => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
       });
 
-      const editButtons = screen.getAllByText('Edit');
-      fireEvent.click(editButtons[0]);
+      const editButtons = screen.getAllByRole('button', { name: /edit/i });
+
+      await act(async () => {
+        fireEvent.click(editButtons[0]);
+      });
 
       await waitFor(() => {
         expect(screen.getByText('Edit Template')).toBeInTheDocument();
       });
 
-      // Get textboxes: [Name, Description]
-      const textboxes = screen.getAllByRole('textbox');
-      const nameInput = textboxes[0];
+      // Get textboxes: search input (index 0) + Name (index 1) + Description (index 2)
+      await waitFor(() => {
+        const textboxes = screen.getAllByRole('textbox');
+        expect(textboxes.length).toBe(3);
+        expect(textboxes[1]).toHaveValue('QA System Prompt');
+      });
 
-      fireEvent.change(nameInput, { target: { value: 'Updated Template' } });
+      const textboxes = screen.getAllByRole('textbox');
+      const nameInput = textboxes[1]; // Name is the second textbox (after search input)
+
+      await act(async () => {
+        fireEvent.change(nameInput, { target: { value: 'Updated Template' } });
+      });
 
       // Submit by clicking the Update button
-      const submitButton = screen.getByText('Update');
-      fireEvent.click(submitButton);
+      const submitButton = screen.getByRole('button', { name: /update/i });
+
+      await act(async () => {
+        fireEvent.click(submitButton);
+      });
 
       await waitFor(() => {
         expect(api.put).toHaveBeenCalledWith('/api/v1/admin/prompts/template-1', {

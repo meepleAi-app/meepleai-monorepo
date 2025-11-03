@@ -1,3 +1,4 @@
+using Api.Tests.Fixtures;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,7 +37,7 @@ public class PromptTemplateConcurrencyTests : ConfigIntegrationTestBase
         PropertyNameCaseInsensitive = true
     };
 
-    public PromptTemplateConcurrencyTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public PromptTemplateConcurrencyTests(PostgresCollectionFixture postgresFixture, WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(postgresFixture, factory)
     {
         _output = output;
     }

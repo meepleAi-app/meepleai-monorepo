@@ -215,7 +215,7 @@ public class N8nTemplateServiceTests : IDisposable
         var parameters = new Dictionary<string, string>();
 
         // Act & Assert
-        var act = async () => _service.ImportTemplateAsync("nonexistent", parameters, "user123");
+        var act = async () => await _service.ImportTemplateAsync("nonexistent", parameters, "user123");
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
@@ -235,7 +235,7 @@ public class N8nTemplateServiceTests : IDisposable
         };
 
         // Act & Assert
-        var act = async () => _service.ImportTemplateAsync("test", parameters, "user123");
+        var act = async () => await _service.ImportTemplateAsync("test", parameters, "user123");
         var ex = await act.Should().ThrowAsync<InvalidOperationException>();
 
         ex.Which.Message.Should().Contain("param1");
@@ -249,7 +249,7 @@ public class N8nTemplateServiceTests : IDisposable
         var parameters = new Dictionary<string, string>();
 
         // Act & Assert
-        var act = async () => _service.ImportTemplateAsync("test", parameters, "user123");
+        var act = async () => await _service.ImportTemplateAsync("test", parameters, "user123");
         var ex = await act.Should().ThrowAsync<InvalidOperationException>();
 
         ex.Which.Message.Should().Contain("No active n8n configuration");
@@ -382,7 +382,7 @@ public class N8nTemplateServiceTests : IDisposable
             .Returns(httpClient);
 
         // Act & Assert
-        var act = async () => _service.ImportTemplateAsync("test", new Dictionary<string, string>(), "user123");
+        var act = async () => await _service.ImportTemplateAsync("test", new Dictionary<string, string>(), "user123");
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 

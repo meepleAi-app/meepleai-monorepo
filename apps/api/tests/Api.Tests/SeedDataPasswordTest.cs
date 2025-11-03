@@ -5,20 +5,22 @@ using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;
+using Api.Tests.Fixtures;
 
 namespace Api.Tests;
 
 /// <summary>
 /// Test to verify and generate seed data password hashes
 /// </summary>
-[Collection("IntegrationTests")]
+[Collection("Postgres Integration Tests")]
 public class SeedDataPasswordTest : IClassFixture<WebApplicationFactoryFixture>
 {
     private readonly WebApplicationFactoryFixture _factory;
     private readonly ITestOutputHelper _output;
 
-    public SeedDataPasswordTest(WebApplicationFactoryFixture factory, ITestOutputHelper output)
+    public SeedDataPasswordTest(PostgresCollectionFixture postgresFixture, WebApplicationFactoryFixture factory, ITestOutputHelper output)
     {
+        factory.PostgresConnectionString = postgresFixture.ConnectionString;
         _factory = factory;
         _output = output;
     }

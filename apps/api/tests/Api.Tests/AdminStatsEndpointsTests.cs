@@ -1,3 +1,4 @@
+using Api.Tests.Fixtures;
 using System;
 using System.Net;
 using System.Net.Http;
@@ -25,7 +26,7 @@ public class AdminStatsEndpointsTests : AdminTestFixture
 {
     private readonly ITestOutputHelper _output;
 
-    public AdminStatsEndpointsTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public AdminStatsEndpointsTests(PostgresCollectionFixture postgresFixture, WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(postgresFixture, factory)
     {
         _output = output;
     }

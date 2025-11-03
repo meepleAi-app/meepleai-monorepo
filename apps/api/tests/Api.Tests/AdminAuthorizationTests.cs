@@ -1,3 +1,4 @@
+using Api.Tests.Fixtures;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -27,7 +28,7 @@ public class AdminAuthorizationTests : AdminTestFixture
 {
     private readonly ITestOutputHelper _output;
 
-    public AdminAuthorizationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public AdminAuthorizationTests(PostgresCollectionFixture postgresFixture, WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(postgresFixture, factory)
     {
         _output = output;
     }

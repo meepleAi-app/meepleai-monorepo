@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;
+using Api.Tests.Fixtures;
 
 namespace Api.Tests;
 
@@ -16,7 +17,7 @@ namespace Api.Tests;
 /// BDD Integration tests for AI-01: PDF indexing workflow
 /// Tests the complete flow: PDF upload → text extraction → chunking → embedding → Qdrant indexing
 /// </summary>
-[Collection("IntegrationTests")]
+[Collection("Postgres Integration Tests")]
 public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFixture>, IAsyncLifetime
 {
     private readonly ITestOutputHelper _output;
@@ -28,9 +29,10 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
     private string? _editorSessionToken;
     private string? _userSessionToken;
 
-    public PdfIndexingIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output)
+    public PdfIndexingIntegrationTests(PostgresCollectionFixture postgresFixture, WebApplicationFactoryFixture factory, ITestOutputHelper output)
     {
         _output = output;
+        factory.PostgresConnectionString = postgresFixture.ConnectionString;
         _factory = factory;
         _client = factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
         {

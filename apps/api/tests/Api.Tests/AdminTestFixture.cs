@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using Api.Tests.Fixtures;
 
 namespace Api.Tests;
 
@@ -32,8 +33,9 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
     private readonly List<string> _testUserIds = new();
     private readonly List<string> _testConfigIds = new();
 
-    protected AdminTestFixture(WebApplicationFactoryFixture factory)
+    protected AdminTestFixture(PostgresCollectionFixture postgresFixture, WebApplicationFactoryFixture factory)
     {
+        factory.PostgresConnectionString = postgresFixture.ConnectionString;
         Factory = factory;
     }
 

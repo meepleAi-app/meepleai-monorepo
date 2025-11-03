@@ -1,3 +1,4 @@
+using Api.Tests.Fixtures;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -19,7 +20,7 @@ public class ConfigurationMigrationTests : AdminTestFixture
 {
     private readonly ITestOutputHelper _output;
 
-    public ConfigurationMigrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public ConfigurationMigrationTests(PostgresCollectionFixture postgresFixture, WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(postgresFixture, factory)
     {
         _output = output;
     }

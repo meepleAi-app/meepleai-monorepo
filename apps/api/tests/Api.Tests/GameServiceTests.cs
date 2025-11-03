@@ -61,7 +61,7 @@ public class GameServiceTests : IDisposable
 
         var service = new GameService(dbContext);
 
-        var act = async () => service.CreateGameAsync("Another", "duplicate");
+        var act = async () => await service.CreateGameAsync("Another", "duplicate");
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
@@ -74,7 +74,7 @@ public class GameServiceTests : IDisposable
 
         var service = new GameService(dbContext);
 
-        var act = async () => service.CreateGameAsync("Existing Game", "new-id");
+        var act = async () => await service.CreateGameAsync("Existing Game", "new-id");
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 

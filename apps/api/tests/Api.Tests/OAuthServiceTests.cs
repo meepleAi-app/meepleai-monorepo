@@ -120,7 +120,7 @@ public class OAuthServiceTests : IDisposable
     public async Task GetAuthorizationUrlAsync_UnsupportedProvider_ThrowsArgumentException()
     {
         // Act & Assert
-        var act = async () => _service.GetAuthorizationUrlAsync("unsupported", "state");
+        var act = async () => await _service.GetAuthorizationUrlAsync("unsupported", "state");
         await act.Should().ThrowAsync<ArgumentException>();
     }
 
@@ -272,7 +272,7 @@ public class OAuthServiceTests : IDisposable
         var state = "invalid-state";
 
         // Act & Assert
-        var act = async () => _service.HandleCallbackAsync(provider, code, state);
+        var act = async () => await _service.HandleCallbackAsync(provider, code, state);
         await act.Should().ThrowAsync<UnauthorizedAccessException>();
     }
 
@@ -298,7 +298,7 @@ public class OAuthServiceTests : IDisposable
         var user = CreateTestUser();
 
         // Act & Assert
-        var act = async () => _service.UnlinkOAuthAccountAsync(user.Id, "google");
+        var act = async () => await _service.UnlinkOAuthAccountAsync(user.Id, "google");
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 

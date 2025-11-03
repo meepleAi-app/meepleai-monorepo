@@ -1,3 +1,4 @@
+using Api.Tests.Fixtures;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
@@ -28,7 +29,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
 {
     private readonly ITestOutputHelper _output;
 
-    public FeatureFlagEndpointIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public FeatureFlagEndpointIntegrationTests(PostgresCollectionFixture postgresFixture, WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(postgresFixture, factory)
     {
         _output = output;
     }

@@ -185,7 +185,7 @@ public class N8nConfigServiceTests : IDisposable
             new CreateN8nConfigRequest("Second", "https://two.com", "key2", null),
             CancellationToken.None);
 
-        var act = async () => service.UpdateConfigAsync(
+        var act = async () => await service.UpdateConfigAsync(
             first.Id,
             new UpdateN8nConfigRequest("Second", null, null, null, null),
             CancellationToken.None);

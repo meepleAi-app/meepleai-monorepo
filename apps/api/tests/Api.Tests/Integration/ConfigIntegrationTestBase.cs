@@ -1,3 +1,4 @@
+using Api.Tests.Fixtures;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -12,7 +13,7 @@ namespace Api.Tests.Integration;
 /// </summary>
 public abstract class ConfigIntegrationTestBase : AdminTestFixture
 {
-    protected ConfigIntegrationTestBase(WebApplicationFactoryFixture factory) : base(factory)
+    protected ConfigIntegrationTestBase(PostgresCollectionFixture postgresFixture, WebApplicationFactoryFixture factory) : base(postgresFixture, factory)
     {
     }
 

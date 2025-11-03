@@ -1,3 +1,4 @@
+using Api.Tests.Fixtures;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,7 +31,7 @@ public class RuleSpecConcurrencyTests : ConfigIntegrationTestBase
     private string _editorEmail = null!;
     private List<string> _editorCookies = null!;
 
-    public RuleSpecConcurrencyTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public RuleSpecConcurrencyTests(PostgresCollectionFixture postgresFixture, WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(postgresFixture, factory)
     {
         _output = output;
     }

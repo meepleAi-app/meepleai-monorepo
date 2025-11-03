@@ -1,35 +1,43 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Models;
+using Api.Services;
+using Api.Tests.Fixtures;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;
 
 namespace Api.Tests;
 
-public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Program>>
+[Collection("Postgres")]
+public class N8nTemplateEndpointsTests : AdminTestFixture, IClassFixture<PostgresCollectionFixture>, IClassFixture<WebApplicationFactoryFixture>
 {
     private readonly ITestOutputHelper _output;
 
-    private readonly WebApplicationFactory<Program> _factory;
-
-    public N8nTemplateEndpointsTests(WebApplicationFactory<Program> factory, ITestOutputHelper output)
+    public N8nTemplateEndpointsTests(PostgresCollectionFixture postgresFixture, WebApplicationFactoryFixture factory, ITestOutputHelper output)
+        : base(postgresFixture, factory)
     {
         _output = output;
-        _factory = factory;
     }
 
     [Fact]
     public async Task GetTemplates_ReturnsUnauthorized_WhenNotAuthenticated()
     {
         // Arrange
-        var client = _factory.CreateClient();
+        var client = CreateClientWithoutCookies();
 
         // Act
         var response = await client.GetAsync("/api/v1/n8n/templates");
@@ -42,10 +50,15 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
     public async Task GetTemplates_ReturnsTemplates_WhenAuthenticated()
     {
         // Arrange
-        var client = await CreateAuthenticatedClient();
+        var client = CreateClientWithoutCookies();
+        var email = $"n8n-user-{Guid.NewGuid():N}@test.local";
+        var cookies = await RegisterAndAuthenticateAsync(client, email, "User");
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/n8n/templates");
+        AddCookies(request, cookies);
 
         // Act
-        var response = await client.GetAsync("/api/v1/n8n/templates");
+        var response = await client.SendAsync(request);
 
         // Assert
         response.IsSuccessStatusCode.Should().BeTrue();
@@ -63,10 +76,15 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
     public async Task GetTemplates_FiltersByCategory_WhenCategoryProvided()
     {
         // Arrange
-        var client = await CreateAuthenticatedClient();
+        var client = CreateClientWithoutCookies();
+        var email = $"n8n-user-{Guid.NewGuid():N}@test.local";
+        var cookies = await RegisterAndAuthenticateAsync(client, email, "User");
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/n8n/templates?category=integration");
+        AddCookies(request, cookies);
 
         // Act
-        var response = await client.GetAsync("/api/v1/n8n/templates?category=integration");
+        var response = await client.SendAsync(request);
 
         // Assert
         response.IsSuccessStatusCode.Should().BeTrue();
@@ -83,11 +101,16 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
     public async Task GetTemplate_ReturnsTemplate_WhenTemplateExists()
     {
         // Arrange
-        var client = await CreateAuthenticatedClient();
+        var client = CreateClientWithoutCookies();
+        var email = $"n8n-user-{Guid.NewGuid():N}@test.local";
+        var cookies = await RegisterAndAuthenticateAsync(client, email, "User");
         var templateId = "bgg-game-sync"; // Known template from seed data
 
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/n8n/templates/{templateId}");
+        AddCookies(request, cookies);
+
         // Act
-        var response = await client.GetAsync($"/api/v1/n8n/templates/{templateId}");
+        var response = await client.SendAsync(request);
 
         // Assert
         response.IsSuccessStatusCode.Should().BeTrue();
@@ -105,10 +128,15 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
     public async Task GetTemplate_ReturnsNotFound_WhenTemplateDoesNotExist()
     {
         // Arrange
-        var client = await CreateAuthenticatedClient();
+        var client = CreateClientWithoutCookies();
+        var email = $"n8n-user-{Guid.NewGuid():N}@test.local";
+        var cookies = await RegisterAndAuthenticateAsync(client, email, "User");
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/n8n/templates/nonexistent-template");
+        AddCookies(request, cookies);
 
         // Act
-        var response = await client.GetAsync("/api/v1/n8n/templates/nonexistent-template");
+        var response = await client.SendAsync(request);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -118,9 +146,9 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
     public async Task ImportTemplate_ReturnsUnauthorized_WhenNotAuthenticated()
     {
         // Arrange
-        var client = _factory.CreateClient();
-        var request = new ImportTemplateRequest(new Dictionary<string, string>());
-        var json = JsonSerializer.Serialize(request);
+        var client = CreateClientWithoutCookies();
+        var importRequest = new ImportTemplateRequest(new Dictionary<string, string>());
+        var json = JsonSerializer.Serialize(importRequest);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         // Act
@@ -134,20 +162,28 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
     public async Task ImportTemplate_ReturnsBadRequest_WhenMissingRequiredParameters()
     {
         // Arrange
-        var client = await CreateAuthenticatedClient();
+        var client = CreateClientWithoutCookies();
+        var email = $"n8n-user-{Guid.NewGuid():N}@test.local";
+        var cookies = await RegisterAndAuthenticateAsync(client, email, "User");
 
         // bgg-game-sync template requires bggUsername, syncInterval, apiBaseUrl
-        var request = new ImportTemplateRequest(new Dictionary<string, string>
+        var importRequest = new ImportTemplateRequest(new Dictionary<string, string>
         {
             { "syncInterval", "0 2 * * *" }
             // Missing required: bggUsername, apiBaseUrl
         });
 
-        var json = JsonSerializer.Serialize(request);
+        var json = JsonSerializer.Serialize(importRequest);
         var httpContent = new StringContent(json, Encoding.UTF8, "application/json");
 
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/n8n/templates/bgg-game-sync/import")
+        {
+            Content = httpContent
+        };
+        AddCookies(request, cookies);
+
         // Act
-        var response = await client.PostAsync("/api/v1/n8n/templates/bgg-game-sync/import", httpContent);
+        var response = await client.SendAsync(request);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -159,13 +195,22 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
     public async Task ImportTemplate_ReturnsNotFound_WhenTemplateDoesNotExist()
     {
         // Arrange
-        var client = await CreateAuthenticatedClient();
-        var request = new ImportTemplateRequest(new Dictionary<string, string>());
-        var json = JsonSerializer.Serialize(request);
+        var client = CreateClientWithoutCookies();
+        var email = $"n8n-user-{Guid.NewGuid():N}@test.local";
+        var cookies = await RegisterAndAuthenticateAsync(client, email, "User");
+
+        var importRequest = new ImportTemplateRequest(new Dictionary<string, string>());
+        var json = JsonSerializer.Serialize(importRequest);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/n8n/templates/nonexistent/import")
+        {
+            Content = content
+        };
+        AddCookies(request, cookies);
+
         // Act
-        var response = await client.PostAsync("/api/v1/n8n/templates/nonexistent/import", content);
+        var response = await client.SendAsync(request);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -177,9 +222,9 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
     public async Task ValidateTemplate_ReturnsUnauthorized_WhenNotAuthenticated()
     {
         // Arrange
-        var client = _factory.CreateClient();
-        var request = new ValidateTemplateRequest("{}");
-        var json = JsonSerializer.Serialize(request);
+        var client = CreateClientWithoutCookies();
+        var validateRequest = new ValidateTemplateRequest("{}");
+        var json = JsonSerializer.Serialize(validateRequest);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         // Act
@@ -193,13 +238,22 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
     public async Task ValidateTemplate_ReturnsForbidden_WhenNotAdmin()
     {
         // Arrange
-        var client = await CreateAuthenticatedClient("user@meepleai.dev", "User");
-        var request = new ValidateTemplateRequest("{}");
-        var json = JsonSerializer.Serialize(request);
+        var client = CreateClientWithoutCookies();
+        var email = $"n8n-user-{Guid.NewGuid():N}@test.local";
+        var cookies = await RegisterAndAuthenticateAsync(client, email, "User");
+
+        var validateRequest = new ValidateTemplateRequest("{}");
+        var json = JsonSerializer.Serialize(validateRequest);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/n8n/templates/validate")
+        {
+            Content = content
+        };
+        AddCookies(request, cookies);
+
         // Act
-        var response = await client.PostAsync("/api/v1/n8n/templates/validate", content);
+        var response = await client.SendAsync(request);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -209,7 +263,10 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
     public async Task ValidateTemplate_ReturnsValidationResult_ForAdmin()
     {
         // Arrange
-        var client = await CreateAuthenticatedClient("admin@meepleai.dev", "Admin");
+        var client = CreateClientWithoutCookies();
+        var email = $"n8n-admin-{Guid.NewGuid():N}@test.local";
+        var cookies = await RegisterAndAuthenticateAsync(client, email, "Admin");
+
         var validTemplate = JsonSerializer.Serialize(new
         {
             id = "test",
@@ -225,12 +282,18 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
             }
         });
 
-        var request = new ValidateTemplateRequest(validTemplate);
-        var json = JsonSerializer.Serialize(request);
+        var validateRequest = new ValidateTemplateRequest(validTemplate);
+        var json = JsonSerializer.Serialize(validateRequest);
         var httpContent = new StringContent(json, Encoding.UTF8, "application/json");
 
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/n8n/templates/validate")
+        {
+            Content = httpContent
+        };
+        AddCookies(request, cookies);
+
         // Act
-        var response = await client.PostAsync("/api/v1/n8n/templates/validate", httpContent);
+        var response = await client.SendAsync(request);
 
         // Assert
         response.IsSuccessStatusCode.Should().BeTrue();
@@ -242,41 +305,4 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
         result.Should().NotBeNull();
         result!.Valid.Should().BeTrue();
     }
-
-    #region Helper Methods
-
-    private async Task<HttpClient> CreateAuthenticatedClient(
-        string email = "admin@meepleai.dev",
-        string role = "Admin")
-    {
-        var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            AllowAutoRedirect = false,
-            HandleCookies = false
-        });
-
-        // Login to get session cookie
-        var loginRequest = new
-        {
-            email,
-            password = "Demo123!"
-        };
-
-        var loginJson = JsonSerializer.Serialize(loginRequest);
-        var loginContent = new StringContent(loginJson, Encoding.UTF8, "application/json");
-
-        var loginResponse = await client.PostAsync("/api/v1/auth/login", loginContent);
-        loginResponse.EnsureSuccessStatusCode();
-
-        // Extract session cookie
-        if (loginResponse.Headers.TryGetValues("Set-Cookie", out var cookies))
-        {
-            var sessionCookie = string.Join("; ", cookies);
-            client.DefaultRequestHeaders.Add("Cookie", sessionCookie);
-        }
-
-        return client;
-    }
-
-    #endregion
 }

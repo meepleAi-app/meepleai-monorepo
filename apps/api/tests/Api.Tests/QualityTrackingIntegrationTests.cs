@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using Api.Services;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -393,6 +394,16 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                 {
                     user.Role = role;
                     await dbContext.SaveChangesAsync();
+                }
+
+                // Invalidate session cache to force reload with updated role (TEST-653)
+                var sessionCacheService = scope.ServiceProvider.GetService<ISessionCacheService>();
+                if (sessionCacheService != null)
+                {
+                    var sessionId = sessionCookie.Replace("meeple_session=", "");
+                    var tokenHash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(sessionId));
+                    var hashString = Convert.ToBase64String(tokenHash);
+                    await sessionCacheService.InvalidateAsync(hashString, default);
                 }
             }
         }

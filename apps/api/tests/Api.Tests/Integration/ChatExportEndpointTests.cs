@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Api.Infrastructure;
@@ -54,7 +55,8 @@ public class ChatExportEndpointTests : IntegrationTestBase
 
         // When: User requests chat export
         var chatId = Guid.NewGuid();
-        var response = await client.GetAsync($"/api/v1/chats/{chatId}/export?format=pdf");
+        var requestBody = new { Format = "pdf" };
+        var response = await client.PostAsJsonAsync($"/api/v1/chats/{chatId}/export", requestBody);
 
         // Then: 401 Unauthorized is returned
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -104,7 +106,8 @@ public class ChatExportEndpointTests : IntegrationTestBase
         // When: Different user attempts to export
         var cookies = await AuthenticateUserAsync(attacker.Email);
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats/{chat.Id}/export?format=pdf");
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/chats/{chat.Id}/export");
+        request.Content = JsonContent.Create(new { Format = "pdf" });
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -168,7 +171,8 @@ public class ChatExportEndpointTests : IntegrationTestBase
         // When: User requests PDF export
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats/{chat.Id}/export?format=pdf");
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/chats/{chat.Id}/export");
+        request.Content = JsonContent.Create(new { Format = "pdf" });
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -247,7 +251,8 @@ public class ChatExportEndpointTests : IntegrationTestBase
         // When: User requests TXT export
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats/{chat.Id}/export?format=txt");
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/chats/{chat.Id}/export");
+        request.Content = JsonContent.Create(new { Format = "txt" });
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -322,7 +327,8 @@ public class ChatExportEndpointTests : IntegrationTestBase
         // When: User requests MD export
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats/{chat.Id}/export?format=md");
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/chats/{chat.Id}/export");
+        request.Content = JsonContent.Create(new { Format = "md" });
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -385,7 +391,8 @@ public class ChatExportEndpointTests : IntegrationTestBase
         // When: User requests export with invalid format
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats/{chat.Id}/export?format=xml");
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/chats/{chat.Id}/export");
+        request.Content = JsonContent.Create(new { Format = "xml" });
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -462,13 +469,13 @@ public class ChatExportEndpointTests : IntegrationTestBase
         await db.SaveChangesAsync();
 
         // When: User requests export with date range (last 10 days)
-        var startDate = DateTime.UtcNow.AddDays(-10).ToString("yyyy-MM-dd");
-        var endDate = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        var startDate = DateTime.UtcNow.AddDays(-10);
+        var endDate = DateTime.UtcNow;
 
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get,
-            $"/api/v1/chats/{chat.Id}/export?format=txt&startDate={startDate}&endDate={endDate}");
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/chats/{chat.Id}/export");
+        request.Content = JsonContent.Create(new { Format = "txt", DateFrom = startDate, DateTo = endDate });
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -503,7 +510,8 @@ public class ChatExportEndpointTests : IntegrationTestBase
         // When: User requests export
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats/{nonExistentChatId}/export?format=pdf");
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/chats/{nonExistentChatId}/export");
+        request.Content = JsonContent.Create(new { Format = "pdf" });
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -561,7 +569,8 @@ public class ChatExportEndpointTests : IntegrationTestBase
         // When: User exports chat
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats/{chat.Id}/export?format=pdf");
+        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/chats/{chat.Id}/export");
+        request.Content = JsonContent.Create(new { Format = "pdf" });
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -629,8 +638,9 @@ public class ChatExportEndpointTests : IntegrationTestBase
         {
             var cookies = await AuthenticateUserAsync(userChat.user.Email);
             var client = CreateClientWithoutCookies();
-            var request = new HttpRequestMessage(HttpMethod.Get,
-                $"/api/v1/chats/{userChat.chat.Id}/export?format=pdf");
+            var request = new HttpRequestMessage(HttpMethod.Post,
+                $"/api/v1/chats/{userChat.chat.Id}/export");
+            request.Content = JsonContent.Create(new { Format = "pdf" });
             AddCookies(request, cookies);
             return await client.SendAsync(request);
         }).ToArray();

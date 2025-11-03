@@ -251,7 +251,8 @@ public class N8nTemplateEndpointsTests : IClassFixture<WebApplicationFactory<Pro
     {
         var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
         {
-            AllowAutoRedirect = false
+            AllowAutoRedirect = false,
+            HandleCookies = false
         });
 
         // Login to get session cookie

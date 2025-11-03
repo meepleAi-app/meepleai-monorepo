@@ -419,6 +419,10 @@ public class PdfStorageServiceTests
             new() { Text = "chunk-two", Page = 1, CharStart = 9, CharEnd = 17 }
         };
         var chunkingMock = new Mock<ITextChunkingService>(MockBehavior.Strict);
+        // Setup PrepareForEmbedding to return empty, forcing service to use ChunkText fallback
+        chunkingMock
+            .Setup(c => c.PrepareForEmbedding(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(new List<DocumentChunkInput>());
         chunkingMock
             .Setup(c => c.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
             .Returns<string, int, int>((text, _, _) =>

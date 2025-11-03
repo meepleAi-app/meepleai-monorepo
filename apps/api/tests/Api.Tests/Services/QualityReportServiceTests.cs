@@ -82,7 +82,8 @@ public class QualityReportServiceTests : IDisposable
         using var helper = new BackgroundServiceTestHelper<QualityReportService>(
             service,
             _timeProvider,
-            timeout: TimeSpan.FromSeconds(5)
+            timeout: TimeSpan.FromSeconds(5),
+            processingDelayMs: 200 // Increased from default 50ms to allow service loop completion with FakeTimeProvider
         );
 
         await helper.StartAsync();
@@ -136,7 +137,8 @@ public class QualityReportServiceTests : IDisposable
         using var helper = new BackgroundServiceTestHelper<QualityReportService>(
             service,
             _timeProvider,
-            timeout: TimeSpan.FromSeconds(5)
+            timeout: TimeSpan.FromSeconds(5),
+            processingDelayMs: 200 // Increased from default 50ms to allow service loop completion with FakeTimeProvider
         );
 
         await helper.StartAsync();
@@ -327,7 +329,8 @@ public class QualityReportServiceTests : IDisposable
         using var helper = new BackgroundServiceTestHelper<QualityReportService>(
             service,
             _timeProvider,
-            timeout: TimeSpan.FromSeconds(5)
+            timeout: TimeSpan.FromSeconds(5),
+            processingDelayMs: 200 // Increased from default 50ms to allow service loop completion with FakeTimeProvider
         );
 
         await helper.StartAsync();
@@ -383,7 +386,8 @@ public class QualityReportServiceTests : IDisposable
         using var helper = new BackgroundServiceTestHelper<QualityReportService>(
             service,
             _timeProvider,
-            timeout: TimeSpan.FromSeconds(5)
+            timeout: TimeSpan.FromSeconds(5),
+            processingDelayMs: 200 // Increased from default 50ms to allow service loop completion with FakeTimeProvider
         );
 
         await helper.StartAsync();
@@ -432,7 +436,8 @@ public class QualityReportServiceTests : IDisposable
         using var helper = new BackgroundServiceTestHelper<QualityReportService>(
             service,
             _timeProvider,
-            timeout: TimeSpan.FromSeconds(5)
+            timeout: TimeSpan.FromSeconds(5),
+            processingDelayMs: 200 // Increased from default 50ms to allow service loop completion with FakeTimeProvider
         );
 
         await helper.StartAsync();

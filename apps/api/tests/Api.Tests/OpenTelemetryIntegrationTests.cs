@@ -7,12 +7,14 @@ using FluentAssertions;
 using Xunit.Abstractions;
 using System.Diagnostics;
 using Api.Observability;
+using Api.Tests.Fixtures;
 
 namespace Api.Tests;
 
 /// <summary>
 /// Integration tests for OpenTelemetry metrics and distributed tracing
 /// </summary>
+[Collection("Postgres Integration Tests")]
 public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactoryFixture>
 {
     private readonly ITestOutputHelper _output;
@@ -20,9 +22,10 @@ public class OpenTelemetryIntegrationTests : IClassFixture<WebApplicationFactory
     private readonly WebApplicationFactoryFixture _factory;
     private readonly HttpClient _client;
 
-    public OpenTelemetryIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output)
+    public OpenTelemetryIntegrationTests(PostgresCollectionFixture postgresFixture, WebApplicationFactoryFixture factory, ITestOutputHelper output)
     {
         _output = output;
+        factory.PostgresConnectionString = postgresFixture.ConnectionString;
         _factory = factory;
         _client = _factory.CreateClient(new WebApplicationFactoryClientOptions
         {

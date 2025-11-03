@@ -1,3 +1,4 @@
+using Api.Tests.Fixtures;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,7 +29,7 @@ public class ConfigurationIntegrationTests : ConfigIntegrationTestBase
     private string _adminEmail = null!;
     private List<string> _adminCookies = null!;
 
-    public ConfigurationIntegrationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public ConfigurationIntegrationTests(PostgresCollectionFixture postgresFixture, WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(postgresFixture, factory)
     {
         _output = output;
     }

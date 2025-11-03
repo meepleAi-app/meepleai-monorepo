@@ -102,7 +102,7 @@ public class ChatServiceTests
         await using var dbContext = CreateInMemoryContext();
         var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, CreateAuditService(dbContext));
 
-        var act = async () => service.CreateChatAsync("user-123", "nonexistent", "agent-1");
+        var act = async () => await service.CreateChatAsync("user-123", "nonexistent", "agent-1");
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
@@ -122,7 +122,7 @@ public class ChatServiceTests
 
         var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, CreateAuditService(dbContext));
 
-        var act = async () => service.CreateChatAsync("user-123", "catan", "nonexistent-agent");
+        var act = async () => await service.CreateChatAsync("user-123", "catan", "nonexistent-agent");
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
@@ -314,7 +314,7 @@ public class ChatServiceTests
 
         var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, CreateAuditService(dbContext));
 
-        var act = async () => service.DeleteChatAsync(chat.Id, "user-456");
+        var act = async () => await service.DeleteChatAsync(chat.Id, "user-456");
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 

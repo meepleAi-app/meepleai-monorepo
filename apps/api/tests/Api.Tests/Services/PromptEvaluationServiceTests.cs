@@ -201,7 +201,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         var invalidPath = "/nonexistent/dataset.json";
 
         // Act & Assert: Security validation happens before file existence check
-        var act = async () => _service.LoadDatasetAsync(invalidPath);
+        var act = async () => await _service.LoadDatasetAsync(invalidPath);
         await act.Should().ThrowAsync<SecurityException>();
     }
 
@@ -215,7 +215,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         try
         {
             // Act & Assert
-            var act = async () => _service.LoadDatasetAsync(malformedPath);
+            var act = async () => await _service.LoadDatasetAsync(malformedPath);
         await act.Should().ThrowAsync<JsonException>();
         }
         finally
@@ -426,7 +426,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         var nonExistentVersionId = "non-existent-version";
 
         // Act & Assert
-        var act = async () => _service.EvaluateAsync(
+        var act = async () => await _service.EvaluateAsync(
                 "test-template-id",
                 nonExistentVersionId,
                 _testDatasetPath);

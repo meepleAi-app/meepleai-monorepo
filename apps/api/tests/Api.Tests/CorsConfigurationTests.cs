@@ -6,18 +6,21 @@ using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;
+using Api.Tests.Fixtures;
 
 namespace Api.Tests;
 
+[Collection("Postgres Integration Tests")]
 public class CorsConfigurationTests : IClassFixture<WebApplicationFactoryFixture>
 {
     private readonly ITestOutputHelper _output;
 
     private readonly WebApplicationFactoryFixture _factory;
 
-    public CorsConfigurationTests(WebApplicationFactoryFixture factory, ITestOutputHelper output)
+    public CorsConfigurationTests(PostgresCollectionFixture postgresFixture, WebApplicationFactoryFixture factory, ITestOutputHelper output)
     {
         _output = output;
+        factory.PostgresConnectionString = postgresFixture.ConnectionString;
         _factory = factory;
     }
 

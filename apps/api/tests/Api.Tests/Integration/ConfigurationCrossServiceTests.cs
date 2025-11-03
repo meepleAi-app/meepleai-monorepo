@@ -1,3 +1,4 @@
+using Api.Tests.Fixtures;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,7 +28,7 @@ public class ConfigurationCrossServiceTests : ConfigIntegrationTestBase
     private string _adminEmail = null!;
     private List<string> _adminCookies = null!;
 
-    public ConfigurationCrossServiceTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public ConfigurationCrossServiceTests(PostgresCollectionFixture postgresFixture, WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(postgresFixture, factory)
     {
         _output = output;
     }

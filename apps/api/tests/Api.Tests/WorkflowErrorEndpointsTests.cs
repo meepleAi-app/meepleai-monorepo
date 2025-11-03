@@ -1,3 +1,4 @@
+using Api.Tests.Fixtures;
 using System;
 using System.Net;
 using System.Net.Http;
@@ -28,7 +29,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
 {
     private readonly ITestOutputHelper _output;
 
-    public WorkflowErrorEndpointsTests(WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(factory)
+    public WorkflowErrorEndpointsTests(PostgresCollectionFixture postgresFixture, WebApplicationFactoryFixture factory, ITestOutputHelper output) : base(postgresFixture, factory)
     {
         _output = output;
     }

@@ -171,7 +171,7 @@ public class RuleSpecCommentServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act & Assert
-        var act = async () => _service.AddCommentAsync(game.Id, "v99", null, user.Id, "Comment");
+        var act = async () => await _service.AddCommentAsync(game.Id, "v99", null, user.Id, "Comment");
         var ex = await act.Should().ThrowAsync<InvalidOperationException>();
 
         ex.Which.Message.Should().Contain("RuleSpec version v99 not found");
@@ -200,7 +200,7 @@ public class RuleSpecCommentServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act & Assert
-        var act = async () => _service.AddCommentAsync(game.Id, "v1", null, "missing-user", "Comment");
+        var act = async () => await _service.AddCommentAsync(game.Id, "v1", null, "missing-user", "Comment");
         var ex = await act.Should().ThrowAsync<InvalidOperationException>();
 
         ex.Which.Message.Should().Contain("User missing-user not found");
@@ -459,7 +459,7 @@ public class RuleSpecCommentServiceTests : IDisposable
         var missingId = Guid.NewGuid();
 
         // Act & Assert
-        var act = async () => _service.UpdateCommentAsync(missingId, "user-1", "New text");
+        var act = async () => await _service.UpdateCommentAsync(missingId, "user-1", "New text");
         var ex = await act.Should().ThrowAsync<InvalidOperationException>();
 
         ex.Which.Message.Should().Contain($"Comment {missingId} not found");
@@ -520,7 +520,7 @@ public class RuleSpecCommentServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act & Assert
-        var act = async () => _service.UpdateCommentAsync(comment.Id, otherUser.Id, "Hijacked text");
+        var act = async () => await _service.UpdateCommentAsync(comment.Id, otherUser.Id, "Hijacked text");
         var ex = await act.Should().ThrowAsync<InvalidOperationException>();
 
         ex.Which.Message.Should().Contain($"User {otherUser.Id} is not authorized");
@@ -695,7 +695,7 @@ public class RuleSpecCommentServiceTests : IDisposable
         await _dbContext.SaveChangesAsync();
 
         // Act & Assert
-        var act = async () => _service.DeleteCommentAsync(comment.Id, otherUser.Id, isAdmin: false);
+        var act = async () => await _service.DeleteCommentAsync(comment.Id, otherUser.Id, isAdmin: false);
         var ex = await act.Should().ThrowAsync<InvalidOperationException>();
 
         ex.Which.Message.Should().Contain($"User {otherUser.Id} is not authorized");

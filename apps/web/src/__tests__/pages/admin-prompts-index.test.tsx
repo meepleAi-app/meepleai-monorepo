@@ -232,24 +232,30 @@ describe('AdminPrompts Index Page', () => {
         expect(screen.getByText('QA System Prompt')).toBeInTheDocument();
       });
 
+      // Clear previous calls
+      (api.get as jest.Mock).mockClear();
+
       const categoryHeader = screen.getByText(/Category/);
 
       // First click - should sort ascending
       fireEvent.click(categoryHeader);
 
       await waitFor(() => {
-        const calls = (api.get as jest.Mock).mock.calls;
-        const lastCall = calls[calls.length - 1][0];
-        expect(lastCall).toContain('sortBy=category&sortOrder=asc');
+        expect(api.get).toHaveBeenCalledWith(
+          expect.stringContaining('sortBy=category&sortOrder=asc')
+        );
       });
+
+      // Clear calls again
+      (api.get as jest.Mock).mockClear();
 
       // Second click - should toggle to descending
       fireEvent.click(categoryHeader);
 
       await waitFor(() => {
-        const calls = (api.get as jest.Mock).mock.calls;
-        const lastCall = calls[calls.length - 1][0];
-        expect(lastCall).toContain('sortBy=category&sortOrder=desc');
+        expect(api.get).toHaveBeenCalledWith(
+          expect.stringContaining('sortBy=category&sortOrder=desc')
+        );
       });
     });
   });
@@ -358,14 +364,14 @@ describe('AdminPrompts Index Page', () => {
       const createButtons = screen.getAllByText('Create Template');
       fireEvent.click(createButtons[0]);
 
-      // Modal should open with form fields - use text content instead of labels
+      // Modal should open with form fields
       await waitFor(() => {
-        expect(screen.getByText('Create Template')).toBeInTheDocument();
+        const modalTitles = screen.getAllByText('Create Template');
+        expect(modalTitles.length).toBeGreaterThan(1); // Button + Modal title
       });
 
-      // Check for form elements by their type
-      const inputs = screen.getAllByRole('textbox');
-      expect(inputs.length).toBeGreaterThan(0);
+      // Check for Name input (textbox) and Description/InitialContent (textarea)
+      expect(screen.getAllByRole('textbox').length).toBeGreaterThan(0);
     });
 
     it('should close modal when Cancel button clicked', async () => {
@@ -380,16 +386,17 @@ describe('AdminPrompts Index Page', () => {
 
       // Wait for modal to open
       await waitFor(() => {
-        expect(screen.getAllByRole('textbox').length).toBeGreaterThan(0);
+        const modalTitles = screen.getAllByText('Create Template');
+        expect(modalTitles.length).toBeGreaterThan(1);
       });
 
       const cancelButton = screen.getByText('Cancel');
       fireEvent.click(cancelButton);
 
       await waitFor(() => {
-        // Modal should close - check that form is no longer visible
-        const textboxes = screen.queryAllByRole('textbox');
-        expect(textboxes.length).toBe(0);
+        // Modal should close - only the button "Create Template" should remain
+        const createTemplateElements = screen.queryAllByText('Create Template');
+        expect(createTemplateElements.length).toBe(1); // Only the button
       });
     });
 
@@ -406,10 +413,11 @@ describe('AdminPrompts Index Page', () => {
       fireEvent.click(createButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getAllByRole('textbox').length).toBeGreaterThan(0);
+        const modalTitles = screen.getAllByText('Create Template');
+        expect(modalTitles.length).toBeGreaterThan(1);
       });
 
-      // Get all textboxes: [Name, Description, InitialContent]
+      // Get all textboxes (Name input + Description textarea + InitialContent textarea)
       const textboxes = screen.getAllByRole('textbox');
       const nameInput = textboxes[0];
       const descriptionInput = textboxes[1];
@@ -426,8 +434,9 @@ describe('AdminPrompts Index Page', () => {
 
       fireEvent.change(initialContentInput, { target: { value: 'Prompt content' } });
 
-      const form = nameInput.closest('form');
-      fireEvent.submit(form!);
+      // Find and submit the form
+      const submitButton = screen.getByText('Create');
+      fireEvent.click(submitButton);
 
       await waitFor(() => {
         expect(api.post).toHaveBeenCalledWith('/api/v1/admin/prompts', {
@@ -463,10 +472,11 @@ describe('AdminPrompts Index Page', () => {
       fireEvent.click(createButtons[0]);
 
       await waitFor(() => {
-        expect(screen.getAllByRole('textbox').length).toBeGreaterThan(0);
+        const modalTitles = screen.getAllByText('Create Template');
+        expect(modalTitles.length).toBeGreaterThan(1);
       });
 
-      // Get all textboxes: [Name, Description, InitialContent]
+      // Get form elements
       const textboxes = screen.getAllByRole('textbox');
       const nameInput = textboxes[0];
       const descriptionInput = textboxes[1];
@@ -483,8 +493,9 @@ describe('AdminPrompts Index Page', () => {
 
       fireEvent.change(initialContentInput, { target: { value: 'Prompt content' } });
 
-      const form = nameInput.closest('form');
-      fireEvent.submit(form!);
+      // Submit by clicking the Create button
+      const submitButton = screen.getByText('Create');
+      fireEvent.click(submitButton);
 
       await waitFor(() => {
         expect(screen.getByText('Creation failed')).toBeInTheDocument();
@@ -516,10 +527,13 @@ describe('AdminPrompts Index Page', () => {
         expect(screen.getByText('Edit Template')).toBeInTheDocument();
       });
 
-      // Get textboxes: [Name, Description] (no Initial Content in edit mode)
-      const textboxes = screen.getAllByRole('textbox');
-      expect(textboxes[0]).toHaveValue('QA System Prompt');
-      expect(textboxes[1]).toHaveValue('System prompt for QA service');
+      // Wait for form to be populated with values
+      await waitFor(() => {
+        const textboxes = screen.getAllByRole('textbox');
+        expect(textboxes.length).toBe(2); // Name + Description
+        expect(textboxes[0]).toHaveValue('QA System Prompt');
+        expect(textboxes[1]).toHaveValue('System prompt for QA service');
+      });
     });
 
     it('should update template successfully', async () => {
@@ -544,8 +558,9 @@ describe('AdminPrompts Index Page', () => {
 
       fireEvent.change(nameInput, { target: { value: 'Updated Template' } });
 
-      const form = nameInput.closest('form');
-      fireEvent.submit(form!);
+      // Submit by clicking the Update button
+      const submitButton = screen.getByText('Update');
+      fireEvent.click(submitButton);
 
       await waitFor(() => {
         expect(api.put).toHaveBeenCalledWith('/api/v1/admin/prompts/template-1', {

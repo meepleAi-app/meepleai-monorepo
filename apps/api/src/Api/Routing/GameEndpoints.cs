@@ -15,7 +15,11 @@ public static class GameEndpoints
         // Get all games
         group.MapGet("/games", async (HttpContext context, GameService gameService, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
+            // Support both cookie-based session auth and API key auth
+            var hasSession = context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession;
+            var hasApiKey = context.User.Identity?.IsAuthenticated == true;
+
+            if (!hasSession && !hasApiKey)
             {
                 return Results.Unauthorized();
             }
@@ -69,7 +73,11 @@ public static class GameEndpoints
         // CHAT-06: Get agents for a specific game
         group.MapGet("/games/{gameId}/agents", async (string gameId, HttpContext context, ChatService chatService, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession)
+            // Support both cookie-based session auth and API key auth
+            var hasSession = context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession;
+            var hasApiKey = context.User.Identity?.IsAuthenticated == true;
+
+            if (!hasSession && !hasApiKey)
             {
                 return Results.Unauthorized();
             }

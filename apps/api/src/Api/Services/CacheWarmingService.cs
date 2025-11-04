@@ -244,6 +244,11 @@ public class CacheWarmingService : BackgroundService
             _logger.LogInformation(ex, "Operation cancelled warming cache for query: {Query} (game {GameId})",
                 frequentQuery.Query, frequentQuery.GameId);
         }
+        catch (TimeoutException ex)
+        {
+            _logger.LogError(ex, "Timeout warming cache for query: {Query} (game {GameId})",
+                frequentQuery.Query, frequentQuery.GameId);
+        }
     }
 
     /// <summary>

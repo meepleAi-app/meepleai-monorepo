@@ -451,6 +451,10 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                         $"Role update verification failed. Expected: {role}, Actual: {verifiedUser?.Role}");
                 }
             }
+
+            // TEST-651: Small delay to ensure database transaction is fully committed
+            // before the next HTTP request validates the session
+            await Task.Delay(100);
         }
 
         // Create authenticated client with session cookie

@@ -439,9 +439,6 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                 var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
                 var user = await dbContext.Users.SingleAsync(u => u.Email == email);
                 user.Role = role;
-
-                // TEST-656: Explicitly mark entity as modified to ensure EF Core tracks the change
-                dbContext.Entry(user).State = EntityState.Modified;
                 await dbContext.SaveChangesAsync();
             }
 

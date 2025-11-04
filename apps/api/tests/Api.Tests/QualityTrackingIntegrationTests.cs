@@ -1,15 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Security.Cryptography;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
-using Api.Services;
-using Microsoft.AspNetCore.Mvc.Testing;
+using Api.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Moq;
-using Testcontainers.PostgreSql;
 using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;
@@ -18,475 +14,21 @@ namespace Api.Tests;
 
 /// <summary>
 /// BDD integration tests for quality tracking system.
-/// These tests verify end-to-end flow with real PostgreSQL database (TDD RED phase).
+/// These tests verify end-to-end flow with real PostgreSQL database.
 ///
-/// Infrastructure: Uses Testcontainers PostgreSQL + WebApplicationFactory
-/// Authentication: Session cookie-based authentication via /api/v1/auth/login
-/// Isolation: Each test creates unique users to prevent session ID collisions
+/// Infrastructure: Uses PostgresCollectionFixture (shared Testcontainer) + IntegrationTestBase
+/// Authentication: Proven pattern from RuleSpecHistoryIntegrationTests
+/// Isolation: Each test creates unique users via IntegrationTestBase helpers
 /// </summary>
-public class QualityTrackingIntegrationTests : IAsyncLifetime
+[Collection("Postgres Integration Tests")]
+public class QualityTrackingIntegrationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
 
-    private readonly PostgreSqlContainer? _postgresContainer;
-    private readonly bool _isRunningInCi;
-    private string _connectionString;
-    private WebApplicationFactory<Program> _factory = null!;
-    private int _userCounter = 0;
-
-    public QualityTrackingIntegrationTests(ITestOutputHelper output)
+    public QualityTrackingIntegrationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
     {
         _output = output;
-        // Detect CI environment
-        _isRunningInCi = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")) ||
-                         !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GITHUB_ACTIONS"));
-
-        if (_isRunningInCi)
-        {
-            // In CI: Use service container from environment variable
-            _connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__Postgres") ??
-                               "Host=localhost;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass";
-            _postgresContainer = null;
-        }
-        else
-        {
-            // Local: Use Testcontainers
-            _postgresContainer = new PostgreSqlBuilder()
-                .WithImage("postgres:16-alpine")
-                .WithDatabase("meepleai_quality_test")
-                .WithUsername("test_user")
-                .WithPassword("test_password")
-                .WithCleanUp(true)
-                .Build();
-            _connectionString = string.Empty; // Will be set after container starts
-        }
     }
-
-    public async Task InitializeAsync()
-    {
-        if (!_isRunningInCi && _postgresContainer != null)
-        {
-            // Start PostgreSQL container (local development only)
-            await _postgresContainer.StartAsync();
-            _connectionString = _postgresContainer.GetConnectionString();
-        }
-
-        // Create WebApplicationFactory configured with PostgreSQL + mocked services
-        _factory = new WebApplicationFactory<Program>()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureServices(services =>
-                {
-                    // Remove existing DbContext and external service dependencies
-                    var descriptors = services.Where(d =>
-                        d.ServiceType == typeof(DbContextOptions<MeepleAiDbContext>) ||
-                        d.ServiceType == typeof(DbContextOptions) ||
-                        d.ServiceType == typeof(MeepleAiDbContext) ||
-                        d.ServiceType == typeof(Api.Services.IQdrantService) ||
-                        d.ServiceType == typeof(Api.Services.IEmbeddingService) ||
-                        d.ServiceType == typeof(Api.Services.IAiResponseCacheService) ||
-                        d.ServiceType == typeof(Api.Services.IPromptTemplateService) || // AI-11: Mock PromptTemplateService dependency
-                        d.ServiceType == typeof(Api.Services.ISessionCacheService) || // TEST-651: Remove Redis session cache (needs mock Redis)
-                        d.ServiceType == typeof(StackExchange.Redis.IConnectionMultiplexer) // TEST-651: Will be mocked below
-                    ).ToList();
-
-                    foreach (var descriptor in descriptors)
-                    {
-                        services.Remove(descriptor);
-                    }
-
-                    // TEST-651: Mock Redis IConnectionMultiplexer for services that depend on it
-                    // (RateLimitService, RedisFrequencyTracker, etc.)
-                    var mockRedis = new Moq.Mock<StackExchange.Redis.IConnectionMultiplexer>();
-                    var mockDatabase = new Moq.Mock<StackExchange.Redis.IDatabase>();
-
-                    // Setup basic Redis database operations to return success/default values
-                    mockDatabase.Setup(x => x.StringGetAsync(Moq.It.IsAny<StackExchange.Redis.RedisKey>(), Moq.It.IsAny<StackExchange.Redis.CommandFlags>()))
-                        .ReturnsAsync(StackExchange.Redis.RedisValue.Null);
-                    mockDatabase.Setup(x => x.StringSetAsync(Moq.It.IsAny<StackExchange.Redis.RedisKey>(), Moq.It.IsAny<StackExchange.Redis.RedisValue>(), Moq.It.IsAny<TimeSpan?>(), Moq.It.IsAny<bool>(), Moq.It.IsAny<StackExchange.Redis.When>(), Moq.It.IsAny<StackExchange.Redis.CommandFlags>()))
-                        .ReturnsAsync(true);
-                    mockDatabase.Setup(x => x.KeyDeleteAsync(Moq.It.IsAny<StackExchange.Redis.RedisKey>(), Moq.It.IsAny<StackExchange.Redis.CommandFlags>()))
-                        .ReturnsAsync(true);
-                    mockDatabase.Setup(x => x.KeyExpireAsync(Moq.It.IsAny<StackExchange.Redis.RedisKey>(), Moq.It.IsAny<TimeSpan?>(), Moq.It.IsAny<StackExchange.Redis.ExpireWhen>(), Moq.It.IsAny<StackExchange.Redis.CommandFlags>()))
-                        .ReturnsAsync(true);
-                    mockDatabase.Setup(x => x.StringIncrementAsync(Moq.It.IsAny<StackExchange.Redis.RedisKey>(), Moq.It.IsAny<long>(), Moq.It.IsAny<StackExchange.Redis.CommandFlags>()))
-                        .ReturnsAsync(1L);
-
-                    mockRedis.Setup(x => x.GetDatabase(Moq.It.IsAny<int>(), Moq.It.IsAny<object>())).Returns(mockDatabase.Object);
-                    mockRedis.Setup(x => x.IsConnected).Returns(false); // Indicate Redis not available
-
-                    services.AddSingleton(mockRedis.Object);
-
-                    // TEST-651: Re-register SessionCacheService to ensure it's in DI but always returns null
-                    // This forces AuthService to query database for every session validation
-                    var mockSessionCache = new Moq.Mock<Api.Services.ISessionCacheService>();
-                    mockSessionCache.Setup(x => x.GetAsync(Moq.It.IsAny<string>(), Moq.It.IsAny<CancellationToken>()))
-                        .ReturnsAsync((Api.Models.ActiveSession?)null);
-                    mockSessionCache.Setup(x => x.SetAsync(Moq.It.IsAny<string>(), Moq.It.IsAny<Api.Models.ActiveSession>(), Moq.It.IsAny<DateTime>(), Moq.It.IsAny<CancellationToken>()))
-                        .Returns(Task.CompletedTask);
-                    mockSessionCache.Setup(x => x.InvalidateAsync(Moq.It.IsAny<string>(), Moq.It.IsAny<CancellationToken>()))
-                        .Returns(Task.CompletedTask);
-                    mockSessionCache.Setup(x => x.InvalidateUserSessionsAsync(Moq.It.IsAny<string>(), Moq.It.IsAny<CancellationToken>()))
-                        .Returns(Task.CompletedTask);
-
-                    services.AddSingleton(mockSessionCache.Object);
-
-                    // TEST-651: Mock TempSessionService for 2FA login support
-                    var mockTempSessionService = new Moq.Mock<Api.Services.ITempSessionService>();
-                    mockTempSessionService.Setup(x => x.CreateTempSessionAsync(
-                        Moq.It.IsAny<string>(),
-                        Moq.It.IsAny<string?>()))
-                        .ReturnsAsync("mock-temp-session-token");
-                    services.AddSingleton(mockTempSessionService.Object);
-
-                    // Add DbContext with Testcontainers PostgreSQL connection string
-                    services.AddDbContext<MeepleAiDbContext>(options =>
-                    {
-                        options.UseNpgsql(_connectionString);
-                        options.EnableServiceProviderCaching(false);
-                    });
-
-                    // Mock Qdrant service (returns realistic search results for quality scoring)
-                    // Returns low-quality results if gameId starts with 0-4, high-quality if starts with 5-9/a-f
-                    var mockQdrantService = new Moq.Mock<Api.Services.IQdrantService>();
-
-                    // Mock non-language overload
-                    mockQdrantService
-                        .Setup(x => x.SearchAsync(
-                            Moq.It.IsAny<string>(),
-                            Moq.It.IsAny<float[]>(),
-                            Moq.It.IsAny<int>(),
-                            Moq.It.IsAny<System.Threading.CancellationToken>()))
-                        .ReturnsAsync((string gameId, float[] embedding, int limit, System.Threading.CancellationToken ct) =>
-                        {
-                            // Use gameId to determine quality (50% chance low, 50% high based on first character)
-                            bool isLowQuality = gameId.Length > 0 && "0123456789".Contains(gameId[0]) && gameId[0] < '5';
-                            return CreateMockSearchResult(isLowQuality);
-                        });
-
-                    // Mock language-specific overload
-                    mockQdrantService
-                        .Setup(x => x.SearchAsync(
-                            Moq.It.IsAny<string>(),
-                            Moq.It.IsAny<float[]>(),
-                            Moq.It.IsAny<string>(),
-                            Moq.It.IsAny<int>(),
-                            Moq.It.IsAny<System.Threading.CancellationToken>()))
-                        .ReturnsAsync((string gameId, float[] embedding, string language, int limit, System.Threading.CancellationToken ct) =>
-                        {
-                            // Use gameId to determine quality (50% chance low, 50% high based on first character)
-                            // GameIds starting with 0-4 are low-quality, 5-9/a-f are high-quality
-                            var firstChar = char.ToLowerInvariant(gameId[0]);
-                            bool isLowQuality = gameId.Length > 0 && "0123456789abcdef".Contains(firstChar) && firstChar < '5';
-                            return CreateMockSearchResult(isLowQuality);
-                        });
-
-                    // Helper method to create mock search results based on quality level
-                    Api.Services.SearchResult CreateMockSearchResult(bool isLowQuality)
-                    {
-                        if (isLowQuality)
-                        {
-                            return Api.Services.SearchResult.CreateSuccess(new List<Api.Services.SearchResultItem>
-                            {
-                                new Api.Services.SearchResultItem
-                                {
-                                    Score = 0.35f,
-                                    Text = "Vague text from rulebook.",
-                                    PdfId = Guid.NewGuid().ToString(),
-                                    Page = 1,
-                                    ChunkIndex = 1
-                                },
-                                new Api.Services.SearchResultItem
-                                {
-                                    Score = 0.40f,
-                                    Text = "Another unclear passage.",
-                                    PdfId = Guid.NewGuid().ToString(),
-                                    Page = 2,
-                                    ChunkIndex = 2
-                                },
-                                new Api.Services.SearchResultItem
-                                {
-                                    Score = 0.45f,
-                                    Text = "Somewhat related content.",
-                                    PdfId = Guid.NewGuid().ToString(),
-                                    Page = 3,
-                                    ChunkIndex = 3
-                                }
-                            });
-                        }
-                        else
-                        {
-                            return Api.Services.SearchResult.CreateSuccess(new List<Api.Services.SearchResultItem>
-                            {
-                                new Api.Services.SearchResultItem
-                                {
-                                    Score = 0.92f,
-                                    Text = "This is a relevant rulebook passage about winning conditions. To win the game, a player must achieve the objective.",
-                                    PdfId = Guid.NewGuid().ToString(),
-                                    Page = 5,
-                                    ChunkIndex = 1
-                                },
-                                new Api.Services.SearchResultItem
-                                {
-                                    Score = 0.88f,
-                                    Text = "Another relevant passage explaining game mechanics and victory conditions in detail.",
-                                    PdfId = Guid.NewGuid().ToString(),
-                                    Page = 6,
-                                    ChunkIndex = 2
-                                },
-                                new Api.Services.SearchResultItem
-                                {
-                                    Score = 0.85f,
-                                    Text = "Additional context about the rules and how to determine the winner of the match.",
-                                    PdfId = Guid.NewGuid().ToString(),
-                                    Page = 7,
-                                    ChunkIndex = 3
-                                }
-                            });
-                        }
-                    }
-
-                    services.AddSingleton(mockQdrantService.Object);
-
-                    // Mock Embedding service (tests don't need real embeddings)
-                    var mockEmbeddingService = new Moq.Mock<Api.Services.IEmbeddingService>();
-                    // Mock both 2-parameter and 3-parameter (with language) overloads
-                    mockEmbeddingService
-                        .Setup(x => x.GenerateEmbeddingAsync(
-                            Moq.It.IsAny<string>(),
-                            Moq.It.IsAny<System.Threading.CancellationToken>()))
-                        .ReturnsAsync(new Api.Services.EmbeddingResult
-                        {
-                            Success = true,
-                            Embeddings = new List<float[]> { new float[768] }
-                        });
-                    mockEmbeddingService
-                        .Setup(x => x.GenerateEmbeddingAsync(
-                            Moq.It.IsAny<string>(),
-                            Moq.It.IsAny<string>(), // language parameter
-                            Moq.It.IsAny<System.Threading.CancellationToken>()))
-                        .ReturnsAsync(new Api.Services.EmbeddingResult
-                        {
-                            Success = true,
-                            Embeddings = new List<float[]> { new float[768] }
-                        });
-                    services.AddSingleton(mockEmbeddingService.Object);
-
-                    // Mock LLM service (returns short response ONLY for specific low-quality test gameId)
-                    // Returns long responses by default to avoid breaking other tests
-                    var mockLlmService = new Moq.Mock<Api.Services.ILlmService>();
-                    mockLlmService
-                        .Setup(x => x.GenerateCompletionAsync(
-                            Moq.It.IsAny<string>(),
-                            Moq.It.IsAny<string>(),
-                            Moq.It.IsAny<System.Threading.CancellationToken>()))
-                        .ReturnsAsync((string systemPrompt, string userPrompt, System.Threading.CancellationToken ct) =>
-                        {
-                            // Detect low-quality RAG context by checking for low-quality snippet text markers
-                            // Low-quality RAG snippets (returned for gameIds starting with 0-4) contain these phrases
-                            bool isLowQualityContext = userPrompt.Contains("Vague text from rulebook") ||
-                                                       userPrompt.Contains("Another unclear passage") ||
-                                                       userPrompt.Contains("Somewhat related content");
-
-                            if (isLowQualityContext)
-                            {
-                                // Very short response (3 words < 50 word threshold) with hedging phrases
-                                // Triggers VeryShortPenalty (0.30) + hedging penalties (0.10)
-                                // Expected LLM confidence: 0.85 - 0.30 - 0.10 = 0.45
-                                // With RAG=0.40, Citation=1.00: Overall = (0.40 × 0.40) + (0.45 × 0.40) + (1.00 × 0.20) = 0.54 < 0.60 ✓
-                                return Api.Services.LlmCompletionResult.CreateSuccess(
-                                    response: "Not sure. Unclear.",  // 3 words → VeryShortPenalty + hedging
-                                    usage: new Api.Services.LlmUsage(PromptTokens: 50, CompletionTokens: 20, TotalTokens: 70),
-                                    metadata: new Dictionary<string, string>
-                                    {
-                                        ["model"] = "mock-model",
-                                        ["finish_reason"] = "stop"
-                                    }
-                                );
-                            }
-                            else
-                            {
-                                // Long, high-quality response (>100 words) has no penalties
-                                // Expected LLM confidence: 0.85
-                                // With high-quality RAG (0.88), Citation=1.00: Overall = (0.88 × 0.40) + (0.85 × 0.40) + (1.00 × 0.20) = 0.89 > 0.60 ✓
-                                return Api.Services.LlmCompletionResult.CreateSuccess(
-                                    response: "To win the game, you must fulfill the victory conditions specified in the rulebook. " +
-                                             "The victory conditions are clearly defined and establish the criteria for determining the winner. " +
-                                             "These conditions involve achieving specific objectives that demonstrate mastery of the game mechanics. " +
-                                             "Common victory conditions include reaching a target score through strategic gameplay, " +
-                                             "eliminating all opponents through tactical decisions, completing designated goals within the time limit, " +
-                                             "or fulfilling special requirements unique to each game. The rulebook provides comprehensive details " +
-                                             "about these conditions, ensuring all players understand the path to victory before starting.",
-                                    usage: new Api.Services.LlmUsage(PromptTokens: 150, CompletionTokens: 120, TotalTokens: 270),
-                                    metadata: new Dictionary<string, string>
-                                    {
-                                        ["model"] = "mock-model",
-                                        ["finish_reason"] = "stop"
-                                    }
-                                );
-                            }
-                        });
-                    services.AddSingleton(mockLlmService.Object);
-
-                    // Mock cache service (always returns null to force cache misses and use mocked LLM)
-                    var mockCacheService = new Moq.Mock<Api.Services.IAiResponseCacheService>();
-                    // Setup GetAsync to return null for any type T (cache miss)
-                    mockCacheService
-                        .Setup(x => x.GetAsync<Api.Models.QaResponse>(
-                            Moq.It.IsAny<string>(),
-                            Moq.It.IsAny<System.Threading.CancellationToken>()))
-                        .ReturnsAsync((Api.Models.QaResponse?)null);
-                    services.AddSingleton(mockCacheService.Object);
-
-                    // AI-11: Mock PromptTemplateService (required by RagService after AI-07.1)
-                    var mockPromptService = new Moq.Mock<Api.Services.IPromptTemplateService>();
-                    mockPromptService
-                        .Setup(x => x.ClassifyQuestion(Moq.It.IsAny<string>()))
-                        .Returns(Api.Models.QuestionType.General); // Default classification
-                    mockPromptService
-                        .Setup(x => x.GetTemplateAsync(
-                            Moq.It.IsAny<Guid?>(),
-                            Moq.It.IsAny<Api.Models.QuestionType>()))
-                        .ReturnsAsync(new Api.Models.PromptTemplate
-                        {
-                            SystemPrompt = "You are a helpful assistant.",
-                            UserPromptTemplate = "Context: {context}\n\nQuestion: {question}",
-                            FewShotExamples = new List<Api.Models.FewShotExample>()
-                        });
-                    mockPromptService
-                        .Setup(x => x.RenderSystemPrompt(Moq.It.IsAny<Api.Models.PromptTemplate>()))
-                        .Returns("You are a helpful assistant.");
-                    mockPromptService
-                        .Setup(x => x.RenderUserPrompt(
-                            Moq.It.IsAny<Api.Models.PromptTemplate>(),
-                            Moq.It.IsAny<string>(),
-                            Moq.It.IsAny<string>()))
-                        .Returns((Api.Models.PromptTemplate _, string context, string question) =>
-                            $"Context: {context}\n\nQuestion: {question}");
-                    services.AddSingleton(mockPromptService.Object);
-                });
-            });
-
-        // Apply migrations to create schema
-        using var scope = _factory.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await dbContext.Database.MigrateAsync();
-    }
-
-    public async Task DisposeAsync()
-    {
-        // Dispose factory
-        if (_factory != null)
-        {
-            await _factory.DisposeAsync();
-        }
-
-        // Stop and dispose container (local development only)
-        if (_postgresContainer != null)
-        {
-            await _postgresContainer.DisposeAsync();
-        }
-    }
-
-    /// <summary>
-    /// Creates an authenticated HTTP client with session cookie.
-    /// Each call creates a unique user to prevent session ID collisions between tests.
-    /// </summary>
-    private async Task<HttpClient> CreateAuthenticatedClientAsync(string emailPrefix, UserRole role = UserRole.User)
-    {
-        var uniqueId = Interlocked.Increment(ref _userCounter);
-        var email = $"{emailPrefix}-{uniqueId}@quality-test.local";
-        var password = "TestPassword123!";
-
-        // Register creates user and returns session cookie automatically
-        var registerClient = _factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            HandleCookies = false
-        });
-
-        var registerPayload = new
-        {
-            email,
-            password,
-            displayName = $"Quality Test User {uniqueId}"
-        };
-
-        var registerResponse = await registerClient.PostAsJsonAsync("/api/v1/auth/register", registerPayload);
-        registerResponse.EnsureSuccessStatusCode();
-
-        // Extract session cookie from register response
-        if (!registerResponse.Headers.TryGetValues("Set-Cookie", out var cookieValues))
-        {
-            throw new InvalidOperationException("Register did not return session cookie");
-        }
-
-        var sessionCookie = cookieValues
-            .Select(value => value.Split(';')[0])
-            .FirstOrDefault(c => c.StartsWith("meeple_session="));
-
-        if (sessionCookie == null)
-        {
-            throw new InvalidOperationException("Session cookie not found in register response");
-        }
-
-        // Promote user to desired role if not User
-        // Note: For Admin tests, we update role in DB but session cookie still contains User role
-        // This is a known limitation - Auth middleware may need to query DB for current role
-        if (role != UserRole.User)
-        {
-            using (var scope = _factory.Services.CreateScope())
-            {
-                var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-                var user = await dbContext.Users.SingleAsync(u => u.Email == email);
-                user.Role = role;
-                await dbContext.SaveChangesAsync();
-            }
-
-            // TEST-653: Verify role update is visible with fresh context
-            using (var verifyScope = _factory.Services.CreateScope())
-            {
-                var verifyContext = verifyScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-                var verifiedUser = await verifyContext.Users.AsNoTracking()
-                    .SingleOrDefaultAsync(u => u.Email == email);
-
-                if (verifiedUser?.Role.ToString() != role.ToString())
-                {
-                    throw new InvalidOperationException(
-                        $"Role update verification failed. Expected: {role}, Actual: {verifiedUser?.Role}");
-                }
-            }
-
-            // TEST-651: Small delay to ensure database transaction is fully committed
-            // before the next HTTP request validates the session
-            await Task.Delay(100);
-        }
-
-        // Create authenticated client with session cookie
-        var authenticatedClient = _factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            HandleCookies = false
-        });
-
-        authenticatedClient.DefaultRequestHeaders.Add("Cookie", sessionCookie);
-
-        return authenticatedClient;
-    }
-
-    /// <summary>
-    /// Hashes a password using PBKDF2 (matches AuthService implementation).
-    /// </summary>
-    private static string HashPassword(string password)
-    {
-        const int iterations = 210_000;
-        var salt = RandomNumberGenerator.GetBytes(16);
-        var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, 32);
-        return $"v1.{iterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
-    }
-
-    /// <summary>
-    /// Property to access factory's service provider (for database queries in tests)
-    /// </summary>
-    private IServiceProvider Services => _factory.Services;
 
     /// <summary>
     /// Scenario: Low-quality response flagged and logged to database
@@ -498,7 +40,9 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
     public async Task QaEndpoint_LowQualityResponse_LoggedToDatabase()
     {
         // Given: Authenticated user
-        var client = await CreateAuthenticatedClientAsync("qa-user-low", UserRole.User);
+        var user = await CreateTestUserAsync("qa-user-low");
+        var cookies = await AuthenticateUserAsync(user.Email);
+        var client = CreateClientWithoutCookies();
 
         // Arrange
         // Use specific GUID that starts with '0' to trigger low-quality mock response
@@ -509,16 +53,19 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         };
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/v1/agents/qa", request);
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        httpRequest.Content = JsonContent.Create(request);
+        AddCookies(httpRequest, cookies);
+        var response = await client.SendAsync(httpRequest);
 
         // Assert
         response.IsSuccessStatusCode.Should().BeTrue();
 
         // Query database for logged request
-        using var scope = Services.CreateScope();
+        using var scope = Factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        // AI-11: Get most recent log (should be from this test request)
+        // Get most recent log (should be from this test request)
         var log = await dbContext.AiRequestLogs
             .OrderByDescending(l => l.CreatedAt)
             .FirstOrDefaultAsync();
@@ -527,7 +74,7 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         log.Should().NotBeNull();
 
         // Verify quality scores were calculated and stored
-        log.RagConfidence.Should().NotBeNull();
+        log!.RagConfidence.Should().NotBeNull();
         log.LlmConfidence.Should().NotBeNull();
         log.CitationQuality.Should().NotBeNull();
         log.OverallConfidence.Should().NotBeNull();
@@ -552,7 +99,9 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
     public async Task QaEndpoint_HighQualityResponse_NotFlagged()
     {
         // Given: Authenticated user
-        var client = await CreateAuthenticatedClientAsync("qa-user-high", UserRole.User);
+        var user = await CreateTestUserAsync("qa-user-high");
+        var cookies = await AuthenticateUserAsync(user.Email);
+        var client = CreateClientWithoutCookies();
 
         // Arrange
         // Use specific GUID that starts with '5' or higher to trigger high-quality mock response
@@ -563,13 +112,16 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         };
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/v1/agents/qa", request);
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        httpRequest.Content = JsonContent.Create(request);
+        AddCookies(httpRequest, cookies);
+        var response = await client.SendAsync(httpRequest);
 
         // Assert
         response.IsSuccessStatusCode.Should().BeTrue();
 
         // Query database
-        using var scope = Services.CreateScope();
+        using var scope = Factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var logs = dbContext.AiRequestLogs
             .OrderByDescending(log => log.CreatedAt)
@@ -595,7 +147,9 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
     public async Task QaEndpoint_QualityScores_StoredInDatabase()
     {
         // Given: Authenticated user
-        var client = await CreateAuthenticatedClientAsync("qa-user-scores", UserRole.User);
+        var user = await CreateTestUserAsync("qa-user-scores");
+        var cookies = await AuthenticateUserAsync(user.Email);
+        var client = CreateClientWithoutCookies();
 
         // Arrange
         var request = new
@@ -605,25 +159,28 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         };
 
         // Act
-        var response = await client.PostAsJsonAsync("/api/v1/agents/qa", request);
+        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        httpRequest.Content = JsonContent.Create(request);
+        AddCookies(httpRequest, cookies);
+        var response = await client.SendAsync(httpRequest);
 
         // Assert
         response.IsSuccessStatusCode.Should().BeTrue();
 
-        using var scope = Services.CreateScope();
+        using var scope = Factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var log = dbContext.AiRequestLogs
             .OrderByDescending(l => l.CreatedAt)
             .First();
 
         log.RagConfidence.Should().NotBeNull();
-        log.RagConfidence.Value.Should().BeInRange(0.0, 1.0);
+        log.RagConfidence!.Value.Should().BeInRange(0.0, 1.0);
         log.LlmConfidence.Should().NotBeNull();
-        log.LlmConfidence.Value.Should().BeInRange(0.0, 1.0);
+        log.LlmConfidence!.Value.Should().BeInRange(0.0, 1.0);
         log.CitationQuality.Should().NotBeNull();
-        log.CitationQuality.Value.Should().BeInRange(0.0, 1.0);
+        log.CitationQuality!.Value.Should().BeInRange(0.0, 1.0);
         log.OverallConfidence.Should().NotBeNull();
-        log.OverallConfidence.Value.Should().BeInRange(0.0, 1.0);
+        log.OverallConfidence!.Value.Should().BeInRange(0.0, 1.0);
     }
 
     /// <summary>
@@ -636,10 +193,12 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
     public async Task AdminEndpoint_GetLowQualityResponses_ReturnsOnlyLowQuality()
     {
         // Given: Admin user is authenticated
-        var client = await CreateAuthenticatedClientAsync("quality-admin-list", UserRole.Admin);
+        var admin = await CreateTestUserAsync("quality-admin-list", UserRole.Admin);
+        var cookies = await AuthenticateUserAsync(admin.Email);
+        var client = CreateClientWithoutCookies();
 
         // Arrange - Seed database with mixed quality responses
-        using (var scope = Services.CreateScope())
+        using (var scope = Factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var logs = new[]
@@ -655,7 +214,8 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                     LlmConfidence = 0.45,
                     CitationQuality = 0.50,
                     OverallConfidence = 0.45,
-                    IsLowQuality = true
+                    IsLowQuality = true,
+                    UserId = admin.Id
                 },
                 new AiRequestLogEntity
                 {
@@ -668,7 +228,8 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                     LlmConfidence = 0.87,
                     CitationQuality = 0.90,
                     OverallConfidence = 0.87,
-                    IsLowQuality = false
+                    IsLowQuality = false,
+                    UserId = admin.Id
                 },
                 new AiRequestLogEntity
                 {
@@ -681,7 +242,8 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                     LlmConfidence = 0.40,
                     CitationQuality = 0.45,
                     OverallConfidence = 0.40,
-                    IsLowQuality = true
+                    IsLowQuality = true,
+                    UserId = admin.Id
                 },
                 new AiRequestLogEntity
                 {
@@ -694,7 +256,8 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                     LlmConfidence = 0.82,
                     CitationQuality = 0.85,
                     OverallConfidence = 0.82,
-                    IsLowQuality = false
+                    IsLowQuality = false,
+                    UserId = admin.Id
                 },
                 new AiRequestLogEntity
                 {
@@ -707,7 +270,8 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                     LlmConfidence = 0.78,
                     CitationQuality = 0.80,
                     OverallConfidence = 0.78,
-                    IsLowQuality = false
+                    IsLowQuality = false,
+                    UserId = admin.Id
                 }
             };
             dbContext.AiRequestLogs.AddRange(logs);
@@ -715,13 +279,15 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         }
 
         // Act
-        var response = await client.GetAsync("/api/v1/admin/quality/low-responses");
+        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/quality/low-responses");
+        AddCookies(httpRequest, cookies);
+        var response = await client.SendAsync(httpRequest);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<LowQualityResponsesResult>();
         result.Should().NotBeNull();
-        result.TotalCount.Should().Be(2);
+        result!.TotalCount.Should().Be(2);
         result.Responses.Should().OnlyContain(r => r.IsLowQuality);
     }
 
@@ -735,10 +301,12 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
     public async Task AdminEndpoint_Pagination_ReturnsCorrectPage()
     {
         // Given: Admin user is authenticated
-        var client = await CreateAuthenticatedClientAsync("quality-admin-pagination", UserRole.Admin);
+        var admin = await CreateTestUserAsync("quality-admin-pagination", UserRole.Admin);
+        var cookies = await AuthenticateUserAsync(admin.Email);
+        var client = CreateClientWithoutCookies();
 
         // Arrange - Seed 25 low-quality responses
-        using (var scope = Services.CreateScope())
+        using (var scope = Factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var logs = Enumerable.Range(1, 25).Select(i => new AiRequestLogEntity
@@ -752,20 +320,23 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                 LlmConfidence = 0.45,
                 CitationQuality = 0.50,
                 OverallConfidence = 0.45,
-                IsLowQuality = true
+                IsLowQuality = true,
+                UserId = admin.Id
             }).ToArray();
             dbContext.AiRequestLogs.AddRange(logs);
             await dbContext.SaveChangesAsync();
         }
 
         // Act
-        var response = await client.GetAsync("/api/v1/admin/quality/low-responses?limit=10&offset=0");
+        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/quality/low-responses?limit=10&offset=0");
+        AddCookies(httpRequest, cookies);
+        var response = await client.SendAsync(httpRequest);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<LowQualityResponsesResult>();
         result.Should().NotBeNull();
-        result.TotalCount.Should().Be(25);
+        result!.TotalCount.Should().Be(25);
         result.Responses.Count.Should().Be(10);
     }
 
@@ -779,10 +350,14 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
     public async Task AdminEndpoint_NonAdminUser_ReturnsForbidden()
     {
         // Given: Regular user (non-admin) is authenticated
-        var client = await CreateAuthenticatedClientAsync("qa-user-forbidden", UserRole.User);
+        var user = await CreateTestUserAsync("qa-user-forbidden", UserRole.User);
+        var cookies = await AuthenticateUserAsync(user.Email);
+        var client = CreateClientWithoutCookies();
 
         // Act
-        var response = await client.GetAsync("/api/v1/admin/quality/low-responses");
+        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/quality/low-responses");
+        AddCookies(httpRequest, cookies);
+        var response = await client.SendAsync(httpRequest);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -798,10 +373,7 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
     public async Task AdminEndpoint_Unauthenticated_ReturnsUnauthorized()
     {
         // Given: Unauthenticated client (no cookies)
-        var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            HandleCookies = false
-        });
+        var client = CreateClientWithoutCookies();
 
         // Act
         var response = await client.GetAsync("/api/v1/admin/quality/low-responses");
@@ -820,10 +392,12 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
     public async Task AdminEndpoint_QualityReport_ReturnsStatistics()
     {
         // Given: Admin user is authenticated
-        var client = await CreateAuthenticatedClientAsync("quality-admin-report", UserRole.Admin);
+        var admin = await CreateTestUserAsync("quality-admin-report", UserRole.Admin);
+        var cookies = await AuthenticateUserAsync(admin.Email);
+        var client = CreateClientWithoutCookies();
 
         // Arrange - Seed responses
-        using (var scope = Services.CreateScope())
+        using (var scope = Factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             // Create 50 records distributed over 6.5 days (well within 7-day window)
@@ -839,20 +413,23 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                 LlmConfidence = i <= 15 ? 0.45 : 0.82,
                 CitationQuality = i <= 15 ? 0.50 : 0.85,
                 OverallConfidence = i <= 15 ? 0.45 : 0.82,
-                IsLowQuality = i <= 15
+                IsLowQuality = i <= 15,
+                UserId = admin.Id
             }).ToArray();
             dbContext.AiRequestLogs.AddRange(logs);
             await dbContext.SaveChangesAsync();
         }
 
         // Act
-        var response = await client.GetAsync("/api/v1/admin/quality/report?days=7");
+        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/quality/report?days=7");
+        AddCookies(httpRequest, cookies);
+        var response = await client.SendAsync(httpRequest);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var report = await response.Content.ReadFromJsonAsync<QualityReport>();
         report.Should().NotBeNull();
-        report.TotalResponses.Should().Be(50);
+        report!.TotalResponses.Should().Be(50);
         report.LowQualityCount.Should().Be(15);
         // TEST-656: Calculated averages: RagConf=(15*0.40+35*0.80)/50=0.68, OverallConf=(15*0.45+35*0.82)/50=0.709
         report.AverageRagConfidence!.Value.Should().BeApproximately(0.68, 0.05);
@@ -869,10 +446,12 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
     public async Task AdminEndpoint_DateRangeFilter_ReturnsFilteredResults()
     {
         // Given: Admin user is authenticated
-        var client = await CreateAuthenticatedClientAsync("quality-admin-datefilter", UserRole.Admin);
+        var admin = await CreateTestUserAsync("quality-admin-datefilter", UserRole.Admin);
+        var cookies = await AuthenticateUserAsync(admin.Email);
+        var client = CreateClientWithoutCookies();
 
         // Arrange
-        using (var scope = Services.CreateScope())
+        using (var scope = Factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var logs = new[]
@@ -884,7 +463,8 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                     Endpoint = "qa",
                     Status = "Success",
                     Query = "Old query",
-                    IsLowQuality = true
+                    IsLowQuality = true,
+                    UserId = admin.Id
                 },
                 new AiRequestLogEntity
                 {
@@ -893,7 +473,8 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                     Endpoint = "qa",
                     Status = "Success",
                     Query = "In range query 1",
-                    IsLowQuality = true
+                    IsLowQuality = true,
+                    UserId = admin.Id
                 },
                 new AiRequestLogEntity
                 {
@@ -902,7 +483,8 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                     Endpoint = "qa",
                     Status = "Success",
                     Query = "In range query 2",
-                    IsLowQuality = true
+                    IsLowQuality = true,
+                    UserId = admin.Id
                 },
                 new AiRequestLogEntity
                 {
@@ -911,7 +493,8 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                     Endpoint = "qa",
                     Status = "Success",
                     Query = "Future query",
-                    IsLowQuality = true
+                    IsLowQuality = true,
+                    UserId = admin.Id
                 }
             };
             dbContext.AiRequestLogs.AddRange(logs);
@@ -919,13 +502,15 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         }
 
         // Act
-        var response = await client.GetAsync("/api/v1/admin/quality/low-responses?startDate=2025-01-01&endDate=2025-01-07");
+        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/quality/low-responses?startDate=2025-01-01&endDate=2025-01-07");
+        AddCookies(httpRequest, cookies);
+        var response = await client.SendAsync(httpRequest);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var result = await response.Content.ReadFromJsonAsync<LowQualityResponsesResult>();
         result.Should().NotBeNull();
-        result.TotalCount.Should().Be(2);
+        result!.TotalCount.Should().Be(2);
         result.Responses.Should().OnlyContain(r =>
             r.CreatedAt >= new DateTime(2025, 1, 1) &&
             r.CreatedAt <= new DateTime(2025, 1, 7));
@@ -941,7 +526,9 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
     public async Task QaEndpoint_ConcurrentRequests_AllLogged()
     {
         // Given: Authenticated user
-        var client = await CreateAuthenticatedClientAsync("qa-user-concurrent", UserRole.User);
+        var user = await CreateTestUserAsync("qa-user-concurrent");
+        var cookies = await AuthenticateUserAsync(user.Email);
+        var client = CreateClientWithoutCookies();
 
         // Arrange
         var requests = Enumerable.Range(1, 10).Select(i => new
@@ -952,14 +539,18 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
 
         // Act
         var tasks = requests.Select(req =>
-            client.PostAsJsonAsync("/api/v1/agents/qa", req)
-        ).ToArray();
+        {
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+            httpRequest.Content = JsonContent.Create(req);
+            AddCookies(httpRequest, cookies);
+            return client.SendAsync(httpRequest);
+        }).ToArray();
         var responses = await Task.WhenAll(tasks);
 
         // Assert
         responses.Should().OnlyContain(r => r.IsSuccessStatusCode);
 
-        using var scope = Services.CreateScope();
+        using var scope = Factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var logCount = dbContext.AiRequestLogs.Count();
 

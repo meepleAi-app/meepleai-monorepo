@@ -287,7 +287,7 @@ CRITICAL INSTRUCTIONS:
                 It.IsAny<string>(),
                 It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(SearchResult.CreateEmpty()); // Empty due to low relevance
+            .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>())); // Empty due to low relevance
 
         var mockHybridSearch = CreateHybridSearchMock();
         var mockLlm = new Mock<ILlmService>();

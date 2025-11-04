@@ -372,9 +372,17 @@ describe('useMultiGameChat', () => {
 
     it('should handle API errors when loading chat history', async () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-      mockApi.get.mockRejectedValueOnce(new Error('Chat not found'));
+      // TEST-685: Mock initial auto-load, then the failing loadChatHistory call
+      mockApi.get
+        .mockResolvedValueOnce([]) // Initial auto-load from useEffect
+        .mockRejectedValueOnce(new Error('Chat not found')); // loadChatHistory call
 
       const { result } = renderHook(() => useMultiGameChat('game-1'));
+
+      // Wait for initial load to complete
+      await waitFor(() => {
+        expect(result.current.isLoadingChats).toBe(false);
+      });
 
       await act(async () => {
         try {

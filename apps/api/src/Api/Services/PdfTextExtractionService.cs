@@ -237,12 +237,13 @@ public class PdfTextExtractionService
 
     /// <summary>
     /// Extracts text from PDF page-by-page using Docnet.Core (AI-08)
+    /// CRITICAL FIX (TEST-651): Don't dispose DocLib.Instance singleton - causes access violations
     /// </summary>
     private List<PagedTextChunk> ExtractPagedRawText(string filePath)
     {
         var pageChunks = new List<PagedTextChunk>();
 
-        using var library = DocLib.Instance;
+        var library = DocLib.Instance; // Don't use 'using' - it's a singleton!
         using var docReader = library.GetDocReader(filePath, new PageDimensions(1080, 1920));
 
         var pageCount = docReader.GetPageCount();
@@ -280,7 +281,7 @@ public class PdfTextExtractionService
 
         try
         {
-            using var library = DocLib.Instance;
+            var library = DocLib.Instance; // Don't use 'using' - it's a singleton! (TEST-651)
             using var docReader = library.GetDocReader(filePath, new PageDimensions(1080, 1920));
 
             var pageCount = docReader.GetPageCount();

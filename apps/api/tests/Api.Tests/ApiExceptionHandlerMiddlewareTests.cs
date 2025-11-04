@@ -401,7 +401,7 @@ public class ApiExceptionHandlerMiddlewareTests
         // Arrange
         var logger = new TestLogger<ApiExceptionHandlerMiddleware>();
         var environment = new Mock<IHostEnvironment>();
-        environment.Setup(e => e.IsDevelopment()).Returns(false);
+        environment.Setup(e => e.EnvironmentName).Returns("Production"); // IsDevelopment() checks EnvironmentName
 
         RequestDelegate throwingNext = _ => throw new InvalidOperationException("Boom");
         var middleware = new ApiExceptionHandlerMiddleware(throwingNext, logger, environment.Object);

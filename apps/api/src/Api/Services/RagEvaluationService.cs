@@ -298,7 +298,8 @@ public class RagEvaluationService : IRagEvaluationService
             var retrievedDocIds = searchResult.Results.Select(r => r.PdfId).ToList();
             var relevantDocIds = query.RelevantDocIds.ToHashSet();
 
-            var relevantRetrievedCount = retrievedDocIds.Count(docId => relevantDocIds.Contains(docId));
+            // TEST-656: Count UNIQUE relevant documents to prevent RecallAtK > 1.0
+            var relevantRetrievedCount = retrievedDocIds.Where(docId => relevantDocIds.Contains(docId)).Distinct().Count();
 
             // Precision@K for different K values
             var precisionAt1 = CalculatePrecisionAtK(retrievedDocIds, relevantDocIds, 1);

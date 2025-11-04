@@ -861,8 +861,8 @@ ANSWER:",
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
-        // Should have received some events before cancellation
-        events.Count.Should().BeCloseTo(1, 2);
+        // TEST-656: Should have received 5 events before cancellation (we cancel when count == 5)
+        events.Count.Should().BeCloseTo(5, 2);
     }
 
     /// <summary>

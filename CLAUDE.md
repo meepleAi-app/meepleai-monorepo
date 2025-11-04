@@ -499,6 +499,7 @@ cd apps/web && pnpm dev                                                         
 | Category | Path | Content |
 |----------|------|---------|
 | **Security** | `docs/SECURITY.md` | Policies, secrets, key rotation |
+| **Secrets Management** | `docs/guide/secrets-management.md` | Environment files, Gmail App Password, rotation (SEC-700) |
 | **Database** | `docs/database-schema.md` | Complete schema ref |
 | **Observability** | `docs/observability.md` | Health, logging, correlation (OPS-01) |
 | **OpenTelemetry** | `docs/technic/ops-02-opentelemetry-design.md` | Tracing, metrics (OPS-02) |

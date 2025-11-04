@@ -38,6 +38,10 @@ The `.gitignore` file explicitly excludes secret-containing files:
 *.env.local
 *.env.prod
 *.env.production
+
+# Service-specific secrets (SEC-700)
+infra/env/n8n-service-session.env
+infra/env/alertmanager.env
 ```
 
 ### Never Commit Secrets
@@ -45,6 +49,8 @@ The `.gitignore` file explicitly excludes secret-containing files:
 ❌ **Never commit**:
 - API keys (OpenRouter, third-party services)
 - Database passwords
+- Gmail App Passwords (Alertmanager)
+- Slack webhook URLs
 - GitHub Personal Access Tokens
 - Session secrets
 - Private keys or certificates
@@ -146,12 +152,61 @@ OpenRouter is used for LLM and embedding services.
    git push
    ```
 
+### Gmail App Password (Alertmanager)
+
+Used for email notifications from Alertmanager.
+
+#### Rotation Schedule
+
+- **Recommended**: Annually or when prompted by Gmail
+- **Required**: Immediately if compromised
+
+#### Rotation Procedure
+
+1. **Generate new App Password**:
+   - Go to https://myaccount.google.com/security
+   - Ensure 2-Step Verification is enabled
+   - Visit https://myaccount.google.com/apppasswords
+   - Create new App Password for "Mail" → "MeepleAI Alertmanager"
+   - Copy 16-character password (format: xxxx xxxx xxxx xxxx)
+
+2. **Update local development** (`infra/env/alertmanager.env`):
+   ```bash
+   GMAIL_APP_PASSWORD=abcdabcdabcdabcd  # Remove spaces
+   ```
+
+3. **Restart Alertmanager**:
+   ```bash
+   cd infra
+   docker compose restart alertmanager
+   ```
+
+4. **Verify email delivery**:
+   ```bash
+   # Trigger test alert
+   curl -X POST http://localhost:9093/api/v1/alerts -d '[{
+     "labels": {"alertname": "TestAlert", "severity": "critical"},
+     "annotations": {"summary": "Testing email after rotation"}
+   }]'
+   ```
+
+5. **Revoke old App Password**:
+   - Return to https://myaccount.google.com/apppasswords
+   - Delete the old "MeepleAI Alertmanager" entry
+
+6. **Update production environment** (if applicable):
+   - Update secret in deployment platform
+   - Restart Alertmanager service
+
+See `docs/guide/secrets-management.md` for detailed Gmail App Password setup.
+
 ### Other API Keys
 
 Follow similar procedure for any third-party API keys:
 - Qdrant cloud keys
 - Database connection strings with embedded passwords
 - Third-party service tokens
+- Slack webhook URLs
 
 ## GitHub Personal Access Token (PAT) Rotation
 
@@ -229,6 +284,12 @@ PATs are used for:
 - [ ] Audit team member access (remove former team members)
 - [ ] Review `.secrets.baseline` for false positives
 
+### Annually
+
+- [ ] Rotate Gmail App Password (Alertmanager)
+- [ ] Review all service-specific secrets
+- [ ] Update secrets management documentation
+
 ### After a Suspected Breach
 
 - [ ] Immediately rotate all potentially compromised secrets
@@ -253,12 +314,17 @@ If you discover a security vulnerability:
 
 ## Additional Resources
 
-- [GitHub Secret Scanning](https://docs.github.com/en/code-security/secret-scanning/about-secret-scanning)
-- [OpenRouter API Documentation](https://openrouter.ai/docs)
-- [pre-commit Documentation](https://pre-commit.com/)
-- [OWASP Secrets Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html)
+- **Internal Documentation**:
+  - [Secrets Management Guide](guide/secrets-management.md) - Comprehensive guide with examples
+  - [Alertmanager Setup](../infra/OPS-05-SETUP.md) - Email notification configuration
+- **External Resources**:
+  - [GitHub Secret Scanning](https://docs.github.com/en/code-security/secret-scanning/about-secret-scanning)
+  - [OpenRouter API Documentation](https://openrouter.ai/docs)
+  - [Gmail App Passwords](https://support.google.com/accounts/answer/185833)
+  - [pre-commit Documentation](https://pre-commit.com/)
+  - [OWASP Secrets Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html)
 
 ---
 
-**Last Updated**: 2025-01-09
-**Version**: 1.0
+**Last Updated**: 2024-11-04 (SEC-700: Added Gmail App Password rotation)
+**Version**: 1.1

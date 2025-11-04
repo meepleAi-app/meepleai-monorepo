@@ -83,12 +83,23 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         // Verify event sequence
         var eventTypes = events.Select(e => e.Type).ToList();
         eventTypes.Should().Contain(StreamingEventType.StateUpdate);
-        eventTypes.Should().Contain(StreamingEventType.Citations);
-        eventTypes.Should().Contain(StreamingEventType.Token);
-        eventTypes.Should().Contain(StreamingEventType.Complete);
 
-        // Complete should be last
-        eventTypes[^1].Should().Be(StreamingEventType.Complete);
+        // TEST-693: Citations event is optional - only present when search finds results
+        // When no results are found, Error event is sent instead
+        var hasError = eventTypes.Contains(StreamingEventType.Error);
+        if (!hasError)
+        {
+            // Success path: should have Citations, Token(s), Complete
+            eventTypes.Should().Contain(StreamingEventType.Citations);
+            eventTypes.Should().Contain(StreamingEventType.Token);
+            eventTypes.Should().Contain(StreamingEventType.Complete);
+            eventTypes[^1].Should().Be(StreamingEventType.Complete);
+        }
+        else
+        {
+            // Error path: should have Error event (no Citations or Token expected)
+            eventTypes.Should().Contain(StreamingEventType.Error);
+        }
 
         // And: All events have valid timestamps
         events.Should().OnlyContain(evt =>

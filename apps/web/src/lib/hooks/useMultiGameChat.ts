@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { api } from "../api";
 
 /**
@@ -325,12 +325,16 @@ export function useMultiGameChat(activeGameId: string | null): UseMultiGameChatR
     return gameState?.chats.length ?? 0;
   }, [chatStatesByGame]);
 
+  // TEST-685: Store switchGame in ref to avoid effect dependency issues
+  const switchGameRef = useRef(switchGame);
+  switchGameRef.current = switchGame;
+
   // Load chats when active game changes
   useEffect(() => {
     if (activeGameId) {
-      void switchGame(activeGameId);
+      void switchGameRef.current(activeGameId);
     }
-  }, [activeGameId, switchGame]);
+  }, [activeGameId]);
 
   // Get current game state (or empty state if no game selected)
   const currentState = activeGameId ? getGameState(activeGameId) : {

@@ -28,6 +28,8 @@ To receive alert emails at **badsworm@gmail.com**, follow these steps:
 
 ### Step 2: Configure Alertmanager
 
+⚠️ **SECURITY NOTE**: The `alertmanager.env` file is gitignored to prevent committing secrets. See `docs/guide/secrets-management.md` for details.
+
 1. Create the environment file:
    ```bash
    cd infra/env
@@ -37,10 +39,17 @@ To receive alert emails at **badsworm@gmail.com**, follow these steps:
 2. Edit `alertmanager.env`:
    ```bash
    # Replace with your actual App Password (remove spaces)
+   # IMPORTANT: Never commit this file to version control!
    GMAIL_APP_PASSWORD=abcdabcdabcdabcd
    ```
 
-3. Restart Alertmanager:
+3. Verify gitignore protection:
+   ```bash
+   # Should output: "infra/env/alertmanager.env" is ignored
+   git check-ignore infra/env/alertmanager.env
+   ```
+
+4. Restart Alertmanager:
    ```bash
    cd ../
    docker compose restart alertmanager
@@ -147,6 +156,8 @@ All documentation is available in `docs/`:
 
 - **Technical Design**: `docs/ops-05-error-monitoring-design.md`
 - **User Guide**: `docs/guide/error-monitoring-guide.md`
+- **Secrets Management**: `docs/guide/secrets-management.md` - Gmail App Password setup and rotation
+- **Security Policy**: `docs/SECURITY.md` - Secret rotation procedures and schedules
 - **Runbooks**:
   - `docs/runbooks/high-error-rate.md`
   - `docs/runbooks/error-spike.md`

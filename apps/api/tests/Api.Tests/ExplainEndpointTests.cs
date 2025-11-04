@@ -26,20 +26,27 @@ namespace Api.Tests;
 /// As a user
 /// I want to get structured explanations about game rules topics
 /// So that I can understand complex concepts with proper citations
+///
+/// TEST #710: Now uses QdrantRagTestFixture for indexed chess knowledge
 /// </summary>
-[Collection("Postgres Integration Tests")]
+[Collection("Qdrant RAG Tests")]
 public class ExplainEndpointTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
+    private readonly QdrantRagTestFixture _ragFixture;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    public ExplainEndpointTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
+    public ExplainEndpointTests(
+        PostgresCollectionFixture postgresFixture,
+        QdrantRagTestFixture ragFixture,
+        ITestOutputHelper output) : base(postgresFixture)
     {
         _output = output;
+        _ragFixture = ragFixture;
     }
 
     /// <summary>

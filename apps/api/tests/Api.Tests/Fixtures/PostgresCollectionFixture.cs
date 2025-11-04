@@ -53,6 +53,9 @@ public class PostgresCollectionFixture : IAsyncLifetime
         Console.WriteLine($"✅ [PostgresCollectionFixture] Container started in {_stopwatch.ElapsedMilliseconds}ms");
         Console.WriteLine($"📍 [PostgresCollectionFixture] Connection: {ConnectionString}");
 
+        // TEST #710: Share connection string with QdrantRagTestFixture via static coordination
+        QdrantRagTestCollection.SharedPostgresConnectionString = ConnectionString;
+
         // Build configuration with Postgres connection string
         Configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>

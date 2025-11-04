@@ -592,22 +592,28 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
 
         db.Users.AddRange(adminUser, editorUser, regularUser);
 
-        // Seed demo games
-        var ticTacToeGame = new Api.Infrastructure.Entities.GameEntity
+        // Seed demo games (TEST #710: check if games already exist to avoid duplicates with RAG fixture)
+        if (!db.Games.Any(g => g.Id == "tic-tac-toe"))
         {
-            Id = "tic-tac-toe",
-            Name = "Tic-Tac-Toe",
-            CreatedAt = now
-        };
+            var ticTacToeGame = new Api.Infrastructure.Entities.GameEntity
+            {
+                Id = "tic-tac-toe",
+                Name = "Tic-Tac-Toe",
+                CreatedAt = now
+            };
+            db.Games.Add(ticTacToeGame);
+        }
 
-        var chessGame = new Api.Infrastructure.Entities.GameEntity
+        if (!db.Games.Any(g => g.Id == "chess"))
         {
-            Id = "chess",
-            Name = "Chess",
-            CreatedAt = now
-        };
-
-        db.Games.AddRange(ticTacToeGame, chessGame);
+            var chessGame = new Api.Infrastructure.Entities.GameEntity
+            {
+                Id = "chess",
+                Name = "Chess",
+                CreatedAt = now
+            };
+            db.Games.Add(chessGame);
+        }
 
         if (!db.SystemConfigurations.Any(c => c.Key == "Features.PdfUpload"))
         {
@@ -756,8 +762,9 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
     /// <summary>
     /// In-memory storage for mocked Qdrant points across all tests
     /// Key: collection name, Value: list of points
+    /// TEST #710: Populated by QdrantRagTestFixture for chess knowledge
     /// </summary>
-    private static readonly Dictionary<string, List<Qdrant.Client.Grpc.PointStruct>> _mockQdrantStorage = new();
+    internal static readonly Dictionary<string, List<Qdrant.Client.Grpc.PointStruct>> _mockQdrantStorage = new();
     private static readonly object _storageLock = new object();
 
     /// <summary>
@@ -810,6 +817,9 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
                     bool isQa = userContent.Contains("CONTEXT FROM RULEBOOK") &&
                                userContent.Contains("QUESTION:");
 
+                    // TEST #710: Check if this is a ChessAgent request
+                    bool isChessAgent = userContent.Contains("CHESS KNOWLEDGE BASE:");
+
                     // Check if there's no context (empty search results)
                     bool hasNoContext = userContent.Contains("CONTEXT FROM RULEBOOK") &&
                                        userContent.Contains("[Page") == false;
@@ -850,25 +860,46 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
 
 Based on the rulebook, {topic} involves the mechanics and conditions described above. Players should refer to the specific page numbers cited for complete details.";
                     }
-                    else if (isQa)
+                    else
                     {
-                        // Generate Q&A response based on context
-                        var contextSnippets = ExtractContextSnippets(userContent);
+                        // TEST #710: For all other requests (including ChessAgent), extract any context and use it
+                        // This ensures tests get realistic responses based on retrieved data
 
-                        if (contextSnippets.Count > 0)
+                        // Try multiple context extraction patterns
+                        string extractedContext = "";
+
+                        // Pattern 1: Chess knowledge base
+                        var chessMatch = System.Text.RegularExpressions.Regex.Match(
+                            userContent,
+                            @"CHESS KNOWLEDGE BASE:\s*(.*?)(?:\s*QUESTION:|\s*POSITION:|$)",
+                            System.Text.RegularExpressions.RegexOptions.Singleline);
+                        if (chessMatch.Success && chessMatch.Groups[1].Value.Trim().Length > 20)
                         {
-                            // Use first snippet as basis for answer
-                            responseText = $"{contextSnippets[0]} (see page 1 for details)";
+                            extractedContext = chessMatch.Groups[1].Value.Trim();
+                        }
+
+                        // Pattern 2: Rulebook context
+                        if (string.IsNullOrWhiteSpace(extractedContext))
+                        {
+                            var contextSnippets = ExtractContextSnippets(userContent);
+                            if (contextSnippets.Count > 0)
+                            {
+                                extractedContext = string.Join(" ", contextSnippets);
+                            }
+                        }
+
+                        // Use extracted context or fallback to generic response
+                        if (!string.IsNullOrWhiteSpace(extractedContext))
+                        {
+                            // Return first 600 chars of context (contains actual knowledge)
+                            responseText = extractedContext.Length > 600
+                                ? extractedContext.Substring(0, 600)
+                                : extractedContext;
                         }
                         else
                         {
-                            responseText = "Based on the provided rulebook, the information needed to answer this question is available on the referenced pages.";
+                            responseText = "This is a deterministic test LLM response.";
                         }
-                    }
-                    else
-                    {
-                        // Default response for other LLM requests
-                        responseText = "This is a test response from the mocked LLM service.";
                     }
 
                     // Build OpenRouter-compatible response with token usage

@@ -31,7 +31,20 @@ internal sealed class TestLlmService : ILlmService
             response = "This is a deterministic test LLM response.";
         }
 
-        return Task.FromResult(LlmCompletionResult.CreateSuccess(response));
+        // TEST-711: Calculate realistic token usage for test assertions
+        var promptTokens = EstimateTokens(systemPrompt + userPrompt);
+        var completionTokens = EstimateTokens(response);
+        var usage = new LlmUsage(promptTokens, completionTokens, promptTokens + completionTokens);
+
+        return Task.FromResult(LlmCompletionResult.CreateSuccess(response, usage));
+    }
+
+    /// <summary>
+    /// Rough token estimation (1 token ≈ 4 characters for English text)
+    /// </summary>
+    private static int EstimateTokens(string text)
+    {
+        return Math.Max(1, (text?.Length ?? 0) / 4);
     }
 
     public async IAsyncEnumerable<string> GenerateCompletionStreamAsync(
@@ -65,14 +78,66 @@ internal sealed class TestLlmService : ILlmService
 
     private static string? ExtractFirstSnippet(string prompt)
     {
-        const string marker = "Relevant Rule Context:";
-        var markerIndex = prompt.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
-        if (markerIndex < 0)
+        // TEST-711: Support both RAG context markers
+        // RagService uses "Relevant Rule Context:", ChessAgentService uses "CHESS KNOWLEDGE BASE:"
+        var markers = new[] { "Relevant Rule Context:", "CHESS KNOWLEDGE BASE:", "CONTEXT FROM RULEBOOK" };
+
+        int markerIndex = -1;
+        string? foundMarker = null;
+        foreach (var marker in markers)
+        {
+            markerIndex = prompt.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (markerIndex >= 0)
+            {
+                foundMarker = marker;
+                break;
+            }
+        }
+
+        if (markerIndex < 0 || foundMarker == null)
         {
             return null;
         }
 
-        var start = markerIndex + marker.Length;
+        var start = markerIndex + foundMarker.Length;
+
+        // TEST-711: For ChessAgentService format, extract ALL context up to "QUESTION:" or "POSITION:"
+        // Format is:
+        // CHESS KNOWLEDGE BASE:
+        // [Source 1]
+        // <text>
+        //
+        // ---
+        //
+        // [Source 2]
+        // <text>
+        // ...
+        // QUESTION:
+        // <question>
+        if (foundMarker == "CHESS KNOWLEDGE BASE:")
+        {
+            var questionIndex = prompt.IndexOf("\nQUESTION:", start, StringComparison.OrdinalIgnoreCase);
+            var positionIndex = prompt.IndexOf("\nPOSITION:", start, StringComparison.OrdinalIgnoreCase);
+
+            var endIndex = -1;
+            if (questionIndex >= 0 && (positionIndex < 0 || questionIndex < positionIndex))
+            {
+                endIndex = questionIndex;
+            }
+            else if (positionIndex >= 0)
+            {
+                endIndex = positionIndex;
+            }
+
+            if (endIndex > start)
+            {
+                return prompt.Substring(start, endIndex - start).Trim();
+            }
+            // If no QUESTION or POSITION found, return everything after the marker
+            return prompt.Substring(start).Trim();
+        }
+
+        // Original logic for "Relevant Rule Context:" format
         var remainder = prompt.Substring(start)
             .Split('\n')
             .Select(line => line.Trim())

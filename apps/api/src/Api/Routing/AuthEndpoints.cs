@@ -137,7 +137,9 @@ public static class AuthEndpoints
         group.MapGet("/auth/me", (HttpContext context) =>
         {
             // Check for API key authentication first (higher priority)
-            if (context.User.Identity?.IsAuthenticated == true)
+            // API keys are identified by the "AuthType" claim with value "ApiKey"
+            var authType = context.User.FindFirst("AuthType")?.Value;
+            if (authType == "ApiKey" && context.User.Identity?.IsAuthenticated == true)
             {
                 var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 var email = context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;

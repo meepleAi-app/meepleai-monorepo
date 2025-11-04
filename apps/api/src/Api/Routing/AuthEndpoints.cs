@@ -133,20 +133,15 @@ public static class AuthEndpoints
         });
 
         // Get current user (AUTH-01: Supports both cookie and API key auth)
+        // Priority: API key > Cookie session
         group.MapGet("/auth/me", (HttpContext context) =>
         {
-            // Support both cookie-based session auth and API key auth
-            if (context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession session)
-            {
-                return Results.Json(new AuthResponse(session.User, session.ExpiresAt));
-            }
-
-            // Check for API key authentication
+            // Check for API key authentication first (higher priority)
             if (context.User.Identity?.IsAuthenticated == true)
             {
                 var userId = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 var email = context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
-                var displayName = context.User.FindFirst("displayName")?.Value;
+                var displayName = context.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
                 var role = context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
 
                 if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(email))
@@ -154,6 +149,12 @@ public static class AuthEndpoints
                     var user = new AuthUser(userId, email, displayName ?? email, role ?? UserRole.User.ToString());
                     return Results.Json(new AuthResponse(user, null)); // API keys don't have session expiration
                 }
+            }
+
+            // Fall back to cookie-based session auth
+            if (context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession session)
+            {
+                return Results.Json(new AuthResponse(session.User, session.ExpiresAt));
             }
 
             return Results.Unauthorized();

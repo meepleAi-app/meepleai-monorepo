@@ -39,16 +39,13 @@ public class LoggingIntegrationTests : IDisposable
     [Fact]
     public async Task Request_WithNoAuthentication_LogsWithCorrelationId()
     {
-        // Arrange + Act within a correlator context to ensure capture
-        List<LogEvent> logEvents;
-        HttpResponseMessage response;
-        using (TestCorrelator.CreateContext())
-        {
-            TestLogSink.Clear();
-            response = await _client.GetAsync("/health/live");
-            response.EnsureSuccessStatusCode();
-            logEvents = TestLogSink.GetEvents().ToList();
-        }
+        // Arrange + Act
+        TestLogSink.Clear();
+        var response = await _client.GetAsync("/health/live");
+        response.EnsureSuccessStatusCode();
+
+        // Get logs from TestLogSink (not TestCorrelator)
+        var logEvents = TestLogSink.GetEvents().ToList();
 
         // Assert - check correlation header
         response.Headers.Contains("X-Correlation-Id").Should().BeTrue();
@@ -82,11 +79,12 @@ public class LoggingIntegrationTests : IDisposable
         var logger = _factory.Services.GetRequiredService<ILogger<LoggingIntegrationTests>>();
 
         // Act - log an object with password
+        TestLogSink.Clear();
         var loginAttempt = new { Username = "admin", Password = "super-secret-password" };
         logger.LogInformation("Login attempt: {@LoginAttempt}", loginAttempt);
 
-        // Assert - password should be redacted
-        var logEvents = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
+        // Assert - password should be redacted (use TestLogSink, not TestCorrelator)
+        var logEvents = TestLogSink.GetEvents().ToList();
         var loginLog = logEvents.FirstOrDefault(e => e.MessageTemplate.Text.Contains("Login attempt"));
 
         loginLog.Should().NotBeNull();
@@ -135,11 +133,12 @@ public class LoggingIntegrationTests : IDisposable
         var logger = _factory.Services.GetRequiredService<ILogger<LoggingIntegrationTests>>();
 
         // Act
+        TestLogSink.Clear();
         var config = new { ConnectionString = "Host=localhost;Password=secret123;Database=test" };
         logger.LogInformation("Database config: {@Config}", config);
 
-        // Assert
-        var logEvents = TestCorrelator.GetLogEventsFromCurrentContext().ToList();
+        // Assert (use TestLogSink, not TestCorrelator)
+        var logEvents = TestLogSink.GetEvents().ToList();
         var configLog = logEvents.FirstOrDefault(e => e.MessageTemplate.Text.Contains("Database config"));
 
         configLog.Should().NotBeNull();

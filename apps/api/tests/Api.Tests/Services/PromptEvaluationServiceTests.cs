@@ -621,15 +621,19 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
                 if (marginalCallCount <= 2)
                 {
                     return marginalCallCount == 1
-                        ? new QaResponse("Two players required. Page 1.", new List<Snippet>().AsReadOnly(), confidence: 0.82)
-                        : new QaResponse("Not specified in the rulebook.", new List<Snippet>().AsReadOnly(), confidence: 0.82);
+                        ? new QaResponse("2 players (two) required. See Page 1.",
+                            new List<Snippet> { new Snippet("Two players", "rulebook.pdf", 1, 5, 0.95f) }.AsReadOnly(),
+                            confidence: 0.82)
+                        : new QaResponse("This is not specified in the rulebook.", new List<Snippet>().AsReadOnly(), confidence: 0.82);
                 }
                 // Next 2 calls: candidate (100% accurate, confidence 0.85 - marginal improvement)
                 else
                 {
                     return marginalCallCount == 3
-                        ? new QaResponse("Two players needed. Page 1.", new List<Snippet>().AsReadOnly(), confidence: 0.85)
-                        : new QaResponse("Not specified in the game rules.", new List<Snippet>().AsReadOnly(), confidence: 0.85);
+                        ? new QaResponse("Requires 2 players (two). See Page 1 for details.",
+                            new List<Snippet> { new Snippet("Two players", "rulebook.pdf", 1, 5, 0.95f) }.AsReadOnly(),
+                            confidence: 0.85)
+                        : new QaResponse("not specified in the rules.", new List<Snippet>().AsReadOnly(), confidence: 0.85);
                 }
             });
 
@@ -641,8 +645,15 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
             _testDatasetPath);
 
         // Assert
+        // DEBUG: Log actual values
+        _output.WriteLine($"Candidate Passed: {comparison.CandidateResult.Passed}");
+        _output.WriteLine($"Candidate Summary: {comparison.CandidateResult.Summary}");
+        _output.WriteLine($"Baseline Metrics: Acc={comparison.BaselineResult.Metrics.Accuracy}%, Conf={comparison.BaselineResult.Metrics.AvgConfidence}, Cite={comparison.BaselineResult.Metrics.CitationCorrectness}%");
+        _output.WriteLine($"Candidate Metrics: Acc={comparison.CandidateResult.Metrics.Accuracy}%, Conf={comparison.CandidateResult.Metrics.AvgConfidence}, Cite={comparison.CandidateResult.Metrics.CitationCorrectness}%");
+        _output.WriteLine($"Recommendation: {comparison.Recommendation}, Reason: {comparison.RecommendationReason}");
+
         comparison.Recommendation.Should().Be(ComparisonRecommendation.ManualReview);
-        comparison.RecommendationReason.Should().Contain("manual review");
+        comparison.RecommendationReason.Should().ContainEquivalentOf("manual review");
     }
 
     #endregion

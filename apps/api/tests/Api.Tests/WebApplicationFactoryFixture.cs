@@ -658,6 +658,31 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
             db.SystemConfigurations.Add(chatExportFlag);
         }
 
+        // Seed Features.StreamingResponses flag (TEST-693: Fix 403 Forbidden in StreamingQaEndpointIntegrationTests)
+        if (!db.SystemConfigurations.Any(c => c.Key == "Features.StreamingResponses"))
+        {
+            var streamingResponsesFlag = new Api.Infrastructure.Entities.SystemConfigurationEntity
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                Key = "Features.StreamingResponses",
+                Value = "true",
+                ValueType = "Boolean",
+                Description = "Enable streaming responses for integration tests",
+                Category = "FeatureFlags",
+                IsActive = true,
+                RequiresRestart = false,
+                Environment = "All",
+                Version = 1,
+                CreatedAt = now,
+                UpdatedAt = now,
+                CreatedByUserId = adminUser.Id,
+                UpdatedByUserId = adminUser.Id,
+                LastToggledAt = now
+            };
+
+            db.SystemConfigurations.Add(streamingResponsesFlag);
+        }
+
         // Seed demo rule specs
         var ticTacToeRuleSpec = new Api.Infrastructure.Entities.RuleSpecEntity
         {

@@ -224,7 +224,9 @@ public static class TimeAssertions
 
         if (delta > maxDelta)
         {
-            throw new Xunit.Sdk.XunitException(
+            throw new ArgumentOutOfRangeException(
+                nameof(actual),
+                actual,
                 $"Expected time near {expected:O}, but was {actual:O} (delta: {delta})");
         }
     }

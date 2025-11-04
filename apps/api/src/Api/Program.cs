@@ -185,9 +185,14 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+    var db = scope.ServiceProvider.GetService<MeepleAiDbContext>();
 
-    if (ShouldSkipMigrations(app, db))
+    if (db == null)
+    {
+        // Logging tests and other scenarios without DB context
+        app.Logger.LogInformation("Skipping database migrations (MeepleAiDbContext not registered)");
+    }
+    else if (ShouldSkipMigrations(app, db))
     {
         // Test or in-memory environments create the schema elsewhere.
     }

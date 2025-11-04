@@ -215,6 +215,7 @@ public class CacheWarmingService : BackgroundService
             await _ragService.AskAsync(
                 frequentQuery.GameId.ToString(),
                 frequentQuery.Query,
+                language: null,
                 bypassCache: false,
                 cancellationToken: cancellationToken);
 

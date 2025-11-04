@@ -85,13 +85,51 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                         d.ServiceType == typeof(Api.Services.IQdrantService) ||
                         d.ServiceType == typeof(Api.Services.IEmbeddingService) ||
                         d.ServiceType == typeof(Api.Services.IAiResponseCacheService) ||
-                        d.ServiceType == typeof(Api.Services.IPromptTemplateService) // AI-11: Mock PromptTemplateService dependency
+                        d.ServiceType == typeof(Api.Services.IPromptTemplateService) || // AI-11: Mock PromptTemplateService dependency
+                        d.ServiceType == typeof(Api.Services.ISessionCacheService) || // TEST-651: Remove Redis session cache (needs mock Redis)
+                        d.ServiceType == typeof(StackExchange.Redis.IConnectionMultiplexer) // TEST-651: Will be mocked below
                     ).ToList();
 
                     foreach (var descriptor in descriptors)
                     {
                         services.Remove(descriptor);
                     }
+
+                    // TEST-651: Mock Redis IConnectionMultiplexer for services that depend on it
+                    // (RateLimitService, RedisFrequencyTracker, etc.)
+                    var mockRedis = new Moq.Mock<StackExchange.Redis.IConnectionMultiplexer>();
+                    var mockDatabase = new Moq.Mock<StackExchange.Redis.IDatabase>();
+
+                    // Setup basic Redis database operations to return success/default values
+                    mockDatabase.Setup(x => x.StringGetAsync(Moq.It.IsAny<StackExchange.Redis.RedisKey>(), Moq.It.IsAny<StackExchange.Redis.CommandFlags>()))
+                        .ReturnsAsync(StackExchange.Redis.RedisValue.Null);
+                    mockDatabase.Setup(x => x.StringSetAsync(Moq.It.IsAny<StackExchange.Redis.RedisKey>(), Moq.It.IsAny<StackExchange.Redis.RedisValue>(), Moq.It.IsAny<TimeSpan?>(), Moq.It.IsAny<bool>(), Moq.It.IsAny<StackExchange.Redis.When>(), Moq.It.IsAny<StackExchange.Redis.CommandFlags>()))
+                        .ReturnsAsync(true);
+                    mockDatabase.Setup(x => x.KeyDeleteAsync(Moq.It.IsAny<StackExchange.Redis.RedisKey>(), Moq.It.IsAny<StackExchange.Redis.CommandFlags>()))
+                        .ReturnsAsync(true);
+                    mockDatabase.Setup(x => x.KeyExpireAsync(Moq.It.IsAny<StackExchange.Redis.RedisKey>(), Moq.It.IsAny<TimeSpan?>(), Moq.It.IsAny<StackExchange.Redis.ExpireWhen>(), Moq.It.IsAny<StackExchange.Redis.CommandFlags>()))
+                        .ReturnsAsync(true);
+                    mockDatabase.Setup(x => x.StringIncrementAsync(Moq.It.IsAny<StackExchange.Redis.RedisKey>(), Moq.It.IsAny<long>(), Moq.It.IsAny<StackExchange.Redis.CommandFlags>()))
+                        .ReturnsAsync(1L);
+
+                    mockRedis.Setup(x => x.GetDatabase(Moq.It.IsAny<int>(), Moq.It.IsAny<object>())).Returns(mockDatabase.Object);
+                    mockRedis.Setup(x => x.IsConnected).Returns(false); // Indicate Redis not available
+
+                    services.AddSingleton(mockRedis.Object);
+
+                    // TEST-651: Re-register SessionCacheService to ensure it's in DI but always returns null
+                    // This forces AuthService to query database for every session validation
+                    var mockSessionCache = new Moq.Mock<Api.Services.ISessionCacheService>();
+                    mockSessionCache.Setup(x => x.GetAsync(Moq.It.IsAny<string>(), Moq.It.IsAny<CancellationToken>()))
+                        .ReturnsAsync((Api.Models.ActiveSession?)null);
+                    mockSessionCache.Setup(x => x.SetAsync(Moq.It.IsAny<string>(), Moq.It.IsAny<Api.Models.ActiveSession>(), Moq.It.IsAny<DateTime>(), Moq.It.IsAny<CancellationToken>()))
+                        .Returns(Task.CompletedTask);
+                    mockSessionCache.Setup(x => x.InvalidateAsync(Moq.It.IsAny<string>(), Moq.It.IsAny<CancellationToken>()))
+                        .Returns(Task.CompletedTask);
+                    mockSessionCache.Setup(x => x.InvalidateUserSessionsAsync(Moq.It.IsAny<string>(), Moq.It.IsAny<CancellationToken>()))
+                        .Returns(Task.CompletedTask);
+
+                    services.AddSingleton(mockSessionCache.Object);
 
                     // Add DbContext with Testcontainers PostgreSQL connection string
                     services.AddDbContext<MeepleAiDbContext>(options =>
@@ -394,16 +432,23 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                 {
                     user.Role = role;
                     await dbContext.SaveChangesAsync();
-                }
 
-                // Invalidate session cache to force reload with updated role (TEST-653)
-                var sessionCacheService = scope.ServiceProvider.GetService<ISessionCacheService>();
-                if (sessionCacheService != null)
+                    // TEST-653: Explicit transaction flush to ensure role update is committed
+                    await dbContext.Database.ExecuteSqlRawAsync("SELECT 1");
+                }
+            }
+
+            // TEST-653: Verify role update is visible with fresh context
+            using (var verifyScope = _factory.Services.CreateScope())
+            {
+                var verifyContext = verifyScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+                var verifiedUser = await verifyContext.Users.AsNoTracking()
+                    .SingleOrDefaultAsync(u => u.Email == email);
+
+                if (verifiedUser?.Role.ToString() != role.ToString())
                 {
-                    var sessionId = sessionCookie.Replace("meeple_session=", "");
-                    var tokenHash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(sessionId));
-                    var hashString = Convert.ToBase64String(tokenHash);
-                    await sessionCacheService.InvalidateAsync(hashString, default);
+                    throw new InvalidOperationException(
+                        $"Role update verification failed. Expected: {role}, Actual: {verifiedUser?.Role}");
                 }
             }
         }

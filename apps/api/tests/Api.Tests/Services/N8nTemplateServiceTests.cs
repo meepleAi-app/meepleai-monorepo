@@ -321,7 +321,7 @@ public class N8nTemplateServiceTests : IDisposable
             { "interval", "0 * * * *" }
         };
 
-        HttpRequestMessage? capturedRequest = null;
+        string? capturedRequestBody = null;
 
         var mockHandler = new Mock<HttpMessageHandler>();
         mockHandler
@@ -330,7 +330,11 @@ public class N8nTemplateServiceTests : IDisposable
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
                 ItExpr.IsAny<CancellationToken>())
-            .Callback<HttpRequestMessage, CancellationToken>((req, _) => capturedRequest = req)
+            .Callback<HttpRequestMessage, CancellationToken>(async (req, _) =>
+            {
+                // CODE-01: Read content before HttpClient disposes it
+                capturedRequestBody = await req.Content!.ReadAsStringAsync();
+            })
             .ReturnsAsync(new HttpResponseMessage
             {
                 StatusCode = HttpStatusCode.OK,
@@ -348,8 +352,8 @@ public class N8nTemplateServiceTests : IDisposable
         await _service.ImportTemplateAsync("test-params", parameters, "user123");
 
         // Assert
-        capturedRequest.Should().NotBeNull();
-        var requestBody = await capturedRequest!.Content!.ReadAsStringAsync();
+        capturedRequestBody.Should().NotBeNull();
+        var requestBody = capturedRequestBody!;
 
         requestBody.Should().Contain("https://api.example.com");
         requestBody.Should().Contain("0 * * * *");
@@ -646,6 +650,18 @@ public class N8nTemplateServiceTests : IDisposable
 
     private async Task SeedActiveN8nConfig()
     {
+        // Create test user first (required for foreign key constraint)
+        var user = new UserEntity
+        {
+            Id = "admin",
+            Email = "admin@test.com",
+            DisplayName = "Test Admin",
+            PasswordHash = "hash",
+            Role = UserRole.Admin,
+            CreatedAt = DateTime.UtcNow
+        };
+        _db.Users.Add(user);
+
         var config = new N8nConfigEntity
         {
             Id = Guid.NewGuid().ToString(),

@@ -278,22 +278,21 @@ CRITICAL INSTRUCTIONS:
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { new float[] { 0.1f, 0.2f, 0.3f } }));
 
-        // Hybrid search returns empty (low-relevance threshold filtering)
-        var mockHybridSearch = CreateHybridSearchMock();
-        mockHybridSearch
+        // TEST-656: Mock Qdrant to return empty results (no relevant context found)
+        var mockQdrant = new Mock<IQdrantService>();
+        mockQdrant
             .Setup(x => x.SearchAsync(
                 It.IsAny<string>(),
-                It.IsAny<Guid>(),
-                It.IsAny<SearchMode>(),
+                It.IsAny<float[]>(),
+                It.IsAny<string>(),
                 It.IsAny<int>(),
-                It.IsAny<float>(),
-                It.IsAny<float>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<HybridSearchResult>()); // Empty due to low relevance
+            .ReturnsAsync(SearchResult.CreateEmpty()); // Empty due to low relevance
 
+        var mockHybridSearch = CreateHybridSearchMock();
         var mockLlm = new Mock<ILlmService>();
         var mockCache = CreateCacheMock();
-        var ragService = new RagService(dbContext, mockEmbedding.Object, new Mock<IQdrantService>().Object, mockHybridSearch.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object, CreateQueryExpansionMock().Object, CreateRerankerMock().Object, CreateCitationExtractorMock().Object);
+        var ragService = new RagService(dbContext, mockEmbedding.Object, mockQdrant.Object, mockHybridSearch.Object, mockLlm.Object, mockCache.Object, CreatePromptTemplateMock().Object, _mockLogger.Object, CreateQueryExpansionMock().Object, CreateRerankerMock().Object, CreateCitationExtractorMock().Object);
 
         // When: User asks a question not covered by the retrieved context
         var result = await ragService.AskAsync("catan", "What is the maximum score to win?");

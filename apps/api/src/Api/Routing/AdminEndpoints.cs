@@ -2192,12 +2192,11 @@ group.MapDelete("/admin/cache/games/{gameId}", async (string gameId, HttpContext
         return Results.BadRequest(new { error = "gameId is required" });
     }
 
-    // Validate game exists
+    // Validate game exists (but proceed with cache invalidation even if not - idempotent)
     var gameExists = await dbContext.Games.AnyAsync(g => g.Id == gameId, ct);
     if (!gameExists)
     {
-        logger.LogWarning("Admin {AdminId} attempted to invalidate cache for non-existent game {GameId}", session.User.Id, gameId);
-        return Results.NotFound(new { error = $"Game with ID '{gameId}' not found" });
+        logger.LogWarning("Admin {AdminId} invalidating cache for non-existent game {GameId} (idempotent)", session.User.Id, gameId);
     }
 
     try

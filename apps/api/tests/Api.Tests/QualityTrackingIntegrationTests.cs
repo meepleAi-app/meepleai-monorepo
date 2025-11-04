@@ -439,6 +439,9 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
                 var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
                 var user = await dbContext.Users.SingleAsync(u => u.Email == email);
                 user.Role = role;
+
+                // TEST-656: Explicitly mark entity as modified to ensure EF Core tracks the change
+                dbContext.Entry(user).State = EntityState.Modified;
                 await dbContext.SaveChangesAsync();
             }
 
@@ -854,8 +857,9 @@ public class QualityTrackingIntegrationTests : IAsyncLifetime
         report.Should().NotBeNull();
         report.TotalResponses.Should().Be(50);
         report.LowQualityCount.Should().Be(15);
-        report.AverageRagConfidence!.Value.Should().BeApproximately(0.60, 0.1);
-        report.AverageOverallConfidence!.Value.Should().BeApproximately(0.60, 0.1);
+        // TEST-656: Calculated averages: RagConf=(15*0.40+35*0.80)/50=0.68, OverallConf=(15*0.45+35*0.82)/50=0.709
+        report.AverageRagConfidence!.Value.Should().BeApproximately(0.68, 0.05);
+        report.AverageOverallConfidence!.Value.Should().BeApproximately(0.71, 0.05);
     }
 
     /// <summary>

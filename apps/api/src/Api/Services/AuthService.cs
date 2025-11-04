@@ -152,6 +152,19 @@ public class AuthService
                 // Verify not expired (belt-and-suspenders check)
                 if (cached.ExpiresAt > now)
                 {
+                    // TEST-656: Always refresh user data from DB to get current role
+                    // Session cache stores user snapshot, but roles can change
+                    var currentUser = await _db.Users
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(u => u.Id == cached.User.Id, ct);
+                    
+                    if (currentUser == null)
+                    {
+                        // User deleted - invalidate session
+                        await _sessionCache.InvalidateAsync(hash, ct);
+                        return null;
+                    }
+
                     // Update last seen synchronously to avoid disposed context issues
                     var session = await _db.UserSessions
                         .FirstOrDefaultAsync(s => s.TokenHash == hash, ct);
@@ -161,8 +174,8 @@ public class AuthService
                         await _db.SaveChangesAsync(ct);
                     }
 
-                    // Return session with current LastSeenAt (AUTH-05 fix)
-                    return new ActiveSession(cached.User, cached.ExpiresAt, now);
+                    // Return session with CURRENT user data (fresh role from DB)
+                    return new ActiveSession(ToDto(currentUser), cached.ExpiresAt, now);
                 }
 
                 // Expired in cache - invalidate

@@ -22,20 +22,27 @@ namespace Api.Tests;
 /// As an external system
 /// I want to call the chess webhook
 /// So that I can get chess analysis and suggestions via n8n orchestration
+///
+/// TEST #710: Now uses QdrantRagTestFixture for indexed chess knowledge
 /// </summary>
-[Collection("Postgres Integration Tests")]
+[Collection("Qdrant RAG Tests")]
 public class ChessWebhookIntegrationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
+    private readonly QdrantRagTestFixture _ragFixture;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    public ChessWebhookIntegrationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
+    public ChessWebhookIntegrationTests(
+        PostgresCollectionFixture postgresFixture,
+        QdrantRagTestFixture ragFixture,
+        ITestOutputHelper output) : base(postgresFixture)
     {
         _output = output;
+        _ragFixture = ragFixture;
     }
 
     /// <summary>

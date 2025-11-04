@@ -17,20 +17,27 @@ namespace Api.Tests;
 /// As a chess player
 /// I want to ask questions about chess rules, openings, tactics, and positions
 /// So that I can improve my understanding and play better
+///
+/// TEST #710: Now uses QdrantRagTestFixture for indexed chess knowledge
 /// </summary>
-[Collection("Postgres Integration Tests")]
+[Collection("Qdrant RAG Tests")]
 public class ChessAgentIntegrationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
+    private readonly QdrantRagTestFixture _ragFixture;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    public ChessAgentIntegrationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
+    public ChessAgentIntegrationTests(
+        PostgresCollectionFixture postgresFixture,
+        QdrantRagTestFixture ragFixture,
+        ITestOutputHelper output) : base(postgresFixture)
     {
         _output = output;
+        _ragFixture = ragFixture;
     }
 
     /// <summary>

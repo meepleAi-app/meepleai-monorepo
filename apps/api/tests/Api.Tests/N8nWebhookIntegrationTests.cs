@@ -22,20 +22,27 @@ namespace Api.Tests;
 /// As an external system
 /// I want to call the explain webhook
 /// So that I can get structured game rule explanations via n8n orchestration
+///
+/// TEST #710: Now uses QdrantRagTestFixture for indexed chess knowledge
 /// </summary>
-[Collection("Postgres Integration Tests")]
+[Collection("Qdrant RAG Tests")]
 public class N8nWebhookIntegrationTests : IntegrationTestBase
 {
     private readonly ITestOutputHelper _output;
+    private readonly QdrantRagTestFixture _ragFixture;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
 
-    public N8nWebhookIntegrationTests(PostgresCollectionFixture fixture, ITestOutputHelper output) : base(fixture)
+    public N8nWebhookIntegrationTests(
+        PostgresCollectionFixture postgresFixture,
+        QdrantRagTestFixture ragFixture,
+        ITestOutputHelper output) : base(postgresFixture)
     {
         _output = output;
+        _ragFixture = ragFixture;
     }
 
     /// <summary>

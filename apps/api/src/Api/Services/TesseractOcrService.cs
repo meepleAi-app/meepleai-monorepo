@@ -2,6 +2,9 @@ using Docnet.Core;
 using Docnet.Core.Models;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
 using Tesseract;
 
@@ -192,39 +195,56 @@ public class TesseractOcrService : IOcrService, IDisposable
     /// <summary>
     /// Internal method to extract text from a single page using Tesseract
     /// </summary>
+    [HandleProcessCorruptedStateExceptions]
+    [SecurityCritical]
     private (string Text, float Confidence) ExtractTextFromPageInternal(string pdfPath, int pageIndex)
     {
         var engine = GetEngine();
 
-        // Render PDF page to image using Docnet
-        using var library = DocLib.Instance;
-        using var docReader = library.GetDocReader(pdfPath, new PageDimensions(1080, 1920));
-
-        if (pageIndex >= docReader.GetPageCount())
+        try
         {
-            throw new ArgumentException($"Page index {pageIndex} is out of range. PDF has {docReader.GetPageCount()} pages.");
+            // Render PDF page to image using Docnet
+            using var library = DocLib.Instance;
+            using var docReader = library.GetDocReader(pdfPath, new PageDimensions(1080, 1920));
+
+            if (pageIndex >= docReader.GetPageCount())
+            {
+                throw new ArgumentException($"Page index {pageIndex} is out of range. PDF has {docReader.GetPageCount()} pages.");
+            }
+
+            using var pageReader = docReader.GetPageReader(pageIndex);
+
+            // Get page dimensions
+            var width = pageReader.GetPageWidth();
+            var height = pageReader.GetPageHeight();
+
+            // Render page to raw bytes
+            var rawBytes = pageReader.GetImage();
+
+            // Convert to Pix format for Tesseract
+            // Docnet provides BGRA format, we need to convert to compatible format
+            using var pix = ConvertToPix(rawBytes, width, height);
+
+            // Perform OCR
+            using var page = engine.Process(pix);
+
+            var text = page.GetText();
+            var confidence = page.GetMeanConfidence();
+
+            return (text ?? string.Empty, confidence);
         }
-
-        using var pageReader = docReader.GetPageReader(pageIndex);
-
-        // Get page dimensions
-        var width = pageReader.GetPageWidth();
-        var height = pageReader.GetPageHeight();
-
-        // Render page to raw bytes
-        var rawBytes = pageReader.GetImage();
-
-        // Convert to Pix format for Tesseract
-        // Docnet provides BGRA format, we need to convert to compatible format
-        using var pix = ConvertToPix(rawBytes, width, height);
-
-        // Perform OCR
-        using var page = engine.Process(pix);
-
-        var text = page.GetText();
-        var confidence = page.GetMeanConfidence();
-
-        return (text ?? string.Empty, confidence);
+        catch (AccessViolationException ex)
+        {
+            // Native library crash - log and rethrow as managed exception
+            _logger.LogError(ex, "Native library crash during PDF processing for page {PageIndex} of {PdfPath}", pageIndex, pdfPath);
+            throw new InvalidOperationException($"PDF processing failed due to native library error. The PDF may be corrupted or unsupported.", ex);
+        }
+        catch (SEHException ex)
+        {
+            // Structured Exception Handling (SEH) from native code
+            _logger.LogError(ex, "Native exception during PDF processing for page {PageIndex} of {PdfPath}", pageIndex, pdfPath);
+            throw new InvalidOperationException($"PDF processing failed due to native library error. The PDF may be corrupted or unsupported.", ex);
+        }
     }
 
     /// <summary>

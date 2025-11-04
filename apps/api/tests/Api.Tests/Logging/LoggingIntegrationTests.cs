@@ -2,6 +2,7 @@ using Api.Infrastructure;
 using Api.Logging;
 using Api.Tests.Fixtures;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -269,20 +270,32 @@ public class LoggingTestFactory : Microsoft.AspNetCore.Mvc.Testing.WebApplicatio
         // Set Testing environment to prevent real database connections
         builder.UseEnvironment("Testing");
 
-        // Configure minimal services (no DB required for logging tests)
+        // Configure minimal services with in-memory database
         builder.ConfigureServices(services =>
         {
-            // Remove real database services
-            var descriptors = services.Where(d =>
-                d.ServiceType.FullName?.Contains("MeepleAiDbContext") == true ||
-                d.ServiceType.FullName?.Contains("Postgres") == true ||
-                d.ServiceType.FullName?.Contains("Qdrant") == true ||
-                d.ServiceType.FullName?.Contains("Redis") == true).ToList();
-
-            foreach (var descriptor in descriptors)
+            // Remove real database descriptor
+            var dbContextDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<MeepleAiDbContext>));
+            if (dbContextDescriptor != null)
             {
-                services.Remove(descriptor);
+                services.Remove(dbContextDescriptor);
             }
+
+            // Add in-memory SQLite database for logging tests
+            services.AddDbContext<MeepleAiDbContext>(options =>
+            {
+                options.UseSqlite("DataSource=:memory:");
+            });
+
+            // Build service provider to create and initialize DB
+            var sp = services.BuildServiceProvider();
+            using var scope = sp.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+            // Keep SQLite in-memory DB alive by opening connection using relational extension
+            var connection = db.Database.GetDbConnection();
+            connection.Open();
+
+            db.Database.EnsureCreated();  // Create schema
         });
 
         // Configure logging for Serilog with TestCorrelator

@@ -1,5 +1,8 @@
 using Docnet.Core;
 using Docnet.Core.Models;
+using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
 using System.Text.RegularExpressions;
 using Api.Services.Exceptions;
@@ -269,28 +272,45 @@ public class PdfTextExtractionService
     /// <summary>
     /// Extracts raw text from PDF using Docnet.Core
     /// </summary>
+    [HandleProcessCorruptedStateExceptions]
+    [SecurityCritical]
     private (string Text, int PageCount) ExtractRawText(string filePath)
     {
         var textBuilder = new StringBuilder();
 
-        using var library = DocLib.Instance;
-        using var docReader = library.GetDocReader(filePath, new PageDimensions(1080, 1920));
-
-        var pageCount = docReader.GetPageCount();
-
-        for (int i = 0; i < pageCount; i++)
+        try
         {
-            using var pageReader = docReader.GetPageReader(i);
-            var pageText = pageReader.GetText();
+            using var library = DocLib.Instance;
+            using var docReader = library.GetDocReader(filePath, new PageDimensions(1080, 1920));
 
-            if (!string.IsNullOrWhiteSpace(pageText))
+            var pageCount = docReader.GetPageCount();
+
+            for (int i = 0; i < pageCount; i++)
             {
-                textBuilder.AppendLine(pageText);
-                textBuilder.AppendLine(); // Add separator between pages
-            }
-        }
+                using var pageReader = docReader.GetPageReader(i);
+                var pageText = pageReader.GetText();
 
-        return (textBuilder.ToString(), pageCount);
+                if (!string.IsNullOrWhiteSpace(pageText))
+                {
+                    textBuilder.AppendLine(pageText);
+                    textBuilder.AppendLine(); // Add separator between pages
+                }
+            }
+
+            return (textBuilder.ToString(), pageCount);
+        }
+        catch (AccessViolationException ex)
+        {
+            // Native library crash - log and rethrow as managed exception
+            _logger.LogError(ex, "Native library crash during PDF text extraction from {FilePath}", filePath);
+            throw new InvalidOperationException($"PDF text extraction failed due to native library error. The PDF may be corrupted or unsupported.", ex);
+        }
+        catch (SEHException ex)
+        {
+            // Structured Exception Handling (SEH) from native code
+            _logger.LogError(ex, "Native exception during PDF text extraction from {FilePath}", filePath);
+            throw new InvalidOperationException($"PDF text extraction failed due to native library error. The PDF may be corrupted or unsupported.", ex);
+        }
     }
 
     /// <summary>

@@ -38,5 +38,8 @@
   <ItemGroup>
     <None Include="Fixtures\**\*.*" CopyToOutputDirectory="PreserveNewest" />
     <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="runtimeconfig.template.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Copy n8n templates for integration tests -->
+    <None Include="..\..\..\..\infra\n8n\templates\**\*.json" Link="infra\n8n\templates\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

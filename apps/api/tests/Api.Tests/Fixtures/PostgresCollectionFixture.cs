@@ -74,9 +74,42 @@ public class PostgresCollectionFixture : IAsyncLifetime
             .WithDatabase("meepleai_test")
             .WithUsername("postgres")
             .WithPassword("testpassword")
+            // Add explicit wait strategy for reliability (TEST-651 Phase 1)
+            .WithWaitStrategy(Wait.ForUnixContainer()
+                .UntilCommandIsCompleted("pg_isready -U postgres"))
             .Build();
 
         await PostgresContainer.StartAsync();
+
+        // Wait for Postgres to be fully ready and queryable (TEST-651 Phase 1)
+        await WaitForPostgresReadyAsync();
+    }
+
+    /// <summary>
+    /// Waits for Postgres to be fully initialized and queryable.
+    /// Prevents race conditions in integration tests (TEST-651 Phase 1).
+    /// </summary>
+    private async Task WaitForPostgresReadyAsync(int maxRetries = 30, int delayMs = 1000)
+    {
+        var retries = maxRetries;
+        while (retries-- > 0)
+        {
+            try
+            {
+                await using var context = CreateDbContext();
+                await context.Database.CanConnectAsync();
+                Console.WriteLine("✅ [PostgresCollectionFixture] Postgres is ready and queryable");
+                return;
+            }
+            catch (Exception ex)
+            {
+                if (retries == 0)
+                {
+                    throw new TimeoutException($"Postgres not ready after {maxRetries} attempts", ex);
+                }
+                await Task.Delay(delayMs);
+            }
+        }
     }
 
     public async Task DisposeAsync()

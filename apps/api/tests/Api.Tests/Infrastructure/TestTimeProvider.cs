@@ -14,6 +14,7 @@ public sealed class TestTimeProvider : TimeProvider, IDisposable
 {
     private long _utcNowTicks;
     private readonly object _lock = new();
+    private readonly List<TestTimer> _timers = new();
 
     /// <summary>
     /// Creates a new TestTimeProvider starting at the specified time (UTC).
@@ -51,7 +52,7 @@ public sealed class TestTimeProvider : TimeProvider, IDisposable
     public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
 
     /// <summary>
-    /// Advances the fake time by the specified duration.
+    /// Advances the fake time by the specified duration and fires any timers that are due.
     /// Thread-safe: Uses compare-exchange for atomic updates.
     /// </summary>
     /// <param name="duration">Time to advance. Must be positive.</param>
@@ -69,6 +70,15 @@ public sealed class TestTimeProvider : TimeProvider, IDisposable
             oldTicks = Interlocked.Read(ref _utcNowTicks);
             newTicks = oldTicks + duration.Ticks;
         } while (Interlocked.CompareExchange(ref _utcNowTicks, newTicks, oldTicks) != oldTicks);
+
+        // Fire any timers that are now due
+        lock (_lock)
+        {
+            foreach (var timer in _timers.ToList()) // ToList() to avoid modification during iteration
+            {
+                timer.CheckAndFire();
+            }
+        }
     }
 
     /// <summary>
@@ -96,12 +106,17 @@ public sealed class TestTimeProvider : TimeProvider, IDisposable
     /// </summary>
     public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
     {
-        return new TestTimer(this, callback, state, dueTime, period);
+        var timer = new TestTimer(this, callback, state, dueTime, period);
+        lock (_lock)
+        {
+            _timers.Add(timer);
+        }
+        return timer;
     }
 
     /// <summary>
-    /// Gets a timestamp for measuring elapsed time (uses fake time).
-    /// Thread-safe: Returns current fake time in ticks.
+    /// Gets a timestamp for measuring elapsed time (uses fake time in milliseconds).
+    /// Thread-safe: Returns current fake time in milliseconds.
     /// </summary>
     public override long GetTimestamp()
     {
@@ -109,29 +124,43 @@ public sealed class TestTimeProvider : TimeProvider, IDisposable
     }
 
     /// <summary>
-    /// Gets the frequency of timestamps per second (1000 ticks/ms * 10000 ticks = 10M ticks/sec).
+    /// Gets the frequency of timestamps per second (1000 ms/sec).
+    /// Since GetTimestamp() returns milliseconds, frequency is 1000.
     /// </summary>
-    public override long TimestampFrequency => Stopwatch.Frequency;
+    public override long TimestampFrequency => 1000; // 1000 ms per second
 
     /// <summary>
-    /// Calculates elapsed time between two timestamps using fake time frequency.
+    /// Calculates elapsed time between two timestamps.
     /// Note: TimeProvider.GetElapsedTime() is not virtual in .NET 9, so we use new instead.
     /// </summary>
     public new TimeSpan GetElapsedTime(long startingTimestamp, long endingTimestamp)
     {
-        var deltaTicks = endingTimestamp - startingTimestamp;
-        var milliseconds = (deltaTicks * 1000.0) / TimestampFrequency;
-        return TimeSpan.FromMilliseconds(milliseconds);
+        // Timestamps are in milliseconds, so delta is directly in ms
+        var deltaMs = endingTimestamp - startingTimestamp;
+        return TimeSpan.FromMilliseconds(deltaMs);
     }
 
     /// <summary>
-    /// Disposes resources. TestTimeProvider has no unmanaged resources, so this is a no-op.
-    /// Implementing IDisposable for consistency with using patterns in tests.
+    /// Removes a timer from the active timers list.
+    /// Called by TestTimer when disposed.
+    /// </summary>
+    private void RemoveTimer(TestTimer timer)
+    {
+        lock (_lock)
+        {
+            _timers.Remove(timer);
+        }
+    }
+
+    /// <summary>
+    /// Disposes resources and clears all active timers.
     /// </summary>
     public void Dispose()
     {
-        // No unmanaged resources to dispose
-        // This is here for consistency with test patterns using 'using' statements
+        lock (_lock)
+        {
+            _timers.Clear();
+        }
     }
 
     /// <summary>
@@ -171,7 +200,11 @@ public sealed class TestTimeProvider : TimeProvider, IDisposable
 
         public void Dispose()
         {
-            _disposed = true;
+            if (!_disposed)
+            {
+                _disposed = true;
+                _timeProvider.RemoveTimer(this);
+            }
         }
 
         /// <summary>

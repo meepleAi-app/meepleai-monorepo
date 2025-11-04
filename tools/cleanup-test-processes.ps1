@@ -10,8 +10,9 @@ param(
 Write-Host "=== Test Process Cleanup ===" -ForegroundColor Cyan
 Write-Host "Memory threshold: $MemoryThresholdMB MB" -ForegroundColor Gray
 
-$processesToCheck = @('node', 'dotnet', 'jest')
+$processesToCheck = @('node', 'dotnet', 'jest', 'testhost', 'VBCSCompiler')
 $killedCount = 0
+$orphanedTestHosts = @()
 
 foreach ($processName in $processesToCheck) {
     $processes = Get-Process -Name $processName -ErrorAction SilentlyContinue
@@ -44,10 +45,19 @@ foreach ($processName in $processesToCheck) {
                 }
 
                 # Check if it's a test process (contains test-related command line)
-                if (-not $isProtected -and $cmdLine -match "test|jest|xunit|nunit") {
+                if (-not $isProtected -and $cmdLine -match "test|jest|xunit|nunit|testhost") {
                     if ($proc.CPU -gt 0 -and $proc.Responding -eq $false) {
                         $shouldKill = $true
                         $reason = "Not responding (test process)"
+                    }
+                    # Also kill orphaned testhost processes (no parent or old)
+                    if ($processName -eq "testhost") {
+                        $runtime = (Get-Date) - $proc.StartTime
+                        if ($runtime.TotalMinutes -gt 10) {
+                            $shouldKill = $true
+                            $reason = "Orphaned testhost (running $([math]::Round($runtime.TotalMinutes, 1)) min)"
+                            $orphanedTestHosts += $proc.Id
+                        }
                     }
                 }
             } catch {
@@ -90,6 +100,9 @@ if ($DryRun) {
     Write-Host "Dry run completed. No processes were killed." -ForegroundColor Yellow
 } else {
     Write-Host "Killed $killedCount hanging test processes." -ForegroundColor $(if ($killedCount -gt 0) { "Red" } else { "Green" })
+    if ($orphanedTestHosts.Count -gt 0) {
+        Write-Host "  - Including $($orphanedTestHosts.Count) orphaned testhost processes" -ForegroundColor Yellow
+    }
 }
 
 # Show current memory usage

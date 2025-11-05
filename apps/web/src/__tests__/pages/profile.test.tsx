@@ -343,6 +343,46 @@ describe('ProfilePage', () => {
     alertMock.mockRestore();
   });
 
+  it('handles network error during unlink (catch block)', async () => {
+    const alertMock = jest.spyOn(window, 'alert').mockImplementation(() => {});
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    confirmMock.mockReturnValue(true);
+
+    // @ts-expect-error - Mock signature simplified
+    fetchMock.mockImplementation((url: string, options?: RequestInit) => {
+      if (url.includes('/api/v1/auth/me')) {
+        return Promise.resolve(createJsonResponse(mockUserData));
+      }
+      if (url.includes('/api/v1/users/me/oauth-accounts')) {
+        return Promise.resolve(createJsonResponse(mockOAuthAccounts));
+      }
+      if (url.includes('/api/v1/auth/oauth/google/unlink') && options?.method === 'DELETE') {
+        // Throw a network error to trigger the catch block
+        return Promise.reject(new Error('Network error'));
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${url}`));
+    });
+
+    process.env.NEXT_PUBLIC_API_BASE = apiBase;
+    const ProfilePage = loadProfilePage();
+    const user = userEvent.setup({ delay: null });
+
+    render(<ProfilePage />);
+
+    expect(await screen.findByText('Linked Accounts')).toBeInTheDocument();
+
+    const unlinkButtons = screen.getAllByRole('button', { name: /Unlink/i });
+    await user.click(unlinkButtons[0]);
+
+    await waitFor(() => {
+      expect(consoleError).toHaveBeenCalledWith('Unlink error:', expect.any(Error));
+      expect(alertMock).toHaveBeenCalledWith('Failed to unlink account.');
+    });
+
+    alertMock.mockRestore();
+    consoleError.mockRestore();
+  });
+
   it('handles network error during profile load', async () => {
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
 

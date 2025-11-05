@@ -1,8 +1,12 @@
-import { test, expect } from "./fixtures/auth";
+import { test as base, expect } from '@playwright/test';
+import { loginAsAdmin } from './fixtures/auth';
 
-test.describe("Analytics Dashboard E2E", () => {
-  test.beforeEach(async ({ adminPage: page }) => {
-    // Mock analytics API endpoint
+const test = base.extend<{ adminPage: any }>({
+  adminPage: async ({ page }, use) => {
+    // Set up auth mocks first (but skip navigation)
+    await loginAsAdmin(page, true);
+
+    // Set up analytics API mocks BEFORE any navigation
     await page.route('**/api/v1/admin/analytics*', async (route) => {
       await route.fulfill({
         status: 200,
@@ -27,7 +31,12 @@ test.describe("Analytics Dashboard E2E", () => {
         })
       });
     });
-  });
+
+    await use(page);
+  }
+});
+
+test.describe("Analytics Dashboard E2E", () => {
 
   test("should display analytics dashboard with metrics", async ({ adminPage: page }) => {
     // Navigate to analytics

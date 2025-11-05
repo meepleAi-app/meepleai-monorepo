@@ -1,13 +1,17 @@
-import { test, expect } from './fixtures/auth';
+import { test as base, expect } from '@playwright/test';
+import { loginAsAdmin } from './fixtures/auth';
 
 /**
  * CONFIG-07: E2E tests for admin configuration UI
  * Validates configuration management workflows through the browser
  */
 
-test.describe('Admin Configuration Management', () => {
-  test.beforeEach(async ({ adminPage: page }) => {
-    // Mock configuration API endpoints
+const test = base.extend<{ adminPage: any }>({
+  adminPage: async ({ page }, use) => {
+    // Set up auth mocks first (but skip navigation)
+    await loginAsAdmin(page, true);
+
+    // Set up configuration API mocks BEFORE any navigation
     await page.route('**/api/v1/admin/configurations*', async (route) => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
@@ -42,13 +46,17 @@ test.describe('Admin Configuration Management', () => {
       });
     });
 
-    // Navigate to configuration page (already authenticated via fixture)
-    await page.goto('/admin/configuration');
-    await page.waitForLoadState('networkidle');
-    await expect(page).toHaveURL('/admin/configuration');
-  });
+    await use(page);
+  }
+});
+
+test.describe('Admin Configuration Management', () => {
 
   test('admin can view configuration management page', async ({ adminPage: page }) => {
+    // Navigate to configuration page (mocks are already set up)
+    await page.goto('/admin/configuration');
+    await page.waitForLoadState('networkidle');
+
     // Assert: Configuration page loads with tabs
     await expect(page.locator('h1')).toContainText(/Configuration Management/i);
 
@@ -60,6 +68,9 @@ test.describe('Admin Configuration Management', () => {
   });
 
   test('admin can create new feature flag configuration', async ({ adminPage: page }) => {
+    await page.goto('/admin/configuration');
+    await page.waitForLoadState('networkidle');
+
     // Navigate to Feature Flags tab
     await page.getByRole('button', { name: /Feature Flags/i }).click();
 
@@ -86,6 +97,9 @@ test.describe('Admin Configuration Management', () => {
   });
 
   test('admin can toggle feature flag', async ({ adminPage: page }) => {
+    await page.goto('/admin/configuration');
+    await page.waitForLoadState('networkidle');
+
     // Navigate to Feature Flags tab
     await page.getByRole('button', { name: /Feature Flags/i }).click();
 
@@ -115,6 +129,9 @@ test.describe('Admin Configuration Management', () => {
   });
 
   test('admin can view different configuration categories', async ({ adminPage: page }) => {
+    await page.goto('/admin/configuration');
+    await page.waitForLoadState('networkidle');
+
     // Test tab navigation
     const tabs = ['Feature Flags', 'Rate Limiting', 'AI', 'RAG'];
 

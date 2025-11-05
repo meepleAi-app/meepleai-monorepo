@@ -13,6 +13,16 @@ export default defineConfig({
     trace: 'on-first-retry',
     actionTimeout: 10000,     // 10s for clicks/fills
     navigationTimeout: 30000, // 30s for page.goto
+    launchOptions: {
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--disable-gpu',
+        '--single-process',
+      ],
+    },
   },
 
   projects: [

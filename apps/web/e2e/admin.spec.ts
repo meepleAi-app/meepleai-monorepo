@@ -3,7 +3,7 @@ import { test, expect, Page } from '@playwright/test';
 const apiBase = 'http://localhost:8080';
 
 async function mockAuthenticatedUser(page: Page) {
-  await page.route(`${apiBase}/auth/me`, async (route) => {
+  await page.route(`${apiBase}/api/v1/auth/me`, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -69,7 +69,7 @@ test.describe('Admin dashboard', () => {
 
     const qaOnly = [allRequests[0]];
 
-    await page.route(new RegExp(`${apiBase}/admin/requests.*`), async (route) => {
+    await page.route(new RegExp(`${apiBase}/api/v1/admin/requests.*`), async (route) => {
       const url = new URL(route.request().url());
       const endpoint = url.searchParams.get('endpoint');
       const body = endpoint === 'qa' ? { requests: qaOnly } : { requests: allRequests };
@@ -81,7 +81,7 @@ test.describe('Admin dashboard', () => {
       });
     });
 
-    await page.route(`${apiBase}/admin/stats`, async (route) => {
+    await page.route(`${apiBase}/api/v1/admin/stats`, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -168,7 +168,7 @@ test.describe('Admin dashboard', () => {
   test('shows an error state when analytics APIs fail', async ({ page }) => {
     await mockAuthenticatedUser(page);
 
-    await page.route(new RegExp(`${apiBase}/admin/requests.*`), async (route) => {
+    await page.route(new RegExp(`${apiBase}/api/v1/admin/requests.*`), async (route) => {
       await route.fulfill({
         status: 500,
         contentType: 'application/json',
@@ -249,7 +249,7 @@ test.describe('Admin dashboard', () => {
       }
     ];
 
-    await page.route(new RegExp(`${apiBase}/admin/requests.*`), async (route) => {
+    await page.route(new RegExp(`${apiBase}/api/v1/admin/requests.*`), async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -257,7 +257,7 @@ test.describe('Admin dashboard', () => {
       });
     });
 
-    await page.route(`${apiBase}/admin/stats`, async (route) => {
+    await page.route(`${apiBase}/api/v1/admin/stats`, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -305,7 +305,7 @@ test.describe('Admin dashboard', () => {
   test('hides charts when no data available', async ({ page }) => {
     await mockAuthenticatedUser(page);
 
-    await page.route(new RegExp(`${apiBase}/admin/requests.*`), async (route) => {
+    await page.route(new RegExp(`${apiBase}/api/v1/admin/requests.*`), async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -313,7 +313,7 @@ test.describe('Admin dashboard', () => {
       });
     });
 
-    await page.route(`${apiBase}/admin/stats`, async (route) => {
+    await page.route(`${apiBase}/api/v1/admin/stats`, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

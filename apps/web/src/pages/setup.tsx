@@ -362,7 +362,7 @@ export default function SetupPage() {
   if (!authUser) {
     return (
       <main style={{ padding: 24, maxWidth: 900, margin: "0 auto", fontFamily: "sans-serif" }}>
-        <Link href="/" style={{ color: "#0077FF", textDecoration: "none" }}>
+        <Link href="/" style={{ color: "#3391ff", textDecoration: "none" }}>
           ← Back to Home
         </Link>
         <div

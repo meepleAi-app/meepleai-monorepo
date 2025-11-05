@@ -62,11 +62,18 @@ public class BlobStorageService : IBlobStorageService
             _logger.LogError(ex, "Access denied storing file for game {GameId}", gameId);
             return new BlobStorageResult(false, null, null, 0, "Access denied to storage location");
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
+            // SERVICE BOUNDARY PATTERN: Blob storage service boundary - must handle all file system errors gracefully
+            // Rationale: This is a service entry point that interacts with the file system. File operations can
+            // throw various runtime exceptions (disk full, permissions, antivirus locks, path too long). We must
+            // catch all exceptions to return error results instead of crashing the service.
+            // Context: File system operations can fail in unpredictable ways across different OS environments
             _logger.LogError(ex, "Unexpected error storing file for game {GameId}", gameId);
             return new BlobStorageResult(false, null, null, 0, ex.Message);
         }
+#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     public async Task<Stream?> RetrieveAsync(string fileId, string gameId, CancellationToken ct = default)
@@ -89,11 +96,18 @@ public class BlobStorageService : IBlobStorageService
             var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
             return fileStream;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
+            // SERVICE BOUNDARY PATTERN: Blob storage service boundary - must handle all file system errors gracefully
+            // Rationale: This is a service entry point that retrieves files from the file system. File operations
+            // can throw various runtime exceptions (file locked, permissions, disk errors, path issues). We must
+            // catch all exceptions to return null instead of crashing the service.
+            // Context: File system operations can fail in unpredictable ways across different OS environments
             _logger.LogError(ex, "Error retrieving file {FileId} for game {GameId}", fileId, gameId);
             return null;
         }
+#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     public async Task<bool> DeleteAsync(string fileId, string gameId, CancellationToken ct = default)
@@ -130,11 +144,18 @@ public class BlobStorageService : IBlobStorageService
             _logger.LogWarning(ex, "Access denied deleting file {FileId} for game {GameId}", fileId, gameId);
             return false;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
+            // SERVICE BOUNDARY PATTERN: Blob storage service boundary - must handle all file system errors gracefully
+            // Rationale: This is a service entry point that deletes files from the file system. File operations
+            // can throw various runtime exceptions (file locked, permissions, antivirus blocks, disk errors). We
+            // must catch all exceptions to return false instead of crashing the service.
+            // Context: File system operations can fail in unpredictable ways across different OS environments
             _logger.LogWarning(ex, "Unexpected error deleting file {FileId} for game {GameId}", fileId, gameId);
             return false;
         }
+#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     public string GetStoragePath(string fileId, string gameId, string fileName)

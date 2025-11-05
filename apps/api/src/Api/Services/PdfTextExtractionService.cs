@@ -152,11 +152,18 @@ public class PdfTextExtractionService
             _logger.LogError(ex, "Failed to extract text from PDF {FilePath}: I/O error", filePath);
             return PdfTextExtractionResult.CreateFailure($"Failed to read PDF file: {ex.Message}");
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
+            // SERVICE BOUNDARY PATTERN: PDF text extraction service boundary - must handle all errors gracefully
+            // Rationale: This is a service entry point that processes untrusted PDF files from users. PDFs can
+            // trigger various runtime exceptions (Docnet.Core native crashes, encoding errors, corrupt structures).
+            // We must catch all exceptions to return a user-friendly error result instead of crashing the service.
+            // Context: Docnet.Core can throw unexpected exceptions from native PDF parsing libraries
             _logger.LogError(ex, "Failed to extract text from PDF {FilePath}", filePath);
             return PdfTextExtractionResult.CreateFailure($"Failed to extract text from PDF: {ex.Message}");
         }
+#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     /// <summary>
@@ -228,11 +235,18 @@ public class PdfTextExtractionService
             _logger.LogError(ex, "Failed to extract paged text from PDF {FilePath}: I/O error", filePath);
             return PagedExtractionResult.CreateFailure($"Failed to read PDF file: {ex.Message}");
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
+            // SERVICE BOUNDARY PATTERN: PDF paged extraction service boundary - must handle all errors gracefully
+            // Rationale: This is a service entry point that processes untrusted PDF files. Page-by-page extraction
+            // can encounter various runtime exceptions from native PDF libraries (Docnet.Core crashes, malformed
+            // page structures, encoding issues). We must catch all exceptions to return error results.
+            // Context: Docnet.Core can throw unexpected exceptions from native libraries during page processing
             _logger.LogError(ex, "Failed to extract paged text from PDF {FilePath}", filePath);
             return PagedExtractionResult.CreateFailure($"Failed to extract paged text from PDF: {ex.Message}");
         }
+#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     /// <summary>

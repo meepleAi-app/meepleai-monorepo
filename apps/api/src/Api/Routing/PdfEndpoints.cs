@@ -137,6 +137,9 @@ group.MapGet("/bgg/search", async (
             details = ex.Message
         }, statusCode: StatusCodes.Status503ServiceUnavailable);
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must catch all exceptions to return HTTP 500
+    // Specific exception handling occurs in service layer (BggApiService)
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -147,6 +150,7 @@ group.MapGet("/bgg/search", async (
             error = "An unexpected error occurred while searching BoardGameGeek."
         }, statusCode: StatusCodes.Status500InternalServerError);
     }
+#pragma warning restore CA1031
 });
 
 group.MapGet("/bgg/games/{bggId:int}", async (
@@ -190,6 +194,9 @@ group.MapGet("/bgg/games/{bggId:int}", async (
             details = ex.Message
         }, statusCode: StatusCodes.Status503ServiceUnavailable);
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must catch all exceptions to return HTTP 500
+    // Specific exception handling occurs in service layer (BggApiService)
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -200,6 +207,7 @@ group.MapGet("/bgg/games/{bggId:int}", async (
             error = "An unexpected error occurred while retrieving game details."
         }, statusCode: StatusCodes.Status500InternalServerError);
     }
+#pragma warning restore CA1031
 });
 
 group.MapGet("/games/{gameId}/pdfs", async (string gameId, HttpContext context, PdfStorageService pdfStorage, CancellationToken ct) =>
@@ -350,6 +358,9 @@ group.MapGet("/pdfs/{pdfId}/progress", async (string pdfId, HttpContext context,
         {
             progress = System.Text.Json.JsonSerializer.Deserialize<ProcessingProgress>(pdf.ProcessingProgressJson);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Resilience pattern - JSON deserialization failure shouldn't break PDF retrieval
+        // Fail-open to return PDF metadata even if progress field is corrupted
         catch (Exception ex)
         {
             // Resilience pattern: JSON deserialization failure shouldn't break PDF retrieval
@@ -358,6 +369,7 @@ group.MapGet("/pdfs/{pdfId}/progress", async (string pdfId, HttpContext context,
             var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
             logger.LogWarning(ex, "Failed to deserialize progress for PDF {PdfId}", pdfId);
         }
+#pragma warning restore CA1031
     }
 
     return Results.Ok(progress);

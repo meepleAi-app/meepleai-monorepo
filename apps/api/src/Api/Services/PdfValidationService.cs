@@ -158,6 +158,9 @@ public class PdfValidationService : IPdfValidationService
                     {
                         _logger.LogWarning(ex, "Access denied deleting temporary validation file {TempFile}", tempFile);
                     }
+#pragma warning disable CA1031 // Do not catch general exception types
+                    // Justification: Cleanup pattern - temp file deletion failures must not affect validation result
+                    // Validation is complete; file cleanup is best-effort only
                     catch (Exception ex)
                     {
                         // CLEANUP PATTERN: Temp file deletion failures are logged but not thrown
@@ -168,6 +171,7 @@ public class PdfValidationService : IPdfValidationService
                         // Context: File failures are typically permission/locking (antivirus, backup processes)
                         _logger.LogWarning(ex, "Unexpected error deleting temporary validation file {TempFile}", tempFile);
                     }
+#pragma warning restore CA1031
                 }
             }
             finally
@@ -210,11 +214,18 @@ public class PdfValidationService : IPdfValidationService
             _logger.LogError(ex, "Access denied during PDF validation for {FileName}", fileName);
             throw new PdfValidationException("Failed to access PDF file: Permission denied.", ex);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
+            // SERVICE BOUNDARY PATTERN: PDF validation service boundary - must handle all errors gracefully
+            // Rationale: This is a service entry point that validates untrusted PDF files from users. Validation
+            // involves magic byte checks, Docnet.Core parsing, and file operations that can throw various runtime
+            // exceptions. We wrap all exceptions in PdfValidationException for consistent error handling upstream.
+            // Context: Docnet.Core can throw unexpected exceptions from native PDF validation libraries
             _logger.LogError(ex, "Unexpected error during PDF validation for {FileName}", fileName);
             throw new PdfValidationException($"PDF validation failed: {ex.Message}", ex);
         }
+#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     public PdfValidationResult ValidateFileSize(long fileSizeBytes)
@@ -331,10 +342,14 @@ public class PdfValidationService : IPdfValidationService
         {
             errors["pdfStructure"] = $"Unsupported PDF format: {ex.Message}";
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Validation pattern - all PDF parsing errors must be captured and returned as validation errors
+        // PDF structure validation must convert all exceptions to user-friendly validation messages
         catch (Exception ex)
         {
             errors["pdfStructure"] = $"Unable to read PDF structure: {ex.Message}";
         }
+#pragma warning restore CA1031
 
         return (errors, metadata);
     }

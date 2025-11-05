@@ -237,6 +237,9 @@ public class PdfExportFormatter : IExportFormatter
                     var page = element.GetProperty("page").GetInt32();
                     citations.Add(new CitationMetadata(source, page));
                 }
+#pragma warning disable CA1031 // Do not catch general exception types
+                // Justification: Data robustness pattern - malformed citation entries are skipped
+                // Chat export with incomplete/malformed citations should still succeed
                 catch (Exception ex)
                 {
                     // DATA ROBUSTNESS PATTERN: Malformed citation entries are skipped, not fatal
@@ -247,6 +250,7 @@ public class PdfExportFormatter : IExportFormatter
                     // Context: Citation malformation from RAG JSON structure changes or DB corruption
                     _logger?.LogWarning(ex, "Failed to parse citation from metadata: {Metadata}", element.ToString());
                 }
+#pragma warning restore CA1031
             }
 
             return citations;

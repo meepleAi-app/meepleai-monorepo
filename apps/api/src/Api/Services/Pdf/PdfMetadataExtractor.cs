@@ -37,28 +37,42 @@ public class PdfMetadataExtractor : IPdfMetadataExtractor
             var creationDateStr = info.GetMoreInfo(PdfName.CreationDate.GetValue());
             if (!string.IsNullOrEmpty(creationDateStr))
             {
+#pragma warning disable CA1031 // Do not catch general exception types
                 try
                 {
                     metadata.CreationDate = ParsePdfDate(creationDateStr);
                 }
                 catch (Exception ex)
                 {
+                    // DATA ROBUSTNESS PATTERN: Malformed PDF metadata should not fail extraction
+                    // Rationale: PDF creation dates can have various non-standard formats. Parsing failures
+                    // should only result in null date metadata, not extraction failure. We log the error
+                    // for monitoring but continue extracting other metadata fields.
+                    // Context: PDF date format D:YYYYMMDDHHmmSS can have vendor-specific variations
                     _logger.LogWarning(ex, "Failed to parse creation date: {Date}", creationDateStr);
                 }
+#pragma warning restore CA1031 // Do not catch general exception types
             }
 
             // Parse modification date if available
             var modDateStr = info.GetMoreInfo(PdfName.ModDate.GetValue());
             if (!string.IsNullOrEmpty(modDateStr))
             {
+#pragma warning disable CA1031 // Do not catch general exception types
                 try
                 {
                     metadata.ModificationDate = ParsePdfDate(modDateStr);
                 }
                 catch (Exception ex)
                 {
+                    // DATA ROBUSTNESS PATTERN: Malformed PDF metadata should not fail extraction
+                    // Rationale: PDF modification dates can have various non-standard formats. Parsing failures
+                    // should only result in null date metadata, not extraction failure. We log the error
+                    // for monitoring but continue extracting other metadata fields.
+                    // Context: PDF date format D:YYYYMMDDHHmmSS can have vendor-specific variations
                     _logger.LogWarning(ex, "Failed to parse modification date: {Date}", modDateStr);
                 }
+#pragma warning restore CA1031 // Do not catch general exception types
             }
 
             return metadata;

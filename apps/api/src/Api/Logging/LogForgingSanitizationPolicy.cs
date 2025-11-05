@@ -140,6 +140,9 @@ public class LogForgingSanitizationPolicy : IDestructuringPolicy
                     }
                 }
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Resilience pattern - logging infrastructure must not fail operations
+            // Property access during logging may throw various exceptions; we must skip problematic properties
             catch (Exception ex) when (
                 ex is TargetException or
                 TargetInvocationException or
@@ -150,6 +153,7 @@ public class LogForgingSanitizationPolicy : IDestructuringPolicy
                 // Intentionally skip properties that throw on access during logging
                 // This prevents logging infrastructure failures from propagating
             }
+#pragma warning restore CA1031
         }
 
         if (logProperties.Count > 0)

@@ -110,7 +110,9 @@ public class OllamaLlmService : ILlmService
             _logger.LogError(ex, "Chat completion timed out");
             return LlmCompletionResult.CreateFailure("Request timed out");
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogError(ex, "Failed to generate chat completion");
             return LlmCompletionResult.CreateFailure($"Error: {ex.Message}");
@@ -182,12 +184,16 @@ public class OllamaLlmService : ILlmService
                 yield break;
             }
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - graceful degradation for streaming operations
+        // Streaming iterator must handle all exceptions to prevent yield break from propagating exceptions
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error initiating streaming chat completion");
             response?.Dispose();
             yield break;
         }
+#pragma warning restore CA1031
 
         // Process stream without try-catch to allow yield return
         using (response)
@@ -286,7 +292,9 @@ public class OllamaLlmService : ILlmService
                 truncatedResponse);
             return null;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogError(ex, "Unexpected error in GenerateJsonAsync");
             return null;

@@ -32,10 +32,14 @@ public class QdrantHealthCheck : IHealthCheck
                 return HealthCheckResult.Degraded("Qdrant is accessible but collection does not exist");
             }
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Health check boundary - must return Unhealthy status instead of throwing
+        // Health checks are required to handle all exceptions and return appropriate status
         catch (Exception ex)
         {
             _logger.LogError(ex, "Qdrant health check failed");
             return HealthCheckResult.Unhealthy("Qdrant is not accessible", ex);
         }
+#pragma warning restore CA1031
     }
 }

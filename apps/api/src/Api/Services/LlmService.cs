@@ -215,11 +215,15 @@ public class LlmService : ILlmService
             _logger.LogError(ex, "Invalid operation during chat completion");
             return LlmCompletionResult.CreateFailure($"Configuration error: {ex.Message}");
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary using Result pattern - must return failure instead of throwing
+        // All expected exceptions are caught above; this handles truly unexpected errors gracefully
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during chat completion");
             return LlmCompletionResult.CreateFailure($"Error: {ex.Message}");
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -306,12 +310,16 @@ public class LlmService : ILlmService
             response?.Dispose();
             yield break;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Streaming generator boundary - must handle all errors gracefully without throwing
+        // All expected exceptions are caught above; this ensures stream cleanup on unexpected errors
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error initiating streaming chat completion");
             response?.Dispose();
             yield break;
         }
+#pragma warning restore CA1031
 
         // Process stream without try-catch to allow yield return
         using (response)
@@ -432,11 +440,15 @@ public class LlmService : ILlmService
             _logger.LogError(ex, "Invalid operation during JSON generation");
             return null;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - must return null on any error instead of throwing
+        // All expected exceptions are caught above; this handles truly unexpected errors gracefully
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error in GenerateJsonAsync");
             return null;
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>

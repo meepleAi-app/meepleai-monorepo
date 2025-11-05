@@ -66,6 +66,9 @@ public class EmailService : IEmailService
                 "Password reset email sent successfully to {Email}",
                 toEmail);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - wraps external SMTP exceptions with domain exception
+        // External service integration requires catching all SMTP exceptions to provide consistent error handling
         catch (Exception ex)
         {
             _logger.LogError(
@@ -74,6 +77,7 @@ public class EmailService : IEmailService
                 toEmail);
             throw new InvalidOperationException("Failed to send password reset email", ex);
         }
+#pragma warning restore CA1031
     }
 
     private static string BuildPasswordResetEmailBody(string userName, string resetUrl)

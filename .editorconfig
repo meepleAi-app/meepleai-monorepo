@@ -83,6 +83,10 @@ dotnet_diagnostic.CA1816.severity = warning
 # CA1063: Implement IDisposable correctly
 dotnet_diagnostic.CA1063.severity = warning
 
+# CA1031: Do not catch general exception types
+# CODE QUALITY: Fix Generic Catch Clauses (Issue #735)
+dotnet_diagnostic.CA1031.severity = warning
+
 # CODE-02: Null Reference Safety Rules
 # CS8600: Converting null literal or possible null value to non-nullable type
 dotnet_diagnostic.CS8600.severity = error

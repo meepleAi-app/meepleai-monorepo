@@ -122,13 +122,18 @@ public class KeywordSearchService : IKeywordSearchService
 
             return keywordResults;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
-            // Service layer: Logs PostgreSQL full-text search errors before re-throwing
-            // Caller receives exception with full diagnostic context for query troubleshooting
+            // SERVICE BOUNDARY PATTERN: Search service must log all errors before re-throwing
+            // Rationale: This is a service entry point that executes PostgreSQL full-text searches. We catch
+            // all exceptions to add diagnostic logging context (query details) before re-throwing to the caller.
+            // This ensures comprehensive error logging while maintaining exception propagation for proper handling.
+            // Context: PostgreSQL full-text search can fail in various ways (syntax errors, timeout, connection)
             _logger.LogError(ex, "Error during keyword search for query '{Query}'", query);
             throw;
         }
+#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     public async Task<List<KeywordDocumentResult>> SearchDocumentsAsync(
@@ -198,13 +203,18 @@ public class KeywordSearchService : IKeywordSearchService
                 PageCount = r.PageCount
             }).ToList();
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
-            // Service layer: Logs PostgreSQL document search errors before re-throwing
-            // Caller receives exception with full diagnostic context for search troubleshooting
+            // SERVICE BOUNDARY PATTERN: Search service must log all errors before re-throwing
+            // Rationale: This is a service entry point that executes PostgreSQL document searches. We catch
+            // all exceptions to add diagnostic logging context (query details) before re-throwing to the caller.
+            // This ensures comprehensive error logging while maintaining exception propagation for proper handling.
+            // Context: PostgreSQL full-text search can fail in various ways (syntax errors, timeout, connection)
             _logger.LogError(ex, "Error during document keyword search for query '{Query}'", query);
             throw;
         }
+#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     /// <summary>

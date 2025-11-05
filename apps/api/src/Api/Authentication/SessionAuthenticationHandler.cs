@@ -91,11 +91,15 @@ public class SessionAuthenticationHandler : AuthenticationHandler<Authentication
 
             return AuthenticateResult.Success(ticket);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Authentication handler boundary - must not propagate exceptions
+        // Any exception during authentication should result in NoResult to allow proper 401 response
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "Session validation failed in SessionAuthenticationHandler");
             return AuthenticateResult.NoResult();
         }
+#pragma warning restore CA1031
     }
 
     protected override Task HandleChallengeAsync(AuthenticationProperties properties)

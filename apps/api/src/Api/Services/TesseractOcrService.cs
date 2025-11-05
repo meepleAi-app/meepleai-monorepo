@@ -103,7 +103,9 @@ public class TesseractOcrService : IOcrService, IDisposable
 
             return OcrResult.CreateSuccess(text, confidence, pageCount: 1);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             // Service layer: Catches all exceptions to return domain result object
             // OCR errors logged, returned as failure result with diagnostic message
@@ -183,7 +185,9 @@ public class TesseractOcrService : IOcrService, IDisposable
             _logger.LogWarning("OCR operation cancelled for PDF: {PdfPath}", pdfPath);
             throw;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             // Service layer: Catches all exceptions to return domain result object
             // Full PDF OCR errors logged, returned as failure result with error details

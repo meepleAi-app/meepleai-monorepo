@@ -82,7 +82,9 @@ public class PagerDutyAlertChannel : IAlertChannel
                 errorContent);
             return false;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             // RESILIENCE PATTERN: PagerDuty alert channel failures must return false, not throw
             // Rationale: Alert channels implement IAlertChannel which requires returning success/

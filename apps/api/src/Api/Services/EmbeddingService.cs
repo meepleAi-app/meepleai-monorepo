@@ -179,11 +179,15 @@ public class EmbeddingService : IEmbeddingService
             _logger.LogError(ex, "Invalid operation during embedding generation");
             return EmbeddingResult.CreateFailure($"Configuration error: {ex.Message}");
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - external API calls with result pattern
+        // Returns domain result object instead of throwing. Callers check Success flag.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during embedding generation");
             return EmbeddingResult.CreateFailure($"Error: {ex.Message}");
         }
+#pragma warning restore CA1031
     }
 
     private async Task<EmbeddingResult> GenerateOllamaEmbeddingsAsync(List<string> texts, CancellationToken ct)
@@ -343,11 +347,15 @@ public class EmbeddingService : IEmbeddingService
             _logger.LogError(ex, "Invalid operation during embedding generation for language {Language}", language);
             return EmbeddingResult.CreateFailure($"Configuration error: {ex.Message}");
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - external API calls with result pattern
+        // Returns domain result object instead of throwing. Callers check Success flag.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during embedding generation for language {Language}", language);
             return EmbeddingResult.CreateFailure($"Error: {ex.Message}");
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -418,11 +426,15 @@ public class EmbeddingService : IEmbeddingService
             _logger.LogError(ex, "Failed to deserialize local embedding service response");
             return EmbeddingResult.CreateFailure("Invalid local service response");
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - external API calls with fallback chain
+        // Local service failures return result object to enable fallback to Ollama/OpenRouter.
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error calling local embedding service");
             return EmbeddingResult.CreateFailure($"Local service error: {ex.Message}");
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>

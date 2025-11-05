@@ -150,6 +150,9 @@ public class QdrantService : IQdrantService
             MeepleAiMetrics.VectorIndexingDuration.Record(stopwatch.Elapsed.TotalMilliseconds, new TagList { { "collection", CollectionName } });
             return IndexResult.CreateSuccess(validChunks.Count);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - must catch all exceptions to return structured IndexResult
+        // Vector indexing may fail due to network issues, Qdrant errors, or validation failures
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error indexing document chunks for PDF {PdfId}", pdfId);
@@ -159,6 +162,7 @@ public class QdrantService : IQdrantService
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
         }
+#pragma warning restore CA1031
     }
     /// <summary>
     /// Search for similar chunks filtered by game identifier
@@ -205,6 +209,9 @@ public class QdrantService : IQdrantService
             MeepleAiMetrics.RecordVectorSearch(stopwatch.Elapsed.TotalMilliseconds, results.Count, CollectionName);
             return SearchResult.CreateSuccess(results);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - must catch all exceptions to return structured SearchResult
+        // Vector search may fail due to network issues, Qdrant errors, or invalid query parameters
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during search for game {GameId}", gameId);
@@ -214,6 +221,7 @@ public class QdrantService : IQdrantService
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             return SearchResult.CreateFailure($"Search failed: {ex.Message}");
         }
+#pragma warning restore CA1031
     }
     /// <summary>
     /// Delete all vectors for a specific PDF
@@ -228,11 +236,15 @@ public class QdrantService : IQdrantService
             _logger.LogInformation("Successfully deleted vectors for PDF {PdfId}", pdfId);
             return true;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - must catch all exceptions to return boolean status
+        // Vector deletion may fail due to network issues, Qdrant errors, or filter validation
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting vectors for PDF {PdfId}", pdfId);
             return false;
         }
+#pragma warning restore CA1031
     }
     /// <summary>
     /// Index document chunks with custom metadata
@@ -263,11 +275,15 @@ public class QdrantService : IQdrantService
             _logger.LogInformation("Successfully indexed {Count} chunks with metadata", chunks.Count);
             return IndexResult.CreateSuccess(chunks.Count);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - must catch all exceptions to return structured IndexResult
+        // Vector indexing may fail due to network issues, Qdrant errors, or validation failures
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error indexing chunks with metadata");
             return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
         }
+#pragma warning restore CA1031
     }
     /// <summary>
     /// Search for similar chunks filtered by category
@@ -293,11 +309,15 @@ public class QdrantService : IQdrantService
             _logger.LogInformation("Found {Count} results in category {Category}", results.Count, category);
             return SearchResult.CreateSuccess(results);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - must catch all exceptions to return structured SearchResult
+        // Vector search may fail due to network issues, Qdrant errors, or invalid query parameters
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during search for category {Category}", category);
             return SearchResult.CreateFailure($"Search failed: {ex.Message}");
         }
+#pragma warning restore CA1031
     }
     // AI-09: Multi-language support
     /// <summary>
@@ -347,6 +367,9 @@ public class QdrantService : IQdrantService
                 new TagList { { "collection", CollectionName }, { "language", language } });
             return IndexResult.CreateSuccess(chunks.Count);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - must catch all exceptions to return structured IndexResult
+        // Vector indexing with language metadata may fail due to network issues, Qdrant errors, or validation
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error indexing document chunks for PDF {PdfId} with language {Language}",
@@ -357,6 +380,7 @@ public class QdrantService : IQdrantService
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             return IndexResult.CreateFailure($"Indexing failed: {ex.Message}");
         }
+#pragma warning restore CA1031
     }
     /// <summary>
     /// Search for similar chunks filtered by game and language
@@ -401,6 +425,9 @@ public class QdrantService : IQdrantService
             MeepleAiMetrics.RecordVectorSearch(stopwatch.Elapsed.TotalMilliseconds, results.Count, CollectionName);
             return SearchResult.CreateSuccess(results);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - must catch all exceptions to return structured SearchResult
+        // Vector search with language filtering may fail due to network issues or Qdrant errors
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during search for game {GameId} and language {Language}", gameId, language);
@@ -410,6 +437,7 @@ public class QdrantService : IQdrantService
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             return SearchResult.CreateFailure($"Search failed: {ex.Message}");
         }
+#pragma warning restore CA1031
     }
     /// <summary>
     /// Delete all vectors for a specific category
@@ -424,11 +452,15 @@ public class QdrantService : IQdrantService
             _logger.LogInformation("Successfully deleted vectors for category {Category}", category);
             return true;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - must catch all exceptions to return boolean status
+        // Vector deletion by category may fail due to network issues, Qdrant errors, or filter validation
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error deleting vectors for category {Category}", category);
             return false;
         }
+#pragma warning restore CA1031
     }
 }
 /// <summary>

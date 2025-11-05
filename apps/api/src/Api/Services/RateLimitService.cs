@@ -125,6 +125,9 @@ public class RateLimitService : IRateLimitService
 
             return new RateLimitResult(allowed, tokensRemaining, retryAfter);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Fail-open resilience pattern - rate limiting failures must not block legitimate traffic
+        // We favor availability over strict rate enforcement during infrastructure failures
         catch (Exception ex)
         {
             // FAIL-OPEN PATTERN: Rate limiting failures must not block legitimate traffic
@@ -136,6 +139,7 @@ public class RateLimitService : IRateLimitService
             _logger.LogError(ex, "Rate limit check failed for key {Key}. Allowing request (fail-open)", key);
             return new RateLimitResult(true, maxTokens, 0);
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>

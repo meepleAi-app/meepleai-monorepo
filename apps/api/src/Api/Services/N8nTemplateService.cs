@@ -111,15 +111,18 @@ public class N8nTemplateService
                     }
                 }
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Service boundary - resilience pattern for template gallery loading
+            // RESILIENCE PATTERN: Individual template load failures must not break gallery
+            // Rationale: N8n template loading iterates through multiple JSON files. A malformed
+            // or corrupted template file should not prevent other valid templates from loading.
+            // We log the error for debugging and continue processing remaining templates.
+            // Context: Template failures are typically file-related (malformed JSON, missing file)
             catch (Exception ex)
             {
-                // RESILIENCE PATTERN: Individual template load failures must not break gallery
-                // Rationale: N8n template loading iterates through multiple JSON files. A malformed
-                // or corrupted template file should not prevent other valid templates from loading.
-                // We log the error for debugging and continue processing remaining templates.
-                // Context: Template failures are typically file-related (malformed JSON, missing file)
                 _logger.LogError(ex, "Failed to load template from {File}", file);
             }
+#pragma warning restore CA1031
         }
 
         return templates
@@ -183,17 +186,20 @@ public class N8nTemplateService
                 template.Workflow
             );
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - returns null for missing/corrupt templates
+        // RESILIENCE PATTERN: Single template load failure returns null instead of throwing
+        // Rationale: GetTemplateByIdAsync is called by API endpoints that display template
+        // details. Returning null allows the API to respond with 404 Not Found, which is
+        // the appropriate HTTP response for missing/corrupt templates. Throwing would cause
+        // a 500 Internal Server Error instead.
+        // Context: Template failures are typically file-related (malformed JSON, missing file)
         catch (Exception ex)
         {
-            // RESILIENCE PATTERN: Single template load failure returns null instead of throwing
-            // Rationale: GetTemplateByIdAsync is called by API endpoints that display template
-            // details. Returning null allows the API to respond with 404 Not Found, which is
-            // the appropriate HTTP response for missing/corrupt templates. Throwing would cause
-            // a 500 Internal Server Error instead.
-            // Context: Template failures are typically file-related (malformed JSON, missing file)
             _logger.LogError(ex, "Failed to load template {TemplateId}", templateId);
             return null;
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>

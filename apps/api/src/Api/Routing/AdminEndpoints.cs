@@ -470,6 +470,9 @@ group.MapPost("/n8n/templates/{id}/import", async (
         logger.LogWarning("Failed to import template {TemplateId}: {Error}", id, ex.Message);
         return Results.BadRequest(new { error = ex.Message });
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must return HTTP error response instead of throwing
+    // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -477,6 +480,7 @@ group.MapPost("/n8n/templates/{id}/import", async (
         logger.LogError(ex, "Unexpected error importing template {TemplateId}", id);
         return Results.Problem("An unexpected error occurred while importing the template");
     }
+#pragma warning restore CA1031
 })
 .RequireAuthorization()
 .WithName("ImportN8nTemplate")
@@ -771,6 +775,9 @@ group.MapPost("/alerts/prometheus", async (
                 await alertingService.ResolveAlertAsync(alertType, ct);
             }
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - must return error response instead of throwing
+        // Individual alert processing failure shouldn't break other alerts in the batch
         catch (Exception ex)
         {
             // Resilience pattern: Individual alert processing failure shouldn't break other alerts
@@ -778,6 +785,7 @@ group.MapPost("/alerts/prometheus", async (
             logger.LogError(ex, "Error processing Prometheus alert: {AlertName}",
                 alert.Labels.GetValueOrDefault("alertname", "Unknown"));
         }
+#pragma warning restore CA1031
     }
 
     return Results.Ok(new { message = "Webhook processed successfully" });
@@ -1198,6 +1206,9 @@ group.MapPost("/admin/prompts/{id}/versions/{versionId}/activate", async (
 
         return Results.Ok(new { message = "Version activated successfully" });
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must return HTTP error response instead of throwing
+    // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -1207,6 +1218,7 @@ group.MapPost("/admin/prompts/{id}/versions/{versionId}/activate", async (
             title: "Activation Failed",
             detail: ex.Message);
     }
+#pragma warning restore CA1031
 })
 .WithName("ActivatePromptVersion")
 .WithTags("Admin", "PromptManagement")
@@ -1264,6 +1276,9 @@ group.MapPost("/admin/prompts/{templateId}/versions/{versionId}/evaluate", async
         logger.LogWarning("Dataset not found: {Error}", ex.Message);
         return Results.NotFound(new { error = $"Dataset not found: {ex.Message}" });
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must return HTTP error response instead of throwing
+    // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -1271,6 +1286,7 @@ group.MapPost("/admin/prompts/{templateId}/versions/{versionId}/evaluate", async
         logger.LogError(ex, "Evaluation failed for template {TemplateId}, version {VersionId}", templateId, versionId);
         return Results.Problem($"Evaluation failed: {ex.Message}");
     }
+#pragma warning restore CA1031
 })
 .WithName("EvaluatePromptVersion")
 .WithTags("Admin", "PromptManagement", "Testing")
@@ -1316,6 +1332,9 @@ group.MapPost("/admin/prompts/{templateId}/compare", async (
 
         return Results.Ok(comparison);
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must return HTTP error response instead of throwing
+    // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -1323,6 +1342,7 @@ group.MapPost("/admin/prompts/{templateId}/compare", async (
         logger.LogError(ex, "Comparison failed for template {TemplateId}", templateId);
         return Results.Problem($"Comparison failed: {ex.Message}");
     }
+#pragma warning restore CA1031
 })
 .WithName("ComparePromptVersions")
 .WithTags("Admin", "PromptManagement", "Testing")
@@ -1400,6 +1420,9 @@ group.MapGet("/admin/prompts/evaluations/{evaluationId}/report", async (
 
         return Results.Content(report, contentType);
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must return HTTP error response instead of throwing
+    // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -1407,6 +1430,7 @@ group.MapGet("/admin/prompts/evaluations/{evaluationId}/report", async (
         logger.LogError(ex, "Failed to generate report for evaluation {EvaluationId}", evaluationId);
         return Results.Problem($"Report generation failed: {ex.Message}");
     }
+#pragma warning restore CA1031
 })
 .WithName("GetEvaluationReport")
 .WithTags("Admin", "PromptManagement", "Testing")
@@ -1923,6 +1947,9 @@ group.MapPost("/admin/configurations/import", async (
         logger.LogInformation("Successfully imported {Count} configurations", importedCount);
         return Results.Json(new { importedCount });
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must return HTTP error response instead of throwing
+    // All expected exceptions are caught above; this ensures proper HTTP 400 response for unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 400
@@ -1930,6 +1957,7 @@ group.MapPost("/admin/configurations/import", async (
         logger.LogError(ex, "Failed to import configurations");
         return Results.BadRequest(new { error = ex.Message });
     }
+#pragma warning restore CA1031
 })
 .WithName("ImportConfigurations")
 .WithTags("Admin", "Configuration")
@@ -2004,6 +2032,9 @@ group.MapPut("/admin/features/{featureName}", async (
 
         return Results.Json(new { featureName, enabled = request.Enabled, role = request.Role });
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must return HTTP error response instead of throwing
+    // All expected exceptions are caught above; this ensures proper HTTP 400 response for unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 400
@@ -2011,6 +2042,7 @@ group.MapPut("/admin/features/{featureName}", async (
         logger.LogError(ex, "Failed to update feature flag {FeatureName}", featureName);
         return Results.BadRequest(new { error = ex.Message });
     }
+#pragma warning restore CA1031
 })
 .WithName("UpdateFeatureFlag")
 .WithTags("Admin", "FeatureFlags")
@@ -2163,12 +2195,16 @@ group.MapGet("/admin/cache/stats", async (HttpContext context, IAiResponseCacheS
         var stats = await cacheService.GetCacheStatsAsync(gameId, ct);
         return Results.Json(stats);
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must return HTTP error response instead of throwing
+    // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
         // Specific exception handling occurs in service layer (HybridCacheService)
         return Results.Problem(detail: $"Failed to retrieve cache stats: {ex.Message}", statusCode: 500);
     }
+#pragma warning restore CA1031
 })
 .WithName("GetCacheStats")
 .WithDescription("Get cache statistics with optional game filter (Admin only)")
@@ -2209,6 +2245,9 @@ group.MapDelete("/admin/cache/games/{gameId}", async (string gameId, HttpContext
         logger.LogInformation("Successfully invalidated cache for game {GameId}", gameId);
         return Results.Json(new { ok = true, message = $"Cache invalidated for game '{gameId}'" });
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must return HTTP error response instead of throwing
+    // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -2216,6 +2255,7 @@ group.MapDelete("/admin/cache/games/{gameId}", async (string gameId, HttpContext
         logger.LogError(ex, "Failed to invalidate cache for game {GameId}", gameId);
         return Results.Problem(detail: $"Failed to invalidate cache: {ex.Message}", statusCode: 500);
     }
+#pragma warning restore CA1031
 })
 .WithName("InvalidateGameCache")
 .WithDescription("Invalidate all cached responses for a specific game (Admin only)")
@@ -2251,6 +2291,9 @@ group.MapDelete("/admin/cache/tags/{tag}", async (string tag, HttpContext contex
         logger.LogInformation("Successfully invalidated cache by tag {Tag}", tag);
         return Results.Json(new { ok = true, message = $"Cache invalidated for tag '{tag}'" });
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must return HTTP error response instead of throwing
+    // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -2258,6 +2301,7 @@ group.MapDelete("/admin/cache/tags/{tag}", async (string tag, HttpContext contex
         logger.LogError(ex, "Failed to invalidate cache by tag {Tag}", tag);
         return Results.Problem(detail: $"Failed to invalidate cache: {ex.Message}", statusCode: 500);
     }
+#pragma warning restore CA1031
 })
 .WithName("InvalidateCacheByTag")
 .WithDescription("Invalidate cache entries by tag (e.g., game:chess, pdf:abc123) (Admin only)")

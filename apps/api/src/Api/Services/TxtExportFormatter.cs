@@ -134,7 +134,9 @@ public class TxtExportFormatter : IExportFormatter
                     var page = element.GetProperty("page").GetInt32();
                     citations.Add(new CitationMetadata(source, page));
                 }
+#pragma warning disable CA1031 // Do not catch general exception types
                 catch (Exception ex)
+#pragma warning restore CA1031
                 {
                     // DATA ROBUSTNESS PATTERN: Malformed citation entries are skipped, not fatal
                     // Rationale: Chat export with incomplete/malformed citations should still succeed.

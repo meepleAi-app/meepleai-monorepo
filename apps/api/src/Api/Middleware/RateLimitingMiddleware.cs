@@ -75,11 +75,18 @@ public class RateLimitingMiddleware
 
             await _next(context);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
+            // MIDDLEWARE BOUNDARY PATTERN: Rate limiting middleware must fail-open to avoid self-DOS
+            // Rationale: Rate limiting is a protective control - failing closed when rate limiting fails
+            // (Redis down, config errors) creates a self-inflicted denial of service. We favor availability
+            // over strict rate enforcement during infrastructure failures. We log the error for monitoring.
+            // Context: Rate limiting involves Redis operations that can fail (connection, timeout, etc.)
             _logger.LogWarning(ex, "Rate limiting middleware encountered an error; allowing request (fail-open)");
             await _next(context);
         }
+#pragma warning restore CA1031 // Do not catch general exception types
     }
 }
 

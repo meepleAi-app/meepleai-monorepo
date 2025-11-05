@@ -46,7 +46,9 @@ public class AuditService
             _db.AuditLogs.Add(auditLog);
             await _db.SaveChangesAsync(ct);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             // RESILIENCE PATTERN: Audit logging must never fail business operations
             // Rationale: Auditing is a secondary concern - failing a user request because

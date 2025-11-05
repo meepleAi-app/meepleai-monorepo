@@ -169,17 +169,20 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
 
             return response;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - graceful degradation for AI/LLM operations
+        // GRACEFUL DEGRADATION: Setup guide generation failures return empty guide
+        // Rationale: Setup guide is a helpful feature but not critical. If RAG/LLM pipeline
+        // fails, returning an empty guide allows the API to respond successfully (200 OK) and
+        // lets the UI display fallback content. Throwing would cause 500 errors and poor UX.
+        // Alternative: Callers can check IsEmpty flag to detect degraded responses.
+        // Context: Failures typically from Qdrant/OpenRouter/LLM timeout or rate limiting
         catch (Exception ex)
         {
-            // GRACEFUL DEGRADATION: Setup guide generation failures return empty guide
-            // Rationale: Setup guide is a helpful feature but not critical. If RAG/LLM pipeline
-            // fails, returning an empty guide allows the API to respond successfully (200 OK) and
-            // lets the UI display fallback content. Throwing would cause 500 errors and poor UX.
-            // Alternative: Callers can check IsEmpty flag to detect degraded responses.
-            // Context: Failures typically from Qdrant/OpenRouter/LLM timeout or rate limiting
             _logger.LogError(ex, "Error generating setup guide for game {GameId}", gameId);
             return CreateEmptySetupGuide("Unknown Game");
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -257,16 +260,19 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
                 _logger.LogWarning("Failed to parse any steps from LLM response");
             }
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - graceful degradation for LLM parsing
+        // GRACEFUL DEGRADATION: LLM parsing failures return empty list for fallback handling
+        // Rationale: Caller (GetSetupGuideAsync) checks for empty list and uses default steps
+        // as fallback. Parsing failure indicates malformed LLM output (unexpected format,
+        // hallucination) - not a fatal error. Returning empty list triggers graceful degradation
+        // to generic setup steps rather than complete failure.
+        // Context: LLM output format can vary due to model changes or prompt drift
         catch (Exception ex)
         {
-            // GRACEFUL DEGRADATION: LLM parsing failures return empty list for fallback handling
-            // Rationale: Caller (GetSetupGuideAsync) checks for empty list and uses default steps
-            // as fallback. Parsing failure indicates malformed LLM output (unexpected format,
-            // hallucination) - not a fatal error. Returning empty list triggers graceful degradation
-            // to generic setup steps rather than complete failure.
-            // Context: LLM output format can vary due to model changes or prompt drift
             _logger.LogError(ex, "Error parsing LLM steps response");
         }
+#pragma warning restore CA1031
 
         return steps;
     }
@@ -395,16 +401,19 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
                     _logger.LogWarning("Database prompt 'setup-guide-system-prompt' not found, falling back to hardcoded prompt");
                 }
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Service boundary - fallback pattern for database prompt retrieval
+            // FALLBACK PATTERN: Database prompt retrieval failures use hardcoded prompt
+            // Rationale: Dynamic prompt loading from DB is an enhancement (ADMIN-01 Phase 3).
+            // If PromptTemplateService fails (DB unavailable, Redis timeout, corruption), we
+            // must still generate setup guides. Fallback to hardcoded prompt ensures feature
+            // availability during infrastructure failures. Feature flag controls opt-in behavior.
+            // Context: DB/Redis failures are typically transient (connection loss, resource exhaustion)
             catch (Exception ex)
             {
-                // FALLBACK PATTERN: Database prompt retrieval failures use hardcoded prompt
-                // Rationale: Dynamic prompt loading from DB is an enhancement (ADMIN-01 Phase 3).
-                // If PromptTemplateService fails (DB unavailable, Redis timeout, corruption), we
-                // must still generate setup guides. Fallback to hardcoded prompt ensures feature
-                // availability during infrastructure failures. Feature flag controls opt-in behavior.
-                // Context: DB/Redis failures are typically transient (connection loss, resource exhaustion)
                 _logger.LogWarning(ex, "Failed to retrieve setup guide system prompt from database, falling back to hardcoded prompt");
             }
+#pragma warning restore CA1031
         }
 
         // Fallback: Use hardcoded prompt (backward compatibility)

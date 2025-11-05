@@ -144,17 +144,20 @@ public class BggApiService : IBggApiService
             _logger.LogError(ex, "BGG API request failed for search query: {Query}", query);
             throw new InvalidOperationException("BoardGameGeek API is currently unavailable", ex);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - external API calls with result pattern
+        // EXTERNAL API PATTERN: BGG XML parsing errors return null instead of throwing
+        // Rationale: BGG API search is already successfully completed - we received XML from
+        // their server. Parsing failures indicate malformed/unexpected XML structure, not a
+        // system error. Returning null allows callers to gracefully handle "no results found"
+        // scenarios. HttpRequestException above handles actual API connectivity failures.
+        // Context: Parsing failures are typically BGG-side (schema changes, malformed XML)
         catch (Exception ex)
         {
-            // EXTERNAL API PATTERN: BGG XML parsing errors return null instead of throwing
-            // Rationale: BGG API search is already successfully completed - we received XML from
-            // their server. Parsing failures indicate malformed/unexpected XML structure, not a
-            // system error. Returning null allows callers to gracefully handle "no results found"
-            // scenarios. HttpRequestException above handles actual API connectivity failures.
-            // Context: Parsing failures are typically BGG-side (schema changes, malformed XML)
             _logger.LogError(ex, "Error parsing BGG search results for query: {Query}", query);
             return null;
         }
+#pragma warning restore CA1031
     }
 
     private async Task<BggGameDetailsDto?> FetchGameDetailsAsync(int bggId, CancellationToken ct)
@@ -200,17 +203,20 @@ public class BggApiService : IBggApiService
             _logger.LogError(ex, "BGG API request failed for game ID: {BggId}", bggId);
             throw new InvalidOperationException("BoardGameGeek API is currently unavailable", ex);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - external API calls with result pattern
+        // EXTERNAL API PATTERN: BGG XML parsing errors return null instead of throwing
+        // Rationale: BGG API request is already successfully completed - we received XML from
+        // their server. Parsing failures indicate malformed/unexpected XML structure, not a
+        // system error. Returning null allows callers to gracefully handle "game not found"
+        // scenarios. HttpRequestException above handles actual API connectivity failures.
+        // Context: Parsing failures are typically BGG-side (schema changes, malformed XML)
         catch (Exception ex)
         {
-            // EXTERNAL API PATTERN: BGG XML parsing errors return null instead of throwing
-            // Rationale: BGG API request is already successfully completed - we received XML from
-            // their server. Parsing failures indicate malformed/unexpected XML structure, not a
-            // system error. Returning null allows callers to gracefully handle "game not found"
-            // scenarios. HttpRequestException above handles actual API connectivity failures.
-            // Context: Parsing failures are typically BGG-side (schema changes, malformed XML)
             _logger.LogError(ex, "Error parsing BGG game details for ID: {BggId}", bggId);
             return null;
         }
+#pragma warning restore CA1031
     }
 
     private BggSearchResultDto? ParseSearchResult(XElement item)
@@ -236,6 +242,9 @@ public class BggApiService : IBggApiService
                 type
             );
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Data robustness pattern - malformed external API data is skipped
+        // BGG API occasionally returns malformed data; we gracefully skip invalid entries
         catch (Exception ex) when (ex is FormatException or OverflowException)
         {
             // BGG API occasionally returns malformed data - skip this result
@@ -246,6 +255,7 @@ public class BggApiService : IBggApiService
                 item.Attribute("id")?.Value ?? "unknown");
             return null;
         }
+#pragma warning restore CA1031
     }
 
     private BggGameDetailsDto? ParseGameDetails(XElement item, int bggId)
@@ -338,6 +348,9 @@ public class BggApiService : IBggApiService
                 publishers
             );
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Data robustness pattern - malformed external API data is skipped
+        // BGG API occasionally returns malformed data; we gracefully skip invalid entries
         catch (Exception ex) when (ex is FormatException or OverflowException or ArgumentException)
         {
             // BGG API occasionally returns malformed data - caller will log this
@@ -348,6 +361,7 @@ public class BggApiService : IBggApiService
                 bggId);
             return null;
         }
+#pragma warning restore CA1031
     }
 
     private static double? ParseDouble(string? value)

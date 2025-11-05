@@ -27,13 +27,16 @@ public class BackgroundTaskService : IBackgroundTaskService
             {
                 _logger.LogError(ex, "Invalid operation in background task");
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Background service boundary - prevents task crash in fire-and-forget
+            // Background service: Generic catch prevents task exception from crashing host process
+            // Fire-and-forget tasks must not throw unhandled exceptions
+            // Catch-all for unexpected errors in fire-and-forget tasks
             catch (Exception ex)
             {
-                // Background service: Generic catch prevents task exception from crashing host process
-                // Fire-and-forget tasks must not throw unhandled exceptions
-                // Catch-all for unexpected errors in fire-and-forget tasks
                 _logger.LogError(ex, "Unexpected error in background task");
             }
+#pragma warning restore CA1031
         }, CancellationToken.None);
     }
 
@@ -64,11 +67,14 @@ public class BackgroundTaskService : IBackgroundTaskService
             {
                 _logger.LogError(ex, "Invalid operation in background task {TaskId}", taskId);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Background service boundary - prevents task crash in fire-and-forget
+            // Catch-all for unexpected errors in fire-and-forget tasks
             catch (Exception ex)
             {
-                // Catch-all for unexpected errors in fire-and-forget tasks
                 _logger.LogError(ex, "Unexpected error in background task {TaskId}", taskId);
             }
+#pragma warning restore CA1031
             finally
             {
                 _activeTasks.TryRemove(taskId, out _);

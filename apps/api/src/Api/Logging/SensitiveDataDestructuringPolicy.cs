@@ -200,6 +200,9 @@ public partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
                     }
                 }
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Resilience pattern - logging infrastructure must not fail operations
+            // Property access during logging may throw various exceptions; we must skip problematic properties
             catch (Exception ex) when (
                 ex is TargetException or
                 TargetInvocationException or
@@ -211,6 +214,7 @@ public partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
                 // This prevents logging infrastructure failures from propagating
                 // Cannot log here as it would risk infinite recursion in logging pipeline
             }
+#pragma warning restore CA1031
         }
 
         if (logProperties.Count > 0)

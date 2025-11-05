@@ -129,11 +129,15 @@ public class RagEvaluationService : IRagEvaluationService
             _logger.LogError(ex, "Failed to parse JSON dataset from {FilePath}", filePath);
             throw new InvalidOperationException($"Invalid JSON in dataset file: {filePath}", ex);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - converts unexpected exceptions to domain exceptions
+        // File loading may throw various exceptions; we wrap them with context for callers
         catch (Exception ex) when (ex is not FileNotFoundException && ex is not ArgumentException)
         {
             _logger.LogError(ex, "Error loading dataset from {Path}", filePath);
             throw new InvalidOperationException($"Failed to load dataset: {ex.Message}", ex);
         }
+#pragma warning restore CA1031
     }
 
     /// <inheritdoc/>
@@ -382,7 +386,9 @@ public class RagEvaluationService : IRagEvaluationService
                 Success = true
             };
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             stopwatch.Stop();
             _logger.LogError(ex, "Error evaluating query {QueryId}", query.Id);

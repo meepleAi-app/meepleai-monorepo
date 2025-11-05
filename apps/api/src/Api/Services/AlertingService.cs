@@ -116,13 +116,15 @@ public class AlertingService : IAlertingService
                         channel.ChannelName);
                 }
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Background service boundary - alert channel failure isolation
+            // RESILIENCE PATTERN: Alert channel failures must not stop other alert channels
+            // Rationale: Multi-channel alerting requires fault isolation - if email fails,
+            // Slack/PagerDuty should still deliver. We track per-channel results and log
+            // failures for monitoring. This enables graceful degradation when channels fail.
+            // Context: Channel failures are typically external (SMTP down, Slack API timeout)
             catch (Exception ex)
             {
-                // RESILIENCE PATTERN: Alert channel failures must not stop other alert channels
-                // Rationale: Multi-channel alerting requires fault isolation - if email fails,
-                // Slack/PagerDuty should still deliver. We track per-channel results and log
-                // failures for monitoring. This enables graceful degradation when channels fail.
-                // Context: Channel failures are typically external (SMTP down, Slack API timeout)
                 _logger.LogError(
                     ex,
                     "Error sending alert {AlertType} via {Channel}",
@@ -130,6 +132,7 @@ public class AlertingService : IAlertingService
                     channel.ChannelName);
                 channelResults[channel.ChannelName] = false;
             }
+#pragma warning restore CA1031
         }
 
         alertEntity.ChannelSent = JsonSerializer.Serialize(channelResults);

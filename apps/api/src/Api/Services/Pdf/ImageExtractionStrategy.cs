@@ -38,10 +38,17 @@ public class ImageExtractionStrategy : IEventListener
                         });
                     }
                 }
+#pragma warning disable CA1031 // Do not catch general exception types
                 catch (Exception)
                 {
+                    // DATA ROBUSTNESS PATTERN: Individual image extraction failures should not stop PDF processing
+                    // Rationale: PDFs can contain various image formats, some corrupted or unsupported. Failing to
+                    // extract one image should not prevent extracting other images or diagrams from the document.
+                    // We silently skip problematic images to maximize extraction success rate.
+                    // Context: iText7 can throw various exceptions for malformed/encrypted/proprietary image formats
                     // Ignore errors for individual images
                 }
+#pragma warning restore CA1031 // Do not catch general exception types
             }
         }
     }

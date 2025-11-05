@@ -114,6 +114,9 @@ public static class AuthEndpoints
                 logger.LogInformation("User {UserId} logged in successfully", result.User.Id);
                 return Results.Json(new AuthResponse(result.User, result.ExpiresAt));
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
+            // All business exceptions are handled in AuthService; this catches unexpected infrastructure failures
             catch (Exception ex)
             {
                 // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -121,6 +124,7 @@ public static class AuthEndpoints
                 logger.LogError(ex, "Login endpoint error");
                 return Results.Problem(detail: ex.Message, statusCode: 500);
             }
+#pragma warning restore CA1031
         });
 
         // User logout
@@ -202,6 +206,9 @@ public static class AuthEndpoints
                 logger.LogInformation("2FA setup generated for user {UserId}", userId);
                 return Results.Ok(setup);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
+            // All business exceptions are handled in TotpService; this catches unexpected infrastructure failures
             catch (Exception ex)
             {
                 // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -209,6 +216,7 @@ public static class AuthEndpoints
                 logger.LogError(ex, "2FA setup failed for user {UserId}", userId);
                 return Results.Problem(detail: ex.Message, statusCode: 500);
             }
+#pragma warning restore CA1031
         })
         .RequireAuthorization()
         .WithName("Setup2FA")
@@ -234,6 +242,9 @@ public static class AuthEndpoints
                 logger.LogInformation("2FA enabled for user {UserId}", userId);
                 return Results.Ok(new { message = "Two-factor authentication enabled successfully" });
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
+            // All business exceptions are handled in TotpService; this catches unexpected infrastructure failures
             catch (Exception ex)
             {
                 // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -241,6 +252,7 @@ public static class AuthEndpoints
                 logger.LogError(ex, "2FA enable error for user {UserId}", userId);
                 return Results.Problem(detail: ex.Message, statusCode: 500);
             }
+#pragma warning restore CA1031
         })
         .RequireAuthorization()
         .WithName("Enable2FA")
@@ -294,6 +306,9 @@ public static class AuthEndpoints
 
                 return Results.Problem("Failed to create session after 2FA", statusCode: 500);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
+            // All business exceptions are handled in TotpService/TempSessionService; this catches unexpected failures
             catch (Exception ex)
             {
                 // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -301,6 +316,7 @@ public static class AuthEndpoints
                 logger.LogError(ex, "2FA verify error");
                 return Results.Problem(detail: ex.Message, statusCode: 500);
             }
+#pragma warning restore CA1031
         })
         .WithName("Verify2FA")
         .WithTags("Authentication");
@@ -324,6 +340,9 @@ public static class AuthEndpoints
                 logger.LogWarning("2FA disable unauthorized for user {UserId}: {Message}", userId, ex.Message);
                 return Results.Unauthorized();
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
+            // All business exceptions are handled in TotpService; this catches unexpected infrastructure failures
             catch (Exception ex)
             {
                 // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -331,6 +350,7 @@ public static class AuthEndpoints
                 logger.LogError(ex, "2FA disable error for user {UserId}", userId);
                 return Results.Problem(detail: ex.Message, statusCode: 500);
             }
+#pragma warning restore CA1031
         })
         .RequireAuthorization()
         .WithName("Disable2FA")
@@ -349,6 +369,9 @@ public static class AuthEndpoints
                 var status = await totpService.GetTwoFactorStatusAsync(userId);
                 return Results.Ok(status);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
+            // All business exceptions are handled in TotpService; this catches unexpected infrastructure failures
             catch (Exception ex)
             {
                 // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -356,6 +379,7 @@ public static class AuthEndpoints
                 logger.LogError(ex, "Get 2FA status error for user {UserId}", userId);
                 return Results.Problem(detail: ex.Message, statusCode: 500);
             }
+#pragma warning restore CA1031
         })
         .RequireAuthorization()
         .WithName("Get2FAStatus")
@@ -460,6 +484,9 @@ Rate limited to 10 requests per minute per IP address.
                 var redirectUrl = $"{frontendUrl}/auth/callback?success=true&new={result.IsNewUser}";
                 return Results.Redirect(redirectUrl);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: API endpoint boundary - must catch all exceptions to redirect user with error message
+            // All business exceptions are handled in OAuthService; this catches unexpected infrastructure failures
             catch (Exception ex)
             {
                 // Top-level API endpoint handler: Catches all exceptions to return HTTP redirect with error
@@ -471,6 +498,7 @@ Rate limited to 10 requests per minute per IP address.
                 var redirectUrl = $"{frontendUrl}/auth/callback?error=oauth_failed";
                 return Results.Redirect(redirectUrl);
             }
+#pragma warning restore CA1031
         })
         .WithName("HandleOAuthCallback")
         .WithTags("Authentication", "OAuth")
@@ -702,6 +730,9 @@ User must have at least one authentication method remaining (password or another
                 logger.LogWarning("Password reset request error: {Message}", ex.Message);
                 return Results.BadRequest(new { error = ex.Message });
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
+            // All business exceptions are handled in PasswordResetService; this catches unexpected failures
             catch (Exception ex)
             {
                 // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -709,6 +740,7 @@ User must have at least one authentication method remaining (password or another
                 logger.LogError(ex, "Password reset request endpoint error");
                 return Results.Problem(detail: "An error occurred processing your request", statusCode: 500);
             }
+#pragma warning restore CA1031
         });
 
         group.MapGet("/auth/password-reset/verify", async (
@@ -733,6 +765,9 @@ User must have at least one authentication method remaining (password or another
 
                 return Results.Json(new { ok = true, message = "Token is valid" });
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
+            // All business exceptions are handled in PasswordResetService; this catches unexpected failures
             catch (Exception ex)
             {
                 // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -740,6 +775,7 @@ User must have at least one authentication method remaining (password or another
                 logger.LogError(ex, "Password reset verify endpoint error");
                 return Results.Problem(detail: "An error occurred processing your request", statusCode: 500);
             }
+#pragma warning restore CA1031
         });
 
         group.MapPut("/auth/password-reset/confirm", async (
@@ -793,6 +829,9 @@ User must have at least one authentication method remaining (password or another
                 logger.LogWarning("Password reset confirm validation error: {Message}", ex.Message);
                 return Results.BadRequest(new { error = ex.Message });
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
+            // All business exceptions are handled in PasswordResetService; this catches unexpected failures
             catch (Exception ex)
             {
                 // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -800,6 +839,7 @@ User must have at least one authentication method remaining (password or another
                 logger.LogError(ex, "Password reset confirm endpoint error");
                 return Results.Problem(detail: "An error occurred processing your request", statusCode: 500);
             }
+#pragma warning restore CA1031
         });
     }
 }

@@ -206,6 +206,9 @@ group.MapPost("/agents/qa", async (
 
         return Results.Json(finalResponse); // CHAT-02: Return response with follow-up questions
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must return HTTP error response instead of throwing
+    // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -225,12 +228,16 @@ group.MapPost("/agents/qa", async (
                     new { endpoint = "qa", gameId = req.gameId, error = ex.GetType().Name },
                     ct);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Cleanup operation - must not throw during error handling
+            // Chat logging is non-critical; failure should be logged but not propagate
             catch (Exception chatEx)
             {
                 // Resilience pattern: Chat logging failure shouldn't break error response flow
                 // Fail-open to ensure client receives error message even if chat persistence fails
                 logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
             }
+#pragma warning restore CA1031
         }
 
         // ADM-01: Log failed AI request
@@ -249,6 +256,7 @@ group.MapPost("/agents/qa", async (
 
         throw;
     }
+#pragma warning restore CA1031
 })
 .WithName("QaAgent")
 .WithDescription("Ask a question about game rules using RAG (Retrieval-Augmented Generation)")
@@ -341,6 +349,9 @@ group.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context,
 
         return Results.Json(resp);
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must return HTTP error response instead of throwing
+    // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -360,12 +371,16 @@ group.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context,
                     new { endpoint = "explain", gameId = req.gameId, topic = req.topic, error = ex.GetType().Name },
                     ct);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Cleanup operation - must not throw during error handling
+            // Chat logging is non-critical; failure should be logged but not propagate
             catch (Exception chatEx)
             {
                 // Resilience pattern: Chat logging failure shouldn't break error response flow
                 // Fail-open to ensure client receives error message even if chat persistence fails
                 logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
             }
+#pragma warning restore CA1031
         }
 
         // ADM-01: Log failed AI request
@@ -384,6 +399,7 @@ group.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context,
 
         throw;
     }
+#pragma warning restore CA1031
 });
 
 // API-02: Streaming RAG Explain endpoint (SSE)
@@ -425,6 +441,9 @@ group.MapPost("/agents/explain/stream", async (ExplainRequest req, HttpContext c
     {
         logger.LogInformation("Streaming explain cancelled by client for game {GameId}, topic: {Topic}", req.gameId, req.topic);
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: Streaming generator boundary - must handle all errors gracefully without throwing
+    // All expected exceptions are caught above; this ensures cleanup and error event on unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions for SSE streaming endpoint
@@ -442,11 +461,16 @@ group.MapPost("/agents/explain/stream", async (ExplainRequest req, HttpContext c
             await context.Response.WriteAsync($"data: {json}\n\n", ct);
             await context.Response.Body.FlushAsync(ct);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Cleanup operation - must not throw during disposal/cleanup
+        // Error event sending failure is logged but suppressed to ensure graceful stream termination
         catch
         {
             // If we can't send error event, client connection is likely broken
         }
+#pragma warning restore CA1031
     }
+#pragma warning restore CA1031
 
     return Results.Empty;
 });
@@ -591,6 +615,9 @@ group.MapPost("/agents/qa/stream", async (
                                 gameName: gameName,
                                 ct: ct);
                         }
+#pragma warning disable CA1031 // Do not catch general exception types
+                        // Justification: Background service boundary - must handle all errors without crashing
+                        // Follow-up generation is non-critical; failure returns empty list to main flow
                         catch (Exception ex)
                         {
                             // Resilience pattern: Follow-up question generation failure shouldn't break main QA response
@@ -598,6 +625,7 @@ group.MapPost("/agents/qa/stream", async (
                             logger.LogWarning(ex, "Failed to generate follow-up questions for game {GameId}", req.gameId);
                             return new List<string>().AsReadOnly();
                         }
+#pragma warning restore CA1031
                     });
                 }
             }
@@ -626,12 +654,16 @@ group.MapPost("/agents/qa/stream", async (
                         followUpQuestions.Count, req.gameId);
                 }
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Cleanup operation - must not throw during error handling
+            // SSE event sending is non-critical; failure should be logged but not propagate
             catch (Exception ex)
             {
                 // Resilience pattern: SSE event sending failure for follow-up questions shouldn't break response
                 // Fail-open to ensure client receives main answer even if follow-up streaming fails
                 logger.LogWarning(ex, "Failed to send follow-up questions event for game {GameId}", req.gameId);
             }
+#pragma warning restore CA1031
         }
 
         logger.LogInformation("Streaming QA completed for game {GameId}, query: {Query}", req.gameId, req.query);
@@ -677,6 +709,9 @@ group.MapPost("/agents/qa/stream", async (
     {
         logger.LogInformation("Streaming QA cancelled by client for game {GameId}, query: {Query}", req.gameId, req.query);
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: Streaming generator boundary - must handle all errors gracefully without throwing
+    // All expected exceptions are caught above; this ensures cleanup and error event on unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions for SSE streaming endpoint
@@ -697,12 +732,16 @@ group.MapPost("/agents/qa/stream", async (
                     new { endpoint = "qa-stream", gameId = req.gameId, error = ex.GetType().Name },
                     ct);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Cleanup operation - must not throw during error handling
+            // Chat logging is non-critical; failure should be logged but not propagate
             catch (Exception chatEx)
             {
                 // Resilience pattern: Chat logging failure shouldn't break error response flow
                 // Fail-open to ensure client receives error message even if chat persistence fails
                 logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
             }
+#pragma warning restore CA1031
         }
 
         // Log failed AI request
@@ -730,11 +769,16 @@ group.MapPost("/agents/qa/stream", async (
             await context.Response.WriteAsync($"data: {json}\n\n", ct);
             await context.Response.Body.FlushAsync(ct);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Cleanup operation - must not throw during disposal/cleanup
+        // Error event sending failure is logged but suppressed to ensure graceful stream termination
         catch
         {
             // If we can't send error event, client connection is likely broken
         }
+#pragma warning restore CA1031
     }
+#pragma warning restore CA1031
 
     return Results.Empty;
 });
@@ -842,6 +886,9 @@ group.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context
 
         return Results.Json(resp);
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must return HTTP error response instead of throwing
+    // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -861,12 +908,16 @@ group.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context
                     new { endpoint = "setup", gameId = req.gameId, error = ex.GetType().Name },
                     ct);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Cleanup operation - must not throw during error handling
+            // Chat logging is non-critical; failure should be logged but not propagate
             catch (Exception chatEx)
             {
                 // Resilience pattern: Chat logging failure shouldn't break error response flow
                 // Fail-open to ensure client receives error message even if chat persistence fails
                 logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
             }
+#pragma warning restore CA1031
         }
 
         // ADM-01: Log failed AI request
@@ -885,6 +936,7 @@ group.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context
 
         throw;
     }
+#pragma warning restore CA1031
 });
 
 group.MapPost("/agents/feedback", async (AgentFeedbackRequest req, HttpContext context, AgentFeedbackService feedbackService, ILogger<Program> logger, CancellationToken ct) =>
@@ -923,6 +975,9 @@ group.MapPost("/agents/feedback", async (AgentFeedbackRequest req, HttpContext c
 
         return Results.Json(new { ok = true });
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must return HTTP error response instead of throwing
+    // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -930,6 +985,7 @@ group.MapPost("/agents/feedback", async (AgentFeedbackRequest req, HttpContext c
         logger.LogError(ex, "Failed to record feedback for message {MessageId}", req.messageId);
         return Results.Problem(detail: "Unable to record feedback", statusCode: 500);
     }
+#pragma warning restore CA1031
 });
 
 // CHESS-04: Chess conversational agent endpoint
@@ -1036,6 +1092,9 @@ group.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context
 
         return Results.Json(resp);
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must return HTTP error response instead of throwing
+    // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -1055,12 +1114,16 @@ group.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context
                     new { endpoint = "chess", question = req.question, fenPosition = req.fenPosition, error = ex.GetType().Name },
                     ct);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Cleanup operation - must not throw during error handling
+            // Chat logging is non-critical; failure should be logged but not propagate
             catch (Exception chatEx)
             {
                 // Resilience pattern: Chat logging failure shouldn't break error response flow
                 // Fail-open to ensure client receives error message even if chat persistence fails
                 logger.LogWarning(chatEx, "Failed to log error message to chat {ChatId}", req.chatId.Value);
             }
+#pragma warning restore CA1031
         }
 
         // ADM-01: Log failed AI request
@@ -1079,6 +1142,7 @@ group.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context
 
         throw;
     }
+#pragma warning restore CA1031
 });
 
 group.MapGet("/bgg/search", async (
@@ -1116,6 +1180,9 @@ group.MapGet("/bgg/search", async (
             details = ex.Message
         }, statusCode: StatusCodes.Status503ServiceUnavailable);
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must return HTTP error response instead of throwing
+    // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -1126,6 +1193,7 @@ group.MapGet("/bgg/search", async (
             error = "An unexpected error occurred while searching BoardGameGeek."
         }, statusCode: StatusCodes.Status500InternalServerError);
     }
+#pragma warning restore CA1031
 });
 
 group.MapGet("/bgg/games/{bggId:int}", async (
@@ -1169,6 +1237,9 @@ group.MapGet("/bgg/games/{bggId:int}", async (
             details = ex.Message
         }, statusCode: StatusCodes.Status503ServiceUnavailable);
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must return HTTP error response instead of throwing
+    // All expected exceptions are caught above; this ensures proper HTTP 500 response for unexpected errors
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -1179,6 +1250,7 @@ group.MapGet("/bgg/games/{bggId:int}", async (
             error = "An unexpected error occurred while retrieving game details."
         }, statusCode: StatusCodes.Status500InternalServerError);
     }
+#pragma warning restore CA1031
 });
 
 

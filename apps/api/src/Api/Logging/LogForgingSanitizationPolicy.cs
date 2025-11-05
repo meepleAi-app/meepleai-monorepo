@@ -71,7 +71,8 @@ public class LogForgingSanitizationPolicy : IDestructuringPolicy
             var properties = new List<LogEventProperty>();
             foreach (DictionaryEntry entry in dictionary)
             {
-                var key = entry.Key?.ToString() ?? "null";
+                // SEC-731: Sanitize dictionary keys to prevent newline injection via keys
+                var key = SanitizeString(entry.Key?.ToString());
                 var propertyValue = entry.Value;
 
                 if (propertyValue is string str)

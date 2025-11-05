@@ -207,6 +207,43 @@ public class LogForgingSanitizationPolicyTests
     }
 
     [Fact]
+    public void TryDestructure_WithDictionaryMaliciousKeys_SanitizesKeys()
+    {
+        // Arrange - SEC-731: Attacker controls dictionary keys (e.g., HTTP headers)
+        var dict = new Dictionary<string, string>
+        {
+            { "X-Header\nINFO: Fake log entry", "value1" },
+            { "User-Agent\rERROR: Injected", "value2" },
+            { "Safe-Header", "value3" }
+        };
+
+        // Act
+        var success = _policy.TryDestructure(dict, _propertyFactory, out var result);
+
+        // Assert
+        success.Should().BeTrue();
+        result.Should().NotBeNull();
+        var structureValue = result.Should().BeOfType<StructureValue>().Subject;
+
+        // Verify keys are sanitized (newlines removed)
+        var sanitizedKeyProp1 = structureValue.Properties.FirstOrDefault(p => p.Name == "X-HeaderINFO: Fake log entry");
+        sanitizedKeyProp1.Should().NotBeNull("key should be sanitized");
+
+        var sanitizedKeyProp2 = structureValue.Properties.FirstOrDefault(p => p.Name == "User-AgentERROR: Injected");
+        sanitizedKeyProp2.Should().NotBeNull("key should be sanitized");
+
+        var safeProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Safe-Header");
+        safeProp.Should().NotBeNull();
+
+        // Verify no keys contain newlines
+        foreach (var prop in structureValue.Properties)
+        {
+            prop.Name.Should().NotContain("\n");
+            prop.Name.Should().NotContain("\r");
+        }
+    }
+
+    [Fact]
     public void TryDestructure_WithNestedObject_SanitizesAtAllLevels()
     {
         // Arrange

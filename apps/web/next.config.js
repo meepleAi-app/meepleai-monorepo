@@ -2,6 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone', // Enable Docker-optimized output
+  eslint: {
+    // Disable ESLint during builds - run separately to avoid ESLint 9 circular structure issues
+    ignoreDuringBuilds: true,
+  },
   webpack: (config) => {
     // PDF.js worker configuration
     config.resolve.alias.canvas = false;

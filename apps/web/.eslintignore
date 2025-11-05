@@ -1,6 +1,0 @@
-.next/
-out/
-node_modules/
-coverage/
-*.config.js
-pnpm-lock.yaml

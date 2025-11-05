@@ -1,4 +1,5 @@
 using Api.Infrastructure.Entities;
+using Api.Models;
 using Microsoft.AspNetCore.Http;
 
 namespace Api.Helpers;

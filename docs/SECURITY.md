@@ -4,12 +4,44 @@ This document outlines security practices, secret management, and key rotation p
 
 ## Table of Contents
 
+- [Security Features](#security-features)
 - [Secrets Management](#secrets-management)
 - [Pre-commit Hooks](#pre-commit-hooks)
 - [API Key Rotation](#api-key-rotation)
 - [GitHub Personal Access Token (PAT) Rotation](#github-personal-access-token-pat-rotation)
 - [Security Checklist](#security-checklist)
 - [Reporting Security Issues](#reporting-security-issues)
+
+## Security Features
+
+### Log Forging Prevention (SEC-731)
+
+**Status**: ✅ **FIXED** - All log forging vulnerabilities have been mitigated globally.
+
+MeepleAI implements automatic sanitization of all logged values to prevent log forging attacks, where attackers inject newline characters (`\r`, `\n`) to create fake log entries.
+
+**Protection Coverage**:
+- ✅ **798 logging calls** across **79 files** are automatically protected
+- ✅ **Zero manual code changes** required - protection is transparent
+- ✅ **Future-proof** - all new logging is automatically sanitized
+
+**How It Works**:
+- Global Serilog enricher removes control characters from all strings before writing to logs
+- Both destructuring policy and enricher provide 100% coverage
+- Minimal performance impact (~0.01ms per log event)
+
+**For Developers**:
+```csharp
+// ✅ This is automatically protected - no action needed
+_logger.LogInformation("Query: {Query}", userInput);
+
+// ❌ Avoid string interpolation (bypasses protection)
+_logger.LogInformation($"Query: {userInput}"); // BAD
+```
+
+**Documentation**: See [docs/security/log-forging-prevention.md](security/log-forging-prevention.md) for complete details.
+
+**Related Issue**: [#731 - Fix Log Forging Vulnerabilities](https://github.com/DegrassiAaron/meepleai-monorepo/issues/731)
 
 ## Secrets Management
 

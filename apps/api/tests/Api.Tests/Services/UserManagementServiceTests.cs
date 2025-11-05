@@ -9,6 +9,7 @@ using Api.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;
@@ -57,11 +58,13 @@ public class UserManagementServiceTests : IDisposable
 
         // Use real AuthService - it works with SQLite
         // Pass null for ISessionCacheService (optional parameter)
-        _authService = new AuthService(_dbContext, sessionCache: null, timeProvider: null);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
+        _authService = new AuthService(_dbContext, mockPasswordHashing.Object, sessionCache: null, timeProvider: null);
 
         _service = new UserManagementService(
             _dbContext,
             _authService,
+            mockPasswordHashing.Object,
             NullLogger<UserManagementService>.Instance);
     }
 

@@ -395,9 +395,10 @@ public class RuleSpecService
         if (!string.IsNullOrWhiteSpace(filters.Author))
         {
             var authorFilter = filters.Author.Trim();
+            // CWE-476: Add null coalescing to Email property access
             query = query.Where(r => r.CreatedBy != null &&
                 ((r.CreatedBy.DisplayName != null && r.CreatedBy.DisplayName.Contains(authorFilter)) ||
-                 r.CreatedBy.Email.Contains(authorFilter)));
+                 (r.CreatedBy.Email != null && r.CreatedBy.Email.Contains(authorFilter))));
         }
 
         if (!string.IsNullOrWhiteSpace(filters.SearchQuery))
@@ -416,8 +417,9 @@ public class RuleSpecService
                 r.ParentVersionId,
                 r.MergedFromVersionIds,
                 AtomCount = r.Atoms.Count,
+                // CWE-476: Ensure Email fallback handles null properly
                 AuthorName = r.CreatedBy != null
-                    ? r.CreatedBy.DisplayName ?? r.CreatedBy.Email
+                    ? r.CreatedBy.DisplayName ?? r.CreatedBy.Email ?? "Unknown"
                     : "Unknown"
             })
             .ToListAsync(cancellationToken);

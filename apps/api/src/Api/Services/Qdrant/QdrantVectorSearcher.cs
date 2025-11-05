@@ -81,10 +81,11 @@ public class QdrantVectorSearcher : IQdrantVectorSearcher
         return scoredPoints.Select(r => new SearchResultItem
         {
             Score = r.Score,
-            Text = r.Payload["text"].StringValue,
-            PdfId = r.Payload.ContainsKey("pdf_id") ? r.Payload["pdf_id"].StringValue : "",
-            Page = (int)r.Payload["page"].IntegerValue,
-            ChunkIndex = (int)r.Payload["chunk_index"].IntegerValue
+            // CWE-476: Use safe dictionary access to prevent KeyNotFoundException
+            Text = r.Payload.TryGetValue("text", out var textValue) ? textValue.StringValue ?? "" : "",
+            PdfId = r.Payload.TryGetValue("pdf_id", out var pdfIdValue) ? pdfIdValue.StringValue ?? "" : "",
+            Page = r.Payload.TryGetValue("page", out var pageValue) ? (int)pageValue.IntegerValue : 0,
+            ChunkIndex = r.Payload.TryGetValue("chunk_index", out var chunkValue) ? (int)chunkValue.IntegerValue : 0
         }).ToList();
     }
 

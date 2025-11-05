@@ -42,12 +42,14 @@ public static class AuthEndpoints
             }
             catch (ArgumentException ex)
             {
-                logger.LogWarning("Registration validation failed for {Email}: {Error}", payload.Email, ex.Message);
+                // SEC-738: Pass exception object for proper destructuring (CWE-532 prevention)
+                logger.LogWarning(ex, "Registration validation failed for {Email}", payload.Email);
                 return Results.BadRequest(new { error = ex.Message });
             }
             catch (InvalidOperationException ex)
             {
-                logger.LogWarning("Registration conflict for {Email}: {Error}", payload.Email, ex.Message);
+                // SEC-738: Pass exception object for proper destructuring (CWE-532 prevention)
+                logger.LogWarning(ex, "Registration conflict for {Email}", payload.Email);
                 return Results.Conflict(new { error = ex.Message });
             }
         });
@@ -337,7 +339,8 @@ public static class AuthEndpoints
             }
             catch (UnauthorizedAccessException ex)
             {
-                logger.LogWarning("2FA disable unauthorized for user {UserId}: {Message}", userId, ex.Message);
+                // SEC-738: Pass exception object for proper destructuring (CWE-532 prevention)
+                logger.LogWarning(ex, "2FA disable unauthorized for user {UserId}", userId);
                 return Results.Unauthorized();
             }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -727,7 +730,8 @@ User must have at least one authentication method remaining (password or another
             catch (InvalidOperationException ex)
             {
                 // Rate limit or validation errors
-                logger.LogWarning("Password reset request error: {Message}", ex.Message);
+                // SEC-738: Pass exception object for proper destructuring (CWE-532 prevention)
+                logger.LogWarning(ex, "Password reset request error");
                 return Results.BadRequest(new { error = ex.Message });
             }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -826,7 +830,8 @@ User must have at least one authentication method remaining (password or another
             catch (ArgumentException ex)
             {
                 // Validation errors (password complexity, etc.)
-                logger.LogWarning("Password reset confirm validation error: {Message}", ex.Message);
+                // SEC-738: Pass exception object for proper destructuring (CWE-532 prevention)
+                logger.LogWarning(ex, "Password reset confirm validation error");
                 return Results.BadRequest(new { error = ex.Message });
             }
 #pragma warning disable CA1031 // Do not catch general exception types

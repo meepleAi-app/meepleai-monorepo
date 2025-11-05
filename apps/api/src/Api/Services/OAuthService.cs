@@ -114,11 +114,17 @@ public class OAuthService : IOAuthService
             if (user == null)
             {
                 // Create new user
+                // CWE-476: Safe email split with null/empty guards
+                var emailParts = userInfo.Email?.Split('@') ?? Array.Empty<string>();
+                var emailPrefix = emailParts.Length > 0 && !string.IsNullOrEmpty(emailParts[0])
+                    ? emailParts[0]
+                    : "User";
+
                 user = new UserEntity
                 {
                     Id = Guid.NewGuid().ToString(),
                     Email = userInfo.Email.ToLowerInvariant(),
-                    DisplayName = userInfo.Name ?? userInfo.Email.Split('@')[0],
+                    DisplayName = userInfo.Name ?? emailPrefix,
                     PasswordHash = GenerateRandomPasswordHash(), // No password for OAuth-only users
                     Role = UserRole.User,
                     CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
@@ -270,9 +276,12 @@ public class OAuthService : IOAuthService
             { "grant_type", "authorization_code" }
         };
 
+        // CODE-01: Use using for FormUrlEncodedContent to ensure proper disposal (CWE-404)
+        using var content = new FormUrlEncodedContent(requestData);
+
         using var request = new HttpRequestMessage(HttpMethod.Post, config.TokenUrl)
         {
-            Content = new FormUrlEncodedContent(requestData)
+            Content = content
         };
 
         // GitHub requires Accept header for JSON response
@@ -556,9 +565,12 @@ public class OAuthService : IOAuthService
             { "grant_type", "refresh_token" }
         };
 
+        // CODE-01: Use using for FormUrlEncodedContent to ensure proper disposal (CWE-404)
+        using var content = new FormUrlEncodedContent(requestData);
+
         using var request = new HttpRequestMessage(HttpMethod.Post, config.TokenUrl)
         {
-            Content = new FormUrlEncodedContent(requestData)
+            Content = content
         };
 
         // GitHub requires Accept header (though it doesn't support refresh)

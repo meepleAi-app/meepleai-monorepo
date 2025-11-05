@@ -14,6 +14,7 @@ public class PasswordResetService : IPasswordResetService
     private readonly MeepleAiDbContext _db;
     private readonly IEmailService _emailService;
     private readonly IRateLimitService _rateLimitService;
+    private readonly IPasswordHashingService _passwordHashingService;
     private readonly ILogger<PasswordResetService> _logger;
     private readonly TimeProvider _timeProvider;
 
@@ -21,12 +22,14 @@ public class PasswordResetService : IPasswordResetService
         MeepleAiDbContext db,
         IEmailService emailService,
         IRateLimitService rateLimitService,
+        IPasswordHashingService passwordHashingService,
         ILogger<PasswordResetService> logger,
         TimeProvider? timeProvider = null)
     {
         _db = db;
         _emailService = emailService;
         _rateLimitService = rateLimitService;
+        _passwordHashingService = passwordHashingService;
         _logger = logger;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -263,12 +266,9 @@ public class PasswordResetService : IPasswordResetService
         return Convert.ToBase64String(hash);
     }
 
-    private static string HashPassword(string password)
+    private string HashPassword(string password)
     {
-        const int iterations = 210_000;
-        var salt = RandomNumberGenerator.GetBytes(16);
-        var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, 32);
-        return $"v1.{iterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
+        return _passwordHashingService.HashSecret(password);
     }
 
     private static bool IsValidPassword(string password)

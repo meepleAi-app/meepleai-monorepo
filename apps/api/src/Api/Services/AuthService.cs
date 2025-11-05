@@ -16,13 +16,16 @@ public class AuthService
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
     private readonly ISessionCacheService? _sessionCache;
+    private readonly IPasswordHashingService _passwordHashingService;
 
     public AuthService(
         MeepleAiDbContext db,
+        IPasswordHashingService passwordHashingService,
         ISessionCacheService? sessionCache = null,
         TimeProvider? timeProvider = null)
     {
         _db = db;
+        _passwordHashingService = passwordHashingService;
         _sessionCache = sessionCache;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -260,43 +263,14 @@ public class AuthService
         return (entity, token);
     }
 
-    private static string HashPassword(string password)
+    private string HashPassword(string password)
     {
-        const int iterations = 210_000;
-        var salt = RandomNumberGenerator.GetBytes(16);
-        var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, 32);
-        return $"v1.{iterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
+        return _passwordHashingService.HashSecret(password);
     }
 
-    private static bool VerifyPassword(string password, string encodedHash)
+    private bool VerifyPassword(string password, string encodedHash)
     {
-        try
-        {
-            var parts = encodedHash.Split('.', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length != 4 || parts[0] != "v1")
-            {
-                return false;
-            }
-
-            if (!int.TryParse(parts[1], out var iterations))
-            {
-                return false;
-            }
-
-            var salt = Convert.FromBase64String(parts[2]);
-            var expected = Convert.FromBase64String(parts[3]);
-
-            var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, expected.Length);
-            return CryptographicOperations.FixedTimeEquals(hash, expected);
-        }
-        catch (FormatException)
-        {
-            return false;
-        }
-        catch (ArgumentException)
-        {
-            return false;
-        }
+        return _passwordHashingService.VerifySecret(password, encodedHash);
     }
 
     private static string HashToken(string token)

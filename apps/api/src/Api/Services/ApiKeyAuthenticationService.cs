@@ -17,15 +17,18 @@ public class ApiKeyAuthenticationService
     private const int KeyLengthBytes = 32; // 256 bits = 32 bytes
     private const int HashIterations = 210_000; // Same as password hashing for consistency
     private readonly MeepleAiDbContext _db;
+    private readonly IPasswordHashingService _passwordHashingService;
     private readonly ILogger<ApiKeyAuthenticationService> _logger;
     private readonly TimeProvider _timeProvider;
 
     public ApiKeyAuthenticationService(
         MeepleAiDbContext db,
+        IPasswordHashingService passwordHashingService,
         ILogger<ApiKeyAuthenticationService> logger,
         TimeProvider? timeProvider = null)
     {
         _db = db;
+        _passwordHashingService = passwordHashingService;
         _logger = logger;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -231,55 +234,19 @@ public class ApiKeyAuthenticationService
     }
 
     /// <summary>
-    /// Hashes an API key using PBKDF2 with SHA256.
-    /// Format: v1.{iterations}.{base64_salt}.{base64_hash}
-    /// Same approach as password hashing for consistency.
+    /// Hashes an API key using centralized IPasswordHashingService
     /// </summary>
-    private static string HashApiKey(string apiKey)
+    private string HashApiKey(string apiKey)
     {
-        const int iterations = HashIterations;
-        var salt = RandomNumberGenerator.GetBytes(16);
-        var hash = Rfc2898DeriveBytes.Pbkdf2(apiKey, salt, iterations, HashAlgorithmName.SHA256, 32);
-        return $"v1.{iterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
+        return _passwordHashingService.HashSecret(apiKey);
     }
 
     /// <summary>
-    /// Verifies an API key against a stored hash.
-    /// Extracts the salt from the stored hash and recomputes the hash to compare.
-    /// Uses constant-time comparison to prevent timing attacks.
+    /// Verifies an API key against a stored hash using centralized IPasswordHashingService
     /// </summary>
-    /// <param name="apiKey">The plaintext API key to verify</param>
-    /// <param name="encodedHash">The stored hash in format v1.{iterations}.{salt}.{hash}</param>
-    /// <returns>True if the key matches the hash, false otherwise</returns>
-    private static bool VerifyApiKey(string apiKey, string encodedHash)
+    private bool VerifyApiKey(string apiKey, string encodedHash)
     {
-        try
-        {
-            var parts = encodedHash.Split('.', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length != 4 || parts[0] != "v1")
-            {
-                return false;
-            }
-
-            if (!int.TryParse(parts[1], out var iterations))
-            {
-                return false;
-            }
-
-            var salt = Convert.FromBase64String(parts[2]);
-            var expected = Convert.FromBase64String(parts[3]);
-
-            var hash = Rfc2898DeriveBytes.Pbkdf2(apiKey, salt, iterations, HashAlgorithmName.SHA256, expected.Length);
-            return CryptographicOperations.FixedTimeEquals(hash, expected);
-        }
-        catch (FormatException)
-        {
-            return false;
-        }
-        catch (ArgumentException)
-        {
-            return false;
-        }
+        return _passwordHashingService.VerifySecret(apiKey, encodedHash);
     }
 
     /// <summary>

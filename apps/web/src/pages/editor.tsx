@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import DOMPurify from "dompurify";
 import { api } from "../lib/api";
 import { RichTextEditor, ViewModeToggle } from "../components/editor";
 import { useDebounce } from "../hooks/useDebounce";
@@ -58,6 +59,23 @@ export default function RuleSpecEditor() {
 
   // Debounced content for auto-save (2 second delay)
   const debouncedContent = useDebounce(viewMode === "rich" ? richContent : jsonContent, 2000);
+
+  // Sanitized rich content for XSS protection (SEC-715)
+  const sanitizedRichContent = useMemo(() => {
+    if (!richContent) return "";
+
+    return DOMPurify.sanitize(richContent, {
+      ALLOWED_TAGS: [
+        'p', 'br', 'strong', 'em', 'u', 's', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'table',
+        'thead', 'tbody', 'tr', 'th', 'td', 'span', 'div'
+      ],
+      ALLOWED_ATTR: ['href', 'class', 'style', 'target', 'rel'],
+      ALLOW_DATA_ATTR: false,
+      ALLOW_UNKNOWN_PROTOCOLS: false,
+      SAFE_FOR_TEMPLATES: true
+    });
+  }, [richContent]);
 
   // Undo/Redo state
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -527,7 +545,7 @@ export default function RuleSpecEditor() {
             >
               {isValid && (viewMode === "rich" ? richContent : jsonContent) ? (
                 viewMode === "rich" ? (
-                  <div dangerouslySetInnerHTML={{ __html: richContent }} />
+                  <div dangerouslySetInnerHTML={{ __html: sanitizedRichContent }} />
                 ) : (
                   <RuleSpecPreview ruleSpec={JSON.parse(jsonContent)} />
                 )

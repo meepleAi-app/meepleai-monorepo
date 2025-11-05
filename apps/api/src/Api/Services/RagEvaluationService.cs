@@ -84,8 +84,11 @@ public class RagEvaluationService : IRagEvaluationService
         {
             // SECURITY: Validate path is within allowed directory (prevent path traversal)
             // Use centralized PathSecurity utility to ensure consistent validation
+            // For absolute paths, convert to relative path to preserve subdirectory structure
             var fullPath = Path.IsPathRooted(filePath)
-                ? PathSecurity.ValidatePathIsInDirectory(_allowedDatasetsDirectory, Path.GetFileName(filePath))
+                ? PathSecurity.ValidatePathIsInDirectory(
+                    _allowedDatasetsDirectory,
+                    Path.GetRelativePath(_allowedDatasetsDirectory, filePath))
                 : PathSecurity.ValidatePathIsInDirectory(_allowedDatasetsDirectory, filePath);
 
             if (!System.IO.File.Exists(fullPath))

@@ -14,6 +14,14 @@ export const mockStopStreaming = jest.fn();
 export let mockOnComplete: ((answer: string, snippets: any[], metadata: any) => void) | null = null;
 export let mockOnError: ((error: string) => void) | null = null;
 
+// Setter functions for mockOnComplete and mockOnError to avoid ESLint no-import-assign errors
+export const setMockOnComplete = (callback: ((answer: string, snippets: any[], metadata: any) => void) | null) => {
+  mockOnComplete = callback;
+};
+export const setMockOnError = (callback: ((error: string) => void) | null) => {
+  mockOnError = callback;
+};
+
 // Mock API reference
 export const mockApi = api as jest.Mocked<typeof api>;
 

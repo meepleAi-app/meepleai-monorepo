@@ -217,15 +217,16 @@ export function useChatStreaming(callbacks?: {
                     }));
                     break;
 
-                  case 'followUpQuestions':
+                  case 'followUpQuestions': {
                     const followUpData = eventData as FollowUpQuestionsData;
                     setState((prev) => ({
                       ...prev,
                       followUpQuestions: followUpData?.questions || [],
                     }));
                     break;
+                  }
 
-                  case 'complete':
+                  case 'complete': {
                     const completeData = eventData as CompleteData;
                     setState((prev) => {
                       const finalState = {
@@ -249,8 +250,9 @@ export function useChatStreaming(callbacks?: {
                       return finalState;
                     });
                     break;
+                  }
 
-                  case 'error':
+                  case 'error': {
                     const errorData = eventData as ErrorData;
                     const errorMessage = errorData?.message || 'Unknown error occurred';
                     setState((prev) => ({
@@ -263,6 +265,7 @@ export function useChatStreaming(callbacks?: {
                       callbacks.onError(errorMessage);
                     }
                     break;
+                  }
 
                   case 'heartbeat':
                     // Ignore heartbeat events (keep connection alive)

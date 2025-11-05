@@ -72,13 +72,6 @@ export interface UpdateRuleSpecCommentRequest {
   commentText: string;
 }
 
-// AUTH-05: Session status response
-export interface SessionStatusResponse {
-  expiresAt: string;
-  lastSeenAt: string | null;
-  remainingMinutes: number;
-}
-
 // AUTH-07: Two-Factor Authentication types
 export interface TotpSetupResponse {
   secret: string;

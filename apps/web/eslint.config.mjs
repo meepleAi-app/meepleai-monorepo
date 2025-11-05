@@ -21,44 +21,9 @@ export default [
     ],
   },
   js.configs.recommended,
-  // Configuration for E2E tests (Playwright)
-  {
-    files: ["e2e/**/*.ts", "e2e/**/*.tsx"],
-    languageOptions: {
-      parser: typescriptParser,
-      parserOptions: {
-        ecmaVersion: "latest",
-        sourceType: "module",
-      },
-      globals: {
-        console: "readonly",
-        process: "readonly",
-        setTimeout: "readonly",
-        clearTimeout: "readonly",
-        setInterval: "readonly",
-        clearInterval: "readonly",
-        URL: "readonly",
-        Blob: "readonly",
-        performance: "readonly",
-        requestAnimationFrame: "readonly",
-        cancelAnimationFrame: "readonly",
-      },
-    },
-    plugins: {
-      "@typescript-eslint": typescriptEslint,
-    },
-    rules: {
-      "no-console": "off", // Allow console in E2E tests
-      "@typescript-eslint/no-unused-vars": "off",
-      "@typescript-eslint/no-explicit-any": "off",
-      "react-hooks/rules-of-hooks": "off", // Disable for Playwright test.use()
-      "no-unused-vars": "off",
-      "no-undef": "off",
-    },
-  },
   // Configuration for Jest setup and test files
   {
-    files: ["jest.setup.js", "jest.teardown.js", "**/*.test.{js,jsx,ts,tsx}", "**/__tests__/**/*.{js,jsx,ts,tsx}"],
+    files: ["jest.setup.js", "jest.teardown.js", "**/*.test.{js,jsx,ts,tsx}", "**/__tests__/**/*.{js,jsx,ts,tsx}", "src/test-utils/**/*.{js,jsx,ts,tsx}"],
     languageOptions: {
       globals: {
         jest: "readonly",
@@ -76,6 +41,9 @@ export default [
         setInterval: "readonly",
         clearInterval: "readonly",
       },
+    },
+    plugins: {
+      "@typescript-eslint": typescriptEslint,
     },
     rules: {
       "no-console": "off",
@@ -154,6 +122,8 @@ export default [
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       "@typescript-eslint/no-explicit-any": "warn",
+      "no-unused-vars": "off", // Use @typescript-eslint/no-unused-vars instead
+      "no-undef": "off", // TypeScript handles this better than ESLint
 
       // Accessibility rules (basic)
       "jsx-a11y/alt-text": "warn",
@@ -205,6 +175,41 @@ export default [
       react: {
         version: "detect",
       },
+    },
+  },
+  // Configuration for E2E tests (Playwright) - Must come last to override TypeScript settings
+  {
+    files: ["e2e/**/*.ts", "e2e/**/*.tsx"],
+    languageOptions: {
+      parser: typescriptParser,
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+      },
+      globals: {
+        console: "readonly",
+        process: "readonly",
+        setTimeout: "readonly",
+        clearTimeout: "readonly",
+        setInterval: "readonly",
+        clearInterval: "readonly",
+        URL: "readonly",
+        Blob: "readonly",
+        performance: "readonly",
+        requestAnimationFrame: "readonly",
+        cancelAnimationFrame: "readonly",
+      },
+    },
+    plugins: {
+      "@typescript-eslint": typescriptEslint,
+    },
+    rules: {
+      "no-console": "off", // Allow console in E2E tests
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "react-hooks/rules-of-hooks": "off", // Disable for Playwright test.use()
+      "no-unused-vars": "off",
+      "no-undef": "off",
     },
   },
 ];

@@ -7,8 +7,10 @@ import { test, expect } from '@playwright/test';
  * to manually inspect the DOM and investigate issues like the
  * nextjs-portal click blocking problem.
  *
- * Run with:
- *   pnpm playwright test visual-debug-demo.spec.ts --debug
+ * ⚠️  SKIPPED BY DEFAULT - These tests use page.pause() and require manual interaction
+ *
+ * To run interactively:
+ *   pnpm playwright test visual-debug-demo.spec.ts --grep "Visual Debug Demo" --debug
  *   or
  *   pnpm test:e2e:ui visual-debug-demo.spec.ts
  *
@@ -17,9 +19,11 @@ import { test, expect } from '@playwright/test';
  * - Check for <nextjs-portal> element
  * - Try clicking manually
  * - Use Playwright Inspector to step through
+ *
+ * To enable in code: Remove .skip from test.describe.skip below
  */
 
-test.describe('Visual Debug Demo', () => {
+test.describe.skip('Visual Debug Demo', () => {
   test('investigate portal issue with manual inspection', async ({ page }) => {
     // Step 1: Navigate to home page
     console.log('📍 Step 1: Navigating to home page...');

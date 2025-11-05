@@ -98,6 +98,8 @@ public class ConfigurationService : IConfigurationService
 
         // Try to get from cache first
         var cacheKey = GetCacheKey(key, currentEnvironment);
+#pragma warning disable CS8634 // Nullability of type argument doesn't match 'class' constraint - nullable DTOs in cache are intentional
+#pragma warning disable CS8621 // Nullability of reference types in return type doesn't match target delegate - nullable DTOs in cache are intentional
         var cachedValue = await _cache.GetOrCreateAsync(
             cacheKey,
             async cancel =>
@@ -117,6 +119,8 @@ public class ConfigurationService : IConfigurationService
             expiration: DefaultCacheDuration,
             ct: CancellationToken.None
         );
+#pragma warning restore CS8621
+#pragma warning restore CS8634
 
         return cachedValue;
     }
@@ -424,7 +428,7 @@ public class ConfigurationService : IConfigurationService
 #pragma warning restore CA1031
     }
 
-    public async Task<ConfigurationValidationResult> ValidateConfigurationAsync(
+    public Task<ConfigurationValidationResult> ValidateConfigurationAsync(
         string key,
         string value,
         string valueType)
@@ -505,10 +509,10 @@ public class ConfigurationService : IConfigurationService
         }
 #pragma warning restore CA1031
 
-        return new ConfigurationValidationResult(
+        return Task.FromResult(new ConfigurationValidationResult(
             IsValid: errors.Count == 0,
             Errors: errors
-        );
+        ));
     }
 
     public async Task<ConfigurationExportDto> ExportConfigurationsAsync(string environment, bool activeOnly = true)

@@ -42,11 +42,11 @@ public class LogForgingSanitizationPolicy : IDestructuringPolicy
             .Replace("\u000A", string.Empty); // Unicode LF
     }
 
-    public bool TryDestructure(object value, ILogEventPropertyValueFactory propertyValueFactory, out LogEventPropertyValue? result)
+    public bool TryDestructure(object value, ILogEventPropertyValueFactory propertyValueFactory, out LogEventPropertyValue result)
     {
         if (value == null)
         {
-            result = null;
+            result = null!;
             return false;
         }
 
@@ -61,7 +61,7 @@ public class LogForgingSanitizationPolicy : IDestructuringPolicy
                 result = new ScalarValue(sanitized);
                 return true;
             }
-            result = null;
+            result = null!;
             return false;
         }
 
@@ -103,7 +103,7 @@ public class LogForgingSanitizationPolicy : IDestructuringPolicy
             type == typeof(Guid) || type == typeof(TimeSpan) ||
             type == typeof(Uri))
         {
-            result = null;
+            result = null!;
             return false;
         }
 
@@ -111,7 +111,7 @@ public class LogForgingSanitizationPolicy : IDestructuringPolicy
         var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
         if (props.Length == 0)
         {
-            result = null;
+            result = null!;
             return false;
         }
 
@@ -162,7 +162,7 @@ public class LogForgingSanitizationPolicy : IDestructuringPolicy
             return true;
         }
 
-        result = null;
+        result = null!;
         return false;
     }
 }

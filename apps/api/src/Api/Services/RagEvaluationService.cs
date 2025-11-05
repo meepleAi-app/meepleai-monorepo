@@ -217,7 +217,7 @@ public class RagEvaluationService : IRagEvaluationService
 
         var confidenceValues = successfulQueries
             .Where(r => r.AverageConfidence.HasValue)
-            .Select(r => r.AverageConfidence.Value) // Safe because of Where clause
+            .Select(r => r.AverageConfidence!.Value) // Safe because of Where clause - null-forgiving operator used
             .ToList();
 
         var avgConfidence = confidenceValues.Count > 0

@@ -151,7 +151,8 @@ public class PdfStorageService
             await _db.SaveChangesAsync(ct);
 
             // Extract text asynchronously (PDF-02) with cancellation support (PDF-08)
-            _backgroundTaskService.ExecuteWithCancellation(storageResult.FileId, (cancellationToken) => ProcessPdfAsync(storageResult.FileId, storageResult.FilePath!, cancellationToken));
+            // Note: FileId and FilePath are guaranteed non-null after successful storage
+            _backgroundTaskService.ExecuteWithCancellation(storageResult.FileId!, (cancellationToken) => ProcessPdfAsync(storageResult.FileId!, storageResult.FilePath!, cancellationToken));
 
             await InvalidateCacheSafelyAsync(gameId, ct, "PDF upload");
 

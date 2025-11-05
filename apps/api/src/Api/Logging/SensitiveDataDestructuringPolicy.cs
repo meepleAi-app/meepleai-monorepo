@@ -90,11 +90,11 @@ public partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
         return RedactSensitiveStringPatterns(input);
     }
 
-    public bool TryDestructure(object value, ILogEventPropertyValueFactory propertyValueFactory, out LogEventPropertyValue? result)
+    public bool TryDestructure(object value, ILogEventPropertyValueFactory propertyValueFactory, out LogEventPropertyValue result)
     {
         if (value == null)
         {
-            result = null;
+            result = null!;
             return false;
         }
 
@@ -109,7 +109,7 @@ public partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
                 result = new ScalarValue(redacted);
                 return true;
             }
-            result = null;
+            result = null!;
             return false;
         }
 
@@ -156,7 +156,7 @@ public partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
             type == typeof(Guid) || type == typeof(TimeSpan) ||
             type == typeof(Uri))
         {
-            result = null;
+            result = null!;
             return false;
         }
 
@@ -164,7 +164,7 @@ public partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
         var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
         if (props.Length == 0)
         {
-            result = null;
+            result = null!;
             return false;
         }
 
@@ -223,7 +223,7 @@ public partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
             return true;
         }
 
-        result = null;
+        result = null!;
         return false;
     }
 

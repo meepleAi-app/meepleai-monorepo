@@ -76,7 +76,7 @@ public class BlobStorageService : IBlobStorageService
 #pragma warning restore CA1031 // Do not catch general exception types
     }
 
-    public async Task<Stream?> RetrieveAsync(string fileId, string gameId, CancellationToken ct = default)
+    public Task<Stream?> RetrieveAsync(string fileId, string gameId, CancellationToken ct = default)
     {
         try
         {
@@ -89,12 +89,12 @@ public class BlobStorageService : IBlobStorageService
             if (files.Length == 0)
             {
                 _logger.LogWarning("File not found for {FileId} in game {GameId}", fileId, gameId);
-                return null;
+                return Task.FromResult<Stream?>(null);
             }
 
             var filePath = files[0];
             var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            return fileStream;
+            return Task.FromResult<Stream?>(fileStream);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
@@ -105,7 +105,7 @@ public class BlobStorageService : IBlobStorageService
             // catch all exceptions to return null instead of crashing the service.
             // Context: File system operations can fail in unpredictable ways across different OS environments
             _logger.LogError(ex, "Error retrieving file {FileId} for game {GameId}", fileId, gameId);
-            return null;
+            return Task.FromResult<Stream?>(null);
         }
 #pragma warning restore CA1031 // Do not catch general exception types
     }

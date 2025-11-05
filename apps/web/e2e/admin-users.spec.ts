@@ -161,8 +161,8 @@ test.describe('Admin User Management E2E Flow', () => {
     await expect(page.getByText('editor@example.com')).toBeVisible();
 
     // ===== CREATE USER =====
-    // Click Create User button
-    await page.getByRole('button', { name: 'Create User' }).click();
+    // Click Create User button (open modal)
+    await page.getByTestId('open-create-user-modal').click();
 
     // Fill out create form
     await expect(page.getByRole('heading', { name: 'Create User' })).toBeVisible();
@@ -172,14 +172,17 @@ test.describe('Admin User Management E2E Flow', () => {
     await page.getByLabel('Role *').selectOption('Editor');
 
     // Submit form
-    await page.getByRole('button', { name: /Create User/i }).click();
+    await page.getByTestId('submit-user-form').click();
 
     // Verify success toast appears
     await expect(page.getByText(/created successfully/)).toBeVisible();
 
-    // Verify new user appears in list
-    await expect(page.getByText('newuser@example.com')).toBeVisible();
-    await expect(page.getByText('New Test User')).toBeVisible();
+    // Wait for toast to disappear or close it to avoid interference
+    await page.waitForTimeout(1000); // Give toast time to auto-dismiss
+
+    // Verify new user appears in table (use role to be specific with exact match)
+    await expect(page.getByRole('cell', { name: 'newuser@example.com', exact: true })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'New Test User', exact: true })).toBeVisible();
 
     // ===== EDIT USER =====
     // Find and click Edit button for the newly created user
@@ -200,15 +203,18 @@ test.describe('Admin User Management E2E Flow', () => {
     // Verify success toast
     await expect(page.getByText(/updated successfully/)).toBeVisible();
 
-    // Verify updates appear in table
-    await expect(page.getByText('Updated User Name')).toBeVisible();
+    // Wait for toast to dismiss
+    await page.waitForTimeout(1000);
+
+    // Verify updates appear in table (use role for specificity)
+    await expect(page.getByRole('cell', { name: 'Updated User Name' })).toBeVisible();
 
     // ===== SEARCH FUNCTIONALITY =====
     // Search for the user
     await page.getByPlaceholder('Search by email or name...').fill('Updated');
 
-    // Verify filtered results
-    await expect(page.getByText('newuser@example.com')).toBeVisible();
+    // Verify filtered results (use role to avoid toast interference)
+    await expect(page.getByRole('cell', { name: 'newuser@example.com', exact: true })).toBeVisible();
     await expect(page.getByText('existing@example.com')).not.toBeVisible();
 
     // Clear search
@@ -240,6 +246,9 @@ test.describe('Admin User Management E2E Flow', () => {
 
     // Verify success toast
     await expect(page.getByText(/deleted successfully/)).toBeVisible();
+
+    // Wait for toast to dismiss
+    await page.waitForTimeout(1000);
 
     // Verify user no longer in list
     await expect(page.getByText('newuser@example.com')).not.toBeVisible();
@@ -458,20 +467,20 @@ test.describe('Admin User Management E2E Flow', () => {
     await expect(page.getByText('user1@example.com')).toBeVisible();
 
     // Previous should be disabled
-    await expect(page.getByRole('button', { name: 'Previous' })).toBeDisabled();
+    await expect(page.getByTestId('pagination-previous')).toBeDisabled();
 
     // Go to page 2
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByTestId('pagination-next').click();
 
     // Verify page 2
     await expect(page.getByText('Page 2 of 2')).toBeVisible();
     await expect(page.getByText('Showing 21 to 25 of 25 users')).toBeVisible();
 
     // Next should be disabled on last page
-    await expect(page.getByRole('button', { name: 'Next' })).toBeDisabled();
+    await expect(page.getByTestId('pagination-next')).toBeDisabled();
 
     // Go back to page 1
-    await page.getByRole('button', { name: 'Previous' }).click();
+    await page.getByTestId('pagination-previous').click();
     await expect(page.getByText('Page 1 of 2')).toBeVisible();
   });
 
@@ -494,10 +503,10 @@ test.describe('Admin User Management E2E Flow', () => {
     await page.goto('http://localhost:3000/admin/users');
 
     // Open create modal
-    await page.getByRole('button', { name: 'Create User' }).click();
+    await page.getByTestId('open-create-user-modal').click();
 
     // Try to submit empty form
-    await page.getByRole('button', { name: /Create User/i }).click();
+    await page.getByTestId('submit-user-form').click();
 
     // Should show validation errors
     await expect(page.getByText('Valid email is required')).toBeVisible();
@@ -510,7 +519,7 @@ test.describe('Admin User Management E2E Flow', () => {
     await page.getByLabel('Display Name *').fill('Valid User');
 
     // Validation errors should disappear after filling
-    await page.getByRole('button', { name: /Create User/i }).click();
+    await page.getByTestId('submit-user-form').click();
 
     // Should not show validation errors now (modal will close or show API error)
     await expect(page.getByText('Valid email is required')).not.toBeVisible();
@@ -546,7 +555,7 @@ test.describe('Admin User Management E2E Flow', () => {
     await page.goto('http://localhost:3000/admin/users');
 
     // Test create modal cancel
-    await page.getByRole('button', { name: 'Create User' }).click();
+    await page.getByTestId('open-create-user-modal').click();
     await expect(page.getByRole('heading', { name: 'Create User' })).toBeVisible();
     await page.getByRole('button', { name: 'Cancel' }).click();
     await expect(page.getByRole('heading', { name: 'Create User' })).not.toBeVisible();

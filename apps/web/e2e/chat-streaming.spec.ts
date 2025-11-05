@@ -5,6 +5,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     // Navigate to chat (already authenticated as user)
     await page.goto('/chat');
     await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle');
   });
 
   test('should display streaming UI elements', async ({ userPage: page }) => {

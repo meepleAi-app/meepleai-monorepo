@@ -49,6 +49,7 @@ test.describe('RuleSpecEditor E2E', () => {
 
   test('complete user flow: login → edit → auto-save → undo → manual save', async ({ page }) => {
     await page.goto('http://localhost:3000/editor?gameId=demo-chess');
+    await page.waitForLoadState('networkidle');
 
     // Wait for editor to load
     await expect(page.getByText('Editor RuleSpec')).toBeVisible({ timeout: 10000 });
@@ -130,6 +131,7 @@ test.describe('RuleSpecEditor E2E', () => {
     });
 
     await page.goto('http://localhost:3000/editor?gameId=demo-chess');
+    await page.waitForLoadState('networkidle');
     await expect(page.getByText('Editor RuleSpec')).toBeVisible({ timeout: 10000 });
 
     const textarea = page.locator('textarea');
@@ -150,6 +152,7 @@ test.describe('RuleSpecEditor E2E', () => {
 
   test('validates JSON content in real-time', async ({ page }) => {
     await page.goto('http://localhost:3000/editor?gameId=demo-chess');
+    await page.waitForLoadState('networkidle');
     await expect(page.getByText('Editor RuleSpec')).toBeVisible({ timeout: 10000 });
 
     const textarea = page.locator('textarea');
@@ -169,6 +172,7 @@ test.describe('RuleSpecEditor E2E', () => {
 
   test('keyboard shortcuts work correctly', async ({ page }) => {
     await page.goto('http://localhost:3000/editor?gameId=demo-chess');
+    await page.waitForLoadState('networkidle');
     await expect(page.getByText('Editor RuleSpec')).toBeVisible({ timeout: 10000 });
 
     const textarea = page.locator('textarea');
@@ -227,6 +231,7 @@ test.describe('RuleSpecEditor E2E', () => {
     });
 
     await page.goto('http://localhost:3000/editor?gameId=demo-chess');
+    await page.waitForLoadState('networkidle');
     await expect(page.getByText('Editor RuleSpec')).toBeVisible({ timeout: 10000 });
 
     // Reload page to trigger session check
@@ -238,6 +243,7 @@ test.describe('RuleSpecEditor E2E', () => {
 
   test('preserves content during view mode toggle', async ({ page }) => {
     await page.goto('http://localhost:3000/editor?gameId=demo-chess');
+    await page.waitForLoadState('networkidle');
     await expect(page.getByText('Editor RuleSpec')).toBeVisible({ timeout: 10000 });
 
     const textarea = page.locator('textarea');

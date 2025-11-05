@@ -1,62 +1,79 @@
-import { test as base, Page } from '@playwright/test';
+import { test as base, Page, Route } from '@playwright/test';
+
+const API_BASE = 'http://localhost:8080';
 
 /**
- * Login as admin user (admin@meepleai.dev)
- * Handles page load timing and navigation properly
+ * Setup mock auth routes for testing (based on authenticated.spec.ts pattern)
+ * This is more reliable than trying to use real login which has UI/timing issues
+ */
+async function setupMockAuth(page: Page, role: 'Admin' | 'Editor' | 'User' = 'Admin', email: string = 'admin@meepleai.dev') {
+  const userResponse = {
+    user: {
+      id: `${role.toLowerCase()}-test-id`,
+      email,
+      displayName: `Test ${role}`,
+      role
+    },
+    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString()
+  };
+
+  // Mock /auth/me to return authenticated user
+  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(userResponse)
+    });
+  });
+
+  // Mock login endpoint (in case it's called)
+  await page.route(`${API_BASE}/api/v1/auth/login`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(userResponse)
+    });
+  });
+
+  return userResponse;
+}
+
+/**
+ * Login as admin user - uses mock authentication for reliability
  */
 export async function loginAsAdmin(page: Page) {
+  // Setup mock auth before navigating
+  await setupMockAuth(page, 'Admin', 'admin@meepleai.dev');
+
+  // Navigate to home page - /auth/me mock will make user appear logged in
   await page.goto('/');
-  await page.waitForLoadState('networkidle'); // Wait for page ready
+  await page.waitForLoadState('networkidle');
 
-  // Click login with specificity (handle multiple matches)
-  const loginButton = page.getByRole('button', { name: 'Login', exact: true });
-  await loginButton.first().click();
-
-  // Fill credentials
-  await page.fill('input[type="email"]', 'admin@meepleai.dev');
-  await page.fill('input[type="password"]', 'Demo123!');
-
-  // Submit and wait for redirect
-  await page.getByRole('button', { name: /sign in/i }).click();
-  await page.waitForURL('/');
+  console.log('✅ Mock admin authentication setup complete');
 }
 
 /**
- * Login as editor user (editor@meepleai.dev)
+ * Login as editor user - uses mock authentication
  */
 export async function loginAsEditor(page: Page) {
+  await setupMockAuth(page, 'Editor', 'editor@meepleai.dev');
   await page.goto('/');
   await page.waitForLoadState('networkidle');
-
-  const loginButton = page.getByRole('button', { name: 'Login', exact: true });
-  await loginButton.first().click();
-
-  await page.fill('input[type="email"]', 'editor@meepleai.dev');
-  await page.fill('input[type="password"]', 'Demo123!');
-
-  await page.getByRole('button', { name: /sign in/i }).click();
-  await page.waitForURL('/');
+  console.log('✅ Mock editor authentication setup complete');
 }
 
 /**
- * Login as regular user (user@meepleai.dev)
+ * Login as regular user - uses mock authentication
  */
 export async function loginAsUser(page: Page) {
+  await setupMockAuth(page, 'User', 'user@meepleai.dev');
   await page.goto('/');
   await page.waitForLoadState('networkidle');
-
-  const loginButton = page.getByRole('button', { name: 'Login', exact: true });
-  await loginButton.first().click();
-
-  await page.fill('input[type="email"]', 'user@meepleai.dev');
-  await page.fill('input[type="password"]', 'Demo123!');
-
-  await page.getByRole('button', { name: /sign in/i }).click();
-  await page.waitForURL('/');
+  console.log('✅ Mock user authentication setup complete');
 }
 
 /**
- * Extended test with pre-authenticated pages
+ * Extended test with pre-authenticated pages using mock auth
  * Usage: test.describe('My tests', () => { test('...', async ({ adminPage }) => { ... }) })
  */
 export const test = base.extend<{

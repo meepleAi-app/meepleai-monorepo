@@ -332,6 +332,7 @@ export default function UserManagement() {
             borderRadius: "4px",
             cursor: "pointer",
           }}
+          data-testid="open-create-user-modal"
         >
           Create User
         </button>
@@ -516,6 +517,7 @@ export default function UserManagement() {
               borderRadius: "4px",
               cursor: page === 1 ? "not-allowed" : "pointer",
             }}
+            data-testid="pagination-previous"
           >
             Previous
           </button>
@@ -533,6 +535,7 @@ export default function UserManagement() {
               borderRadius: "4px",
               cursor: page >= Math.ceil(total / pageSize) ? "not-allowed" : "pointer",
             }}
+            data-testid="pagination-next"
           >
             Next
           </button>
@@ -853,6 +856,7 @@ function UserModal({ mode, user, onClose, onCreate, onUpdate }: UserModalProps) 
                 borderRadius: "4px",
                 cursor: "pointer",
               }}
+              data-testid="submit-user-form"
             >
               {mode === "create" ? "Create User" : "Save Changes"}
             </button>

@@ -160,7 +160,7 @@ export default function Home() {
               <br />
               <span className="gradient-text">Board Game Rules Assistant</span>
             </h1>
-            <p className="text-xl text-slate-300 leading-relaxed">
+            <p className="text-xl text-slate-100 leading-relaxed">
               Never argue about rules again. Get instant, accurate answers from any game&apos;s rulebook with AI-powered semantic search.
             </p>
             <div className="flex flex-wrap gap-4">
@@ -183,8 +183,8 @@ export default function Home() {
               </motion.a>
             </div>
             {!authUser && (
-              <p className="text-sm text-slate-400 mt-4">
-                💡 Try with demo account: <code className="bg-white/10 px-2 py-1 rounded text-slate-300 font-mono">user@meepleai.dev</code> / <code className="bg-white/10 px-2 py-1 rounded text-slate-300 font-mono">Demo123!</code>
+              <p className="text-sm text-slate-100 mt-4">
+                💡 Try with demo account: <code className="bg-white/20 px-2 py-1 rounded text-slate-200 font-mono">user@meepleai.dev</code> / <code className="bg-white/20 px-2 py-1 rounded text-slate-200 font-mono">Demo123!</code>
               </p>
             )}
           </motion.div>
@@ -250,7 +250,7 @@ export default function Home() {
             className="text-center mb-16"
           >
             <h2 className="text-5xl font-bold mb-4">How It Works</h2>
-            <p className="text-xl text-slate-300">Three simple steps to never misunderstand rules again</p>
+            <p className="text-xl text-slate-100">Three simple steps to never misunderstand rules again</p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -268,7 +268,7 @@ export default function Home() {
               >
                 <div className="text-6xl mb-4">{feature.icon}</div>
                 <h3 className="text-2xl font-semibold mb-3">{feature.title}</h3>
-                <p className="text-slate-300 leading-relaxed">{feature.description}</p>
+                <p className="text-slate-100 leading-relaxed">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -296,7 +296,7 @@ export default function Home() {
                   <span className="text-2xl">{feature.icon}</span>
                   {feature.title}
                 </h3>
-                <p className="text-slate-300">{feature.description}</p>
+                <p className="text-slate-100">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -440,14 +440,14 @@ export default function Home() {
             aria-labelledby={authMode === "login" ? "login-tab" : "register-tab"}
           >
             {authMode === "login" ? (
-              <form onSubmit={handleLogin} className="space-y-4">
+              <form onSubmit={handleLogin} className="space-y-4" data-testid="login-form">
                 <AccessibleFormInput
                   label="Email"
                   type="email"
                   value={loginForm.email}
                   onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                   required
-                  inputClassName="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white"
+                  inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900"
                 />
                 <AccessibleFormInput
                   label="Password"
@@ -455,12 +455,13 @@ export default function Home() {
                   value={loginForm.password}
                   onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                   required
-                  inputClassName="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white"
+                  inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900"
                 />
                 <AccessibleButton
                   type="submit"
                   variant="primary"
                   className="w-full mt-6"
+                  data-testid="login-submit-button"
                 >
                   Login
                 </AccessibleButton>
@@ -473,7 +474,7 @@ export default function Home() {
                   value={registerForm.email}
                   onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
                   required
-                  inputClassName="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white"
+                  inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900"
                 />
                 <AccessibleFormInput
                   label="Password"
@@ -482,7 +483,7 @@ export default function Home() {
                   onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
                   required
                   hint="Must be at least 8 characters"
-                  inputClassName="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white"
+                  inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900"
                   minLength={8}
                 />
                 <AccessibleFormInput
@@ -490,17 +491,17 @@ export default function Home() {
                   value={registerForm.displayName}
                   onChange={(e) => setRegisterForm({ ...registerForm, displayName: e.target.value })}
                   hint="Optional - How you'll appear to other users"
-                  inputClassName="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white"
+                  inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900"
                 />
                 <div className="space-y-2">
-                  <label htmlFor="register-role" className="block text-sm font-medium text-slate-300">
+                  <label htmlFor="register-role" className="block text-sm font-medium text-slate-200">
                     Role
                   </label>
                   <select
                     id="register-role"
                     value={registerForm.role}
                     onChange={(e) => setRegisterForm({ ...registerForm, role: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white outline-none focus:border-primary-500 transition-colors"
+                    className="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 outline-none focus:border-primary-500 transition-colors"
                     aria-label="Select user role"
                   >
                     <option value="User">User</option>

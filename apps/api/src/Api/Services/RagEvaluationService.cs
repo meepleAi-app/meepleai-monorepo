@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Api.Infrastructure.Security;
 using Api.Models;
 using Microsoft.Extensions.Logging;
 
@@ -46,18 +48,28 @@ public class RagEvaluationService : IRagEvaluationService
     private readonly IQdrantService _qdrantService;
     private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<RagEvaluationService> _logger;
+    private readonly string _allowedDatasetsDirectory;
     private readonly TimeProvider _timeProvider;
 
     public RagEvaluationService(
         IQdrantService qdrantService,
         IEmbeddingService embeddingService,
         ILogger<RagEvaluationService> logger,
+        string? allowedDatasetsDirectory = null,
         TimeProvider? timeProvider = null)
     {
         _qdrantService = qdrantService;
         _embeddingService = embeddingService;
         _logger = logger;
+        _allowedDatasetsDirectory = allowedDatasetsDirectory
+            ?? Path.Combine(Directory.GetCurrentDirectory(), "datasets", "rag");
         _timeProvider = timeProvider ?? TimeProvider.System;
+
+        // Ensure datasets directory exists
+        if (!Directory.Exists(_allowedDatasetsDirectory))
+        {
+            Directory.CreateDirectory(_allowedDatasetsDirectory);
+        }
     }
 
     /// <inheritdoc/>
@@ -68,14 +80,35 @@ public class RagEvaluationService : IRagEvaluationService
             throw new ArgumentException("File path cannot be null or empty", nameof(filePath));
         }
 
-        if (!System.IO.File.Exists(filePath))
-        {
-            throw new System.IO.FileNotFoundException($"Dataset file not found: {filePath}");
-        }
-
         try
         {
-            var jsonContent = await System.IO.File.ReadAllTextAsync(filePath, ct);
+            // SECURITY: Validate path is within allowed directory (prevent path traversal)
+            var fullPath = Path.IsPathRooted(filePath)
+                ? Path.GetFullPath(filePath)
+                : Path.GetFullPath(Path.Combine(_allowedDatasetsDirectory, filePath));
+
+            // Verify resolved path is within allowed directory
+            if (!fullPath.StartsWith(_allowedDatasetsDirectory, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("Path traversal attempt detected: {RequestedPath} resolved to {FullPath}",
+                    filePath, fullPath);
+                throw new SecurityException("Dataset path must be within allowed datasets directory");
+            }
+
+            if (!System.IO.File.Exists(fullPath))
+            {
+                throw new System.IO.FileNotFoundException($"Dataset file not found: {fullPath}");
+            }
+
+            // SECURITY: Check file size to prevent resource exhaustion
+            var fileInfo = new FileInfo(fullPath);
+            const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB
+            if (fileInfo.Length > MaxFileSizeBytes)
+            {
+                throw new ArgumentException($"Dataset file exceeds maximum size of 10 MB (actual: {fileInfo.Length / 1024 / 1024} MB)");
+            }
+
+            var jsonContent = await System.IO.File.ReadAllTextAsync(fullPath, ct);
             var dataset = JsonSerializer.Deserialize<RagEvaluationDataset>(jsonContent, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
@@ -83,18 +116,27 @@ public class RagEvaluationService : IRagEvaluationService
 
             if (dataset == null)
             {
-                throw new InvalidOperationException($"Failed to deserialize dataset from {filePath}");
+                throw new InvalidOperationException($"Failed to deserialize dataset from {fullPath}");
             }
 
             _logger.LogInformation("Loaded evaluation dataset '{DatasetName}' with {QueryCount} queries from {FilePath}",
-                dataset.Name, dataset.Queries.Count, filePath);
+                dataset.Name, dataset.Queries.Count, fullPath);
 
             return dataset;
+        }
+        catch (SecurityException)
+        {
+            throw; // Re-throw security exceptions as-is
         }
         catch (JsonException ex)
         {
             _logger.LogError(ex, "Failed to parse JSON dataset from {FilePath}", filePath);
             throw new InvalidOperationException($"Invalid JSON in dataset file: {filePath}", ex);
+        }
+        catch (Exception ex) when (ex is not FileNotFoundException && ex is not ArgumentException)
+        {
+            _logger.LogError(ex, "Error loading dataset from {Path}", filePath);
+            throw new InvalidOperationException($"Failed to load dataset: {ex.Message}", ex);
         }
     }
 

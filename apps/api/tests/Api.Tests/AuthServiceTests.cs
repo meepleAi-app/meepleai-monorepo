@@ -4,6 +4,7 @@ using Api.Models;
 using Api.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;
@@ -45,7 +46,8 @@ public class AuthServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new AuthService(dbContext, sessionCache: null, timeProvider: timeProvider);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
+        var authService = new AuthService(dbContext, mockPasswordHashing.Object, sessionCache: null, timeProvider: timeProvider);
 
         var register = await authService.RegisterAsync(new RegisterCommand(
             Email: "user@example.com",
@@ -102,7 +104,8 @@ public class AuthServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new AuthService(dbContext, sessionCache: null, timeProvider: timeProvider);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
+        var authService = new AuthService(dbContext, mockPasswordHashing.Object, sessionCache: null, timeProvider: timeProvider);
 
         await authService.RegisterAsync(new RegisterCommand(
             Email: "bootstrap@example.com",

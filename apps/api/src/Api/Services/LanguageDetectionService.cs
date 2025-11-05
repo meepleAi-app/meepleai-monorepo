@@ -102,7 +102,9 @@ public class LanguageDetectionService : ILanguageDetectionService
 
             return detectedLanguage;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             // FALLBACK PATTERN: Language detection failures default to English (en)
             // Rationale: Language detection is a best-effort enhancement for RAG and embedding

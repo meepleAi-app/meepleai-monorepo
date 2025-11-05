@@ -51,7 +51,9 @@ public class WorkflowErrorLoggingService : IWorkflowErrorLoggingService
             // Invalidate cache for workflow errors list
             await _cache.RemoveAsync($"workflow-errors-list", ct);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             // RESILIENCE PATTERN: Error logging must never fail n8n webhook operations
             // Rationale: n8n workflow error logging is telemetry for debugging - failing the

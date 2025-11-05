@@ -227,10 +227,12 @@ public class N8nConfigService
 
             return new N8nTestResult(success, message, latency);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - external API calls with result pattern
+        // Service layer: Catches all exceptions to return domain result object
+        // Connection test failures logged, returned as test result with error details
         catch (Exception ex)
         {
-            // Service layer: Catches all exceptions to return domain result object
-            // Connection test failures logged, returned as test result with error details
             _logger.LogError(ex, "Failed to test n8n connection for config {ConfigId}", configId);
 
             var message = $"Connection failed: {ex.Message}";
@@ -240,6 +242,7 @@ public class N8nConfigService
 
             return new N8nTestResult(false, message, null);
         }
+#pragma warning restore CA1031
     }
 
     private string EncryptApiKey(string apiKey)

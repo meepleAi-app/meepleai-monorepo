@@ -96,13 +96,16 @@ public class QualityReportService : BackgroundService, IQualityReportService
                 _logger.LogInformation("Quality report generation cancelled (application shutting down)");
                 break;
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Background service boundary - prevents service crash
+            // Background service: Generic catch prevents service from crashing host process
+            // Report generation failure logged but service continues scheduled execution
             catch (Exception ex)
             {
-                // Background service: Generic catch prevents service from crashing host process
-                // Report generation failure logged but service continues scheduled execution
                 _logger.LogError(ex, "Error generating scheduled quality report");
                 // Continue to next iteration despite error
             }
+#pragma warning restore CA1031
 
             // Wait for the configured interval before next run
             await Task.Delay(_interval, _timeProvider, stoppingToken);

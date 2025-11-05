@@ -84,13 +84,18 @@ public class HybridSearchService : IHybridSearchService
                     throw new ArgumentException($"Unsupported search mode: {mode}");
             }
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
-            // Service layer: Logs exception details before re-throwing
-            // Caller receives exception with full diagnostic context
+            // SERVICE BOUNDARY PATTERN: Search service must log all errors before re-throwing
+            // Rationale: This is a service entry point that coordinates vector and keyword searches. We catch
+            // all exceptions to add diagnostic logging context (query, mode) before re-throwing to the caller.
+            // This ensures comprehensive error logging while maintaining exception propagation for proper handling.
+            // Context: Search operations involve multiple systems (Qdrant, PostgreSQL, embeddings) that can fail
             _logger.LogError(ex, "Error during hybrid search for query '{Query}', mode={Mode}", query, mode);
             throw;
         }
+#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     /// <summary>

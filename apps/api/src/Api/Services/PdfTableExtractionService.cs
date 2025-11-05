@@ -73,11 +73,18 @@ public class PdfTableExtractionService
             _logger.LogError(ex, "Failed to extract structured content from PDF: {FilePath}", filePath);
             return PdfStructuredExtractionResult.CreateFailure($"Extraction failed: {ex.Message}");
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
+            // SERVICE BOUNDARY PATTERN: PDF table extraction service boundary - must handle all errors gracefully
+            // Rationale: This is a service entry point that processes untrusted PDF files to extract tables and
+            // diagrams. iText7 PDF parsing can throw various runtime exceptions (corrupt tables, invalid image
+            // formats, unexpected PDF structures). We must catch all exceptions to return error results.
+            // Context: iText7 can throw unexpected exceptions during table detection and image extraction
             _logger.LogError(ex, "Failed to extract structured content from PDF: {FilePath}", filePath);
             return PdfStructuredExtractionResult.CreateFailure($"Extraction failed: {ex.Message}");
         }
+#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     /// <summary>

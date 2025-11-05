@@ -50,7 +50,9 @@ public class CacheMetricsRecorder : ICacheMetricsRecorder
 
                 MeepleAiMetrics.CacheHitsTotal.Add(1, tags);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 // Observability: Metrics recording must not break application functionality
                 // Fire-and-forget pattern - metrics are non-critical, fail silently
@@ -82,7 +84,9 @@ public class CacheMetricsRecorder : ICacheMetricsRecorder
 
                 MeepleAiMetrics.CacheMissesTotal.Add(1, tags);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 // Observability: Metrics recording must not break application functionality
                 // Fire-and-forget pattern - metrics are non-critical, fail silently
@@ -112,7 +116,9 @@ public class CacheMetricsRecorder : ICacheMetricsRecorder
 
                 MeepleAiMetrics.CacheEvictionsTotal.Add(1, tags);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
+#pragma warning restore CA1031
             {
                 // Observability: Metrics recording must not break application functionality
                 // Fire-and-forget pattern - metrics are non-critical, fail silently

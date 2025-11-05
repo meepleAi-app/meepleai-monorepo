@@ -83,10 +83,17 @@ public class TableStructureAnalyzer : ITableStructureAnalyzer
         {
             _logger.LogWarning(ex, "I/O error extracting images from page {PageNum}", pageNum);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
+            // DATA ROBUSTNESS PATTERN: Page-level diagram extraction failures should not stop PDF processing
+            // Rationale: Diagram extraction from PDF pages can encounter various runtime exceptions (corrupt
+            // images, unsupported formats, malformed page structures). Failing on one page should not prevent
+            // extracting diagrams from other pages. We log the error and return empty list for this page.
+            // Context: iText7 PdfCanvasProcessor can throw unexpected exceptions during image extraction
             _logger.LogWarning(ex, "Unexpected error extracting images from page {PageNum}", pageNum);
         }
+#pragma warning restore CA1031 // Do not catch general exception types
 
         return diagrams;
     }

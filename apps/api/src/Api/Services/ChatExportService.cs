@@ -80,7 +80,9 @@ public class ChatExportService : IChatExportService
             // Let cancellation exceptions bubble up (don't catch)
             throw;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             // Service layer: Catches all exceptions to return domain result object
             // Detailed error logged, returned as failure result for caller handling

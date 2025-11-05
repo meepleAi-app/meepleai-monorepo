@@ -81,6 +81,9 @@ public class AgentFeedbackService
 
             await _db.SaveChangesAsync(ct);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - log-and-rethrow pattern for diagnostic context
+        // Catch exception to log details, then rethrow to allow caller to handle
         catch (Exception ex)
         {
             // Service layer: Logs exception details before re-throwing
@@ -88,6 +91,7 @@ public class AgentFeedbackService
             _logger.LogError(ex, "Failed to record feedback for message {MessageId}", messageId);
             throw;
         }
+#pragma warning restore CA1031
     }
 
     public async Task<AgentFeedbackStats> GetStatsAsync(

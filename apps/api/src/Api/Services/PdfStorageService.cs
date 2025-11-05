@@ -183,11 +183,15 @@ public class PdfStorageService
             _logger.LogError(ex, "Database error during PDF upload for game {GameId}", gameId);
             throw new PdfStorageException("Failed to save PDF metadata: Database error occurred.", ex);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - wraps unexpected exceptions in domain-specific PdfStorageException
+        // Already handling specific exception types (IO, UnauthorizedAccess, DbUpdate); this catches remaining failures
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during PDF upload for game {GameId}", gameId);
             throw new PdfStorageException($"Failed to upload PDF: {ex.Message}", ex);
         }
+#pragma warning restore CA1031
     }
 
     public async Task<List<PdfDocumentDto>> GetPdfsByGameAsync(string gameId, CancellationToken ct = default)
@@ -262,10 +266,14 @@ public class PdfStorageService
                 {
                     _logger.LogWarning(ex, "Invalid operation deleting vectors from Qdrant for PDF {PdfId}", pdfId);
                 }
+#pragma warning disable CA1031 // Do not catch general exception types
+                // Justification: Cleanup operation - must continue PDF deletion even if Qdrant cleanup fails
+                // Vector deletion is non-critical and should not block the main deletion flow
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Unexpected error deleting vectors from Qdrant for PDF {PdfId}", pdfId);
                 }
+#pragma warning restore CA1031
             }
 
             // Delete PDF document record
@@ -279,10 +287,14 @@ public class PdfStorageService
             {
                 await _blobStorageService.DeleteAsync(pdfId, gameId, ct);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Cleanup operation - physical file deletion failure should not fail entire operation
+            // Database record is already deleted; physical file cleanup is best-effort
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Error deleting physical file for PDF {PdfId}", pdfId);
             }
+#pragma warning restore CA1031
 
             await InvalidateCacheSafelyAsync(gameId, ct, "PDF deletion");
 
@@ -302,11 +314,15 @@ public class PdfStorageService
             _logger.LogError(ex, "Database error deleting PDF {PdfId}", pdfId);
             throw new PdfStorageException("Failed to delete PDF metadata: Database error occurred.", ex);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - wraps unexpected exceptions in domain-specific PdfStorageException
+        // Already handling specific exception types (Cancellation, DbConcurrency, DbUpdate); this catches remaining failures
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error deleting PDF {PdfId}", pdfId);
             throw new PdfStorageException($"Failed to delete PDF: {ex.Message}", ex);
         }
+#pragma warning restore CA1031
     }
 
     // Keep all the remaining methods (ProcessPdfAsync, UpdateProgressAsync, ExtractTextAsync, IndexVectorsAsync, InvalidateCacheSafelyAsync)
@@ -583,6 +599,9 @@ public class PdfStorageService
                 await db.SaveChangesAsync(CancellationToken.None);
             }
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Background task error handling - must catch all exceptions to mark PDF processing as failed
+        // Already handling specific exception types (Cancellation, InvalidOperation, DbUpdate); this catches remaining failures
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during PDF processing for {PdfId}", pdfId);
@@ -597,6 +616,7 @@ public class PdfStorageService
                 await db.SaveChangesAsync(CancellationToken.None);
             }
         }
+#pragma warning restore CA1031
     }
 
     private async Task UpdateProgressAsync(
@@ -642,10 +662,14 @@ public class PdfStorageService
         {
             _logger.LogWarning(ex, "Database error updating progress for PDF {PdfId}", pdfId);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Non-critical progress tracking - failures should not interrupt PDF processing
+        // Progress updates are informational; processing should continue even if tracking fails
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Unexpected error updating progress for PDF {PdfId}", pdfId);
         }
+#pragma warning restore CA1031
     }
 
     private async Task InvalidateCacheSafelyAsync(string gameId, CancellationToken ct, string operation)
@@ -662,10 +686,14 @@ public class PdfStorageService
         {
             _logger.LogWarning(ex, "Invalid operation invalidating AI cache for game {GameId} after {Operation}", gameId, operation);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Non-critical cache invalidation - failures should not interrupt PDF operations
+        // Cache invalidation is a best-effort operation; main workflow should succeed regardless
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Unexpected error invalidating AI cache for game {GameId} after {Operation}", gameId, operation);
         }
+#pragma warning restore CA1031
     }
 }
 

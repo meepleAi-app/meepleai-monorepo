@@ -110,7 +110,9 @@ public class PasswordResetService : IPasswordResetService
                 resetTokenValue,
                 ct);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             // SECURITY + RESILIENCE PATTERN: Email failures must not leak user enumeration
             // Rationale: Password reset requests must have consistent behavior regardless of

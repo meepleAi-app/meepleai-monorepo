@@ -154,12 +154,15 @@ public class SessionManagementService : ISessionManagementService
             {
                 await _sessionCache.InvalidateAsync(session.TokenHash, ct);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Service boundary - cache failure resilience for session operations
+            // RESILIENCE: Cache failures should not prevent session revocation
+            // Database revocation already succeeded, so log warning and continue
             catch (Exception ex)
             {
-                // RESILIENCE: Cache failures should not prevent session revocation
-                // Database revocation already succeeded, so log warning and continue
                 _logger.LogWarning(ex, "Failed to invalidate cache for session {SessionId}, but database revocation succeeded", sessionId);
             }
+#pragma warning restore CA1031
         }
 
         _logger.LogInformation("Session {SessionId} for user {UserId} revoked successfully", sessionId, session.UserId);
@@ -196,11 +199,14 @@ public class SessionManagementService : ISessionManagementService
                 {
                     await _sessionCache.InvalidateAsync(session.TokenHash, ct);
                 }
+#pragma warning disable CA1031 // Do not catch general exception types
+                // Justification: Service boundary - cache failure resilience for batch session operations
+                // RESILIENCE: Cache failures should not prevent batch session revocation
                 catch (Exception ex)
                 {
-                    // RESILIENCE: Cache failures should not prevent batch session revocation
                     _logger.LogWarning(ex, "Failed to invalidate cache for session {SessionId}, continuing batch revocation", session.Id);
                 }
+#pragma warning restore CA1031
             }
         }
 

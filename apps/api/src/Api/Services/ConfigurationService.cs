@@ -135,11 +135,15 @@ public class ConfigurationService : IConfigurationService
         {
             return DeserializeValue<T>(config.Value, config.ValueType);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - must catch all deserialization failures and return default value
+        // Configuration deserialization may fail due to type mismatches, JSON parsing errors, or invalid values
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to deserialize configuration {Key} of type {ValueType}", key, config.ValueType);
             return defaultValue;
         }
+#pragma warning restore CA1031
     }
 
     public async Task<SystemConfigurationDto> CreateConfigurationAsync(CreateConfigurationRequest request, string userId)
@@ -387,6 +391,9 @@ public class ConfigurationService : IConfigurationService
 
             return updatedConfigs;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Transaction rollback handling - must catch all exceptions to attempt rollback
+        // Already handles specific validation errors; this catches database, network, or unexpected failures
         catch (Exception ex)
         {
             _logger.LogError(
@@ -399,6 +406,9 @@ public class ConfigurationService : IConfigurationService
             {
                 await transaction.RollbackAsync();
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Nested rollback error handling - prevents rollback failure from masking original error
+            // Original exception is more important than rollback failure for debugging
             catch (Exception rollbackEx)
             {
                 _logger.LogError(
@@ -407,9 +417,11 @@ public class ConfigurationService : IConfigurationService
                     userId);
                 // Don't throw rollback exception - original exception is more important
             }
+#pragma warning restore CA1031
 
             throw; // Re-throw original exception
         }
+#pragma warning restore CA1031
     }
 
     public async Task<ConfigurationValidationResult> ValidateConfigurationAsync(
@@ -484,10 +496,14 @@ public class ConfigurationService : IConfigurationService
                 }
             }
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Validation error handling - must catch all validation failures and return error message
+        // Validation may fail due to parsing errors, type mismatches, or custom validation rules
         catch (Exception ex)
         {
             errors.Add($"Validation error: {ex.Message}");
         }
+#pragma warning restore CA1031
 
         return new ConfigurationValidationResult(
             IsValid: errors.Count == 0,
@@ -598,6 +614,9 @@ public class ConfigurationService : IConfigurationService
 
             return importedCount;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Transaction rollback handling - must catch all exceptions to attempt rollback
+        // Import may fail due to validation errors, database errors, or network issues
         catch (Exception ex)
         {
             _logger.LogError(
@@ -611,6 +630,9 @@ public class ConfigurationService : IConfigurationService
             {
                 await transaction.RollbackAsync();
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Nested rollback error handling - prevents rollback failure from masking original error
+            // Original exception is more important than rollback failure for debugging
             catch (Exception rollbackEx)
             {
                 _logger.LogError(
@@ -619,9 +641,11 @@ public class ConfigurationService : IConfigurationService
                     userId);
                 // Don't throw rollback exception - original exception is more important
             }
+#pragma warning restore CA1031
 
             throw; // Re-throw original exception
         }
+#pragma warning restore CA1031
     }
 
     public async Task<IReadOnlyList<ConfigurationHistoryDto>> GetConfigurationHistoryAsync(

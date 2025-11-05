@@ -57,10 +57,17 @@ public class SessionAuthenticationMiddleware
                     }
                 }
             }
+#pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception ex)
             {
+                // MIDDLEWARE BOUNDARY PATTERN: Authentication middleware must not block requests on validation errors
+                // Rationale: This middleware validates session cookies but must not crash the request pipeline if
+                // validation fails (DB errors, crypto errors, malformed tokens). Failed authentication simply means
+                // the request proceeds as unauthenticated. We log the error for monitoring but allow the request.
+                // Context: Session validation involves DB queries and crypto operations that can fail
                 _logger.LogWarning(ex, "Session cookie validation failed");
             }
+#pragma warning restore CA1031 // Do not catch general exception types
         }
 
         await _next(context);

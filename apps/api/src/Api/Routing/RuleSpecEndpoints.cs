@@ -339,6 +339,9 @@ group.MapPost("/rulespecs/{gameId}/{version}/comments", async (
         logger.LogInformation("Comment {CommentId} created successfully", comment.Id);
         return Results.Created($"/api/v1/comments/{comment.Id}", comment);
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 400 response
+    // All business exceptions are handled in RuleCommentService; this catches unexpected infrastructure failures
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 400
@@ -346,6 +349,7 @@ group.MapPost("/rulespecs/{gameId}/{version}/comments", async (
         logger.LogError(ex, "Failed to create comment on RuleSpec {GameId} version {Version}", gameId, version);
         return Results.BadRequest(new { error = ex.Message });
     }
+#pragma warning restore CA1031
 })
 .RequireAuthorization()
 .WithName("CreateRuleSpecComment")
@@ -392,6 +396,9 @@ group.MapPost("/comments/{commentId}/replies", async (
         logger.LogWarning("Failed to create reply to comment {CommentId}: {Error}", commentId, ex.Message);
         return Results.BadRequest(new { error = ex.Message });
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 400 response
+    // All business exceptions are handled in RuleCommentService; this catches unexpected infrastructure failures
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 400
@@ -399,6 +406,7 @@ group.MapPost("/comments/{commentId}/replies", async (
         logger.LogError(ex, "Unexpected error creating reply to comment {CommentId}", commentId);
         return Results.BadRequest(new { error = ex.Message });
     }
+#pragma warning restore CA1031
 })
 .RequireAuthorization()
 .WithName("CreateCommentReply")
@@ -512,6 +520,9 @@ group.MapPost("/comments/{commentId}/resolve", async (
         logger.LogWarning("Comment {CommentId} not found for resolution", commentId);
         return Results.NotFound(new { error = ex.Message });
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 400 response
+    // All business exceptions are handled in RuleCommentService; this catches unexpected infrastructure failures
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 400
@@ -519,6 +530,7 @@ group.MapPost("/comments/{commentId}/resolve", async (
         logger.LogError(ex, "Failed to resolve comment {CommentId}", commentId);
         return Results.BadRequest(new { error = ex.Message });
     }
+#pragma warning restore CA1031
 })
 .RequireAuthorization()
 .WithName("ResolveComment")
@@ -571,6 +583,9 @@ group.MapPost("/comments/{commentId}/unresolve", async (
         logger.LogWarning("Comment {CommentId} not found for unresolve", commentId);
         return Results.NotFound(new { error = ex.Message });
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 400 response
+    // All business exceptions are handled in RuleCommentService; this catches unexpected infrastructure failures
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 400
@@ -578,6 +593,7 @@ group.MapPost("/comments/{commentId}/unresolve", async (
         logger.LogError(ex, "Failed to unresolve comment {CommentId}", commentId);
         return Results.BadRequest(new { error = ex.Message });
     }
+#pragma warning restore CA1031
 })
 .RequireAuthorization()
 .WithName("UnresolveComment")
@@ -629,6 +645,9 @@ group.MapPost("/rulespecs/bulk/export", async (BulkExportRequest request, HttpCo
         logger.LogWarning("Export operation failed: {Error}", ex.Message);
         return Results.Problem(ex.Message, statusCode: StatusCodes.Status500InternalServerError);
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
+    // All business exceptions are handled in RuleSpecService; this catches unexpected infrastructure failures
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -636,6 +655,7 @@ group.MapPost("/rulespecs/bulk/export", async (BulkExportRequest request, HttpCo
         logger.LogError(ex, "Unexpected error during rule spec export");
         return Results.Problem("An error occurred during export", statusCode: StatusCodes.Status500InternalServerError);
     }
+#pragma warning restore CA1031
 });
 
         return group;

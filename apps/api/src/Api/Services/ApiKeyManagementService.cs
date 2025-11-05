@@ -390,7 +390,9 @@ public class ApiKeyManagementService
                 metadata?.Length > 100 ? metadata[..100] + "..." : metadata);
             return (null, null);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex) when (ex is FormatException or InvalidOperationException)
+#pragma warning restore CA1031
         {
             _logger.LogWarning(
                 ex,

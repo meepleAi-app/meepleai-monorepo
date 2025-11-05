@@ -71,7 +71,9 @@ public class AiRequestLogService
             _db.AiRequestLogs.Add(log);
             await _db.SaveChangesAsync(ct);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             // RESILIENCE PATTERN: AI request logging must never fail AI operations
             // Rationale: AI request logging is telemetry - failing an AI query because we

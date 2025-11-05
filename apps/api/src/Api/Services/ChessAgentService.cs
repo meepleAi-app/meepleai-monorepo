@@ -135,17 +135,20 @@ public class ChessAgentService : IChessAgentService
 
             return response;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - graceful degradation for AI/LLM operations
+        // GRACEFUL DEGRADATION: Chess agent query failures return empty response
+        // Rationale: Chess agent is a helpful feature but not critical. If RAG/LLM pipeline
+        // fails, returning an error response allows the API to respond successfully (200 OK)
+        // and lets the UI display the error message. Throwing would cause 500 errors and poor UX.
+        // Alternative: Callers can check IsEmpty flag or error message to detect failures.
+        // Context: Failures typically from Qdrant/OpenRouter/LLM timeout or rate limiting
         catch (Exception ex)
         {
-            // GRACEFUL DEGRADATION: Chess agent query failures return empty response
-            // Rationale: Chess agent is a helpful feature but not critical. If RAG/LLM pipeline
-            // fails, returning an error response allows the API to respond successfully (200 OK)
-            // and lets the UI display the error message. Throwing would cause 500 errors and poor UX.
-            // Alternative: Callers can check IsEmpty flag or error message to detect failures.
-            // Context: Failures typically from Qdrant/OpenRouter/LLM timeout or rate limiting
             _logger.LogError(ex, "Error during chess agent query");
             return CreateEmptyResponse("An error occurred while processing your question.");
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -193,16 +196,19 @@ WARNING: The provided FEN position appears invalid: {fenValidationError}
                     _logger.LogWarning("Database prompt 'chess-system-prompt' not found, falling back to hardcoded prompt");
                 }
             }
+#pragma warning disable CA1031 // Do not catch general exception types
+            // Justification: Service boundary - fallback pattern for database prompt retrieval
+            // FALLBACK PATTERN: Database prompt retrieval failures use hardcoded prompt
+            // Rationale: Dynamic prompt loading from DB is an enhancement (ADMIN-01 Phase 3).
+            // If PromptTemplateService fails (DB unavailable, Redis timeout, corruption), we
+            // must still provide chess agent functionality. Fallback to hardcoded prompt ensures
+            // feature availability during infrastructure failures. Feature flag controls opt-in.
+            // Context: DB/Redis failures are typically transient (connection loss, resource exhaustion)
             catch (Exception ex)
             {
-                // FALLBACK PATTERN: Database prompt retrieval failures use hardcoded prompt
-                // Rationale: Dynamic prompt loading from DB is an enhancement (ADMIN-01 Phase 3).
-                // If PromptTemplateService fails (DB unavailable, Redis timeout, corruption), we
-                // must still provide chess agent functionality. Fallback to hardcoded prompt ensures
-                // feature availability during infrastructure failures. Feature flag controls opt-in.
-                // Context: DB/Redis failures are typically transient (connection loss, resource exhaustion)
                 _logger.LogWarning(ex, "Failed to retrieve chess system prompt from database, falling back to hardcoded prompt");
             }
+#pragma warning restore CA1031
         }
 
         // Fallback: Use hardcoded prompt (backward compatibility)

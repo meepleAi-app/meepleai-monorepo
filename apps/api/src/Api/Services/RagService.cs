@@ -306,6 +306,9 @@ public class RagService : IRagService
 
             return new QaResponse("Database error. Please try again.", Array.Empty<Snippet>());
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - must return error response instead of throwing
+        // All expected exceptions are caught above; this handles truly unexpected errors gracefully
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during RAG query for game {GameId}", gameId);
@@ -323,6 +326,7 @@ public class RagService : IRagService
 
             return new QaResponse("An error occurred while processing your question.", Array.Empty<Snippet>());
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -515,6 +519,9 @@ public class RagService : IRagService
 
             return CreateEmptyExplainResponse("Database error. Please try again.");
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - must return error response instead of throwing
+        // All expected exceptions are caught above; this handles truly unexpected errors gracefully
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during RAG explain for topic {Topic} in game {GameId}", topic, gameId);
@@ -532,6 +539,7 @@ public class RagService : IRagService
 
             return CreateEmptyExplainResponse("An error occurred while generating the explanation.");
         }
+#pragma warning restore CA1031
     }
 
     private ExplainResponse CreateEmptyExplainResponse(string message)
@@ -831,6 +839,9 @@ public class RagService : IRagService
 
             return new QaResponse("Database error. Please try again.", Array.Empty<Snippet>());
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - must return error response instead of throwing
+        // All expected exceptions are caught above; this handles truly unexpected errors gracefully
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during hybrid search RAG query for game {GameId}, mode {SearchMode}", gameId, searchMode);
@@ -848,6 +859,7 @@ public class RagService : IRagService
 
             return new QaResponse("An error occurred while processing your question.", Array.Empty<Snippet>());
         }
+#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -1069,6 +1081,9 @@ Instructions:
 
             return new QaResponse("Database error. Please try again.", Array.Empty<Snippet>());
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - must return error response instead of throwing
+        // All expected exceptions are caught above; this handles truly unexpected errors gracefully
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during custom prompt RAG query for game {GameId}", gameId);
@@ -1086,6 +1101,7 @@ Instructions:
 
             return new QaResponse("An error occurred while processing your question.", Array.Empty<Snippet>());
         }
+#pragma warning restore CA1031
     }
 
 

@@ -139,7 +139,9 @@ public class ChessKnowledgeService : IChessKnowledgeService
 
             return ChessIndexResult.CreateSuccess(allItems.Count, totalChunks, categoryCounts);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             // ERROR STATE MANAGEMENT: Chess knowledge indexing failures return structured error result
             // Rationale: Indexing involves multiple external systems (file I/O, Qdrant, embedding API).
@@ -179,7 +181,9 @@ public class ChessKnowledgeService : IChessKnowledgeService
             _logger.LogInformation("Chess knowledge search completed: {ResultCount} results", searchResult.Results.Count);
             return searchResult;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             // ERROR STATE MANAGEMENT: Chess knowledge search failures return structured error result
             // Rationale: Search involves multiple external systems (embedding API, Qdrant). Returning
@@ -204,7 +208,9 @@ public class ChessKnowledgeService : IChessKnowledgeService
             _logger.LogInformation("Chess knowledge deletion completed: {Success}", result);
             return result;
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             // ERROR STATE MANAGEMENT: Chess knowledge deletion failures return false
             // Rationale: Deletion failure (typically Qdrant unavailable) should allow the API to

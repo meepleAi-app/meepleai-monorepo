@@ -195,6 +195,9 @@ group.MapPut("/chats/{chatId:guid}/messages/{messageId:guid}",
             logger.LogWarning("Invalid operation updating message {MessageId}: {Error}", messageId, ex.Message);
             return Results.BadRequest(new { error = "invalid_operation", message = ex.Message });
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: API endpoint boundary - must catch all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (ChatService)
         catch (Exception ex)
         {
             // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -202,6 +205,7 @@ group.MapPut("/chats/{chatId:guid}/messages/{messageId:guid}",
             logger.LogError(ex, "Error updating message {MessageId} in chat {ChatId}", messageId, chatId);
             return Results.Problem(statusCode: 500, detail: "An error occurred while updating the message", title: "Internal Server Error");
         }
+#pragma warning restore CA1031
     })
     .RequireAuthorization()
     .WithName("UpdateChatMessage")
@@ -258,6 +262,9 @@ group.MapDelete("/chats/{chatId:guid}/messages/{messageId:guid}",
             logger.LogWarning("User {UserId} not authorized to delete message {MessageId}: {Error}", session.User.Id, messageId, ex.Message);
             return Results.Problem(statusCode: 403, detail: ex.Message, title: "Forbidden");
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: API endpoint boundary - must catch all exceptions to return HTTP 500
+        // Specific exception handling occurs in service layer (ChatService)
         catch (Exception ex)
         {
             // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -265,6 +272,7 @@ group.MapDelete("/chats/{chatId:guid}/messages/{messageId:guid}",
             logger.LogError(ex, "Error deleting message {MessageId} in chat {ChatId}", messageId, chatId);
             return Results.Problem(statusCode: 500, detail: "An error occurred while deleting the message", title: "Internal Server Error");
         }
+#pragma warning restore CA1031
     })
     .RequireAuthorization()
     .WithName("DeleteChatMessage")
@@ -327,6 +335,9 @@ group.MapPost("/chats/{chatId:guid}/export", async (
             fileDownloadName: result.Filename,
             enableRangeProcessing: false);
     }
+#pragma warning disable CA1031 // Do not catch general exception types
+    // Justification: API endpoint boundary - must catch all exceptions to return HTTP 500
+    // Specific exception handling occurs in service layer (ChatExportService)
     catch (Exception ex)
     {
         // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
@@ -335,6 +346,7 @@ group.MapPost("/chats/{chatId:guid}/export", async (
             session.User.Id, chatId);
         return Results.Problem("An unexpected error occurred during export");
     }
+#pragma warning restore CA1031
 });
 
         return group;

@@ -203,6 +203,9 @@ public class PdfIndexingService
                 documentChunks.Count,
                 existingVectorDoc.IndexedAt.Value);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Justification: Service boundary - error state management for complex multi-system operation
+        // PDF indexing involves multiple external systems (Qdrant, DB, file system) that must maintain consistency
         catch (Exception ex)
         {
             // ERROR STATE MANAGEMENT: Top-level catch ensures graceful failure handling

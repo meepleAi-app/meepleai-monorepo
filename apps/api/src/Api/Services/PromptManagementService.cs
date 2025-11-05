@@ -384,7 +384,9 @@ public class PromptManagementService : IPromptManagementService
 
             return MapToVersionDto(createdVersion);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogError(
                 ex,
@@ -398,7 +400,9 @@ public class PromptManagementService : IPromptManagementService
             {
                 await transaction.RollbackAsync(ct);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception rollbackEx)
+#pragma warning restore CA1031
             {
                 _logger.LogError(
                     rollbackEx,
@@ -563,7 +567,9 @@ public class PromptManagementService : IPromptManagementService
 
             return MapToVersionDto(versionToActivate);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             _logger.LogError(
                 ex,
@@ -577,7 +583,9 @@ public class PromptManagementService : IPromptManagementService
             {
                 await transaction.RollbackAsync(ct);
             }
+#pragma warning disable CA1031 // Do not catch general exception types
             catch (Exception rollbackEx)
+#pragma warning restore CA1031
             {
                 _logger.LogError(
                     rollbackEx,

@@ -324,10 +324,17 @@ public class HybridCacheService : IHybridCacheService
         {
             _logger.LogWarning(ex, "Redis timeout while tracking tags for key {CacheKey}", cacheKey);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
+            // SERVICE BOUNDARY PATTERN: Cache tag tracking failures must not block cache operations
+            // Rationale: Tag tracking is a secondary feature for cache invalidation. Failures in tag tracking
+            // (Redis errors, serialization issues) should not prevent the primary cache operation from succeeding.
+            // We log the warning for monitoring but allow the cache entry to be created without tags.
+            // Context: Redis operations can fail in various ways (serialization, network, permissions)
             _logger.LogWarning(ex, "Unexpected error tracking tags for key {CacheKey}", cacheKey);
         }
+#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     private void UntrackKey(string cacheKey)
@@ -361,10 +368,17 @@ public class HybridCacheService : IHybridCacheService
         {
             _logger.LogWarning(ex, "Redis timeout while untracking key {CacheKey}", cacheKey);
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
+            // SERVICE BOUNDARY PATTERN: Cache tag untracking failures must not block cache removal
+            // Rationale: Tag untracking is a cleanup operation. Failures in removing tag associations
+            // (Redis errors, key scanning issues) should not prevent the primary cache removal operation.
+            // We log the warning for monitoring but allow the cache entry to be removed.
+            // Context: Redis KEYS scanning can fail in various ways (permissions, large key sets, network)
             _logger.LogWarning(ex, "Unexpected error untracking key {CacheKey}", cacheKey);
         }
+#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     private HashSet<string> GetKeysByTag(string tag)
@@ -394,11 +408,18 @@ public class HybridCacheService : IHybridCacheService
             _logger.LogWarning(ex, "Redis timeout while getting keys for tag {Tag}", tag);
             return new HashSet<string>();
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
+            // SERVICE BOUNDARY PATTERN: Cache tag lookup failures must return empty results gracefully
+            // Rationale: Tag-based cache lookup is a query operation. Failures (Redis errors, serialization
+            // issues) should return empty results rather than throwing exceptions. This allows tag-based
+            // invalidation operations to complete gracefully even if some lookups fail.
+            // Context: Redis SetMembers operations can fail in various ways (network, permissions, corrupt data)
             _logger.LogWarning(ex, "Unexpected error getting keys for tag {Tag}", tag);
             return new HashSet<string>();
         }
+#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     private HashSet<string> GetKeysByTags(string[] tags)
@@ -455,11 +476,18 @@ public class HybridCacheService : IHybridCacheService
             _logger.LogWarning(ex, "Redis timeout while getting keys for multiple tags");
             return new HashSet<string>();
         }
+#pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
         {
+            // SERVICE BOUNDARY PATTERN: Cache multi-tag lookup failures must return empty results gracefully
+            // Rationale: Multi-tag cache lookup is a query operation with set intersections. Failures (Redis
+            // errors, serialization issues) should return empty results rather than throwing exceptions. This
+            // allows tag-based invalidation operations to complete gracefully even if some lookups fail.
+            // Context: Redis SetMembers and set intersection operations can fail in various ways
             _logger.LogWarning(ex, "Unexpected error getting keys for multiple tags");
             return new HashSet<string>();
         }
+#pragma warning restore CA1031 // Do not catch general exception types
     }
 
     #endregion

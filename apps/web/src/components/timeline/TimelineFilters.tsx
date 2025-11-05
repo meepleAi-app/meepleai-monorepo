@@ -1,5 +1,5 @@
 // UI-04: Timeline filters sidebar component
-import type { TimelineFilters } from "@/lib/timeline-types";
+import type { TimelineFilters as TimelineFiltersType } from "@/lib/timeline-types";
 import {
   TimelineEventType,
   TimelineEventStatus,
@@ -8,8 +8,8 @@ import {
 } from "@/lib/timeline-types";
 
 interface TimelineFiltersProps {
-  filters: TimelineFilters;
-  onFiltersChange: (filters: TimelineFilters) => void;
+  filters: TimelineFiltersType;
+  onFiltersChange: (filters: TimelineFiltersType) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
 }

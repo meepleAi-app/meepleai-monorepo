@@ -19,6 +19,8 @@ import {
   mockStopStreaming,
   mockOnComplete,
   mockOnError,
+  setMockOnComplete,
+  setMockOnError,
   resetAllMocks,
   setupAuthenticatedState
 } from './shared/chat-test-utils';
@@ -26,12 +28,13 @@ import {
 // Mock the useChatStreaming hook
 jest.mock('../../../lib/hooks/useChatStreaming', () => ({
   useChatStreaming: jest.fn((callbacks?: { onComplete?: any; onError?: any }) => {
-    // Capture callbacks for later use
+    // Capture callbacks for later use using setter functions
+    const { setMockOnComplete: setComplete, setMockOnError: setError } = require('./shared/chat-test-utils');
     if (callbacks?.onComplete) {
-      (mockOnComplete as any) = callbacks.onComplete;
+      setComplete(callbacks.onComplete);
     }
     if (callbacks?.onError) {
-      (mockOnError as any) = callbacks.onError;
+      setError(callbacks.onError);
     }
 
     return [
@@ -79,12 +82,12 @@ describe('ChatPage - Authentication', () => {
     };
 
     (useChatStreaming as jest.Mock).mockImplementation((callbacks?: { onComplete?: any; onError?: any }) => {
-      // Capture callbacks for later use
+      // Capture callbacks for later use using setter functions
       if (callbacks?.onComplete) {
-        (mockOnComplete as any) = callbacks.onComplete;
+        setMockOnComplete(callbacks.onComplete);
       }
       if (callbacks?.onError) {
-        (mockOnError as any) = callbacks.onError;
+        setMockOnError(callbacks.onError);
       }
 
       return [

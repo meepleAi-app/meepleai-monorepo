@@ -8,10 +8,8 @@ import userEvent from '@testing-library/user-event';
 import { ErrorBoundary, useErrorHandler } from '../ErrorBoundary';
 
 // Component that throws an error during render
-// TypeScript doesn't like components that always throw, so we suppress the error at usage sites
-function ThrowError({ error }: { error: Error }): null {
+function ThrowError({ error }: { error: Error }): never {
   throw error;
-  return null; // Never reached, but makes TypeScript happy
 }
 
 // Component that uses useErrorHandler hook

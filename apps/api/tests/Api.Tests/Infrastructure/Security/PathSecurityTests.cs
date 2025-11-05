@@ -47,6 +47,40 @@ public class PathSecurityTests
     }
 
     [Fact]
+    public void ValidatePathIsInDirectory_WithSiblingDirectoryBypass_ThrowsSecurityException()
+    {
+        // Arrange
+        // Create a base directory like "/tmp/games"
+        var gamesDir = Path.Combine(Path.GetTempPath(), "PathSecurityTests_SiblingBypass", "games");
+        Directory.CreateDirectory(gamesDir);
+
+        // Create a sibling directory like "/tmp/games_backup"
+        var siblingDir = Path.Combine(Path.GetTempPath(), "PathSecurityTests_SiblingBypass", "games_backup");
+        Directory.CreateDirectory(siblingDir);
+
+        try
+        {
+            // Act & Assert
+            // This should throw because "../games_backup/secret.json" resolves to the sibling directory
+            // which shares the same prefix but is not a subdirectory of gamesDir
+            Assert.Throws<SecurityException>(() =>
+                PathSecurity.ValidatePathIsInDirectory(gamesDir, "../games_backup/secret.json")
+            );
+        }
+        finally
+        {
+            // Cleanup
+            if (Directory.Exists(siblingDir))
+                Directory.Delete(siblingDir, true);
+            if (Directory.Exists(gamesDir))
+                Directory.Delete(gamesDir, true);
+            var parentDir = Path.Combine(Path.GetTempPath(), "PathSecurityTests_SiblingBypass");
+            if (Directory.Exists(parentDir))
+                Directory.Delete(parentDir, true);
+        }
+    }
+
+    [Fact]
     public void ValidatePathIsInDirectory_WithEmptyFilename_ThrowsArgumentException()
     {
         // Act & Assert

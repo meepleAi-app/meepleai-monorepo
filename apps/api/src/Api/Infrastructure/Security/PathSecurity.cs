@@ -28,8 +28,13 @@ public static class PathSecurity
         var combinedPath = Path.Combine(basePath, filename);
         var fullPath = Path.GetFullPath(combinedPath);
 
-        // Get canonical base directory path
+        // Get canonical base directory path and ensure it ends with directory separator
+        // This prevents sibling directory bypasses (e.g., /storage/games matching /storage/games_backup)
         var baseDirectory = Path.GetFullPath(basePath);
+        if (!baseDirectory.EndsWith(Path.DirectorySeparatorChar))
+        {
+            baseDirectory += Path.DirectorySeparatorChar;
+        }
 
         // Verify resolved path is within base directory
         // Use OrdinalIgnoreCase for case-insensitive file systems (Windows, macOS by default)

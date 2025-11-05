@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+using Api.Helpers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -98,28 +98,14 @@ public class ChatExportService : IChatExportService
     /// </summary>
     private string GenerateSafeFilename(string gameName, string extension, Guid chatId)
     {
-        // Remove/replace dangerous characters
-        var safeName = gameName
-            .Replace("/", "-")
-            .Replace("\\", "-")
-            .Replace("..", "")
-            .Replace("\r", "")
-            .Replace("\n", "");
-
-        // Remove control characters (ASCII 0-31 and 127)
-        safeName = Regex.Replace(safeName, @"[\x00-\x1F\x7F]", "");
-
-        // Trim and limit length
-        safeName = safeName.Trim();
-        if (string.IsNullOrWhiteSpace(safeName))
-        {
-            safeName = "chat"; // Fallback for empty/invalid game names
-        }
-        safeName = safeName.Substring(0, Math.Min(safeName.Length, 50));
-
         // Use short form of chatId (first 8 chars) for readability
         var shortChatId = chatId.ToString("N").Substring(0, 8);
 
-        return $"{safeName}-chat-{shortChatId}.{extension}";
+        // Generate safe filename using centralized helper
+        return StringHelper.GenerateSafeFilename(
+            gameName,
+            extension,
+            suffix: $"chat-{shortChatId}",
+            maxLength: 100);
     }
 }

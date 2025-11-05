@@ -1,3 +1,6 @@
+using System.Text;
+using System.Text.Json;
+using Api.Constants;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -5,8 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
-using System.Text;
-using System.Text.Json;
 
 namespace Api.Services;
 
@@ -25,7 +26,7 @@ public class PromptTemplateService : IPromptTemplateService
 
     // ADMIN-01: Cache configuration
     private const string CacheKeyPrefix = "prompt:";
-    private const int DefaultCacheTtlSeconds = 3600; // 1 hour
+    private const int DefaultCacheTtlSeconds = TimeConstants.PromptTemplateCacheTtlSeconds;
 
     // Fallback hardcoded prompts for backward compatibility
     private static readonly PromptTemplate FallbackTemplate = new()

@@ -1,9 +1,10 @@
+using System.Security.Cryptography;
+using System.Text;
+using Api.Helpers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace Api.Services;
 
@@ -298,7 +299,6 @@ public class N8nConfigService
                 $"Missing or invalid n8n encryption key. Set the {EncryptionKeyConfigName} environment variable to a secure value.");
         }
 
-        using var sha256 = SHA256.Create();
-        return sha256.ComputeHash(Encoding.UTF8.GetBytes(key));
+        return CryptographyHelper.ComputeSha256HashBytes(key);
     }
 }

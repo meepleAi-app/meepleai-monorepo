@@ -1,3 +1,5 @@
+using Api.Constants;
+
 namespace Api.Services;
 
 /// <summary>
@@ -6,12 +8,12 @@ namespace Api.Services;
 public class TextChunkingService : ITextChunkingService
 {
     private readonly ILogger<TextChunkingService> _logger;
-    private const int DefaultChunkSize = 512; // characters
-    private const int DefaultOverlap = 50; // characters overlap between chunks
+    private const int DefaultChunkSize = ChunkingConstants.DefaultChunkSize;
+    private const int DefaultOverlap = ChunkingConstants.DefaultChunkOverlap;
 
     // PERF-07: Adaptive chunking parameters
-    private const int MinChunkSize = 256; // Minimum chunk size (preserve sentence integrity)
-    private const int MaxChunkSize = 768; // Maximum chunk size (allow larger semantic units)
+    private const int MinChunkSize = ChunkingConstants.MinChunkSize;
+    private const int MaxChunkSize = ChunkingConstants.MaxChunkSize;
 
     public TextChunkingService(ILogger<TextChunkingService> logger)
     {
@@ -173,7 +175,7 @@ public class TextChunkingService : ITextChunkingService
                     if (c == '.')
                     {
                         // Check for decimal number (e.g., "3.5")
-                        if (i > start && char.IsDigit(text[i - 1]) && i + 1 < text.Length && char.IsDigit(next))
+                        if (IsNumberDecimalPoint(text, i, start))
                         {
                             continue; // Skip decimal points
                         }
@@ -233,8 +235,16 @@ public class TextChunkingService : ITextChunkingService
     }
 
     /// <summary>
-    /// Find the nearest word boundary (whitespace)
+    /// Checks if a period is part of a decimal number (e.g., "3.5").
     /// </summary>
+    private static bool IsNumberDecimalPoint(string text, int position, int start)
+    {
+        return position > start
+            && char.IsDigit(text[position - 1])
+            && position + 1 < text.Length
+            && char.IsDigit(text[position + 1]);
+    }
+
     private int FindWordBoundary(string text, int start, int end)
     {
         // Look backward from end for whitespace

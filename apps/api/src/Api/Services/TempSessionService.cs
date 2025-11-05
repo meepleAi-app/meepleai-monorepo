@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Api.Helpers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -132,11 +133,8 @@ public class TempSessionService : ITempSessionService
     }
 
     // Helper: Hash token for storage (SHA-256)
-    private string HashToken(string token)
+    private static string HashToken(string token)
     {
-        using var sha256 = SHA256.Create();
-        var bytes = System.Text.Encoding.UTF8.GetBytes(token);
-        var hash = sha256.ComputeHash(bytes);
-        return Convert.ToBase64String(hash);
+        return CryptographyHelper.ComputeSha256HashBase64(token);
     }
 }

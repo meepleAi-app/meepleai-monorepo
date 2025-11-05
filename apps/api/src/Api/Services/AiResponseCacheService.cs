@@ -1,6 +1,7 @@
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Api.Constants;
+using Api.Helpers;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
@@ -87,7 +88,7 @@ public class AiResponseCacheService : IAiResponseCacheService
     /// with a factory function to get cache stampede protection.
     /// Tags are automatically extracted from cache key for tag-based invalidation.
     /// </remarks>
-    public async Task SetAsync<T>(string cacheKey, T response, int ttlSeconds = 86400, CancellationToken ct = default) where T : class
+    public async Task SetAsync<T>(string cacheKey, T response, int ttlSeconds = TimeConstants.DefaultAiResponseCacheTtlSeconds, CancellationToken ct = default) where T : class
     {
         try
         {
@@ -162,14 +163,14 @@ public class AiResponseCacheService : IAiResponseCacheService
     /// <inheritdoc />
     public string GenerateQaCacheKey(string gameId, string query)
     {
-        var queryHash = ComputeSha256Hash(query.Trim().ToLowerInvariant());
+        var queryHash = CryptographyHelper.ComputeSha256Hash(query.Trim().ToLowerInvariant());
         return $"meepleai:qa:{gameId}:{queryHash}";
     }
 
     /// <inheritdoc />
     public string GenerateExplainCacheKey(string gameId, string topic)
     {
-        var topicHash = ComputeSha256Hash(topic.Trim().ToLowerInvariant());
+        var topicHash = CryptographyHelper.ComputeSha256Hash(topic.Trim().ToLowerInvariant());
         return $"meepleai:explain:{gameId}:{topicHash}";
     }
 
@@ -222,7 +223,7 @@ public class AiResponseCacheService : IAiResponseCacheService
             HitRate = hitRate,
             TotalKeys = (int)hybridStats.L1EntryCount,
             CacheSizeBytes = hybridStats.L1MemoryBytes,
-            TopQuestions = new List<TopQuestion>() // TODO: Implement if needed
+            TopQuestions = new List<TopQuestion>() // FUTURE: Track most frequently cached questions for analytics
         };
     }
 
@@ -235,10 +236,4 @@ public class AiResponseCacheService : IAiResponseCacheService
         return Task.CompletedTask;
     }
 
-    private static string ComputeSha256Hash(string input)
-    {
-        var bytes = Encoding.UTF8.GetBytes(input);
-        var hash = SHA256.HashData(bytes);
-        return Convert.ToHexString(hash).ToLowerInvariant();
-    }
 }

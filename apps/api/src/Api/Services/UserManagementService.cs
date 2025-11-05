@@ -129,7 +129,12 @@ public class UserManagementService
             .Include(u => u.Sessions)
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
 
-        return MapToDto(createdUser!);
+        if (createdUser == null)
+        {
+            throw new InvalidOperationException($"Failed to retrieve created user {userId}");
+        }
+
+        return MapToDto(createdUser);
     }
 
     /// <summary>

@@ -111,7 +111,7 @@ public class ConfigurationService : IConfigurationService
                     .OrderBy(c => c.Environment == currentEnvironment ? 0 : 1) // Prioritize environment-specific
                     .FirstOrDefaultAsync(cancel);
 
-                return config != null ? MapToDto(config) : null!;
+                return config != null ? MapToDto(config) : null;
             },
             tags: [CacheCategoryTagPrefix + "general"],
             expiration: DefaultCacheDuration,
@@ -652,7 +652,7 @@ public class ConfigurationService : IConfigurationService
             NewValue: config.Value,
             Version: config.Version,
             ChangedAt: config.UpdatedAt,
-            ChangedByUserId: config.UpdatedByUserId ?? config.CreatedByUserId,
+            ChangedByUserId: config.UpdatedByUserId ?? config.CreatedByUserId ?? "system",
             ChangeReason: "Configuration updated"
         ));
 

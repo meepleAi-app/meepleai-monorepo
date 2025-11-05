@@ -114,13 +114,13 @@ if (forwardedHeadersEnabled)
         }
 
         var forwardLimit = forwardedHeadersSection.GetValue<int?>("ForwardLimit");
-        if (forwardLimit.HasValue)
+        if (forwardLimit != null && forwardLimit.HasValue)
         {
             options.ForwardLimit = forwardLimit.Value;
         }
 
         var requireHeaderSymmetry = forwardedHeadersSection.GetValue<bool?>("RequireHeaderSymmetry");
-        if (requireHeaderSymmetry.HasValue)
+        if (requireHeaderSymmetry != null && requireHeaderSymmetry.HasValue)
         {
             options.RequireHeaderSymmetry = requireHeaderSymmetry.Value;
         }

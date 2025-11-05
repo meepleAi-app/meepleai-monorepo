@@ -332,7 +332,7 @@ public class HybridCacheService : IHybridCacheService
 
     private void UntrackKey(string cacheKey)
     {
-        if (_redisDb == null)
+        if (_redisDb == null || _redis == null)
         {
             _logger.LogDebug("Redis not available for untracking key: {CacheKey}", cacheKey);
             return;
@@ -343,7 +343,7 @@ public class HybridCacheService : IHybridCacheService
             // We don't know which tags this key had, so we need to scan all tag keys
             // This is inefficient but necessary without maintaining a reverse index
             // Alternative: Store key → tags mapping separately in Redis (future optimization)
-            var server = _redis!.GetServer(_redis.GetEndPoints().First());
+            var server = _redis.GetServer(_redis.GetEndPoints().First());
             var pattern = TagKeyPrefix + "*";
 
             foreach (var redisKey in server.Keys(pattern: pattern))

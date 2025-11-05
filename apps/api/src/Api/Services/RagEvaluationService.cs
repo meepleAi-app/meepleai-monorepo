@@ -211,9 +211,14 @@ public class RagEvaluationService : IRagEvaluationService
             ? successfulQueries.Average(r => r.LatencyMs)
             : 0.0;
 
-        var avgConfidence = successfulQueries.Any(r => r.AverageConfidence.HasValue)
-            ? successfulQueries.Where(r => r.AverageConfidence.HasValue).Average(r => r.AverageConfidence!.Value)
-            : (double?)null;
+        var confidenceValues = successfulQueries
+            .Where(r => r.AverageConfidence.HasValue)
+            .Select(r => r.AverageConfidence.Value) // Safe because of Where clause
+            .ToList();
+
+        var avgConfidence = confidenceValues.Count > 0
+            ? (double?)confidenceValues.Average()
+            : null;
 
         // Calculate latency percentiles
         var latencies = successfulQueries.Select(r => r.LatencyMs).OrderBy(l => l).ToList();

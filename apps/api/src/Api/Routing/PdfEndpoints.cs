@@ -89,7 +89,13 @@ group.MapPost("/ingest/pdf", async (HttpContext context, IPdfValidationService p
         return Results.BadRequest(new { error = result.Message });
     }
 
-    logger.LogInformation("PDF uploaded successfully: {PdfId}", result.Document!.Id);
+    if (result.Document == null)
+    {
+        logger.LogError("PDF upload succeeded but Document is null for game {GameId}", gameId);
+        return Results.Problem("Upload succeeded but document is missing", statusCode: 500);
+    }
+
+    logger.LogInformation("PDF uploaded successfully: {PdfId}", result.Document.Id);
     return Results.Json(new { documentId = result.Document.Id, fileName = result.Document.FileName });
 });
 

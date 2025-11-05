@@ -28,7 +28,8 @@ public class MdExportFormatter : IExportFormatter
         var sb = new StringBuilder();
 
         // Header
-        sb.AppendLine($"# Chat Export: {chat.Game.Name}");
+        var gameName = chat.Game?.Name ?? "Unknown Game";
+        sb.AppendLine($"# Chat Export: {gameName}");
         sb.AppendLine();
         sb.AppendLine("---");
         sb.AppendLine();

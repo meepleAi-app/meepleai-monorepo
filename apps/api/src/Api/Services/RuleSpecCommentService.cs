@@ -82,7 +82,7 @@ public class RuleSpecCommentService
                 c.Version,
                 c.AtomId,
                 c.UserId,
-                c.User.DisplayName ?? c.User.Email,
+                c.User != null ? (c.User.DisplayName ?? c.User.Email) : "Unknown",
                 c.CommentText,
                 c.CreatedAt,
                 c.UpdatedAt
@@ -105,6 +105,11 @@ public class RuleSpecCommentService
         if (comment is null)
         {
             throw new InvalidOperationException($"Comment {commentId} not found");
+        }
+
+        if (comment.User == null)
+        {
+            throw new InvalidOperationException("Comment user entity not loaded");
         }
 
         // Verify ownership

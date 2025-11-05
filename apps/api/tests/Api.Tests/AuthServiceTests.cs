@@ -36,6 +36,25 @@ public class AuthServiceTests : IDisposable
         return new MeepleAiDbContext(options);
     }
 
+    /// <summary>
+    /// Creates a mock password hashing service that hashes deterministically for testing.
+    /// HashSecret returns "hashed_{secret}", VerifySecret checks if hash matches that pattern.
+    /// </summary>
+    private Mock<IPasswordHashingService> CreateMockPasswordHashingService()
+    {
+        var mock = new Mock<IPasswordHashingService>();
+
+        // Setup HashSecret to return a deterministic hash
+        mock.Setup(m => m.HashSecret(It.IsAny<string>(), It.IsAny<int>()))
+            .Returns<string, int>((secret, iterations) => $"hashed_{secret}");
+
+        // Setup VerifySecret to check if the hash matches the expected pattern
+        mock.Setup(m => m.VerifySecret(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns<string, string>((secret, storedHash) => storedHash == $"hashed_{secret}");
+
+        return mock;
+    }
+
     [Fact]
     public async Task RegisterLoginLogout_RoundTrip_Succeeds()
     {
@@ -46,7 +65,7 @@ public class AuthServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var mockPasswordHashing = new Mock<IPasswordHashingService>();
+        var mockPasswordHashing = CreateMockPasswordHashingService();
         var authService = new AuthService(dbContext, mockPasswordHashing.Object, sessionCache: null, timeProvider: timeProvider);
 
         var register = await authService.RegisterAsync(new RegisterCommand(
@@ -104,7 +123,7 @@ public class AuthServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var mockPasswordHashing = new Mock<IPasswordHashingService>();
+        var mockPasswordHashing = CreateMockPasswordHashingService();
         var authService = new AuthService(dbContext, mockPasswordHashing.Object, sessionCache: null, timeProvider: timeProvider);
 
         await authService.RegisterAsync(new RegisterCommand(

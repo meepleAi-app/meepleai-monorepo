@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Security;
 using Api.Models;
 using Api.Services;
 
@@ -60,18 +61,13 @@ public class PromptEvaluationService : IPromptEvaluationService
                 Directory.CreateDirectory(allowedDirectory);
             }
 
-            // Resolve to absolute path
-            var fullPath = Path.IsPathRooted(datasetPath)
-                ? Path.GetFullPath(datasetPath)
-                : Path.GetFullPath(Path.Combine(allowedDirectory, datasetPath));
+            // SECURITY: Validate path is within allowed directory using PathSecurity utility
+            var relativePath = Path.IsPathRooted(datasetPath)
+                ? Path.GetRelativePath(allowedDirectory, datasetPath)
+                : datasetPath;
 
-            // SECURITY: Validate path is within allowed directory (prevent path traversal)
-            if (!fullPath.StartsWith(allowedDirectory, StringComparison.OrdinalIgnoreCase))
-            {
-                _logger.LogWarning("Path traversal attempt detected: {RequestedPath} resolved to {FullPath}",
-                    datasetPath, fullPath);
-                throw new SecurityException("Dataset path must be within allowed datasets directory");
-            }
+            // Use PathSecurity to validate and get full path
+            var fullPath = PathSecurity.ValidatePathIsInDirectory(allowedDirectory, relativePath);
 
             if (!File.Exists(fullPath))
             {

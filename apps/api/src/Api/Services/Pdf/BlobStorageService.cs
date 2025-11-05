@@ -1,3 +1,5 @@
+using Api.Infrastructure.Security;
+
 namespace Api.Services.Pdf;
 
 /// <summary>
@@ -28,8 +30,11 @@ public class BlobStorageService : IBlobStorageService
     {
         try
         {
+            // SECURITY: Validate gameId to prevent path traversal
+            PathSecurity.ValidateIdentifier(gameId, nameof(gameId));
+
             var fileId = Guid.NewGuid().ToString("N");
-            var gameDir = Path.Combine(_storageBasePath, gameId);
+            var gameDir = PathSecurity.ValidatePathIsInDirectory(_storageBasePath, gameId);
             Directory.CreateDirectory(gameDir);
 
             var sanitizedFileName = SanitizeFileName(fileName);
@@ -68,7 +73,10 @@ public class BlobStorageService : IBlobStorageService
     {
         try
         {
-            var gameDir = Path.Combine(_storageBasePath, gameId);
+            // SECURITY: Validate gameId to prevent path traversal
+            PathSecurity.ValidateIdentifier(gameId, nameof(gameId));
+
+            var gameDir = PathSecurity.ValidatePathIsInDirectory(_storageBasePath, gameId);
             var files = Directory.GetFiles(gameDir, $"{fileId}_*");
 
             if (files.Length == 0)
@@ -92,7 +100,10 @@ public class BlobStorageService : IBlobStorageService
     {
         try
         {
-            var gameDir = Path.Combine(_storageBasePath, gameId);
+            // SECURITY: Validate gameId to prevent path traversal
+            PathSecurity.ValidateIdentifier(gameId, nameof(gameId));
+
+            var gameDir = PathSecurity.ValidatePathIsInDirectory(_storageBasePath, gameId);
             var files = Directory.GetFiles(gameDir, $"{fileId}_*");
 
             if (files.Length == 0)
@@ -128,21 +139,40 @@ public class BlobStorageService : IBlobStorageService
 
     public string GetStoragePath(string fileId, string gameId, string fileName)
     {
-        var gameDir = Path.Combine(_storageBasePath, gameId);
+        // SECURITY: Validate gameId to prevent path traversal
+        PathSecurity.ValidateIdentifier(gameId, nameof(gameId));
+
+        var gameDir = PathSecurity.ValidatePathIsInDirectory(_storageBasePath, gameId);
         var sanitizedFileName = SanitizeFileName(fileName);
         return Path.Combine(gameDir, $"{fileId}_{sanitizedFileName}");
     }
 
     public bool Exists(string fileId, string gameId)
     {
-        var gameDir = Path.Combine(_storageBasePath, gameId);
-        if (!Directory.Exists(gameDir))
+        try
         {
+            // SECURITY: Validate gameId to prevent path traversal
+            PathSecurity.ValidateIdentifier(gameId, nameof(gameId));
+
+            var gameDir = PathSecurity.ValidatePathIsInDirectory(_storageBasePath, gameId);
+            if (!Directory.Exists(gameDir))
+            {
+                return false;
+            }
+
+            var files = Directory.GetFiles(gameDir, $"{fileId}_*");
+            return files.Length > 0;
+        }
+        catch (ArgumentException)
+        {
+            // Invalid gameId - path traversal attempt
             return false;
         }
-
-        var files = Directory.GetFiles(gameDir, $"{fileId}_*");
-        return files.Length > 0;
+        catch (System.Security.SecurityException)
+        {
+            // Path traversal attempt detected
+            return false;
+        }
     }
 
     private static string SanitizeFileName(string fileName)

@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Security;
 using Api.Models;
 
 namespace Api.Services;
@@ -134,7 +135,10 @@ public class N8nTemplateService
         string templateId,
         CancellationToken ct = default)
     {
-        var filePath = Path.Combine(_templatesPath, $"{templateId}.json");
+        // SECURITY: Validate templateId to prevent path traversal
+        PathSecurity.ValidateIdentifier(templateId, nameof(templateId));
+
+        var filePath = PathSecurity.ValidatePathIsInDirectory(_templatesPath, $"{templateId}.json");
 
         if (!File.Exists(filePath))
         {

@@ -16,6 +16,7 @@ public class TotpService : ITotpService
     private readonly IEncryptionService _encryptionService;
     private readonly AuthService _authService;
     private readonly AuditService _auditService;
+    private readonly IPasswordHashingService _passwordHashingService;
     private readonly ILogger<TotpService> _logger;
     private readonly TimeProvider _timeProvider;
 
@@ -32,6 +33,7 @@ public class TotpService : ITotpService
         IEncryptionService encryptionService,
         AuthService authService,
         AuditService auditService,
+        IPasswordHashingService passwordHashingService,
         ILogger<TotpService> logger,
         TimeProvider? timeProvider = null)
     {
@@ -39,6 +41,7 @@ public class TotpService : ITotpService
         _encryptionService = encryptionService;
         _authService = authService;
         _auditService = auditService;
+        _passwordHashingService = passwordHashingService;
         _logger = logger;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -430,80 +433,26 @@ public class TotpService : ITotpService
     }
 
     /// <summary>
-    /// Hash backup code with PBKDF2 (same algorithm as passwords for consistency)
+    /// Hash backup code with PBKDF2 using centralized IPasswordHashingService
     /// </summary>
     private string HashBackupCode(string code)
     {
-        var salt = RandomNumberGenerator.GetBytes(16);
-        var hash = Rfc2898DeriveBytes.Pbkdf2(code, salt, PbkdfIterations, HashAlgorithmName.SHA256, 32);
-        return $"v1.{PbkdfIterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
+        return _passwordHashingService.HashSecret(code);
     }
 
     /// <summary>
-    /// Verify backup code against hash (constant-time comparison)
+    /// Verify backup code against hash using centralized IPasswordHashingService
     /// </summary>
     private bool VerifyBackupCode(string encodedHash, string code)
     {
-        try
-        {
-            var parts = encodedHash.Split('.', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length != 4 || parts[0] != "v1")
-            {
-                return false;
-            }
-
-            if (!int.TryParse(parts[1], out var iterations))
-            {
-                return false;
-            }
-
-            var salt = Convert.FromBase64String(parts[2]);
-            var expected = Convert.FromBase64String(parts[3]);
-
-            var hash = Rfc2898DeriveBytes.Pbkdf2(code, salt, iterations, HashAlgorithmName.SHA256, expected.Length);
-            return CryptographicOperations.FixedTimeEquals(hash, expected);
-        }
-        catch (FormatException)
-        {
-            return false;
-        }
-        catch (ArgumentException)
-        {
-            return false;
-        }
+        return _passwordHashingService.VerifySecret(code, encodedHash);
     }
 
     /// <summary>
-    /// Verify password against hash (duplicated from AuthService since it's private)
+    /// Verify password against hash using centralized IPasswordHashingService
     /// </summary>
     private bool VerifyPassword(string encodedHash, string password)
     {
-        try
-        {
-            var parts = encodedHash.Split('.', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length != 4 || parts[0] != "v1")
-            {
-                return false;
-            }
-
-            if (!int.TryParse(parts[1], out var iterations))
-            {
-                return false;
-            }
-
-            var salt = Convert.FromBase64String(parts[2]);
-            var expected = Convert.FromBase64String(parts[3]);
-
-            var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, expected.Length);
-            return CryptographicOperations.FixedTimeEquals(hash, expected);
-        }
-        catch (FormatException)
-        {
-            return false;
-        }
-        catch (ArgumentException)
-        {
-            return false;
-        }
+        return _passwordHashingService.VerifySecret(password, encodedHash);
     }
 }

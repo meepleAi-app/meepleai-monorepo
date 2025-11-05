@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -14,17 +13,20 @@ public class UserManagementService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly AuthService _authService;
+    private readonly IPasswordHashingService _passwordHashingService;
     private readonly ILogger<UserManagementService> _logger;
     private readonly TimeProvider _timeProvider;
 
     public UserManagementService(
         MeepleAiDbContext dbContext,
         AuthService authService,
+        IPasswordHashingService passwordHashingService,
         ILogger<UserManagementService> logger,
         TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext;
         _authService = authService;
+        _passwordHashingService = passwordHashingService;
         _logger = logger;
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -238,14 +240,10 @@ public class UserManagementService
     }
 
     /// <summary>
-    /// Hash password using PBKDF2 with 210,000 iterations (same as AuthService).
-    /// Format: v1.iterations.base64_salt.base64_hash
+    /// Hash password using centralized IPasswordHashingService.
     /// </summary>
-    private static string HashPassword(string password)
+    private string HashPassword(string password)
     {
-        const int iterations = 210_000;
-        var salt = RandomNumberGenerator.GetBytes(16);
-        var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, 32);
-        return $"v1.{iterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
+        return _passwordHashingService.HashSecret(password);
     }
 }

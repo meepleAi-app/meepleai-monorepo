@@ -52,6 +52,9 @@ public static class AuthenticationServiceExtensions
 
     private static IServiceCollection AddAuthServices(this IServiceCollection services)
     {
+        // CODE-QUALITY: Centralized password hashing service (PBKDF2-HMAC-SHA256)
+        services.AddSingleton<IPasswordHashingService, PasswordHashingService>();
+
         // Core authentication
         services.AddScoped<AuthService>();
 

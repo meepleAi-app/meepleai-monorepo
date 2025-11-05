@@ -68,7 +68,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
                 }
 
                 // Build service provider and initialize database
-                var sp = services.BuildServiceProvider();
+                using var sp = services.BuildServiceProvider();
                 using var scope = sp.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
                 db.Database.EnsureCreated();

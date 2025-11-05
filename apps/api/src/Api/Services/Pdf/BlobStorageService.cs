@@ -87,7 +87,7 @@ public class BlobStorageService : IBlobStorageService
 
             var filePath = files[0];
             var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            return await Task.FromResult<Stream>(fileStream);
+            return fileStream;
         }
         catch (Exception ex)
         {

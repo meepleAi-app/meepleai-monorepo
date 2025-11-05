@@ -55,9 +55,10 @@ public class ApiKeyAuthenticationMiddlewareTests
         RequestDelegate next = _ => Task.CompletedTask;
         var middleware = new ApiKeyAuthenticationMiddleware(next, logger);
 
+        using var serviceProvider = new ServiceCollection().AddLogging().BuildServiceProvider();
         var context = new DefaultHttpContext
         {
-            RequestServices = new ServiceCollection().AddLogging().BuildServiceProvider()
+            RequestServices = serviceProvider
         };
         context.Request.Method = "GET";
         context.Request.Path = "/api/data\r\nfetch";

@@ -286,7 +286,7 @@ public class LoggingTestFactory : Microsoft.AspNetCore.Mvc.Testing.WebApplicatio
             });
 
             // Build service provider to create and initialize DB
-            var sp = services.BuildServiceProvider();
+            using var sp = services.BuildServiceProvider();
             using var scope = sp.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 

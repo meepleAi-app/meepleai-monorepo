@@ -38,6 +38,7 @@ public class CacheWarmingServiceTests : IDisposable
     private readonly Mock<IOptions<CacheOptimizationConfiguration>> _mockConfig;
     private readonly TestTimeProvider _timeProvider;
     private SqliteConnection? _connection;
+    private ServiceProvider? _serviceProvider;
     private IServiceScopeFactory? _scopeFactory;
 
     public CacheWarmingServiceTests(ITestOutputHelper output)
@@ -78,8 +79,8 @@ public class CacheWarmingServiceTests : IDisposable
         var services = new ServiceCollection();
         services.AddScoped(_ => new MeepleAiDbContext(options));
 
-        var serviceProvider = services.BuildServiceProvider();
-        var scopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
+        _serviceProvider = services.BuildServiceProvider();
+        var scopeFactory = _serviceProvider.GetRequiredService<IServiceScopeFactory>();
 
         return scopeFactory;
     }
@@ -88,6 +89,7 @@ public class CacheWarmingServiceTests : IDisposable
     {
         _connection?.Dispose();
         _timeProvider?.Dispose();
+        _serviceProvider?.Dispose();
     }
 
     [Fact]

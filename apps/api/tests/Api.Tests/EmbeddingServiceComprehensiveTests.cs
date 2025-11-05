@@ -52,7 +52,7 @@ public class EmbeddingServiceComprehensiveTests
             .AddInMemoryCollection(configDict)
             .Build();
 
-        var httpClient = new HttpClient();
+        using var httpClient = new HttpClient();
         _httpClientFactoryMock
             .Setup(f => f.CreateClient("Ollama"))
             .Returns(httpClient);
@@ -79,7 +79,7 @@ public class EmbeddingServiceComprehensiveTests
             .AddInMemoryCollection(configDict)
             .Build();
 
-        var httpClient = new HttpClient();
+        using var httpClient = new HttpClient();
         _httpClientFactoryMock
             .Setup(f => f.CreateClient("OpenRouter"))
             .Returns(httpClient);
@@ -101,7 +101,7 @@ public class EmbeddingServiceComprehensiveTests
             .AddInMemoryCollection(configDict)
             .Build();
 
-        var httpClient = new HttpClient();
+        using var httpClient = new HttpClient();
         _httpClientFactoryMock
             .Setup(f => f.CreateClient("Ollama"))
             .Returns(httpClient);
@@ -127,7 +127,7 @@ public class EmbeddingServiceComprehensiveTests
             .AddInMemoryCollection(configDict)
             .Build();
 
-        var httpClient = new HttpClient();
+        using var httpClient = new HttpClient();
         _httpClientFactoryMock
             .Setup(f => f.CreateClient("OpenRouter"))
             .Returns(httpClient);
@@ -170,7 +170,7 @@ public class EmbeddingServiceComprehensiveTests
             .AddInMemoryCollection(configDict)
             .Build();
 
-        var httpClient = new HttpClient();
+        using var httpClient = new HttpClient();
         _httpClientFactoryMock
             .Setup(f => f.CreateClient("Ollama"))
             .Returns(httpClient);

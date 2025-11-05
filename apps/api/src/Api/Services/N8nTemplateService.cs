@@ -475,7 +475,7 @@ public class N8nTemplateService
 
         try
         {
-            var response = await httpClient.SendAsync(request, ct);
+            using var response = await httpClient.SendAsync(request, ct);
             var responseBody = await response.Content.ReadAsStringAsync(ct);
 
             if (!response.IsSuccessStatusCode)

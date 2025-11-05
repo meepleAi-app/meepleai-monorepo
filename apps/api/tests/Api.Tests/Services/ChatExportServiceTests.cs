@@ -214,7 +214,7 @@ public class ChatExportServiceTests : IDisposable
         _dbContext.ChatLogs.Add(log);
         await _dbContext.SaveChangesAsync();
 
-        var exportStream = new MemoryStream();
+        using var exportStream = new MemoryStream();
         _txtFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(exportStream);
@@ -296,7 +296,7 @@ public class ChatExportServiceTests : IDisposable
         _dbContext.ChatLogs.AddRange(oldLog, recentLog);
         await _dbContext.SaveChangesAsync();
 
-        var exportStream = new MemoryStream();
+        using var exportStream = new MemoryStream();
         _pdfFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ReturnsAsync(exportStream);
@@ -363,7 +363,7 @@ public class ChatExportServiceTests : IDisposable
         // Given: Game name contains special characters
         var chat = await CreateTestChatAsync("user-123", gameName);
 
-        var exportStream = new MemoryStream();
+        using var exportStream = new MemoryStream();
         _txtFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(exportStream);
@@ -397,7 +397,7 @@ public class ChatExportServiceTests : IDisposable
         // Given: User exports with date range
         var chat = await CreateTestChatAsync();
 
-        var exportStream = new MemoryStream();
+        using var exportStream = new MemoryStream();
         _pdfFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), It.IsAny<DateTime?>(), It.IsAny<DateTime?>()))
             .ReturnsAsync(exportStream);
@@ -429,7 +429,7 @@ public class ChatExportServiceTests : IDisposable
         // Given: Chat exists but has no messages
         var chat = await CreateTestChatAsync();
 
-        var exportStream = new MemoryStream();
+        using var exportStream = new MemoryStream();
         _mdFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(exportStream);
@@ -493,7 +493,7 @@ public class ChatExportServiceTests : IDisposable
         _dbContext.ChatLogs.AddRange(userLog, assistantLog, systemLog);
         await _dbContext.SaveChangesAsync();
 
-        var exportStream = new MemoryStream();
+        using var exportStream = new MemoryStream();
         _pdfFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(exportStream);
@@ -546,7 +546,7 @@ public class ChatExportServiceTests : IDisposable
         _dbContext.ChatLogs.Add(log);
         await _dbContext.SaveChangesAsync();
 
-        var exportStream = new MemoryStream();
+        using var exportStream = new MemoryStream();
         var mockFormatter = format.ToLower() == "pdf" ? _pdfFormatterMock :
                             format.ToLower() == "txt" ? _txtFormatterMock :
                             _mdFormatterMock;
@@ -608,7 +608,7 @@ public class ChatExportServiceTests : IDisposable
         // Given: Game name is empty/whitespace
         var chat = await CreateTestChatAsync("user-123", emptyGameName);
 
-        var exportStream = new MemoryStream();
+        using var exportStream = new MemoryStream();
         _txtFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(exportStream);
@@ -641,7 +641,7 @@ public class ChatExportServiceTests : IDisposable
         // Given: Game name contains control characters
         var chat = await CreateTestChatAsync("user-123", gameName);
 
-        var exportStream = new MemoryStream();
+        using var exportStream = new MemoryStream();
         _pdfFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(exportStream);
@@ -673,7 +673,7 @@ public class ChatExportServiceTests : IDisposable
         var longGameName = "This is an extremely long game name that definitely exceeds the fifty character limit for filenames";
         var chat = await CreateTestChatAsync("user-123", longGameName);
 
-        var exportStream = new MemoryStream();
+        using var exportStream = new MemoryStream();
         _mdFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(exportStream);
@@ -711,7 +711,7 @@ public class ChatExportServiceTests : IDisposable
         // Given: Game name contains newlines
         var chat = await CreateTestChatAsync("user-123", gameName);
 
-        var exportStream = new MemoryStream();
+        using var exportStream = new MemoryStream();
         _txtFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(exportStream);
@@ -802,7 +802,7 @@ public class ChatExportServiceTests : IDisposable
         _dbContext.ChatLogs.AddRange(logs);
         await _dbContext.SaveChangesAsync();
 
-        var exportStream = new MemoryStream();
+        using var exportStream = new MemoryStream();
         _pdfFormatterMock
             .Setup(f => f.FormatAsync(It.IsAny<ChatEntity>(), null, null))
             .ReturnsAsync(exportStream);

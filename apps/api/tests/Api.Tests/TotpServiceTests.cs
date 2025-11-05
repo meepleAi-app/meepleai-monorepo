@@ -22,6 +22,7 @@ public class TotpServiceTests : IDisposable
     private readonly ITestOutputHelper _output;
 
     private readonly MeepleAiDbContext _dbContext;
+    private readonly ServiceProvider _serviceProvider;
     private readonly TotpService _totpService;
     private readonly Mock<ILogger<TotpService>> _loggerMock;
     private readonly Mock<ILogger<EncryptionService>> _encLoggerMock;
@@ -43,8 +44,8 @@ public class TotpServiceTests : IDisposable
         // Setup encryption service with DataProtection
         var services = new ServiceCollection();
         services.AddDataProtection();
-        var serviceProvider = services.BuildServiceProvider();
-        var dataProtectionProvider = serviceProvider.GetRequiredService<IDataProtectionProvider>();
+        _serviceProvider = services.BuildServiceProvider();
+        var dataProtectionProvider = _serviceProvider.GetRequiredService<IDataProtectionProvider>();
         _encLoggerMock = new Mock<ILogger<EncryptionService>>();
         _encryptionService = new EncryptionService(dataProtectionProvider, _encLoggerMock.Object);
 
@@ -692,5 +693,6 @@ public class TotpServiceTests : IDisposable
     {
         _dbContext.Database.EnsureDeleted();
         _dbContext.Dispose();
+        _serviceProvider.Dispose();
     }
 }

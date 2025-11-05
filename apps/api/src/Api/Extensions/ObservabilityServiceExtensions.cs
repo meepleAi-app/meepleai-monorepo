@@ -14,7 +14,7 @@ public static class ObservabilityServiceExtensions
         IWebHostEnvironment environment)
     {
         services.AddOpenTelemetryServices(configuration, environment);
-        services.AddHealthCheckServices(configuration);
+        services.AddHealthCheckServices(configuration, environment);
         services.AddSwaggerServices();
 
         return services;
@@ -81,29 +81,44 @@ public static class ObservabilityServiceExtensions
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="configuration">The application configuration.</param>
+    /// <param name="environment">The web host environment.</param>
     /// <returns>The service collection for method chaining.</returns>
     /// <exception cref="InvalidOperationException">
     /// Thrown when the database connection string is not configured via
-    /// ConnectionStrings:Postgres in appsettings.json or CONNECTIONSTRINGS__POSTGRES environment variable.
+    /// ConnectionStrings:Postgres in appsettings.json or CONNECTIONSTRINGS__POSTGRES environment variable,
+    /// except in Testing environment where health checks are skipped.
     /// </exception>
     private static IServiceCollection AddHealthCheckServices(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IWebHostEnvironment environment)
     {
         // OPS-01: Health checks for observability
         var healthCheckConnectionString = configuration.GetConnectionString("Postgres")
-            ?? configuration["ConnectionStrings__Postgres"]
-            ?? throw new InvalidOperationException(
-                "Health check database connection string not configured. " +
-                "Set CONNECTIONSTRINGS__POSTGRES environment variable or appsettings.json ConnectionStrings:Postgres.");
+            ?? configuration["ConnectionStrings__Postgres"];
+
         var healthCheckRedisConnectionString = configuration["REDIS_URL"] ?? "localhost:6379";
         var healthCheckQdrantUrl = configuration["QDRANT_URL"] ?? "http://localhost:6333";
 
-        services.AddHealthChecks()
-            .AddNpgSql(
+        var healthChecksBuilder = services.AddHealthChecks();
+
+        // Skip Postgres health check in Testing environment (uses SQLite in-memory DB)
+        if (!environment.IsEnvironment("Testing"))
+        {
+            if (string.IsNullOrEmpty(healthCheckConnectionString))
+            {
+                throw new InvalidOperationException(
+                    "Health check database connection string not configured. " +
+                    "Set CONNECTIONSTRINGS__POSTGRES environment variable or appsettings.json ConnectionStrings:Postgres.");
+            }
+
+            healthChecksBuilder.AddNpgSql(
                 healthCheckConnectionString,
                 name: "postgres",
-                tags: new[] { "db", "sql" })
+                tags: new[] { "db", "sql" });
+        }
+
+        healthChecksBuilder
             .AddRedis(
                 healthCheckRedisConnectionString,
                 name: "redis",

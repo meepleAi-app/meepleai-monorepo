@@ -83,17 +83,10 @@ public class RagEvaluationService : IRagEvaluationService
         try
         {
             // SECURITY: Validate path is within allowed directory (prevent path traversal)
+            // Use centralized PathSecurity utility to ensure consistent validation
             var fullPath = Path.IsPathRooted(filePath)
-                ? Path.GetFullPath(filePath)
-                : Path.GetFullPath(Path.Combine(_allowedDatasetsDirectory, filePath));
-
-            // Verify resolved path is within allowed directory
-            if (!fullPath.StartsWith(_allowedDatasetsDirectory, StringComparison.OrdinalIgnoreCase))
-            {
-                _logger.LogWarning("Path traversal attempt detected: {RequestedPath} resolved to {FullPath}",
-                    filePath, fullPath);
-                throw new SecurityException("Dataset path must be within allowed datasets directory");
-            }
+                ? PathSecurity.ValidatePathIsInDirectory(_allowedDatasetsDirectory, Path.GetFileName(filePath))
+                : PathSecurity.ValidatePathIsInDirectory(_allowedDatasetsDirectory, filePath);
 
             if (!System.IO.File.Exists(fullPath))
             {

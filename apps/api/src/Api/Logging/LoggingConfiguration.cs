@@ -45,6 +45,12 @@ public static class LoggingConfiguration
             .Destructure.With<SensitiveDataDestructuringPolicy>()
             .Enrich.With(new SensitiveStringRedactionEnricher());
 
+        // SEC-731: Add log forging sanitization (removes \r and \n from all strings)
+        // This prevents attackers from injecting fake log entries via newlines in user input
+        loggerConfig
+            .Destructure.With<LogForgingSanitizationPolicy>()
+            .Enrich.With<LogForgingSanitizationEnricher>();
+
         // Console sink with appropriate formatting
         var consoleTemplate = environment.IsDevelopment()
             ? "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}"

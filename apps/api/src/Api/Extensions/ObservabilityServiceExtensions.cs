@@ -76,19 +76,32 @@ public static class ObservabilityServiceExtensions
         return services;
     }
 
+    /// <summary>
+    /// Adds health check services for database, cache, and vector store monitoring.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">The application configuration.</param>
+    /// <returns>The service collection for method chaining.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the database connection string is not configured via
+    /// ConnectionStrings:Postgres in appsettings.json or CONNECTIONSTRINGS__POSTGRES environment variable.
+    /// </exception>
     private static IServiceCollection AddHealthCheckServices(
         this IServiceCollection services,
         IConfiguration configuration)
     {
         // OPS-01: Health checks for observability
         var healthCheckConnectionString = configuration.GetConnectionString("Postgres")
-            ?? configuration["ConnectionStrings__Postgres"];
+            ?? configuration["ConnectionStrings__Postgres"]
+            ?? throw new InvalidOperationException(
+                "Health check database connection string not configured. " +
+                "Set CONNECTIONSTRINGS__POSTGRES environment variable or appsettings.json ConnectionStrings:Postgres.");
         var healthCheckRedisConnectionString = configuration["REDIS_URL"] ?? "localhost:6379";
         var healthCheckQdrantUrl = configuration["QDRANT_URL"] ?? "http://localhost:6333";
 
         services.AddHealthChecks()
             .AddNpgSql(
-                healthCheckConnectionString ?? "Host=localhost;Database=meepleai;Username=postgres;Password=postgres",
+                healthCheckConnectionString,
                 name: "postgres",
                 tags: new[] { "db", "sql" })
             .AddRedis(

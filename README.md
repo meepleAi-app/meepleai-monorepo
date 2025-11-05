@@ -196,10 +196,16 @@ cp infra/env/n8n.env.dev.example infra/env/n8n.env.dev
 - `OPENROUTER_API_KEY` - OpenRouter API key for embeddings/LLM
 - `QDRANT_URL` - Qdrant endpoint (default: http://qdrant:6333)
 - `REDIS_URL` - Redis endpoint (default: redis:6379)
-- `ConnectionStrings__Postgres` - PostgreSQL connection string
+- `ConnectionStrings__Postgres` - **REQUIRED** PostgreSQL connection string (application will fail to start if not configured)
+  ```bash
+  # Example
+  export CONNECTIONSTRINGS__POSTGRES="Host=localhost;Port=5432;Database=meepleai;Username=meepleai_user;Password=your_secure_password"
+  ```
 - `NEXT_PUBLIC_API_BASE` - API base URL for frontend
 
-**Security**: See [docs/SECURITY.md](./docs/SECURITY.md) for secret management and key rotation procedures.
+**Security**: See [docs/SECURITY.md](./docs/SECURITY.md) for secret management, required environment variables, and key rotation procedures.
+
+**Important**: As of version 1.2, hardcoded database credentials have been removed. The application will **fail fast** with a clear error message if `CONNECTIONSTRINGS__POSTGRES` is not configured. This prevents accidental use of insecure default credentials.
 
 ## 🤝 Contributing
 

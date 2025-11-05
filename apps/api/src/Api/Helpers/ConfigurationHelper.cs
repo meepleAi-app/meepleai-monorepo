@@ -39,11 +39,14 @@ public class ConfigurationHelper
         // Tier 1: Try database
         try
         {
-            var dbValue = await _configService.GetValueAsync(key, default(T), environment);
-            if (dbValue != null && !dbValue.Equals(default(T)))
+            // Check if configuration exists in database (to distinguish "not found" from "found with default value")
+            var dbConfig = await _configService.GetConfigurationByKeyAsync(key, environment);
+            if (dbConfig != null && dbConfig.IsActive)
             {
+                // Configuration exists, get the typed value even if it equals default(T)
+                var dbValue = await _configService.GetValueAsync(key, default(T), environment);
                 _logger.LogDebug("Configuration {Key} loaded from database: {Value}", key, dbValue);
-                return dbValue;
+                return dbValue!;
             }
         }
 #pragma warning disable CA1031
@@ -56,11 +59,14 @@ public class ConfigurationHelper
         // Tier 2: Try appsettings.json
         try
         {
-            var configValue = _fallbackConfig.GetValue<T>(key);
-            if (configValue != null && !configValue.Equals(default(T)))
+            // Check if key exists in appsettings (to distinguish "not found" from "found with default value")
+            var section = _fallbackConfig.GetSection(key);
+            if (section.Exists())
             {
+                // Key exists, get the value even if it equals default(T)
+                var configValue = _fallbackConfig.GetValue<T>(key);
                 _logger.LogDebug("Configuration {Key} loaded from appsettings.json: {Value}", key, configValue);
-                return configValue;
+                return configValue!;
             }
         }
 #pragma warning disable CA1031

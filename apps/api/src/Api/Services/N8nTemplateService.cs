@@ -474,7 +474,8 @@ public class N8nTemplateService
         };
 
         var requestJson = JsonSerializer.Serialize(createRequest);
-        var content = new StringContent(requestJson, Encoding.UTF8, "application/json");
+        // CODE-01: Use using for StringContent to ensure proper disposal (CWE-404)
+        using var content = new StringContent(requestJson, Encoding.UTF8, "application/json");
 
         using var request = new HttpRequestMessage(HttpMethod.Post, $"{config.BaseUrl}/api/v1/workflows");
         request.Headers.Add("X-N8N-API-KEY", apiKey);

@@ -67,7 +67,8 @@ public class OllamaLlmService : ILlmService
 
             _logger.LogInformation("Generating chat completion using Ollama {Model}", ChatModel);
 
-            var response = await _httpClient.PostAsync("/api/chat", content, ct);
+            // CODE-01: Dispose HttpResponseMessage to prevent resource leak (CWE-404)
+            using var response = await _httpClient.PostAsync("/api/chat", content, ct);
             var responseBody = await response.Content.ReadAsStringAsync(ct);
 
             if (!response.IsSuccessStatusCode)
@@ -161,7 +162,8 @@ public class OllamaLlmService : ILlmService
         };
 
         var json = JsonSerializer.Serialize(request);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
+        // CODE-01: Use using for StringContent to ensure proper disposal (CWE-404)
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         _logger.LogInformation("Starting streaming chat completion using Ollama {Model}", ChatModel);
 

@@ -48,12 +48,13 @@ public class UserManagementService
             .AsNoTracking();
 
         // Search filter (email or display name)
+        // CWE-476: Add null check for Email property
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
             var term = searchTerm.ToLower();
             query = query.Where(u =>
-                u.Email.ToLower().Contains(term) ||
-                u.DisplayName != null && u.DisplayName.ToLower().Contains(term));
+                (u.Email != null && u.Email.ToLower().Contains(term)) ||
+                (u.DisplayName != null && u.DisplayName.ToLower().Contains(term)));
         }
 
         // Role filter

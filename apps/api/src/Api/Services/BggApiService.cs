@@ -122,7 +122,8 @@ public class BggApiService : IBggApiService
 
             _logger.LogInformation("Fetching BGG search results from: {Url}", url);
 
-            var response = await _httpClient.GetAsync(url, ct);
+            // CODE-01: Dispose HttpResponseMessage to prevent resource leak (CWE-404)
+            using var response = await _httpClient.GetAsync(url, ct);
             response.EnsureSuccessStatusCode();
 
             var xmlContent = await response.Content.ReadAsStringAsync(ct);
@@ -181,7 +182,8 @@ public class BggApiService : IBggApiService
 
             _logger.LogInformation("Fetching BGG game details from: {Url}", url);
 
-            var response = await _httpClient.GetAsync(url, ct);
+            // CODE-01: Dispose HttpResponseMessage to prevent resource leak (CWE-404)
+            using var response = await _httpClient.GetAsync(url, ct);
             response.EnsureSuccessStatusCode();
 
             var xmlContent = await response.Content.ReadAsStringAsync(ct);

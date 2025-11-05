@@ -81,7 +81,8 @@ public class BlobStorageService : IBlobStorageService
     {
         try
         {
-            // SECURITY: Validate gameId to prevent path traversal
+            // SECURITY: Validate parameters to prevent path traversal (SEC-738, CWE-22, CWE-73)
+            PathSecurity.ValidateIdentifier(fileId, nameof(fileId));
             PathSecurity.ValidateIdentifier(gameId, nameof(gameId));
 
             var gameDir = PathSecurity.ValidatePathIsInDirectory(_storageBasePath, gameId);
@@ -115,7 +116,8 @@ public class BlobStorageService : IBlobStorageService
     {
         try
         {
-            // SECURITY: Validate gameId to prevent path traversal
+            // SECURITY: Validate parameters to prevent path traversal (SEC-738, CWE-22, CWE-73)
+            PathSecurity.ValidateIdentifier(fileId, nameof(fileId));
             PathSecurity.ValidateIdentifier(gameId, nameof(gameId));
 
             var gameDir = PathSecurity.ValidatePathIsInDirectory(_storageBasePath, gameId);
@@ -173,7 +175,8 @@ public class BlobStorageService : IBlobStorageService
     {
         try
         {
-            // SECURITY: Validate gameId to prevent path traversal
+            // SECURITY: Validate parameters to prevent path traversal (SEC-738, CWE-22, CWE-73)
+            PathSecurity.ValidateIdentifier(fileId, nameof(fileId));
             PathSecurity.ValidateIdentifier(gameId, nameof(gameId));
 
             var gameDir = PathSecurity.ValidatePathIsInDirectory(_storageBasePath, gameId);

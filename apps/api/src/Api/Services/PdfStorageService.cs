@@ -1,6 +1,7 @@
 using Api.Constants;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Security;
 using Api.Models;
 using Api.Services.Exceptions;
 using Api.Services.Pdf;
@@ -85,10 +86,21 @@ public class PdfStorageService
             return new PdfUploadResult(false, $"Invalid file type ({file.ContentType}). Only PDF files are allowed. Please ensure your file has a .pdf extension.", null);
         }
 
+        // SEC-738: Extract and sanitize filename to prevent path injection (CWE-22, CWE-73)
         var fileName = Path.GetFileName(file.FileName);
         if (string.IsNullOrWhiteSpace(fileName))
         {
             return new PdfUploadResult(false, "Invalid file name. The file must have a valid name.", null);
+        }
+
+        // Defense-in-depth: Validate filename at entry point before passing to storage service
+        try
+        {
+            fileName = PathSecurity.SanitizeFilename(fileName);
+        }
+        catch (ArgumentException ex)
+        {
+            return new PdfUploadResult(false, $"Invalid file name: {ex.Message}", null);
         }
 
         // Verify game exists

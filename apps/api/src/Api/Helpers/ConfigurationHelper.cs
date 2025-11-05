@@ -14,6 +14,17 @@ public class ConfigurationHelper
     private readonly IConfiguration _fallbackConfig;
     private readonly ILogger<ConfigurationHelper> _logger;
 
+    // SEC-738: Sensitive configuration key patterns to prevent CWE-532 (sensitive info in logs)
+    private static readonly string[] SensitiveKeyPatterns = new[]
+    {
+        "password", "passwd", "pwd", "secret", "apikey", "api_key", "api-key",
+        "token", "accesstoken", "access_token", "refreshtoken", "refresh_token",
+        "bearer", "authorization", "credential", "connectionstring", "connection_string",
+        "privatekey", "private_key", "securitykey", "security_key", "key",
+        "clientsecret", "client_secret", "clientid", "client_id",
+        "webhook", "salt", "hash", "encryption", "jwt", "totp"
+    };
+
     public ConfigurationHelper(
         IConfigurationService configService,
         IConfiguration fallbackConfig,
@@ -44,9 +55,17 @@ public class ConfigurationHelper
             if (dbConfig != null && dbConfig.IsActive)
             {
                 // Configuration exists, get the typed value even if it equals default(T)
-                // Pass defaultValue so deserialization failures return the caller's default instead of default(T)
-                var dbValue = await _configService.GetValueAsync(key, defaultValue, environment);
-                _logger.LogDebug("Configuration {Key} loaded from database: {Value}", key, dbValue);
+                var dbValue = await _configService.GetValueAsync(key, default(T), environment);
+
+                // SEC-738: Don't log sensitive configuration values (CWE-532 prevention)
+                if (IsSensitiveConfigurationKey(key))
+                {
+                    _logger.LogDebug("Configuration {Key} loaded from database: [REDACTED]", key);
+                }
+                else
+                {
+                    _logger.LogDebug("Configuration {Key} loaded from database: {Value}", key, dbValue);
+                }
                 return dbValue!;
             }
         }
@@ -66,7 +85,16 @@ public class ConfigurationHelper
             {
                 // Key exists, get the value even if it equals default(T)
                 var configValue = _fallbackConfig.GetValue<T>(key);
-                _logger.LogDebug("Configuration {Key} loaded from appsettings.json: {Value}", key, configValue);
+
+                // SEC-738: Don't log sensitive configuration values (CWE-532 prevention)
+                if (IsSensitiveConfigurationKey(key))
+                {
+                    _logger.LogDebug("Configuration {Key} loaded from appsettings.json: [REDACTED]", key);
+                }
+                else
+                {
+                    _logger.LogDebug("Configuration {Key} loaded from appsettings.json: {Value}", key, configValue);
+                }
                 return configValue!;
             }
         }
@@ -78,7 +106,15 @@ public class ConfigurationHelper
 #pragma warning restore CA1031
 
         // Tier 3: Use default value
-        _logger.LogDebug("Configuration {Key} using default value: {Value}", key, defaultValue);
+        // SEC-738: Don't log sensitive configuration values (CWE-532 prevention)
+        if (IsSensitiveConfigurationKey(key))
+        {
+            _logger.LogDebug("Configuration {Key} using default value: [REDACTED]", key);
+        }
+        else
+        {
+            _logger.LogDebug("Configuration {Key} using default value: {Value}", key, defaultValue);
+        }
         return defaultValue;
     }
 
@@ -140,5 +176,19 @@ public class ConfigurationHelper
         CancellationToken ct = default)
     {
         return await GetValueAsync(key, defaultValue, environment, ct);
+    }
+
+    /// <summary>
+    /// SEC-738: Checks if a configuration key contains sensitive keywords (CWE-532 prevention)
+    /// </summary>
+    private static bool IsSensitiveConfigurationKey(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return false;
+        }
+
+        var normalizedKey = key.ToLowerInvariant().Replace("_", "").Replace("-", "").Replace(":", "");
+        return SensitiveKeyPatterns.Any(pattern => normalizedKey.Contains(pattern));
     }
 }

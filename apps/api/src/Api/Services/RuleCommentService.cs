@@ -275,10 +275,11 @@ public partial class RuleCommentService : IRuleCommentService
             }
 
             // Query users: exact DisplayName match (case-insensitive) or Email prefix match
+            // CWE-476: Add null check for Email property
             var users = await _dbContext.Users
                 .AsNoTracking()
                 .Where(u => (u.DisplayName != null && mentionedUsernames.Contains(u.DisplayName.ToLower()))
-                    || mentionedUsernames.Any(m => u.Email.ToLower().StartsWith(m)))
+                    || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower().StartsWith(m))))
                 .Select(u => u.Id)
                 .Distinct()
                 .ToListAsync();

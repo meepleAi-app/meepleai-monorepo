@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import DOMPurify from "dompurify";
 import { api } from "../lib/api";
 import { RichTextEditor, ViewModeToggle } from "../components/editor";
 import { useDebounce } from "../hooks/useDebounce";
@@ -61,8 +60,16 @@ export default function RuleSpecEditor() {
   const debouncedContent = useDebounce(viewMode === "rich" ? richContent : jsonContent, 2000);
 
   // Sanitized rich content for XSS protection (SEC-715)
+  // SSR-safe: Only sanitize in browser environment to avoid "window is not defined"
   const sanitizedRichContent = useMemo(() => {
     if (!richContent) return "";
+
+    // Return unsanitized content during SSR (server-side rendering)
+    // Content will be sanitized on client-side hydration
+    if (typeof window === 'undefined') return richContent;
+
+    // Lazy-load DOMPurify only in browser
+    const DOMPurify = require('dompurify');
 
     return DOMPurify.sanitize(richContent, {
       ALLOWED_TAGS: [

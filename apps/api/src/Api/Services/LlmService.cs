@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Api.Infrastructure.Security;
 
 namespace Api.Services;
 
@@ -153,7 +154,7 @@ public class LlmService : ILlmService
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("OpenRouter chat API error: {Status} - {Body}", response.StatusCode, responseBody);
+                _logger.LogError("OpenRouter chat API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(responseBody));
                 return LlmCompletionResult.CreateFailure($"API error: {response.StatusCode}");
             }
 
@@ -282,7 +283,7 @@ public class LlmService : ILlmService
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync(ct);
-                _logger.LogError("OpenRouter streaming API error: {Status} - {Body}", response.StatusCode, errorBody);
+                _logger.LogError("OpenRouter streaming API error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(errorBody));
                 response.Dispose();
                 yield break;
             }

@@ -336,7 +336,7 @@ public class OAuthService : IOAuthService
                 _ => throw new InvalidOperationException($"Unsupported provider: {provider}")
             };
 
-            _logger.LogDebug("Retrieved user info from OAuth provider. Provider: {Provider}, Email: {Email}", provider, email);
+            _logger.LogDebug("Retrieved user info from OAuth provider. Provider: {Provider}", provider);
             return new OAuthUserInfo(id, email, name);
         }
         catch (HttpRequestException ex)

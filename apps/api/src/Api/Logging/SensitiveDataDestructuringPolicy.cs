@@ -52,7 +52,18 @@ public partial class SensitiveDataDestructuringPolicy : IDestructuringPolicy
         "jwttoken",
         "jwt_token",
         "bearertoken",
-        "bearer_token"
+        "bearer_token",
+        "email",
+        "emailaddress",
+        "email_address",
+        "useremail",
+        "user_email",
+        "passwordhash",
+        "password_hash",
+        "totpsecret",
+        "totp_secret",
+        "totpsecretencrypted",
+        "totp_secret_encrypted"
     };
 
     // Regex patterns for detecting sensitive data in strings

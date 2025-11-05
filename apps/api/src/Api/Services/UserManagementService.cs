@@ -122,7 +122,7 @@ public class UserManagementService
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Admin created user {UserId} with email {Email} and role {Role}", userId, request.Email, role);
+        _logger.LogInformation("Admin created user {UserId} with role {Role}", userId, role);
 
         // Reload with sessions for DTO mapping
         var createdUser = await _dbContext.Users
@@ -210,7 +210,7 @@ public class UserManagementService
 
         _dbContext.Users.Remove(user);
         await _dbContext.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("Admin deleted user {UserId} with email {Email}", userId, user.Email);
+        _logger.LogInformation("Admin deleted user {UserId}", userId);
     }
 
     private static UserDto MapToDto(UserEntity user)

@@ -65,9 +65,7 @@ public class PasswordResetService : IPasswordResetService
         // This prevents email enumeration attacks
         if (user == null)
         {
-            _logger.LogInformation(
-                "Password reset requested for non-existent email: {Email}",
-                normalizedEmail);
+            _logger.LogInformation("Password reset requested for non-existent email");
             return true;
         }
 

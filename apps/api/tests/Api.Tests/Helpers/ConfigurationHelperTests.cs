@@ -515,6 +515,78 @@ public class ConfigurationHelperTests
 
     #endregion
 
+    #region Deserialization Failure Tests
+
+    [Fact]
+    public async Task GetValueAsync_DatabaseDeserializationFails_ReturnsDefaultValue()
+    {
+        // Arrange
+        const string key = "RateLimit:MaxTokens";
+        const int defaultValue = 100; // Safe default for rate limiting
+
+        // Database has active config but with invalid value "abc" for int type
+        var dbConfig = new SystemConfigurationDto
+        {
+            Key = key,
+            Value = "abc", // Invalid value for int
+            ValueType = "int",
+            IsActive = true
+        };
+
+        _mockConfigService
+            .Setup(x => x.GetConfigurationByKeyAsync(key, null))
+            .ReturnsAsync(dbConfig);
+
+        // GetValueAsync will return defaultValue when deserialization fails
+        _mockConfigService
+            .Setup(x => x.GetValueAsync<int>(key, defaultValue, null))
+            .ReturnsAsync(defaultValue); // Returns the passed defaultValue on deserialization failure
+
+        // Act
+        var result = await _helper.GetValueAsync(key, defaultValue);
+
+        // Assert
+        Assert.Equal(defaultValue, result); // Should return 100, not 0
+        _mockConfigService.Verify(x => x.GetConfigurationByKeyAsync(key, null), Times.Once);
+        _mockConfigService.Verify(x => x.GetValueAsync<int>(key, defaultValue, null), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetValueAsync_DatabaseDeserializationFails_Bool_ReturnsDefaultValue()
+    {
+        // Arrange
+        const string key = "Features:EnableDangerousFeature";
+        const bool defaultValue = false; // Safe default
+
+        // Database has active config but with invalid value "maybe" for bool type
+        var dbConfig = new SystemConfigurationDto
+        {
+            Key = key,
+            Value = "maybe", // Invalid value for bool
+            ValueType = "bool",
+            IsActive = true
+        };
+
+        _mockConfigService
+            .Setup(x => x.GetConfigurationByKeyAsync(key, null))
+            .ReturnsAsync(dbConfig);
+
+        // GetValueAsync will return defaultValue when deserialization fails
+        _mockConfigService
+            .Setup(x => x.GetValueAsync<bool>(key, defaultValue, null))
+            .ReturnsAsync(defaultValue);
+
+        // Act
+        var result = await _helper.GetValueAsync(key, defaultValue);
+
+        // Assert
+        Assert.False(result); // Should return false, not true
+        _mockConfigService.Verify(x => x.GetConfigurationByKeyAsync(key, null), Times.Once);
+        _mockConfigService.Verify(x => x.GetValueAsync<bool>(key, defaultValue, null), Times.Once);
+    }
+
+    #endregion
+
     #region Environment Parameter Tests
 
     [Fact]

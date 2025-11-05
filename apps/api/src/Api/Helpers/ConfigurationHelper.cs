@@ -44,7 +44,8 @@ public class ConfigurationHelper
             if (dbConfig != null && dbConfig.IsActive)
             {
                 // Configuration exists, get the typed value even if it equals default(T)
-                var dbValue = await _configService.GetValueAsync(key, default(T), environment);
+                // Pass defaultValue so deserialization failures return the caller's default instead of default(T)
+                var dbValue = await _configService.GetValueAsync(key, defaultValue, environment);
                 _logger.LogDebug("Configuration {Key} loaded from database: {Value}", key, dbValue);
                 return dbValue!;
             }

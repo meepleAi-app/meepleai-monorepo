@@ -52,16 +52,16 @@ test.describe('Admin Configuration Management', () => {
     // Assert: Configuration page loads with tabs
     await expect(page.locator('h1')).toContainText(/Configuration Management/i);
 
-    // Verify tabs present
-    await expect(page.locator('text=Feature Flags')).toBeVisible();
-    await expect(page.locator('text=Rate Limiting')).toBeVisible();
-    await expect(page.locator('text=AI')).toBeVisible();
-    await expect(page.locator('text=RAG')).toBeVisible();
+    // Verify tabs present (use getByRole for buttons to avoid strict mode violations)
+    await expect(page.getByRole('button', { name: /Feature Flags/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Rate Limiting/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /AI/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /RAG/i })).toBeVisible();
   });
 
   test('admin can create new feature flag configuration', async ({ adminPage: page }) => {
     // Navigate to Feature Flags tab
-    await page.click('text=Feature Flags');
+    await page.getByRole('button', { name: /Feature Flags/i }).click();
 
     // Click to create new configuration
     const createButton = page.locator('button:has-text("New")').or(page.locator('button:has-text("Add")'));
@@ -87,7 +87,7 @@ test.describe('Admin Configuration Management', () => {
 
   test('admin can toggle feature flag', async ({ adminPage: page }) => {
     // Navigate to Feature Flags tab
-    await page.click('text=Feature Flags');
+    await page.getByRole('button', { name: /Feature Flags/i }).click();
 
     // Wait for feature flags to load
     await page.waitForTimeout(1000);
@@ -119,7 +119,7 @@ test.describe('Admin Configuration Management', () => {
     const tabs = ['Feature Flags', 'Rate Limiting', 'AI', 'RAG'];
 
     for (const tab of tabs) {
-      await page.click(`text=${tab}`);
+      await page.getByRole('button', { name: new RegExp(tab, 'i') }).click();
       await page.waitForTimeout(300);
 
       // Verify tab is active (URL or visual indicator)

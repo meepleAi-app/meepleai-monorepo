@@ -1,5 +1,6 @@
 using Serilog.Core;
 using Serilog.Events;
+using Api.Infrastructure.Security;
 
 namespace Api.Logging;
 
@@ -57,7 +58,8 @@ public class UserContextEnricher : ILogEventEnricher
 
             if (!string.IsNullOrEmpty(userEmail))
             {
-                logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("UserEmail", userEmail));
+                // Mask email to prevent PII exposure in logs (SEC-733)
+                logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("UserEmail", DataMasking.MaskEmail(userEmail)));
             }
 
             if (!string.IsNullOrEmpty(userRole))
@@ -112,7 +114,9 @@ public class RequestContextEnricher : ILogEventEnricher
 
             logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("RequestPath", sanitizedPath));
             logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("RequestMethod", httpContext.Request.Method));
-            logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("RemoteIp", httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"));
+            // Mask IP address for GDPR compliance (SEC-733)
+            var remoteIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("RemoteIp", DataMasking.MaskIpAddress(remoteIp)));
             logEvent.AddOrUpdateProperty(propertyFactory.CreateProperty("UserAgent", httpContext.Request.Headers.UserAgent.ToString()));
         }
     }

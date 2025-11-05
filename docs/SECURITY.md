@@ -13,6 +13,39 @@ This document outlines security practices, secret management, and key rotation p
 
 ## Secrets Management
 
+### Required Environment Variables
+
+The application requires the following environment variables to be configured in all environments:
+
+#### Database Connection String (REQUIRED)
+
+```bash
+# Linux/macOS
+export CONNECTIONSTRINGS__POSTGRES="Host=localhost;Port=5432;Database=meepleai;Username=meepleai_user;Password=your_secure_password"
+
+# Windows PowerShell
+$env:CONNECTIONSTRINGS__POSTGRES="Host=localhost;Port=5432;Database=meepleai;Username=meepleai_user;Password=your_secure_password"
+```
+
+**Important**: Starting with version 1.2, the application will **fail to start** if `CONNECTIONSTRINGS__POSTGRES` is not configured. This prevents accidental use of insecure default credentials.
+
+**Alternative Configuration Methods**:
+1. Environment variable: `CONNECTIONSTRINGS__POSTGRES`
+2. `appsettings.json`: `ConnectionStrings:Postgres`
+3. `appsettings.Development.json` (local development only, **gitignored**)
+
+**Security Best Practices**:
+- Use strong, randomly generated passwords (minimum 16 characters)
+- Never use default credentials (`postgres:postgres`) in any environment
+- Rotate database passwords quarterly
+- Use least-privilege database users (not superuser accounts)
+
+Example secure password generation:
+```bash
+# Generate 32-character random password
+openssl rand -base64 32
+```
+
 ### Environment Files
 
 The project uses separate environment files for different contexts:
@@ -326,5 +359,5 @@ If you discover a security vulnerability:
 
 ---
 
-**Last Updated**: 2024-11-04 (SEC-700: Added Gmail App Password rotation)
-**Version**: 1.1
+**Last Updated**: 2025-11-05 (Issue #716: Removed hardcoded database credentials, added required environment variable documentation)
+**Version**: 1.2

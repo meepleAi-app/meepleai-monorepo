@@ -83,10 +83,11 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object, timeProvider);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object, timeProvider);
 
         // Act
         var result = await service.RequestPasswordResetAsync(ValidEmail);
@@ -125,10 +126,11 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object, timeProvider);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object, timeProvider);
 
         // Act
         var result = await service.RequestPasswordResetAsync("nonexistent@example.com");
@@ -170,9 +172,10 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
 
         // Act & Assert
         var act = async () => await service.RequestPasswordResetAsync(null!);
@@ -194,9 +197,10 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
 
         // Act & Assert
         var act = async () => await service.RequestPasswordResetAsync(string.Empty);
@@ -220,9 +224,10 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: false, retryAfter: 3600);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
 
         // Act & Assert
         var act = async () => await service.RequestPasswordResetAsync(ValidEmail);
@@ -279,10 +284,11 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object, timeProvider);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object, timeProvider);
 
         // Act
         var result = await service.RequestPasswordResetAsync(ValidEmail);
@@ -341,10 +347,11 @@ public class PasswordResetServiceTests : IDisposable
             .ThrowsAsync(new InvalidOperationException("SMTP server unavailable"));
 
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object, timeProvider);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object, timeProvider);
 
         // Act
         var result = await service.RequestPasswordResetAsync(ValidEmail);
@@ -402,9 +409,10 @@ public class PasswordResetServiceTests : IDisposable
             .Returns(Task.CompletedTask);
 
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
 
         // Act
         await service.RequestPasswordResetAsync(ValidEmail);
@@ -442,9 +450,10 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
 
         // Act
         var result = await service.RequestPasswordResetAsync("USER@EXAMPLE.COM");
@@ -483,9 +492,10 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
 
         // Act
         var result = await service.RequestPasswordResetAsync("  user@example.com  ");
@@ -542,10 +552,11 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object, timeProvider);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object, timeProvider);
 
         // Act
         var result = await service.ValidateResetTokenAsync(token);
@@ -568,9 +579,10 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
 
         // Act
         var result = await service.ValidateResetTokenAsync(null!);
@@ -593,9 +605,10 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
 
         // Act
         var result = await service.ValidateResetTokenAsync(string.Empty);
@@ -618,9 +631,10 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
 
         // Act
         var result = await service.ValidateResetTokenAsync("invalid-token-that-does-not-exist");
@@ -671,10 +685,11 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object, timeProvider);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object, timeProvider);
 
         // Act
         var result = await service.ValidateResetTokenAsync(token);
@@ -734,10 +749,11 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object, timeProvider);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object, timeProvider);
 
         // Act
         var result = await service.ValidateResetTokenAsync(token);
@@ -804,10 +820,11 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object, timeProvider);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object, timeProvider);
 
         // Act
         var result = await service.ResetPasswordAsync(token, "NewPassword123");
@@ -889,10 +906,11 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object, timeProvider);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object, timeProvider);
 
         // Act
         var result = await service.ResetPasswordAsync(token, "NewPassword123");
@@ -919,9 +937,10 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
 
         // Act & Assert
         var act = async () => await service.ResetPasswordAsync(null!, ValidPassword);
@@ -943,9 +962,10 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
 
         // Act & Assert
         var act = async () => await service.ResetPasswordAsync(string.Empty, ValidPassword);
@@ -967,9 +987,10 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
 
         // Act & Assert
         var act = async () => await service.ResetPasswordAsync("some-token", null!);
@@ -991,9 +1012,10 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
 
         // Act & Assert
         var act = async () => await service.ResetPasswordAsync("some-token", "Pass12"); // 6 chars
@@ -1019,9 +1041,10 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
 
         // Act & Assert
         var act = async () => await service.ResetPasswordAsync("some-token", weakPassword);
@@ -1047,9 +1070,10 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
 
         // Act
         var result = await service.ResetPasswordAsync("invalid-token", strongPassword);
@@ -1074,9 +1098,10 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
 
         // Act
         var result = await service.ResetPasswordAsync("invalid-token-xyz", ValidPassword);
@@ -1140,10 +1165,11 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object, timeProvider);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object, timeProvider);
 
         // Act
         var result = await service.ResetPasswordAsync(token, "NewPassword123");
@@ -1209,10 +1235,11 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object, timeProvider);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object, timeProvider);
 
         // Act
         var result = await service.ResetPasswordAsync(token, "NewPassword123");
@@ -1275,10 +1302,11 @@ public class PasswordResetServiceTests : IDisposable
 
         var mockEmail = CreateEmailServiceMock();
         var mockRateLimit = CreateRateLimitMock(allowed: true);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
-        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockLogger.Object, timeProvider);
+        var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object, timeProvider);
 
         // Act
         var result = await service.ResetPasswordAsync(token, "Pássw0rd"); // Unicode characters

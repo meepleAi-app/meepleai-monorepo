@@ -51,7 +51,7 @@ export default function ChatPage() {
   if (!authUser) {
     return (
       <main id="main-content" style={{ padding: 24, maxWidth: 900, margin: "0 auto", fontFamily: "sans-serif" }}>
-        <Link href="/" style={{ color: "#0070f3", textDecoration: "none" }}>
+        <Link href="/" style={{ color: "#0077FF", textDecoration: "none" }}>
           ← Torna alla Home
         </Link>
         <div

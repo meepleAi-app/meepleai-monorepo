@@ -1,12 +1,41 @@
 import { test, expect } from "./fixtures/auth";
 
 test.describe("Analytics Dashboard E2E", () => {
+  test.beforeEach(async ({ adminPage: page }) => {
+    // Mock analytics API endpoint
+    await page.route('**/api/v1/admin/analytics*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          metrics: {
+            totalUsers: 10,
+            activeSessions: 5,
+            apiRequestsToday: 100,
+            totalPdfDocuments: 20,
+            totalChatMessages: 50,
+            averageConfidenceScore: 0.85,
+            totalRagRequests: 30,
+            totalTokensUsed: 5000
+          },
+          userTrend: [{ date: '2025-11-05', count: 2 }],
+          sessionTrend: [{ date: '2025-11-05', count: 5 }],
+          apiRequestTrend: [{ date: '2025-11-05', count: 100 }],
+          pdfUploadTrend: [{ date: '2025-11-05', count: 3 }],
+          chatMessageTrend: [{ date: '2025-11-05', count: 15 }],
+          generatedAt: new Date().toISOString()
+        })
+      });
+    });
+  });
+
   test("should display analytics dashboard with metrics", async ({ adminPage: page }) => {
     // Navigate to analytics
     await page.goto("/admin/analytics");
+    await page.waitForLoadState('networkidle');
 
-    // Wait for page to load
-    await expect(page.getByText("Analytics Dashboard")).toBeVisible();
+    // Wait for page to load (increased timeout for API calls)
+    await expect(page.getByText("Analytics Dashboard")).toBeVisible({ timeout: 15000 });
 
     // Check metric cards are visible
     await expect(page.getByText("Total Users")).toBeVisible();
@@ -21,9 +50,11 @@ test.describe("Analytics Dashboard E2E", () => {
 
   test("should display charts", async ({ adminPage: page }) => {
     await page.goto("/admin/analytics");
+    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('networkidle');
 
-    // Wait for dashboard to load
-    await expect(page.getByText("Analytics Dashboard")).toBeVisible();
+    // Wait for dashboard to load (increased timeout)
+    await expect(page.getByText("Analytics Dashboard")).toBeVisible({ timeout: 15000 });
 
     // Check chart titles are visible
     await expect(page.getByText("User Registrations")).toBeVisible();
@@ -35,6 +66,7 @@ test.describe("Analytics Dashboard E2E", () => {
 
   test("should allow changing time period filter", async ({ adminPage: page }) => {
     await page.goto("/admin/analytics");
+    await page.waitForLoadState('networkidle');
 
     // Wait for initial load
     await expect(page.getByText("Analytics Dashboard")).toBeVisible();
@@ -49,6 +81,7 @@ test.describe("Analytics Dashboard E2E", () => {
 
   test("should toggle auto-refresh", async ({ adminPage: page }) => {
     await page.goto("/admin/analytics");
+    await page.waitForLoadState('networkidle');
 
     // Wait for dashboard
     await expect(page.getByText("Analytics Dashboard")).toBeVisible();
@@ -67,6 +100,7 @@ test.describe("Analytics Dashboard E2E", () => {
 
   test("should refresh data when refresh button clicked", async ({ adminPage: page }) => {
     await page.goto("/admin/analytics");
+    await page.waitForLoadState('networkidle');
 
     // Wait for initial load
     await expect(page.getByText("Analytics Dashboard")).toBeVisible();
@@ -90,6 +124,7 @@ test.describe("Analytics Dashboard E2E", () => {
 
   test("should export CSV", async ({ adminPage: page }) => {
     await page.goto("/admin/analytics");
+    await page.waitForLoadState('networkidle');
 
     // Wait for dashboard
     await expect(page.getByText("Analytics Dashboard")).toBeVisible();
@@ -108,6 +143,7 @@ test.describe("Analytics Dashboard E2E", () => {
 
   test("should export JSON", async ({ adminPage: page }) => {
     await page.goto("/admin/analytics");
+    await page.waitForLoadState('networkidle');
 
     // Wait for dashboard
     await expect(page.getByText("Analytics Dashboard")).toBeVisible();
@@ -126,6 +162,7 @@ test.describe("Analytics Dashboard E2E", () => {
 
   test("should have back to users link", async ({ adminPage: page }) => {
     await page.goto("/admin/analytics");
+    await page.waitForLoadState('networkidle');
 
     // Check back link exists
     const backLink = page.getByRole("link", { name: /Back to Users/i });

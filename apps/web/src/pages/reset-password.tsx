@@ -361,7 +361,7 @@ export default function ResetPasswordPage() {
                     required
                     autoComplete="email"
                     placeholder="you@example.com"
-                    inputClassName="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
+                    inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
                   />
 
                   <AccessibleButton
@@ -474,7 +474,7 @@ export default function ResetPasswordPage() {
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
                     autoComplete="new-password"
-                    inputClassName="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
+                    inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
                   />
 
                   {/* Password Requirements */}
@@ -538,7 +538,7 @@ export default function ResetPasswordPage() {
                         ? "Passwords do not match"
                         : undefined
                     }
-                    inputClassName="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
+                    inputClassName="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
                   />
 
                   <AccessibleButton

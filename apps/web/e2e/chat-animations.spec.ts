@@ -21,6 +21,7 @@ import { test, expect, Page, BrowserContext } from './fixtures/auth';
  */
 async function navigateToChat(page: Page): Promise<void> {
   await page.goto('/chat');
+    await page.waitForLoadState('networkidle');
   await page.waitForLoadState('networkidle');
 }
 
@@ -119,6 +120,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
     });
 
     await page.goto('/chat');
+    await page.waitForLoadState('networkidle');
 
     // Verify games skeleton appears
     const gamesSkeleton = page.locator('[aria-label="Caricamento giochi"]');

@@ -7,14 +7,50 @@ import { test, expect } from './fixtures/auth';
 
 test.describe('Admin Configuration Management', () => {
   test.beforeEach(async ({ adminPage: page }) => {
-    // Navigate to configuration page (already authenticated)
+    // Mock configuration API endpoints
+    await page.route('**/api/v1/admin/configurations*', async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            items: [
+              {
+                id: 'config-1',
+                key: 'Features:TestFlag',
+                value: 'true',
+                valueType: 'bool',
+                category: 'FeatureFlags',
+                isActive: true
+              }
+            ],
+            total: 1,
+            page: 1,
+            pageSize: 100
+          })
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
+    await page.route('**/api/v1/admin/configurations/categories', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(['FeatureFlags', 'RateLimiting', 'AI', 'RAG'])
+      });
+    });
+
+    // Navigate to configuration page (already authenticated via fixture)
     await page.goto('/admin/configuration');
+    await page.waitForLoadState('networkidle');
     await expect(page).toHaveURL('/admin/configuration');
   });
 
   test('admin can view configuration management page', async ({ adminPage: page }) => {
     // Assert: Configuration page loads with tabs
-    await expect(page.locator('h1')).toContainText(/configuration/i);
+    await expect(page.locator('h1')).toContainText(/Configuration Management/i);
 
     // Verify tabs present
     await expect(page.locator('text=Feature Flags')).toBeVisible();

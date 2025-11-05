@@ -362,7 +362,7 @@ export default function SetupPage() {
   if (!authUser) {
     return (
       <main style={{ padding: 24, maxWidth: 900, margin: "0 auto", fontFamily: "sans-serif" }}>
-        <Link href="/" style={{ color: "#0070f3", textDecoration: "none" }}>
+        <Link href="/" style={{ color: "#0077FF", textDecoration: "none" }}>
           ← Back to Home
         </Link>
         <div
@@ -374,8 +374,8 @@ export default function SetupPage() {
             borderRadius: 8
           }}
         >
-          <h2>Login Required</h2>
-          <p>You must be logged in to use the setup guide.</p>
+          <h2>Accesso richiesto</h2>
+          <p>Devi effettuare l'accesso per utilizzare la guida alla configurazione.</p>
           <Link
             href="/"
             style={{
@@ -388,7 +388,7 @@ export default function SetupPage() {
               borderRadius: 4
             }}
           >
-            Go to Login
+            Vai al Login
           </Link>
         </div>
       </main>

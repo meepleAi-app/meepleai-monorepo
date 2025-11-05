@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Api.Observability;
+using Microsoft.Extensions.Logging;
 
 namespace Api.Helpers;
 

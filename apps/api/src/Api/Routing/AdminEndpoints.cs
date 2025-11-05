@@ -901,9 +901,7 @@ group.MapGet("/admin/prompts", async (
             CreatedByEmail = t.CreatedBy.Email,
             CreatedAt = t.CreatedAt,
             VersionCount = t.Versions.Count,
-            ActiveVersionNumber = t.Versions.FirstOrDefault(v => v.IsActive) != null
-                ? t.Versions.First(v => v.IsActive).VersionNumber
-                : null
+            ActiveVersionNumber = t.Versions.FirstOrDefault(v => v.IsActive)?.VersionNumber
         })
         .ToListAsync(ct);
 
@@ -944,7 +942,7 @@ group.MapPost("/admin/prompts", async (
     var user = await db.Set<UserEntity>().FindAsync([session.User.Id], ct);
     if (user == null)
     {
-        return Results.BadRequest(new { error = "User not found" });
+        return Results.Unauthorized();
     }
 
     var template = new PromptTemplateEntity
@@ -1012,6 +1010,11 @@ group.MapGet("/admin/prompts/{id}", async (
         return Results.NotFound(new { error = "Template not found" });
     }
 
+    if (template.CreatedBy == null)
+    {
+        return Results.Problem("Template creator information is missing", statusCode: 500);
+    }
+
     return Results.Ok(new PromptTemplateDto
     {
         Id = template.Id,
@@ -1064,7 +1067,7 @@ group.MapPost("/admin/prompts/{id}/versions", async (
     var user = await db.Set<UserEntity>().FindAsync([session.User.Id], ct);
     if (user == null)
     {
-        return Results.BadRequest(new { error = "User not found" });
+        return Results.Unauthorized();
     }
 
     var nextVersionNumber = template.Versions.Any()

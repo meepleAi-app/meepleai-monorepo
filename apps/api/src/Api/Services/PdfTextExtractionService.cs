@@ -73,14 +73,14 @@ public class PdfTextExtractionService
 
                 var needsOcr = charsPerPage < ocrThreshold && _ocrService != null;
 
-                if (needsOcr)
+                if (needsOcr && _ocrService != null)
                 {
                     _logger.LogInformation(
                         "Standard extraction quality too low ({CharsPerPage} chars/page < {Threshold}). Falling back to OCR for {FilePath}",
                         charsPerPage, ocrThreshold, filePath);
 
                     // Fallback to OCR
-                    var ocrResult = await _ocrService!.ExtractTextFromPdfAsync(filePath, ct);
+                    var ocrResult = await _ocrService.ExtractTextFromPdfAsync(filePath, ct);
 
                     if (!ocrResult.Success)
                     {

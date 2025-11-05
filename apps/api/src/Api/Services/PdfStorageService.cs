@@ -488,7 +488,7 @@ public class PdfStorageService
                 documentChunks.Add(new DocumentChunk
                 {
                     Text = allDocumentChunks[i].Text,
-                    Embedding = embeddingResult.Embeddings[i],
+                    Embedding = embeddings[i],
                     Page = allDocumentChunks[i].Page,
                     CharStart = allDocumentChunks[i].CharStart,
                     CharEnd = allDocumentChunks[i].CharEnd

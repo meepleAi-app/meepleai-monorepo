@@ -87,7 +87,13 @@ public static class AuthEndpoints
 
                 // AUTH-07: Check if 2FA is enabled
                 var user = await db.Users.FindAsync(result.User.Id);
-                if (user?.IsTwoFactorEnabled == true)
+                if (user == null)
+                {
+                    logger.LogError("User {UserId} not found after successful login", result.User.Id);
+                    return Results.Problem("User not found", statusCode: 500);
+                }
+
+                if (user.IsTwoFactorEnabled)
                 {
                     // Create temp session for 2FA verification
                     var tempToken = await tempSessionService.CreateTempSessionAsync(
@@ -146,11 +152,18 @@ public static class AuthEndpoints
                 var displayName = context.User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
                 var role = context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
 
-                if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(email))
+                if (string.IsNullOrEmpty(userId))
                 {
-                    var user = new AuthUser(userId, email, displayName ?? email, role ?? UserRole.User.ToString());
-                    return Results.Json(new AuthResponse(user, null)); // API keys don't have session expiration
+                    return Results.Unauthorized();
                 }
+
+                if (string.IsNullOrEmpty(email))
+                {
+                    return Results.Unauthorized();
+                }
+
+                var user = new AuthUser(userId, email, displayName ?? email, role ?? UserRole.User.ToString());
+                return Results.Json(new AuthResponse(user, null)); // API keys don't have session expiration
             }
 
             // Fall back to cookie-based session auth
@@ -565,7 +578,12 @@ User must have at least one authentication method remaining (password or another
             var dbSession = await db.UserSessions
                 .FirstOrDefaultAsync(s => s.TokenHash == tokenHash, ct);
 
-            if (dbSession == null || dbSession.RevokedAt != null)
+            if (dbSession == null)
+            {
+                return Results.Unauthorized();
+            }
+
+            if (dbSession.RevokedAt != null)
             {
                 return Results.Unauthorized();
             }
@@ -613,7 +631,12 @@ User must have at least one authentication method remaining (password or another
             var dbSession = await db.UserSessions
                 .FirstOrDefaultAsync(s => s.TokenHash == tokenHash, ct);
 
-            if (dbSession == null || dbSession.RevokedAt != null)
+            if (dbSession == null)
+            {
+                return Results.Unauthorized();
+            }
+
+            if (dbSession.RevokedAt != null)
             {
                 return Results.Unauthorized();
             }

@@ -45,7 +45,15 @@ group.MapPost("/agents/qa", async (
 
     var startTime = DateTime.UtcNow;
     var config = followUpConfig.Value;
-    generateFollowUps = generateFollowUps && config.Enabled; // Apply global feature flag
+    if (config == null)
+    {
+        logger.LogWarning("FollowUpQuestionsConfiguration is null, disabling follow-up generation");
+        generateFollowUps = false;
+    }
+    else
+    {
+        generateFollowUps = generateFollowUps && config.Enabled; // Apply global feature flag
+    }
 
     logger.LogInformation("QA request from user {UserId} for game {GameId}: {Query} (bypassCache: {BypassCache}, generateFollowUps: {GenerateFollowUps})",
         session.User.Id, req.gameId, req.query, bypassCache, generateFollowUps);
@@ -53,7 +61,7 @@ group.MapPost("/agents/qa", async (
     try
     {
         // Persist user query to chat if chatId provided
-        if (req.chatId.HasValue)
+        if (req.chatId != null && req.chatId.HasValue)
         {
             await chatService.AddMessageAsync(
                 req.chatId.Value,
@@ -85,7 +93,7 @@ group.MapPost("/agents/qa", async (
                 .Select(g => g.Name)
                 .FirstOrDefaultAsync(ct);
 
-            if (game != null)
+            if (!string.IsNullOrEmpty(game))
             {
                 followUpQuestions = await followUpService.GenerateQuestionsAsync(
                     originalQuestion: req.query,
@@ -152,7 +160,7 @@ group.MapPost("/agents/qa", async (
         }
 
         // Persist agent response to chat if chatId provided
-        if (req.chatId.HasValue)
+        if (req.chatId != null && req.chatId.HasValue)
         {
             await chatService.AddMessageAsync(
                 req.chatId.Value,
@@ -205,7 +213,7 @@ group.MapPost("/agents/qa", async (
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
         // Persist error to chat if chatId provided
-        if (req.chatId.HasValue)
+        if (req.chatId != null && req.chatId.HasValue)
         {
             try
             {
@@ -269,7 +277,7 @@ group.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context,
     try
     {
         // Persist user query to chat if chatId provided
-        if (req.chatId.HasValue)
+        if (req.chatId != null && req.chatId.HasValue)
         {
             await chatService.AddMessageAsync(
                 req.chatId.Value,
@@ -288,7 +296,7 @@ group.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context,
             req.gameId, resp.estimatedReadingTimeMinutes);
 
         // Persist agent response to chat if chatId provided
-        if (req.chatId.HasValue)
+        if (req.chatId != null && req.chatId.HasValue)
         {
             await chatService.AddMessageAsync(
                 req.chatId.Value,
@@ -340,7 +348,7 @@ group.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context,
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
         // Persist error to chat if chatId provided
-        if (req.chatId.HasValue)
+        if (req.chatId != null && req.chatId.HasValue)
         {
             try
             {
@@ -478,7 +486,15 @@ group.MapPost("/agents/qa/stream", async (
 
     // CHAT-02: Apply global feature flag for follow-up questions
     var config = followUpConfig.Value;
-    generateFollowUps = generateFollowUps && config.Enabled;
+    if (config == null)
+    {
+        logger.LogWarning("FollowUpQuestionsConfiguration is null, disabling follow-up generation");
+        generateFollowUps = false;
+    }
+    else
+    {
+        generateFollowUps = generateFollowUps && config.Enabled;
+    }
 
     var startTime = DateTime.UtcNow;
     logger.LogInformation("Streaming QA request from user {UserId} for game {GameId}: {Query}",
@@ -492,7 +508,7 @@ group.MapPost("/agents/qa/stream", async (
     try
     {
         // Persist user query to chat if chatId provided
-        if (req.chatId.HasValue)
+        if (req.chatId != null && req.chatId.HasValue)
         {
             await chatService.AddMessageAsync(
                 req.chatId.Value,
@@ -621,7 +637,7 @@ group.MapPost("/agents/qa/stream", async (
         logger.LogInformation("Streaming QA completed for game {GameId}, query: {Query}", req.gameId, req.query);
 
         // Persist agent response to chat if chatId provided
-        if (req.chatId.HasValue && !string.IsNullOrWhiteSpace(answer))
+        if (req.chatId != null && req.chatId.HasValue && !string.IsNullOrWhiteSpace(answer))
         {
             await chatService.AddMessageAsync(
                 req.chatId.Value,
@@ -669,7 +685,7 @@ group.MapPost("/agents/qa/stream", async (
         logger.LogError(ex, "Error during streaming QA for game {GameId}, query: {Query}", req.gameId, req.query);
 
         // Persist error to chat if chatId provided
-        if (req.chatId.HasValue)
+        if (req.chatId != null && req.chatId.HasValue)
         {
             try
             {
@@ -751,7 +767,7 @@ group.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context
     try
     {
         // Persist user query to chat if chatId provided
-        if (req.chatId.HasValue)
+        if (req.chatId != null && req.chatId.HasValue)
         {
             await chatService.AddMessageAsync(
                 req.chatId.Value,
@@ -769,7 +785,7 @@ group.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context
             req.gameId, resp.steps.Count, resp.estimatedSetupTimeMinutes);
 
         // Persist agent response to chat if chatId provided
-        if (req.chatId.HasValue)
+        if (req.chatId != null && req.chatId.HasValue)
         {
             var setupSummary = resp.steps.Count > 0
                 ? string.Join("; ", resp.steps.Take(3).Select(s => $"{s.stepNumber}. {s.title}")) + (resp.steps.Count > 3 ? "..." : "")
@@ -833,7 +849,7 @@ group.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
         // Persist error to chat if chatId provided
-        if (req.chatId.HasValue)
+        if (req.chatId != null && req.chatId.HasValue)
         {
             try
             {
@@ -936,7 +952,7 @@ group.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context
     try
     {
         // Persist user query to chat if chatId provided
-        if (req.chatId.HasValue)
+        if (req.chatId != null && req.chatId.HasValue)
         {
             var queryText = !string.IsNullOrWhiteSpace(req.fenPosition)
                 ? $"{req.question} [Position: {req.fenPosition}]"
@@ -973,7 +989,7 @@ group.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context
         }
 
         // Persist agent response to chat if chatId provided
-        if (req.chatId.HasValue)
+        if (req.chatId != null && req.chatId.HasValue)
         {
             await chatService.AddMessageAsync(
                 req.chatId.Value,
@@ -1027,7 +1043,7 @@ group.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context
         var latencyMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
 
         // Persist error to chat if chatId provided
-        if (req.chatId.HasValue)
+        if (req.chatId != null && req.chatId.HasValue)
         {
             try
             {

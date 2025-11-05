@@ -28,8 +28,9 @@ public class TxtExportFormatter : IExportFormatter
         var sb = new StringBuilder();
 
         // Header
+        var gameName = chat.Game?.Name ?? "Unknown Game";
         sb.AppendLine("========================================");
-        sb.AppendLine($"Chat Export: {chat.Game.Name}");
+        sb.AppendLine($"Chat Export: {gameName}");
         sb.AppendLine($"Exported: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
         sb.AppendLine($"Messages: {filteredLogs.Count}");
         sb.AppendLine("========================================");

@@ -98,6 +98,10 @@ public class OAuthService : IOAuthService
         if (oauthAccount != null)
         {
             // Existing OAuth account - update token
+            if (oauthAccount.User == null)
+            {
+                throw new InvalidOperationException("OAuth account found but user entity not loaded");
+            }
             user = oauthAccount.User;
             await UpdateOAuthTokenAsync(oauthAccount, tokenResponse);
             _logger.LogInformation("OAuth login for existing account. Provider: {Provider}, UserId: {UserId}", provider, user.Id);

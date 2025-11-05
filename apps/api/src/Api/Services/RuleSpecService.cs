@@ -222,7 +222,7 @@ public class RuleSpecService
         var numericVersions = versions
             .Select(TryParseNumericVersion)
             .Where(v => v.HasValue)
-            .Select(v => v!.Value)
+            .Select(v => v.Value)
             .ToList();
 
         int? nextNumeric = null;
@@ -394,7 +394,7 @@ public class RuleSpecService
         {
             var authorFilter = filters.Author.Trim();
             query = query.Where(r => r.CreatedBy != null &&
-                (r.CreatedBy.DisplayName!.Contains(authorFilter) ||
+                ((r.CreatedBy.DisplayName != null && r.CreatedBy.DisplayName.Contains(authorFilter)) ||
                  r.CreatedBy.Email.Contains(authorFilter)));
         }
 
@@ -450,7 +450,7 @@ public class RuleSpecService
                     .Split(',', StringSplitOptions.RemoveEmptyEntries)
                     .Select(id => Guid.TryParse(id.Trim(), out var guid) ? guid : (Guid?)null)
                     .Where(id => id.HasValue)
-                    .Select(id => id!.Value)
+                    .Select(id => id.Value)
                     .ToList();
 
                 node = node with

@@ -167,9 +167,15 @@ public class RateLimitService : IRateLimitService
     /// </summary>
     private async Task<T> GetRateLimitValueAsync<T>(string limitType, string role) where T : struct
     {
+        // Guard: This method should only be called when _configService is not null
+        if (_configService == null)
+        {
+            throw new InvalidOperationException("ConfigurationService is required but was not provided");
+        }
+
         // 1. Try DB config with role-specific key (e.g., RateLimit.MaxTokens.admin)
         var roleKey = $"RateLimit.{limitType}.{role}";
-        var value = await _configService!.GetValueAsync<T?>(roleKey);
+        var value = await _configService.GetValueAsync<T?>(roleKey);
         if (value.HasValue)
         {
             var validated = ValidateRateLimit(value.Value, limitType, role);

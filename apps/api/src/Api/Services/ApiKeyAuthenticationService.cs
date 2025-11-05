@@ -69,6 +69,12 @@ public class ApiKeyAuthenticationService
             return ApiKeyValidationResult.Invalid("Invalid, expired, or revoked API key");
         }
 
+        if (apiKeyEntity.User == null)
+        {
+            _logger.LogError("API key found but user entity not loaded. KeyId: {KeyId}", apiKeyEntity.Id);
+            return ApiKeyValidationResult.Invalid("Invalid API key configuration");
+        }
+
         // Update last used timestamp (fire-and-forget, non-blocking)
         _ = UpdateLastUsedAsync(apiKeyEntity.Id);
 

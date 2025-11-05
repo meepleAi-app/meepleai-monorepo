@@ -189,13 +189,19 @@ public class AuthService
             .Include(s => s.User)
             .FirstOrDefaultAsync(s => s.TokenHash == hash, ct);
 
-        if (dbSession == null || dbSession.RevokedAt != null || dbSession.ExpiresAt <= now)
+        if (dbSession == null || dbSession.User == null || dbSession.RevokedAt != null || dbSession.ExpiresAt <= now)
         {
             return null;
         }
 
-        dbSession.LastSeenAt = now;
-        await _db.SaveChangesAsync(ct);
+        // Update last seen (need to query again without AsNoTracking to update)
+        var sessionToUpdate = await _db.UserSessions
+            .FirstOrDefaultAsync(s => s.TokenHash == hash, ct);
+        if (sessionToUpdate != null)
+        {
+            sessionToUpdate.LastSeenAt = now;
+            await _db.SaveChangesAsync(ct);
+        }
 
         var activeSession = new ActiveSession(ToDto(dbSession.User), dbSession.ExpiresAt, now);
 

@@ -66,7 +66,8 @@ public class ChatExportService : IChatExportService
             var stream = await formatter.FormatAsync(chat, dateFrom, dateTo);
 
             // Step 4: Generate safe filename
-            var filename = GenerateSafeFilename(chat.Game.Name, formatter.FileExtension, chatId);
+            var gameName = chat.Game?.Name ?? "Unknown Game";
+            var filename = GenerateSafeFilename(gameName, formatter.FileExtension, chatId);
 
             _logger.LogInformation(
                 "Successfully exported chat {ChatId} for user {UserId} in {Format} format",

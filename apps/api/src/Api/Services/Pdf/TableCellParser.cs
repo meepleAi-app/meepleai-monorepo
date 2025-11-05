@@ -124,7 +124,12 @@ public class TableCellParser : ITableCellParser
             else
             {
                 currentBoundary.ExpandToInclude(character);
-                currentText!.Append(character.Text);
+                // currentText should always be non-null here since it's set with currentBoundary
+                // but we add a defensive check to satisfy the compiler
+                if (currentText != null)
+                {
+                    currentText.Append(character.Text);
+                }
             }
         }
 

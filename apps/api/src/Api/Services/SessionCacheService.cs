@@ -86,9 +86,12 @@ public class SessionCacheService : ISessionCacheService
             _logger.LogDebug("Cached session for hash: {TokenHash} (TTL: {TTL}s)", tokenHash.Substring(0, 8), (int)ttl.TotalSeconds);
 
             // Also add to user's session set for bulk invalidation
-            var userSetKey = GetUserSessionsSetKey(session.User.Id);
-            await db.SetAddAsync(userSetKey, cacheKey);
-            await db.KeyExpireAsync(userSetKey, ttl); // Set same expiration
+            if (session.User != null)
+            {
+                var userSetKey = GetUserSessionsSetKey(session.User.Id);
+                await db.SetAddAsync(userSetKey, cacheKey);
+                await db.KeyExpireAsync(userSetKey, ttl); // Set same expiration
+            }
         }
         catch (RedisConnectionException ex)
         {

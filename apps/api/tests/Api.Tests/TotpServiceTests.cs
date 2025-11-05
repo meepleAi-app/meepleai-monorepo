@@ -50,7 +50,8 @@ public class TotpServiceTests : IDisposable
         _encryptionService = new EncryptionService(dataProtectionProvider, _encLoggerMock.Object);
 
         // Setup auth and audit services (simplified for tests)
-        _authService = new AuthService(_dbContext, sessionCache: null, timeProvider: TimeProvider.System);
+        var mockPasswordHashing = new Mock<IPasswordHashingService>();
+        _authService = new AuthService(_dbContext, mockPasswordHashing.Object, sessionCache: null, timeProvider: TimeProvider.System);
         _auditService = new AuditService(_dbContext, Mock.Of<ILogger<AuditService>>());
 
         // Setup TOTP service

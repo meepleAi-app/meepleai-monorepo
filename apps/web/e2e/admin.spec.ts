@@ -137,7 +137,7 @@ test.describe('Admin dashboard', () => {
 
     await page.waitForResponse((response) => {
       return (
-        response.url().startsWith(`${apiBase}/admin/requests`) &&
+        response.url().startsWith(`${apiBase}/api/v1/admin/requests`) &&
         response.url().includes('endpoint=qa') &&
         response.request().method() === 'GET'
       );

@@ -21,13 +21,29 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
    * Setup: Login and navigate to chat page before each test
    */
   test.beforeEach(async ({ page }) => {
+    // Disable animations to prevent timing issues with framer-motion
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+
     // Login with demo user
     await page.goto('/');
+    await page.waitForLoadState('networkidle');
 
-    // Click first "Get Started Free" button to open auth modal (there are 2 on the page)
+    // Wait for nextjs-portal to disappear (it appears during initial render)
+    await page.waitForFunction(() => {
+      const portals = document.querySelectorAll('nextjs-portal');
+      return portals.length === 0 || Array.from(portals).every(p => {
+        const rect = p.getBoundingClientRect();
+        return rect.width === 0 && rect.height === 0;
+      });
+    }, { timeout: 5000 });
+
+    // Click first "Get Started Free" button to open auth modal
     await page.getByRole('button', { name: 'Get Started Free' }).first().click();
 
-    // Wait for modal to open and fill login form
+    // Wait for modal to open
+    await page.waitForSelector('[role="dialog"]', { state: 'visible', timeout: 5000 });
+
+    // Fill login form
     await page.getByLabel('Email').fill('user@meepleai.dev');
     await page.getByLabel('Password').fill('Demo123!');
     await page.locator('form button[type="submit"]:has-text("Login")').click();

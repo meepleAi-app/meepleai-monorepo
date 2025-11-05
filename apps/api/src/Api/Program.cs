@@ -267,26 +267,6 @@ v1Api.MapAdminEndpoints();
 
 app.Run();
 
-// CHAT-06: Helper method to map ChatLogEntity to ChatMessageResponse (kept for backward compatibility if needed elsewhere)
-static ChatMessageResponse MapToChatMessageResponse(ChatLogEntity entity)
-{
-    return new ChatMessageResponse(
-        entity.Id,
-        entity.ChatId,
-        entity.UserId,
-        entity.Level,
-        entity.Message,
-        entity.SequenceNumber,
-        entity.CreatedAt,
-        entity.UpdatedAt,
-        entity.IsDeleted,
-        entity.DeletedAt,
-        entity.DeletedByUserId,
-        entity.IsInvalidated,
-        entity.MetadataJson
-    );
-}
-
 // OPS-01: Helper method for database migration logic
 static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)
 {

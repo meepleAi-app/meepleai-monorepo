@@ -487,7 +487,7 @@ group.MapPost("/n8n/templates/{id}/import", async (
 .WithTags("N8N")
 .WithDescription("Import an n8n workflow template with parameter substitution");
 
-group.MapPost("/n8n/templates/validate", async (
+group.MapPost("/n8n/templates/validate", (
     ValidateTemplateRequest request,
     N8nTemplateService templateService,
     HttpContext context,
@@ -909,7 +909,7 @@ group.MapGet("/admin/prompts", async (
             CreatedByEmail = t.CreatedBy.Email,
             CreatedAt = t.CreatedAt,
             VersionCount = t.Versions.Count,
-            ActiveVersionNumber = t.Versions.FirstOrDefault(v => v.IsActive)?.VersionNumber
+            ActiveVersionNumber = t.Versions.Where(v => v.IsActive).Select(v => (int?)v.VersionNumber).FirstOrDefault()
         })
         .ToListAsync(ct);
 

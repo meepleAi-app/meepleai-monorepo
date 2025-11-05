@@ -222,7 +222,7 @@ public class RuleSpecService
         var numericVersions = versions
             .Select(TryParseNumericVersion)
             .Where(v => v.HasValue)
-            .Select(v => v.Value)
+            .Select(v => v!.Value) // Safe because of Where clause - null-forgiving operator used
             .ToList();
 
         int? nextNumeric = null;
@@ -450,7 +450,7 @@ public class RuleSpecService
                     .Split(',', StringSplitOptions.RemoveEmptyEntries)
                     .Select(id => Guid.TryParse(id.Trim(), out var guid) ? guid : (Guid?)null)
                     .Where(id => id.HasValue)
-                    .Select(id => id.Value)
+                    .Select(id => id!.Value) // Safe because of Where clause - null-forgiving operator used
                     .ToList();
 
                 node = node with

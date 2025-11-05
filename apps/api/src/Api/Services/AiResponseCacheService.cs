@@ -41,7 +41,7 @@ public class AiResponseCacheService : IAiResponseCacheService
             // by using GetOrCreateAsync with a factory that returns null
             var result = await _hybridCache.GetOrCreateAsync(
                 cacheKey: cacheKey,
-                factory: async _ => (T?)null!,
+                factory: _ => Task.FromResult((T?)null!),
                 tags: null,
                 expiration: null,
                 ct: ct
@@ -98,7 +98,7 @@ public class AiResponseCacheService : IAiResponseCacheService
             // Use GetOrCreateAsync to ensure value is cached with tags
             await _hybridCache.GetOrCreateAsync(
                 cacheKey: cacheKey,
-                factory: async _ => response,
+                factory: _ => Task.FromResult(response),
                 tags: tags,
                 expiration: TimeSpan.FromSeconds(ttlSeconds),
                 ct: ct

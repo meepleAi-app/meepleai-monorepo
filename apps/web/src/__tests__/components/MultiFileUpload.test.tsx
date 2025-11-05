@@ -48,10 +48,11 @@ function createMockFile(name: string, size: number, type: string, content = '%PD
   return file;
 }
 
-// Helper to create FileReader mock
+// Helper to create FileReader mock - returns a new instance for each FileReader() call
 function mockFileReader(result: string) {
-  const mockReader = {
-    readAsArrayBuffer: jest.fn(function (this: any) {
+  (global as any).FileReader = jest.fn(function(this: any) {
+    // Create a NEW instance for each FileReader() call to avoid shared state
+    this.readAsArrayBuffer = jest.fn(function (this: any) {
       const buffer = new ArrayBuffer(result.length);
       const view = new Uint8Array(buffer);
       for (let i = 0; i < result.length; i++) {
@@ -64,13 +65,11 @@ function mockFileReader(result: string) {
           this.onload({ target: { result: buffer } });
         }
       }, 0);
-    }),
-    onload: null as any,
-    onerror: null as any,
-    result: null as any
-  };
-  (global as any).FileReader = jest.fn(() => mockReader);
-  return mockReader;
+    });
+    this.onload = null;
+    this.onerror = null;
+    this.result = null;
+  });
 }
 
 describe('MultiFileUpload Component', () => {
@@ -92,8 +91,8 @@ describe('MultiFileUpload Component', () => {
       failed: 0,
       cancelled: 0
     });
-    // Reset FileReader mock to default
-    mockFileReader('%PDF-1.4');
+    // Reset FileReader mock to default - use '%PDF-' (5 bytes) to match PDF_MAGIC_BYTES constant
+    mockFileReader('%PDF-');
   });
 
   afterEach(() => {
@@ -128,7 +127,7 @@ describe('MultiFileUpload Component', () => {
 
   describe('File Selection via Input', () => {
     it('handles file selection via input', async () => {
-      mockFileReader('%PDF-1.4');
+      mockFileReader('%PDF-');
       render(<MultiFileUpload {...defaultProps} />);
 
       const file = createMockFile('test.pdf', 1000, 'application/pdf');
@@ -152,7 +151,7 @@ describe('MultiFileUpload Component', () => {
     });
 
     it('handles multiple file selection', async () => {
-      mockFileReader('%PDF-1.4');
+      mockFileReader('%PDF-');
       render(<MultiFileUpload {...defaultProps} />);
 
       const files = [
@@ -182,7 +181,7 @@ describe('MultiFileUpload Component', () => {
     });
 
     it('resets input value after selection', async () => {
-      mockFileReader('%PDF-1.4');
+      mockFileReader('%PDF-');
       render(<MultiFileUpload {...defaultProps} />);
 
       const file = createMockFile('test.pdf', 1000, 'application/pdf');
@@ -245,7 +244,7 @@ describe('MultiFileUpload Component', () => {
     });
 
     it('handles file drop', async () => {
-      mockFileReader('%PDF-1.4');
+      mockFileReader('%PDF-');
       render(<MultiFileUpload {...defaultProps} />);
 
       const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
@@ -271,7 +270,7 @@ describe('MultiFileUpload Component', () => {
     });
 
     it('resets dragging state after drop', async () => {
-      mockFileReader('%PDF-1.4');
+      mockFileReader('%PDF-');
       render(<MultiFileUpload {...defaultProps} />);
 
       const dropZone = screen.getByRole('button', { name: /Click to browse files or drag and drop PDFs here/i });
@@ -312,7 +311,7 @@ describe('MultiFileUpload Component', () => {
     });
 
     it('rejects files exceeding 100MB limit', async () => {
-      mockFileReader('%PDF-1.4');
+      mockFileReader('%PDF-');
       render(<MultiFileUpload {...defaultProps} />);
 
       const file = createMockFile('huge.pdf', 105 * 1024 * 1024, 'application/pdf'); // 105 MB
@@ -367,7 +366,7 @@ describe('MultiFileUpload Component', () => {
     });
 
     it('rejects batches exceeding 20 files', async () => {
-      mockFileReader('%PDF-1.4');
+      mockFileReader('%PDF-');
       render(<MultiFileUpload {...defaultProps} />);
 
       const files = Array.from({ length: 21 }, (_, i) =>
@@ -388,7 +387,7 @@ describe('MultiFileUpload Component', () => {
     });
 
     it('shows multiple validation errors for mixed invalid files', async () => {
-      mockFileReader('%PDF-1.4');
+      mockFileReader('%PDF-');
       render(<MultiFileUpload {...defaultProps} />);
 
       const files = [
@@ -412,7 +411,7 @@ describe('MultiFileUpload Component', () => {
     });
 
     it('adds only valid files when some files fail validation', async () => {
-      mockFileReader('%PDF-1.4');
+      mockFileReader('%PDF-');
       render(<MultiFileUpload {...defaultProps} />);
 
       const files = [
@@ -637,7 +636,7 @@ describe('MultiFileUpload Component', () => {
     });
 
     it('hides summary when new files are added', async () => {
-      mockFileReader('%PDF-1.4');
+      mockFileReader('%PDF-');
       mockQueueState = [];
       mockGetStats.mockReturnValue({
         total: 3,
@@ -832,7 +831,7 @@ describe('MultiFileUpload Component', () => {
       }, { timeout: 1000 });
 
       // Then, add valid file with proper PDF header
-      mockFileReader('%PDF-1.4');
+      mockFileReader('%PDF-');
       const validFile = createMockFile('valid.pdf', 1000, 'application/pdf');
 
       await act(async () => {

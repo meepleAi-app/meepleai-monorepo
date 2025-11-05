@@ -1,10 +1,11 @@
+using Api.Constants;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
+using Api.Services.Exceptions;
 using Api.Services.Pdf;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Api.Services.Exceptions;
 
 namespace Api.Services;
 
@@ -26,7 +27,7 @@ public class PdfStorageService
     private readonly IEmbeddingService? _embeddingServiceOverride;
     private readonly IQdrantService? _qdrantServiceOverride;
     private readonly TimeProvider _timeProvider;
-    private const long MaxFileSizeBytes = 50 * 1024 * 1024; // 50 MB
+    private const long MaxFileSizeBytes = FileConstants.MaxPdfFileSizeBytes;
     private static readonly HashSet<string> AllowedContentTypes = new()
     {
         "application/pdf"
@@ -475,7 +476,7 @@ public class PdfStorageService
             for (var i = 0; i < embeddings.Count; i++)
             {
                 var vector = embeddings[i];
-                if (vector == null || vector.Length == 0 || Array.Exists(vector, v => float.IsNaN(v) || float.IsInfinity(v)))
+                if (IsInvalidVector(vector))
                 {
                     invalidEmbeddingIndexes.Add(i);
                 }
@@ -695,6 +696,17 @@ public class PdfStorageService
             _logger.LogWarning(ex, "Unexpected error invalidating AI cache for game {GameId} after {Operation}", gameId, operation);
         }
 #pragma warning restore CA1031
+    }
+
+    /// <summary>
+    /// Validates whether an embedding vector is valid.
+    /// Checks for null, empty, NaN, or infinite values.
+    /// </summary>
+    private static bool IsInvalidVector(float[]? vector)
+    {
+        return vector == null
+            || vector.Length == 0
+            || Array.Exists(vector, v => float.IsNaN(v) || float.IsInfinity(v));
     }
 }
 

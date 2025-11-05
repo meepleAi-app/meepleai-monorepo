@@ -1,11 +1,12 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Microsoft.EntityFrameworkCore;
+using Api.Helpers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Security;
 using Api.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.Services;
 
@@ -548,8 +549,7 @@ public class N8nTemplateService
                 $"Missing or invalid n8n encryption key. Set the {EncryptionKeyConfigName} environment variable to a secure value.");
         }
 
-        using var sha256 = System.Security.Cryptography.SHA256.Create();
-        return sha256.ComputeHash(Encoding.UTF8.GetBytes(key));
+        return CryptographyHelper.ComputeSha256HashBytes(key);
     }
 
     #endregion

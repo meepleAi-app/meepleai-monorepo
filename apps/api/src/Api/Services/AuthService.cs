@@ -1,5 +1,5 @@
 using System.Security.Cryptography;
-using System.Text;
+using Api.Helpers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -192,7 +192,7 @@ public class AuthService
             .Include(s => s.User)
             .FirstOrDefaultAsync(s => s.TokenHash == hash, ct);
 
-        if (dbSession == null || dbSession.User == null || dbSession.RevokedAt != null || dbSession.ExpiresAt <= now)
+        if (!IsSessionValid(dbSession, now))
         {
             return null;
         }
@@ -275,9 +275,19 @@ public class AuthService
 
     private static string HashToken(string token)
     {
-        var bytes = Encoding.UTF8.GetBytes(token);
-        var hash = SHA256.HashData(bytes);
-        return Convert.ToBase64String(hash);
+        return CryptographyHelper.ComputeSha256HashBase64(token);
+    }
+
+    /// <summary>
+    /// Validates whether a session is valid and active.
+    /// Checks for null session, null user, revoked status, and expiration.
+    /// </summary>
+    private static bool IsSessionValid(UserSessionEntity? session, DateTime now)
+    {
+        return session != null
+            && session.User != null
+            && session.RevokedAt == null
+            && session.ExpiresAt > now;
     }
 
     private static AuthUser ToDto(UserEntity user) => new(

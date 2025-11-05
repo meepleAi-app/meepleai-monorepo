@@ -1,3 +1,5 @@
+using Api.Constants;
+
 namespace Api.Services;
 
 /// <summary>
@@ -23,7 +25,7 @@ public interface IAiResponseCacheService
     /// <param name="response">Response to cache</param>
     /// <param name="ttlSeconds">Time-to-live in seconds (default: 24 hours)</param>
     /// <param name="ct">Cancellation token</param>
-    Task SetAsync<T>(string cacheKey, T response, int ttlSeconds = 86400, CancellationToken ct = default) where T : class;
+    Task SetAsync<T>(string cacheKey, T response, int ttlSeconds = TimeConstants.DefaultAiResponseCacheTtlSeconds, CancellationToken ct = default) where T : class;
 
     /// <summary>
     /// Generate cache key for QA endpoint.

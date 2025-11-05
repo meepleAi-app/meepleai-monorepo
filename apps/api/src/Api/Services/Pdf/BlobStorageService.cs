@@ -1,3 +1,4 @@
+using Api.Helpers;
 using Api.Infrastructure.Security;
 
 namespace Api.Services.Pdf;
@@ -198,13 +199,6 @@ public class BlobStorageService : IBlobStorageService
 
     private static string SanitizeFileName(string fileName)
     {
-        // Get OS-specific invalid chars and add additional problematic chars
-        var invalidChars = Path.GetInvalidFileNameChars()
-            .Concat(new[] { '<', '>', '?', '*', '|', '"', ':' })
-            .Distinct()
-            .ToArray();
-
-        var sanitized = string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
-        return sanitized.Length > 200 ? sanitized.Substring(0, 200) : sanitized;
+        return StringHelper.SanitizeFilename(fileName, maxLength: 200, fallbackName: "file");
     }
 }

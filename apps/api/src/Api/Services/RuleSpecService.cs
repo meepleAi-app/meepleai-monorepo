@@ -1,13 +1,14 @@
-using Api.Infrastructure;
-using Api.Infrastructure.Entities;
-using Api.Models;
-using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Api.Helpers;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities;
+using Api.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.Services;
 
@@ -60,7 +61,8 @@ public class RuleSpecService
         return new RuleSpec(pdf.GameId, version, timestamp, atoms);
     }
 
-    // TODO: integra parser PDF (Tabula/Camelot via sidecar) e normalizzazione in RuleSpec
+    // FUTURE ENHANCEMENT: Integrate PDF parser (Tabula/Camelot via sidecar) for automated RuleSpec extraction
+    // This would enable automatic conversion of PDF rulebooks to machine-readable RuleSpec format
     public async Task<RuleSpec> GetOrCreateDemoAsync(string gameId, CancellationToken cancellationToken = default)
     {
         var specEntity = await _dbContext.RuleSpecs
@@ -564,19 +566,6 @@ public class RuleSpecService
     /// </summary>
     private static string SanitizeFileName(string filename)
     {
-        // Remove invalid filename characters
-        var invalid = Path.GetInvalidFileNameChars();
-        var sanitized = new string(filename.Where(c => !invalid.Contains(c)).ToArray());
-
-        // Remove path traversal attempts
-        sanitized = sanitized.Replace("..", "").Replace("/", "_").Replace("\\", "_");
-
-        // Limit length
-        if (sanitized.Length > 50)
-        {
-            sanitized = sanitized.Substring(0, 50);
-        }
-
-        return string.IsNullOrWhiteSpace(sanitized) ? "rulespec" : sanitized;
+        return StringHelper.SanitizeFilename(filename, maxLength: 50, fallbackName: "rulespec");
     }
 }

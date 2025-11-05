@@ -319,8 +319,12 @@ public class ApiKeyManagementService
         // Parse quota from metadata
         var quota = ParseQuotaFromMetadata(apiKey.Metadata);
 
-        // TODO: Implement actual usage tracking from request logs
-        // For now, return placeholder data
+        // FUTURE ENHANCEMENT: Implement actual usage tracking from request logs
+        // This would require:
+        // 1. Middleware to log API key usage per request
+        // 2. Database table to track usage counts (daily/hourly aggregates)
+        // 3. Background job to reset counters and enforce rate limits
+        // For now, return placeholder data with zero usage
         return new ApiKeyQuotaDto
         {
             MaxRequestsPerDay = quota.MaxRequestsPerDay,

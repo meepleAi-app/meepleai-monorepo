@@ -1,5 +1,5 @@
 using System.Security.Cryptography;
-using System.Text;
+using Api.Helpers;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -261,9 +261,7 @@ public class PasswordResetService : IPasswordResetService
 
     private static string HashToken(string token)
     {
-        var bytes = Encoding.UTF8.GetBytes(token);
-        var hash = SHA256.HashData(bytes);
-        return Convert.ToBase64String(hash);
+        return CryptographyHelper.ComputeSha256HashBase64(token);
     }
 
     private string HashPassword(string password)

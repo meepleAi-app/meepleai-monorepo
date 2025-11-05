@@ -77,7 +77,7 @@ export default function AnalyticsDashboard() {
         queryParams.set("roleFilter", roleFilter);
       }
 
-      const data = await api.get<DashboardStatsDto>(`/admin/analytics?${queryParams.toString()}`);
+      const data = await api.get<DashboardStatsDto>(`/api/v1/admin/analytics?${queryParams.toString()}`);
 
       if (!data) {
         throw new Error("Unauthorized or no data returned");

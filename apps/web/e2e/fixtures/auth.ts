@@ -40,36 +40,45 @@ async function setupMockAuth(page: Page, role: 'Admin' | 'Editor' | 'User' = 'Ad
 
 /**
  * Login as admin user - uses mock authentication for reliability
+ * Note: This only sets up auth mocking. Tests should set up their own API endpoint mocks
+ * BEFORE navigating to pages that need those endpoints.
  */
-export async function loginAsAdmin(page: Page) {
+export async function loginAsAdmin(page: Page, skipNavigation: boolean = false) {
   // Setup mock auth before navigating
   await setupMockAuth(page, 'Admin', 'admin@meepleai.dev');
 
-  // Navigate to home page - /auth/me mock will make user appear logged in
-  await page.goto('/');
-  await page.waitForLoadState('networkidle');
-
-  console.log('✅ Mock admin authentication setup complete');
+  // Only navigate if not skipped (allows tests to set up additional mocks first)
+  if (!skipNavigation) {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    console.log('✅ Mock admin authentication setup complete');
+  }
 }
 
 /**
  * Login as editor user - uses mock authentication
  */
-export async function loginAsEditor(page: Page) {
+export async function loginAsEditor(page: Page, skipNavigation: boolean = false) {
   await setupMockAuth(page, 'Editor', 'editor@meepleai.dev');
-  await page.goto('/');
-  await page.waitForLoadState('networkidle');
-  console.log('✅ Mock editor authentication setup complete');
+
+  if (!skipNavigation) {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    console.log('✅ Mock editor authentication setup complete');
+  }
 }
 
 /**
  * Login as regular user - uses mock authentication
  */
-export async function loginAsUser(page: Page) {
+export async function loginAsUser(page: Page, skipNavigation: boolean = false) {
   await setupMockAuth(page, 'User', 'user@meepleai.dev');
-  await page.goto('/');
-  await page.waitForLoadState('networkidle');
-  console.log('✅ Mock user authentication setup complete');
+
+  if (!skipNavigation) {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    console.log('✅ Mock user authentication setup complete');
+  }
 }
 
 /**

@@ -1,3 +1,4 @@
+using Api.Helpers;
 using Api.Services;
 using Api.Services.Chat;
 using Api.Services.Pdf;
@@ -55,6 +56,9 @@ public static class ApplicationServiceExtensions
 
         // CONFIG-01: Dynamic configuration service
         services.AddScoped<IConfigurationService, ConfigurationService>();
+
+        // CONFIG: Configuration helper for 3-tier fallback (Database → Config → Defaults)
+        services.AddScoped<ConfigurationHelper>();
 
         // CONFIG-05: Feature flags service
         services.AddScoped<IFeatureFlagService, FeatureFlagService>();

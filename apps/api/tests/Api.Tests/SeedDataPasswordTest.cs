@@ -29,7 +29,7 @@ public class SeedDataPasswordTest : IClassFixture<WebApplicationFactoryFixture>
     public async Task SeedDataUsersCanLogin()
     {
         // Arrange
-        var scope = _factory.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var authService = scope.ServiceProvider.GetRequiredService<AuthService>();
 
         // Act - Try to login with seed users

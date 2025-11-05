@@ -406,12 +406,14 @@ public class ApiExceptionHandlerMiddlewareTests
         RequestDelegate throwingNext = _ => throw new InvalidOperationException("Boom");
         var middleware = new ApiExceptionHandlerMiddleware(throwingNext, logger, environment.Object);
 
+        using var serviceProvider = new ServiceCollection().AddLogging().BuildServiceProvider();
+        using var responseBody = new MemoryStream();
         var context = new DefaultHttpContext
         {
-            RequestServices = new ServiceCollection().AddLogging().BuildServiceProvider(),
+            RequestServices = serviceProvider,
             TraceIdentifier = "trace-123"
         };
-        context.Response.Body = new MemoryStream();
+        context.Response.Body = responseBody;
         context.Request.Path = "/api/unsafe\r\npath";
         context.Request.Method = "GET";
 

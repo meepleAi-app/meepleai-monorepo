@@ -223,7 +223,7 @@ public class EmbeddingServiceTests
         configWithoutKey.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("openai");
         configWithoutKey.Setup(c => c["OPENAI_API_KEY"]).Returns((string?)null);
 
-        var httpClient = new HttpClient();
+        using var httpClient = new HttpClient();
         var httpClientFactoryMock = new Mock<IHttpClientFactory>();
         httpClientFactoryMock.Setup(f => f.CreateClient("OpenRouter")).Returns(httpClient);
 
@@ -542,7 +542,7 @@ public class EmbeddingServiceTests
         configWithoutApiKey.Setup(c => c["EMBEDDING_PROVIDER"]).Returns("openai");
         configWithoutApiKey.Setup(c => c["OPENAI_API_KEY"]).Returns((string?)null);
 
-        var httpClient = new HttpClient();
+        using var httpClient = new HttpClient();
         var httpClientFactoryMock = new Mock<IHttpClientFactory>();
         httpClientFactoryMock.Setup(f => f.CreateClient("OpenRouter")).Returns(httpClient);
 

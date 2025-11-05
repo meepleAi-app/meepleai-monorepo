@@ -425,14 +425,34 @@ public class N8nTemplateService
         var apiKey = DecryptApiKey(config.ApiKeyEncrypted);
 
         // Parse workflow JSON to add metadata
-        var workflowData = JsonSerializer.Deserialize<JsonElement>(workflowJson);
+        JsonElement workflowData;
+        try
+        {
+            workflowData = JsonSerializer.Deserialize<JsonElement>(workflowJson);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to parse workflow JSON for n8n import");
+            throw new ArgumentException("Invalid workflow JSON format", nameof(workflowJson), ex);
+        }
+
+        // Validate required workflow structure
+        if (!workflowData.TryGetProperty("nodes", out var nodes))
+        {
+            throw new ArgumentException("Workflow JSON is missing required 'nodes' property", nameof(workflowJson));
+        }
+
+        if (!workflowData.TryGetProperty("connections", out var connections))
+        {
+            throw new ArgumentException("Workflow JSON is missing required 'connections' property", nameof(workflowJson));
+        }
 
         // Create n8n workflow creation request
         var createRequest = new
         {
             name = $"{workflowName} (Imported)",
-            nodes = workflowData.GetProperty("nodes"),
-            connections = workflowData.GetProperty("connections"),
+            nodes = nodes,
+            connections = connections,
             settings = workflowData.TryGetProperty("settings", out var settings)
                 ? settings
                 : (object)new { },

@@ -120,6 +120,182 @@ public class RagEvaluationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task LoadDatasetAsync_NestedRelativePath_LoadsSuccessfully()
+    {
+        // Arrange - Create a nested directory structure
+        var allowedDir = Path.Combine(Path.GetTempPath(), $"rag-eval-test-{Guid.NewGuid()}");
+        var nestedDir = Path.Combine(allowedDir, "samples", "set1");
+        Directory.CreateDirectory(nestedDir);
+
+        var testService = new RagEvaluationService(
+            _qdrantServiceMock.Object,
+            _embeddingServiceMock.Object,
+            _mockLogger.Object,
+            allowedDir);
+
+        var dataset = new RagEvaluationDataset
+        {
+            Name = "Nested Dataset",
+            Version = "1.0",
+            Queries = new List<RagEvaluationQuery>
+            {
+                new RagEvaluationQuery
+                {
+                    Id = "nested-001",
+                    GameId = "test-game",
+                    Query = "Test query",
+                    RelevantDocIds = new List<string> { "doc-1" }
+                }
+            }
+        };
+
+        var nestedFilePath = Path.Combine(nestedDir, "dataset.json");
+        var json = JsonSerializer.Serialize(dataset);
+        await File.WriteAllTextAsync(nestedFilePath, json);
+
+        try
+        {
+            // Act - Use relative path with subdirectories
+            var loaded = await testService.LoadDatasetAsync("samples/set1/dataset.json");
+
+            // Assert
+            loaded.Should().NotBeNull();
+            loaded.Name.Should().Be("Nested Dataset");
+        }
+        finally
+        {
+            // Cleanup
+            if (Directory.Exists(allowedDir))
+                Directory.Delete(allowedDir, true);
+        }
+    }
+
+    [Fact]
+    public async Task LoadDatasetAsync_NestedAbsolutePath_LoadsSuccessfully()
+    {
+        // Arrange - Create a nested directory structure
+        var allowedDir = Path.Combine(Path.GetTempPath(), $"rag-eval-test-{Guid.NewGuid()}");
+        var nestedDir = Path.Combine(allowedDir, "samples", "set2");
+        Directory.CreateDirectory(nestedDir);
+
+        var testService = new RagEvaluationService(
+            _qdrantServiceMock.Object,
+            _embeddingServiceMock.Object,
+            _mockLogger.Object,
+            allowedDir);
+
+        var dataset = new RagEvaluationDataset
+        {
+            Name = "Nested Absolute Dataset",
+            Version = "1.0",
+            Queries = new List<RagEvaluationQuery>
+            {
+                new RagEvaluationQuery
+                {
+                    Id = "nested-002",
+                    GameId = "test-game",
+                    Query = "Test query",
+                    RelevantDocIds = new List<string> { "doc-1" }
+                }
+            }
+        };
+
+        var absoluteFilePath = Path.Combine(nestedDir, "dataset.json");
+        var json = JsonSerializer.Serialize(dataset);
+        await File.WriteAllTextAsync(absoluteFilePath, json);
+
+        try
+        {
+            // Act - Use absolute path to nested file
+            var loaded = await testService.LoadDatasetAsync(absoluteFilePath);
+
+            // Assert
+            loaded.Should().NotBeNull();
+            loaded.Name.Should().Be("Nested Absolute Dataset");
+        }
+        finally
+        {
+            // Cleanup
+            if (Directory.Exists(allowedDir))
+                Directory.Delete(allowedDir, true);
+        }
+    }
+
+    [Fact]
+    public async Task LoadDatasetAsync_AbsolutePathOutsideAllowedDirectory_ThrowsSecurityException()
+    {
+        // Arrange - Create two separate directories
+        var allowedDir = Path.Combine(Path.GetTempPath(), $"rag-eval-allowed-{Guid.NewGuid()}");
+        var forbiddenDir = Path.Combine(Path.GetTempPath(), $"rag-eval-forbidden-{Guid.NewGuid()}");
+        Directory.CreateDirectory(allowedDir);
+        Directory.CreateDirectory(forbiddenDir);
+
+        var testService = new RagEvaluationService(
+            _qdrantServiceMock.Object,
+            _embeddingServiceMock.Object,
+            _mockLogger.Object,
+            allowedDir);
+
+        var dataset = new RagEvaluationDataset
+        {
+            Name = "Forbidden Dataset",
+            Version = "1.0",
+            Queries = new List<RagEvaluationQuery> { }
+        };
+
+        var forbiddenFilePath = Path.Combine(forbiddenDir, "dataset.json");
+        var json = JsonSerializer.Serialize(dataset);
+        await File.WriteAllTextAsync(forbiddenFilePath, json);
+
+        try
+        {
+            // Act & Assert - Absolute path outside allowed directory should fail
+            var act = async () => await testService.LoadDatasetAsync(forbiddenFilePath);
+            await act.Should().ThrowAsync<System.Security.SecurityException>()
+                .WithMessage("*Path traversal*");
+        }
+        finally
+        {
+            // Cleanup
+            if (Directory.Exists(allowedDir))
+                Directory.Delete(allowedDir, true);
+            if (Directory.Exists(forbiddenDir))
+                Directory.Delete(forbiddenDir, true);
+        }
+    }
+
+    [Theory]
+    [InlineData("../../etc/passwd")]
+    [InlineData("../../../sensitive.json")]
+    [InlineData("..\\..\\Windows\\config.json")]
+    public async Task LoadDatasetAsync_PathTraversalAttempt_ThrowsSecurityException(string maliciousPath)
+    {
+        // Arrange
+        var allowedDir = Path.Combine(Path.GetTempPath(), $"rag-eval-security-{Guid.NewGuid()}");
+        Directory.CreateDirectory(allowedDir);
+
+        var testService = new RagEvaluationService(
+            _qdrantServiceMock.Object,
+            _embeddingServiceMock.Object,
+            _mockLogger.Object,
+            allowedDir);
+
+        try
+        {
+            // Act & Assert
+            var act = async () => await testService.LoadDatasetAsync(maliciousPath);
+            await act.Should().ThrowAsync<System.Security.SecurityException>()
+                .WithMessage("*Path traversal*");
+        }
+        finally
+        {
+            // Cleanup
+            if (Directory.Exists(allowedDir))
+                Directory.Delete(allowedDir, true);
+        }
+    }
+
+    [Fact]
     public async Task EvaluateAsync_PerfectResults_AllMetricsOne()
     {
         // Arrange

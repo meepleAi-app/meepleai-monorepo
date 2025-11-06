@@ -9,6 +9,7 @@ import OAuthButtons from '../OAuthButtons';
 
 describe('OAuthButtons', () => {
   const originalEnv = process.env;
+  const originalLocation = window.location;
 
   // Helper function to create a spy for window.location.href assignment
   // Note: Mocking window.location.href in jsdom is challenging due to jsdom's
@@ -20,6 +21,14 @@ describe('OAuthButtons', () => {
     delete (window as any).location;
     (window as any).location = {
       href: 'http://localhost/',
+      origin: 'http://localhost',
+      protocol: 'http:',
+      host: 'localhost',
+      hostname: 'localhost',
+      port: '',
+      pathname: '/',
+      search: '',
+      hash: '',
       get href() {
         return this._href || 'http://localhost/';
       },
@@ -29,7 +38,8 @@ describe('OAuthButtons', () => {
       },
       _href: 'http://localhost/',
       assign: jest.fn(),
-      reload: jest.fn()
+      reload: jest.fn(),
+      replace: jest.fn()
     };
     return spy;
   };
@@ -41,6 +51,8 @@ describe('OAuthButtons', () => {
 
   afterEach(() => {
     process.env = originalEnv;
+    // Restore original window.location to prevent mock from leaking to other tests
+    window.location = originalLocation;
   });
 
   describe('Rendering', () => {

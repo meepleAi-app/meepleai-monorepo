@@ -212,6 +212,9 @@ using (var scope = app.Services.CreateScope())
 
         app.Logger.LogInformation("✓ Embedding configuration validated: Provider={Provider}, Model={Model}, Dimensions={Dimensions}",
             provider, model, embeddingDimensions);
+
+        // Bootstrap: Create initial admin user if database is empty
+        await EnsureInitialAdminUserAsync(app, db, scope.ServiceProvider);
     }
 }
 
@@ -266,6 +269,108 @@ v1Api.MapChatEndpoints();
 v1Api.MapAdminEndpoints();
 
 app.Run();
+
+// Bootstrap: Create initial admin user if database is empty
+static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbContext db, IServiceProvider services)
+{
+    // Skip in test environments
+    if (app.Environment.IsEnvironment("Testing"))
+    {
+        return;
+    }
+
+    // Check if any admin users exist
+    var hasAdminUser = await db.Users
+        .AnyAsync(u => u.Role == UserRole.Admin);
+
+    if (hasAdminUser)
+    {
+        app.Logger.LogInformation("Admin user already exists, skipping bootstrap");
+        return;
+    }
+
+    // Get admin credentials from environment variables
+    var adminEmail = app.Configuration["INITIAL_ADMIN_EMAIL"];
+    var adminPassword = app.Configuration["INITIAL_ADMIN_PASSWORD"];
+    var adminDisplayName = app.Configuration["INITIAL_ADMIN_DISPLAY_NAME"] ?? "System Admin";
+
+    if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+    {
+        app.Logger.LogWarning(
+            "⚠️  No admin user found and INITIAL_ADMIN_EMAIL/INITIAL_ADMIN_PASSWORD not set. " +
+            "Please create an admin user manually or set environment variables."
+        );
+        return;
+    }
+
+    // Validate email format
+    if (!adminEmail.Contains('@'))
+    {
+        app.Logger.LogError("Invalid INITIAL_ADMIN_EMAIL format: {Email}", adminEmail);
+        return;
+    }
+
+    // Validate password strength (minimum 8 chars, at least one uppercase, one digit)
+    if (adminPassword.Length < 8 ||
+        !adminPassword.Any(char.IsUpper) ||
+        !adminPassword.Any(char.IsDigit))
+    {
+        app.Logger.LogError(
+            "INITIAL_ADMIN_PASSWORD must be at least 8 characters with uppercase and digit"
+        );
+        return;
+    }
+
+    try
+    {
+        // Hash the password using PBKDF2
+        var passwordHashingService = services.GetRequiredService<IPasswordHashingService>();
+        var passwordHash = passwordHashingService.HashSecret(adminPassword);
+
+        // Create admin user
+        var adminUser = new UserEntity
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            Email = adminEmail,
+            DisplayName = adminDisplayName,
+            PasswordHash = passwordHash,
+            Role = UserRole.Admin,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        db.Users.Add(adminUser);
+        await db.SaveChangesAsync();
+
+        app.Logger.LogInformation(
+            "✅ Initial admin user created successfully: {Email} (ID: {UserId})",
+            adminEmail,
+            adminUser.Id
+        );
+
+        // Audit log
+        var auditLog = new AuditLogEntity
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            UserId = null, // System-generated
+            Action = "BOOTSTRAP_ADMIN_CREATED",
+            Resource = "User",
+            ResourceId = adminUser.Id,
+            Result = "Success",
+            Details = $"Initial admin user created: {adminEmail}",
+            IpAddress = "system",
+            UserAgent = "bootstrap",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        db.AuditLogs.Add(auditLog);
+        await db.SaveChangesAsync();
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Failed to create initial admin user");
+        throw;
+    }
+}
 
 // OPS-01: Helper method for database migration logic
 static bool ShouldSkipMigrations(WebApplication app, MeepleAiDbContext db)

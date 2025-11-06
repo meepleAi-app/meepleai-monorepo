@@ -692,8 +692,17 @@ public class TotpServiceTests : IDisposable
 
     public void Dispose()
     {
-        _dbContext.Database.EnsureDeleted();
-        _dbContext.Dispose();
-        _serviceProvider.Dispose();
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _dbContext.Database.EnsureDeleted();
+            _dbContext.Dispose();
+            _serviceProvider.Dispose();
+        }
     }
 }

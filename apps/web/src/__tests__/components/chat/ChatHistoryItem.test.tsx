@@ -5,7 +5,7 @@
 
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ChatHistoryItem } from '../ChatHistoryItem';
+import { ChatHistoryItem } from '@/components/chat/ChatHistoryItem';
 import { Chat } from '@/types';
 
 describe('ChatHistoryItem', () => {

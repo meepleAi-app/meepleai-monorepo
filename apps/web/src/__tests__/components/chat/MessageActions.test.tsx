@@ -5,7 +5,7 @@
 
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MessageActions } from '../MessageActions';
+import { MessageActions } from '@/components/chat/MessageActions';
 import { Message } from '@/types';
 
 describe('MessageActions', () => {

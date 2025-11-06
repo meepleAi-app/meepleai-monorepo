@@ -365,11 +365,62 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
         db.AuditLogs.Add(auditLog);
         await db.SaveChangesAsync();
     }
+    catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+    {
+        // Race condition: Another instance created the admin user simultaneously
+        // Recheck if an admin user now exists
+        var adminNowExists = await db.Users
+            .AnyAsync(u => u.Role == UserRole.Admin);
+
+        if (adminNowExists)
+        {
+            app.Logger.LogInformation(
+                "ℹ️  Admin user creation skipped: Another instance created the admin user concurrently"
+            );
+            return;
+        }
+
+        // If no admin exists, this is an unexpected error - rethrow
+        app.Logger.LogError(ex, "Unique constraint violation but no admin user found");
+        throw;
+    }
     catch (Exception ex)
     {
         app.Logger.LogError(ex, "Failed to create initial admin user");
         throw;
     }
+}
+
+// Helper method to detect unique constraint violations across database providers
+static bool IsUniqueConstraintViolation(DbUpdateException ex)
+{
+    var innerException = ex.InnerException;
+    if (innerException == null)
+    {
+        return false;
+    }
+
+    var message = innerException.Message.ToLowerInvariant();
+
+    // PostgreSQL: "23505: duplicate key value violates unique constraint"
+    if (message.Contains("23505") || message.Contains("duplicate key"))
+    {
+        return true;
+    }
+
+    // SQLite: "UNIQUE constraint failed"
+    if (message.Contains("unique constraint"))
+    {
+        return true;
+    }
+
+    // SQL Server: "Cannot insert duplicate key"
+    if (message.Contains("cannot insert duplicate key") || message.Contains("violation of unique key"))
+    {
+        return true;
+    }
+
+    return false;
 }
 
 // OPS-01: Helper method for database migration logic

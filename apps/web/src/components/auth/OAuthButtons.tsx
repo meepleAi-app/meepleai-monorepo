@@ -10,7 +10,7 @@ export default function OAuthButtons({ onOAuthLogin }: OAuthButtonsProps) {
       onOAuthLogin(provider);
     } else {
       const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
-      window.location.href = `${apiBase}/api/v1/auth/oauth/${provider}/login`;
+      window.location.assign(`${apiBase}/api/v1/auth/oauth/${provider}/login`);
     }
   };
 

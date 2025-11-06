@@ -4,15 +4,19 @@
  */
 
 import { render } from '@testing-library/react';
-import { PrismHighlighter } from '../PrismHighlighter';
 
-// Mock Prism
+// Mock Prism BEFORE importing component
 jest.mock('prismjs', () => ({
   highlight: jest.fn((code) => `<span class="highlighted">${code}</span>`),
   languages: {
     json: {},
   },
 }));
+
+// Mock the JSON language component
+jest.mock('prismjs/components/prism-json', () => ({}));
+
+import { PrismHighlighter } from '../PrismHighlighter';
 
 describe('PrismHighlighter', () => {
   beforeEach(() => {

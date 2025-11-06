@@ -7,6 +7,23 @@ import { toHaveNoViolations } from 'jest-axe'
 // Extend Jest matchers with jest-axe for accessibility testing
 expect.extend(toHaveNoViolations)
 
+// Mock Prism.js globally to avoid "Prism is not defined" errors
+// Prism.js requires a global Prism object when loading language modules
+global.Prism = {
+  highlight: jest.fn((code) => code),
+  languages: {
+    json: {},
+  },
+  highlightAll: jest.fn(),
+  highlightElement: jest.fn(),
+};
+
+// Mock prismjs module
+jest.mock('prismjs', () => global.Prism, { virtual: true });
+
+// Mock prismjs/components/prism-json
+jest.mock('prismjs/components/prism-json', () => ({}), { virtual: true });
+
 // Mock framer-motion to avoid animation issues in tests
 jest.mock('framer-motion', () => {
   const React = require('react');

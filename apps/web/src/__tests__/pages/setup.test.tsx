@@ -97,9 +97,9 @@ describe('SetupPage', () => {
 
       await waitForApiCall(mockApi.get, '/api/v1/auth/me');
 
-      expect(screen.getByRole('heading', { name: 'Login Required' })).toBeInTheDocument();
-      expect(screen.getByText('You must be logged in to use the setup guide.')).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Go to Login' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Accesso richiesto' })).toBeInTheDocument();
+      expect(screen.getByText('Devi effettuare l\'accesso per utilizzare la guida alla configurazione.')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Vai al Login' })).toBeInTheDocument();
     });
 
     it('shows authenticated interface when user is logged in', async () => {
@@ -121,7 +121,7 @@ describe('SetupPage', () => {
 
       await waitForApiCall(mockApi.get, '/api/v1/auth/me');
 
-      expect(screen.getByRole('heading', { name: 'Login Required' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Accesso richiesto' })).toBeInTheDocument();
 
       consoleErrorSpy.mockRestore();
     });

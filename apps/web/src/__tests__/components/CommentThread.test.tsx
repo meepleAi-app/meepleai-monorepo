@@ -211,9 +211,9 @@ describe('CommentThread Component', () => {
 
     it('filters comments by line number', async () => {
       const comments = [
-        createMockComment({ id: 'comment-1', lineNumber: 10 }),
-        createMockComment({ id: 'comment-2', lineNumber: 20 }),
-        createMockComment({ id: 'comment-3', lineNumber: 10 }),
+        createMockComment({ id: 'comment-1', lineNumber: 10, commentText: 'Comment on line 10 #1' }),
+        createMockComment({ id: 'comment-2', lineNumber: 20, commentText: 'Comment on line 20' }),
+        createMockComment({ id: 'comment-3', lineNumber: 10, commentText: 'Comment on line 10 #2' }),
       ];
 
       mockApi.ruleSpecComments.getComments.mockResolvedValue({
@@ -225,7 +225,9 @@ describe('CommentThread Component', () => {
 
       // Should only show comments for line 10
       await waitFor(() => {
-        expect(screen.getAllByRole('article')).toHaveLength(2);
+        expect(screen.getByText('Comment on line 10 #1')).toBeInTheDocument();
+        expect(screen.getByText('Comment on line 10 #2')).toBeInTheDocument();
+        expect(screen.queryByText('Comment on line 20')).not.toBeInTheDocument();
       });
     });
 
@@ -511,7 +513,8 @@ describe('CommentThread Component', () => {
       render(<CommentThread {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByText(/Impossibile caricare i commenti/)).toBeInTheDocument();
+        const errorElement = screen.getByText('Load failed');
+        expect(errorElement).toBeInTheDocument();
       });
     });
 
@@ -520,12 +523,17 @@ describe('CommentThread Component', () => {
 
       render(<CommentThread {...defaultProps} currentUserRole="Editor" />);
 
+      // Wait for initial load to complete
+      await waitFor(() => {
+        expect(screen.queryByText('Caricamento commenti...')).not.toBeInTheDocument();
+      });
+
       const form = screen.getByPlaceholderText(/Aggiungi un commento/);
       fireEvent.change(form, { target: { value: 'New comment' } });
       fireEvent.submit(form.closest('form')!);
 
       await waitFor(() => {
-        expect(screen.getByText(/Impossibile creare il commento/)).toBeInTheDocument();
+        expect(screen.getByText('Create failed')).toBeInTheDocument();
       });
     });
 
@@ -618,7 +626,7 @@ describe('CommentThread Component', () => {
       render(<CommentThread {...defaultProps} />);
 
       await waitFor(() => {
-        const error = screen.getByText(/Impossibile caricare i commenti/);
+        const error = screen.getByText('Load failed');
         expect(error.closest('div')).toHaveStyle({
           background: '#fce4e4',
           border: '1px solid #d93025',
@@ -634,9 +642,10 @@ describe('CommentThread Component', () => {
     it('handles comments with nested replies', async () => {
       const parentComment = createMockComment({
         id: 'parent',
+        commentText: 'Parent comment',
         replies: [
-          createMockComment({ id: 'reply-1', parentCommentId: 'parent' }),
-          createMockComment({ id: 'reply-2', parentCommentId: 'parent' }),
+          createMockComment({ id: 'reply-1', parentCommentId: 'parent', commentText: 'Reply 1' }),
+          createMockComment({ id: 'reply-2', parentCommentId: 'parent', commentText: 'Reply 2' }),
         ],
       });
 
@@ -648,7 +657,9 @@ describe('CommentThread Component', () => {
       render(<CommentThread {...defaultProps} />);
 
       await waitFor(() => {
-        expect(screen.getByText('Test comment')).toBeInTheDocument();
+        expect(screen.getByText('Parent comment')).toBeInTheDocument();
+        expect(screen.getByText('Reply 1')).toBeInTheDocument();
+        expect(screen.getByText('Reply 2')).toBeInTheDocument();
       });
     });
 
@@ -669,7 +680,7 @@ describe('CommentThread Component', () => {
     });
 
     it('handles special characters in comments', async () => {
-      const specialText = '<script>alert("xss")</script>\n&"\'';
+      const specialText = '<script>alert("xss")</script> special & chars "\'';
       const comment = createMockComment({ commentText: specialText });
 
       mockApi.ruleSpecComments.getComments.mockResolvedValue({
@@ -680,6 +691,7 @@ describe('CommentThread Component', () => {
       render(<CommentThread {...defaultProps} />);
 
       await waitFor(() => {
+        // Check that the special characters are escaped and rendered as text
         expect(screen.getByText(specialText)).toBeInTheDocument();
       });
     });

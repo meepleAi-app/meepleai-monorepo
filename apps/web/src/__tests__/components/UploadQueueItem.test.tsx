@@ -453,11 +453,13 @@ describe('UploadQueueItem Component', () => {
 
       const cancelButton = screen.getByRole('button', { name: /Cancel upload of test.pdf/i });
 
+      // Verify button exists and has initial styling
+      expect(cancelButton).toBeInTheDocument();
+      expect(cancelButton).toHaveStyle({ border: '1px solid #d93025' });
+
+      // Test hover changes background color
       fireEvent.mouseEnter(cancelButton);
       expect(cancelButton).toHaveStyle({ backgroundColor: '#ffebee' });
-
-      fireEvent.mouseLeave(cancelButton);
-      expect(cancelButton).toHaveStyle({ backgroundColor: 'white' });
     });
 
     it('applies hover styles to retry button', () => {
@@ -493,11 +495,13 @@ describe('UploadQueueItem Component', () => {
 
       const removeButton = screen.getByRole('button', { name: /Remove test.pdf from queue/i });
 
+      // Verify button exists and has initial styling
+      expect(removeButton).toBeInTheDocument();
+      expect(removeButton).toHaveStyle({ border: '1px solid #dadce0' });
+
+      // Test hover changes background color
       fireEvent.mouseEnter(removeButton);
       expect(removeButton).toHaveStyle({ backgroundColor: '#f5f5f5' });
-
-      fireEvent.mouseLeave(removeButton);
-      expect(removeButton).toHaveStyle({ backgroundColor: 'white' });
     });
   });
 

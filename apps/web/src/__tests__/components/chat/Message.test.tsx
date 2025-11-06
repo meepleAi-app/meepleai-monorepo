@@ -35,7 +35,7 @@ jest.mock('../../../components/chat/MessageEditForm', () => ({
 // Mock FollowUpQuestions component
 jest.mock('../../../components/FollowUpQuestions', () => ({
   FollowUpQuestions: ({ questions, onQuestionClick, disabled }: any) => (
-    <div data-testid="follow-up-questions" data-disabled={disabled}>
+    <div data-disabled={disabled ? 'true' : 'false'}>
       {questions.map((q: string, i: number) => (
         <button key={i} onClick={() => onQuestionClick(q)}>
           {q}
@@ -116,7 +116,10 @@ describe('Message Component', () => {
       const message = createMessage({ content });
       render(<Message message={message} isUser={true} />);
 
-      const contentElement = screen.getByText(content);
+      // Use a function matcher for multiline text
+      const contentElement = screen.getByText((_, element) => {
+        return element?.textContent === content;
+      });
       expect(contentElement).toHaveStyle({ whiteSpace: 'pre-wrap' });
     });
   });
@@ -268,7 +271,9 @@ describe('Message Component', () => {
       });
       render(<Message message={message} isUser={false} />);
 
-      expect(screen.getByTestId('follow-up-questions')).toBeInTheDocument();
+      // The component wraps FollowUpQuestions with a div that has the data-testid
+      const followUpContainer = screen.getByTestId('follow-up-questions');
+      expect(followUpContainer).toBeInTheDocument();
       expect(screen.getByText('Question 1?')).toBeInTheDocument();
       expect(screen.getByText('Question 2?')).toBeInTheDocument();
       expect(screen.getByText('Question 3?')).toBeInTheDocument();
@@ -313,7 +318,9 @@ describe('Message Component', () => {
       });
       render(<Message message={message} isUser={false} />);
 
-      const followUpQuestions = screen.getByTestId('follow-up-questions');
+      // The mock FollowUpQuestions component sets data-disabled on its root div
+      const followUpContainer = screen.getByTestId('follow-up-questions');
+      const followUpQuestions = followUpContainer.querySelector('[data-disabled]');
       expect(followUpQuestions).toHaveAttribute('data-disabled', 'true');
     });
   });
@@ -326,7 +333,8 @@ describe('Message Component', () => {
       const message = createMessage();
       const { container } = render(<Message message={message} isUser={true} />);
 
-      const bubble = container.querySelector('[style*="maxWidth"]');
+      // The message bubble is the first div child of the li element
+      const bubble = container.querySelector('li > div');
       expect(bubble).toHaveStyle({ maxWidth: '75%' });
     });
   });
@@ -382,7 +390,11 @@ describe('Message Component', () => {
       const message = createMessage({ content: specialContent });
       render(<Message message={message} isUser={true} />);
 
-      expect(screen.getByText(specialContent)).toBeInTheDocument();
+      // Use a function matcher for multiline text with special characters
+      const contentElement = screen.getByText((_, element) => {
+        return element?.textContent === specialContent;
+      });
+      expect(contentElement).toBeInTheDocument();
     });
 
     it('handles missing followUpQuestions property', () => {

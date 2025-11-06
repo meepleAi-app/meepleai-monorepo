@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 
 export interface DiffSearchInputProps {
   value: string;
@@ -18,18 +18,31 @@ export function DiffSearchInput({
   matchCount
 }: DiffSearchInputProps) {
   const [localValue, setLocalValue] = useState(value);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setLocalValue(newValue);
 
+    // Clear previous timeout if it exists
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
     // Debounce onChange callback (300ms)
-    const timeoutId = setTimeout(() => {
+    debounceTimerRef.current = setTimeout(() => {
       onChange(newValue);
     }, 300);
-
-    return () => clearTimeout(timeoutId);
   }, [onChange]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleClear = () => {
     setLocalValue('');

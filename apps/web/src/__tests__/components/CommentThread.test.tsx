@@ -385,7 +385,6 @@ describe('CommentThread Component', () => {
 
       // Find and click edit button (CommentItem should render this)
       const editButton = container.querySelector('[aria-label="Modifica commento"]') ||
-                         container.querySelector('button:has([data-icon="edit"])') ||
                          screen.queryByText('Modifica');
 
       if (editButton) {

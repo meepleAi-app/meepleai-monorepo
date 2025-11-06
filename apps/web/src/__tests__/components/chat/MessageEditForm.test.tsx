@@ -5,16 +5,16 @@
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MessageEditForm } from '../MessageEditForm';
-import { ChatContextValue } from '../ChatProvider';
+import { MessageEditForm } from '@/components/chat/MessageEditForm';
+import { ChatContextValue } from '@/components/chat/ChatProvider';
 import React from 'react';
 
 // Mock ChatProvider context
-jest.mock('../ChatProvider', () => ({
+jest.mock('@/components/chat/ChatProvider', () => ({
   useChatContext: jest.fn()
 }));
 
-import { useChatContext } from '../ChatProvider';
+import { useChatContext } from '@/components/chat/ChatProvider';
 const mockUseChatContext = useChatContext as jest.MockedFunction<typeof useChatContext>;
 
 describe('MessageEditForm', () => {

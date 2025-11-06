@@ -108,7 +108,7 @@ describe('DiffToolbar', () => {
       const user = userEvent.setup({ delay: null });
       const mockOnSearchChange = jest.fn();
 
-      render(<DiffToolbar {...defaultProps} onSearchChange={mockOnSearchChange} />);
+      render(<DiffToolbar {...defaultProps} onSearchChange={mockOnSearchChange} searchQuery="test" />);
 
       const clearButton = screen.getByLabelText('Clear search');
       await user.click(clearButton);

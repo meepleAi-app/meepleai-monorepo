@@ -13,19 +13,20 @@ describe('OAuthButtons', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env = { ...originalEnv };
-    // Mock window.location with assignment capability
+    process.env = { ...originalEnv, NEXT_PUBLIC_API_BASE: 'http://localhost:8080' };
+    // Mock window.location - use Object.defineProperty with getter/setter
     delete (window as any).location;
-    (window as any).location = {
-      href: 'http://localhost/',
+    const mockLocation = {
+      _href: 'http://localhost/',
       assign: jest.fn(),
       reload: jest.fn()
     };
-    // Store original href setter behavior
-    Object.defineProperty(window.location, 'href', {
-      writable: true,
-      value: 'http://localhost/'
+    Object.defineProperty(mockLocation, 'href', {
+      get() { return this._href; },
+      set(value) { this._href = value; },
+      configurable: true
     });
+    (window as any).location = mockLocation;
   });
 
   afterEach(() => {

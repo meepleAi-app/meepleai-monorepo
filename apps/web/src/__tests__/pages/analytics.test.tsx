@@ -225,7 +225,7 @@ describe('AnalyticsDashboard', () => {
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(
-          expect.stringContaining('/admin/analytics/export'),
+          expect.stringContaining('/api/v1/admin/analytics/export'),
           expect.objectContaining({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -273,7 +273,7 @@ describe('AnalyticsDashboard', () => {
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(
-          expect.stringContaining('/admin/analytics/export'),
+          expect.stringContaining('/api/v1/admin/analytics/export'),
           expect.objectContaining({
             method: 'POST',
             body: expect.stringContaining('"format":"json"'),
@@ -525,7 +525,7 @@ describe('AnalyticsDashboard', () => {
 
       await waitFor(() => {
         expect(mockApi.get).toHaveBeenCalledWith(
-          expect.stringMatching(/^\/admin\/analytics\?days=\d+$/)
+          expect.stringMatching(/^\/api\/v1\/admin\/analytics\?days=\d+$/)
         );
       });
     });
@@ -748,7 +748,7 @@ describe('AnalyticsDashboard', () => {
 
       await waitFor(() => {
         expect(mockApi.get).toHaveBeenCalledWith(
-          expect.stringMatching(/\/admin\/analytics\?days=\d+/)
+          expect.stringMatching(/\/api\/v1\/admin\/analytics\?days=\d+/)
         );
       });
     });

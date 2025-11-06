@@ -306,7 +306,7 @@ describe('Timer Test Helpers', () => {
       expect(execution).toEqual([1, 2]);
     });
 
-    it('should not advance real Date', () => {
+    it('should advance fake Date when running timers', () => {
       const before = Date.now();
 
       setTimeout(() => {
@@ -317,8 +317,9 @@ describe('Timer Test Helpers', () => {
 
       const after = Date.now();
 
-      // Date.now() should still be mocked and not advance significantly
-      expect(after - before).toBeLessThan(100);
+      // Date.now() should advance by at least the timer duration (1000ms)
+      // since jest.runAllTimers() advances the fake timer clock
+      expect(after - before).toBeGreaterThanOrEqual(1000);
     });
   });
 

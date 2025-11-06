@@ -72,6 +72,7 @@ tools/             - PowerShell scripts
 - **Entities**: User/Auth, Game/RuleSpec, PDF/Vector docs, Chat logs, AI logs, Agents, N8n config, API keys, Sessions, OAuth accounts, Alerts
 - **Migrations**: Auto-applied in `Program.cs` (search `Database.Migrate`)
 - **Seed Data** (DB-02): Demo users (admin/editor/user@meepleai.dev, pwd: `Demo123!`), games, specs. Migration: `20251009140700_SeedDemoData`
+- **Admin Bootstrap**: Auto-creates initial admin user on first startup via `INITIAL_ADMIN_EMAIL`/`INITIAL_ADMIN_PASSWORD` env vars (see `docs/guide/admin-bootstrap-guide.md`)
 
 ### Frontend (Next.js 14)
 
@@ -424,8 +425,14 @@ cd apps/web && pnpm audit --audit-level=high
 
 Templates: `infra/env/*.env.*.example` (never commit `.env.dev/local/prod`)
 
-**API**: `OPENROUTER_API_KEY`, `QDRANT_URL` (http://qdrant:6333), `REDIS_URL` (redis:6379), `SEQ_URL` (http://seq:5341), `ConnectionStrings__Postgres`
+**API**: `OPENROUTER_API_KEY`, `QDRANT_URL` (http://qdrant:6333), `REDIS_URL` (redis:6379), `SEQ_URL` (http://seq:5341), `ConnectionStrings__Postgres`, `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD`, `INITIAL_ADMIN_DISPLAY_NAME`
 **Web**: `NEXT_PUBLIC_API_BASE` (http://localhost:8080)
+
+**Admin Bootstrap** (automatic initial admin creation):
+- `INITIAL_ADMIN_EMAIL`: Email for first admin user (required if no admin exists)
+- `INITIAL_ADMIN_PASSWORD`: Password (min 8 chars, uppercase, digit required)
+- `INITIAL_ADMIN_DISPLAY_NAME`: Display name (optional, default: "System Admin")
+- See `docs/guide/admin-bootstrap-guide.md` for setup instructions
 
 ## Available MCP Servers
 
@@ -500,6 +507,7 @@ cd apps/web && pnpm dev                                                         
 |----------|------|---------|
 | **Security** | `docs/SECURITY.md` | Policies, secrets, key rotation |
 | **Secrets Management** | `docs/guide/secrets-management.md` | Environment files, Gmail App Password, rotation (SEC-700) |
+| **Admin Bootstrap** | `docs/guide/admin-bootstrap-guide.md` | Initial admin user creation via environment variables |
 | **Database** | `docs/database-schema.md` | Complete schema ref |
 | **Observability** | `docs/observability.md` | Health, logging, correlation (OPS-01) |
 | **OpenTelemetry** | `docs/technic/ops-02-opentelemetry-design.md` | Tracing, metrics (OPS-02) |

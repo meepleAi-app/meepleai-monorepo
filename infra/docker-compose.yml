@@ -274,6 +274,10 @@ services:
       # AI-09: Local embedding service configuration
       LOCAL_EMBEDDING_URL: http://embedding-service:8000
       EMBEDDING_FALLBACK_ENABLED: "true"
+      # Bootstrap: Initial admin user configuration (set via env file or environment)
+      INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
+      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
+      INITIAL_ADMIN_DISPLAY_NAME: ${INITIAL_ADMIN_DISPLAY_NAME:-System Admin}
     ports:
       - "8080:8080"
     depends_on:

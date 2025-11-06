@@ -4,13 +4,21 @@ interface OAuthButtonsProps {
   onOAuthLogin?: (provider: string) => void;
 }
 
+/**
+ * Builds OAuth login URL for the given provider
+ * Exported for testing purposes
+ */
+export function buildOAuthUrl(provider: 'google' | 'discord' | 'github'): string {
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+  return `${apiBase}/api/v1/auth/oauth/${provider}/login`;
+}
+
 export default function OAuthButtons({ onOAuthLogin }: OAuthButtonsProps) {
   const handleOAuthLogin = (provider: 'google' | 'discord' | 'github') => {
     if (onOAuthLogin) {
       onOAuthLogin(provider);
     } else {
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
-      window.location.assign(`${apiBase}/api/v1/auth/oauth/${provider}/login`);
+      window.location.assign(buildOAuthUrl(provider));
     }
   };
 

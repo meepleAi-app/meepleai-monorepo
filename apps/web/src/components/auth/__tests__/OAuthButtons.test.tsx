@@ -9,29 +9,38 @@ import OAuthButtons from '../OAuthButtons';
 
 describe('OAuthButtons', () => {
   const originalEnv = process.env;
-  const originalLocation = window.location;
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-    process.env = { ...originalEnv, NEXT_PUBLIC_API_BASE: 'http://localhost:8080' };
-    // Mock window.location - use Object.defineProperty with getter/setter
+  // Helper function to create a spy for window.location.href assignment
+  // Note: Mocking window.location.href in jsdom is challenging due to jsdom's
+  // internal handling of the Location object. The tests that use callbacks work fine,
+  // demonstrating that the component logic is correct.
+  const createHrefSpy = () => {
+    const spy = jest.fn();
+    // Mock the location.href setter by replacing window.location
     delete (window as any).location;
-    const mockLocation = {
+    (window as any).location = {
+      href: 'http://localhost/',
+      get href() {
+        return this._href || 'http://localhost/';
+      },
+      set href(url: string) {
+        this._href = url;
+        spy(url);
+      },
       _href: 'http://localhost/',
       assign: jest.fn(),
       reload: jest.fn()
     };
-    Object.defineProperty(mockLocation, 'href', {
-      get() { return this._href; },
-      set(value) { this._href = value; },
-      configurable: true
-    });
-    (window as any).location = mockLocation;
+    return spy;
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env = { ...originalEnv };
   });
 
   afterEach(() => {
     process.env = originalEnv;
-    window.location = originalLocation;
   });
 
   describe('Rendering', () => {
@@ -86,57 +95,77 @@ describe('OAuthButtons', () => {
   describe('Default Behavior (without onOAuthLogin callback)', () => {
     it('redirects to Google OAuth endpoint when Google button is clicked', async () => {
       const user = userEvent.setup();
-      process.env.NEXT_PUBLIC_API_BASE = 'http://localhost:8080';
+      delete process.env.NEXT_PUBLIC_API_BASE;
+
+      const hrefSpy = createHrefSpy();
 
       render(<OAuthButtons />);
       const googleButton = screen.getByText('Continue with Google');
       await user.click(googleButton);
 
-      expect(window.location.href).toBe('http://localhost:8080/api/v1/auth/oauth/google/login');
+      // Component uses 'http://localhost:8080' as default when env var is not set
+      expect(hrefSpy).toHaveBeenCalledWith('http://localhost:8080/api/v1/auth/oauth/google/login');
     });
 
     it('redirects to Discord OAuth endpoint when Discord button is clicked', async () => {
       const user = userEvent.setup();
-      process.env.NEXT_PUBLIC_API_BASE = 'http://localhost:8080';
+      delete process.env.NEXT_PUBLIC_API_BASE;
+
+      const hrefSpy = createHrefSpy();
 
       render(<OAuthButtons />);
       const discordButton = screen.getByText('Continue with Discord');
       await user.click(discordButton);
 
-      expect(window.location.href).toBe('http://localhost:8080/api/v1/auth/oauth/discord/login');
+      expect(hrefSpy).toHaveBeenCalledWith('http://localhost:8080/api/v1/auth/oauth/discord/login');
     });
 
     it('redirects to GitHub OAuth endpoint when GitHub button is clicked', async () => {
       const user = userEvent.setup();
-      process.env.NEXT_PUBLIC_API_BASE = 'http://localhost:8080';
+      delete process.env.NEXT_PUBLIC_API_BASE;
+
+      const hrefSpy = createHrefSpy();
 
       render(<OAuthButtons />);
       const githubButton = screen.getByText('Continue with GitHub');
       await user.click(githubButton);
 
-      expect(window.location.href).toBe('http://localhost:8080/api/v1/auth/oauth/github/login');
+      expect(hrefSpy).toHaveBeenCalledWith('http://localhost:8080/api/v1/auth/oauth/github/login');
     });
 
     it('uses default API base URL when NEXT_PUBLIC_API_BASE is not set', async () => {
       const user = userEvent.setup();
       delete process.env.NEXT_PUBLIC_API_BASE;
 
+      const hrefSpy = createHrefSpy();
+
       render(<OAuthButtons />);
       const googleButton = screen.getByText('Continue with Google');
       await user.click(googleButton);
 
-      expect(window.location.href).toBe('http://localhost:8080/api/v1/auth/oauth/google/login');
+      expect(hrefSpy).toHaveBeenCalledWith('http://localhost:8080/api/v1/auth/oauth/google/login');
     });
 
-    it('uses custom API base URL when NEXT_PUBLIC_API_BASE is set', async () => {
+    it('uses custom API base URL when NEXT_PUBLIC_API_BASE is set via Object.defineProperty', async () => {
       const user = userEvent.setup();
-      process.env.NEXT_PUBLIC_API_BASE = 'https://api.example.com';
+
+      // Use Object.defineProperty for more reliable env var setting in Jest
+      Object.defineProperty(process.env, 'NEXT_PUBLIC_API_BASE', {
+        value: 'https://api.example.com',
+        writable: true,
+        configurable: true
+      });
+
+      const hrefSpy = createHrefSpy();
 
       render(<OAuthButtons />);
       const googleButton = screen.getByText('Continue with Google');
       await user.click(googleButton);
 
-      expect(window.location.href).toBe('https://api.example.com/api/v1/auth/oauth/google/login');
+      expect(hrefSpy).toHaveBeenCalledWith('https://api.example.com/api/v1/auth/oauth/google/login');
+
+      // Clean up
+      delete process.env.NEXT_PUBLIC_API_BASE;
     });
   });
 
@@ -180,13 +209,15 @@ describe('OAuthButtons', () => {
     it('does not redirect when onOAuthLogin is provided', async () => {
       const user = userEvent.setup();
       const onOAuthLogin = jest.fn();
-      const initialHref = window.location.href;
+
+      const hrefSpy = createHrefSpy();
 
       render(<OAuthButtons onOAuthLogin={onOAuthLogin} />);
       const googleButton = screen.getByText('Continue with Google');
       await user.click(googleButton);
 
-      expect(window.location.href).toBe(initialHref);
+      // Should not set href when callback is provided
+      expect(hrefSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -301,14 +332,25 @@ describe('OAuthButtons', () => {
 
     it('handles empty NEXT_PUBLIC_API_BASE environment variable', async () => {
       const user = userEvent.setup();
-      process.env.NEXT_PUBLIC_API_BASE = '';
+
+      // Set empty string using Object.defineProperty
+      Object.defineProperty(process.env, 'NEXT_PUBLIC_API_BASE', {
+        value: '',
+        writable: true,
+        configurable: true
+      });
+
+      const hrefSpy = createHrefSpy();
 
       render(<OAuthButtons />);
       const googleButton = screen.getByText('Continue with Google');
       await user.click(googleButton);
 
-      // Should use default when env var is empty string
-      expect(window.location.href).toBe('http://localhost:8080/api/v1/auth/oauth/google/login');
+      // Should use default when env var is empty string (empty string is falsy)
+      expect(hrefSpy).toHaveBeenCalledWith('http://localhost:8080/api/v1/auth/oauth/google/login');
+
+      // Clean up
+      delete process.env.NEXT_PUBLIC_API_BASE;
     });
   });
 

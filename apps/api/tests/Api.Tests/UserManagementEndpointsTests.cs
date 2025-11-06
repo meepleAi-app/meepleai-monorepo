@@ -606,7 +606,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var targetUserId = await GetUserIdByEmailAsync(targetEmail);
 
         // When: Admin deletes user
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/users/{targetUserId}");
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/users/{targetUserId}");
         AddCookies(request, adminCookies);
         var response = await adminClient.SendAsync(request);
 

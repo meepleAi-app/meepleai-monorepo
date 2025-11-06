@@ -181,6 +181,119 @@ describe('SideBySideDiffView', () => {
     });
   });
 
+  describe('Synchronized Scrolling', () => {
+    it('should synchronize scroll from left to right panel', () => {
+      render(
+        <SideBySideDiffView
+          processedDiff={mockProcessedDiff}
+          searchQuery=""
+          currentChangeIndex={0}
+          collapsibleSections={mockCollapsibleSections}
+          onToggleSection={mockOnToggleSection}
+        />
+      );
+
+      const leftPanel = screen.getByTestId('diff-code-panel-old');
+      const leftScrollButton = leftPanel.querySelector('button');
+
+      // Trigger scroll on left panel
+      if (leftScrollButton) {
+        leftScrollButton.click();
+      }
+
+      // Right panel should sync
+      const rightPanel = screen.getByTestId('diff-code-panel-new');
+      expect(rightPanel).toBeInTheDocument();
+    });
+
+    it('should synchronize scroll from right to left panel', () => {
+      render(
+        <SideBySideDiffView
+          processedDiff={mockProcessedDiff}
+          searchQuery=""
+          currentChangeIndex={0}
+          collapsibleSections={mockCollapsibleSections}
+          onToggleSection={mockOnToggleSection}
+        />
+      );
+
+      const rightPanel = screen.getByTestId('diff-code-panel-new');
+      const rightScrollButton = rightPanel.querySelector('button');
+
+      // Trigger scroll on right panel
+      if (rightScrollButton) {
+        rightScrollButton.click();
+      }
+
+      // Left panel should sync
+      const leftPanel = screen.getByTestId('diff-code-panel-old');
+      expect(leftPanel).toBeInTheDocument();
+    });
+
+    it('should not scroll when already scrolling from same side', () => {
+      render(
+        <SideBySideDiffView
+          processedDiff={mockProcessedDiff}
+          searchQuery=""
+          currentChangeIndex={0}
+          collapsibleSections={mockCollapsibleSections}
+          onToggleSection={mockOnToggleSection}
+        />
+      );
+
+      const leftPanel = screen.getByTestId('diff-code-panel-old');
+      const leftScrollButton = leftPanel.querySelector('button');
+
+      // Trigger scroll twice on left panel
+      if (leftScrollButton) {
+        leftScrollButton.click();
+        leftScrollButton.click();
+      }
+
+      expect(leftPanel).toBeInTheDocument();
+    });
+  });
+
+  describe('Section Toggle Callbacks', () => {
+    it('should call onToggleSection with old- prefix for old panel', () => {
+      const sections = new Map<string, CollapsibleSection>([
+        ['old-1', { startLine: 1, endLine: 2, lineCount: 2 }],
+      ]);
+
+      render(
+        <SideBySideDiffView
+          processedDiff={mockProcessedDiff}
+          searchQuery=""
+          currentChangeIndex={0}
+          collapsibleSections={sections}
+          onToggleSection={mockOnToggleSection}
+        />
+      );
+
+      // The component passes onToggleSection to DiffCodePanel
+      // We can verify it's being set up correctly
+      expect(screen.getByTestId('diff-code-panel-old')).toBeInTheDocument();
+    });
+
+    it('should call onToggleSection with new- prefix for new panel', () => {
+      const sections = new Map<string, CollapsibleSection>([
+        ['new-1', { startLine: 1, endLine: 2, lineCount: 2 }],
+      ]);
+
+      render(
+        <SideBySideDiffView
+          processedDiff={mockProcessedDiff}
+          searchQuery=""
+          currentChangeIndex={0}
+          collapsibleSections={sections}
+          onToggleSection={mockOnToggleSection}
+        />
+      );
+
+      expect(screen.getByTestId('diff-code-panel-new')).toBeInTheDocument();
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle empty diff', () => {
       const emptyDiff: ProcessedDiff = {

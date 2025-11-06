@@ -5,7 +5,7 @@
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import MentionDemo from '../mention-demo';
+import MentionDemo from '@/pages/mention-demo';
 
 // Mock MentionInput component
 jest.mock('@/components/MentionInput', () => ({
@@ -54,21 +54,39 @@ describe('MentionDemo Page', () => {
 
   describe('Instructions Section', () => {
     it('should display all instruction items', () => {
-      render(<MentionDemo />);
+      const { container } = render(<MentionDemo />);
 
-      expect(screen.getByText(/Type.*@ followed by at least 2 characters/)).toBeInTheDocument();
-      expect(screen.getByText(/Use.*Arrow Keys.*to navigate/)).toBeInTheDocument();
-      expect(screen.getByText(/Press.*Enter.*to select/)).toBeInTheDocument();
-      expect(screen.getByText(/Press.*Escape.*to close/)).toBeInTheDocument();
-      expect(screen.getByText(/Click on a suggestion/)).toBeInTheDocument();
+      // Get the first ul (instructions list, not test data list)
+      const instructionsList = container.querySelector('ul');
+      const listItems = instructionsList?.querySelectorAll('li');
+
+      expect(listItems).toHaveLength(5);
+
+      // Verify key instruction text is present in the instructions list
+      const allText = Array.from(listItems || []).map(li => li.textContent).join(' ');
+      expect(allText).toContain('Type');
+      expect(allText).toContain('@');
+      expect(allText).toContain('at least 2 characters');
+      expect(allText).toContain('Arrow Keys');
+      expect(allText).toContain('navigate');
+      expect(allText).toContain('Enter');
+      expect(allText).toContain('select');
+      expect(allText).toContain('Escape');
+      expect(allText).toContain('close');
+      expect(allText).toContain('Click on a suggestion');
     });
 
     it('should have blue info styling', () => {
       const { container } = render(<MentionDemo />);
 
-      const infoBox = container.querySelector('[style*="background: #f0f9ff"]');
+      // Check for div with blue background (instructions section)
+      const divs = container.querySelectorAll('div');
+      const infoBox = Array.from(divs).find((el: Element) => {
+        const styles = (el as HTMLElement).style;
+        return styles.background === '#f0f9ff' || styles.background === 'rgb(240, 249, 255)';
+      });
 
-      expect(infoBox).toBeInTheDocument();
+      expect(infoBox).toBeTruthy();
     });
   });
 
@@ -98,9 +116,14 @@ describe('MentionDemo Page', () => {
     it('should have yellow info styling', () => {
       const { container } = render(<MentionDemo />);
 
-      const testDataBox = container.querySelector('[style*="background: #fff9db"]');
+      // Check for div with yellow background (test data section)
+      const divs = container.querySelectorAll('div');
+      const testDataBox = Array.from(divs).find((el: Element) => {
+        const styles = (el as HTMLElement).style;
+        return styles.background === '#fff9db' || styles.background === 'rgb(255, 249, 219)';
+      });
 
-      expect(testDataBox).toBeInTheDocument();
+      expect(testDataBox).toBeTruthy();
     });
   });
 
@@ -130,12 +153,14 @@ describe('MentionDemo Page', () => {
     it('should display current value in preview', async () => {
       const user = userEvent.setup();
 
-      render(<MentionDemo />);
+      const { container } = render(<MentionDemo />);
 
       const input = screen.getByLabelText('Mention input');
       await user.type(input, 'Hello @user');
 
-      expect(screen.getByText('Hello @user')).toBeInTheDocument();
+      // Check the preview pre element, not the input
+      const preview = container.querySelector('pre');
+      expect(preview).toHaveTextContent('Hello @user');
     });
 
     it('should show "(empty)" when no value', () => {
@@ -147,15 +172,16 @@ describe('MentionDemo Page', () => {
     it('should update preview as user types', async () => {
       const user = userEvent.setup();
 
-      render(<MentionDemo />);
+      const { container } = render(<MentionDemo />);
 
       const input = screen.getByLabelText('Mention input');
+      const preview = container.querySelector('pre');
 
       await user.type(input, 'Test');
-      expect(screen.getByText('Test')).toBeInTheDocument();
+      expect(preview).toHaveTextContent('Test');
 
       await user.clear(input);
-      expect(screen.getByText('(empty)')).toBeInTheDocument();
+      expect(preview).toHaveTextContent('(empty)');
     });
   });
 
@@ -163,34 +189,51 @@ describe('MentionDemo Page', () => {
     it('should have centered layout', () => {
       const { container } = render(<MentionDemo />);
 
-      const mainDiv = container.querySelector('[style*="maxWidth: 800"]');
+      // The main div is the first child of the rendered component
+      const mainDiv = container.firstElementChild as HTMLElement;
 
       expect(mainDiv).toBeInTheDocument();
-      expect(mainDiv).toHaveStyle({ margin: '0 auto' });
+      expect(mainDiv).toHaveStyle({
+        maxWidth: '800px',
+        margin: '0 auto',
+        padding: '40px'
+      });
     });
 
     it('should have proper spacing', () => {
       const { container } = render(<MentionDemo />);
 
-      const mainDiv = container.querySelector('[style*="padding: 40"]');
+      const mainDiv = container.firstElementChild as HTMLElement;
 
-      expect(mainDiv).toBeInTheDocument();
+      expect(mainDiv).toHaveStyle({ padding: '40px' });
     });
 
     it('should render sections with proper borders', () => {
       const { container } = render(<MentionDemo />);
 
-      const borderedSections = container.querySelectorAll('[style*="border"]');
+      // Check for info boxes which have borders (there are 3: instructions, preview, test data)
+      const infoBoxes = container.querySelectorAll('div');
+      const boxesWithBorders = Array.from(infoBoxes).filter((el: Element) => {
+        const styles = (el as HTMLElement).style;
+        // Check for any border property
+        return styles.border.length > 0 || styles.borderWidth.length > 0;
+      });
 
-      expect(borderedSections.length).toBeGreaterThan(0);
+      expect(boxesWithBorders.length).toBeGreaterThanOrEqual(3);
     });
 
     it('should have rounded corners on boxes', () => {
       const { container } = render(<MentionDemo />);
 
-      const roundedBoxes = container.querySelectorAll('[style*="borderRadius: 4"]');
+      // Check for elements with borderRadius (there are 3: instructions, preview, test data)
+      const styledDivs = container.querySelectorAll('div');
+      const roundedBoxes = Array.from(styledDivs).filter((el: Element) => {
+        const styles = (el as HTMLElement).style;
+        // borderRadius can be '4px' or just '4' depending on how React sets it
+        return styles.borderRadius.includes('4');
+      });
 
-      expect(roundedBoxes.length).toBeGreaterThan(0);
+      expect(roundedBoxes.length).toBeGreaterThanOrEqual(3);
     });
   });
 
@@ -295,21 +338,22 @@ describe('MentionDemo Page', () => {
     it('should maintain state across interactions', async () => {
       const user = userEvent.setup();
 
-      render(<MentionDemo />);
+      const { container } = render(<MentionDemo />);
 
       const input = screen.getByLabelText('Mention input');
+      const preview = container.querySelector('pre');
 
       // Type something
       await user.type(input, 'First message');
-      expect(screen.getByText('First message')).toBeInTheDocument();
+      expect(preview).toHaveTextContent('First message');
 
       // Clear and type again
       await user.clear(input);
       await user.type(input, 'Second message');
-      expect(screen.getByText('Second message')).toBeInTheDocument();
+      expect(preview).toHaveTextContent('Second message');
 
-      // Verify first message is gone
-      expect(screen.queryByText('First message')).not.toBeInTheDocument();
+      // Verify first message is gone from preview
+      expect(preview).not.toHaveTextContent('First message');
     });
   });
 });

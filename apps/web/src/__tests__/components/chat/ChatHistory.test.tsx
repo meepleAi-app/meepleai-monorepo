@@ -76,8 +76,10 @@ describe('ChatHistory Component', () => {
       setupChatContext({ loading: { chats: true } });
       render(<ChatHistory />);
 
-      expect(screen.getByRole('status', { hidden: true })).toBeInTheDocument();
+      // Multiple status elements exist due to SkeletonLoader, check for the loading message
       expect(screen.getByText('Caricamento chat...')).toBeInTheDocument();
+      const statuses = screen.getAllByRole('status', { hidden: true });
+      expect(statuses.length).toBeGreaterThan(0);
     });
 
     it('shows correct loading message', () => {
@@ -91,7 +93,9 @@ describe('ChatHistory Component', () => {
       setupChatContext({ loading: { chats: true } });
       render(<ChatHistory />);
 
-      expect(screen.getByLabelText('Caricamento cronologia chat')).toBeInTheDocument();
+      // SkeletonLoader creates multiple items with the same aria-label
+      const skeletons = screen.getAllByLabelText('Caricamento cronologia chat');
+      expect(skeletons.length).toBeGreaterThan(0);
     });
 
     it('displays loading state within navigation element', () => {
@@ -161,9 +165,9 @@ describe('ChatHistory Component', () => {
       setupChatContext({ chats });
       render(<ChatHistory />);
 
-      // Each chat should be rendered as a list item
-      const listItems = screen.getAllByRole('listitem');
-      expect(listItems).toHaveLength(3);
+      // Each ChatHistoryItem is rendered as a button role within list items
+      const chatButtons = screen.getAllByRole('button');
+      expect(chatButtons.length).toBeGreaterThanOrEqual(3); // At least 3 chat items (may have delete buttons)
     });
 
     it('passes correct props to ChatHistoryItem components', () => {
@@ -175,8 +179,8 @@ describe('ChatHistory Component', () => {
       setupChatContext({ chats: [chat], activeChatId: 'chat-1' });
       render(<ChatHistory />);
 
-      // ChatHistoryItem should receive the chat data
-      expect(screen.getByText(/Chess Expert/)).toBeInTheDocument();
+      // ChatHistoryItem should display the agent name
+      expect(screen.getByText('Chess Expert')).toBeInTheDocument();
     });
 
     it('marks active chat correctly', () => {
@@ -205,39 +209,42 @@ describe('ChatHistory Component', () => {
    */
   describe('Chat Selection', () => {
     it('calls selectChat when chat item is clicked', () => {
-      const chat = createMockChat({ id: 'chat-123' });
+      const chat = createMockChat({ id: 'chat-123', agentName: 'Test Agent' });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
 
-      const chatItem = screen.getByRole('listitem');
-      fireEvent.click(chatItem);
+      // ChatHistoryItem's li element has role="button", click it directly
+      const chatItem = screen.getByText('Test Agent').closest('li');
+      fireEvent.click(chatItem!);
 
       expect(mockSelectChat).toHaveBeenCalledWith('chat-123');
     });
 
     it('calls selectChat with correct chat ID for multiple chats', () => {
       const chats = [
-        createMockChat({ id: 'chat-1' }),
-        createMockChat({ id: 'chat-2' }),
-        createMockChat({ id: 'chat-3' }),
+        createMockChat({ id: 'chat-1', agentName: 'Agent 1' }),
+        createMockChat({ id: 'chat-2', agentName: 'Agent 2' }),
+        createMockChat({ id: 'chat-3', agentName: 'Agent 3' }),
       ];
       setupChatContext({ chats });
       render(<ChatHistory />);
 
-      const chatItems = screen.getAllByRole('listitem');
-      fireEvent.click(chatItems[1]);
+      // Click the second chat item (Agent 2)
+      const agent2Button = screen.getByText('Agent 2').closest('[role="button"]');
+      fireEvent.click(agent2Button!);
 
       expect(mockSelectChat).toHaveBeenCalledWith('chat-2');
     });
 
     it('handles asynchronous selectChat calls', async () => {
       mockSelectChat.mockResolvedValue(undefined);
-      const chat = createMockChat({ id: 'chat-1' });
+      const chat = createMockChat({ id: 'chat-1', agentName: 'Test Agent' });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
 
-      const chatItem = screen.getByRole('listitem');
-      fireEvent.click(chatItem);
+      // Click the chat item (li element with role="button")
+      const chatItem = screen.getByText('Test Agent').closest('li');
+      fireEvent.click(chatItem!);
 
       await waitFor(() => {
         expect(mockSelectChat).toHaveBeenCalledTimes(1);
@@ -308,15 +315,17 @@ describe('ChatHistory Component', () => {
   describe('Multiple Chats', () => {
     it('renders multiple chats in order', () => {
       const chats = [
-        createMockChat({ id: 'chat-1', gameName: 'Chess' }),
-        createMockChat({ id: 'chat-2', gameName: 'Catan' }),
-        createMockChat({ id: 'chat-3', gameName: 'Risk' }),
+        createMockChat({ id: 'chat-1', gameName: 'Chess', agentName: 'Chess Agent' }),
+        createMockChat({ id: 'chat-2', gameName: 'Catan', agentName: 'Catan Agent' }),
+        createMockChat({ id: 'chat-3', gameName: 'Risk', agentName: 'Risk Agent' }),
       ];
       setupChatContext({ chats });
       render(<ChatHistory />);
 
-      const listItems = screen.getAllByRole('listitem');
-      expect(listItems).toHaveLength(3);
+      // Verify all agent names are displayed
+      expect(screen.getByText('Chess Agent')).toBeInTheDocument();
+      expect(screen.getByText('Catan Agent')).toBeInTheDocument();
+      expect(screen.getByText('Risk Agent')).toBeInTheDocument();
     });
 
     it('handles many chats without performance issues', () => {
@@ -348,21 +357,25 @@ describe('ChatHistory Component', () => {
     it('handles chat with lastMessageAt timestamp', () => {
       const chat = createMockChat({
         lastMessageAt: '2025-01-10T15:30:00Z',
+        agentName: 'Test Agent',
       });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
 
-      expect(screen.getByRole('listitem')).toBeInTheDocument();
+      // Verify the chat item is rendered with the agent name
+      expect(screen.getByText('Test Agent')).toBeInTheDocument();
     });
 
     it('handles chat without lastMessageAt (null)', () => {
       const chat = createMockChat({
         lastMessageAt: null,
+        agentName: 'Test Agent',
       });
       setupChatContext({ chats: [chat] });
       render(<ChatHistory />);
 
-      expect(screen.getByRole('listitem')).toBeInTheDocument();
+      // Verify the chat item is rendered with the agent name
+      expect(screen.getByText('Test Agent')).toBeInTheDocument();
     });
 
     it('passes all chat properties to ChatHistoryItem', () => {
@@ -378,8 +391,11 @@ describe('ChatHistory Component', () => {
       setupChatContext({ chats: [chat], activeChatId: 'chat-1' });
       render(<ChatHistory />);
 
-      // All properties should be passed to ChatHistoryItem
-      expect(screen.getByRole('listitem')).toBeInTheDocument();
+      // All properties should be passed to and displayed by ChatHistoryItem
+      expect(screen.getByText('Chess Expert')).toBeInTheDocument();
+      // Active chat should have aria-current on the list item (role=button)
+      const chatItem = screen.getByText('Chess Expert').closest('li');
+      expect(chatItem).toHaveAttribute('aria-current', 'true');
     });
   });
 
@@ -483,8 +499,10 @@ describe('ChatHistory Component', () => {
       setupChatContext({ loading: { chats: true } });
       render(<ChatHistory />);
 
-      const status = screen.getByRole('status', { hidden: true });
-      expect(status).toHaveAttribute('aria-live', 'polite');
+      // Multiple status elements exist, check that at least one has aria-live
+      const statuses = screen.getAllByRole('status', { hidden: true });
+      expect(statuses.length).toBeGreaterThan(0);
+      expect(statuses[0]).toHaveAttribute('aria-live', 'polite');
     });
   });
 

@@ -13,29 +13,38 @@ import EditorToolbar from '../../../components/editor/EditorToolbar';
 import { Editor } from '@tiptap/react';
 
 /**
+ * Helper to create a complete chain object (for both enabled and disabled states)
+ */
+const createChain = (runReturnValue: boolean = true) => ({
+  focus: jest.fn().mockReturnThis(),
+  toggleBold: jest.fn().mockReturnThis(),
+  toggleItalic: jest.fn().mockReturnThis(),
+  toggleStrike: jest.fn().mockReturnThis(),
+  toggleCode: jest.fn().mockReturnThis(),
+  toggleHeading: jest.fn().mockReturnThis(),
+  toggleBulletList: jest.fn().mockReturnThis(),
+  toggleOrderedList: jest.fn().mockReturnThis(),
+  toggleCodeBlock: jest.fn().mockReturnThis(),
+  setHorizontalRule: jest.fn().mockReturnThis(),
+  undo: jest.fn().mockReturnThis(),
+  redo: jest.fn().mockReturnThis(),
+  unsetAllMarks: jest.fn().mockReturnThis(),
+  run: jest.fn().mockReturnValue(runReturnValue),
+});
+
+/**
  * Mock TipTap Editor
  */
 const createMockEditor = (overrides?: Partial<Editor>): Editor => {
-  const mockChain = {
-    focus: jest.fn().mockReturnThis(),
-    toggleBold: jest.fn().mockReturnThis(),
-    toggleItalic: jest.fn().mockReturnThis(),
-    toggleStrike: jest.fn().mockReturnThis(),
-    toggleCode: jest.fn().mockReturnThis(),
-    toggleHeading: jest.fn().mockReturnThis(),
-    toggleBulletList: jest.fn().mockReturnThis(),
-    toggleOrderedList: jest.fn().mockReturnThis(),
-    toggleCodeBlock: jest.fn().mockReturnThis(),
-    setHorizontalRule: jest.fn().mockReturnThis(),
-    undo: jest.fn().mockReturnThis(),
-    redo: jest.fn().mockReturnThis(),
-    unsetAllMarks: jest.fn().mockReturnThis(),
-    run: jest.fn(),
+  const mockChain = createChain(true);
+
+  const mockCan = {
+    chain: jest.fn(() => mockChain),
   };
 
   return {
     chain: jest.fn(() => mockChain),
-    can: jest.fn(() => mockChain),
+    can: jest.fn(() => mockCan),
     isActive: jest.fn((format: string, options?: any) => false),
     ...overrides,
   } as any;
@@ -136,16 +145,18 @@ describe('EditorToolbar Component', () => {
       const boldButton = screen.getByTitle('Grassetto (Ctrl+B)');
       expect(boldButton).toHaveStyle({
         background: '#0070f3',
-        color: 'white',
       });
+      // Check color separately (jsdom converts 'white' to 'rgb(255, 255, 255)')
+      const computedStyle = window.getComputedStyle(boldButton);
+      expect(computedStyle.color).toMatch(/(white|rgb\(255,\s*255,\s*255\))/);
     });
 
     it('disables bold button when not available', () => {
-      const mockChain = {
-        ...createMockEditor().chain(),
-        toggleBold: jest.fn(() => null),
+      const disabledChain = createChain(false);
+      const disabledCan = {
+        chain: jest.fn(() => disabledChain),
       };
-      mockEditor.can = jest.fn(() => mockChain as any);
+      mockEditor.can = jest.fn(() => disabledCan as any);
 
       render(<EditorToolbar editor={mockEditor} />);
 
@@ -366,11 +377,11 @@ describe('EditorToolbar Component', () => {
     });
 
     it('disables undo button when not available', () => {
-      const mockChain = {
-        ...createMockEditor().chain(),
-        undo: jest.fn(() => null),
+      const disabledChain = createChain(false);
+      const disabledCan = {
+        chain: jest.fn(() => disabledChain),
       };
-      mockEditor.can = jest.fn(() => mockChain as any);
+      mockEditor.can = jest.fn(() => disabledCan as any);
 
       render(<EditorToolbar editor={mockEditor} />);
 
@@ -388,11 +399,11 @@ describe('EditorToolbar Component', () => {
     });
 
     it('disables redo button when not available', () => {
-      const mockChain = {
-        ...createMockEditor().chain(),
-        redo: jest.fn(() => null),
+      const disabledChain = createChain(false);
+      const disabledCan = {
+        chain: jest.fn(() => disabledChain),
       };
-      mockEditor.can = jest.fn(() => mockChain as any);
+      mockEditor.can = jest.fn(() => disabledCan as any);
 
       render(<EditorToolbar editor={mockEditor} />);
 
@@ -439,11 +450,11 @@ describe('EditorToolbar Component', () => {
     });
 
     it('does not change background on hover for disabled button', () => {
-      const mockChain = {
-        ...createMockEditor().chain(),
-        undo: jest.fn(() => null),
+      const disabledChain = createChain(false);
+      const disabledCan = {
+        chain: jest.fn(() => disabledChain),
       };
-      mockEditor.can = jest.fn(() => mockChain as any);
+      mockEditor.can = jest.fn(() => disabledCan as any);
 
       render(<EditorToolbar editor={mockEditor} />);
 
@@ -511,12 +522,11 @@ describe('EditorToolbar Component', () => {
     });
 
     it('indicates disabled state properly', () => {
-      const mockChain = {
-        ...createMockEditor().chain(),
-        undo: jest.fn(() => null),
-        redo: jest.fn(() => null),
+      const disabledChain = createChain(false);
+      const disabledCan = {
+        chain: jest.fn(() => disabledChain),
       };
-      mockEditor.can = jest.fn(() => mockChain as any);
+      mockEditor.can = jest.fn(() => disabledCan as any);
 
       render(<EditorToolbar editor={mockEditor} />);
 
@@ -567,11 +577,11 @@ describe('EditorToolbar Component', () => {
     });
 
     it('applies disabled styling to disabled buttons', () => {
-      const mockChain = {
-        ...createMockEditor().chain(),
-        undo: jest.fn(() => null),
+      const disabledChain = createChain(false);
+      const disabledCan = {
+        chain: jest.fn(() => disabledChain),
       };
-      mockEditor.can = jest.fn(() => mockChain as any);
+      mockEditor.can = jest.fn(() => disabledCan as any);
 
       render(<EditorToolbar editor={mockEditor} />);
 
@@ -590,9 +600,11 @@ describe('EditorToolbar Component', () => {
       const boldButton = screen.getByTitle('Grassetto (Ctrl+B)');
       expect(boldButton).toHaveStyle({
         background: '#0070f3',
-        color: 'white',
         fontWeight: 'bold',
       });
+      // Check color separately (jsdom converts 'white' to 'rgb(255, 255, 255)')
+      const computedStyle = window.getComputedStyle(boldButton);
+      expect(computedStyle.color).toMatch(/(white|rgb\(255,\s*255,\s*255\))/);
     });
   });
 

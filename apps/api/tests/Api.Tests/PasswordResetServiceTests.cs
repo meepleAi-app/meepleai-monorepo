@@ -85,7 +85,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
@@ -130,7 +130,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
@@ -178,7 +178,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
@@ -205,7 +205,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
@@ -234,7 +234,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: false, retryAfter: 3600);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
@@ -296,7 +296,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
@@ -361,7 +361,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
@@ -425,7 +425,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
@@ -468,7 +468,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
@@ -512,7 +512,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
@@ -574,7 +574,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
@@ -603,7 +603,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
@@ -631,7 +631,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
@@ -659,7 +659,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
@@ -715,7 +715,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
@@ -781,7 +781,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
@@ -854,7 +854,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
@@ -942,7 +942,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
@@ -975,7 +975,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
@@ -1002,7 +1002,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
@@ -1029,7 +1029,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
@@ -1056,7 +1056,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
@@ -1087,7 +1087,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
@@ -1118,7 +1118,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
@@ -1148,7 +1148,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
 
         var service = new PasswordResetService(db, mockEmail.Object, mockRateLimit.Object, mockPasswordHashing.Object, mockLogger.Object);
@@ -1217,7 +1217,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
@@ -1289,7 +1289,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 
@@ -1358,7 +1358,7 @@ public class PasswordResetServiceTests : IDisposable
         var mockRateLimit = CreateRateLimitMock(allowed: true);
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
         mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
-            .Returns((string pwd) => $"v1.210000.hashed_{pwd}"); // Mock PBKDF2 format
+            .Returns("v1.210000.hashed_password"); // Mock PBKDF2 format
         var mockLogger = new Mock<ILogger<PasswordResetService>>();
         var timeProvider = new FixedTimeProvider(FixedNow);
 

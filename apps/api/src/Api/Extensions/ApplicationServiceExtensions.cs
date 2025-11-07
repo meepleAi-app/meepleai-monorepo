@@ -132,8 +132,10 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IPdfValidationService, PdfValidationService>(); // PDF-09: PDF validation service
         services.AddScoped<PdfStorageService>(); // Refactored facade
 
-        // PDF-02: OCR service for fallback text extraction
+        // PDF-02: OCR service for fallback text extraction (Windows-only)
+#pragma warning disable CA1416 // TesseractOcrService is Windows-only by design
         services.AddSingleton<IOcrService, TesseractOcrService>();
+#pragma warning restore CA1416
 
         return services;
     }

@@ -1,0 +1,80 @@
+# EditorConfig for MeepleAI API project
+# https://editorconfig.org/
+
+root = true
+
+# All files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# C# files
+[*.cs]
+indent_style = space
+indent_size = 4
+
+# Code quality - Production code (strict enforcement)
+[src/**/*.cs]
+# CA2000: Dispose objects before losing scope (ERROR in production)
+dotnet_diagnostic.CA2000.severity = error
+
+# CA1031: Do not catch general exception types (SUGGESTION in production - allow for graceful degradation patterns)
+dotnet_diagnostic.CA1031.severity = suggestion
+
+# CA1063: Implement IDisposable correctly (ERROR in production)
+dotnet_diagnostic.CA1063.severity = error
+
+# CA1816: Call GC.SuppressFinalize correctly (WARNING in production)
+dotnet_diagnostic.CA1816.severity = warning
+
+# CA1416: Platform compatibility (WARNING in production)
+dotnet_diagnostic.CA1416.severity = warning
+
+# Code quality - Test code (relaxed enforcement)
+[tests/**/*.cs]
+# CA2000: Dispose objects - SUGGESTION in tests (test fixtures often manage lifetime differently)
+dotnet_diagnostic.CA2000.severity = suggestion
+
+# CA1031: Do not catch general exception types - SILENT in tests (tests often validate exception handling)
+dotnet_diagnostic.CA1031.severity = silent
+
+# CA1063: Implement IDisposable correctly - SUGGESTION in tests
+dotnet_diagnostic.CA1063.severity = suggestion
+
+# CA1816: Call GC.SuppressFinalize correctly - SUGGESTION in tests
+dotnet_diagnostic.CA1816.severity = suggestion
+
+# CA1416: Platform compatibility - SILENT in tests (tests may target specific platforms)
+dotnet_diagnostic.CA1416.severity = silent
+
+# CA2022: Avoid inexact read with Stream.ReadAsync - SILENT in tests (test code can be less strict)
+dotnet_diagnostic.CA2022.severity = silent
+
+# xUnit1026: Unused theory parameter - SILENT in tests (parameters may be for documentation)
+dotnet_diagnostic.xUnit1026.severity = silent
+
+# xUnit1012: Null should not be used for value type - SILENT in tests (testing null scenarios)
+dotnet_diagnostic.xUnit1012.severity = silent
+
+# CS0169: Field is never used - SILENT in tests (test fixtures may have fields for future use)
+dotnet_diagnostic.CS0169.severity = silent
+
+# CS0108: Member hides inherited member - SILENT in tests (intentional override in test context)
+dotnet_diagnostic.CS0108.severity = silent
+
+# CS0109: Member does not hide accessible member - SILENT in tests
+dotnet_diagnostic.CS0109.severity = silent
+
+# CS1998: Async method lacks await - SILENT in tests (testing async signatures)
+dotnet_diagnostic.CS1998.severity = silent
+
+# CS0219: Variable assigned but never used - SILENT in tests (test setup variables)
+dotnet_diagnostic.CS0219.severity = silent
+
+# CS8605: Unboxing possibly null value - SILENT in tests (test assertions handle nulls)
+dotnet_diagnostic.CS8605.severity = silent
+
+# CS8618: Non-nullable field must contain non-null value - SILENT in tests (xUnit initializes via reflection)
+dotnet_diagnostic.CS8618.severity = silent

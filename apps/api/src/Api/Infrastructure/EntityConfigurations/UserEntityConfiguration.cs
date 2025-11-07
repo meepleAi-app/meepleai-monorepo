@@ -13,7 +13,7 @@ public class UserEntityConfiguration : IEntityTypeConfiguration<UserEntity>
         builder.Property(e => e.Id).HasMaxLength(64);
         builder.Property(e => e.Email).IsRequired().HasMaxLength(256);
         builder.Property(e => e.DisplayName).HasMaxLength(128);
-        builder.Property(e => e.PasswordHash).IsRequired();
+        builder.Property(e => e.PasswordHash).IsRequired(false); // Nullable for OAuth-only users
         builder.Property(e => e.Role)
             .HasConversion<string>()
             .HasMaxLength(32)

@@ -90,7 +90,7 @@ public class LoggingEnrichersTests
 
         var userEmail = logEvent.Properties["UserEmail"];
         var scalarEmail = userEmail.Should().BeOfType<ScalarValue>().Subject;
-        scalarEmail.Value.Should().Be("test@example.com");
+        scalarEmail.Value.Should().Be("t***t@example.com"); // PII-masked email
 
         var userRole = logEvent.Properties["UserRole"];
         var scalarRole = userRole.Should().BeOfType<ScalarValue>().Subject;
@@ -208,7 +208,7 @@ public class LoggingEnrichersTests
 
         var remoteIp = logEvent.Properties["RemoteIp"];
         var scalarIp = remoteIp.Should().BeOfType<ScalarValue>().Subject;
-        scalarIp.Value.Should().Be("192.168.1.1");
+        scalarIp.Value.Should().Be("192.168.1.***"); // PII-masked IP
 
         var userAgent = logEvent.Properties["UserAgent"];
         var scalarAgent = userAgent.Should().BeOfType<ScalarValue>().Subject;
@@ -280,7 +280,7 @@ public class LoggingEnrichersTests
         logEvent.Properties.ContainsKey("RemoteIp").Should().BeTrue();
         var remoteIp = logEvent.Properties["RemoteIp"];
         var scalarIp = remoteIp.Should().BeOfType<ScalarValue>().Subject;
-        scalarIp.Value.Should().Be("unknown");
+        scalarIp.Value.Should().Be("***"); // PII-masked null IP
     }
 
     [Fact]

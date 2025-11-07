@@ -272,6 +272,15 @@ public class TotpService : ITotpService
             throw new InvalidOperationException("User not found");
         }
 
+        // OAuth-only users don't have a password - require OAuth re-authentication
+        if (user.PasswordHash == null)
+        {
+            _logger.LogWarning("2FA disable failed: OAuth-only user {UserId} cannot use password auth", userId);
+            await _auditService.LogAsync(userId, "TwoFactorDisable", "TwoFactor", userId, "Failed",
+                "OAuth user - password authentication not available");
+            throw new UnauthorizedAccessException("OAuth users must re-authenticate via OAuth provider");
+        }
+
         // Verify password first (using private method, need to duplicate logic)
         var isPasswordValid = VerifyPassword(user.PasswordHash, password);
         if (!isPasswordValid)

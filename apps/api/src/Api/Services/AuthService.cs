@@ -100,6 +100,12 @@ public class AuthService
             return null;
         }
 
+        // OAuth-only users don't have a password hash
+        if (user.PasswordHash == null)
+        {
+            return null; // OAuth users must authenticate via OAuth flow
+        }
+
         if (!VerifyPassword(command.Password, user.PasswordHash))
         {
             return null;

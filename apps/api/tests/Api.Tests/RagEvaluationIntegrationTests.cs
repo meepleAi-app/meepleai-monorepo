@@ -36,6 +36,7 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
     private IEmbeddingService? _embeddingService;
     private IRagEvaluationService? _evaluationService;
     private string? _tempDatasetPath;
+    private string? _tempDirectory;
 
     public async Task InitializeAsync()
     {
@@ -110,13 +111,18 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
             qdrantLogger);
         await _qdrantService.EnsureCollectionExistsAsync();
 
+        // Create temp dataset directory for test isolation
+        _tempDirectory = Path.Combine(Path.GetTempPath(), $"rag-eval-test-{Guid.NewGuid()}");
+        Directory.CreateDirectory(_tempDirectory);
+
         _evaluationService = new RagEvaluationService(
             _qdrantService,
             _embeddingService,
-            evaluationLogger);
+            evaluationLogger,
+            allowedDatasetsDirectory: _tempDirectory);  // SECURITY: Allow temp directory for test isolation
 
-        // Create temp dataset file
-        _tempDatasetPath = Path.Combine(Path.GetTempPath(), $"integration-test-dataset-{Guid.NewGuid()}.json");
+        // Create temp dataset file within the allowed directory
+        _tempDatasetPath = Path.Combine(_tempDirectory, $"integration-test-dataset-{Guid.NewGuid()}.json");
     }
 
     public async Task DisposeAsync()
@@ -136,9 +142,17 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
             await _qdrantContainer.DisposeAsync();
         }
 
-        if (_tempDatasetPath != null && File.Exists(_tempDatasetPath))
+        // Clean up temp directory and all files
+        if (_tempDirectory != null && Directory.Exists(_tempDirectory))
         {
-            File.Delete(_tempDatasetPath);
+            try
+            {
+                Directory.Delete(_tempDirectory, recursive: true);
+            }
+            catch
+            {
+                // Ignore cleanup errors (test may have already deleted)
+            }
         }
     }
 

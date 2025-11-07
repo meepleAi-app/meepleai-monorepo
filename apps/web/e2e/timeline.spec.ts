@@ -1,15 +1,16 @@
 import { test, expect } from './fixtures/auth';
+import { getTextMatcher, t } from './fixtures/i18n';
 
 test.describe('Timeline RAG Feature', () => {
   test('should require authentication', async ({ page }) => {
     await page.goto('/chat');
 
     // Should show login required message (Italian)
-    await expect(page.getByRole('heading', { name: 'Accesso richiesto' })).toBeVisible();
-    await expect(page.getByText('Devi effettuare l\'accesso per utilizzare la chat')).toBeVisible();
+    await expect(page.getByRole('heading', { name: getTextMatcher('chat.loginRequired') })).toBeVisible();
+    await expect(page.getByText(getTextMatcher('chat.loginRequiredMessage'))).toBeVisible();
 
     // Should have login link
-    await expect(page.getByRole('link', { name: 'Vai al Login' })).toBeVisible();
+    await expect(page.getByRole('link', { name: getTextMatcher('chat.goToLogin') })).toBeVisible();
   });
 
   test.describe('Authenticated User Flow', () => {
@@ -23,18 +24,18 @@ test.describe('Timeline RAG Feature', () => {
 
     test('should display Timeline component on chat page', async ({ userPage: page }) => {
       // Check that Timeline heading is present
-      await expect(page.getByRole('heading', { name: 'Timeline Eventi RAG' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: getTextMatcher('timeline.heading') })).toBeVisible();
 
       // Check that filters section exists
-      await expect(page.getByText('Filtri')).toBeVisible();
+      await expect(page.getByText(getTextMatcher('timeline.filters'))).toBeVisible();
 
       // Check that event list section exists
-      await expect(page.getByText('Eventi')).toBeVisible();
+      await expect(page.getByText(getTextMatcher('timeline.events'))).toBeVisible();
     });
 
     test('should show empty state when no events', async ({ userPage: page }) => {
       // Timeline should show "Nessun evento" message initially
-      const noEventsMessage = page.locator('text=/Nessun evento da visualizzare/i');
+      const noEventsMessage = page.locator(`text=${t('timeline.noEvents')}`);
 
       // May be visible immediately or after a short wait
       const isVisible = await noEventsMessage.isVisible().catch(() => false);
@@ -46,11 +47,11 @@ test.describe('Timeline RAG Feature', () => {
 
     test('should show filter controls', async ({ userPage: page }) => {
       // Check for filter type checkboxes
-      await expect(page.getByText('Tipo Evento')).toBeVisible();
+      await expect(page.getByText(getTextMatcher('timeline.eventType'))).toBeVisible();
 
       // Check for some event type filters
-      const messageFilter = page.locator('text=Message');
-      const ragSearchFilter = page.locator('text=RAG Search');
+      const messageFilter = page.locator(`text=${t('timeline.message')}`);
+      const ragSearchFilter = page.locator(`text=${t('timeline.ragSearch')}`);
 
       // At least one filter should be visible
       const hasMessageFilter = await messageFilter.isVisible().catch(() => false);
@@ -59,31 +60,31 @@ test.describe('Timeline RAG Feature', () => {
       expect(hasMessageFilter || hasRagSearchFilter).toBeTruthy();
 
       // Check for status filters
-      await expect(page.getByText('Stato')).toBeVisible();
+      await expect(page.getByText(getTextMatcher('timeline.status'))).toBeVisible();
 
       // Check for search input
-      const searchInput = page.locator('input[placeholder*="Cerca"]');
+      const searchInput = page.locator(`input[placeholder*="${t('timeline.searchPlaceholder')}"]`);
       await expect(searchInput).toBeVisible();
     });
 
     test('should toggle filters panel', async ({ userPage: page }) => {
       // Find the filters toggle button
-      const filtersButton = page.locator('button').filter({ hasText: 'Filtri' }).first();
+      const filtersButton = page.locator('button').filter({ hasText: t('timeline.filters') }).first();
 
       // Check if button exists
       const buttonExists = await filtersButton.isVisible().catch(() => false);
 
       if (buttonExists) {
         // Click to collapse
-        await filtersButton.click();
+        await filtersButton.click({ force: true });
         await page.waitForTimeout(500); // Wait for animation
 
         // Click to expand again
-        await filtersButton.click();
+        await filtersButton.click({ force: true });
         await page.waitForTimeout(500);
 
         // Filters should be visible again
-        await expect(page.getByText('Tipo Evento')).toBeVisible();
+        await expect(page.getByText(getTextMatcher('timeline.eventType'))).toBeVisible();
       }
     });
 
@@ -112,7 +113,7 @@ test.describe('Timeline RAG Feature', () => {
 
       // Send message
       const sendButton = page.locator('button[type="submit"]').or(page.getByRole('button', { name: /send/i }));
-      await sendButton.click();
+      await sendButton.click({ force: true });
 
       // Wait a bit for events to be tracked
       await page.waitForTimeout(2000);
@@ -137,7 +138,7 @@ test.describe('Timeline RAG Feature', () => {
         const initiallyChecked = await messageCheckbox.isChecked();
 
         // Toggle it
-        await messageCheckbox.click();
+        await messageCheckbox.click({ force: true });
         await page.waitForTimeout(500);
 
         // Verify it toggled
@@ -145,14 +146,14 @@ test.describe('Timeline RAG Feature', () => {
         expect(nowChecked).toBe(!initiallyChecked);
 
         // Toggle back
-        await messageCheckbox.click();
+        await messageCheckbox.click({ force: true });
         await page.waitForTimeout(500);
       }
     });
 
     test('should search events by text', async ({ userPage: page }) => {
       // Find search input
-      const searchInput = page.locator('input[placeholder*="Cerca"]').or(page.locator('input[type="text"]')).first();
+      const searchInput = page.locator(`input[placeholder*="${t('timeline.searchPlaceholder')}"]`).or(page.locator('input[type="text"]')).first();
 
       await searchInput.waitFor({ state: 'visible', timeout: 5000 });
 
@@ -170,16 +171,16 @@ test.describe('Timeline RAG Feature', () => {
 
     test('should reset filters', async ({ userPage: page }) => {
       // Find reset button
-      const resetButton = page.getByRole('button', { name: /reset/i }).or(page.locator('button').filter({ hasText: 'Reset' }));
+      const resetButton = page.getByRole('button', { name: getTextMatcher('timeline.reset') }).or(page.locator('button').filter({ hasText: t('timeline.reset') }));
 
       const buttonExists = await resetButton.isVisible().catch(() => false);
 
       if (buttonExists) {
-        await resetButton.click();
+        await resetButton.click({ force: true });
         await page.waitForTimeout(500);
 
         // Verify search is cleared
-        const searchInput = page.locator('input[placeholder*="Cerca"]').first();
+        const searchInput = page.locator(`input[placeholder*="${t('timeline.searchPlaceholder')}"]`).first();
         const searchValue = await searchInput.inputValue().catch(() => '');
         expect(searchValue).toBe('');
       }
@@ -187,7 +188,7 @@ test.describe('Timeline RAG Feature', () => {
 
     test('should display event details when clicking an event', async ({ userPage: page }) => {
       // Check if details panel heading exists
-      const detailsHeading = page.getByText('Dettagli Evento').or(page.getByText('Details'));
+      const detailsHeading = page.getByText(getTextMatcher('timeline.eventDetails')).or(page.getByText(getTextMatcher('timeline.details')));
 
       const headingVisible = await detailsHeading.isVisible().catch(() => false);
 
@@ -197,17 +198,17 @@ test.describe('Timeline RAG Feature', () => {
 
     test('should toggle details panel', async ({ userPage: page }) => {
       // Find the details toggle button
-      const detailsButton = page.locator('button').filter({ hasText: /dettagli/i }).first();
+      const detailsButton = page.locator('button').filter({ hasText: new RegExp(t('timeline.details'), 'i') }).first();
 
       const buttonExists = await detailsButton.isVisible().catch(() => false);
 
       if (buttonExists) {
         // Click to collapse
-        await detailsButton.click();
+        await detailsButton.click({ force: true });
         await page.waitForTimeout(500);
 
         // Click to expand again
-        await detailsButton.click();
+        await detailsButton.click({ force: true });
         await page.waitForTimeout(500);
       }
     });
@@ -241,7 +242,7 @@ test.describe('Timeline RAG Feature', () => {
       await page.waitForTimeout(500);
 
       // Timeline should still be visible
-      const timeline = page.getByRole('heading', { name: 'Timeline Eventi RAG' });
+      const timeline = page.getByRole('heading', { name: getTextMatcher('timeline.heading') });
       await expect(timeline).toBeVisible();
 
       // Test desktop viewport
@@ -254,7 +255,7 @@ test.describe('Timeline RAG Feature', () => {
 
     test('should persist through chat interactions', async ({ userPage: page }) => {
       // Timeline should remain visible throughout chat session
-      const timelineHeading = page.getByRole('heading', { name: 'Timeline Eventi RAG' });
+      const timelineHeading = page.getByRole('heading', { name: getTextMatcher('timeline.heading') });
       await expect(timelineHeading).toBeVisible();
 
       // Navigate within page (scroll, etc.)
@@ -273,11 +274,11 @@ test.describe('Timeline RAG Feature', () => {
 
     test('should have accessibility features', async ({ userPage: page }) => {
       // Check for proper heading structure
-      const heading = page.getByRole('heading', { name: 'Timeline Eventi RAG' });
+      const heading = page.getByRole('heading', { name: getTextMatcher('timeline.heading') });
       await expect(heading).toBeVisible();
 
       // Check for labeled inputs
-      const searchInput = page.locator('input[placeholder*="Cerca"]').first();
+      const searchInput = page.locator(`input[placeholder*="${t('timeline.searchPlaceholder')}"]`).first();
       await expect(searchInput).toBeVisible();
 
       // Check for buttons with accessible text
@@ -291,7 +292,7 @@ test.describe('Timeline RAG Feature', () => {
       // Actual loading states will appear during real API calls
 
       // Check that the page has loaded
-      const timelineHeading = page.getByRole('heading', { name: 'Timeline Eventi RAG' });
+      const timelineHeading = page.getByRole('heading', { name: getTextMatcher('timeline.heading') });
       await expect(timelineHeading).toBeVisible();
 
       // Component should be rendered (not in permanent loading state)
@@ -344,11 +345,11 @@ test.describe('Timeline RAG Feature', () => {
       // Timeline should handle multiple rapid events
       // This test verifies the UI structure is robust
 
-      const timeline = page.getByRole('heading', { name: 'Timeline Eventi RAG' });
+      const timeline = page.getByRole('heading', { name: getTextMatcher('timeline.heading') });
       await expect(timeline).toBeVisible();
 
       // Simulate rapid interactions
-      const searchInput = page.locator('input[placeholder*="Cerca"]').first();
+      const searchInput = page.locator(`input[placeholder*="${t('timeline.searchPlaceholder')}"]`).first();
       await searchInput.fill('test');
       await searchInput.clear();
       await searchInput.fill('another test');
@@ -360,7 +361,7 @@ test.describe('Timeline RAG Feature', () => {
 
     test('should maintain filter state during session', async ({ userPage: page }) => {
       // Apply a filter
-      const searchInput = page.locator('input[placeholder*="Cerca"]').first();
+      const searchInput = page.locator(`input[placeholder*="${t('timeline.searchPlaceholder')}"]`).first();
       await searchInput.fill('persistent test');
 
       // Verify filter persists

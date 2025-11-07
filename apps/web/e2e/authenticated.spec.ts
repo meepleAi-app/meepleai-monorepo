@@ -1,5 +1,6 @@
 import { test, expect, Page, Route } from '@playwright/test';
 import { Buffer } from 'buffer';
+import { getTextMatcher, t } from './fixtures/i18n';
 
 const apiBase = 'http://localhost:8080';
 

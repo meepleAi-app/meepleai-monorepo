@@ -1,5 +1,6 @@
 import { test as base, expect } from '@playwright/test';
 import { loginAsAdmin } from './fixtures/auth';
+import { getTextMatcher, t } from './fixtures/i18n';
 
 const test = base.extend<{ adminPage: any }>({
   adminPage: async ({ page }, use) => {
@@ -44,17 +45,17 @@ test.describe("Analytics Dashboard E2E", () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for page to load (increased timeout for API calls)
-    await expect(page.getByText("Analytics Dashboard")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(getTextMatcher("admin.analytics.dashboard"))).toBeVisible({ timeout: 15000 });
 
     // Check metric cards are visible
-    await expect(page.getByText("Total Users")).toBeVisible();
-    await expect(page.getByText("Active Sessions")).toBeVisible();
-    await expect(page.getByText("API Requests Today")).toBeVisible();
-    await expect(page.getByText("Total PDF Documents")).toBeVisible();
-    await expect(page.getByText("Total Chat Messages")).toBeVisible();
-    await expect(page.getByText("Avg Confidence Score")).toBeVisible();
-    await expect(page.getByText("Total RAG Requests")).toBeVisible();
-    await expect(page.getByText("Total Tokens Used")).toBeVisible();
+    await expect(page.getByText(getTextMatcher("admin.analytics.totalUsers"))).toBeVisible();
+    await expect(page.getByText(getTextMatcher("admin.analytics.activeSessions"))).toBeVisible();
+    await expect(page.getByText(getTextMatcher("admin.analytics.apiRequestsToday"))).toBeVisible();
+    await expect(page.getByText(getTextMatcher("admin.analytics.totalPdfDocuments"))).toBeVisible();
+    await expect(page.getByText(getTextMatcher("admin.analytics.totalChatMessages"))).toBeVisible();
+    await expect(page.getByText(getTextMatcher("admin.analytics.avgConfidenceScore"))).toBeVisible();
+    await expect(page.getByText(getTextMatcher("admin.analytics.totalRagRequests"))).toBeVisible();
+    await expect(page.getByText(getTextMatcher("admin.analytics.totalTokensUsed"))).toBeVisible();
   });
 
   test("should display charts", async ({ adminPage: page }) => {
@@ -63,14 +64,14 @@ test.describe("Analytics Dashboard E2E", () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for dashboard to load (increased timeout)
-    await expect(page.getByText("Analytics Dashboard")).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(getTextMatcher("admin.analytics.dashboard"))).toBeVisible({ timeout: 15000 });
 
-    // Check chart titles are visible
-    await expect(page.getByText("User Registrations")).toBeVisible();
-    await expect(page.getByText("Session Creations")).toBeVisible();
-    await expect(page.getByText("API Requests")).toBeVisible();
-    await expect(page.getByText("PDF Uploads")).toBeVisible();
-    await expect(page.getByText("Chat Messages")).toBeVisible();
+    // Check chart titles are visible using heading role to avoid strict mode violation
+    await expect(page.getByText(getTextMatcher("admin.analytics.userRegistrations"))).toBeVisible();
+    await expect(page.getByText(getTextMatcher("admin.analytics.sessionCreations"))).toBeVisible();
+    await expect(page.locator('h2', { hasText: getTextMatcher("admin.analytics.apiRequests") })).toBeVisible();
+    await expect(page.getByText(getTextMatcher("admin.analytics.pdfUploads"))).toBeVisible();
+    await expect(page.locator('h2', { hasText: getTextMatcher("admin.analytics.chatMessages") })).toBeVisible();
   });
 
   test("should allow changing time period filter", async ({ adminPage: page }) => {
@@ -78,14 +79,14 @@ test.describe("Analytics Dashboard E2E", () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for initial load
-    await expect(page.getByText("Analytics Dashboard")).toBeVisible();
+    await expect(page.getByText(getTextMatcher("admin.analytics.dashboard"))).toBeVisible();
 
     // Change to 7 days
     await page.selectOption('select', '7');
 
     // Wait for data to refresh (check that page doesn't error)
     await page.waitForTimeout(1000);
-    await expect(page.getByText("Analytics Dashboard")).toBeVisible();
+    await expect(page.getByText(getTextMatcher("admin.analytics.dashboard"))).toBeVisible();
   });
 
   test("should toggle auto-refresh", async ({ adminPage: page }) => {
@@ -93,18 +94,18 @@ test.describe("Analytics Dashboard E2E", () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for dashboard
-    await expect(page.getByText("Analytics Dashboard")).toBeVisible();
+    await expect(page.getByText(getTextMatcher("admin.analytics.dashboard"))).toBeVisible();
 
     // Auto-refresh should be ON by default
-    await expect(page.getByRole("button", { name: /Auto-refresh ON/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: getTextMatcher("admin.analytics.autoRefreshOn") })).toBeVisible();
 
-    // Toggle off
-    await page.getByRole("button", { name: /Auto-refresh ON/i }).click();
-    await expect(page.getByRole("button", { name: /Auto-refresh OFF/i })).toBeVisible();
+    // Toggle off (use force: true to handle nextjs-portal overlay)
+    await page.getByRole("button", { name: getTextMatcher("admin.analytics.autoRefreshOn") }).click({ force: true });
+    await expect(page.getByRole("button", { name: getTextMatcher("admin.analytics.autoRefreshOff") })).toBeVisible();
 
-    // Toggle back on
-    await page.getByRole("button", { name: /Auto-refresh OFF/i }).click();
-    await expect(page.getByRole("button", { name: /Auto-refresh ON/i })).toBeVisible();
+    // Toggle back on (use force: true to handle nextjs-portal overlay)
+    await page.getByRole("button", { name: getTextMatcher("admin.analytics.autoRefreshOff") }).click({ force: true });
+    await expect(page.getByRole("button", { name: getTextMatcher("admin.analytics.autoRefreshOn") })).toBeVisible();
   });
 
   test("should refresh data when refresh button clicked", async ({ adminPage: page }) => {
@@ -112,22 +113,22 @@ test.describe("Analytics Dashboard E2E", () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for initial load
-    await expect(page.getByText("Analytics Dashboard")).toBeVisible();
+    await expect(page.getByText(getTextMatcher("admin.analytics.dashboard"))).toBeVisible();
 
     // Get initial last updated time
-    const initialUpdateText = await page.getByText(/Last updated:/).textContent();
+    const initialUpdateText = await page.getByText(getTextMatcher("admin.analytics.lastUpdated")).textContent();
 
     // Wait a moment
     await page.waitForTimeout(1000);
 
-    // Click refresh
-    await page.getByRole("button", { name: /Refresh/i }).click();
+    // Click refresh button (use force: true to handle nextjs-portal overlay and strict mode)
+    await page.locator('button').filter({ hasText: getTextMatcher("admin.analytics.refresh") }).first().click({ force: true });
 
     // Wait for refresh to complete
     await page.waitForTimeout(1000);
 
     // Check that last updated time has changed
-    const newUpdateText = await page.getByText(/Last updated:/).textContent();
+    const newUpdateText = await page.getByText(getTextMatcher("admin.analytics.lastUpdated")).textContent();
     expect(newUpdateText).not.toBe(initialUpdateText);
   });
 
@@ -136,18 +137,16 @@ test.describe("Analytics Dashboard E2E", () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for dashboard
-    await expect(page.getByText("Analytics Dashboard")).toBeVisible();
+    await expect(page.getByText(getTextMatcher("admin.analytics.dashboard"))).toBeVisible();
 
-    // Click export CSV button
-    const downloadPromise = page.waitForEvent("download");
-    await page.getByRole("button", { name: /Export CSV/i }).click();
-
-    // Wait for download
-    const download = await downloadPromise;
+    // Click export CSV button THEN wait for download (use force: true to handle nextjs-portal overlay)
+    await page.getByRole("button", { name: getTextMatcher("admin.analytics.exportCsv") }).click({ force: true });
+    const download = await page.waitForEvent("download");
+    
     expect(download.suggestedFilename()).toMatch(/analytics-.+\.csv/);
 
     // Check for success toast
-    await expect(page.getByText("Analytics exported as CSV")).toBeVisible();
+    await expect(page.getByText(getTextMatcher("admin.analytics.exportedCsv"))).toBeVisible();
   });
 
   test("should export JSON", async ({ adminPage: page }) => {
@@ -155,18 +154,16 @@ test.describe("Analytics Dashboard E2E", () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for dashboard
-    await expect(page.getByText("Analytics Dashboard")).toBeVisible();
+    await expect(page.getByText(getTextMatcher("admin.analytics.dashboard"))).toBeVisible();
 
-    // Click export JSON button
-    const downloadPromise = page.waitForEvent("download");
-    await page.getByRole("button", { name: /Export JSON/i }).click();
-
-    // Wait for download
-    const download = await downloadPromise;
+    // Click export JSON button THEN wait for download (use force: true to handle nextjs-portal overlay)
+    await page.getByRole("button", { name: getTextMatcher("admin.analytics.exportJson") }).click({ force: true });
+    const download = await page.waitForEvent("download");
+    
     expect(download.suggestedFilename()).toMatch(/analytics-.+\.json/);
 
     // Check for success toast
-    await expect(page.getByText("Analytics exported as JSON")).toBeVisible();
+    await expect(page.getByText(getTextMatcher("admin.analytics.exportedJson"))).toBeVisible();
   });
 
   test("should have back to users link", async ({ adminPage: page }) => {
@@ -174,11 +171,11 @@ test.describe("Analytics Dashboard E2E", () => {
     await page.waitForLoadState('networkidle');
 
     // Check back link exists
-    const backLink = page.getByRole("link", { name: /Back to Users/i });
+    const backLink = page.getByRole("link", { name: getTextMatcher("admin.analytics.backToUsers") });
     await expect(backLink).toBeVisible();
 
-    // Click and verify navigation
-    await backLink.click();
+    // Click and verify navigation (use force: true to handle nextjs-portal overlay)
+    await backLink.click({ force: true });
     await expect(page).toHaveURL("http://localhost:3000/admin/users");
   });
 });

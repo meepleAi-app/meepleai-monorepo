@@ -1,8 +1,21 @@
 /**
  * E2E tests for error handling flows
+ * 
+ * ⚠️ STATUS: These tests are STUBBED and incomplete (Phase 5 deliverable)
+ * They define the test structure and scenarios but lack complete assertions.
+ * Each test needs implementation before being considered complete.
+ * 
+ * To implement:
+ * 1. Add proper error toast/notification selectors
+ * 2. Implement assertions for error handling behavior
+ * 3. Add edge case scenarios
+ * 4. Validate recovery flows
+ * 
+ * See docs/issue/ui-05-accessibility-phase5.md for Phase 5 requirements
  */
 
 import { test, expect, Page } from '@playwright/test';
+import { getTextMatcher, t } from './fixtures/i18n';
 
 test.describe('Error Handling E2E Tests', () => {
   test.describe('Network errors', () => {

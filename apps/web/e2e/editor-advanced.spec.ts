@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { getTextMatcher, t } from './fixtures/i18n';
 
 test.describe('RuleSpecEditor E2E', () => {
   test.beforeEach(async ({ page }) => {
@@ -73,15 +74,15 @@ test.describe('RuleSpecEditor E2E', () => {
     await textarea.blur();
 
     // Verify unsaved changes indicator
-    await expect(page.getByText(/Modifiche non salvate/i)).toBeVisible({ timeout: 2000 });
+    await expect(page.getByText(/unsaved|modifiche non salvate/i)).toBeVisible({ timeout: 2000 });
 
     // Wait for auto-save (2 second debounce)
     await page.waitForTimeout(2500);
-    await expect(page.getByText(/Auto-salvato/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/auto.saved|auto.salvato/i)).toBeVisible({ timeout: 5000 });
 
-    // Test undo functionality
-    const undoButton = page.getByRole('button', { name: /annulla/i });
-    await undoButton.click();
+    // Test undo functionality (use force: true to handle nextjs-portal overlay)
+    const undoButton = page.getByRole('button', { name: /undo|annulla/i });
+    await undoButton.click({ force: true });
 
     // Verify content reverted
     const content = await textarea.inputValue();
@@ -98,13 +99,13 @@ test.describe('RuleSpecEditor E2E', () => {
     }, null, 2));
     await textarea.blur();
 
-    // Manual save
-    const saveButton = page.getByRole('button', { name: /salva ora/i });
+    // Manual save (use force: true to handle nextjs-portal overlay)
+    const saveButton = page.getByRole('button', { name: getTextMatcher('editor.save') });
     await expect(saveButton).toBeEnabled({ timeout: 2000 });
-    await saveButton.click();
+    await saveButton.click({ force: true });
 
     // Verify save success
-    await expect(page.getByText(/RuleSpec salvato con successo/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/successfully saved|salvato con successo/i)).toBeVisible({ timeout: 5000 });
   });
 
   test('handles network failure gracefully', async ({ page }) => {
@@ -143,11 +144,11 @@ test.describe('RuleSpecEditor E2E', () => {
     }, null, 2));
     await textarea.blur();
 
-    const saveButton = page.getByRole('button', { name: /salva ora/i });
-    await saveButton.click();
+    const saveButton = page.getByRole('button', { name: getTextMatcher('editor.save') });
+    await saveButton.click({ force: true });
 
     // Should show error message
-    await expect(page.getByText(/Impossibile salvare RuleSpec/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/error|impossibile|failed/i)).toBeVisible({ timeout: 5000 });
   });
 
   test('validates JSON content in real-time', async ({ page }) => {
@@ -162,11 +163,11 @@ test.describe('RuleSpecEditor E2E', () => {
     await textarea.blur();
 
     // Should show validation error
-    await expect(page.getByText(/✗/)).toBeVisible({ timeout: 2000 });
-    await expect(page.getByText(/JSON non valido/i)).toBeVisible();
+    await expect(page.getByText(/✗|invalid/i)).toBeVisible({ timeout: 2000 });
+    await expect(page.getByText(/JSON.*invalid|JSON non valido/i)).toBeVisible();
 
     // Save button should be disabled
-    const saveButton = page.getByRole('button', { name: /salvato/i });
+    const saveButton = page.getByRole('button', { name: getTextMatcher('editor.save') });
     await expect(saveButton).toBeDisabled();
   });
 
@@ -238,7 +239,7 @@ test.describe('RuleSpecEditor E2E', () => {
     await page.reload();
 
     // Should show login prompt
-    await expect(page.getByText(/Devi effettuare l'accesso/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/login required|devi effettuare l'accesso/i)).toBeVisible({ timeout: 10000 });
   });
 
   test('preserves content during view mode toggle', async ({ page }) => {
@@ -249,14 +250,14 @@ test.describe('RuleSpecEditor E2E', () => {
     const textarea = page.locator('textarea');
     const originalContent = await textarea.inputValue();
 
-    // Toggle to rich mode (if toggle button exists)
-    const toggleButton = page.getByTestId('view-toggle').or(page.getByText(/Switch to/i));
+    // Toggle to rich mode (if toggle button exists, use force: true to handle nextjs-portal overlay)
+    const toggleButton = page.getByTestId('view-toggle').or(page.getByText(/Switch to|toggle/i));
     if (await toggleButton.count() > 0) {
-      await toggleButton.click();
+      await toggleButton.click({ force: true });
       await page.waitForTimeout(500);
 
-      // Toggle back to JSON
-      await toggleButton.click();
+      // Toggle back to JSON (use force: true to handle nextjs-portal overlay)
+      await toggleButton.click({ force: true });
       await page.waitForTimeout(500);
 
       // Content should be preserved

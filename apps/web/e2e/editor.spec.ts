@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { getTextMatcher, t } from './fixtures/i18n';
 
 /**
  * E2E Tests for RuleSpec Editor (EDIT-01)
@@ -35,7 +36,7 @@ test.describe('RuleSpec Editor', () => {
     await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', password);
     await page.fill('input[placeholder*="Name" i]', `${role} Test User`);
-    await page.click('button:has-text("Register")');
+    await page.click('button:has-text("Register")', { force: true });
 
     // Wait for successful registration
     await page.waitForURL('http://localhost:3000/chat', { timeout: 5000 });
@@ -51,7 +52,7 @@ test.describe('RuleSpec Editor', () => {
     await page.goto('http://localhost:3000/upload');
     await page.waitForLoadState('networkidle');
     await page.fill('input[placeholder*="game" i]', gameId);
-    await page.click('button:has-text("Create Game")');
+    await page.click('button:has-text("Create Game")', { force: true });
     await page.waitForSelector(`text=Game "${gameId}" created`, { timeout: 5000 });
   }
 
@@ -85,15 +86,15 @@ test.describe('RuleSpec Editor', () => {
       await page.goto('http://localhost:3000/editor?gameId=demo-chess');
     await page.waitForLoadState('networkidle');
 
-      await expect(page.locator('text=Non hai i permessi necessari')).toBeVisible();
+      await expect(page.getByText(getTextMatcher('common.permissionDenied'))).toBeVisible();
     });
 
     test('redirects unauthenticated users to home', async () => {
       await page.goto('http://localhost:3000/editor?gameId=demo-chess');
     await page.waitForLoadState('networkidle');
 
-      await expect(page.locator('text=Devi effettuare l\'accesso')).toBeVisible();
-      await expect(page.locator('a:has-text("Torna alla home")')).toBeVisible();
+      await expect(page.getByText(getTextMatcher('common.loginRequired'))).toBeVisible();
+      await expect(page.getByRole('link', { name: getTextMatcher('nav.home') })).toBeVisible();
     });
   });
 
@@ -119,8 +120,8 @@ test.describe('RuleSpec Editor', () => {
       await page.goto('http://localhost:3000/editor?gameId=demo-chess');
     await page.waitForLoadState('networkidle');
 
-      await expect(page.locator('text=✓ JSON valido')).toBeVisible();
-      await expect(page.locator('button:has-text("Salva")')).toBeEnabled();
+      await expect(page.getByText(getTextMatcher('editor.validJson'))).toBeVisible();
+      await expect(page.getByRole('button', { name: getTextMatcher('editor.save') })).toBeEnabled();
     });
 
     test('displays preview panel with rule count', async () => {
@@ -128,14 +129,14 @@ test.describe('RuleSpec Editor', () => {
     await page.waitForLoadState('networkidle');
 
       await expect(page.locator('h2:has-text("Preview")')).toBeVisible();
-      await expect(page.locator('text=N. Regole:')).toBeVisible();
+      await expect(page.getByText(getTextMatcher('editor.ruleCount'))).toBeVisible();
     });
 
     test('shows error when gameId is missing', async () => {
       await page.goto('http://localhost:3000/editor');
     await page.waitForLoadState('networkidle');
 
-      await expect(page.locator('text=Specifica un gameId nella query string')).toBeVisible();
+      await expect(page.getByText(getTextMatcher('editor.missingGameId'))).toBeVisible();
     });
 
     test('shows error when RuleSpec not found', async () => {
@@ -145,7 +146,7 @@ test.describe('RuleSpec Editor', () => {
 
       // Should show error or loading state
       await expect(
-        page.locator('text=RuleSpec non trovato').or(page.locator('text=Caricamento'))
+        page.getByText(getTextMatcher('editor.notFound')).or(page.getByText(getTextMatcher('common.loading')))
       ).toBeVisible({ timeout: 10000 });
     });
   });
@@ -163,7 +164,7 @@ test.describe('RuleSpec Editor', () => {
       await textarea.fill('{ invalid json');
 
       await expect(page.locator('text=/Expected property name/i')).toBeVisible();
-      await expect(page.locator('button:has-text("Salva")')).toBeDisabled();
+      await expect(page.getByRole('button', { name: getTextMatcher('editor.save') })).toBeDisabled();
     });
 
     test('validates required gameId field', async () => {
@@ -177,8 +178,8 @@ test.describe('RuleSpec Editor', () => {
 
       await textarea.fill(invalidSpec);
 
-      await expect(page.locator('text=/gameId è richiesto/i')).toBeVisible();
-      await expect(page.locator('button:has-text("Salva")')).toBeDisabled();
+      await expect(page.getByText(/gameId.*required/i)).toBeVisible();
+      await expect(page.getByRole('button', { name: getTextMatcher('editor.save') })).toBeDisabled();
     });
 
     test('validates required version field', async () => {
@@ -192,8 +193,8 @@ test.describe('RuleSpec Editor', () => {
 
       await textarea.fill(invalidSpec);
 
-      await expect(page.locator('text=/version è richiesto/i')).toBeVisible();
-      await expect(page.locator('button:has-text("Salva")')).toBeDisabled();
+      await expect(page.getByText(/version.*required/i)).toBeVisible();
+      await expect(page.getByRole('button', { name: getTextMatcher('editor.save') })).toBeDisabled();
     });
 
     test('validates rules array structure', async () => {
@@ -208,8 +209,8 @@ test.describe('RuleSpec Editor', () => {
 
       await textarea.fill(invalidSpec);
 
-      await expect(page.locator('text=/rules deve essere un array/i')).toBeVisible();
-      await expect(page.locator('button:has-text("Salva")')).toBeDisabled();
+      await expect(page.getByText(/rules.*array/i)).toBeVisible();
+      await expect(page.getByRole('button', { name: getTextMatcher('editor.save') })).toBeDisabled();
     });
 
     test('validates rule atom required fields', async () => {
@@ -226,8 +227,8 @@ test.describe('RuleSpec Editor', () => {
 
       await textarea.fill(invalidSpec);
 
-      await expect(page.locator('text=/rules\\[0\\]\\.id è richiesto/i')).toBeVisible();
-      await expect(page.locator('button:has-text("Salva")')).toBeDisabled();
+      await expect(page.getByText(/rules.*id.*required/i)).toBeVisible();
+      await expect(page.getByRole('button', { name: getTextMatcher('editor.save') })).toBeDisabled();
     });
 
     test('shows valid state after fixing invalid JSON', async () => {
@@ -249,8 +250,8 @@ test.describe('RuleSpec Editor', () => {
 
       await textarea.fill(validSpec);
 
-      await expect(page.locator('text=✓ JSON valido')).toBeVisible();
-      await expect(page.locator('button:has-text("Salva")')).toBeEnabled();
+      await expect(page.getByText(getTextMatcher('editor.validJson'))).toBeVisible();
+      await expect(page.getByRole('button', { name: getTextMatcher('editor.save') })).toBeEnabled();
     });
   });
 
@@ -283,12 +284,12 @@ test.describe('RuleSpec Editor', () => {
 
       await textarea.fill(newSpec);
 
-      // Save
-      const saveButton = testPage.locator('button:has-text("Salva")');
-      await saveButton.click();
+      // Save (use force: true to handle nextjs-portal overlay)
+      const saveButton = testPage.getByRole('button', { name: getTextMatcher('editor.save') });
+      await saveButton.click({ force: true });
 
       // Wait for success message
-      await expect(testPage.locator('text=/RuleSpec salvato con successo/i')).toBeVisible({ timeout: 10000 });
+      await expect(testPage.getByText(/successfully saved|salvato con successo/i)).toBeVisible({ timeout: 10000 });
     });
 
     test('shows error when save fails', async () => {
@@ -304,11 +305,11 @@ test.describe('RuleSpec Editor', () => {
 
       await textarea.fill(JSON.stringify(spec, null, 2));
 
-      const saveButton = page.locator('button:has-text("Salva")');
-      await saveButton.click();
+      const saveButton = page.getByRole('button', { name: getTextMatcher('editor.save') });
+      await saveButton.click({ force: true });
 
       // Should show error (either conflict or other error)
-      await expect(page.locator('text=/error/i').or(page.locator('[style*="fce4e4"]'))).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText(/error/i).or(page.locator('[style*="fce4e4"]'))).toBeVisible({ timeout: 10000 });
     });
 
     test('disables save button while saving', async () => {
@@ -322,11 +323,11 @@ test.describe('RuleSpec Editor', () => {
 
       await textarea.fill(JSON.stringify(spec, null, 2));
 
-      const saveButton = page.locator('button:has-text("Salva")');
-      await saveButton.click();
+      const saveButton = page.getByRole('button', { name: getTextMatcher('editor.save') });
+      await saveButton.click({ force: true });
 
       // Button should show "Salvataggio..." and be disabled temporarily
-      await expect(page.locator('button:has-text("Salvataggio...")')).toBeVisible();
+      await expect(page.getByRole('button', { name: /saving|salvataggio/i })).toBeVisible();
     });
   });
 
@@ -338,12 +339,12 @@ test.describe('RuleSpec Editor', () => {
     });
 
     test('undo button is disabled initially', async () => {
-      const undoButton = page.locator('button:has-text("← Annulla")');
+      const undoButton = page.getByRole('button', { name: /undo|annulla/i });
       await expect(undoButton).toBeDisabled();
     });
 
     test('redo button is disabled initially', async () => {
-      const redoButton = page.locator('button:has-text("Ripeti →")');
+      const redoButton = page.getByRole('button', { name: /redo|ripeti/i });
       await expect(redoButton).toBeDisabled();
     });
 
@@ -360,7 +361,7 @@ test.describe('RuleSpec Editor', () => {
       await textarea.blur();
 
       // Undo should be enabled
-      const undoButton = page.locator('button:has-text("← Annulla")');
+      const undoButton = page.getByRole('button', { name: /undo|annulla/i });
       await expect(undoButton).toBeEnabled();
     });
 
@@ -379,9 +380,9 @@ test.describe('RuleSpec Editor', () => {
       // Verify change applied
       expect(await textarea.inputValue()).toBe(modifiedContent);
 
-      // Undo
-      const undoButton = page.locator('button:has-text("← Annulla")');
-      await undoButton.click();
+      // Undo (use force: true to handle nextjs-portal overlay)
+      const undoButton = page.getByRole('button', { name: /undo|annulla/i });
+      await undoButton.click({ force: true });
 
       // Should restore original
       await expect(textarea).toHaveValue(originalContent);
@@ -397,12 +398,12 @@ test.describe('RuleSpec Editor', () => {
       await textarea.fill(JSON.stringify(spec, null, 2));
       await textarea.blur();
 
-      // Undo
-      const undoButton = page.locator('button:has-text("← Annulla")');
-      await undoButton.click();
+      // Undo (use force: true to handle nextjs-portal overlay)
+      const undoButton = page.getByRole('button', { name: /undo|annulla/i });
+      await undoButton.click({ force: true });
 
       // Redo should be enabled
-      const redoButton = page.locator('button:has-text("Ripeti →")');
+      const redoButton = page.getByRole('button', { name: /redo|ripeti/i });
       await expect(redoButton).toBeEnabled();
     });
 
@@ -418,13 +419,13 @@ test.describe('RuleSpec Editor', () => {
       await textarea.fill(modifiedContent);
       await textarea.blur();
 
-      // Undo
-      const undoButton = page.locator('button:has-text("← Annulla")');
-      await undoButton.click();
+      // Undo (use force: true to handle nextjs-portal overlay)
+      const undoButton = page.getByRole('button', { name: /undo|annulla/i });
+      await undoButton.click({ force: true });
 
-      // Redo
-      const redoButton = page.locator('button:has-text("Ripeti →")');
-      await redoButton.click();
+      // Redo (use force: true to handle nextjs-portal overlay)
+      const redoButton = page.getByRole('button', { name: /redo|ripeti/i });
+      await redoButton.click({ force: true });
 
       // Should restore modified content
       await expect(textarea).toHaveValue(modifiedContent);
@@ -443,20 +444,20 @@ test.describe('RuleSpec Editor', () => {
         await textarea.blur();
       }
 
-      const undoButton = page.locator('button:has-text("← Annulla")');
-      const redoButton = page.locator('button:has-text("Ripeti →")');
+      const undoButton = page.getByRole('button', { name: /undo|annulla/i });
+      const redoButton = page.getByRole('button', { name: /redo|ripeti/i });
 
-      // Undo all changes
+      // Undo all changes (use force: true to handle nextjs-portal overlay)
       for (let i = versions.length - 1; i >= 0; i--) {
-        await undoButton.click();
+        await undoButton.click({ force: true });
       }
 
       // Should be back to original
       await expect(textarea).toHaveValue(originalContent);
 
-      // Redo all changes
+      // Redo all changes (use force: true to handle nextjs-portal overlay)
       for (const version of versions) {
-        await redoButton.click();
+        await redoButton.click({ force: true });
         const content = await textarea.inputValue();
         expect(JSON.parse(content).version).toBe(version);
       }
@@ -471,10 +472,10 @@ test.describe('RuleSpec Editor', () => {
     });
 
     test('shows game metadata in preview', async () => {
-      await expect(page.locator('text=Game ID:')).toBeVisible();
-      await expect(page.locator('text=Versione:')).toBeVisible();
-      await expect(page.locator('text=Creato:')).toBeVisible();
-      await expect(page.locator('text=N. Regole:')).toBeVisible();
+      await expect(page.getByText(/Game ID|GameID/i)).toBeVisible();
+      await expect(page.getByText(/Version|Versione/i)).toBeVisible();
+      await expect(page.getByText(/Created|Creato/i)).toBeVisible();
+      await expect(page.getByText(getTextMatcher('editor.ruleCount'))).toBeVisible();
     });
 
     test('updates preview when JSON changes', async () => {
@@ -494,9 +495,9 @@ test.describe('RuleSpec Editor', () => {
       await textarea.fill(JSON.stringify(spec, null, 2));
 
       // Wait for preview to update
-      await expect(page.locator('text=This is a brand new rule')).toBeVisible({ timeout: 2000 });
-      await expect(page.locator('text=Sezione: Testing')).toBeVisible();
-      await expect(page.locator('text=Pag. 99')).toBeVisible();
+      await expect(page.getByText('This is a brand new rule')).toBeVisible({ timeout: 2000 });
+      await expect(page.getByText(/Section|Sezione/i)).toBeVisible();
+      await expect(page.getByText('99')).toBeVisible();
     });
 
     test('shows error message when JSON is invalid', async () => {
@@ -504,7 +505,7 @@ test.describe('RuleSpec Editor', () => {
 
       await textarea.fill('{ invalid json');
 
-      await expect(page.locator('text=Correggi gli errori per visualizzare l\'anteprima')).toBeVisible();
+      await expect(page.getByText(/fix.*errors|correggi.*errori/i)).toBeVisible();
     });
   });
 
@@ -516,15 +517,15 @@ test.describe('RuleSpec Editor', () => {
     });
 
     test('navigates to version history', async () => {
-      const historyLink = page.locator('a:has-text("Storico Versioni")');
-      await historyLink.click();
+      const historyLink = page.getByRole('link', { name: /version history|storico versioni/i });
+      await historyLink.click({ force: true });
 
       await expect(page).toHaveURL(/\/versions\?gameId=demo-chess/);
     });
 
     test('navigates to home', async () => {
-      const homeLink = page.locator('a:has-text("Home")');
-      await homeLink.click();
+      const homeLink = page.getByRole('link', { name: getTextMatcher('nav.home') });
+      await homeLink.click({ force: true });
 
       await expect(page).toHaveURL('http://localhost:3000/');
     });

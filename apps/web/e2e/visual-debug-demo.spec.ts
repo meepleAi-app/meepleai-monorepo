@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { getTextMatcher, t } from './fixtures/i18n';
 
 /**
  * Visual Debug Demo - Investigate Portal Issue Interactively
@@ -8,6 +9,7 @@ import { test, expect } from '@playwright/test';
  * nextjs-portal click blocking problem.
  *
  * ⚠️  SKIPPED BY DEFAULT - These tests use page.pause() and require manual interaction
+ *     This is a DEBUG FIXTURE only for development/troubleshooting
  *
  * To run interactively:
  *   pnpm playwright test visual-debug-demo.spec.ts --grep "Visual Debug Demo" --debug
@@ -51,7 +53,6 @@ test.describe.skip('Visual Debug Demo', () => {
 
     if (portalCount > 0) {
       console.log(`❌ Found ${portalCount} portal element(s)`);
-
       // Check z-index
       const zIndex = await portal.first().evaluate((el) => {
         return window.getComputedStyle(el).zIndex;
@@ -141,7 +142,6 @@ test.describe.skip('Visual Debug Demo', () => {
     const portal = page.locator('nextjs-portal');
     const portalCount = await portal.count();
     console.log(`Portal elements found: ${portalCount} (should be 0)`);
-
     expect(portalCount).toBe(0);
     console.log('✅ Test complete - No portal issues with mock auth!');
   });

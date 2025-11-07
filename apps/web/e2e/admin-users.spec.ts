@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { getTextMatcher, t } from './fixtures/i18n';
 
 const apiBase = 'http://localhost:8080';
 
@@ -156,7 +157,7 @@ test.describe('Admin User Management E2E Flow', () => {
     await page.goto('http://localhost:3000/admin/users');
 
     // Verify initial user list loads
-    await expect(page.getByText('User Management')).toBeVisible();
+    await expect(page.getByText(getTextMatcher('admin.users.management'))).toBeVisible();
     await expect(page.getByText('existing@example.com')).toBeVisible();
     await expect(page.getByText('editor@example.com')).toBeVisible();
 
@@ -165,11 +166,11 @@ test.describe('Admin User Management E2E Flow', () => {
     await page.getByTestId('open-create-user-modal').click();
 
     // Fill out create form
-    await expect(page.getByRole('heading', { name: 'Create User' })).toBeVisible();
-    await page.getByLabel('Email *').fill('newuser@example.com');
-    await page.getByLabel('Password *').fill('SecurePass123!');
-    await page.getByLabel('Display Name *').fill('New Test User');
-    await page.getByLabel('Role *').selectOption('Editor');
+    await expect(page.getByRole('heading', { name: getTextMatcher('admin.users.createUser') })).toBeVisible();
+    await page.getByLabel(getTextMatcher('admin.users.email')).fill('newuser@example.com');
+    await page.getByLabel(getTextMatcher('admin.users.password')).fill('SecurePass123!');
+    await page.getByLabel(getTextMatcher('admin.users.displayName')).fill('New Test User');
+    await page.getByLabel(getTextMatcher('admin.users.role')).selectOption('Editor');
 
     // Submit form
     await page.getByTestId('submit-user-form').click();
@@ -187,18 +188,18 @@ test.describe('Admin User Management E2E Flow', () => {
     // ===== EDIT USER =====
     // Find and click Edit button for the newly created user
     const newUserRow = page.locator('tr:has-text("newuser@example.com")');
-    await newUserRow.getByRole('button', { name: 'Edit' }).click();
+    await newUserRow.getByRole('button', { name: getTextMatcher('common.edit') }).click();
 
     // Verify edit modal opens with pre-filled data
-    await expect(page.getByRole('heading', { name: 'Edit User' })).toBeVisible();
-    await expect(page.getByLabel('Email *')).toHaveValue('newuser@example.com');
+    await expect(page.getByRole('heading', { name: getTextMatcher('admin.users.editUser') })).toBeVisible();
+    await expect(page.getByLabel(getTextMatcher('admin.users.email'))).toHaveValue('newuser@example.com');
 
     // Update display name and role
-    await page.getByLabel('Display Name *').fill('Updated User Name');
-    await page.getByLabel('Role *').selectOption('User');
+    await page.getByLabel(getTextMatcher('admin.users.displayName')).fill('Updated User Name');
+    await page.getByLabel(getTextMatcher('admin.users.role')).selectOption('User');
 
     // Save changes
-    await page.getByRole('button', { name: /Save Changes/i }).click();
+    await page.getByRole('button', { name: getTextMatcher('admin.users.saveChanges') }).click();
 
     // Verify success toast
     await expect(page.getByText(/updated successfully/)).toBeVisible();
@@ -211,38 +212,44 @@ test.describe('Admin User Management E2E Flow', () => {
 
     // ===== SEARCH FUNCTIONALITY =====
     // Search for the user
-    await page.getByPlaceholder('Search by email or name...').fill('Updated');
+    await page.getByPlaceholder(t('admin.users.searchPlaceholder')).fill('Updated');
 
     // Verify filtered results (use role to avoid toast interference)
     await expect(page.getByRole('cell', { name: 'newuser@example.com', exact: true })).toBeVisible();
     await expect(page.getByText('existing@example.com')).not.toBeVisible();
 
     // Clear search
-    await page.getByPlaceholder('Search by email or name...').clear();
+    await page.getByPlaceholder(t('admin.users.searchPlaceholder')).clear();
 
     // ===== ROLE FILTER =====
     // Filter by User role
     await page.locator('select').first().selectOption('User');
 
-    // Verify only User role users shown
-    await expect(page.getByText('newuser@example.com')).toBeVisible();
-    await expect(page.getByText('existing@example.com')).toBeVisible();
-    await expect(page.getByText('editor@example.com')).not.toBeVisible();
+    // Verify only User role users shown (use role='cell' to avoid toast interference)
+    await expect(page.getByRole('cell', { name: 'newuser@example.com', exact: true })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'existing@example.com', exact: true })).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'editor@example.com', exact: true })).not.toBeVisible();
 
     // Reset filter
     await page.locator('select').first().selectOption('all');
 
     // ===== DELETE USER =====
     // Click Delete button for the user we created
-    const userRowToDelete = page.locator('tr:has-text("newuser@example.com")');
-    await userRowToDelete.getByRole('button', { name: 'Delete' }).click();
+    // First, ensure we're finding the correct row
+    const userRowToDelete = page.locator('tr').filter({ hasText: 'newuser@example.com' });
+    await expect(userRowToDelete).toBeVisible();
 
-    // Verify confirmation dialog
-    await expect(page.getByText('Delete User')).toBeVisible();
-    await expect(page.getByText(/Are you sure you want to delete newuser@example.com/)).toBeVisible();
+    // Find the Delete button within that row, scroll into view, then click
+    const deleteButton = userRowToDelete.locator('button:has-text("Delete")');
+    await deleteButton.scrollIntoViewIfNeeded();
+    await deleteButton.click({ force: true });
 
-    // Confirm deletion
-    await page.getByRole('button', { name: 'Confirm' }).click();
+    // Verify confirmation dialog appears
+    await expect(page.getByText(getTextMatcher('admin.users.deleteUser'))).toBeVisible();
+    await expect(page.getByText(new RegExp(t('admin.users.deleteConfirm')))).toBeVisible();
+
+    // Confirm deletion (use force for portal overlay)
+    await page.getByRole('button', { name: getTextMatcher('common.confirm') }).click({ force: true });
 
     // Verify success toast
     await expect(page.getByText(/deleted successfully/)).toBeVisible();
@@ -323,17 +330,17 @@ test.describe('Admin User Management E2E Flow', () => {
     await checkboxes.nth(2).check(); // Second user
 
     // Verify bulk delete button appears with count
-    await expect(page.getByText('Delete Selected (2)')).toBeVisible();
+    await expect(page.getByText(new RegExp(`${t('admin.users.deleteSelected')} \\(2\\)`))).toBeVisible();
 
     // Click bulk delete
-    await page.getByText('Delete Selected (2)').click();
+    await page.getByText(new RegExp(`${t('admin.users.deleteSelected')} \\(2\\)`)).click();
 
     // Verify confirmation dialog
-    await expect(page.getByText('Delete Multiple Users')).toBeVisible();
+    await expect(page.getByText(getTextMatcher('admin.users.deleteMultiple'))).toBeVisible();
     await expect(page.getByText(/2 user\(s\)/)).toBeVisible();
 
     // Confirm bulk delete
-    await page.getByRole('button', { name: 'Confirm' }).click();
+    await page.getByRole('button', { name: getTextMatcher('common.confirm') }).click();
 
     // Verify success toast
     await expect(page.getByText(/2 user\(s\) deleted successfully/)).toBeVisible();
@@ -413,14 +420,14 @@ test.describe('Admin User Management E2E Flow', () => {
     await expect(page.getByText('alpha@example.com')).toBeVisible();
 
     // Click Email header to sort by email
-    await page.getByText(/Email/).click();
+    await page.getByText(new RegExp(t('admin.users.email').replace(' *', ''))).click();
 
     // Should show sort indicator
-    await expect(page.getByText(/Email ↑/)).toBeVisible();
+    await expect(page.getByText(new RegExp(`${t('admin.users.email').replace(' *', '')} ↑`))).toBeVisible();
 
     // Click again to reverse sort
-    await page.getByText(/Email/).click();
-    await expect(page.getByText(/Email ↓/)).toBeVisible();
+    await page.getByText(new RegExp(t('admin.users.email').replace(' *', ''))).click();
+    await expect(page.getByText(new RegExp(`${t('admin.users.email').replace(' *', '')} ↓`))).toBeVisible();
   });
 
   test('pagination navigation', async ({ page }) => {
@@ -462,8 +469,8 @@ test.describe('Admin User Management E2E Flow', () => {
     await page.goto('http://localhost:3000/admin/users');
 
     // Verify page 1
-    await expect(page.getByText('Page 1 of 2')).toBeVisible();
-    await expect(page.getByText('Showing 1 to 20 of 25 users')).toBeVisible();
+    await expect(page.getByText(new RegExp(`${t('admin.users.page')} 1 ${t('admin.users.of')} 2`))).toBeVisible();
+    await expect(page.getByText(new RegExp(`${t('admin.users.showing')} 1 ${t('admin.users.to')} 20 ${t('admin.users.of')} 25 ${t('admin.users.users')}`))).toBeVisible();
     await expect(page.getByText('user1@example.com')).toBeVisible();
 
     // Previous should be disabled
@@ -473,15 +480,15 @@ test.describe('Admin User Management E2E Flow', () => {
     await page.getByTestId('pagination-next').click();
 
     // Verify page 2
-    await expect(page.getByText('Page 2 of 2')).toBeVisible();
-    await expect(page.getByText('Showing 21 to 25 of 25 users')).toBeVisible();
+    await expect(page.getByText(new RegExp(`${t('admin.users.page')} 2 ${t('admin.users.of')} 2`))).toBeVisible();
+    await expect(page.getByText(new RegExp(`${t('admin.users.showing')} 21 ${t('admin.users.to')} 25 ${t('admin.users.of')} 25 ${t('admin.users.users')}`))).toBeVisible();
 
     // Next should be disabled on last page
     await expect(page.getByTestId('pagination-next')).toBeDisabled();
 
     // Go back to page 1
     await page.getByTestId('pagination-previous').click();
-    await expect(page.getByText('Page 1 of 2')).toBeVisible();
+    await expect(page.getByText(new RegExp(`${t('admin.users.page')} 1 ${t('admin.users.of')} 2`))).toBeVisible();
   });
 
   test('form validation in create modal', async ({ page }) => {
@@ -505,24 +512,35 @@ test.describe('Admin User Management E2E Flow', () => {
     // Open create modal
     await page.getByTestId('open-create-user-modal').click();
 
-    // Try to submit empty form
+    // Disable HTML5 validation to test custom React validation
+    await page.evaluate(() => {
+      const form = document.querySelector('form');
+      if (form) form.setAttribute('novalidate', 'true');
+    });
+
+    // Fill with invalid data to trigger custom validation
+    await page.getByLabel(getTextMatcher('admin.users.email')).fill('invalid');
+    await page.getByLabel(getTextMatcher('admin.users.password')).fill('short');
+    await page.getByLabel(getTextMatcher('admin.users.displayName')).fill('');
+
+    // Try to submit with invalid data
     await page.getByTestId('submit-user-form').click();
 
     // Should show validation errors
-    await expect(page.getByText('Valid email is required')).toBeVisible();
-    await expect(page.getByText(/at least 8 characters/)).toBeVisible();
-    await expect(page.getByText('Display name is required')).toBeVisible();
+    await expect(page.getByText(getTextMatcher('admin.users.validationEmail'))).toBeVisible();
+    await expect(page.getByText(getTextMatcher('admin.users.validationPassword'))).toBeVisible();
+    await expect(page.getByText(getTextMatcher('admin.users.validationDisplayName'))).toBeVisible();
 
     // Fill with valid data
-    await page.getByLabel('Email *').fill('valid@example.com');
-    await page.getByLabel('Password *').fill('ValidPass123!');
-    await page.getByLabel('Display Name *').fill('Valid User');
+    await page.getByLabel(getTextMatcher('admin.users.email')).fill('valid@example.com');
+    await page.getByLabel(getTextMatcher('admin.users.password')).fill('ValidPass123!');
+    await page.getByLabel(getTextMatcher('admin.users.displayName')).fill('Valid User');
 
     // Validation errors should disappear after filling
     await page.getByTestId('submit-user-form').click();
 
     // Should not show validation errors now (modal will close or show API error)
-    await expect(page.getByText('Valid email is required')).not.toBeVisible();
+    await expect(page.getByText(getTextMatcher('admin.users.validationEmail'))).not.toBeVisible();
   });
 
   test('cancel buttons close modals without making changes', async ({ page }) => {
@@ -556,20 +574,20 @@ test.describe('Admin User Management E2E Flow', () => {
 
     // Test create modal cancel
     await page.getByTestId('open-create-user-modal').click();
-    await expect(page.getByRole('heading', { name: 'Create User' })).toBeVisible();
-    await page.getByRole('button', { name: 'Cancel' }).click();
-    await expect(page.getByRole('heading', { name: 'Create User' })).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: getTextMatcher('admin.users.createUser') })).toBeVisible();
+    await page.getByRole('button', { name: getTextMatcher('common.cancel') }).click();
+    await expect(page.getByRole('heading', { name: getTextMatcher('admin.users.createUser') })).not.toBeVisible();
 
     // Test edit modal cancel
-    await page.getByRole('button', { name: 'Edit' }).click();
-    await expect(page.getByRole('heading', { name: 'Edit User' })).toBeVisible();
-    await page.getByRole('button', { name: 'Cancel' }).click();
-    await expect(page.getByRole('heading', { name: 'Edit User' })).not.toBeVisible();
+    await page.getByRole('button', { name: getTextMatcher('common.edit') }).click();
+    await expect(page.getByRole('heading', { name: getTextMatcher('admin.users.editUser') })).toBeVisible();
+    await page.getByRole('button', { name: getTextMatcher('common.cancel') }).click();
+    await expect(page.getByRole('heading', { name: getTextMatcher('admin.users.editUser') })).not.toBeVisible();
 
     // Test delete confirmation cancel
-    await page.getByRole('button', { name: 'Delete' }).click();
-    await expect(page.getByText('Delete User')).toBeVisible();
-    await page.getByRole('button', { name: 'Cancel' }).click();
-    await expect(page.getByText('Delete User')).not.toBeVisible();
+    await page.getByRole('button', { name: getTextMatcher('common.delete') }).click();
+    await expect(page.getByText(getTextMatcher('admin.users.deleteUser'))).toBeVisible();
+    await page.getByRole('button', { name: getTextMatcher('common.cancel') }).click();
+    await expect(page.getByText(getTextMatcher('admin.users.deleteUser'))).not.toBeVisible();
   });
 });

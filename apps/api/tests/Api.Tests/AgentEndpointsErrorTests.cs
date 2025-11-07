@@ -46,7 +46,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = JsonContent.Create(new { gameId = "", query = "What are the rules?" });
         AddCookies(request, cookies);
 
@@ -64,7 +64,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = JsonContent.Create(new { gameId = (string?)null, query = "What are the rules?" });
         AddCookies(request, cookies);
 
@@ -83,7 +83,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = JsonContent.Create(new { gameId = game.Id, query = "" });
         AddCookies(request, cookies);
 
@@ -120,7 +120,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
         request.Content = JsonContent.Create(new { gameId = "", topic = "Setup phase" });
         AddCookies(request, cookies);
 
@@ -138,7 +138,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
         request.Content = JsonContent.Create(new { gameId = (string?)null, topic = "Setup phase" });
         AddCookies(request, cookies);
 
@@ -157,7 +157,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
         request.Content = JsonContent.Create(new { gameId = game.Id, topic = "" });
         AddCookies(request, cookies);
 
@@ -193,7 +193,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup");
         request.Content = JsonContent.Create(new { gameId = "" });
         AddCookies(request, cookies);
 
@@ -211,7 +211,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup");
         request.Content = JsonContent.Create(new { gameId = (string?)null });
         AddCookies(request, cookies);
 
@@ -247,7 +247,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback");
         request.Content = JsonContent.Create(new
         {
             userId = "different-user-id",
@@ -271,7 +271,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback");
         request.Content = JsonContent.Create(new
         {
             userId = user.Id,
@@ -295,7 +295,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback");
         request.Content = JsonContent.Create(new
         {
             userId = user.Id,

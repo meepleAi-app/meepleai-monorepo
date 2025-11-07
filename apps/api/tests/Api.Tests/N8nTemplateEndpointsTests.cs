@@ -54,7 +54,7 @@ public class N8nTemplateEndpointsTests : AdminTestFixture, IClassFixture<Postgre
         var email = $"n8n-user-{Guid.NewGuid():N}@test.local";
         var cookies = await RegisterAndAuthenticateAsync(client, email, "User");
 
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/n8n/templates");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/n8n/templates");
         AddCookies(request, cookies);
 
         // Act
@@ -80,7 +80,7 @@ public class N8nTemplateEndpointsTests : AdminTestFixture, IClassFixture<Postgre
         var email = $"n8n-user-{Guid.NewGuid():N}@test.local";
         var cookies = await RegisterAndAuthenticateAsync(client, email, "User");
 
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/n8n/templates?category=integration");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/n8n/templates?category=integration");
         AddCookies(request, cookies);
 
         // Act
@@ -106,7 +106,7 @@ public class N8nTemplateEndpointsTests : AdminTestFixture, IClassFixture<Postgre
         var cookies = await RegisterAndAuthenticateAsync(client, email, "User");
         var templateId = "bgg-game-sync"; // Known template from seed data
 
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/n8n/templates/{templateId}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/n8n/templates/{templateId}");
         AddCookies(request, cookies);
 
         // Act
@@ -132,7 +132,7 @@ public class N8nTemplateEndpointsTests : AdminTestFixture, IClassFixture<Postgre
         var email = $"n8n-user-{Guid.NewGuid():N}@test.local";
         var cookies = await RegisterAndAuthenticateAsync(client, email, "User");
 
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/n8n/templates/nonexistent-template");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/n8n/templates/nonexistent-template");
         AddCookies(request, cookies);
 
         // Act
@@ -176,7 +176,7 @@ public class N8nTemplateEndpointsTests : AdminTestFixture, IClassFixture<Postgre
         var json = JsonSerializer.Serialize(importRequest);
         var httpContent = new StringContent(json, Encoding.UTF8, "application/json");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/n8n/templates/bgg-game-sync/import")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/n8n/templates/bgg-game-sync/import")
         {
             Content = httpContent
         };
@@ -203,7 +203,7 @@ public class N8nTemplateEndpointsTests : AdminTestFixture, IClassFixture<Postgre
         var json = JsonSerializer.Serialize(importRequest);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/n8n/templates/nonexistent/import")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/n8n/templates/nonexistent/import")
         {
             Content = content
         };
@@ -246,7 +246,7 @@ public class N8nTemplateEndpointsTests : AdminTestFixture, IClassFixture<Postgre
         var json = JsonSerializer.Serialize(validateRequest);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/n8n/templates/validate")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/n8n/templates/validate")
         {
             Content = content
         };
@@ -286,7 +286,7 @@ public class N8nTemplateEndpointsTests : AdminTestFixture, IClassFixture<Postgre
         var json = JsonSerializer.Serialize(validateRequest);
         var httpContent = new StringContent(json, Encoding.UTF8, "application/json");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/n8n/templates/validate")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/n8n/templates/validate")
         {
             Content = httpContent
         };

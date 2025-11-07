@@ -287,7 +287,10 @@ public class PdfTextExtractionService
     /// <summary>
     /// Extracts raw text from PDF using Docnet.Core
     /// </summary>
-    [HandleProcessCorruptedStateExceptions]
+    /// <remarks>
+    /// SYSLIB0032: HandleProcessCorruptedStateExceptions is obsolete in .NET 9+
+    /// Removed as corrupted state exceptions cannot be recovered from anyway.
+    /// </remarks>
     [SecurityCritical]
     private (string Text, int PageCount) ExtractRawText(string filePath)
     {

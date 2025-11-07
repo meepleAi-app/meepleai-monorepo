@@ -402,7 +402,7 @@ public class LogForgingSanitizationEnricherTests
         var logEvent = CreateLogEvent("Query: {Query}", "search\nINFO: Fake");
 
         // Act
-        _enricher.Enrich(logEvent, new LogEventPropertyFactory());
+        _enricher.Enrich(logEvent, new TestPropertyFactory());
 
         // Assert
         var queryProp = logEvent.Properties["Query"];
@@ -423,7 +423,7 @@ public class LogForgingSanitizationEnricherTests
         var logEvent = CreateLogEventWithProperties(template, properties);
 
         // Act
-        _enricher.Enrich(logEvent, new LogEventPropertyFactory());
+        _enricher.Enrich(logEvent, new TestPropertyFactory());
 
         // Assert
         var queryValue = logEvent.Properties["Query"].Should().BeOfType<ScalarValue>().Subject;
@@ -440,7 +440,7 @@ public class LogForgingSanitizationEnricherTests
         var logEvent = CreateLogEvent("Query: {Query}", "safe query");
 
         // Act
-        _enricher.Enrich(logEvent, new LogEventPropertyFactory());
+        _enricher.Enrich(logEvent, new TestPropertyFactory());
 
         // Assert
         var queryProp = logEvent.Properties["Query"];
@@ -466,7 +466,7 @@ public class LogForgingSanitizationEnricherTests
         var logEvent = CreateLogEventWithProperties("Data: {@Data}", properties);
 
         // Act
-        _enricher.Enrich(logEvent, new LogEventPropertyFactory());
+        _enricher.Enrich(logEvent, new TestPropertyFactory());
 
         // Assert
         var dataProp = logEvent.Properties["Data"];

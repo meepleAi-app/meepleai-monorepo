@@ -80,7 +80,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
         T payload)
     {
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Post, url)
+        using var request = new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = JsonContent.Create(payload)
         };
@@ -93,7 +93,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
         string url)
     {
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
         AddCookies(request, cookies);
         return await client.SendAsync(request);
     }

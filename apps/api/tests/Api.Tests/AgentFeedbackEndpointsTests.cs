@@ -36,7 +36,7 @@ public class AgentFeedbackEndpointsTests : AdminTestFixture
         var authenticatedClient = CreateClientWithoutCookies();
 
         // Create a game first
-        var gameRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
+        using var gameRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
         {
             Content = JsonContent.Create(new
             {
@@ -54,7 +54,7 @@ public class AgentFeedbackEndpointsTests : AdminTestFixture
         var gameId = gameData.GetProperty("id").GetGuid();
 
         // Create a chat session
-        var chatRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/chats")
+        using var chatRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/chats")
         {
             Content = JsonContent.Create(new { gameId, agentName = "qa" })
         };
@@ -65,7 +65,7 @@ public class AgentFeedbackEndpointsTests : AdminTestFixture
         var chatId = chatData.GetProperty("chatId").GetGuid();
 
         // Simulate QA agent interaction (generate messageId)
-        var qaRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa")
+        using var qaRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa")
         {
             Content = JsonContent.Create(new
             {
@@ -81,7 +81,7 @@ public class AgentFeedbackEndpointsTests : AdminTestFixture
         var messageId = qaData.GetProperty("messageId").GetGuid();
 
         // Act - Submit helpful feedback
-        var feedbackRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback")
+        using var feedbackRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback")
         {
             Content = JsonContent.Create(new
             {
@@ -109,7 +109,7 @@ public class AgentFeedbackEndpointsTests : AdminTestFixture
         var authenticatedClient = CreateClientWithoutCookies();
 
         // Create game and chat
-        var gameRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
+        using var gameRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
         {
             Content = JsonContent.Create(new
             {
@@ -126,7 +126,7 @@ public class AgentFeedbackEndpointsTests : AdminTestFixture
         var gameData = await gameResponse.Content.ReadFromJsonAsync<JsonElement>();
         var gameId = gameData.GetProperty("id").GetGuid();
 
-        var chatRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/chats")
+        using var chatRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/chats")
         {
             Content = JsonContent.Create(new { gameId, agentName = "qa" })
         };
@@ -137,7 +137,7 @@ public class AgentFeedbackEndpointsTests : AdminTestFixture
         var chatId = chatData.GetProperty("chatId").GetGuid();
 
         // Simulate QA agent interaction
-        var qaRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa")
+        using var qaRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa")
         {
             Content = JsonContent.Create(new
             {
@@ -153,7 +153,7 @@ public class AgentFeedbackEndpointsTests : AdminTestFixture
         var messageId = qaData.GetProperty("messageId").GetGuid();
 
         // Act - Submit not helpful feedback with comment
-        var feedbackRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback")
+        using var feedbackRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback")
         {
             Content = JsonContent.Create(new
             {
@@ -181,7 +181,7 @@ public class AgentFeedbackEndpointsTests : AdminTestFixture
         var authenticatedClient = CreateClientWithoutCookies();
 
         // Act - Submit feedback for non-existent message
-        var feedbackRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback")
+        using var feedbackRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback")
         {
             Content = JsonContent.Create(new
             {
@@ -204,7 +204,7 @@ public class AgentFeedbackEndpointsTests : AdminTestFixture
         var authenticatedClient = CreateClientWithoutCookies();
 
         // Act - Submit feedback without messageId
-        var feedbackRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback")
+        using var feedbackRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback")
         {
             Content = JsonContent.Create(new
             {

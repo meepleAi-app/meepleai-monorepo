@@ -52,7 +52,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var query = "How many resources can I hold?";
 
         // When: First request (cache miss)
-        var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        using var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         AddCookies(request1, cookies);
         request1.Content = JsonContent.Create(new { gameId = game.Id, query });
 
@@ -64,7 +64,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         qaResponse1.Should().NotBeNull();
 
         // When: Second identical request (cache hit)
-        var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        using var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         AddCookies(request2, cookies);
         request2.Content = JsonContent.Create(new { gameId = game.Id, query });
 
@@ -95,7 +95,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var query = "Can I trade with other players?";
 
         // When: User1 makes first request
-        var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        using var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         AddCookies(request1, cookies1);
         request1.Content = JsonContent.Create(new { gameId = game.Id, query });
 
@@ -103,7 +103,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var qaResponse1 = await response1.Content.ReadFromJsonAsync<QaResponse>();
 
         // And: User2 makes identical request
-        var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        using var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         AddCookies(request2, cookies2);
         request2.Content = JsonContent.Create(new { gameId = game.Id, query });
 
@@ -139,7 +139,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
 
         foreach (var query in queries)
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
             AddCookies(request, cookies);
             request.Content = JsonContent.Create(new { gameId = game.Id, query });
 
@@ -175,7 +175,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var topic = "Trading Phase";
 
         // When: First request (cache miss)
-        var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
+        using var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
         AddCookies(request1, cookies);
         request1.Content = JsonContent.Create(new { gameId = game.Id, topic });
 
@@ -183,7 +183,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var explainResponse1 = await response1.Content.ReadFromJsonAsync<ExplainResponse>();
 
         // When: Second identical request (cache hit)
-        var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
+        using var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
         AddCookies(request2, cookies);
         request2.Content = JsonContent.Create(new { gameId = game.Id, topic });
 
@@ -214,7 +214,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: First request (cache miss)
-        var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup");
+        using var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup");
         AddCookies(request1, cookies);
         request1.Content = JsonContent.Create(new { gameId = game.Id });
 
@@ -230,7 +230,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var setupResponse1 = await response1.Content.ReadFromJsonAsync<SetupGuideResponse>();
 
         // When: Second identical request (cache hit)
-        var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup");
+        using var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup");
         AddCookies(request2, cookies);
         request2.Content = JsonContent.Create(new { gameId = game.Id });
 
@@ -269,7 +269,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var query = "Test question for invalidation";
 
         // And: Initial request creates cache entry
-        var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        using var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         AddCookies(request1, cookies);
         request1.Content = JsonContent.Create(new { gameId = game.Id, query });
 
@@ -285,7 +285,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         }
 
         // And: Making same request again after invalidation
-        var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        using var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         AddCookies(request2, cookies);
         request2.Content = JsonContent.Create(new { gameId = game.Id, query });
 
@@ -307,13 +307,13 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // And: QA request cached
-        var qaRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        using var qaRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         AddCookies(qaRequest, cookies);
         qaRequest.Content = JsonContent.Create(new { gameId = game.Id, query = "Test QA" });
         await client.SendAsync(qaRequest);
 
         // And: Explain request cached
-        var explainRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
+        using var explainRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
         AddCookies(explainRequest, cookies);
         explainRequest.Content = JsonContent.Create(new { gameId = game.Id, topic = "Test Topic" });
         await client.SendAsync(explainRequest);
@@ -327,7 +327,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
 
         // Then: Explain cache should still exist (not verified in E2E, but covered in integration tests)
         // This E2E test validates the flow works without errors
-        var explainRequest2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
+        using var explainRequest2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
         AddCookies(explainRequest2, cookies);
         explainRequest2.Content = JsonContent.Create(new { gameId = game.Id, topic = "Test Topic" });
         var response = await client.SendAsync(explainRequest2);
@@ -353,7 +353,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
 
         // When: First request (cache miss)
         var stopwatch1 = System.Diagnostics.Stopwatch.StartNew();
-        var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        using var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         AddCookies(request1, cookies);
         request1.Content = JsonContent.Create(new { gameId = game.Id, query });
 
@@ -363,7 +363,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
 
         // And: Second request (cache hit)
         var stopwatch2 = System.Diagnostics.Stopwatch.StartNew();
-        var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        using var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         AddCookies(request2, cookies);
         request2.Content = JsonContent.Create(new { gameId = game.Id, query });
 
@@ -407,7 +407,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         {
             foreach (var query in queries)
             {
-                var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+                using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
                 AddCookies(request, cookies);
                 request.Content = JsonContent.Create(new { gameId = game.Id, query });
 
@@ -439,7 +439,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Making QA request without auth
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = JsonContent.Create(new { gameId = game.Id, query = "Test" });
 
         var response = await client.SendAsync(request);
@@ -460,7 +460,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var fakeGameId = "nonexistent-game-12345";
 
         // When: Making QA request for non-existent game
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         AddCookies(request, cookies);
         request.Content = JsonContent.Create(new { gameId = fakeGameId, query = "Test" });
 
@@ -484,7 +484,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Making request with empty query
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         AddCookies(request, cookies);
         request.Content = JsonContent.Create(new { gameId = game.Id, query = "" });
 

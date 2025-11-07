@@ -54,7 +54,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         var adminUserId = await GetUserIdByEmailAsync(adminEmail);
 
         // When: Admin creates n8n configuration
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/n8n")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/n8n")
         {
             Content = JsonContent.Create(new CreateN8nConfigRequest(
                 "Primary Workflow",
@@ -85,7 +85,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         entity.ApiKeyEncrypted.Should().NotBe("test-api-key");
 
         // And: Config appears in list endpoint
-        var listRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/n8n");
+        using var listRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/n8n");
         AddCookies(listRequest, cookies);
         var listResponse = await adminClient.SendAsync(listRequest);
 
@@ -118,7 +118,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         var config = await CreateN8nConfigAsync(adminUserId, "Existing Workflow");
 
         // When: Admin requests config by ID
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/admin/n8n/{config.Id}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/admin/n8n/{config.Id}");
         AddCookies(request, cookies);
 
         var response = await adminClient.SendAsync(request);
@@ -164,7 +164,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         }
 
         // When: Admin updates configuration
-        var updateRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/n8n/{existing.Id}")
+        using var updateRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/n8n/{existing.Id}")
         {
             Content = JsonContent.Create(new UpdateN8nConfigRequest(
                 "Updated Workflow",
@@ -218,7 +218,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         var cookies = await RegisterAndAuthenticateAsync(adminClient, adminEmail, "Admin");
 
         // When: Admin attempts to delete non-existent config
-        var request = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/admin/n8n/non-existent-config");
+        using var request = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/admin/n8n/non-existent-config");
         AddCookies(request, cookies);
 
         var response = await adminClient.SendAsync(request);
@@ -254,7 +254,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         var config = await CreateN8nConfigAsync(adminUserId, "Workflow To Test");
 
         // When: Admin tests connection
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/admin/n8n/{config.Id}/test");
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/admin/n8n/{config.Id}/test");
         AddCookies(request, cookies);
 
         var response = await adminClient.SendAsync(request);
@@ -296,7 +296,7 @@ public class N8nConfigEndpointsTests : AdminTestFixture
         var cookies = await RegisterAndAuthenticateAsync(nonAdminClient, email, role);
 
         // When: User attempts to create n8n config
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/n8n")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/n8n")
         {
             Content = JsonContent.Create(new CreateN8nConfigRequest("Forbidden", "https://n8n.invalid", "key", null))
         };

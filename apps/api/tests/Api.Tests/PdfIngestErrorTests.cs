@@ -50,7 +50,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var content = new MultipartFormDataContent();
         content.Add(new StringContent("test-game"), "gameId");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf");
         request.Content = content;
         AddCookies(request, cookies);
 
@@ -76,7 +76,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         content.Add(fileContent, "file", "test.pdf");
         // Missing gameId field
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf");
         request.Content = content;
         AddCookies(request, cookies);
 
@@ -97,7 +97,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var content = new MultipartFormDataContent();
         content.Add(new StringContent(""), "gameId");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf");
         request.Content = content;
         AddCookies(request, cookies);
 
@@ -119,7 +119,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         content.Add(new StringContent("test-game"), "gameId");
         // Missing file
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf");
         request.Content = content;
         AddCookies(request, cookies);
 
@@ -154,7 +154,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("regular-user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf/test-pdf-id/index");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf/test-pdf-id/index");
         AddCookies(request, cookies);
 
         // When: Regular user tries to index PDF
@@ -171,7 +171,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var editor = await CreateTestUserAsync("editor", UserRole.Editor);
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf/non-existent-pdf/index");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf/non-existent-pdf/index");
         AddCookies(request, cookies);
 
         // When: Editor tries to index non-existent PDF
@@ -191,7 +191,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         // PDF created without ExtractedText
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/ingest/pdf/{pdf.Id}/index");
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/ingest/pdf/{pdf.Id}/index");
         AddCookies(request, cookies);
 
         // When: Editor tries to index PDF without extracted text
@@ -225,7 +225,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("regular-user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf/test-pdf-id/rulespec");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf/test-pdf-id/rulespec");
         AddCookies(request, cookies);
 
         // When: Regular user tries to generate RuleSpec
@@ -242,7 +242,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var editor = await CreateTestUserAsync("editor", UserRole.Editor);
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf/non-existent-pdf/rulespec");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf/non-existent-pdf/rulespec");
         AddCookies(request, cookies);
 
         // When: Editor tries to generate RuleSpec for non-existent PDF
@@ -276,7 +276,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/pdfs/non-existent-pdf/text");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/pdfs/non-existent-pdf/text");
         AddCookies(request, cookies);
 
         // When: User tries to get text for non-existent PDF

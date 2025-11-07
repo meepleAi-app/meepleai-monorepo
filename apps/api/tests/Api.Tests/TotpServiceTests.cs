@@ -56,7 +56,7 @@ public class TotpServiceTests : IDisposable
 
         // Setup TOTP service
         _loggerMock = new Mock<ILogger<TotpService>>();
-        _totpService = new TotpService(_dbContext, _encryptionService, _authService, _auditService, _loggerMock.Object);
+        _totpService = new TotpService(_dbContext, _encryptionService, _authService, _auditService, mockPasswordHashing.Object, _loggerMock.Object);
     }
 
     [Fact]

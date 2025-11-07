@@ -60,7 +60,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         await RegisterAndAuthenticateAsync(tempClient, user2Email, "Editor");
 
         // When: Admin requests user list
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/users");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/users");
         AddCookies(request, adminCookies);
         var response = await adminClient.SendAsync(request);
 
@@ -97,7 +97,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         await RegisterAndAuthenticateAsync(tempClient, searchableEmail, "User");
 
         // When: Admin searches by email
-        var request = new HttpRequestMessage(
+        using var request = new HttpRequestMessage(
             HttpMethod.Get,
             $"/api/v1/admin/users?search={uniqueIdentifier}");
         AddCookies(request, adminCookies);
@@ -130,7 +130,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         await RegisterAndAuthenticateAsync(tempClient, editorEmail, "Editor");
 
         // When: Admin filters by Editor role
-        var request = new HttpRequestMessage(
+        using var request = new HttpRequestMessage(
             HttpMethod.Get,
             "/api/v1/admin/users?role=Editor");
         AddCookies(request, adminCookies);
@@ -159,7 +159,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var adminCookies = await RegisterAndAuthenticateAsync(adminClient, adminEmail, "Admin");
 
         // When: Admin requests page 1 with limit 2
-        var request = new HttpRequestMessage(
+        using var request = new HttpRequestMessage(
             HttpMethod.Get,
             "/api/v1/admin/users?page=1&limit=2");
         AddCookies(request, adminCookies);
@@ -191,7 +191,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var userCookies = await RegisterAndAuthenticateAsync(userClient, userEmail, role);
 
         // When: User requests user list
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/users");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/users");
         AddCookies(request, userCookies);
         var response = await userClient.SendAsync(request);
 
@@ -247,7 +247,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
             Role: "User"
         );
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/users")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/users")
         {
             Content = JsonContent.Create(createRequest)
         };
@@ -292,7 +292,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
             Role: "Admin"
         );
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/users")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/users")
         {
             Content = JsonContent.Create(createRequest)
         };
@@ -333,7 +333,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
             Role: "User"
         );
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/users")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/users")
         {
             Content = JsonContent.Create(createRequest)
         };
@@ -370,7 +370,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
             Role: "User"
         );
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/users")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/users")
         {
             Content = JsonContent.Create(createRequest)
         };
@@ -414,7 +414,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
             Role: "Editor"
         );
 
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{targetUserId}")
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{targetUserId}")
         {
             Content = JsonContent.Create(updateRequest)
         };
@@ -457,7 +457,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
             Role: null
         );
 
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{userId}")
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{userId}")
         {
             Content = JsonContent.Create(updateRequest)
         };
@@ -501,7 +501,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
             Role: null
         );
 
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{user1Id}")
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{user1Id}")
         {
             Content = JsonContent.Create(updateRequest)
         };
@@ -536,7 +536,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
             Role: "User"
         );
 
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{invalidId}")
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{invalidId}")
         {
             Content = JsonContent.Create(updateRequest)
         };
@@ -569,7 +569,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
             Role: null
         );
 
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{userId}")
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/admin/users/{userId}")
         {
             Content = JsonContent.Create(updateRequest)
         };
@@ -635,7 +635,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var adminUserId = await GetUserIdByEmailAsync(adminEmail);
 
         // When: Admin tries to delete themselves
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/users/{adminUserId}");
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/users/{adminUserId}");
         AddCookies(request, adminCookies);
         var response = await adminClient.SendAsync(request);
 
@@ -683,7 +683,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
 
         // When: Admin deletes non-existent user
         var invalidId = Guid.NewGuid().ToString();
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/users/{invalidId}");
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/users/{invalidId}");
         AddCookies(request, adminCookies);
         var response = await adminClient.SendAsync(request);
 
@@ -712,7 +712,7 @@ public class UserManagementEndpointsTests : AdminTestFixture
         var targetUserId = await GetUserIdByEmailAsync(targetEmail);
 
         // When: Editor tries to delete user
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/users/{targetUserId}");
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/users/{targetUserId}");
         AddCookies(request, editorCookies);
         var response = await editorClient.SendAsync(request);
 

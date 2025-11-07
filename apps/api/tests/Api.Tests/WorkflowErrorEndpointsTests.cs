@@ -134,7 +134,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         await context.SaveChangesAsync();
 
         // When: Admin requests workflow errors
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/workflows/errors");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/workflows/errors");
         AddCookies(request, adminCookies);
 
         var response = await adminClient.SendAsync(request);
@@ -196,7 +196,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         await context.SaveChangesAsync();
 
         // When: Admin filters by workflowId
-        var request = new HttpRequestMessage(HttpMethod.Get,
+        using var request = new HttpRequestMessage(HttpMethod.Get,
             $"/api/v1/admin/workflows/errors?workflowId={Uri.EscapeDataString(targetWorkflowId)}");
         AddCookies(request, adminCookies);
 
@@ -255,7 +255,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         // When: Admin filters by date range (last 3 days)
         var fromDate = Uri.EscapeDataString(now.AddDays(-3).ToString("O"));
         var toDate = Uri.EscapeDataString(now.ToString("O"));
-        var request = new HttpRequestMessage(HttpMethod.Get,
+        using var request = new HttpRequestMessage(HttpMethod.Get,
             $"/api/v1/admin/workflows/errors?fromDate={fromDate}&toDate={toDate}");
         AddCookies(request, adminCookies);
 
@@ -286,7 +286,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         var userCookies = await RegisterAndAuthenticateAsync(userClient, userEmail, "User");
 
         // When: User requests admin endpoint
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/workflows/errors");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/workflows/errors");
         AddCookies(request, userCookies);
 
         var response = await userClient.SendAsync(request);
@@ -347,7 +347,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
         await context.SaveChangesAsync();
 
         // When: Admin requests specific error
-        var request = new HttpRequestMessage(HttpMethod.Get,
+        using var request = new HttpRequestMessage(HttpMethod.Get,
             $"/api/v1/admin/workflows/errors/{errorId}");
         AddCookies(request, adminCookies);
 
@@ -383,7 +383,7 @@ public class WorkflowErrorEndpointsTests : AdminTestFixture
 
         // When: Admin requests non-existent error
         var nonExistentId = Guid.NewGuid();
-        var request = new HttpRequestMessage(HttpMethod.Get,
+        using var request = new HttpRequestMessage(HttpMethod.Get,
             $"/api/v1/admin/workflows/errors/{nonExistentId}");
         AddCookies(request, adminCookies);
 

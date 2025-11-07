@@ -63,7 +63,7 @@ public class AdminStatsEndpointsTests : AdminTestFixture
                          $"&startDate={Uri.EscapeDataString(seedContext.StartDate.ToString("O"))}" +
                          $"&endDate={Uri.EscapeDataString(seedContext.EndDate.ToString("O"))}";
 
-        var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+        using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
         AddCookies(request, adminCookies);
 
         var response = await adminClient.SendAsync(request);
@@ -114,7 +114,7 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         var cookies = await RegisterAndAuthenticateAsync(nonAdminClient, email, role);
 
         // When: User requests admin stats
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/stats");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/stats");
         AddCookies(request, cookies);
 
         var response = await nonAdminClient.SendAsync(request);
@@ -161,7 +161,7 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         var adminCookies = await RegisterAndAuthenticateAsync(adminClient, adminEmail, "Admin");
 
         // When: Admin requests stats
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/stats");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/stats");
         AddCookies(request, adminCookies);
 
         var response = await adminClient.SendAsync(request);
@@ -203,7 +203,7 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         var requestUri = $"/api/v1/admin/stats?startDate={Uri.EscapeDataString(seedContext.StartDate.ToString("O"))}" +
                          $"&endDate={Uri.EscapeDataString(seedContext.EndDate.ToString("O"))}";
 
-        var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+        using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
         AddCookies(request, adminCookies);
 
         var response = await adminClient.SendAsync(request);
@@ -240,7 +240,7 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         // When: Admin requests stats filtered by game-1
         var requestUri = "/api/v1/admin/stats?gameId=game-1";
 
-        var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+        using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
         AddCookies(request, adminCookies);
 
         var response = await adminClient.SendAsync(request);
@@ -284,7 +284,7 @@ public class AdminStatsEndpointsTests : AdminTestFixture
                          $"&startDate={Uri.EscapeDataString(seedContext.StartDate.ToString("O"))}" +
                          $"&endDate={Uri.EscapeDataString(seedContext.EndDate.ToString("O"))}";
 
-        var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+        using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
         AddCookies(request, adminCookies);
 
         var response = await adminClient.SendAsync(request);
@@ -344,7 +344,7 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         await dbContext.SaveChangesAsync();
 
         // When: Admin requests stats
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/stats");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/stats");
         AddCookies(request, adminCookies);
 
         var response = await adminClient.SendAsync(request);

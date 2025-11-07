@@ -46,7 +46,7 @@ public class RagEndToEndFlowIntegrationTests : AdminTestFixture
 
         // STEP 2: Create a new game
         _output.WriteLine("\n🎮 STEP 2: Creating game...");
-        var gameRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
+        using var gameRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
         {
             Content = JsonContent.Create(new
             {
@@ -74,7 +74,7 @@ public class RagEndToEndFlowIntegrationTests : AdminTestFixture
         formData.Add(new ByteArrayContent(pdfContent), "file", "test-rules.pdf");
         formData.Add(new StringContent(gameId.ToString()), "gameId");
 
-        var uploadRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
+        using var uploadRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
         {
             Content = formData
         };
@@ -94,7 +94,7 @@ public class RagEndToEndFlowIntegrationTests : AdminTestFixture
         while (!textReady && retries < maxRetries)
         {
             await Task.Delay(1000); // Wait 1 second
-            var textRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/pdfs/{pdfId}/text");
+            using var textRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/pdfs/{pdfId}/text");
             AddCookies(textRequest, cookies);
             var textResponse = await authenticatedClient.SendAsync(textRequest);
 
@@ -121,7 +121,7 @@ public class RagEndToEndFlowIntegrationTests : AdminTestFixture
 
         // STEP 5: Verify RuleSpec generation
         _output.WriteLine("\n📋 STEP 5: Verifying RuleSpec generation...");
-        var ruleSpecRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{gameId}/rulespec");
+        using var ruleSpecRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{gameId}/rulespec");
         AddCookies(ruleSpecRequest, cookies);
         var ruleSpecResponse = await authenticatedClient.SendAsync(ruleSpecRequest);
         ruleSpecResponse.EnsureSuccessStatusCode();
@@ -131,7 +131,7 @@ public class RagEndToEndFlowIntegrationTests : AdminTestFixture
 
         // STEP 6: Index PDF in Qdrant
         _output.WriteLine("\n🔍 STEP 6: Indexing PDF in Qdrant...");
-        var indexRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/ingest/pdf/{pdfId}/index");
+        using var indexRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/ingest/pdf/{pdfId}/index");
         AddCookies(indexRequest, cookies);
         var indexResponse = await authenticatedClient.SendAsync(indexRequest);
         indexResponse.EnsureSuccessStatusCode();
@@ -139,7 +139,7 @@ public class RagEndToEndFlowIntegrationTests : AdminTestFixture
 
         // STEP 7: Query RAG agent
         _output.WriteLine("\n💬 STEP 7: Querying RAG agent...");
-        var qaRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa")
+        using var qaRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa")
         {
             Content = JsonContent.Create(new
             {
@@ -179,7 +179,7 @@ public class RagEndToEndFlowIntegrationTests : AdminTestFixture
         // STEP 9: Submit feedback
         _output.WriteLine("\n⭐ STEP 9: Submitting feedback...");
         var messageId = qaData.GetProperty("messageId").GetGuid();
-        var feedbackRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback")
+        using var feedbackRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback")
         {
             Content = JsonContent.Create(new
             {
@@ -205,7 +205,7 @@ public class RagEndToEndFlowIntegrationTests : AdminTestFixture
         var authenticatedClient = CreateClientWithoutCookies();
 
         // Create game
-        var gameRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
+        using var gameRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
         {
             Content = JsonContent.Create(new
             {
@@ -224,7 +224,7 @@ public class RagEndToEndFlowIntegrationTests : AdminTestFixture
 
         // Act - Query streaming endpoint
         _output.WriteLine("\n📡 Querying streaming QA endpoint...");
-        var streamRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
+        using var streamRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
         {
             Content = JsonContent.Create(new
             {

@@ -76,6 +76,7 @@ public class TesseractOcrService : IOcrService, IDisposable
         return _engine;
     }
 
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public async Task<OcrResult> ExtractTextFromPageAsync(
         string pdfPath,
         int pageIndex,
@@ -199,8 +200,12 @@ public class TesseractOcrService : IOcrService, IDisposable
     /// <summary>
     /// Internal method to extract text from a single page using Tesseract
     /// </summary>
-    [HandleProcessCorruptedStateExceptions]
+    /// <remarks>
+    /// SYSLIB0032: HandleProcessCorruptedStateExceptions is obsolete in .NET 9+
+    /// Removed as corrupted state exceptions cannot be recovered from anyway.
+    /// </remarks>
     [SecurityCritical]
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     private (string Text, float Confidence) ExtractTextFromPageInternal(string pdfPath, int pageIndex)
     {
         var engine = GetEngine();

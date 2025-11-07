@@ -73,7 +73,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         content.Add(fileContent, "file", "rules.pdf");
         content.Add(new StringContent(game.Id), "gameId");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf");
         AddCookies(request, adminCookies);
         request.Content = content;
 
@@ -138,7 +138,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         content.Add(fileContent, "file", "game1-rules.pdf");
         content.Add(new StringContent(game1.Id), "gameId");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf");
         AddCookies(request, adminCookies);
         request.Content = content;
 
@@ -200,7 +200,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
         content.Add(fileContent, "file", "rules.pdf");
         content.Add(new StringContent(game.Id), "gameId");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf");
         AddCookies(request, adminCookies);
         request.Content = content;
 
@@ -260,7 +260,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
             ruleSpecJson = "{\"version\":\"1.1.0\",\"game\":\"TestGame\"}"
         };
 
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/rulespecs/{ruleSpec.Id}");
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/rulespecs/{ruleSpec.Id}");
         AddCookies(request, editorCookies);
         request.Content = JsonContent.Create(updateRequest);
 
@@ -319,7 +319,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
             bypassCache = true
         };
 
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/agents/qa?gameId={game.Id}");
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/agents/qa?gameId={game.Id}");
         AddCookies(request, cookies);
         request.Content = JsonContent.Create(qaRequest);
 
@@ -369,7 +369,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
             bypassCache = true
         };
 
-        var request1 = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/agents/qa?gameId={game.Id}");
+        using var request1 = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/agents/qa?gameId={game.Id}");
         AddCookies(request1, cookies);
         request1.Content = JsonContent.Create(bypassRequest);
 
@@ -383,7 +383,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
             // bypassCache defaults to false
         };
 
-        var request2 = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/agents/qa?gameId={game.Id}");
+        using var request2 = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/agents/qa?gameId={game.Id}");
         AddCookies(request2, cookies);
         request2.Content = JsonContent.Create(normalRequest);
 

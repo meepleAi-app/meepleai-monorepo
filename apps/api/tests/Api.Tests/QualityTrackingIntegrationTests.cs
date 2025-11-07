@@ -53,7 +53,7 @@ public class QualityTrackingIntegrationTests : IntegrationTestBase
         };
 
         // Act
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         httpRequest.Content = JsonContent.Create(request);
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
@@ -112,7 +112,7 @@ public class QualityTrackingIntegrationTests : IntegrationTestBase
         };
 
         // Act
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         httpRequest.Content = JsonContent.Create(request);
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
@@ -159,7 +159,7 @@ public class QualityTrackingIntegrationTests : IntegrationTestBase
         };
 
         // Act
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         httpRequest.Content = JsonContent.Create(request);
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
@@ -279,7 +279,7 @@ public class QualityTrackingIntegrationTests : IntegrationTestBase
         }
 
         // Act
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/quality/low-responses");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/quality/low-responses");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 
@@ -328,7 +328,7 @@ public class QualityTrackingIntegrationTests : IntegrationTestBase
         }
 
         // Act
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/quality/low-responses?limit=10&offset=0");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/quality/low-responses?limit=10&offset=0");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 
@@ -355,7 +355,7 @@ public class QualityTrackingIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // Act
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/quality/low-responses");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/quality/low-responses");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 
@@ -421,7 +421,7 @@ public class QualityTrackingIntegrationTests : IntegrationTestBase
         }
 
         // Act
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/quality/report?days=7");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/quality/report?days=7");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 
@@ -502,7 +502,7 @@ public class QualityTrackingIntegrationTests : IntegrationTestBase
         }
 
         // Act
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/quality/low-responses?startDate=2025-01-01&endDate=2025-01-07");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/quality/low-responses?startDate=2025-01-01&endDate=2025-01-07");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 
@@ -540,7 +540,7 @@ public class QualityTrackingIntegrationTests : IntegrationTestBase
         // Act
         var tasks = requests.Select(req =>
         {
-            var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
             httpRequest.Content = JsonContent.Create(req);
             AddCookies(httpRequest, cookies);
             return client.SendAsync(httpRequest);

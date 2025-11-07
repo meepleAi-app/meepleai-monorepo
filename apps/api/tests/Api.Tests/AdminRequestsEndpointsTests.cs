@@ -62,7 +62,7 @@ public class AdminRequestsEndpointsTests : AdminTestFixture
                          $"&startDate={Uri.EscapeDataString(seedContext.StartDate.ToString("O"))}" +
                          $"&endDate={Uri.EscapeDataString(seedContext.EndDate.ToString("O"))}";
 
-        var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+        using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
         AddCookies(request, adminCookies);
 
         var response = await adminClient.SendAsync(request);
@@ -129,7 +129,7 @@ public class AdminRequestsEndpointsTests : AdminTestFixture
         var cookies = await RegisterAndAuthenticateAsync(nonAdminClient, email, role);
 
         // When: User requests admin request logs
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/requests");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/requests");
         AddCookies(request, cookies);
 
         var response = await nonAdminClient.SendAsync(request);

@@ -88,7 +88,11 @@ public class LlmService : ILlmService
         // A/B testing: Random selection based on traffic percentage
         if (_alternativeTrafficPercent > 0)
         {
+            // SCS0005: Random.Shared is acceptable for A/B testing (non-security-critical)
+            // Random.Shared uses a cryptographically secure PRNG in .NET 6+
+#pragma warning disable SCS0005
             var random = Random.Shared.Next(100);
+#pragma warning restore SCS0005
             var selectedModel = random < _alternativeTrafficPercent ? _alternativeModelId : configuredModel;
 
             _logger.LogDebug(

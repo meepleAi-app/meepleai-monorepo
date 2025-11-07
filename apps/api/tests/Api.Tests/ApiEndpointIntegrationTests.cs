@@ -142,7 +142,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         var cookies = await RegisterAndAuthenticateAsync(client, $"seed-admin-{TestRunId}@example.com", role: "Admin");
 
         // When: Admin posts to /admin/seed with game ID
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/seed")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/seed")
         {
             Content = JsonContent.Create(new SeedRequest("terraforming-mars"))
         };
@@ -214,7 +214,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         TrackPdfDocumentId(pdfId);
 
         // When: Admin requests RuleSpec generation from PDF
-        var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/ingest/pdf/{pdfId}/rulespec");
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/ingest/pdf/{pdfId}/rulespec");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);

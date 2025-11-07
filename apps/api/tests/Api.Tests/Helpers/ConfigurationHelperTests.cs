@@ -37,13 +37,24 @@ public class ConfigurationHelperTests
         const int dbValue = 0;
         const int defaultValue = 100;
 
-        var dbConfig = new SystemConfigurationDto
-        {
-            Key = key,
-            Value = "0",
-            ValueType = "int",
-            IsActive = true
-        };
+        var dbConfig = new SystemConfigurationDto(
+            Id: "test-config-1",
+            Key: key,
+            Value: "0",
+            ValueType: "int",
+            Description: null,
+            Category: "Test",
+            IsActive: true,
+            RequiresRestart: false,
+            Environment: "All",
+            Version: 1,
+            PreviousValue: null,
+            CreatedAt: DateTime.UtcNow,
+            UpdatedAt: DateTime.UtcNow,
+            CreatedByUserId: "test-user",
+            UpdatedByUserId: null,
+            LastToggledAt: null
+        );
 
         _mockConfigService
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
@@ -69,13 +80,24 @@ public class ConfigurationHelperTests
         const bool dbValue = false;
         const bool defaultValue = true;
 
-        var dbConfig = new SystemConfigurationDto
-        {
-            Key = key,
-            Value = "false",
-            ValueType = "bool",
-            IsActive = true
-        };
+        var dbConfig = new SystemConfigurationDto(
+            Id: "test-config-2",
+            Key: key,
+            Value: "false",
+            ValueType: "bool",
+            Description: null,
+            Category: "Test",
+            IsActive: true,
+            RequiresRestart: false,
+            Environment: "All",
+            Version: 1,
+            PreviousValue: null,
+            CreatedAt: DateTime.UtcNow,
+            UpdatedAt: DateTime.UtcNow,
+            CreatedByUserId: "test-user",
+            UpdatedByUserId: null,
+            LastToggledAt: null
+        );
 
         _mockConfigService
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
@@ -101,13 +123,24 @@ public class ConfigurationHelperTests
         const string dbValue = "";
         const string defaultValue = "default";
 
-        var dbConfig = new SystemConfigurationDto
-        {
-            Key = key,
-            Value = "",
-            ValueType = "string",
-            IsActive = true
-        };
+        var dbConfig = new SystemConfigurationDto(
+            Id: "test-config-3",
+            Key: key,
+            Value: "",
+            ValueType: "string",
+            Description: null,
+            Category: "Test",
+            IsActive: true,
+            RequiresRestart: false,
+            Environment: "All",
+            Version: 1,
+            PreviousValue: null,
+            CreatedAt: DateTime.UtcNow,
+            UpdatedAt: DateTime.UtcNow,
+            CreatedByUserId: "test-user",
+            UpdatedByUserId: null,
+            LastToggledAt: null
+        );
 
         _mockConfigService
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
@@ -133,13 +166,24 @@ public class ConfigurationHelperTests
         const int appsettingsValue = 50;
         const int defaultValue = 100;
 
-        var inactiveDbConfig = new SystemConfigurationDto
-        {
-            Key = key,
-            Value = "25",
-            ValueType = "int",
-            IsActive = false
-        };
+        var inactiveDbConfig = new SystemConfigurationDto(
+            Id: "test-config-4",
+            Key: key,
+            Value: "25",
+            ValueType: "int",
+            Description: null,
+            Category: "Test",
+            IsActive: false,
+            RequiresRestart: false,
+            Environment: "All",
+            Version: 1,
+            PreviousValue: null,
+            CreatedAt: DateTime.UtcNow,
+            UpdatedAt: DateTime.UtcNow,
+            CreatedByUserId: "test-user",
+            UpdatedByUserId: null,
+            LastToggledAt: null
+        );
 
         _mockConfigService
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
@@ -300,13 +344,24 @@ public class ConfigurationHelperTests
         const int dbValue = 42;
         const int defaultValue = 100;
 
-        var dbConfig = new SystemConfigurationDto
-        {
-            Key = key,
-            Value = "42",
-            ValueType = "int",
-            IsActive = true
-        };
+        var dbConfig = new SystemConfigurationDto(
+            Id: "test-config-5",
+            Key: key,
+            Value: "42",
+            ValueType: "int",
+            Description: null,
+            Category: "Test",
+            IsActive: true,
+            RequiresRestart: false,
+            Environment: "All",
+            Version: 1,
+            PreviousValue: null,
+            CreatedAt: DateTime.UtcNow,
+            UpdatedAt: DateTime.UtcNow,
+            CreatedByUserId: "test-user",
+            UpdatedByUserId: null,
+            LastToggledAt: null
+        );
 
         _mockConfigService
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
@@ -525,13 +580,24 @@ public class ConfigurationHelperTests
         const int defaultValue = 100; // Safe default for rate limiting
 
         // Database has active config but with invalid value "abc" for int type
-        var dbConfig = new SystemConfigurationDto
-        {
-            Key = key,
-            Value = "abc", // Invalid value for int
-            ValueType = "int",
-            IsActive = true
-        };
+        var dbConfig = new SystemConfigurationDto(
+            Id: "test-config-6",
+            Key: key,
+            Value: "abc", // Invalid value for int
+            ValueType: "int",
+            Description: null,
+            Category: "Test",
+            IsActive: true,
+            RequiresRestart: false,
+            Environment: "All",
+            Version: 1,
+            PreviousValue: null,
+            CreatedAt: DateTime.UtcNow,
+            UpdatedAt: DateTime.UtcNow,
+            CreatedByUserId: "test-user",
+            UpdatedByUserId: null,
+            LastToggledAt: null
+        );
 
         _mockConfigService
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
@@ -559,13 +625,24 @@ public class ConfigurationHelperTests
         const bool defaultValue = false; // Safe default
 
         // Database has active config but with invalid value "maybe" for bool type
-        var dbConfig = new SystemConfigurationDto
-        {
-            Key = key,
-            Value = "maybe", // Invalid value for bool
-            ValueType = "bool",
-            IsActive = true
-        };
+        var dbConfig = new SystemConfigurationDto(
+            Id: "test-config-7",
+            Key: key,
+            Value: "maybe", // Invalid value for bool
+            ValueType: "bool",
+            Description: null,
+            Category: "Test",
+            IsActive: true,
+            RequiresRestart: false,
+            Environment: "All",
+            Version: 1,
+            PreviousValue: null,
+            CreatedAt: DateTime.UtcNow,
+            UpdatedAt: DateTime.UtcNow,
+            CreatedByUserId: "test-user",
+            UpdatedByUserId: null,
+            LastToggledAt: null
+        );
 
         _mockConfigService
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))

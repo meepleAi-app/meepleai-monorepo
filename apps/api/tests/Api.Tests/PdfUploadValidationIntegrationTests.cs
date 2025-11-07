@@ -79,7 +79,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         content.Add(fileContent, "file", "oversized-rules.pdf");
         content.Add(new StringContent(game.Id), "gameId");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
         {
             Content = content
         };
@@ -127,7 +127,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         content.Add(fileContent, "file", "rules.doc");
         content.Add(new StringContent(game.Id), "gameId");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
         {
             Content = content
         };
@@ -175,7 +175,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         content.Add(fileContent, "file", "fake.pdf");
         content.Add(new StringContent(game.Id), "gameId");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
         {
             Content = content
         };
@@ -223,7 +223,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         content.Add(fileContent, "file", "empty.pdf");
         content.Add(new StringContent(game.Id), "gameId");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
         {
             Content = content
         };
@@ -263,7 +263,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         content.Add(new StringContent(game.Id), "gameId");
         // No file added
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
         {
             Content = content
         };
@@ -312,7 +312,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         content.Add(fileContent, "file", "valid-rules.pdf");
         content.Add(new StringContent(game.Id), "gameId");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
         {
             Content = content
         };
@@ -355,7 +355,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         content.Add(fileContent, "file", "invalid.pdf");
         content.Add(new StringContent(game.Id), "gameId");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
         {
             Content = content
         };
@@ -407,7 +407,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
         content.Add(fileContent, "file", "editor-rules.pdf");
         content.Add(new StringContent(game.Id), "gameId");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
         {
             Content = content
         };

@@ -28,7 +28,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
     {
         // Arrange
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
 
         // Act
         var response = await client.SendAsync(request);
@@ -45,7 +45,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var sessionCookies = await AuthenticateUserAsync(user.Email, "TestPassword123!");
         var client = CreateClientWithoutCookies();
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
         AddCookies(request, sessionCookies);
 
         // Act
@@ -71,7 +71,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var sessionCookies = await AuthenticateUserAsync(user.Email, "TestPassword123!");
         var client = CreateClientWithoutCookies();
 
-        var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
+        using var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
         AddCookies(request1, sessionCookies);
 
         // Act - First enrollment
@@ -79,7 +79,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var result1 = await response1.Content.ReadFromJsonAsync<TwoFactorSetupResponse>();
 
         // Act - Second enrollment
-        var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
+        using var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
         AddCookies(request2, sessionCookies);
         var response2 = await client.SendAsync(request2);
         var result2 = await response2.Content.ReadFromJsonAsync<TwoFactorSetupResponse>();
@@ -104,7 +104,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var client = CreateClientWithoutCookies();
 
         // Setup 2FA
-        var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
+        using var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
         AddCookies(setupRequest, sessionCookies);
         var setupResponse = await client.SendAsync(setupRequest);
         var setupResult = await setupResponse.Content.ReadFromJsonAsync<TwoFactorSetupResponse>();
@@ -113,7 +113,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var validCode = GenerateValidTotpCode(setupResult!.Secret);
 
         // Act
-        var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
+        using var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
         {
             Content = JsonContent.Create(new { code = validCode })
         };
@@ -124,7 +124,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Verify 2FA is enabled
-        var statusRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/2fa/status");
+        using var statusRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/2fa/status");
         AddCookies(statusRequest, sessionCookies);
         var statusResponse = await client.SendAsync(statusRequest);
         var statusResult = await statusResponse.Content.ReadFromJsonAsync<TwoFactorStatusResponse>();
@@ -140,12 +140,12 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var client = CreateClientWithoutCookies();
 
         // Setup 2FA
-        var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
+        using var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
         AddCookies(setupRequest, sessionCookies);
         await client.SendAsync(setupRequest);
 
         // Act
-        var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
+        using var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
         {
             Content = JsonContent.Create(new { code = "000000" })
         };
@@ -165,7 +165,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var client = CreateClientWithoutCookies();
 
         // Act - Try to enable without setup
-        var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
+        using var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
         {
             Content = JsonContent.Create(new { code = "123456" })
         };
@@ -181,7 +181,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
     {
         // Arrange
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
         {
             Content = JsonContent.Create(new { code = "123456" })
         };
@@ -216,7 +216,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var validCode = GenerateValidTotpCode(secret);
 
         // Act
-        var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
+        using var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
         {
             Content = JsonContent.Create(new
             {
@@ -247,7 +247,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var tempSessionToken = await LoginWithTwoFactorAsync(user.Email, "TestPassword123!", client);
 
         // Act
-        var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
+        using var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
         {
             Content = JsonContent.Create(new
             {
@@ -264,7 +264,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var newSessionCookies = await GetSessionCookiesFromResponse(response);
         await LogoutAsync(newSessionCookies, client);
         var tempSessionToken2 = await LoginWithTwoFactorAsync(user.Email, "TestPassword123!", client);
-        var verifyRequest2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
+        using var verifyRequest2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
         {
             Content = JsonContent.Create(new
             {
@@ -292,7 +292,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var tempSessionToken = await LoginWithTwoFactorAsync(user.Email, "TestPassword123!", client);
 
         // Act
-        var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
+        using var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
         {
             Content = JsonContent.Create(new
             {
@@ -327,7 +327,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var validCode = GenerateValidTotpCode(secret);
 
         // Act - Use invalid token to simulate expired session
-        var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
+        using var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
         {
             Content = JsonContent.Create(new
             {
@@ -360,7 +360,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var validCode = GenerateValidTotpCode(secret);
 
         // First verification - should succeed
-        var verifyRequest1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
+        using var verifyRequest1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
         {
             Content = JsonContent.Create(new
             {
@@ -375,7 +375,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var newCode = GenerateValidTotpCode(secret);
 
         // Act - Try to use the same temp session token again
-        var verifyRequest2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
+        using var verifyRequest2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
         {
             Content = JsonContent.Create(new
             {
@@ -407,7 +407,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         // Act - Make 3 failed attempts (rate limit is 3/min)
         for (int i = 0; i < 3; i++)
         {
-            var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
+            using var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
             {
                 Content = JsonContent.Create(new
                 {
@@ -419,7 +419,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         }
 
         // 4th attempt should be rate limited
-        var finalRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
+        using var finalRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
         {
             Content = JsonContent.Create(new
             {
@@ -441,7 +441,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var invalidToken = "invalid-temp-session-token";
 
         // Act
-        var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
+        using var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
         {
             Content = JsonContent.Create(new
             {
@@ -474,7 +474,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var validCode = GenerateValidTotpCode(secret);
 
         // Act
-        var disableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
+        using var disableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
         {
             Content = JsonContent.Create(new
             {
@@ -489,7 +489,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Verify 2FA is disabled
-        var statusRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/2fa/status");
+        using var statusRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/2fa/status");
         AddCookies(statusRequest, sessionCookies);
         var statusResponse = await client.SendAsync(statusRequest);
         var statusResult = await statusResponse.Content.ReadFromJsonAsync<TwoFactorStatusResponse>();
@@ -511,7 +511,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var validCode = GenerateValidTotpCode(secret);
 
         // Act
-        var disableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
+        using var disableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
         {
             Content = JsonContent.Create(new
             {
@@ -538,7 +538,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         await SetupAndEnable2FAAsync(user.Email, sessionCookies, client);
 
         // Act
-        var disableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
+        using var disableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
         {
             Content = JsonContent.Create(new
             {
@@ -562,7 +562,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var client = CreateClientWithoutCookies();
 
         // Act - Try to disable when 2FA is not enabled
-        var disableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
+        using var disableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
         {
             Content = JsonContent.Create(new
             {
@@ -582,7 +582,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
     {
         // Arrange
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
         {
             Content = JsonContent.Create(new
             {
@@ -614,7 +614,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         await SetupAndEnable2FAAsync(user.Email, sessionCookies, client);
 
         // Act
-        var statusRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/2fa/status");
+        using var statusRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/2fa/status");
         AddCookies(statusRequest, sessionCookies);
         var response = await client.SendAsync(statusRequest);
 
@@ -635,7 +635,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var client = CreateClientWithoutCookies();
 
         // Act
-        var statusRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/2fa/status");
+        using var statusRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/2fa/status");
         AddCookies(statusRequest, sessionCookies);
         var response = await client.SendAsync(statusRequest);
 
@@ -652,7 +652,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
     {
         // Arrange
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/2fa/status");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/2fa/status");
 
         // Act
         var response = await client.SendAsync(request);
@@ -680,7 +680,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         await LogoutAsync(sessionCookies, client);
 
         // Act
-        var loginRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+        using var loginRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
         {
             Content = JsonContent.Create(new
             {
@@ -706,7 +706,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var client = CreateClientWithoutCookies();
 
         // Act
-        var loginRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+        using var loginRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
         {
             Content = JsonContent.Create(new
             {
@@ -738,7 +738,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
 
         await SetupAndEnable2FAAsync(user.Email, sessionCookies, client);
 
-        var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
+        using var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
         AddCookies(setupRequest, sessionCookies);
         var response = await client.SendAsync(setupRequest);
 
@@ -752,7 +752,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var sessionCookies = await AuthenticateUserAsync(user.Email, "TestPassword123!");
         var client = CreateClientWithoutCookies();
 
-        var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
+        using var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
         AddCookies(setupRequest, sessionCookies);
         var response = await client.SendAsync(setupRequest);
 
@@ -766,11 +766,11 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var sessionCookies = await AuthenticateUserAsync(user.Email, "TestPassword123!");
         var client = CreateClientWithoutCookies();
 
-        var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
+        using var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
         AddCookies(setupRequest, sessionCookies);
         await client.SendAsync(setupRequest);
 
-        var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
+        using var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
         {
             Content = JsonContent.Create(new { code = "" })
         };
@@ -787,11 +787,11 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var sessionCookies = await AuthenticateUserAsync(user.Email, "TestPassword123!");
         var client = CreateClientWithoutCookies();
 
-        var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
+        using var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
         AddCookies(setupRequest, sessionCookies);
         await client.SendAsync(setupRequest);
 
-        var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
+        using var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
         {
             Content = JsonContent.Create(new { code = (string?)null })
         };
@@ -809,11 +809,11 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var sessionCookies = await AuthenticateUserAsync(user.Email, "TestPassword123!");
         var client = CreateClientWithoutCookies();
 
-        var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
+        using var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
         AddCookies(setupRequest, sessionCookies);
         await client.SendAsync(setupRequest);
 
-        var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
+        using var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
         {
             Content = JsonContent.Create(new { code = "12@#$%" })
         };
@@ -830,7 +830,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var sessionCookies = await AuthenticateUserAsync(user.Email, "TestPassword123!");
         var client = CreateClientWithoutCookies();
 
-        var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
+        using var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
         {
             Content = JsonContent.Create(new { code = "123456" })
         };
@@ -845,7 +845,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
     {
         var client = CreateClientWithoutCookies();
 
-        var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
+        using var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
         {
             Content = JsonContent.Create(new
             {
@@ -864,7 +864,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
     {
         var client = CreateClientWithoutCookies();
 
-        var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
+        using var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
         {
             Content = JsonContent.Create(new
             {
@@ -889,7 +889,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         await LogoutAsync(sessionCookies, client);
         var tempToken = await LoginWithTwoFactorAsync(user.Email, "TestPassword123!", client);
 
-        var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
+        using var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
         {
             Content = JsonContent.Create(new
             {
@@ -916,7 +916,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         // Make 3 failed attempts (rate limit is 3/min)
         for (int i = 0; i < 3; i++)
         {
-            var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
+            using var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
             {
                 Content = JsonContent.Create(new { SessionToken = tempToken, Code = "000000" })
             };
@@ -924,7 +924,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         }
 
         // 4th attempt - temp session already consumed on first attempt, returns 401
-        var finalRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
+        using var finalRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
         {
             Content = JsonContent.Create(new { SessionToken = tempToken, Code = "123456" })
         };
@@ -943,7 +943,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var (secret, _) = await SetupAndEnable2FAAsync(user.Email, sessionCookies, client);
         var code = GenerateValidTotpCode(secret);
 
-        var disableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
+        using var disableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
         {
             Content = JsonContent.Create(new { password = "", code })
         };
@@ -961,7 +961,7 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         var sessionCookies = await AuthenticateUserAsync(user.Email, "TestPassword123!");
         var client = CreateClientWithoutCookies();
 
-        var disableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
+        using var disableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
         {
             Content = JsonContent.Create(new { password = "TestPassword123!", code = "123456" })
         };
@@ -989,14 +989,14 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         HttpClient client)
     {
         // Setup
-        var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
+        using var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
         AddCookies(setupRequest, sessionCookies);
         var setupResponse = await client.SendAsync(setupRequest);
         var setupResult = await setupResponse.Content.ReadFromJsonAsync<TwoFactorSetupResponse>();
 
         // Enable
         var validCode = GenerateValidTotpCode(setupResult!.Secret);
-        var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
+        using var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
         {
             Content = JsonContent.Create(new { code = validCode })
         };
@@ -1008,14 +1008,14 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
 
     private async Task LogoutAsync(List<string> sessionCookies, HttpClient client)
     {
-        var logoutRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
+        using var logoutRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
         AddCookies(logoutRequest, sessionCookies);
         await client.SendAsync(logoutRequest);
     }
 
     private async Task<string> LoginWithTwoFactorAsync(string email, string password, HttpClient client)
     {
-        var loginRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+        using var loginRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
         {
             Content = JsonContent.Create(new
             {

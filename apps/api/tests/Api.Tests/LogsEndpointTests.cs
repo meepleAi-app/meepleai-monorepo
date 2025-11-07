@@ -88,7 +88,7 @@ public class LogsEndpointTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Admin requests /logs
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/logs");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/logs");
         AddCookies(request, cookies);
         var response = await client.SendAsync(request);
 
@@ -157,7 +157,7 @@ public class LogsEndpointTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User requests /logs
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/logs");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/logs");
         AddCookies(request, cookies);
         var response = await client.SendAsync(request);
 

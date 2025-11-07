@@ -61,7 +61,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
             Metadata = JsonSerializer.Serialize(new { model = "gpt-4", temperature = 0.7 })
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/prompts")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/prompts")
         {
             Content = JsonContent.Create(request)
         };
@@ -120,7 +120,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
             InitialContent = "Content"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/prompts")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/prompts")
         {
             Content = JsonContent.Create(request)
         };
@@ -153,7 +153,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
             InitialContent = "Content 1"
         };
 
-        var httpRequest1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/prompts")
+        using var httpRequest1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/prompts")
         {
             Content = JsonContent.Create(request1)
         };
@@ -167,7 +167,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
             InitialContent = "Content 2"
         };
 
-        var httpRequest2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/prompts")
+        using var httpRequest2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/prompts")
         {
             Content = JsonContent.Create(request2)
         };
@@ -207,7 +207,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
             ActivateImmediately = false
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/prompts/{template.Id}/versions")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/prompts/{template.Id}/versions")
         {
             Content = JsonContent.Create(versionRequest)
         };
@@ -253,7 +253,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
             ActivateImmediately = true
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/prompts/{template.Id}/versions")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/prompts/{template.Id}/versions")
         {
             Content = JsonContent.Create(versionRequest)
         };
@@ -314,7 +314,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
             Reason = "Rollback due to issues with version 3"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/prompts/{template.Id}/versions/{version2.Id}/activate")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/prompts/{template.Id}/versions/{version2.Id}/activate")
         {
             Content = JsonContent.Create(activateRequest)
         };
@@ -366,7 +366,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         await CreateTestPromptVersionAsync(template.Id, "Version 3", user.Id, false);
 
         // When: Admin gets /prompts/{id}/versions
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/prompts/{template.Id}/versions");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/prompts/{template.Id}/versions");
         AddCookies(httpRequest, cookies);
 
         var response = await client.SendAsync(httpRequest);
@@ -403,7 +403,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var template = await CreateTestPromptTemplateAsync(adminUser.Id, "active-version-test");
 
         // When: Authenticated user gets /prompts/{id}/versions/active
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/prompts/{template.Id}/versions/active");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/prompts/{template.Id}/versions/active");
         AddCookies(httpRequest, cookies);
 
         var response = await client.SendAsync(httpRequest);
@@ -436,7 +436,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var template = await CreateTestPromptTemplateAsync(user.Id, "audit-test-template");
 
         // When: Admin gets /prompts/{id}/audit-log
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/prompts/{template.Id}/audit-log?limit=100");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/prompts/{template.Id}/audit-log?limit=100");
         AddCookies(httpRequest, cookies);
 
         var response = await client.SendAsync(httpRequest);
@@ -473,7 +473,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         await CreateTestPromptTemplateAsync(user.Id, $"template-list-2-{TestRunId}");
 
         // When: Admin gets /prompts
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/prompts");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/prompts");
         AddCookies(httpRequest, cookies);
 
         var response = await client.SendAsync(httpRequest);
@@ -507,7 +507,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         await CreateTestPromptTemplateAsync(user.Id, $"explain-template-{TestRunId}", category: "explain");
 
         // When: Admin gets /prompts?category=qa
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/prompts?category=qa");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/prompts?category=qa");
         AddCookies(httpRequest, cookies);
 
         var response = await client.SendAsync(httpRequest);
@@ -540,7 +540,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var template = await CreateTestPromptTemplateAsync(user.Id, "get-template-test", description: "Test description");
 
         // When: Admin gets /prompts/{id}
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/prompts/{template.Id}");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/prompts/{template.Id}");
         AddCookies(httpRequest, cookies);
 
         var response = await client.SendAsync(httpRequest);
@@ -591,7 +591,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Admin gets /prompts/{id}
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/prompts/non-existent-id");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/prompts/non-existent-id");
         AddCookies(httpRequest, cookies);
 
         var response = await client.SendAsync(httpRequest);

@@ -71,7 +71,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
             fenPosition = (string?)null
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
         {
             Content = JsonContent.Create(request)
         };
@@ -124,7 +124,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
             fenPosition = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
         {
             Content = JsonContent.Create(request)
         };
@@ -194,7 +194,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
             fenPosition = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
         {
             Content = JsonContent.Create(request)
         };
@@ -234,7 +234,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
             fenPosition = (string?)null
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
         {
             Content = JsonContent.Create(request)
         };
@@ -289,7 +289,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
             question = "What is the Sicilian Defense?"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
         {
             Content = JsonContent.Create(request)
         };
@@ -329,7 +329,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
 
         // And: A chat session
         var chatRequest = new { GameId = "chess", AgentId = "chess-agent" };
-        var chatHttpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/chats")
+        using var chatHttpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/chats")
         {
             Content = JsonContent.Create(chatRequest)
         };
@@ -346,7 +346,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
             chatId
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
         {
             Content = JsonContent.Create(request)
         };
@@ -358,7 +358,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Verify chat history contains the interaction
-        var historyRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats/{chatId}");
+        using var historyRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats/{chatId}");
         AddCookies(historyRequest, cookies);
         var historyResponse = await client.SendAsync(historyRequest);
 

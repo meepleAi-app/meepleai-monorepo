@@ -9,12 +9,19 @@ namespace Api.Services;
 public interface IPasswordHashingService
 {
     /// <summary>
-    /// Hashes a secret (password, API key, backup code) using PBKDF2 with SHA256.
+    /// Hashes a secret (password, API key, backup code) using PBKDF2 with SHA256 using default iterations.
     /// </summary>
     /// <param name="secret">The secret to hash</param>
-    /// <param name="iterations">Number of PBKDF2 iterations (default: 210,000)</param>
     /// <returns>Versioned hash string in format: v1.{iterations}.{base64Salt}.{base64Hash}</returns>
-    string HashSecret(string secret, int iterations = DefaultIterations);
+    string HashSecret(string secret);
+
+    /// <summary>
+    /// Hashes a secret (password, API key, backup code) using PBKDF2 with SHA256 with custom iterations.
+    /// </summary>
+    /// <param name="secret">The secret to hash</param>
+    /// <param name="iterations">Number of PBKDF2 iterations</param>
+    /// <returns>Versioned hash string in format: v1.{iterations}.{base64Salt}.{base64Hash}</returns>
+    string HashSecret(string secret, int iterations);
 
     /// <summary>
     /// Verifies a secret against a stored hash using constant-time comparison.
@@ -39,7 +46,13 @@ public class PasswordHashingService : IPasswordHashingService
     private const int HashSizeBytes = 32;
 
     /// <inheritdoc />
-    public string HashSecret(string secret, int iterations = IPasswordHashingService.DefaultIterations)
+    public string HashSecret(string secret)
+    {
+        return HashSecret(secret, IPasswordHashingService.DefaultIterations);
+    }
+
+    /// <inheritdoc />
+    public string HashSecret(string secret, int iterations)
     {
         ArgumentNullException.ThrowIfNull(secret);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(iterations, 0);

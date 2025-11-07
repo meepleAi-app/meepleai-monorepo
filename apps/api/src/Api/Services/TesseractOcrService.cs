@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Security;
 using System.Text;
 using Tesseract;
@@ -13,6 +14,7 @@ namespace Api.Services;
 /// <summary>
 /// OCR service implementation using Tesseract 5
 /// </summary>
+[SupportedOSPlatform("windows")]
 public class TesseractOcrService : IOcrService, IDisposable
 {
     private readonly ILogger<TesseractOcrService> _logger;
@@ -291,15 +293,24 @@ public class TesseractOcrService : IOcrService, IDisposable
 
     public void Dispose()
     {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
         if (_disposed)
         {
             return;
         }
 
-        _engine?.Dispose();
-        _semaphore?.Dispose();
-        _disposed = true;
+        if (disposing)
+        {
+            _engine?.Dispose();
+            _semaphore?.Dispose();
+            _logger.LogDebug("TesseractOcrService disposed");
+        }
 
-        _logger.LogDebug("TesseractOcrService disposed");
+        _disposed = true;
     }
 }

@@ -53,7 +53,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // Act: Access admin endpoint
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/sessions");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/sessions");
         AddCookies(request, cookies);
         var response = await client.SendAsync(request);
 
@@ -76,7 +76,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // Act: Access admin endpoint
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/sessions");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/sessions");
         AddCookies(request, cookies);
         var response = await client.SendAsync(request);
 
@@ -99,7 +99,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // Act: Access admin endpoint
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/sessions");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/sessions");
         AddCookies(request, cookies);
         var response = await client.SendAsync(request);
 
@@ -145,7 +145,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // Act: Try to create a game
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
         {
             Content = JsonContent.Create(new { Name = "EditorGame", GameId = "editor-game" })
         };
@@ -171,7 +171,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // Act: Try to create a game (editor/admin only)
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
         {
             Content = JsonContent.Create(new { Name = "TestGame", GameId = "test-game" })
         };
@@ -209,7 +209,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
 
         // Act: User A tries to access user B's chat
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats/{chatB.Id}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats/{chatB.Id}");
         AddCookies(request, cookiesA);
         var response = await client.SendAsync(request);
 
@@ -240,7 +240,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
 
         // Act: User A tries to delete user B's chat
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/chats/{chatB.Id}");
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/chats/{chatB.Id}");
         AddCookies(request, cookiesA);
         var response = await client.SendAsync(request);
 
@@ -270,7 +270,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
 
         // Act: User accesses their own chat
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats/{chat.Id}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats/{chat.Id}");
         AddCookies(request, cookies);
         var response = await client.SendAsync(request);
 
@@ -298,7 +298,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
 
         // Act: Attempt to update profile with admin role (if endpoint accepts role)
         // Note: This test assumes the update endpoint exists and validates role changes
-        var request = new HttpRequestMessage(HttpMethod.Put, "/api/v1/users/me")
+        using var request = new HttpRequestMessage(HttpMethod.Put, "/api/v1/users/me")
         {
             Content = JsonContent.Create(new { displayName = "Hacker", role = "Admin" })
         };
@@ -331,7 +331,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
 
         // Act: Attempt admin action (delete all sessions for a user)
         var targetUser = await CreateTestUserAsync("target-user", UserRole.User);
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/users/{targetUser.Id}/sessions");
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/users/{targetUser.Id}/sessions");
         AddCookies(request, cookies);
         var response = await client.SendAsync(request);
 
@@ -372,7 +372,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
 
         // Act: Try to use revoked session
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/sessions");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/sessions");
         AddCookies(request, cookies);
         var response = await client.SendAsync(request);
 
@@ -462,7 +462,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // Act: Access editor endpoint (game creation)
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
         {
             Content = JsonContent.Create(new { Name = "AdminEditorGame", GameId = "admin-editor-game" })
         };
@@ -488,7 +488,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // Act: Access user endpoint (list own chats)
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/chats");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/chats");
         AddCookies(request, cookies);
         var response = await client.SendAsync(request);
 
@@ -511,7 +511,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // Act: Access user endpoint (list own chats)
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/chats");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/chats");
         AddCookies(request, cookies);
         var response = await client.SendAsync(request);
 

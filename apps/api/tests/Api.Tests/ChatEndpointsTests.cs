@@ -53,7 +53,7 @@ public class ChatEndpointsTests : IntegrationTestBase
 
         // When: User creates a chat
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/chats")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/chats")
         {
             Content = JsonContent.Create(new CreateChatRequest(game.Id, agent.Id))
         };
@@ -122,7 +122,7 @@ public class ChatEndpointsTests : IntegrationTestBase
 
         // When: User retrieves their chats
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/chats");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/chats");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -178,7 +178,7 @@ public class ChatEndpointsTests : IntegrationTestBase
 
         // When: User retrieves chat by ID
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats/{chat.Id}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats/{chat.Id}");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -211,7 +211,7 @@ public class ChatEndpointsTests : IntegrationTestBase
         var chat = await CreateTestChatAsync(owner.Id, game.Id, agent.Id);
 
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats/{chat.Id}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats/{chat.Id}");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -236,7 +236,7 @@ public class ChatEndpointsTests : IntegrationTestBase
         var chat = await CreateTestChatAsync(user.Id, game.Id, agent.Id);
 
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/chats/{chat.Id}");
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/chats/{chat.Id}");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -267,7 +267,7 @@ public class ChatEndpointsTests : IntegrationTestBase
         var chat = await CreateTestChatAsync(owner.Id, game.Id, agent.Id);
 
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/chats/{chat.Id}");
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/chats/{chat.Id}");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -297,7 +297,7 @@ public class ChatEndpointsTests : IntegrationTestBase
         var explainAgent = await CreateTestAgentAsync(game.Id, "explain", "Explain Agent");
 
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/agents");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/agents");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -331,7 +331,7 @@ public class ChatEndpointsTests : IntegrationTestBase
         var chat2 = await CreateTestChatAsync(user.Id, game2.Id, agent2.Id);
 
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats?gameId={game1.Id}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/chats?gameId={game1.Id}");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);

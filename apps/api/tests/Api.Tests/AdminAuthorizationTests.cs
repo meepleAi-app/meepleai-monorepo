@@ -138,7 +138,7 @@ public class AdminAuthorizationTests : AdminTestFixture
         var cookies = await RegisterAndAuthenticateAsync(nonAdminClient, email, role);
 
         // When: User attempts to access admin endpoint
-        var request = new HttpRequestMessage(endpoint.Method, endpoint.Path);
+        using var request = new HttpRequestMessage(endpoint.Method, endpoint.Path);
         if (endpoint.CreateContent != null)
         {
             request.Content = endpoint.CreateContent();
@@ -165,7 +165,7 @@ public class AdminAuthorizationTests : AdminTestFixture
         using var client = Factory.CreateHttpsClient();
 
         // When: Anonymous user attempts to access admin endpoint
-        var request = new HttpRequestMessage(endpoint.Method, endpoint.Path);
+        using var request = new HttpRequestMessage(endpoint.Method, endpoint.Path);
         if (endpoint.CreateContent != null)
         {
             request.Content = endpoint.CreateContent();

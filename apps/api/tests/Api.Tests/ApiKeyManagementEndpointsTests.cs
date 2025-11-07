@@ -53,7 +53,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
 
         // When: User creates an API key
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/api-keys")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/api-keys")
         {
             Content = JsonContent.Create(request)
         };
@@ -109,7 +109,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
 
         // When: User creates API key with invalid data
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/api-keys")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/api-keys")
         {
             Content = JsonContent.Create(request)
         };
@@ -138,7 +138,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
 
         // When: User creates API key for specific environment
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/api-keys")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/api-keys")
         {
             Content = JsonContent.Create(request)
         };
@@ -175,7 +175,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
 
         // When: User lists their API keys
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/api-keys?page=1&pageSize=2");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/api-keys?page=1&pageSize=2");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 
@@ -206,7 +206,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
 
         // When: User lists API keys without includeRevoked
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/api-keys");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/api-keys");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 
@@ -231,7 +231,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
 
         // When: User lists API keys with includeRevoked=true
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/api-keys?includeRevoked=true");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/api-keys?includeRevoked=true");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 
@@ -257,7 +257,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
         // When: User1 lists their API keys
         var cookies = await AuthenticateUserAsync(user1.Email);
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/api-keys");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/api-keys");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 
@@ -288,7 +288,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
 
         // When: User retrieves their API key
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/api-keys/{key.Id}");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/api-keys/{key.Id}");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 
@@ -311,7 +311,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
 
         // When: User requests non-existent key
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/api-keys/non-existent-id");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/api-keys/non-existent-id");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 
@@ -331,7 +331,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
         // When: User2 tries to access User1's key
         var cookies = await AuthenticateUserAsync(user2.Email);
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/api-keys/{key.Id}");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/api-keys/{key.Id}");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 
@@ -364,7 +364,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
 
         // When: User updates their API key
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/api-keys/{key.Id}")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/api-keys/{key.Id}")
         {
             Content = JsonContent.Create(updateRequest)
         };
@@ -397,7 +397,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
 
         // When: User tries to update non-existent key
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Put, "/api/v1/api-keys/non-existent-id")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Put, "/api/v1/api-keys/non-existent-id")
         {
             Content = JsonContent.Create(updateRequest)
         };
@@ -425,7 +425,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
         // When: User2 tries to update User1's key
         var cookies = await AuthenticateUserAsync(user2.Email);
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/api-keys/{key.Id}")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/api-keys/{key.Id}")
         {
             Content = JsonContent.Create(updateRequest)
         };
@@ -459,7 +459,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
 
         // When: User rotates their API key
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/api-keys/{oldKey.Id}/rotate")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/api-keys/{oldKey.Id}/rotate")
         {
             Content = JsonContent.Create(rotateRequest)
         };
@@ -477,13 +477,13 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
         result.NewApiKey.Scopes.Length.Should().Be(2);
 
         // Verify old key cannot be used
-        var testRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var testRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         testRequest.Headers.Add("X-API-Key", oldPlaintextKey);
         var testResponse = await client.SendAsync(testRequest);
         testResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 
         // Verify new key works
-        var newTestRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var newTestRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         newTestRequest.Headers.Add("X-API-Key", result.PlaintextKey);
         var newTestResponse = await client.SendAsync(newTestRequest);
         newTestResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -500,7 +500,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
 
         // When: User tries to rotate non-existent key
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/api-keys/non-existent-id/rotate")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/api-keys/non-existent-id/rotate")
         {
             Content = JsonContent.Create(rotateRequest)
         };
@@ -525,7 +525,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
         // When: User2 tries to rotate User1's key
         var cookies = await AuthenticateUserAsync(user2.Email);
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/api-keys/{key.Id}/rotate")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/api-keys/{key.Id}/rotate")
         {
             Content = JsonContent.Create(rotateRequest)
         };
@@ -554,7 +554,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
 
         // When: User revokes their API key
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/api-keys/{key.Id}");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/api-keys/{key.Id}");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 
@@ -562,7 +562,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Verify key cannot be used
-        var testRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var testRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         testRequest.Headers.Add("X-API-Key", plaintextKey);
         var testResponse = await client.SendAsync(testRequest);
         testResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -577,7 +577,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
 
         // When: User tries to revoke non-existent key
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/api-keys/non-existent-id");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/api-keys/non-existent-id");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 
@@ -597,7 +597,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
         // When: User2 tries to revoke User1's key
         var cookies = await AuthenticateUserAsync(user2.Email);
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/api-keys/{key.Id}");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/api-keys/{key.Id}");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 
@@ -625,7 +625,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
 
         // When: User requests usage statistics
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/api-keys/{key.Id}/usage");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/api-keys/{key.Id}/usage");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 
@@ -648,7 +648,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
 
         // When: User requests usage for non-existent key
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/api-keys/non-existent-id/usage");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/api-keys/non-existent-id/usage");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 
@@ -672,7 +672,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
         // When: Admin deletes the user's API key
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/api-keys/{key.Id}");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/api-keys/{key.Id}");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 
@@ -690,7 +690,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
         // When: Non-admin tries to delete via admin endpoint
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/api-keys/{key.Id}");
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/api-keys/{key.Id}");
         AddCookies(httpRequest, cookies);
         var response = await client.SendAsync(httpRequest);
 

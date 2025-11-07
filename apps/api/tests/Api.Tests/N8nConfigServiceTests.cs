@@ -63,7 +63,10 @@ public class N8nConfigServiceTests : IDisposable
         httpClientFactoryMock ??= new Mock<IHttpClientFactory>();
         // Create a mock handler to avoid CA2000 error
         var mockHandler = new Mock<HttpMessageHandler>();
+        // CA2000: HttpClient returned via mock - caller owns disposal
+#pragma warning disable CA2000
         var mockHttpClient = new HttpClient(mockHandler.Object);
+#pragma warning restore CA2000
         httpClientFactoryMock
             .Setup(f => f.CreateClient(It.IsAny<string>()))
             .Returns(mockHttpClient);

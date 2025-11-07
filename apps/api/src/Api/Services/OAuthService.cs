@@ -85,6 +85,12 @@ public class OAuthService : IOAuthService
         // 3. Get user info from provider
         var userInfo = await GetUserInfoAsync(providerConfig, provider, tokenResponse.AccessToken);
 
+        // Validate user info contains required email (AUTH-06 requirement)
+        if (string.IsNullOrEmpty(userInfo.Email))
+        {
+            throw new InvalidOperationException($"OAuth provider {provider} did not return email address");
+        }
+
         // 4. Find existing OAuth account
         var oauthAccount = await _db.OAuthAccounts
             .Include(oa => oa.User)
@@ -123,7 +129,10 @@ public class OAuthService : IOAuthService
                 user = new UserEntity
                 {
                     Id = Guid.NewGuid().ToString(),
+                    // CS8602: False positive - Email validated non-null at line 89
+#pragma warning disable CS8602
                     Email = userInfo.Email.ToLowerInvariant(),
+#pragma warning restore CS8602
                     DisplayName = userInfo.Name ?? emailPrefix,
                     PasswordHash = GenerateRandomPasswordHash(), // No password for OAuth-only users
                     Role = UserRole.User,

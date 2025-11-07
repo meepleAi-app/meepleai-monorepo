@@ -72,7 +72,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
             topic = "winning conditions"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };
@@ -144,7 +144,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
             topic = "rules"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };
@@ -186,7 +186,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
             topic = "rules"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };
@@ -226,7 +226,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
             topic = "setup"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };
@@ -279,7 +279,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
             webhookUrl = "http://n8n:5678/webhook/explain"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/n8n")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/admin/n8n")
         {
             Content = JsonContent.Create(createRequest)
         };
@@ -296,7 +296,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
         name.GetString().Should().Be(createRequest.name);
 
         // And: Configuration is retrievable
-        var getRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/admin/n8n/{configId.GetString()}");
+        using var getRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/admin/n8n/{configId.GetString()}");
         AddCookies(getRequest, cookies);
 
         var getResponse = await client.SendAsync(getRequest);

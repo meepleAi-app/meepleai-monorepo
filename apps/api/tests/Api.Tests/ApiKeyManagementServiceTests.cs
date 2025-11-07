@@ -50,7 +50,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -77,7 +78,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -116,7 +118,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -161,7 +164,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -200,7 +204,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -236,7 +241,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -259,7 +265,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user1 = await CreateTestUserAsync(dbContext, timeProvider, "user1@test.com");
@@ -295,7 +302,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -334,7 +342,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -368,7 +377,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -397,7 +407,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -431,7 +442,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -473,7 +485,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -513,7 +526,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -541,7 +555,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user1 = await CreateTestUserAsync(dbContext, timeProvider, "user1@test.com");
@@ -578,7 +593,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -622,7 +638,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -659,7 +676,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -686,7 +704,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -739,7 +758,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -764,7 +784,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user1 = await CreateTestUserAsync(dbContext, timeProvider, "user1@test.com");
@@ -802,7 +823,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -837,7 +859,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -864,7 +887,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");
@@ -900,7 +924,8 @@ public class ApiKeyManagementServiceTests : IDisposable
 
         await using var dbContext = CreateContext();
         var timeProvider = new FixedTimeProvider(DateTimeOffset.Parse("2024-01-01T00:00:00Z"));
-        var authService = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
+        var passwordHashingService = new PasswordHashingService();
+        var authService = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
         var service = new ApiKeyManagementService(dbContext, authService, NullLogger<ApiKeyManagementService>.Instance, timeProvider);
 
         var user = await CreateTestUserAsync(dbContext, timeProvider, "user@test.com");

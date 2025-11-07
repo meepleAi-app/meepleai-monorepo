@@ -139,7 +139,7 @@ startxref
         content.Add(fileContent, "file", "chess-rules.pdf");
         content.Add(new StringContent(game.Id), "gameId");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
         {
             Content = content
         };
@@ -192,7 +192,7 @@ startxref
         content.Add(fileContent, "file", "rules.pdf");
         content.Add(new StringContent(game.Id), "gameId");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
         {
             Content = content
         };
@@ -256,7 +256,7 @@ startxref
         content.Add(fileContent, "file", "rules.pdf");
         content.Add(new StringContent(game.Id), "gameId");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
         {
             Content = content
         };
@@ -290,7 +290,7 @@ startxref
         content.Add(fileContent, "file", "rules.pdf");
         // gameId intentionally omitted
 
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf")
         {
             Content = content
         };
@@ -370,7 +370,7 @@ startxref
         }
 
         // When: User requests PDF list for game
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/pdfs");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/pdfs");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -415,7 +415,7 @@ startxref
         var game = await CreateTestGameAsync("Empty Game");
 
         // When: User requests PDF list
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/pdfs");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/pdfs");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -494,7 +494,7 @@ startxref
         }
 
         // When: User requests PDF details
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/pdfs/{pdfId}/text");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/pdfs/{pdfId}/text");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -553,7 +553,7 @@ startxref
         }
 
         // When: User requests PDF details
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/pdfs/{pdfId}/text");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/pdfs/{pdfId}/text");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -614,7 +614,7 @@ startxref
         }
 
         // When: User requests PDF details
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/pdfs/{pdfId}/text");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/pdfs/{pdfId}/text");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -644,7 +644,7 @@ startxref
         var client = CreateClientWithoutCookies();
 
         // When: User requests details for non-existent PDF
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/pdfs/nonexistent-pdf-id/text");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/pdfs/nonexistent-pdf-id/text");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);

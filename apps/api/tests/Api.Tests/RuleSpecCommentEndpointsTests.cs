@@ -55,7 +55,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
 
         // When: Editor posts a comment to the version
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(
+        using var request = new HttpRequestMessage(
             HttpMethod.Post,
             $"/api/v1/games/{game.Id}/rulespec/versions/{ruleSpec.Version}/comments")
         {
@@ -104,7 +104,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
 
         // When: Admin posts a version-level comment
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(
+        using var request = new HttpRequestMessage(
             HttpMethod.Post,
             $"/api/v1/games/{game.Id}/rulespec/versions/{ruleSpec.Version}/comments")
         {
@@ -145,7 +145,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
 
         // When: User attempts to post a comment
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(
+        using var request = new HttpRequestMessage(
             HttpMethod.Post,
             $"/api/v1/games/{game.Id}/rulespec/versions/{ruleSpec.Version}/comments")
         {
@@ -213,7 +213,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         // When: Editor requests comments for the version
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(
+        using var request = new HttpRequestMessage(
             HttpMethod.Get,
             $"/api/v1/games/{game.Id}/rulespec/versions/{ruleSpec.Version}/comments");
         AddCookies(request, cookies);
@@ -270,7 +270,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         // When: Owner updates the comment
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(
+        using var request = new HttpRequestMessage(
             HttpMethod.Put,
             $"/api/v1/games/{game.Id}/rulespec/comments/{commentId}")
         {
@@ -325,7 +325,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         // When: A different editor tries to update it
         var cookies = await AuthenticateUserAsync(otherEditor.Email);
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(
+        using var request = new HttpRequestMessage(
             HttpMethod.Put,
             $"/api/v1/games/{game.Id}/rulespec/comments/{commentId}")
         {
@@ -375,7 +375,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         // When: Owner deletes the comment
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(
+        using var request = new HttpRequestMessage(
             HttpMethod.Delete,
             $"/api/v1/games/{game.Id}/rulespec/comments/{commentId}");
         AddCookies(request, cookies);
@@ -430,7 +430,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         // When: Admin deletes the comment
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(
+        using var request = new HttpRequestMessage(
             HttpMethod.Delete,
             $"/api/v1/games/{game.Id}/rulespec/comments/{commentId}");
         AddCookies(request, cookies);
@@ -484,7 +484,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
         // When: A different editor tries to delete it
         var cookies = await AuthenticateUserAsync(otherEditor.Email);
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(
+        using var request = new HttpRequestMessage(
             HttpMethod.Delete,
             $"/api/v1/games/{game.Id}/rulespec/comments/{commentId}");
         AddCookies(request, cookies);
@@ -535,7 +535,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
 
         // When: Posting a comment with empty text
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(
+        using var request = new HttpRequestMessage(
             HttpMethod.Post,
             $"/api/v1/games/{game.Id}/rulespec/versions/{ruleSpec.Version}/comments")
         {
@@ -567,7 +567,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
 
         // When: Posting a comment for a non-existent version
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(
+        using var request = new HttpRequestMessage(
             HttpMethod.Post,
             $"/api/v1/games/{game.Id}/rulespec/versions/v999/comments")
         {

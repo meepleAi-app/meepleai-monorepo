@@ -63,7 +63,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("regular-user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games");
         request.Content = JsonContent.Create(new { name = "Test Game", gameId = "test-game" });
         AddCookies(request, cookies);
 
@@ -81,7 +81,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var admin = await CreateTestUserAsync("admin", UserRole.Admin);
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games");
         request.Content = null;
         AddCookies(request, cookies);
 
@@ -99,7 +99,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var admin = await CreateTestUserAsync("admin", UserRole.Admin);
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games");
         request.Content = JsonContent.Create(new { name = "", gameId = "test-game" });
         AddCookies(request, cookies);
 
@@ -117,7 +117,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var admin = await CreateTestUserAsync("admin", UserRole.Admin);
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games");
         request.Content = JsonContent.Create(new { name = "Test Game EmptyId", gameId = "" });
         AddCookies(request, cookies);
 
@@ -140,7 +140,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var existingGame = await CreateTestGameAsync("Existing Game Duplicate");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games");
         request.Content = JsonContent.Create(new { name = "Duplicate Game Test", gameId = existingGame.Id });
         AddCookies(request, cookies);
 
@@ -162,7 +162,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var admin = await CreateTestUserAsync("admin", UserRole.Admin);
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games");
         request.Content = JsonContent.Create(new { name = "Test Game InvalidId", gameId = "invalid game id!" });
         AddCookies(request, cookies);
 
@@ -202,7 +202,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games/non-existent-game/pdfs");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games/non-existent-game/pdfs");
         AddCookies(request, cookies);
 
         // When: User tries to get PDFs for non-existent game
@@ -236,7 +236,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games/non-existent-game/rulespec");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games/non-existent-game/rulespec");
         AddCookies(request, cookies);
 
         // When: User tries to get RuleSpec for non-existent game
@@ -272,7 +272,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var game = await CreateTestGameAsync($"Test Game RuleSpec UserRole");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/games/{game.Id}/rulespec");
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/games/{game.Id}/rulespec");
         request.Content = JsonContent.Create(new { gameId = game.Id, version = "1.0.0" });
         AddCookies(request, cookies);
 
@@ -291,7 +291,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var game = await CreateTestGameAsync($"Test Game RuleSpec Mismatched");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/games/{game.Id}/rulespec");
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/games/{game.Id}/rulespec");
         request.Content = JsonContent.Create(new { gameId = "different-game-id", version = "1.0.0" });
         AddCookies(request, cookies);
 
@@ -327,7 +327,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Test Game History UserRole");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/rulespec/history");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/rulespec/history");
         AddCookies(request, cookies);
 
         // When: Regular user tries to get RuleSpec history
@@ -362,7 +362,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Test Game Version UserRole");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/rulespec/versions/1.0.0");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/rulespec/versions/1.0.0");
         AddCookies(request, cookies);
 
         // When: Regular user tries to get specific version
@@ -380,7 +380,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Test Game Version NotFound");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/rulespec/versions/999.0.0");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/rulespec/versions/999.0.0");
         AddCookies(request, cookies);
 
         // When: Editor tries to get non-existent version
@@ -415,7 +415,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Test Game Diff UserRole");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/rulespec/diff?from=1.0.0&to=2.0.0");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/rulespec/diff?from=1.0.0&to=2.0.0");
         AddCookies(request, cookies);
 
         // When: Regular user tries to get diff
@@ -433,7 +433,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Test Game Diff MissingFrom");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/rulespec/diff?to=2.0.0");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/rulespec/diff?to=2.0.0");
         AddCookies(request, cookies);
 
         // When: Editor tries to get diff without 'from' parameter
@@ -451,7 +451,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Test Game Diff MissingTo");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/rulespec/diff?from=1.0.0");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/rulespec/diff?from=1.0.0");
         AddCookies(request, cookies);
 
         // When: Editor tries to get diff without 'to' parameter
@@ -469,7 +469,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Test Game Diff NonExistent");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/rulespec/diff?from=999.0.0&to=1000.0.0");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/games/{game.Id}/rulespec/diff?from=999.0.0&to=1000.0.0");
         AddCookies(request, cookies);
 
         // When: Editor tries to get diff for non-existent versions

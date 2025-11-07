@@ -76,7 +76,7 @@ public class ExplainEndpointTests : IntegrationTestBase
             topic = "winning conditions"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };
@@ -167,7 +167,7 @@ public class ExplainEndpointTests : IntegrationTestBase
             topic = ""
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };
@@ -209,7 +209,7 @@ public class ExplainEndpointTests : IntegrationTestBase
             topic = "rules"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };
@@ -245,7 +245,7 @@ public class ExplainEndpointTests : IntegrationTestBase
             topic = "winning conditions"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };
@@ -289,7 +289,7 @@ public class ExplainEndpointTests : IntegrationTestBase
             chatId = chat.Id
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };
@@ -343,7 +343,7 @@ public class ExplainEndpointTests : IntegrationTestBase
             topic = "scoring"
         };
 
-        var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain")
         {
             Content = JsonContent.Create(request)
         };

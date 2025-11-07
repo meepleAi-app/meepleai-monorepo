@@ -51,7 +51,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var adminCookies = await RegisterAndAuthenticateAsync(client, adminEmail, "Admin");
 
         // When: I request GET /api/v1/admin/features
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/features");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/features");
         var response = await SendWithCookiesAsync(client, request, adminCookies);
 
         // Then: I receive a list of all feature flags with their states
@@ -78,7 +78,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var userCookies = await RegisterAndAuthenticateAsync(client, userEmail, "User");
 
         // When: I request GET /api/v1/admin/features
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/features");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/features");
         var response = await SendWithCookiesAsync(client, request, userCookies);
 
         // Then: I receive 403 Forbidden
@@ -242,7 +242,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
                 { new ByteArrayContent(new byte[] { 0x25, 0x50, 0x44, 0x46 }), "file", "test.pdf" }
             };
 
-            var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf") { Content = content };
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf") { Content = content };
             var response = await SendWithCookiesAsync(editorClient, request, editorCookies);
 
             // Then: They receive 403 Forbidden
@@ -325,7 +325,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         isEnabled.Should().BeTrue();
 
         // Verify via GET endpoint
-        var getRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/features");
+        using var getRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/features");
         var getResponse = await SendWithCookiesAsync(client, getRequest, adminCookies);
         var listResult = await getResponse.Content.ReadFromJsonAsync<FeatureFlagsListResponse>();
         listResult!.Features.Should().Contain(f => f.FeatureName == featureName && f.IsEnabled);
@@ -544,6 +544,7 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
 
     private static HttpRequestMessage CreateJsonRequest(HttpMethod method, string uri, object? payload = null)
     {
+        // CA2000: Caller owns disposal - don't use 'using' in factory methods
         var request = new HttpRequestMessage(method, uri);
         if (payload != null)
         {

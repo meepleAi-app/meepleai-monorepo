@@ -509,7 +509,7 @@ public class CacheWarmingServiceTests : IDisposable
         // Assert (Then): Service should validate config in constructor
         // Note: Actual DI registration check happens in Program.cs, not constructor
         // This test validates config is read correctly
-        var service = act();
+        using var service = act();
         service.Should().NotBeNull();
         _mockConfig.Verify(c => c.Value, Times.Once);
     }

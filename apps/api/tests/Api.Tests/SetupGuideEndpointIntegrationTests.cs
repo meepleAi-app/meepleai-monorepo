@@ -62,7 +62,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Test Board Game");
 
         // When: User requests a setup guide for that game
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
             Content = JsonContent.Create(new SetupGuideRequest(game.Id, null!))
         };
@@ -126,7 +126,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User requests a setup guide without providing a game ID
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
             Content = JsonContent.Create(new SetupGuideRequest("", null))
         };
@@ -154,7 +154,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User requests a setup guide for a game that doesn't exist
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
             Content = JsonContent.Create(new SetupGuideRequest("nonexistent-game-id", null))
         };
@@ -222,7 +222,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         await db.SaveChangesAsync();
 
         // When: User requests a setup guide with chat ID
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
             Content = JsonContent.Create(new SetupGuideRequest(game.Id, chatId))
         };
@@ -264,7 +264,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Timed Setup Game");
 
         // When: User requests a setup guide
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
             Content = JsonContent.Create(new SetupGuideRequest(game.Id, null!))
         };
@@ -305,7 +305,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Token Tracked Game");
 
         // When: User requests a setup guide
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
             Content = JsonContent.Create(new SetupGuideRequest(game.Id, null!))
         };
@@ -348,7 +348,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Logged Game");
 
         // When: User requests a setup guide
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
             Content = JsonContent.Create(new SetupGuideRequest(game.Id, null!))
         };
@@ -402,19 +402,19 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var client2 = CreateClientWithoutCookies();
         var client3 = CreateClientWithoutCookies();
 
-        var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
+        using var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
             Content = JsonContent.Create(new SetupGuideRequest(game.Id, null!))
         };
         AddCookies(request1, cookies1);
 
-        var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
+        using var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
             Content = JsonContent.Create(new SetupGuideRequest(game.Id, null!))
         };
         AddCookies(request2, cookies2);
 
-        var request3 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
+        using var request3 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
             Content = JsonContent.Create(new SetupGuideRequest(game.Id, null!))
         };
@@ -462,7 +462,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Confidence Score Game");
 
         // When: User requests a setup guide
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup")
         {
             Content = JsonContent.Create(new SetupGuideRequest(game.Id, null!))
         };

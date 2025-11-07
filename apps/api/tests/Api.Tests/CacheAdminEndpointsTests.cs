@@ -72,7 +72,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
 
         // When: Admin requests stats
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/cache/stats");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/cache/stats");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -120,7 +120,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
 
         // When: Admin requests stats filtered by game1
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/admin/cache/stats?gameId={game1.Id}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/admin/cache/stats?gameId={game1.Id}");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -150,7 +150,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
 
         // When: User tries to access admin endpoint
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/cache/stats");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/admin/cache/stats");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -219,7 +219,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
 
         // When: Admin deletes game cache
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/cache/games/{game.Id}");
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/cache/games/{game.Id}");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -258,7 +258,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
 
         // When: Admin deletes cache for non-existent game
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/admin/cache/games/nonexistent-game-id");
+        using var request = new HttpRequestMessage(HttpMethod.Delete, "/api/v1/admin/cache/games/nonexistent-game-id");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -283,7 +283,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
 
         // When: User tries to delete game cache
         var client = CreateClientWithoutCookies();
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/cache/games/{game.Id}");
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/cache/games/{game.Id}");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -328,7 +328,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         // When: Admin deletes by game tag (cache entries are tagged with game:{gameId}, not pdf:{pdfId})
         var client = CreateClientWithoutCookies();
         var tag = $"game:{game.Id}";
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/cache/tags/{Uri.EscapeDataString(tag)}");
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/cache/tags/{Uri.EscapeDataString(tag)}");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -364,7 +364,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
         var tag = "game:my-game-123";
         var encodedTag = Uri.EscapeDataString(tag);
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/cache/tags/{encodedTag}");
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/cache/tags/{encodedTag}");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -389,7 +389,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         // When: User tries to delete by tag
         var client = CreateClientWithoutCookies();
         var tag = "game:some-game";
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/cache/tags/{Uri.EscapeDataString(tag)}");
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/cache/tags/{Uri.EscapeDataString(tag)}");
         AddCookies(request, cookies);
 
         var response = await client.SendAsync(request);
@@ -453,7 +453,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
 
         // Get stats before invalidation
         var client = CreateClientWithoutCookies();
-        var statsRequest1 = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/admin/cache/stats?gameId={game.Id}");
+        using var statsRequest1 = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/admin/cache/stats?gameId={game.Id}");
         AddCookies(statsRequest1, cookies);
         var statsResponse1 = await client.SendAsync(statsRequest1);
         var stats1 = await statsResponse1.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
@@ -461,12 +461,12 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         var missesBefore = stats1.GetProperty("totalMisses").GetInt64();
 
         // When: Invalidate game cache
-        var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/cache/games/{game.Id}");
+        using var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/cache/games/{game.Id}");
         AddCookies(deleteRequest, cookies);
         await client.SendAsync(deleteRequest);
 
         // Then: Stats history is preserved
-        var statsRequest2 = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/admin/cache/stats?gameId={game.Id}");
+        using var statsRequest2 = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/admin/cache/stats?gameId={game.Id}");
         AddCookies(statsRequest2, cookies);
         var statsResponse2 = await client.SendAsync(statsRequest2);
         var stats2 = await statsResponse2.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
@@ -517,7 +517,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         // When: Invalidate pdf1 tag
         var client = CreateClientWithoutCookies();
         var tag1 = $"pdf:{pdf1.Id}";
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/cache/tags/{Uri.EscapeDataString(tag1)}");
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/cache/tags/{Uri.EscapeDataString(tag1)}");
         AddCookies(request, cookies);
         await client.SendAsync(request);
 

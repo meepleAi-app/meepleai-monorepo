@@ -33,7 +33,8 @@ public class ApiKeyAuthenticationMiddlewareTests
         }
 
         await using var dbContext = CreateContext(connection);
-        var service = new ApiKeyAuthenticationService(dbContext, NullLogger<ApiKeyAuthenticationService>.Instance);
+        var passwordHashingService = new PasswordHashingService();
+        var service = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance);
 
         var user = new UserEntity
         {

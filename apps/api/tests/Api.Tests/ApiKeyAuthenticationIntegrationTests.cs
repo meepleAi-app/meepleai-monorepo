@@ -44,7 +44,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
             new[] { "read", "write" });
 
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         request.Headers.Add("X-API-Key", plaintextKey);
 
         // When: User makes request with API key
@@ -71,7 +71,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
             new[] { "read" });
 
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
         request.Headers.Add("X-API-Key", plaintextKey);
 
         // When: User requests games list with API key
@@ -95,7 +95,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
             environment: environment);
 
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         request.Headers.Add("X-API-Key", plaintextKey);
 
         // When: Request is made with environment-specific key
@@ -114,7 +114,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
     {
         // Given: Invalid API key
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         request.Headers.Add("X-API-Key", "mpl_test_invalid_key_does_not_exist");
 
         // When: User makes request with invalid key
@@ -150,7 +150,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
             expiresAt: expiresAt);
 
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         request.Headers.Add("X-API-Key", plaintextKey);
 
         // When: User makes request with expired key
@@ -178,7 +178,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         }
 
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         request.Headers.Add("X-API-Key", plaintextKey);
 
         // When: User makes request with revoked key
@@ -211,7 +211,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         }
 
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         request.Headers.Add("X-API-Key", plaintextKey);
 
         // When: User makes request with inactive key
@@ -226,7 +226,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
     {
         // Given: Empty X-API-Key header (should fall through to cookie auth)
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         request.Headers.Add("X-API-Key", "");
 
         // When: User makes request with empty API key
@@ -255,7 +255,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var cookies = await AuthenticateUserAsync(cookieUser.Email);
 
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         request.Headers.Add("X-API-Key", plaintextKey);
         AddCookies(request, cookies);
 
@@ -278,7 +278,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         AddCookies(request, cookies);
 
         // When: Request uses only cookie auth
@@ -309,7 +309,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var client = Factory.CreateHttpsClient();
 
         // When: First request succeeds
-        var request1 = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var request1 = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         request1.Headers.Add("X-API-Key", plaintextKey);
         var response1 = await client.SendAsync(request1);
         response1.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -322,7 +322,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         }
 
         // And: Second request with same key
-        var request2 = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var request2 = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         request2.Headers.Add("X-API-Key", plaintextKey);
         var response2 = await client.SendAsync(request2);
 
@@ -343,7 +343,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
             expiresAt: expiresAt);
 
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         request.Headers.Add("X-API-Key", plaintextKey);
 
         // When: Request is made with soon-to-expire key
@@ -392,7 +392,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
     {
         // Given: Invalid API key
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         request.Headers.Add("X-API-Key", "mpl_test_totally_invalid");
 
         // When: Request is made with invalid key

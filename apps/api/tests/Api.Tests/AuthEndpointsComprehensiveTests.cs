@@ -82,7 +82,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         await db.SaveChangesAsync();
 
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         request.Headers.Add("Cookie", $"meeple_session=expired-token");
 
         // When: User tries to access protected endpoint with expired session
@@ -101,7 +101,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var client = Factory.CreateHttpsClient();
 
         // When: User logs out
-        var logoutRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
+        using var logoutRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
         AddCookies(logoutRequest, cookies);
         var logoutResponse = await client.SendAsync(logoutRequest);
 
@@ -109,7 +109,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         logoutResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // And: Session is invalidated
-        var meRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var meRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         AddCookies(meRequest, cookies);
         var meResponse = await client.SendAsync(meRequest);
         meResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -137,11 +137,11 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var client = Factory.CreateHttpsClient();
 
         // When: User logs out twice
-        var firstLogout = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
+        using var firstLogout = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
         AddCookies(firstLogout, cookies);
         var firstResponse = await client.SendAsync(firstLogout);
 
-        var secondLogout = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
+        using var secondLogout = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
         AddCookies(secondLogout, cookies);
         var secondResponse = await client.SendAsync(secondLogout);
 
@@ -388,7 +388,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var user = await CreateTestUserAsync("me-user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         AddCookies(request, cookies);
 
         // When: User requests their info
@@ -458,11 +458,11 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         var secondCookies = GetCookiesFromResponse(secondLogin);
 
         // Then: Both sessions are valid simultaneously
-        var firstMeRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var firstMeRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         AddCookies(firstMeRequest, new List<string>(firstCookies.Select(kv => $"{kv.Key}={kv.Value}")));
         var firstMeResponse = await client.SendAsync(firstMeRequest);
 
-        var secondMeRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
+        using var secondMeRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
         AddCookies(secondMeRequest, new List<string>(secondCookies.Select(kv => $"{kv.Key}={kv.Value}")));
         var secondMeResponse = await client.SendAsync(secondMeRequest);
 

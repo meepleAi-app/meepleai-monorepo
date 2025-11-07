@@ -60,7 +60,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Posting with empty topic
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
         {
             Content = JsonContent.Create(new ExplainRequest("test-game", ""))
         };
@@ -94,7 +94,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Posting to streaming endpoint
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
         {
             Content = JsonContent.Create(new ExplainRequest(game.Id, "game setup"))
         };
@@ -120,7 +120,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Requesting explanation
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
         {
             Content = JsonContent.Create(new ExplainRequest(game.Id, "game setup"))
         };
@@ -185,7 +185,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Requesting explanation
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
         {
             Content = JsonContent.Create(new ExplainRequest(game.Id, "game setup"))
         };
@@ -220,7 +220,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Requesting explanation
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
         {
             Content = JsonContent.Create(new ExplainRequest(game.Id, "game setup"))
         };
@@ -252,7 +252,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Requesting explanation
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
         {
             Content = JsonContent.Create(new ExplainRequest(game.Id, "game setup"))
         };
@@ -288,7 +288,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Requesting explanation
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
         {
             Content = JsonContent.Create(new ExplainRequest(game.Id, "game setup"))
         };
@@ -320,7 +320,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Requesting explanation
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
         {
             Content = JsonContent.Create(new ExplainRequest(game.Id, "game setup"))
         };
@@ -344,7 +344,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Requesting explanation for non-existent game
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
         {
             Content = JsonContent.Create(new ExplainRequest("non-existent-game", "game setup"))
         };
@@ -372,7 +372,7 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: Requesting explanation with empty topic (quick error response)
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain/stream")
         {
             Content = JsonContent.Create(new ExplainRequest("test-game", ""))
         };

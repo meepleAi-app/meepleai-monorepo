@@ -62,7 +62,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         // Note: In real test, would call POST /chess/index first
 
         // When: User asks "What is en passant?"
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
         {
             Content = JsonContent.Create(new ChessAgentRequest("What is en passant?"))
         };
@@ -109,7 +109,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User asks about the Italian Game
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
         {
             Content = JsonContent.Create(new ChessAgentRequest("Explain the Italian Game opening"))
         };
@@ -147,7 +147,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User provides a valid FEN position (after 1. e4)
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
         {
             Content = JsonContent.Create(new ChessAgentRequest(
                 "What should Black play now?",
@@ -191,7 +191,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User provides an invalid FEN string
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
         {
             Content = JsonContent.Create(new ChessAgentRequest(
                 "Analyze this position",
@@ -229,7 +229,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User asks "What is a fork in chess?"
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
         {
             Content = JsonContent.Create(new ChessAgentRequest("What is a fork in chess? Give examples."))
         };
@@ -284,7 +284,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User sends empty question
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
         {
             Content = JsonContent.Create(new ChessAgentRequest(""))
         };
@@ -313,7 +313,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User asks a question
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
         {
             Content = JsonContent.Create(new ChessAgentRequest("What is castling?"))
         };
@@ -351,7 +351,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // And: User has asked a question before
-        var firstRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
+        using var firstRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
         {
             Content = JsonContent.Create(new ChessAgentRequest("What is checkmate?"))
         };
@@ -364,7 +364,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
         var firstResult = JsonSerializer.Deserialize<ChessAgentResponse>(firstJson, JsonOptions);
 
         // When: User asks the same question again
-        var secondRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
+        using var secondRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/chess")
         {
             Content = JsonContent.Create(new ChessAgentRequest("What is checkmate?"))
         };

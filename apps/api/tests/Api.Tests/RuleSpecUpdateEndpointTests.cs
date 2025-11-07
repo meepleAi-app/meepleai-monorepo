@@ -728,7 +728,7 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
         IReadOnlyList<string> cookies,
         object? body = null)
     {
-        var request = new HttpRequestMessage(method, url);
+        using var request = new HttpRequestMessage(method, url);
 
         // Use shared helper to correctly format cookies into a single header
         AddCookies(request, cookies);

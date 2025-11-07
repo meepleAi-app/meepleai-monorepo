@@ -32,7 +32,7 @@ public class RateLimitingTests : IntegrationTestBase
         var user = await CreateTestUserAsync("rate-limit-user", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
         AddCookies(request, cookies);
 
         // When: User makes a request
@@ -84,7 +84,7 @@ public class RateLimitingTests : IntegrationTestBase
         var admin = await CreateTestUserAsync("admin-rate-limit", UserRole.Admin);
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
         AddCookies(request, cookies);
 
         // When: Admin makes a request
@@ -103,7 +103,7 @@ public class RateLimitingTests : IntegrationTestBase
         var editor = await CreateTestUserAsync("editor-rate-limit", UserRole.Editor);
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
         AddCookies(request, cookies);
 
         // When: Editor makes a request
@@ -122,7 +122,7 @@ public class RateLimitingTests : IntegrationTestBase
         var user = await CreateTestUserAsync("user-rate-limit", UserRole.User);
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
         AddCookies(request, cookies);
 
         // When: User makes a request
@@ -152,7 +152,7 @@ public class RateLimitingTests : IntegrationTestBase
         var responses = new List<HttpResponseMessage>();
         for (int i = 0; i < 105; i++) // Exceed 100 burst capacity
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, "/");
+            using var request = new HttpRequestMessage(HttpMethod.Get, "/");
             AddCookies(request, cookies);
             var response = await client.SendAsync(request);
             responses.Add(response);
@@ -186,7 +186,7 @@ public class RateLimitingTests : IntegrationTestBase
         HttpResponseMessage? rateLimitedResponse = null;
         for (int i = 0; i < 110; i++) // Exceed user limit
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, "/");
+            using var request = new HttpRequestMessage(HttpMethod.Get, "/");
             AddCookies(request, cookies);
             var response = await client.SendAsync(request);
 
@@ -223,7 +223,7 @@ public class RateLimitingTests : IntegrationTestBase
         HttpResponseMessage? rateLimitedResponse = null;
         for (int i = 0; i < 110; i++)
         {
-            var request = new HttpRequestMessage(HttpMethod.Get, "/");
+            using var request = new HttpRequestMessage(HttpMethod.Get, "/");
             AddCookies(request, cookies);
             var response = await client.SendAsync(request);
 
@@ -282,11 +282,11 @@ public class RateLimitingTests : IntegrationTestBase
         var client = Factory.CreateHttpsClient();
 
         // When: Both users make requests
-        var request1 = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
+        using var request1 = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
         AddCookies(request1, cookies1);
         var response1 = await client.SendAsync(request1);
 
-        var request2 = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
+        using var request2 = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
         AddCookies(request2, cookies2);
         var response2 = await client.SendAsync(request2);
 
@@ -327,7 +327,7 @@ public class RateLimitingTests : IntegrationTestBase
         loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var cookies = GetCookiesFromResponse(loginResponse);
-        var authenticatedRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
+        using var authenticatedRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
         AddCookies(authenticatedRequest, cookies);
         var authenticatedResponse = await client.SendAsync(authenticatedRequest);
 

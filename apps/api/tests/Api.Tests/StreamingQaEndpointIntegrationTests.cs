@@ -63,7 +63,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Streaming QA Game");
 
         // When: User requests streaming QA for that game
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
         {
             Content = JsonContent.Create(new QaRequest(game.Id, "How many players?", chatId: null))
         };
@@ -142,7 +142,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         var client = CreateClientWithoutCookies();
 
         // When: User requests streaming QA without providing a game ID
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
         {
             Content = JsonContent.Create(new QaRequest("", "test query", chatId: null))
         };
@@ -174,7 +174,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Citations Game");
 
         // When: User requests streaming QA
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
         {
             Content = JsonContent.Create(new QaRequest(game.Id, "How to play?", chatId: null))
         };
@@ -255,7 +255,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         await db.SaveChangesAsync();
 
         // When: User requests streaming QA with chat ID
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
         {
             Content = JsonContent.Create(new QaRequest(game.Id, "How many players?", chatId))
         };
@@ -310,7 +310,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Logged Game");
 
         // When: User requests streaming QA
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
         {
             Content = JsonContent.Create(new QaRequest(game.Id, "test query", chatId: null))
         };
@@ -360,7 +360,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Token Count Game");
 
         // When: User requests streaming QA
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
         {
             Content = JsonContent.Create(new QaRequest(game.Id, "test query", chatId: null))
         };
@@ -414,19 +414,19 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         var client2 = CreateClientWithoutCookies();
         var client3 = CreateClientWithoutCookies();
 
-        var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
+        using var request1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
         {
             Content = JsonContent.Create(new QaRequest(game.Id, "query 1", chatId: null))
         };
         AddCookies(request1, cookies1);
 
-        var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
+        using var request2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
         {
             Content = JsonContent.Create(new QaRequest(game.Id, "query 2", chatId: null))
         };
         AddCookies(request2, cookies2);
 
-        var request3 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
+        using var request3 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
         {
             Content = JsonContent.Create(new QaRequest(game.Id, "query 3", chatId: null))
         };
@@ -471,7 +471,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
         var game = await CreateTestGameAsync("Error Handling Game");
 
         // When: Streaming QA is requested (may fail due to missing vector data or service issues)
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa/stream")
         {
             Content = JsonContent.Create(new QaRequest(game.Id, "test query", chatId: null))
         };

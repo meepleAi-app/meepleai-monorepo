@@ -83,7 +83,7 @@ public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
         var validCode = GenerateValidTotpCode(secret);
 
         // Act - Disable 2FA
-        var disableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
+        using var disableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
         {
             Content = JsonContent.Create(new
             {
@@ -98,7 +98,7 @@ public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Verify complete cleanup (user + backup codes)
-        var statusRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/2fa/status");
+        using var statusRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/2fa/status");
         AddCookies(statusRequest, sessionCookies);
         var statusResponse = await client.SendAsync(statusRequest);
         var status = await statusResponse.Content.ReadFromJsonAsync<TwoFactorStatusResponse>();
@@ -157,12 +157,12 @@ public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
         var client = CreateClientWithoutCookies();
 
         // Act - First setup (should succeed)
-        var setupRequest1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
+        using var setupRequest1 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
         AddCookies(setupRequest1, sessionCookies);
         var response1 = await client.SendAsync(setupRequest1);
 
         // Second setup (replaces first, tests transactional behavior)
-        var setupRequest2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
+        using var setupRequest2 = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
         AddCookies(setupRequest2, sessionCookies);
         var response2 = await client.SendAsync(setupRequest2);
 
@@ -187,7 +187,7 @@ public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
         var client = CreateClientWithoutCookies();
 
         // Act & Assert - Step 1: Setup
-        var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
+        using var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
         AddCookies(setupRequest, sessionCookies);
         var setupResponse = await client.SendAsync(setupRequest);
         setupResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -195,7 +195,7 @@ public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
 
         // Step 2: Enable
         var validCode = GenerateValidTotpCode(setupResult!.Secret);
-        var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
+        using var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
         {
             Content = JsonContent.Create(new { code = validCode })
         };
@@ -212,7 +212,7 @@ public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
 
         // Step 5: Verify TOTP
         var verifyCode = GenerateValidTotpCode(setupResult.Secret);
-        var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
+        using var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
         {
             Content = JsonContent.Create(new { SessionToken = tempToken, Code = verifyCode })
         };
@@ -290,14 +290,14 @@ public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
         var (oldSecret, _) = await SetupAndEnable2FAAsync(user.Email, sessionCookies, client);
 
         // Act - Reenroll (new secret)
-        var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
+        using var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
         AddCookies(setupRequest, sessionCookies);
         var setupResponse = await client.SendAsync(setupRequest);
         var setupResult = await setupResponse.Content.ReadFromJsonAsync<TwoFactorSetupResponse>();
         var newSecret = setupResult!.Secret;
 
         var newCode = GenerateValidTotpCode(newSecret);
-        var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
+        using var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
         {
             Content = JsonContent.Create(new { code = newCode })
         };
@@ -331,7 +331,7 @@ public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
 
         // Disable
         var code1 = GenerateValidTotpCode(secret1);
-        var disableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
+        using var disableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
         {
             Content = JsonContent.Create(new { password = "TestPassword123!", code = code1 })
         };
@@ -366,7 +366,7 @@ public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
 
         // Disable 2FA
         var code = GenerateValidTotpCode(secret);
-        var disableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
+        using var disableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/disable")
         {
             Content = JsonContent.Create(new { password = "TestPassword123!", code })
         };
@@ -375,7 +375,7 @@ public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
 
         // Act - Logout and login
         await LogoutAsync(sessionCookies, client);
-        var loginRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+        using var loginRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
         {
             Content = JsonContent.Create(new { email = user.Email, password = "TestPassword123!" })
         };
@@ -566,7 +566,7 @@ public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
         // Act - 5 concurrent setup calls
         var tasks = Enumerable.Range(0, 5).Select(_ =>
         {
-            var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
             AddCookies(request, sessionCookies);
             return client.SendAsync(request);
         }).ToArray();
@@ -577,7 +577,7 @@ public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
         responses.Should().OnlyContain(r => r.StatusCode == HttpStatusCode.OK);
 
         // Final state should be clean (10 backup codes from last setup)
-        var statusRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/2fa/status");
+        using var statusRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v1/users/me/2fa/status");
         AddCookies(statusRequest, sessionCookies);
         var statusResponse = await client.SendAsync(statusRequest);
         var status = await statusResponse.Content.ReadFromJsonAsync<TwoFactorStatusResponse>();
@@ -666,13 +666,13 @@ public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
         List<string> sessionCookies,
         HttpClient client)
     {
-        var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
+        using var setupRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/setup");
         AddCookies(setupRequest, sessionCookies);
         var setupResponse = await client.SendAsync(setupRequest);
         var setupResult = await setupResponse.Content.ReadFromJsonAsync<TwoFactorSetupResponse>();
 
         var validCode = GenerateValidTotpCode(setupResult!.Secret);
-        var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
+        using var enableRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/enable")
         {
             Content = JsonContent.Create(new { code = validCode })
         };
@@ -684,14 +684,14 @@ public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
 
     private async Task LogoutAsync(List<string> sessionCookies, HttpClient client)
     {
-        var logoutRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
+        using var logoutRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/logout");
         AddCookies(logoutRequest, sessionCookies);
         await client.SendAsync(logoutRequest);
     }
 
     private async Task<string> LoginWithTwoFactorAsync(string email, string password, HttpClient client)
     {
-        var loginRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
+        using var loginRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login")
         {
             Content = JsonContent.Create(new { email, password })
         };
@@ -702,7 +702,7 @@ public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
 
     private async Task<HttpResponseMessage> VerifyCodeAsync(HttpClient client, string tempToken, string code)
     {
-        var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
+        using var verifyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/2fa/verify")
         {
             Content = JsonContent.Create(new { SessionToken = tempToken, Code = code })
         };

@@ -206,7 +206,11 @@ public class AuthService
             await _db.SaveChangesAsync(ct);
         }
 
-        var activeSession = new ActiveSession(ToDto(dbSession.User), dbSession.ExpiresAt, now);
+        // dbSession.User is guaranteed non-null by IsSessionValid check above (line 195)
+        // CS8602: False positive - IsSessionValid at line 288 explicitly checks session.User != null
+#pragma warning disable CS8602
+        var activeSession = new ActiveSession(ToDto(dbSession.User!), dbSession.ExpiresAt, now);
+#pragma warning restore CS8602
 
         // Cache for next time
         if (_sessionCache != null)

@@ -125,7 +125,7 @@ public class PathSecurityTests
     }
 
     [Theory]
-    [InlineData("../../../etc/passwd", "..etcpasswd")]
+    [InlineData("../../../etc/passwd", "etcpasswd")]  // Trim ALL leading/trailing dots for security
     [InlineData("file<>name.txt", "filename.txt")]
     [InlineData("file:name|test.pdf", "filenametest.pdf")]
     [InlineData("test?.pdf", "test.pdf")]
@@ -226,7 +226,8 @@ public class PathSecurityTests
 
         // Assert
         Assert.EndsWith(".pdf", result);
-        Assert.Contains("-", result); // GUID format (though normalized to 'N')
+        Assert.DoesNotContain("-", result); // GUID format N (no hyphens)
+        Assert.Matches(@"^[a-f0-9]{32}\.pdf$", result); // Verify GUID format: 32 hex chars + .pdf
         Assert.NotEqual(originalFilename, result);
     }
 

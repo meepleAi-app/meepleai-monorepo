@@ -24,6 +24,21 @@ public static class PathSecurity
         if (string.IsNullOrWhiteSpace(filename))
             throw new ArgumentException("Filename cannot be empty", nameof(filename));
 
+        // Detect path traversal patterns before path resolution
+        // Check for relative traversal sequences, not absolute paths
+        // Avoid false positives on Windows absolute paths (C:\Users\...)
+        if (filename.Contains("../") || filename.Contains("..\\") ||
+            filename.StartsWith("../") || filename.StartsWith("..\\") ||
+            filename.EndsWith("/..") || filename.EndsWith("\\..") ||
+            filename.Contains("/..") || filename.Contains("\\..") ||
+            filename.Contains("....") ||
+            filename.Contains("//") ||
+            filename.Contains("\\\\"))
+        {
+            throw new SecurityException(
+                $"Path traversal pattern detected in filename: '{filename}'");
+        }
+
         // Combine and resolve to absolute path
         var combinedPath = Path.Combine(basePath, filename);
         var fullPath = Path.GetFullPath(combinedPath);
@@ -69,6 +84,8 @@ public static class PathSecurity
             .ToArray());
 
         // Remove leading/trailing dots and spaces
+        // Leading/trailing dots can be security risks (.hidden files, "..") or cause filesystem issues
+        // Internal dots are safe and needed for extensions (file.name.pdf)
         sanitized = sanitized.Trim('.', ' ');
 
         if (string.IsNullOrWhiteSpace(sanitized))
@@ -118,9 +135,17 @@ public static class PathSecurity
         if (string.IsNullOrWhiteSpace(originalFilename))
             throw new ArgumentException("Original filename cannot be empty", nameof(originalFilename));
 
-        var extension = Path.GetExtension(originalFilename);
-        var sanitizedExtension = string.IsNullOrWhiteSpace(extension) ? "" : SanitizeFilename(extension);
-        return $"{Guid.NewGuid():N}{sanitizedExtension}";
+        var extension = Path.GetExtension(originalFilename);  // Includes leading dot (e.g., ".pdf")
+
+        // If no extension, return GUID only
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            return $"{Guid.NewGuid():N}";
+        }
+
+        // Remove leading dot, sanitize extension, then re-add dot explicitly
+        var sanitizedExtension = SanitizeFilename(extension.TrimStart('.'));
+        return $"{Guid.NewGuid():N}.{sanitizedExtension}";
     }
 
     /// <summary>

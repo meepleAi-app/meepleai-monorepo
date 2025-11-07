@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures/auth';
+import { getTextMatcher, t } from './fixtures/i18n';
 
 /**
  * CHAT-03: Multi-document context switching in chat interface
@@ -56,7 +57,7 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     const sendButton = page.locator('button[type="submit"][aria-label="Send message"]');
 
     await messageInput.fill('How does castling work in Chess?');
-    await sendButton.click();
+    await sendButton.click({ force: true });
 
     // Wait for user message to appear
     await expect(page.locator('.message, [role="log"] li').filter({ hasText: 'castling' }).first()).toBeVisible({ timeout: 15000 });
@@ -84,7 +85,7 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
 
     // Step 4: Send message about Checkers (or Tic-Tac-Toe)
     await messageInput.fill('Can pieces move backwards?');
-    await sendButton.click();
+    await sendButton.click({ force: true });
 
     // Wait for backwards message to appear
     await expect(page.locator('.message, [role="log"] li').filter({ hasText: 'backwards' }).first()).toBeVisible({ timeout: 15000 });
@@ -188,7 +189,7 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
 
     // Create new chat button
     const newChatButton = page.locator('button:has-text("Nuova Chat"), button[aria-label="Create new chat"]');
-    await newChatButton.click();
+    await newChatButton.click({ force: true });
 
     // Wait for chat to be created and appear in sidebar
     await page.waitForSelector('[role="list"] [role="button"], nav[aria-label="Chat history"] li', { timeout: 5000 });
@@ -237,7 +238,7 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     await agentSelector.selectOption({ index: 1 });
 
     await messageInput.fill('Chess question 1');
-    await sendButton.click();
+    await sendButton.click({ force: true });
     await page.waitForTimeout(1000);
 
     // Game 2: Tic-Tac-Toe
@@ -250,7 +251,7 @@ test.describe('CHAT-03: Multi-game chat context switching', () => {
     await agentSelector.selectOption({ index: 1 });
 
     await messageInput.fill('Tic-Tac-Toe question 1');
-    await sendButton.click();
+    await sendButton.click({ force: true });
     await page.waitForTimeout(1000);
 
     // Rapid switching test

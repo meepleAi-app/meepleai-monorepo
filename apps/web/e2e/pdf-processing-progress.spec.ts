@@ -9,6 +9,7 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
+import { getTextMatcher, t } from './fixtures/i18n';
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 

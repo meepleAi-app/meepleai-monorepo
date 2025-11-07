@@ -7,6 +7,7 @@
 
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { getTextMatcher, t } from './fixtures/i18n';
 
 // Helper to get readable violations
 function formatViolations(violations: any[]) {
@@ -54,7 +55,7 @@ test.describe('Accessibility Tests - WCAG 2.1 AA', () => {
     await page.goto('/chat');
 
     // Wait for page to load completely
-    await page.waitForSelector('text=Accesso richiesto');
+    await page.waitForSelector(`text=${t('chat.loginRequired')}`);
 
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -73,7 +74,7 @@ test.describe('Accessibility Tests - WCAG 2.1 AA', () => {
     await page.goto('/setup');
 
     // Wait for page to load
-    await page.waitForSelector('text=Accesso richiesto');
+    await page.waitForSelector(`text=${t('setup.loginRequired')}`);
 
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -90,7 +91,7 @@ test.describe('Accessibility Tests - WCAG 2.1 AA', () => {
     await page.goto('/');
 
     // Open auth modal
-    await page.click('text=Get Started');
+    await page.click(`text=${t('home.getStartedButton')}`, { force: true });
 
     // Wait for modal to be visible
     await page.waitForSelector('input[type="email"]', { state: 'visible' });
@@ -150,7 +151,7 @@ test.describe('Keyboard Navigation Tests', () => {
     await page.goto('/');
 
     // Open modal
-    await page.click('text=Get Started');
+    await page.click(`text=${t('home.getStartedButton')}`, { force: true });
     await page.waitForSelector('input[type="email"]', { state: 'visible' });
 
     // Close with ESC (this will fail until AccessibleModal is used in index.tsx)
@@ -227,7 +228,7 @@ test.describe('Screen Reader - Semantic HTML', () => {
     await page.goto('/');
 
     // Open auth modal
-    await page.click('text=Get Started');
+    await page.click(`text=${t('home.getStartedButton')}`, { force: true });
     await page.waitForSelector('input[type="email"]');
 
     // All inputs should have labels

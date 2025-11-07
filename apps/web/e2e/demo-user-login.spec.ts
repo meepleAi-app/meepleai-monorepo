@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { getTextMatcher, t } from './fixtures/i18n';
 
 const API_BASE = 'http://localhost:8080';
 
@@ -232,4 +233,3 @@ test.describe.skip('Demo User Login', () => {
     await expect(page.getByText(/Accesso non riuscito|Invalid credentials|Login failed/i)).toBeVisible({ timeout: 5000 });
   });
 });
-

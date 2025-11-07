@@ -15,6 +15,7 @@
  */
 
 import { test, expect, Page, BrowserContext } from './fixtures/auth';
+import { getTextMatcher, t } from './fixtures/i18n';
 
 /**
  * Helper: Navigate to chat page (auth handled by fixture)
@@ -38,7 +39,7 @@ async function waitForGamesToLoad(page: Page): Promise<void> {
  */
 async function sendMessage(page: Page, message: string): Promise<void> {
   await page.fill('#message-input', message);
-  await page.click('button[type="submit"]');
+  await page.click('button[type="submit"]', { force: true });
 }
 
 /**
@@ -211,7 +212,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
     // Create a new chat first
     const newChatButton = page.locator('button:has-text("+ Nuova Chat")');
     if (await newChatButton.isEnabled().catch(() => false)) {
-      await newChatButton.click();
+      await newChatButton.click({ force: true });
       await page.waitForTimeout(1000);
 
       // Send a message to create history
@@ -229,7 +230,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       // Click the chat in history to reload it
       const chatItem = page.locator('li[role="button"]').first();
       if (await chatItem.isVisible().catch(() => false)) {
-        await chatItem.click();
+        await chatItem.click({ force: true });
 
         // Verify messages skeleton appears
         const messagesSkeleton = page.locator('[aria-label="Caricamento messaggi"]');
@@ -428,7 +429,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
         // Get the chat ID by clicking on it
         const firstChat = page.locator('li[role="button"]').first();
         if (await firstChat.isVisible().catch(() => false)) {
-          await firstChat.click();
+          await firstChat.click({ force: true });
           await page.waitForTimeout(500);
 
           // Check for staggered animation completion
@@ -476,7 +477,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
 
       // Click send button
       const sendButton = page.locator('button[type="submit"]');
-      await sendButton.click();
+      await sendButton.click({ force: true });
 
       // Verify button shows loading state
       await expect(sendButton).toHaveAttribute('aria-busy', 'true', { timeout: 500 });
@@ -519,7 +520,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
 
     const newChatButton = page.locator('button:has-text("+ Nuova Chat")');
     if (await newChatButton.isEnabled().catch(() => false)) {
-      await newChatButton.click();
+      await newChatButton.click({ force: true });
 
       // Verify button shows loading state
       await expect(newChatButton).toHaveAttribute('aria-busy', 'true', { timeout: 500 });

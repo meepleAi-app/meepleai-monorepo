@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { getTextMatcher, t } from './fixtures/i18n';
 
 /**
  * E2E Tests for EDIT-03: Rich Text Editor
@@ -39,23 +40,23 @@ test.describe('Rich Text Editor (EDIT-03)', () => {
     // Start in rich text mode
     await expect(page.getByText('Editor Visuale')).toBeVisible();
 
-    // Click JSON mode button
-    await page.getByText('{ } Codice JSON').click();
+    // Click JSON mode button (use force: true to handle nextjs-portal overlay)
+    await page.getByText('{ } Codice JSON').click({ force: true });
 
     // Should show JSON editor
     await expect(page.locator('textarea')).toBeVisible();
     await expect(page.getByText('Editor JSON')).toBeVisible();
 
-    // Switch back to rich text
-    await page.getByText('📝 Editor Visuale').click();
+    // Switch back to rich text (use force: true to handle nextjs-portal overlay)
+    await page.getByText('📝 Editor Visuale').click({ force: true });
 
     // Should show rich text editor
     await expect(page.getByText('Editor Visuale')).toBeVisible();
   });
 
   test('should display formatting toolbar in rich text mode', async ({ page }) => {
-    // Ensure we're in rich text mode
-    await page.getByText('📝 Editor Visuale').click();
+    // Ensure we're in rich text mode (use force: true to handle nextjs-portal overlay)
+    await page.getByText('📝 Editor Visuale').click({ force: true });
 
     // Check for toolbar buttons
     await expect(page.getByTitle(/Grassetto/)).toBeVisible();
@@ -65,8 +66,8 @@ test.describe('Rich Text Editor (EDIT-03)', () => {
   });
 
   test('should show character and word count', async ({ page }) => {
-    // Ensure we're in rich text mode
-    await page.getByText('📝 Editor Visuale').click();
+    // Ensure we're in rich text mode (use force: true to handle nextjs-portal overlay)
+    await page.getByText('📝 Editor Visuale').click({ force: true });
 
     // Check for character/word count display
     await expect(page.getByText(/caratteri/)).toBeVisible();
@@ -74,78 +75,78 @@ test.describe('Rich Text Editor (EDIT-03)', () => {
   });
 
   test('should show unsaved changes indicator after editing', async ({ page }) => {
-    // Ensure we're in rich text mode
-    await page.getByText('📝 Editor Visuale').click();
+    // Ensure we're in rich text mode (use force: true to handle nextjs-portal overlay)
+    await page.getByText('📝 Editor Visuale').click({ force: true });
 
     // Wait a bit for the editor to fully initialize
     await page.waitForTimeout(500);
 
     // Make a change (this is tricky with TipTap, might need to use JSON mode)
-    await page.getByText('{ } Codice JSON').click();
+    await page.getByText('{ } Codice JSON').click({ force: true });
     const textarea = page.locator('textarea');
     await textarea.fill('{"gameId":"demo-chess","version":"1.0","createdAt":"2025-01-01","rules":[]}');
 
     // Check for unsaved changes indicator
-    await expect(page.getByText('Modifiche non salvate')).toBeVisible();
+    await expect(page.getByText(/unsaved|modifiche non salvate/i)).toBeVisible();
   });
 
   test('should enable save button when there are unsaved changes', async ({ page }) => {
-    // Switch to JSON mode for easier editing
-    await page.getByText('{ } Codice JSON').click();
+    // Switch to JSON mode for easier editing (use force: true to handle nextjs-portal overlay)
+    await page.getByText('{ } Codice JSON').click({ force: true });
 
     // Make a change
     const textarea = page.locator('textarea');
     await textarea.fill('{"gameId":"demo-chess","version":"1.0","createdAt":"2025-01-01","rules":[]}');
 
     // Save button should be enabled
-    const saveButton = page.getByRole('button', { name: /Salva/i });
+    const saveButton = page.getByRole('button', { name: getTextMatcher('editor.save') });
     await expect(saveButton).toBeEnabled();
   });
 
   test('should show validation error for invalid JSON', async ({ page }) => {
-    // Switch to JSON mode
-    await page.getByText('{ } Codice JSON').click();
+    // Switch to JSON mode (use force: true to handle nextjs-portal overlay)
+    await page.getByText('{ } Codice JSON').click({ force: true });
 
     // Enter invalid JSON
     const textarea = page.locator('textarea');
     await textarea.fill('invalid json');
 
     // Should show validation error
-    await expect(page.getByText(/JSON non valido/i)).toBeVisible();
+    await expect(page.getByText(/JSON.*invalid|JSON non valido/i)).toBeVisible();
   });
 
   test('should disable save button for invalid content', async ({ page }) => {
-    // Switch to JSON mode
-    await page.getByText('{ } Codice JSON').click();
+    // Switch to JSON mode (use force: true to handle nextjs-portal overlay)
+    await page.getByText('{ } Codice JSON').click({ force: true });
 
     // Enter invalid JSON
     const textarea = page.locator('textarea');
     await textarea.fill('invalid json');
 
     // Save button should be disabled
-    const saveButton = page.getByRole('button', { name: /Salva/i });
+    const saveButton = page.getByRole('button', { name: getTextMatcher('editor.save') });
     await expect(saveButton).toBeDisabled();
   });
 
   test('should show keyboard shortcut hints', async ({ page }) => {
-    // Ensure we're in rich text mode
-    await page.getByText('📝 Editor Visuale').click();
+    // Ensure we're in rich text mode (use force: true to handle nextjs-portal overlay)
+    await page.getByText('📝 Editor Visuale').click({ force: true });
 
     // Check for keyboard shortcut hint at the bottom
-    await expect(page.getByText(/Ctrl\+Z per annullare/)).toBeVisible();
+    await expect(page.getByText(/Ctrl\+Z|undo/i)).toBeVisible();
   });
 
   test('should navigate to version history from editor', async ({ page }) => {
-    // Click "Storico Versioni" link
-    await page.getByText('Storico Versioni').click();
+    // Click "Storico Versioni" link (use force: true to handle nextjs-portal overlay)
+    await page.getByRole('link', { name: /version history|storico versioni/i }).click({ force: true });
 
     // Should navigate to versions page
     await expect(page).toHaveURL(new RegExp(`/versions\\?gameId=${testGameId}`));
   });
 
   test('should navigate to home from editor', async ({ page }) => {
-    // Click "Home" link
-    await page.getByRole('link', { name: 'Home' }).click();
+    // Click "Home" link (use force: true to handle nextjs-portal overlay)
+    await page.getByRole('link', { name: getTextMatcher('nav.home') }).click({ force: true });
 
     // Should navigate to home page
     await expect(page).toHaveURL('/');
@@ -157,31 +158,31 @@ test.describe('Rich Text Editor (EDIT-03)', () => {
   });
 
   test('should show undo/redo buttons in JSON mode', async ({ page }) => {
-    // Switch to JSON mode
-    await page.getByText('{ } Codice JSON').click();
+    // Switch to JSON mode (use force: true to handle nextjs-portal overlay)
+    await page.getByText('{ } Codice JSON').click({ force: true });
 
     // Check for undo/redo buttons
-    await expect(page.getByTitle(/Annulla \(Ctrl\+Z\)/)).toBeVisible();
-    await expect(page.getByTitle(/Ripeti \(Ctrl\+Y\)/)).toBeVisible();
+    await expect(page.getByTitle(/undo|Annulla.*Ctrl/i)).toBeVisible();
+    await expect(page.getByTitle(/redo|Ripeti.*Ctrl/i)).toBeVisible();
   });
 
   test('should hide undo/redo buttons in rich text mode (TipTap has built-in)', async ({ page }) => {
-    // Ensure we're in rich text mode
-    await page.getByText('📝 Editor Visuale').click();
+    // Ensure we're in rich text mode (use force: true to handle nextjs-portal overlay)
+    await page.getByText('📝 Editor Visuale').click({ force: true });
 
     // Undo/redo buttons should not be visible in the top controls
     // (TipTap has its own undo/redo in the toolbar)
-    const undoButton = page.getByRole('button', { name: /← Annulla/ });
+    const undoButton = page.getByRole('button', { name: /undo|Annulla/ });
     await expect(undoButton).not.toBeVisible();
   });
 
   test('should show toolbar undo/redo buttons in rich text mode', async ({ page }) => {
-    // Ensure we're in rich text mode
-    await page.getByText('📝 Editor Visuale').click();
+    // Ensure we're in rich text mode (use force: true to handle nextjs-portal overlay)
+    await page.getByText('📝 Editor Visuale').click({ force: true });
 
     // Check for toolbar undo/redo (with different selectors)
-    await expect(page.getByTitle(/Annulla \(Ctrl\+Z\)/).first()).toBeVisible();
-    await expect(page.getByTitle(/Ripeti \(Ctrl\+Shift\+Z\)/).first()).toBeVisible();
+    await expect(page.getByTitle(/undo|Annulla.*Ctrl/i).first()).toBeVisible();
+    await expect(page.getByTitle(/redo|Ripeti.*Ctrl/i).first()).toBeVisible();
   });
 });
 

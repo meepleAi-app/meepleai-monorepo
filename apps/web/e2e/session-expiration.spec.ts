@@ -12,6 +12,7 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+import { getTextMatcher, t } from './fixtures/i18n';
 
 const apiBase = 'http://localhost:8080';
 

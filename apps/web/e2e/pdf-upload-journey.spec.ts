@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { getTextMatcher, t } from './fixtures/i18n';
 
 /**
  * E2E Test: PDF Upload Journey

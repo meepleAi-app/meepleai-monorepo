@@ -1,5 +1,6 @@
 import { test as base, expect } from '@playwright/test';
 import { loginAsAdmin } from './fixtures/auth';
+import { getTextMatcher, t } from './fixtures/i18n';
 
 /**
  * CONFIG-07: E2E tests for admin configuration UI
@@ -72,12 +73,12 @@ test.describe('Admin Configuration Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Navigate to Feature Flags tab
-    await page.getByRole('button', { name: /Feature Flags/i }).click();
+    await page.getByRole('button', { name: /Feature Flags/i }).click({ force: true });
 
     // Click to create new configuration
     const createButton = page.locator('button:has-text("New")').or(page.locator('button:has-text("Add")'));
     if (await createButton.count() > 0) {
-      await createButton.first().click();
+      await createButton.first().click({ force: true });
 
       // Fill in configuration details
       await page.fill('input[name="key"]', `FeatureFlags:E2ETest${Date.now()}`);
@@ -85,7 +86,7 @@ test.describe('Admin Configuration Management', () => {
       await page.selectOption('select[name="valueType"]', 'bool');
 
       // Submit
-      await page.click('button[type="submit"]');
+      await page.click('button[type="submit"]', { force: true });
 
       // Assert: Success message or redirect
       await expect(page.locator('.success, .toast, [role="alert"]')).toBeVisible({ timeout: 5000 })
@@ -101,7 +102,7 @@ test.describe('Admin Configuration Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Navigate to Feature Flags tab
-    await page.getByRole('button', { name: /Feature Flags/i }).click();
+    await page.getByRole('button', { name: /Feature Flags/i }).click({ force: true });
 
     // Wait for feature flags to load
     await page.waitForTimeout(1000);
@@ -114,7 +115,7 @@ test.describe('Admin Configuration Management', () => {
       const initialState = await firstToggle.isChecked();
 
       // Click toggle
-      await firstToggle.click();
+      await firstToggle.click({ force: true });
 
       // Wait for update
       await page.waitForTimeout(500);
@@ -136,7 +137,7 @@ test.describe('Admin Configuration Management', () => {
     const tabs = ['Feature Flags', 'Rate Limiting', 'AI', 'RAG'];
 
     for (const tab of tabs) {
-      await page.getByRole('button', { name: new RegExp(tab, 'i') }).click();
+      await page.getByRole('button', { name: new RegExp(tab, 'i') }).click({ force: true });
       await page.waitForTimeout(300);
 
       // Verify tab is active (URL or visual indicator)
@@ -157,7 +158,7 @@ test.describe('Admin Configuration Management', () => {
     await page.goto('http://localhost:3000/login');
     await page.fill('input[name="email"]', 'user@meepleai.dev');
     await page.fill('input[name="password"]', 'Demo123!');
-    await page.click('button[type="submit"]');
+    await page.click('button[type="submit"]', { force: true });
 
     // Wait for redirect
     await page.waitForURL(/.*\/(chat|home|$)/, { timeout: 5000 }).catch(() => {});

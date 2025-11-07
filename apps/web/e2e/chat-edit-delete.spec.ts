@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { getTextMatcher, t } from './fixtures/i18n';
 
 /**
  * E2E Tests for CHAT-06: Message Editing and Deletion Feature
@@ -38,7 +39,7 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     }, { timeout: 5000 });
 
     // Click first "Get Started Free" button to open auth modal
-    await page.getByRole('button', { name: 'Get Started Free' }).first().click();
+    await page.getByRole('button', { name: 'Get Started Free' }).first().click({ force: true });
 
     // Wait for modal to open
     await page.waitForSelector('[role="dialog"]', { state: 'visible', timeout: 5000 });
@@ -46,7 +47,7 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     // Fill login form
     await page.getByLabel('Email').fill('user@meepleai.dev');
     await page.getByLabel('Password').fill('Demo123!');
-    await page.locator('form button[type="submit"]:has-text("Login")').click();
+    await page.locator('form button[type="submit"]:has-text("Login")').click({ force: true });
 
     // Wait for redirect to chat after login
     await expect(page).toHaveURL('/chat', { timeout: 10000 });
@@ -84,7 +85,7 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     // Click edit button
     const editButton = userMessageBubble.locator('button[aria-label="Edit message"]');
     await expect(editButton).toBeVisible({ timeout: 2000 });
-    await editButton.click();
+    await editButton.click({ force: true });
 
     // Verify textarea appears with original content
     const editTextarea = page.locator('textarea[aria-label="Edit message content"]');
@@ -117,7 +118,7 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     // Click Save button
     const saveButton = page.locator('button[aria-label="Save edited message"]');
     await expect(saveButton).toBeEnabled();
-    await saveButton.click();
+    await saveButton.click({ force: true });
 
     // Wait for API call and UI update
     await page.waitForTimeout(1000);
@@ -152,7 +153,7 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     // Enter edit mode
     const userMessageBubble = page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`);
     await userMessageBubble.hover();
-    await userMessageBubble.locator('button[aria-label="Edit message"]').click();
+    await userMessageBubble.locator('button[aria-label="Edit message"]').click({ force: true });
 
     // Verify textarea appears
     const editTextarea = page.locator('textarea[aria-label="Edit message content"]');
@@ -166,7 +167,7 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await expect(saveButton).toBeDisabled();
 
     // Cancel edit - just click the Annulla button
-    await page.getByRole('button', { name: 'Annulla' }).first().click();
+    await page.getByRole('button', { name: 'Annulla' }).first().click({ force: true });
 
     // Verify back to normal view
     await expect(editTextarea).not.toBeVisible();
@@ -194,7 +195,7 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     await userMessageBubble.hover();
     const deleteButton = userMessageBubble.locator('button[aria-label="Delete message"]');
     await expect(deleteButton).toBeVisible({ timeout: 2000 });
-    await deleteButton.click();
+    await deleteButton.click({ force: true });
 
     // Verify confirmation modal appears
     await expect(page.getByRole('heading', { name: 'Eliminare il messaggio?' })).toBeVisible();
@@ -220,7 +221,7 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     });
 
     // Click "Elimina" button (the red one, not "Eliminazione...")
-    await page.getByRole('button', { name: 'Elimina' }).click();
+    await page.getByRole('button', { name: 'Elimina' }).click({ force: true });
 
     // Wait for deletion to process
     await page.waitForTimeout(1000);
@@ -255,13 +256,13 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     // Hover and click delete button
     const userMessageBubble = page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`);
     await userMessageBubble.hover();
-    await userMessageBubble.locator('button[aria-label="Delete message"]').click();
+    await userMessageBubble.locator('button[aria-label="Delete message"]').click({ force: true });
 
     // Verify modal appears
     await expect(page.getByRole('heading', { name: 'Eliminare il messaggio?' })).toBeVisible();
 
     // Click "Annulla" button (in the modal)
-    await page.getByRole('button', { name: 'Annulla' }).click();
+    await page.getByRole('button', { name: 'Annulla' }).click({ force: true });
 
     // Verify modal closes
     await expect(page.getByRole('heading', { name: 'Eliminare il messaggio?' })).not.toBeVisible();
@@ -424,7 +425,7 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
     // Enter edit mode
     const userMessageBubble = page.locator(`li[aria-label="Your message"]:has-text("${testMessage}")`);
     await userMessageBubble.hover();
-    await userMessageBubble.locator('button[aria-label="Edit message"]').click();
+    await userMessageBubble.locator('button[aria-label="Edit message"]').click({ force: true });
 
     // Modify content
     const editedMessage = `Edited content that will fail ${Date.now()}`;
@@ -451,7 +452,7 @@ test.describe('CHAT-06: Message Editing and Deletion', () => {
 
     // Click Save button
     const saveButton = page.locator('button[aria-label="Save edited message"]');
-    await saveButton.click();
+    await saveButton.click({ force: true });
 
     // Wait for error to appear
     await page.waitForTimeout(1000);

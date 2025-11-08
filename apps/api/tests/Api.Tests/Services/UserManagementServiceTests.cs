@@ -59,6 +59,10 @@ public class UserManagementServiceTests : IDisposable
         // Use real AuthService - it works with SQLite
         // Pass null for ISessionCacheService (optional parameter)
         var mockPasswordHashing = new Mock<IPasswordHashingService>();
+        // Setup mock to return a non-null password hash (fixes PasswordHash NOT NULL constraint)
+        mockPasswordHashing.Setup(x => x.HashSecret(It.IsAny<string>()))
+            .Returns((string password) => $"hashed_{password}");
+
         _authService = new AuthService(_dbContext, mockPasswordHashing.Object, sessionCache: null, timeProvider: null);
 
         _service = new UserManagementService(

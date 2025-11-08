@@ -133,9 +133,10 @@ public class QdrantRagTestFixture : IAsyncLifetime
     /// </summary>
     private async Task WaitForDatabaseMigrationsAsync()
     {
-        var maxWaitMs = 10000; // 10 seconds max wait for migrations
+        var maxWaitMs = 15000; // 15 seconds max wait for migrations (increased from 10s)
         var waited = 0;
-        var delay = 200;
+        var delay = 300; // 300ms between retries (increased from 200ms)
+        var retryCount = 0;
 
         while (waited < maxWaitMs)
         {
@@ -144,19 +145,31 @@ public class QdrantRagTestFixture : IAsyncLifetime
                 await using var dbContext = CreateDbContext();
                 // Try to query games table - if it exists, migrations are complete
                 var tableExists = await dbContext.Games.AnyAsync();
-                Console.WriteLine($"✅ [QdrantRagTestFixture] Database migrations complete (games table exists)");
+                Console.WriteLine($"✅ [QdrantRagTestFixture] Database migrations complete (games table exists) after {retryCount} retries, {waited}ms");
                 return;
             }
             catch (Npgsql.PostgresException ex) when (ex.SqlState == "42P01") // Table does not exist
             {
                 // Migrations not complete yet - wait and retry
+                retryCount++;
+                await Task.Delay(delay);
+                waited += delay;
+            }
+            catch (Exception ex) when (ex is System.IO.IOException ||
+                                      ex is System.Net.Sockets.SocketException ||
+                                      ex is Npgsql.NpgsqlException ||
+                                      ex is InvalidOperationException)
+            {
+                // Transient connection errors - wait and retry
+                retryCount++;
+                Console.WriteLine($"⚠️  [QdrantRagTestFixture] Transient DB error (retry {retryCount}): {ex.GetType().Name}: {ex.Message}");
                 await Task.Delay(delay);
                 waited += delay;
             }
         }
 
         throw new InvalidOperationException(
-            "Database migrations did not complete after 10s wait. " +
+            $"Database migrations did not complete after {maxWaitMs}ms wait ({retryCount} retries). " +
             "PostgresCollectionFixture should run migrations during initialization.");
     }
 

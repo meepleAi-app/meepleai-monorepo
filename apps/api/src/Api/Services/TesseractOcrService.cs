@@ -139,7 +139,8 @@ public class TesseractOcrService : IOcrService, IDisposable
         {
             // First, get page count
             int pageCount;
-            using (var library = DocLib.Instance)
+            // NOTE: DocLib.Instance is a singleton - DO NOT dispose it
+            var library = DocLib.Instance;
             using (var docReader = library.GetDocReader(pdfPath, new PageDimensions(1080, 1920)))
             {
                 pageCount = docReader.GetPageCount();
@@ -215,7 +216,8 @@ public class TesseractOcrService : IOcrService, IDisposable
         try
         {
             // Render PDF page to image using Docnet
-            using var library = DocLib.Instance;
+            // NOTE: DocLib.Instance is a singleton - DO NOT dispose it
+            var library = DocLib.Instance;
             using var docReader = library.GetDocReader(pdfPath, new PageDimensions(1080, 1920));
 
             if (pageIndex >= docReader.GetPageCount())

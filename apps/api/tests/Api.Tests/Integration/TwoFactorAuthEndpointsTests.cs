@@ -268,8 +268,8 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         {
             Content = JsonContent.Create(new
             {
-                tempSessionToken = tempSessionToken2,
-                code = backupCodes[0]
+                SessionToken = tempSessionToken2,  // Fix: PascalCase to match DTO
+                Code = backupCodes[0]              // Fix: PascalCase to match DTO
             })
         };
         var response2 = await client.SendAsync(verifyRequest2);
@@ -331,8 +331,8 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         {
             Content = JsonContent.Create(new
             {
-                tempSessionToken = "expired-token-simulation",
-                code = validCode
+                SessionToken = "expired-token-simulation",  // Fix: PascalCase to match DTO
+                Code = validCode                            // Fix: PascalCase to match DTO
             })
         };
         var response = await client.SendAsync(verifyRequest);
@@ -445,8 +445,8 @@ public class TwoFactorAuthEndpointsTests : TransactionalTestBase
         {
             Content = JsonContent.Create(new
             {
-                tempSessionToken = invalidToken,
-                code = "123456"
+                SessionToken = invalidToken,  // Fix: PascalCase to match DTO
+                Code = "123456"               // Fix: PascalCase to match DTO
             })
         };
         var response = await client.SendAsync(verifyRequest);

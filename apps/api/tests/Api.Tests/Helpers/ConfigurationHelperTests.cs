@@ -1,6 +1,7 @@
 using Api.Helpers;
 using Api.Models;
 using Api.Services;
+using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -190,9 +191,10 @@ public class ConfigurationHelperTests
             .ReturnsAsync(inactiveDbConfig);
 
         var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Exists()).Returns(true);
+        mockSection.Setup(x => x.Value).Returns(appsettingsValue.ToString());
+        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
         _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
-        _mockFallbackConfig.Setup(x => x.GetValue<int>(key)).Returns(appsettingsValue);
+        _mockFallbackConfig.Setup(x => x[key]).Returns(appsettingsValue.ToString());
 
         // Act
         var result = await _helper.GetValueAsync(key, defaultValue);
@@ -220,9 +222,10 @@ public class ConfigurationHelperTests
             .ReturnsAsync((SystemConfigurationDto?)null);
 
         var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Exists()).Returns(true);
+        mockSection.Setup(x => x.Value).Returns(appsettingsValue.ToString());
+        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
         _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
-        _mockFallbackConfig.Setup(x => x.GetValue<int>(key)).Returns(appsettingsValue);
+        _mockFallbackConfig.Setup(x => x[key]).Returns(appsettingsValue.ToString());
 
         // Act
         var result = await _helper.GetValueAsync(key, defaultValue);
@@ -245,9 +248,10 @@ public class ConfigurationHelperTests
             .ReturnsAsync((SystemConfigurationDto?)null);
 
         var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Exists()).Returns(true);
+        mockSection.Setup(x => x.Value).Returns(appsettingsValue.ToString().ToLowerInvariant());
+        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
         _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
-        _mockFallbackConfig.Setup(x => x.GetValue<bool>(key)).Returns(appsettingsValue);
+        _mockFallbackConfig.Setup(x => x[key]).Returns(appsettingsValue.ToString().ToLowerInvariant());
 
         // Act
         var result = await _helper.GetValueAsync(key, defaultValue);
@@ -270,9 +274,10 @@ public class ConfigurationHelperTests
             .ReturnsAsync((SystemConfigurationDto?)null);
 
         var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Exists()).Returns(true);
+        mockSection.Setup(x => x.Value).Returns(appsettingsValue);
+        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
         _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
-        _mockFallbackConfig.Setup(x => x.GetValue<string>(key)).Returns(appsettingsValue);
+        _mockFallbackConfig.Setup(x => x[key]).Returns(appsettingsValue);
 
         // Act
         var result = await _helper.GetValueAsync(key, defaultValue);
@@ -298,7 +303,8 @@ public class ConfigurationHelperTests
             .ReturnsAsync((SystemConfigurationDto?)null);
 
         var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Exists()).Returns(false);
+        mockSection.Setup(x => x.Value).Returns((string?)null);
+        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
         _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
 
         // Act
@@ -321,7 +327,8 @@ public class ConfigurationHelperTests
             .ThrowsAsync(new Exception("Database error"));
 
         var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Exists()).Returns(false);
+        mockSection.Setup(x => x.Value).Returns((string?)null);
+        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
         _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
 
         // Act
@@ -376,7 +383,7 @@ public class ConfigurationHelperTests
         // Assert
         Assert.Equal(dbValue, result);
         _mockFallbackConfig.Verify(x => x.GetSection(It.IsAny<string>()), Times.Never);
-        _mockFallbackConfig.Verify(x => x.GetValue<int>(It.IsAny<string>()), Times.Never);
+        // Removed GetValue verify - extension method cannot be verified
     }
 
     [Fact]
@@ -392,9 +399,10 @@ public class ConfigurationHelperTests
             .ReturnsAsync((SystemConfigurationDto?)null);
 
         var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Exists()).Returns(true);
+        mockSection.Setup(x => x.Value).Returns(appsettingsValue.ToString());
+        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
         _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
-        _mockFallbackConfig.Setup(x => x.GetValue<int>(key)).Returns(appsettingsValue);
+        _mockFallbackConfig.Setup(x => x[key]).Returns(appsettingsValue.ToString());
 
         // Act
         var result = await _helper.GetValueAsync(key, defaultValue);
@@ -421,9 +429,10 @@ public class ConfigurationHelperTests
             .ThrowsAsync(new Exception("Database connection failed"));
 
         var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Exists()).Returns(true);
+        mockSection.Setup(x => x.Value).Returns(appsettingsValue.ToString());
+        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
         _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
-        _mockFallbackConfig.Setup(x => x.GetValue<int>(key)).Returns(appsettingsValue);
+        _mockFallbackConfig.Setup(x => x[key]).Returns(appsettingsValue.ToString());
 
         // Act
         var result = await _helper.GetValueAsync(key, defaultValue);
@@ -470,7 +479,8 @@ public class ConfigurationHelperTests
             .ReturnsAsync((SystemConfigurationDto?)null);
 
         var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Exists()).Returns(false);
+        mockSection.Setup(x => x.Value).Returns((string?)null);
+        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
         _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
 
         // Act
@@ -492,7 +502,8 @@ public class ConfigurationHelperTests
             .ReturnsAsync((SystemConfigurationDto?)null);
 
         var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Exists()).Returns(false);
+        mockSection.Setup(x => x.Value).Returns((string?)null);
+        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
         _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
 
         // Act
@@ -514,7 +525,8 @@ public class ConfigurationHelperTests
             .ReturnsAsync((SystemConfigurationDto?)null);
 
         var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Exists()).Returns(false);
+        mockSection.Setup(x => x.Value).Returns((string?)null);
+        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
         _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
 
         // Act
@@ -536,7 +548,8 @@ public class ConfigurationHelperTests
             .ReturnsAsync((SystemConfigurationDto?)null);
 
         var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Exists()).Returns(false);
+        mockSection.Setup(x => x.Value).Returns((string?)null);
+        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
         _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
 
         // Act
@@ -558,7 +571,8 @@ public class ConfigurationHelperTests
             .ReturnsAsync((SystemConfigurationDto?)null);
 
         var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Exists()).Returns(false);
+        mockSection.Setup(x => x.Value).Returns((string?)null);
+        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
         _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
 
         // Act
@@ -679,7 +693,8 @@ public class ConfigurationHelperTests
             .ReturnsAsync((SystemConfigurationDto?)null);
 
         var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Exists()).Returns(false);
+        mockSection.Setup(x => x.Value).Returns((string?)null);
+        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
         _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
 
         // Act

@@ -1,0 +1,78 @@
+name: EF Core Migration Guard
+
+on:
+  pull_request:
+    paths:
+      - 'apps/api/src/Api/Migrations/**'
+      - 'apps/api/src/Api/Infrastructure/Migrations/**'
+
+jobs:
+  validate-migrations:
+    runs-on: ubuntu-latest
+    name: Validate EF Core Migrations Not Deleted
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for comparison
+
+      - name: Get base branch migrations
+        id: base_migrations
+        run: |
+          git checkout ${{ github.base_ref }}
+          BASE_MIGRATIONS=$(find apps/api/src/Api/Migrations -name "*.cs" -not -name "*Designer.cs" -not -name "*Snapshot.cs" | sort)
+          echo "base_count=$(echo "$BASE_MIGRATIONS" | wc -l)" >> $GITHUB_OUTPUT
+          echo "$BASE_MIGRATIONS" > /tmp/base_migrations.txt
+
+      - name: Get PR branch migrations
+        id: pr_migrations
+        run: |
+          git checkout ${{ github.head_ref }}
+          PR_MIGRATIONS=$(find apps/api/src/Api/Migrations -name "*.cs" -not -name "*Designer.cs" -not -name "*Snapshot.cs" | sort)
+          echo "pr_count=$(echo "$PR_MIGRATIONS" | wc -l)" >> $GITHUB_OUTPUT
+          echo "$PR_MIGRATIONS" > /tmp/pr_migrations.txt
+
+      - name: Check for deleted migrations
+        run: |
+          DELETED=$(comm -23 /tmp/base_migrations.txt /tmp/pr_migrations.txt)
+
+          if [ -n "$DELETED" ]; then
+            echo "❌ ERROR: EF Core migrations were deleted!"
+            echo ""
+            echo "Deleted migrations:"
+            echo "$DELETED"
+            echo ""
+            echo "⚠️  Deleting applied migrations breaks database update for environments that have already applied them."
+            echo ""
+            echo "Instead of deleting migrations:"
+            echo "1. Add a new migration with 'dotnet ef migrations add <Name>'"
+            echo "2. Or coordinate full database reset with team (requires manual approval)"
+            echo ""
+            echo "If this is an intentional reset:"
+            echo "1. Document in commit message: 'BREAKING: Database reset required'"
+            echo "2. Update deployment docs with migration recovery steps"
+            echo "3. Notify team of required database rebuilds"
+            echo ""
+            echo "See docs/issue/CRITICAL-migration-reset-impact.md for recovery strategies"
+            exit 1
+          fi
+
+          echo "✅ No migrations deleted - validation passed"
+          echo "Base migrations: ${{ steps.base_migrations.outputs.base_count }}"
+          echo "PR migrations: ${{ steps.pr_migrations.outputs.pr_count }}"
+
+      - name: Check migration naming convention
+        run: |
+          cd apps/api/src/Api/Migrations
+          INVALID=$(find . -name "*.cs" -not -name "*Designer.cs" -not -name "*Snapshot.cs" | grep -v -E "^./[0-9]{14}_[A-Z][a-zA-Z0-9]+\.cs$" || true)
+
+          if [ -n "$INVALID" ]; then
+            echo "⚠️  WARNING: Some migrations don't follow naming convention"
+            echo "Expected: YYYYMMDDHHMMSS_MigrationName.cs"
+            echo ""
+            echo "Invalid names:"
+            echo "$INVALID"
+            echo ""
+            echo "This won't fail the build but should be corrected for consistency"
+          fi

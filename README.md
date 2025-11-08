@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/DegrassiAaron/meepleai-monorepo/actions/workflows/ci.yml/badge.svg)](https://github.com/DegrassiAaron/meepleai-monorepo/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo/branch/main/graph/badge.svg)](https://codecov.io/gh/DegrassiAaron/meepleai-monorepo)
+[![Frontend Coverage](https://img.shields.io/badge/coverage%20(frontend)-90%25-brightgreen)](./docs/code-coverage.md)
+[![Backend Coverage](https://img.shields.io/badge/coverage%20(backend)-90%25-brightgreen)](./docs/code-coverage.md)
 
 > AI-powered board game rules assistant with semantic search and intelligent Q&A
 
@@ -130,6 +132,10 @@ pwsh tools/measure-coverage.ps1
 
 # API only with HTML report
 pwsh tools/measure-coverage.ps1 -Project api -GenerateHtml
+
+# Track coverage trends over time
+bash tools/coverage-trends.sh          # Bash/Linux/macOS
+pwsh tools/coverage-trends.ps1         # PowerShell/Windows
 ```
 
 ## 🔧 Development Commands

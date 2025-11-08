@@ -1,0 +1,25 @@
+  Individuazione dei progetti da ripristinare...
+  Tutti i progetti sono aggiornati per il ripristino.
+  Api -> D:\Repositories\meepleai-monorepo\apps\api\src\Api\bin\Debug\net9.0\Api.dll
+  Api.Tests -> D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\bin\Debug\net9.0\Api.Tests.dll
+Esecuzione dei test per D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\bin\Debug\net9.0\Api.Tests.dll (.NETCoreApp,Version=v9.0)
+Versione di VSTest 17.14.0 (x64)
+
+Avvio dell'esecuzione dei test in corso. Attendere...
+Un totale di 1 file di test corrisponde al criterio specificato.
+L'esecuzione dei test attivi è stata interrotta. Motivo: Arresto anomalo del processo host di test : Fatal error. 0xC0000005
+   at Docnet.Core.Bindings.fpdf_view+__Internal.FPDF_CloseDocument(IntPtr)
+   at Docnet.Core.Bindings.fpdf_view.FPDF_CloseDocument(Docnet.Core.Bindings.FpdfDocumentT)
+   at Docnet.Core.Bindings.DocumentWrapper.Dispose()
+   at Docnet.Core.Readers.DocReader.Dispose()
+   at Api.Services.TesseractOcrService.ExtractTextFromPageInternal(System.String, Int32)
+   at Api.Services.TesseractOcrService+<>c__DisplayClass8_0.<ExtractTextFromPageAsync>b__0()
+   at System.Threading.Tasks.Task`1[[System.ValueTuple`2[[System.__Canon, System.Private.CoreLib, Version=9.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e],[System.Single, System.Private.CoreLib, Version=9.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]], System.Private.CoreLib, Version=9.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]].InnerInvoke()
+   at System.Threading.ExecutionContext.RunFromThreadPoolDispatchLoop(System.Threading.Thread, System.Threading.ExecutionContext, System.Threading.ContextCallback, System.Object)
+   at System.Threading.Tasks.Task.ExecuteWithThreadLocal(System.Threading.Tasks.Task ByRef, System.Threading.Thread)
+   at System.Threading.ThreadPoolWorkQueue.Dispatch()
+   at System.Threading.PortableThreadPool+WorkerThread.WorkerThreadStart()
+
+
+Superato!     - Non superati:     0. Superati:    71. Ignorati:     0. Totale:    71. Durata: 418 ms - Api.Tests.dll (net9.0)
+Esecuzione dei test interrotta.

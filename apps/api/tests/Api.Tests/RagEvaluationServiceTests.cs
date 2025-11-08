@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,6 +29,7 @@ public class RagEvaluationServiceTests : IDisposable
     private readonly Mock<ILogger<RagEvaluationService>> _mockLogger;
     private readonly RagEvaluationService _service;
     private readonly string _tempDatasetPath;
+    private readonly string _allowedTestDir;
 
     public RagEvaluationServiceTests(ITestOutputHelper output)
     {
@@ -35,21 +37,27 @@ public class RagEvaluationServiceTests : IDisposable
         _qdrantServiceMock = new Mock<IQdrantService>();
         _embeddingServiceMock = new Mock<IEmbeddingService>();
         _mockLogger = new Mock<ILogger<RagEvaluationService>>();
+
+        // Create temporary allowed directory for testing
+        _allowedTestDir = Path.Combine(Path.GetTempPath(), $"rag-eval-test-{Guid.NewGuid()}");
+        Directory.CreateDirectory(_allowedTestDir);
+
         _service = new RagEvaluationService(
             _qdrantServiceMock.Object,
             _embeddingServiceMock.Object,
-            _mockLogger.Object);
+            _mockLogger.Object,
+            _allowedTestDir);
 
-        // Create temporary dataset file for testing
-        _tempDatasetPath = Path.Combine(Path.GetTempPath(), $"test-dataset-{Guid.NewGuid()}.json");
+        // Create temporary dataset file for testing within allowed directory
+        _tempDatasetPath = Path.Combine(_allowedTestDir, $"test-dataset-{Guid.NewGuid()}.json");
     }
 
     public void Dispose()
     {
-        // Clean up temp file
-        if (File.Exists(_tempDatasetPath))
+        // Clean up temp directory and files
+        if (Directory.Exists(_allowedTestDir))
         {
-            File.Delete(_tempDatasetPath);
+            Directory.Delete(_allowedTestDir, recursive: true);
         }
     }
 
@@ -91,7 +99,7 @@ public class RagEvaluationServiceTests : IDisposable
     public async Task LoadDatasetAsync_FileNotFound_ThrowsException()
     {
         // Arrange
-        var nonExistentPath = Path.Combine(Path.GetTempPath(), "non-existent-file.json");
+        var nonExistentPath = Path.Combine(_allowedTestDir, "non-existent-file.json");
 
         // Act & Assert
         var act = async () => await _service.LoadDatasetAsync(nonExistentPath);

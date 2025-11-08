@@ -49,14 +49,15 @@ public class TotpServiceTests : IDisposable
         _encLoggerMock = new Mock<ILogger<EncryptionService>>();
         _encryptionService = new EncryptionService(dataProtectionProvider, _encLoggerMock.Object);
 
-        // Setup auth and audit services (simplified for tests)
-        var mockPasswordHashing = new Mock<IPasswordHashingService>();
-        _authService = new AuthService(_dbContext, mockPasswordHashing.Object, sessionCache: null, timeProvider: TimeProvider.System);
+        // Setup auth and audit services (use real PasswordHashingService for integration testing)
+        var passwordHashingService = new PasswordHashingService();
+
+        _authService = new AuthService(_dbContext, passwordHashingService, sessionCache: null, timeProvider: TimeProvider.System);
         _auditService = new AuditService(_dbContext, Mock.Of<ILogger<AuditService>>());
 
         // Setup TOTP service
         _loggerMock = new Mock<ILogger<TotpService>>();
-        _totpService = new TotpService(_dbContext, _encryptionService, _authService, _auditService, mockPasswordHashing.Object, _loggerMock.Object);
+        _totpService = new TotpService(_dbContext, _encryptionService, _authService, _auditService, passwordHashingService, _loggerMock.Object);
     }
 
     [Fact]

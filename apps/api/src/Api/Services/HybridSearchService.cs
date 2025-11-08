@@ -109,13 +109,13 @@ public class HybridSearchService : IHybridSearchService
     {
         // Generate embedding for the query
         var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query, "en", cancellationToken);
-        if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
+        if (embeddingResult == null || !embeddingResult.Success || embeddingResult.Embeddings?.Count == 0)
         {
-            _logger.LogError("Failed to generate query embedding for semantic search: {Error}", embeddingResult.ErrorMessage);
+            _logger.LogError("Failed to generate query embedding for semantic search: {Error}", embeddingResult?.ErrorMessage ?? "Embedding result was null");
             return new List<HybridSearchResult>();
         }
 
-        var queryEmbedding = embeddingResult.Embeddings[0];
+        var queryEmbedding = embeddingResult.Embeddings![0];
 
         // Search Qdrant with embedding
         var vectorResults = await _qdrantService.SearchAsync(
@@ -200,14 +200,14 @@ public class HybridSearchService : IHybridSearchService
 
         // Generate query embedding first (needed for vector search)
         var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query, "en", cancellationToken);
-        if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
+        if (embeddingResult == null || !embeddingResult.Success || embeddingResult.Embeddings?.Count == 0)
         {
-            _logger.LogError("Failed to generate query embedding for hybrid search: {Error}", embeddingResult.ErrorMessage);
+            _logger.LogError("Failed to generate query embedding for hybrid search: {Error}", embeddingResult?.ErrorMessage ?? "Embedding result was null");
             // Fall back to keyword-only search if embedding fails
             return await SearchKeywordOnlyAsync(query, gameId, limit, cancellationToken);
         }
 
-        var queryEmbedding = embeddingResult.Embeddings[0];
+        var queryEmbedding = embeddingResult.Embeddings![0];
 
         // Execute vector and keyword searches in parallel for performance
         var vectorTask = _qdrantService.SearchAsync(

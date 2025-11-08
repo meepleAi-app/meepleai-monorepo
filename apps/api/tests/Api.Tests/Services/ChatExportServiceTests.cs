@@ -355,8 +355,8 @@ public class ChatExportServiceTests : IDisposable
     /// </summary>
     [Theory]
     [InlineData("Dungeons & Dragons", "Dungeons & Dragons")]
-    [InlineData("../../etc/passwd", "-etc-passwd")]
-    [InlineData("Game: The Reckoning!", "Game: The Reckoning!")]
+    [InlineData("../../etc/passwd", "etc_passwd")]
+    [InlineData("Game: The Reckoning!", "Game_ The Reckoning!")]
     [InlineData("テスト", "テスト")] // Unicode should be preserved
     public async Task GenerateFilename_SpecialCharacters_SanitizesCorrectly(string gameName, string expectedSanitized)
     {
@@ -375,7 +375,7 @@ public class ChatExportServiceTests : IDisposable
         result.Success.Should().BeTrue();
         result.Filename.Should().NotBeNull();
         result.Filename.Should().Contain(expectedSanitized);
-        result.Filename.Should().Contain("-chat-"); // Format: {game}-chat-{id}.ext
+        result.Filename.Should().Contain("_chat-"); // Format: {game}_chat-{id}.ext
         result.Filename.Should().EndWith(".txt");
 
         // And: Path traversal attempts are blocked
@@ -616,10 +616,10 @@ public class ChatExportServiceTests : IDisposable
         // When: Generating export filename
         var result = await _service.ExportChatAsync(chat.Id, "user-123", "txt");
 
-        // Then: Filename uses "chat" as fallback
+        // Then: Filename uses "file" as fallback (format: file_chat-{id}.txt)
         result.Success.Should().BeTrue();
         result.Filename.Should().NotBeNull();
-        result.Filename.Should().StartWith("chat-chat-");
+        result.Filename.Should().StartWith("file_chat-");
         result.Filename.Should().EndWith(".txt");
     }
 
@@ -685,13 +685,14 @@ public class ChatExportServiceTests : IDisposable
         result.Success.Should().BeTrue();
         result.Filename.Should().NotBeNull();
 
-        // And: Filename contains truncated portion (max 50 chars of game name)
-        // Format: {gameName(<=50)}-chat-{id(8)}.{ext}
-        var gameNamePart = result.Filename.Split("-chat-")[0];
-        (gameNamePart.Length <= 50).Should().BeTrue($"Game name part '{gameNamePart}' exceeds 50 chars: {gameNamePart.Length}");
+        // And: Filename contains truncated portion (total length <= 100)
+        // Format: {gameName(truncated)}_chat-{id(8)}.{ext}
+        // With maxLength=100, extension=".md"(3), suffix="chat-{8chars}"(13), underscore(1), base can be 83 chars
+        var gameNamePart = result.Filename.Split("_chat-")[0];
+        (result.Filename.Length <= 100).Should().BeTrue($"Filename exceeds 100 chars: {result.Filename.Length}");
 
-        // And: Filename is reasonable length (truncated game name + "-chat-" + 8-char ID + ".md")
-        (result.Filename.Length < 80).Should().BeTrue($"Filename too long: {result.Filename.Length} chars");
+        // And: Game name part is truncated to fit within maxLength
+        (gameNamePart.Length <= 83).Should().BeTrue($"Game name part '{gameNamePart}' too long: {gameNamePart.Length}");
     }
 
     /// <summary>

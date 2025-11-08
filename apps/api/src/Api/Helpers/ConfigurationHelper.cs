@@ -55,7 +55,8 @@ public class ConfigurationHelper
             if (dbConfig != null && dbConfig.IsActive)
             {
                 // Configuration exists, get the typed value even if it equals default(T)
-                var dbValue = await _configService.GetValueAsync(key, default(T), environment);
+                // Pass defaultValue so that if deserialization fails, it returns the provided default
+                var dbValue = await _configService.GetValueAsync(key, defaultValue, environment);
 
                 // SEC-738: Don't log sensitive configuration values (CWE-532 prevention)
                 if (IsSensitiveConfigurationKey(key))

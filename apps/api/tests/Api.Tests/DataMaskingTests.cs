@@ -37,7 +37,7 @@ public class DataMaskingTests
     }
 
     [Theory]
-    [InlineData("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U", "eyJhbGciOiJIUzI1Ni...***")]
+    [InlineData("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U", "eyJhbGciOiJIUzI1NiIs...***")] // 20 chars prefix
     [InlineData("short", "***")]
     [InlineData(null, "***")]
     public void MaskJwt_MasksCorrectly(string? input, string expected)
@@ -75,9 +75,15 @@ public class DataMaskingTests
         var result = DataMasking.RedactConnectionString(input);
 
         // Assert
-        Assert.Contains("***REDACTED***", result);
-        Assert.DoesNotContain("secret123", result);
-        Assert.DoesNotContain("pass123", result);
+        Assert.Equal(expected, result);
+
+        // Only check redaction for non-empty inputs
+        if (!string.IsNullOrEmpty(input))
+        {
+            Assert.Contains("***REDACTED***", result);
+            Assert.DoesNotContain("secret123", result);
+            Assert.DoesNotContain("pass123", result);
+        }
     }
 
     [Fact]

@@ -393,13 +393,52 @@ tools/             - PowerShell scripts
 
 ## Testing
 
+### Current Status (Updated 2025-11-08)
+
+**Coverage Metrics**:
+- Frontend: 90.03% statements, 84.22% branches ✅
+- Backend: 90%+ (enforced in CI) ✅
+
+**Test Counts**:
+- Frontend Unit: 4,033 tests (Jest + React Testing Library)
+- Backend Unit/Integration: 90+ tests (xUnit + Moq + Testcontainers)
+- E2E: 30 test files (Playwright)
+
+### Testing Stack
+
 | Layer | Stack | Coverage |
 |-------|-------|----------|
 | **API** | xUnit + Moq + Testcontainers (Postgres, Qdrant) | SQLite (unit), Testcontainers (integration) |
 | **Web** | Jest (jsdom) + Playwright | 90% threshold |
 | **CI** | `CI=true`, `DocnetRuntime=linux` | |
 
-**Coverage**: `pwsh tools/measure-coverage.ps1 [-Project api|web] [-GenerateHtml]`
+### Running Tests
+
+```bash
+# Frontend
+cd apps/web
+pnpm test              # Unit tests
+pnpm test:coverage     # With coverage
+pnpm test:e2e          # E2E tests
+
+# Backend
+cd apps/api
+dotnet test            # All tests
+dotnet test /p:CollectCoverage=true  # With coverage
+
+# Coverage Reports
+pwsh tools/measure-coverage.ps1 [-Project api|web] [-GenerateHtml]
+
+# Coverage Trend Tracking
+bash tools/coverage-trends.sh          # Bash/Linux/macOS
+pwsh tools/coverage-trends.ps1         # PowerShell/Windows
+```
+
+### Test Documentation
+
+- **Test Writing Guide**: [`docs/testing/test-writing-guide.md`](docs/testing/test-writing-guide.md) - Comprehensive guide for new developers
+- **Test Patterns**: [`docs/testing/test-patterns.md`](docs/testing/test-patterns.md) - Common testing patterns reference
+- **Code Coverage**: [`docs/code-coverage.md`](docs/code-coverage.md) - Coverage measurement and tracking
 
 ## CI/CD
 

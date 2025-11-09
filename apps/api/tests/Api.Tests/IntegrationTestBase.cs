@@ -59,7 +59,7 @@ namespace Api.Tests;
 public abstract class IntegrationTestBase : IAsyncLifetime
 {
     protected readonly PostgresCollectionFixture PostgresFixture;
-    protected WebApplicationFactoryFixture Factory { get; private set; } = null!;
+    protected WebApplicationFactoryFixture Factory { get; set; } = null!;
     protected readonly string TestRunId;
 
     // Tracked entities for automatic cleanup
@@ -427,6 +427,36 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 
         _testPdfDocumentIds.Add(pdf.Id);
         return pdf;
+    }
+
+    /// <summary>
+    /// Creates a test agent and tracks it for cleanup.
+    ///
+    /// BDD: Given a test agent with unique identifier
+    /// </summary>
+    protected async Task<AgentEntity> CreateTestAgentAsync(
+        string gameId,
+        string createdByUserId,
+        string agentName = "Test Agent",
+        string kind = "conversational")
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var agent = new AgentEntity
+        {
+            Id = $"{agentName.ToLowerInvariant().Replace(" ", "-")}-{TestRunId}",
+            GameId = gameId,
+            Name = agentName,
+            Kind = kind,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        db.Agents.Add(agent);
+        await db.SaveChangesAsync();
+
+        _testAgentIds.Add(agent.Id);
+        return agent;
     }
 
     /// <summary>

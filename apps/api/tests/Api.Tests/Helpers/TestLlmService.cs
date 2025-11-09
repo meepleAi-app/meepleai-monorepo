@@ -73,7 +73,46 @@ internal sealed class TestLlmService : ILlmService
             return Task.FromResult(dto as T);
         }
 
+        if (typeof(T) == typeof(ExplainOutline))
+        {
+            // TEST-814: Extract topic from user prompt or use default
+            var topic = ExtractTopicFromPrompt(userPrompt) ?? "Game Rules";
+            var dto = new ExplainOutline(
+                mainTopic: topic,
+                sections: new List<string>
+                {
+                    "Overview",
+                    "Key Concepts",
+                    "Examples",
+                    "Common Mistakes"
+                }
+            );
+
+            return Task.FromResult(dto as T);
+        }
+
         return Task.FromResult<T?>(null);
+    }
+
+    private static string? ExtractTopicFromPrompt(string prompt)
+    {
+        // Extract topic from prompts like "Topic: winning conditions" or "explain topic: castling"
+        var topicMarkers = new[] { "Topic:", "topic:", "explain topic:", "about:" };
+        foreach (var marker in topicMarkers)
+        {
+            var index = prompt.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (index >= 0)
+            {
+                var start = index + marker.Length;
+                var remainder = prompt.Substring(start).Trim();
+                var firstLine = remainder.Split('\n')[0].Trim();
+                if (!string.IsNullOrEmpty(firstLine))
+                {
+                    return firstLine;
+                }
+            }
+        }
+        return null;
     }
 
     private static string? ExtractFirstSnippet(string prompt)

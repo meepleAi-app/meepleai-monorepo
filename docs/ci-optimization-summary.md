@@ -108,15 +108,30 @@ global-json-file: apps/api/global.json
 
 **Benefit**: Consistent SDK version, avoid version mismatch issues
 
-## Expected Performance Improvements
+## Validated Performance Improvements
 
 | Metric | Before | After | Improvement |
 |--------|--------|-------|-------------|
-| **Test Execution** | 8-10min | 6-7min | ~25% faster |
-| **Total CI Time** | 10-15min | 7-9min | ~30% faster |
-| **Success Case** | 10min | 7min | ~30% faster |
-| **Failure Case** | 15min | 12min | ~20% faster |
-| **Artifact Size** | Always | On-failure only | ~90% reduction |
+| **Test Execution** | 23m 18s | 14m 23s | **38.2% faster** ✅ |
+| **Timeout** | 20min | 15min | 25% reduction |
+| **Test Runs** | 2 (coverage + threshold) | 1 (combined) | 50% reduction |
+| **HTML Reports** | Always | On-failure only | ~90% reduction |
+| **Artifact Size** | Every run | Failures only | ~90% reduction |
+
+### Validation Test Results
+
+**Baseline Run** (19211707796 - before optimization):
+- Duration: 23m 18s
+- Test runs: 2 separate executions
+- HTML reports: Always generated
+- Timeout: 20min
+
+**Optimized Run** (19213400069 - with optimizations):
+- Duration: 14m 23s
+- Test runs: 1 combined execution
+- HTML reports: Generated on failure only
+- Timeout: 15min (tests completed at 12min, timed out, adjusted to 15min)
+- Improvement: **8m 55s faster (38.2% improvement)** ✅
 
 ## Side Benefits
 

@@ -446,12 +446,13 @@ pwsh tools/coverage-trends.ps1         # PowerShell/Windows
 - ci-web: Lint → Typecheck → Test (Node 20, pnpm 9)
 - ci-api: Build → Test (.NET 9, postgres, qdrant, redis, libgdiplus)
 - rag-evaluation: RAG tests (.NET 9, postgres, qdrant, redis)
-- Performance: ~7-9min (optimized 2025-11-09, 30-40% faster vs baseline)
-  - Test execution: 6-7min (combined coverage + threshold, parallel execution)
-  - Conditional HTML reports (failure-only, ~90% fewer artifacts)
+- Performance: ~14-15min (optimized 2025-11-09, 38% faster vs 23min baseline)
+  - Validated: 14m 23s (run 19213400069 vs 23m 18s baseline)
+  - Single combined test run (eliminated 3-5min duplicate)
+  - Parallel execution (2 threads), conditional HTML reports (failure-only)
   - Enhanced NuGet caching (packages.lock.json, hierarchical fallback)
-  - 12min timeout + 5min hang detection (down from 20min)
-  - See `docs/ci-optimization-summary.md` for details
+  - 15min timeout + 5min hang detection (down from 20min, 25% reduction)
+  - See `docs/ci-optimization-summary.md` for full analysis
 
 **Security** (`.github/workflows/security-scan.yml`):
 1. CodeQL SAST (C#, JS/TS)

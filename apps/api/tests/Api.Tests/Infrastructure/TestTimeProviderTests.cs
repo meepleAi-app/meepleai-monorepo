@@ -1,4 +1,5 @@
 using Api.Tests.Helpers;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;
@@ -17,7 +18,7 @@ public class TestTimeProviderTests
     public void CreateTimeProvider_DefaultsTo2025Jan1()
     {
         // Arrange & Act
-        using var provider = new TestTimeProvider();
+        var provider = TimeTestHelpers.CreateTimeProvider();
 
         // Assert
         var now = provider.GetUtcNow();
@@ -34,7 +35,7 @@ public class TestTimeProviderTests
     {
         // Arrange & Act
         var start = new DateTimeOffset(2025, 3, 15, 10, 30, 45, TimeSpan.Zero);
-        using var provider = new TestTimeProvider(start);
+        var provider = new FakeTimeProvider(start);
 
         // Assert
         var now = provider.GetUtcNow();
@@ -45,7 +46,7 @@ public class TestTimeProviderTests
     public void AdvanceSeconds_IncreasesTime()
     {
         // Arrange
-        using var provider = new TestTimeProvider();
+        var provider = TimeTestHelpers.CreateTimeProvider();
         var before = provider.GetUtcNow();
 
         // Act
@@ -60,7 +61,7 @@ public class TestTimeProviderTests
     public void AdvanceMinutes_IncreasesTime()
     {
         // Arrange
-        using var provider = new TestTimeProvider();
+        var provider = TimeTestHelpers.CreateTimeProvider();
         var before = provider.GetUtcNow();
 
         // Act
@@ -75,7 +76,7 @@ public class TestTimeProviderTests
     public void AdvanceHours_IncreasesTime()
     {
         // Arrange
-        using var provider = new TestTimeProvider();
+        var provider = TimeTestHelpers.CreateTimeProvider();
         var before = provider.GetUtcNow();
 
         // Act
@@ -90,7 +91,7 @@ public class TestTimeProviderTests
     public void AdvanceDays_IncreasesTime()
     {
         // Arrange
-        using var provider = new TestTimeProvider();
+        var provider = TimeTestHelpers.CreateTimeProvider();
         var before = provider.GetUtcNow();
 
         // Act
@@ -105,11 +106,11 @@ public class TestTimeProviderTests
     public void SetTime_ChangesTimeAbsolutely()
     {
         // Arrange
-        using var provider = new TestTimeProvider();
+        var provider = TimeTestHelpers.CreateTimeProvider();
 
         // Act
         var target = new DateTimeOffset(2025, 12, 25, 23, 59, 59, TimeSpan.Zero);
-        provider.SetTime(target);
+        provider.SetUtcNow(target);
 
         // Assert
         provider.GetUtcNow().Should().Be(target);
@@ -119,11 +120,12 @@ public class TestTimeProviderTests
     public void Reset_RestoresDefaultTime()
     {
         // Arrange
-        using var provider = new TestTimeProvider();
+        var provider = TimeTestHelpers.CreateTimeProvider();
         provider.Advance(TimeSpan.FromDays(100));
 
         // Act
-        provider.Reset();
+        var defaultTime = new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        provider.SetUtcNow(defaultTime);
 
         // Assert
         var now = provider.GetUtcNow();
@@ -134,7 +136,7 @@ public class TestTimeProviderTests
     public void Advance_NegativeDuration_ThrowsException()
     {
         // Arrange
-        using var provider = new TestTimeProvider();
+        var provider = TimeTestHelpers.CreateTimeProvider();
 
         // Act & Assert
         var act = () => provider.Advance(TimeSpan.FromMinutes(-5));
@@ -145,7 +147,7 @@ public class TestTimeProviderTests
     public void GetTimestamp_ReturnsConsistentValue()
     {
         // Arrange
-        using var provider = new TestTimeProvider();
+        var provider = TimeTestHelpers.CreateTimeProvider();
 
         // Act
         var timestamp1 = provider.GetTimestamp();
@@ -159,7 +161,7 @@ public class TestTimeProviderTests
     public void GetTimestamp_ChangesAfterAdvance()
     {
         // Arrange
-        using var provider = new TestTimeProvider();
+        var provider = TimeTestHelpers.CreateTimeProvider();
         var timestamp1 = provider.GetTimestamp();
 
         // Act
@@ -174,7 +176,7 @@ public class TestTimeProviderTests
     public void GetElapsedTime_CalculatesCorrectly()
     {
         // Arrange
-        using var provider = new TestTimeProvider();
+        var provider = TimeTestHelpers.CreateTimeProvider();
         var start = provider.GetTimestamp();
 
         // Act
@@ -190,7 +192,7 @@ public class TestTimeProviderTests
     public void LocalTimeZone_ReturnsUtc()
     {
         // Arrange & Act
-        using var provider = new TestTimeProvider();
+        var provider = TimeTestHelpers.CreateTimeProvider();
 
         // Assert
         provider.LocalTimeZone.Should().Be(TimeZoneInfo.Utc);
@@ -200,7 +202,7 @@ public class TestTimeProviderTests
     public void GetLocalNow_ReturnsSameAsUtcNow()
     {
         // Arrange
-        using var provider = new TestTimeProvider();
+        var provider = TimeTestHelpers.CreateTimeProvider();
 
         // Act
         var utcNow = provider.GetUtcNow();
@@ -220,7 +222,7 @@ public class TimeTestHelpersTests
     public void CreateTimeProvider_WithYear_CreatesCorrectTime()
     {
         // Act
-        using var provider = TimeTestHelpers.CreateTimeProvider(2025, 6, 15);
+        var provider = TimeTestHelpers.CreateTimeProvider(2025, 6, 15);
 
         // Assert
         var now = provider.GetUtcNow();
@@ -233,7 +235,7 @@ public class TimeTestHelpersTests
     public void AdvanceSeconds_Extension_WorksCorrectly()
     {
         // Arrange
-        using var provider = TimeTestHelpers.CreateTimeProvider();
+        var provider = TimeTestHelpers.CreateTimeProvider();
         var before = provider.GetUtcNow();
 
         // Act
@@ -248,7 +250,7 @@ public class TimeTestHelpersTests
     public void AdvanceMinutes_Extension_WorksCorrectly()
     {
         // Arrange
-        using var provider = TimeTestHelpers.CreateTimeProvider();
+        var provider = TimeTestHelpers.CreateTimeProvider();
         var before = provider.GetUtcNow();
 
         // Act
@@ -263,7 +265,7 @@ public class TimeTestHelpersTests
     public void AdvanceToSessionExpiration_DefaultIs30Days()
     {
         // Arrange
-        using var provider = TimeTestHelpers.CreateTimeProvider();
+        var provider = TimeTestHelpers.CreateTimeProvider();
         var before = provider.GetUtcNow();
 
         // Act
@@ -278,7 +280,7 @@ public class TimeTestHelpersTests
     public void AdvanceToTempSessionExpiration_DefaultIs5Minutes()
     {
         // Arrange
-        using var provider = TimeTestHelpers.CreateTimeProvider();
+        var provider = TimeTestHelpers.CreateTimeProvider();
         var before = provider.GetUtcNow();
 
         // Act
@@ -293,7 +295,7 @@ public class TimeTestHelpersTests
     public void ChainedOperations_WorkCorrectly()
     {
         // Arrange & Act
-        using var provider = TimeTestHelpers.CreateTimeProvider(2025, 1, 1)
+        var provider = TimeTestHelpers.CreateTimeProvider(2025, 1, 1)
             .AdvanceHours(6)
             .AdvanceMinutes(30)
             .AdvanceSeconds(15);

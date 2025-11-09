@@ -3,7 +3,7 @@ using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using Api.Tests.Helpers;
-using Api.Tests.Infrastructure;
+using Microsoft.Extensions.Time.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -26,14 +26,14 @@ public class QualityReportServiceTests : IDisposable
     private readonly ITestOutputHelper _output;
 
     private readonly SqliteConnection _connection;
-    private readonly TestTimeProvider _timeProvider;
+    private readonly FakeTimeProvider _timeProvider;
 
     public QualityReportServiceTests(ITestOutputHelper output)
     {
         _output = output;
         _connection = new SqliteConnection("Filename=:memory:");
         _connection.Open();
-        _timeProvider = new TestTimeProvider();
+        _timeProvider = TimeTestHelpers.CreateTimeProvider();
     }
 
     public void Dispose()
@@ -609,4 +609,3 @@ public class QualityReportServiceTests : IDisposable
 
     #endregion
 }
-

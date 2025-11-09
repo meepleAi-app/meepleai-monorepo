@@ -8,8 +8,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-// TODO: Add Microsoft.Extensions.TimeProvider.Testing package
-// using Microsoft.Extensions.Time.Testing;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 using FluentAssertions;
 using Xunit.Abstractions;
@@ -19,16 +18,15 @@ namespace Api.Tests;
 /// <summary>
 /// Integration tests for AUTH-05 session status and extension endpoints
 /// Tests /api/v1/auth/session/status and /api/v1/auth/session/extend
-/// TEMPORARILY DISABLED: Requires Microsoft.Extensions.TimeProvider.Testing package
+/// Uses Microsoft.Extensions.TimeProvider.Testing for deterministic time-based testing
 /// </summary>
-/*
 public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
 {
     private readonly ITestOutputHelper _output;
 
     private readonly SqliteConnection _connection;
     private readonly WebApplicationFactory<Program> _factory;
-    private readonly object _timeProvider; // FakeTimeProvider
+    private readonly FakeTimeProvider _timeProvider;
 
     public SessionStatusEndpointsTests(WebApplicationFactory<Program> factory, ITestOutputHelper output)
     {
@@ -99,7 +97,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         status.Should().NotBeNull();
 
         // Session was just created, should have ~30 days (43200 minutes) remaining
-        status.RemainingMinutes.Should().BeApproximately(43000, TimeSpan.FromSeconds(5)); // Allow some tolerance
+        ((double)status.RemainingMinutes).Should().BeApproximately(43000, 5.0); // Allow 5 minutes tolerance
         status.LastSeenAt.Should().NotBeNull();
     }
 
@@ -136,7 +134,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         status.Should().NotBeNull();
 
         // Should have ~30 minutes remaining
-        status.RemainingMinutes.Should().BeApproximately(0, TimeSpan.FromSeconds(5));
+        ((double)status.RemainingMinutes).Should().BeApproximately(0, 5.0); // 5 minutes tolerance
     }
 
     [Fact]
@@ -190,7 +188,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         (extendedStatus.LastSeenAt > initialStatus!.LastSeenAt).Should().BeTrue();
 
         // Remaining minutes should be reset to ~30 days
-        extendedStatus.RemainingMinutes.Should().BeApproximately(43000, TimeSpan.FromSeconds(5));
+        ((double)extendedStatus.RemainingMinutes).Should().BeApproximately(43000, 5.0); // 5 minutes tolerance
     }
 
     [Fact]
@@ -215,7 +213,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
 
         // LastSeenAt should match the extend time (within 1 second tolerance)
         var expectedTime = _timeProvider.GetUtcNow().UtcDateTime;
-        Math.Abs((status.LastSeenAt!.Value - expectedTime).TotalSeconds) < 1.Should().BeTrue();
+        (Math.Abs((status.LastSeenAt!.Value - expectedTime).TotalSeconds) < 1).Should().BeTrue();
     }
 
     [Fact]
@@ -255,7 +253,7 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
             status.Should().NotBeNull();
 
             // After extending, should have ~30 days remaining
-            status.RemainingMinutes.Should().BeApproximately(42000, TimeSpan.FromSeconds(5));
+            ((double)status.RemainingMinutes).Should().BeApproximately(42000, 5.0); // 5 minutes tolerance
         }
     }
 
@@ -297,4 +295,3 @@ public class SessionStatusEndpointsTests : IClassFixture<WebApplicationFactory<P
         return parts.Length == 2 ? parts[1] : string.Empty;
     }
 }
-*/

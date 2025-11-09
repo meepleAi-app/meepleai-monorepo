@@ -1,13 +1,13 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Api.Tests.Infrastructure;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Api.Tests.Helpers;
 
 /// <summary>
-/// Helper class for coordinating BackgroundService execution with TestTimeProvider.
+/// Helper class for coordinating BackgroundService execution with FakeTimeProvider.
 ///
 /// Problem: TestTimeProvider.Advance() advances virtual time but doesn't wake tasks
 /// awaiting Task.Delay(). Background services run asynchronously, causing race conditions
@@ -20,7 +20,7 @@ namespace Api.Tests.Helpers;
 public class BackgroundServiceTestHelper<T> : IDisposable where T : BackgroundService
 {
     private readonly T _service;
-    private readonly TestTimeProvider _timeProvider;
+    private readonly FakeTimeProvider _timeProvider;
     private readonly CancellationTokenSource _cts;
     private readonly int _processingDelayMs;
 
@@ -33,7 +33,7 @@ public class BackgroundServiceTestHelper<T> : IDisposable where T : BackgroundSe
     /// <param name="processingDelayMs">Delay to allow background processing (default: 50ms)</param>
     public BackgroundServiceTestHelper(
         T service,
-        TestTimeProvider timeProvider,
+        FakeTimeProvider timeProvider,
         TimeSpan? timeout = null,
         int processingDelayMs = 50)
     {
@@ -145,7 +145,7 @@ public static class BackgroundServiceTestHelperExtensions
     /// </summary>
     public static BackgroundServiceTestHelper<T> CreateHelper<T>(
         this T service,
-        TestTimeProvider timeProvider,
+        FakeTimeProvider timeProvider,
         TimeSpan? timeout = null,
         int processingDelayMs = 50) where T : BackgroundService
     {

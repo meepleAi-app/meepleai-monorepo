@@ -7,6 +7,7 @@ using Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Moq.Protected;
 using Xunit;
@@ -26,7 +27,7 @@ public class OAuthServiceTests : IDisposable
     private readonly Mock<HttpMessageHandler> _httpMessageHandlerMock;
     private readonly OAuthConfiguration _config;
     private readonly OAuthService _service;
-    private readonly TestTimeProvider _timeProvider;
+    private readonly FakeTimeProvider _timeProvider;
 
     public OAuthServiceTests(ITestOutputHelper output)
     {
@@ -42,7 +43,7 @@ public class OAuthServiceTests : IDisposable
         _mockLogger = new Mock<ILogger<OAuthService>>();
         _httpClientFactoryMock = new Mock<IHttpClientFactory>();
         _httpMessageHandlerMock = new Mock<HttpMessageHandler>();
-        _timeProvider = new TestTimeProvider(DateTimeOffset.Parse("2024-10-26T00:00:00Z"));
+        _timeProvider = new FakeTimeProvider(DateTimeOffset.Parse("2024-10-26T00:00:00Z"));
 
         _config = new OAuthConfiguration
         {
@@ -568,22 +569,5 @@ public class OAuthServiceTests : IDisposable
     {
         _db.Database.CloseConnection();
         _db.Dispose();
-    }
-
-    private sealed class TestTimeProvider : TimeProvider
-    {
-        private DateTimeOffset _now;
-
-        public TestTimeProvider(DateTimeOffset now)
-        {
-            _now = now;
-        }
-
-        public override DateTimeOffset GetUtcNow() => _now;
-
-        public void Advance(TimeSpan timeSpan)
-        {
-            _now = _now.Add(timeSpan);
-        }
     }
 }

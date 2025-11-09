@@ -2,7 +2,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
 using Api.Tests.Helpers;
-using Api.Tests.Infrastructure;
+using Microsoft.Extensions.Time.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -23,7 +23,7 @@ public class TempSessionServiceTests : IDisposable
     private readonly MeepleAiDbContext _dbContext;
     private readonly TempSessionService _tempSessionService;
     private readonly Mock<ILogger<TempSessionService>> _loggerMock;
-    private readonly TestTimeProvider _timeProvider;
+    private readonly FakeTimeProvider _timeProvider;
 
     public TempSessionServiceTests(ITestOutputHelper output)
     {

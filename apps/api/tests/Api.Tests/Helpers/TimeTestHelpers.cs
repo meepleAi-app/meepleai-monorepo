@@ -1,15 +1,15 @@
-using Api.Tests.Infrastructure;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Api.Tests.Helpers;
 
 /// <summary>
-/// Helper methods for creating and manipulating TestTimeProvider in tests.
+/// Helper methods for creating and manipulating FakeTimeProvider in tests.
 /// Provides fluent API for common timing scenarios.
 /// </summary>
 public static class TimeTestHelpers
 {
     /// <summary>
-    /// Creates a new TestTimeProvider starting at a specific date/time.
+    /// Creates a new FakeTimeProvider starting at a specific date/time.
     /// </summary>
     /// <param name="year">Year (e.g., 2025)</param>
     /// <param name="month">Month (1-12)</param>
@@ -17,8 +17,8 @@ public static class TimeTestHelpers
     /// <param name="hour">Hour (0-23, default: 0)</param>
     /// <param name="minute">Minute (0-59, default: 0)</param>
     /// <param name="second">Second (0-59, default: 0)</param>
-    /// <returns>A TestTimeProvider initialized to the specified time (UTC)</returns>
-    public static TestTimeProvider CreateTimeProvider(
+    /// <returns>A FakeTimeProvider initialized to the specified time (UTC)</returns>
+    public static FakeTimeProvider CreateTimeProvider(
         int year = 2025,
         int month = 1,
         int day = 1,
@@ -27,30 +27,30 @@ public static class TimeTestHelpers
         int second = 0)
     {
         var startTime = new DateTimeOffset(year, month, day, hour, minute, second, TimeSpan.Zero);
-        return new TestTimeProvider(startTime);
+        return new FakeTimeProvider(startTime);
     }
 
     /// <summary>
-    /// Creates a TestTimeProvider starting at the given DateTimeOffset.
+    /// Creates a FakeTimeProvider starting at the given DateTimeOffset.
     /// </summary>
-    public static TestTimeProvider CreateTimeProvider(DateTimeOffset start)
+    public static FakeTimeProvider CreateTimeProvider(DateTimeOffset start)
     {
-        return new TestTimeProvider(start);
+        return new FakeTimeProvider(start);
     }
 
     /// <summary>
-    /// Creates a TestTimeProvider starting at "now" (test execution time).
+    /// Creates a FakeTimeProvider starting at "now" (test execution time).
     /// Useful for tests that need realistic timestamps but want deterministic advancement.
     /// </summary>
-    public static TestTimeProvider CreateTimeProviderNow()
+    public static FakeTimeProvider CreateTimeProviderNow()
     {
-        return new TestTimeProvider(DateTimeOffset.UtcNow);
+        return new FakeTimeProvider(DateTimeOffset.UtcNow);
     }
 
     /// <summary>
     /// Advances time by specified number of seconds.
     /// </summary>
-    public static TestTimeProvider AdvanceSeconds(this TestTimeProvider provider, int seconds)
+    public static FakeTimeProvider AdvanceSeconds(this FakeTimeProvider provider, int seconds)
     {
         provider.Advance(TimeSpan.FromSeconds(seconds));
         return provider;
@@ -59,7 +59,7 @@ public static class TimeTestHelpers
     /// <summary>
     /// Advances time by specified number of minutes.
     /// </summary>
-    public static TestTimeProvider AdvanceMinutes(this TestTimeProvider provider, int minutes)
+    public static FakeTimeProvider AdvanceMinutes(this FakeTimeProvider provider, int minutes)
     {
         provider.Advance(TimeSpan.FromMinutes(minutes));
         return provider;
@@ -68,7 +68,7 @@ public static class TimeTestHelpers
     /// <summary>
     /// Advances time by specified number of hours.
     /// </summary>
-    public static TestTimeProvider AdvanceHours(this TestTimeProvider provider, int hours)
+    public static FakeTimeProvider AdvanceHours(this FakeTimeProvider provider, int hours)
     {
         provider.Advance(TimeSpan.FromHours(hours));
         return provider;
@@ -77,7 +77,7 @@ public static class TimeTestHelpers
     /// <summary>
     /// Advances time by specified number of days.
     /// </summary>
-    public static TestTimeProvider AdvanceDays(this TestTimeProvider provider, int days)
+    public static FakeTimeProvider AdvanceDays(this FakeTimeProvider provider, int days)
     {
         provider.Advance(TimeSpan.FromDays(days));
         return provider;
@@ -86,7 +86,7 @@ public static class TimeTestHelpers
     /// <summary>
     /// Advances time by specified number of milliseconds.
     /// </summary>
-    public static TestTimeProvider AdvanceMilliseconds(this TestTimeProvider provider, int milliseconds)
+    public static FakeTimeProvider AdvanceMilliseconds(this FakeTimeProvider provider, int milliseconds)
     {
         provider.Advance(TimeSpan.FromMilliseconds(milliseconds));
         return provider;
@@ -96,7 +96,7 @@ public static class TimeTestHelpers
     /// Advances time to the next occurrence of a specific time-of-day.
     /// Example: AdvanceToNextTime(provider, 9, 0) advances to next 9:00 AM.
     /// </summary>
-    public static TestTimeProvider AdvanceToNextTime(this TestTimeProvider provider, int hour, int minute)
+    public static FakeTimeProvider AdvanceToNextTime(this FakeTimeProvider provider, int hour, int minute)
     {
         var current = provider.GetUtcNow();
         var target = new DateTimeOffset(current.Year, current.Month, current.Day, hour, minute, 0, TimeSpan.Zero);
@@ -115,36 +115,29 @@ public static class TimeTestHelpers
     /// <summary>
     /// Sets time to a specific date and time.
     /// </summary>
-    public static TestTimeProvider SetTo(this TestTimeProvider provider, int year, int month, int day,
+    public static FakeTimeProvider SetTo(this FakeTimeProvider provider, int year, int month, int day,
         int hour = 0, int minute = 0, int second = 0)
     {
         var targetTime = new DateTimeOffset(year, month, day, hour, minute, second, TimeSpan.Zero);
-        provider.SetTime(targetTime);
+        provider.SetUtcNow(targetTime);
         return provider;
     }
 
     /// <summary>
     /// Sets time to a specific DateTimeOffset.
     /// </summary>
-    public static TestTimeProvider SetTo(this TestTimeProvider provider, DateTimeOffset targetTime)
+    public static FakeTimeProvider SetTo(this FakeTimeProvider provider, DateTimeOffset targetTime)
     {
-        provider.SetTime(targetTime);
+        provider.SetUtcNow(targetTime);
         return provider;
     }
 
     /// <summary>
-    /// Resets time to the default start time (2025-01-01 00:00:00 UTC).
-    /// </summary>
-    public static TestTimeProvider ResetToDefault(this TestTimeProvider provider)
-    {
-        provider.Reset();
-        return provider;
-    }
 
     /// <summary>
     /// Common scenario: Session expiration (30 days default).
     /// </summary>
-    public static TestTimeProvider AdvanceToSessionExpiration(this TestTimeProvider provider, int days = 30)
+    public static FakeTimeProvider AdvanceToSessionExpiration(this FakeTimeProvider provider, int days = 30)
     {
         return provider.AdvanceDays(days);
     }
@@ -152,7 +145,7 @@ public static class TimeTestHelpers
     /// <summary>
     /// Common scenario: Temp session expiration (5 minutes default).
     /// </summary>
-    public static TestTimeProvider AdvanceToTempSessionExpiration(this TestTimeProvider provider, int minutes = 5)
+    public static FakeTimeProvider AdvanceToTempSessionExpiration(this FakeTimeProvider provider, int minutes = 5)
     {
         return provider.AdvanceMinutes(minutes);
     }
@@ -160,7 +153,7 @@ public static class TimeTestHelpers
     /// <summary>
     /// Common scenario: Auto-revocation check interval (1 hour default).
     /// </summary>
-    public static TestTimeProvider AdvanceToAutoRevocationCheck(this TestTimeProvider provider, int hours = 1)
+    public static FakeTimeProvider AdvanceToAutoRevocationCheck(this FakeTimeProvider provider, int hours = 1)
     {
         return provider.AdvanceHours(hours);
     }
@@ -168,7 +161,7 @@ public static class TimeTestHelpers
     /// <summary>
     /// Common scenario: Cache warming delay (startup delay + interval).
     /// </summary>
-    public static TestTimeProvider AdvanceToCacheWarmingCycle(this TestTimeProvider provider,
+    public static FakeTimeProvider AdvanceToCacheWarmingCycle(this FakeTimeProvider provider,
         int startupDelayMinutes = 5, int intervalHours = 6)
     {
         provider.AdvanceMinutes(startupDelayMinutes);
@@ -179,7 +172,7 @@ public static class TimeTestHelpers
     /// <summary>
     /// Common scenario: Quality report generation cycle (initial delay + interval).
     /// </summary>
-    public static TestTimeProvider AdvanceToQualityReportCycle(this TestTimeProvider provider,
+    public static FakeTimeProvider AdvanceToQualityReportCycle(this FakeTimeProvider provider,
         TimeSpan? initialDelay = null, TimeSpan? interval = null)
     {
         var delay = initialDelay ?? TimeSpan.FromMinutes(5);
@@ -193,7 +186,7 @@ public static class TimeTestHelpers
     /// <summary>
     /// Creates a timestamp for testing elapsed time calculations.
     /// </summary>
-    public static long GetTestTimestamp(this TestTimeProvider provider)
+    public static long GetTestTimestamp(this FakeTimeProvider provider)
     {
         return provider.GetTimestamp();
     }
@@ -201,7 +194,7 @@ public static class TimeTestHelpers
     /// <summary>
     /// Calculates elapsed time between two test timestamps.
     /// </summary>
-    public static TimeSpan CalculateElapsedTime(this TestTimeProvider provider,
+    public static TimeSpan CalculateElapsedTime(this FakeTimeProvider provider,
         long startTimestamp, long endTimestamp)
     {
         return provider.GetElapsedTime(startTimestamp, endTimestamp);

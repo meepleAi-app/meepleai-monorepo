@@ -140,6 +140,10 @@ builder.Services.Configure<HybridSearchConfiguration>(builder.Configuration.GetS
 // Infrastructure services (DB, Cache, HTTP clients)
 builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment);
 
+// Register TimeProvider for dependency injection (TEST-814: Enables test override)
+// In production, uses TimeProvider.System. Tests can override with TestTimeProvider/FakeTimeProvider.
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+
 // Application services (Domain, AI, Admin)
 builder.Services.AddApplicationServices();
 

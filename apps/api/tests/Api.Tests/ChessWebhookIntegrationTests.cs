@@ -327,14 +327,18 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
 
         await EnsureChessKnowledgeIndexedAsync();
 
+        // And: Create chess agent for testing
+        var agent = await CreateTestAgentAsync("chess", serviceUser.Id);
+
         // And: A chat session
-        var chatRequest = new { GameId = "chess", AgentId = "chess-agent" };
+        var chatRequest = new { GameId = "chess", AgentId = agent.Id };
         using var chatHttpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/chats")
         {
             Content = JsonContent.Create(chatRequest)
         };
         AddCookies(chatHttpRequest, cookies);
         var chatResponse = await client.SendAsync(chatHttpRequest);
+        chatResponse.StatusCode.Should().Be(HttpStatusCode.Created); // POST /chats returns 201 Created
         var chatResult = await chatResponse.Content.ReadFromJsonAsync<JsonElement>(JsonOptions);
         var chatId = chatResult.GetProperty("id").GetGuid();
 

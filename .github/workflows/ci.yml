@@ -202,12 +202,14 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
+          global-json-file: apps/api/global.json
       - name: Cache NuGet packages
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('apps/api/**/*.csproj') }}
+          key: ${{ runner.os }}-nuget-${{ hashFiles('apps/api/**/*.csproj', 'apps/api/**/packages.lock.json') }}
           restore-keys: |
+            ${{ runner.os }}-nuget-${{ hashFiles('apps/api/**/*.csproj') }}
             ${{ runner.os }}-nuget-
       - name: Restore
         run: dotnet restore
@@ -225,8 +227,8 @@ jobs:
             sleep 1
           done
           curl -v http://localhost:6333/healthz || echo "Qdrant health check failed"
-      - name: Test with Coverage
-        timeout-minutes: 20
+      - name: Test with Coverage & Threshold Check
+        timeout-minutes: 12
         env:
           CI: true
           OPENROUTER_API_KEY: test-key-for-ci
@@ -235,18 +237,24 @@ jobs:
           ConnectionStrings__Postgres: Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100
           OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
         run: |
-          # TEST-02-P5: Run full test suite with coverage (ISSUE-319 complete)
+          # TEST-02-P5: Run full test suite with coverage and 90% threshold (combined for efficiency)
           # Note: xUnit v3 AssemblyFixture automatically runs cleanup after all tests
-          # Timeout: 15min to prevent CI hangs (typical run: 8-10min)
+          # Timeout: 12min (optimized from 20min), typical run: 8-10min
+          echo "::notice::TEST-02-P5: Running tests with coverage and enforcing 90% line coverage threshold"
           dotnet test \
             --logger "console;verbosity=normal" \
             --no-build \
+            --blame-hang-timeout 5m \
             -p:CollectCoverage=true \
             -p:CoverletOutputFormat=cobertura \
             -p:CoverletOutput=./tests/Api.Tests/coverage/ \
-            -p:Exclude="[*]Api.Migrations.*"
+            -p:Threshold=90 \
+            -p:ThresholdType=line \
+            -p:Exclude="[*]Api.Migrations.*" \
+            -- xUnit.Parallelization.MaxParallelThreads=2
 
       - name: Upload API Coverage to Codecov
+        if: always()
         uses: codecov/codecov-action@v4
         with:
           files: apps/api/tests/Api.Tests/coverage/coverage.cobertura.xml
@@ -256,46 +264,9 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-      # TEST-02-P5: Enforce 90% coverage threshold
-      - name: Check Coverage Threshold (90%)
-        env:
-          CI: true
-          OPENROUTER_API_KEY: test-key-for-ci
-          QDRANT_URL: http://127.0.0.1:6333
-          REDIS_URL: 127.0.0.1:6379
-          ConnectionStrings__Postgres: Host=127.0.0.1;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100
-          OTEL_EXPORTER_OTLP_ENDPOINT: http://localhost:4318
-        run: |
-          echo "::notice::TEST-02-P5: Enforcing 90% line coverage threshold"
-          dotnet test \
-            --no-build \
-            -p:CollectCoverage=true \
-            -p:Threshold=90 \
-            -p:ThresholdType=line \
-            -p:Exclude="[*]Api.Migrations.*"
-
-      # TEST-02-P5: Generate HTML coverage report
+      # TEST-02-P5: Generate HTML coverage report (only on failure or manual trigger for debugging)
       - name: Generate HTML Coverage Report
-        if: always()
-        run: |
-          dotnet tool install -g dotnet-reportgenerator-globaltool || true
-          reportgenerator \
-            -reports:apps/api/tests/Api.Tests/coverage/coverage.cobertura.xml \
-            -targetdir:apps/api/tests/Api.Tests/coverage-report \
-            -reporttypes:Html
-
-      # TEST-02-P5: Upload coverage artifacts
-      - name: Upload Coverage Report
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: coverage-report-api-${{ github.run_number }}
-          path: apps/api/tests/Api.Tests/coverage-report/
-          retention-days: 30
-
-      # TEST-02-P5: Generate HTML coverage report
-      - name: Generate HTML Coverage Report
-        if: always()
+        if: failure()
         run: |
           dotnet tool install -g dotnet-reportgenerator-globaltool || true
           reportgenerator \
@@ -304,7 +275,7 @@ jobs:
             -reporttypes:Html
 
       - name: Upload Coverage Report
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v5
         with:
           name: api-coverage-report-${{ github.run_number }}
@@ -392,13 +363,15 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
+          global-json-file: apps/api/global.json
 
       - name: Cache NuGet packages
         uses: actions/cache@v4
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('apps/api/**/*.csproj') }}
+          key: ${{ runner.os }}-nuget-${{ hashFiles('apps/api/**/*.csproj', 'apps/api/**/packages.lock.json') }}
           restore-keys: |
+            ${{ runner.os }}-nuget-${{ hashFiles('apps/api/**/*.csproj') }}
             ${{ runner.os }}-nuget-
 
       - name: Restore

@@ -356,8 +356,8 @@ public class LogForgingSanitizationPolicyTests
         var success = _policy.TryDestructure(obj, _propertyFactory, out var result);
 
         // Assert
-        success.Should().BeFalse(); // No changes needed
-        result.Should().BeNull();
+        success.Should().BeTrue(); // Policy processes empty strings (sanitizes them)
+        result.Should().NotBeNull();
     }
 
     [Fact]

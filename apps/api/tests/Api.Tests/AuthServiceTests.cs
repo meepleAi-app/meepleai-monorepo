@@ -44,7 +44,11 @@ public class AuthServiceTests : IDisposable
     {
         var mock = new Mock<IPasswordHashingService>();
 
-        // Setup HashSecret to return a deterministic hash
+        // Setup HashSecret single-parameter overload (used by AuthService, UserManagementService, etc.)
+        mock.Setup(m => m.HashSecret(It.IsAny<string>()))
+            .Returns<string>(secret => $"hashed_{secret}");
+
+        // Setup HashSecret two-parameter overload (used by some services with custom iterations)
         mock.Setup(m => m.HashSecret(It.IsAny<string>(), It.IsAny<int>()))
             .Returns<string, int>((secret, iterations) => $"hashed_{secret}");
 

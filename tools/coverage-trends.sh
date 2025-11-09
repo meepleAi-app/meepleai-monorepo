@@ -3,6 +3,7 @@
 # Tracks test coverage over time for MeepleAI monorepo
 
 set -e
+set -o pipefail  # Fail if any command in pipeline fails
 
 # Configuration
 TIMESTAMP=$(date +%Y-%m-%d-%H%M%S)
@@ -62,7 +63,10 @@ cd apps/web
 
 if [ "$1" != "--no-run" ]; then
     echo "Running frontend tests with coverage..."
-    pnpm test:coverage --silent --json --outputFile="../../$COVERAGE_DIR/coverage-web-${TIMESTAMP}-raw.json" 2>&1 | tail -20
+    if ! pnpm test:coverage --silent --json --outputFile="../../$COVERAGE_DIR/coverage-web-${TIMESTAMP}-raw.json" 2>&1 | tail -20; then
+        echo -e "${YELLOW}⚠ Frontend tests failed - coverage may be incomplete${NC}"
+        exit 1
+    fi
 fi
 
 # Check for Jest coverage summary
@@ -80,7 +84,10 @@ cd apps/api
 
 if [ "$1" != "--no-run" ]; then
     echo "Running backend tests with coverage..."
-    dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=json /p:CoverletOutput="../../$COVERAGE_DIR/coverage-api-${TIMESTAMP}.json" --verbosity quiet 2>&1 | tail -20
+    if ! dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=json /p:CoverletOutput="../../$COVERAGE_DIR/coverage-api-${TIMESTAMP}.json" --verbosity quiet 2>&1 | tail -20; then
+        echo -e "${YELLOW}⚠ Backend tests failed - coverage may be incomplete${NC}"
+        exit 1
+    fi
 fi
 
 # Extract backend coverage if available

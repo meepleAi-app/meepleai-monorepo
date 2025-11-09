@@ -502,6 +502,20 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
                     };
                 });
 
+            // TEST #801 FIX: Add 3-parameter overload for AI-09 multilingual support
+            // RagService.ExplainAsync calls GenerateEmbeddingAsync(topic, language, ct) with language parameter
+            mockEmbeddingService
+                .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string text, string language, CancellationToken ct) =>
+                {
+                    // Return dummy embedding (1536 dimensions of zeros)
+                    return new Api.Services.EmbeddingResult
+                    {
+                        Success = true,
+                        Embeddings = new List<float[]> { new float[1536] }
+                    };
+                });
+
             services.AddSingleton(mockEmbeddingService.Object);
 
             services.AddSingleton<IQdrantService>(sp => new QdrantService(

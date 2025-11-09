@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Moq;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests;
 

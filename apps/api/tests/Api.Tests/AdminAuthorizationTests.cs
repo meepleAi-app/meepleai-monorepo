@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Api.Models;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Api.Tests;
 

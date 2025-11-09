@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 /// <summary>
 /// AI-04: BDD-style integration tests for snippet pipeline and fallback behavior

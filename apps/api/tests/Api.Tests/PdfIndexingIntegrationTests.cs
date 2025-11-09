@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 using Api.Tests.Fixtures;
 
 namespace Api.Tests;
@@ -40,7 +40,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         });
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         // Get database context
         var scope = _factory.Services.CreateScope();
@@ -52,10 +52,10 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
         _userSessionToken = await LoginAsync("user@meepleai.dev", "Demo123!");
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _db?.Dispose();
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     #region BDD Scenarios: Happy Path

@@ -10,7 +10,7 @@ using Moq;
 using StackExchange.Redis;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests;
 

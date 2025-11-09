@@ -4,7 +4,7 @@ using Serilog.Events;
 using System.Security.Claims;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests.Logging;
 

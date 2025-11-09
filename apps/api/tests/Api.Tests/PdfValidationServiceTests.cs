@@ -8,7 +8,7 @@ using QuestPDF.Infrastructure;
 using System.Runtime.InteropServices;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests;
 

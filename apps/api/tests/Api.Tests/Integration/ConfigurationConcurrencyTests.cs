@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests.Integration;
 
@@ -33,7 +33,7 @@ public class ConfigurationConcurrencyTests : ConfigIntegrationTestBase
         _output = output;
     }
 
-    public override async Task InitializeAsync()
+    public override async ValueTask InitializeAsync()
     {
         await base.InitializeAsync();
         _adminEmail = $"config-concur-{Guid.NewGuid():N}@test.com";

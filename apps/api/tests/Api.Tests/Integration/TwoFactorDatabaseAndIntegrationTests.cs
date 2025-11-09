@@ -15,7 +15,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using OtpNet;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Api.Tests.Integration;
 

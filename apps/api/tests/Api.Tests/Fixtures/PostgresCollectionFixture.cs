@@ -42,7 +42,7 @@ public class PostgresCollectionFixture : IAsyncLifetime
     /// </summary>
     public IConfiguration Configuration { get; private set; } = null!;
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         Console.WriteLine("🚀 [PostgresCollectionFixture] Starting Postgres container...");
         _stopwatch.Start();
@@ -115,7 +115,7 @@ public class PostgresCollectionFixture : IAsyncLifetime
         }
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         Console.WriteLine("🧹 [PostgresCollectionFixture] Cleaning up Postgres container...");
 

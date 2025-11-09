@@ -7,7 +7,7 @@ using System.Net;
 using System.Text.Json;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests;
 

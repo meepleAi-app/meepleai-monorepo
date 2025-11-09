@@ -69,7 +69,7 @@ public class QdrantRagTestFixture : IAsyncLifetime
         // Parameterless constructor required by xUnit collection fixture
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         Console.WriteLine("🚀 [QdrantRagTestFixture] Starting Qdrant+RAG initialization...");
         _stopwatch.Start();
@@ -173,12 +173,12 @@ public class QdrantRagTestFixture : IAsyncLifetime
             "PostgresCollectionFixture should run migrations during initialization.");
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         // DON'T clear mocked Qdrant storage - it's shared across all tests in collection
         // Storage persists for the lifetime of the test collection
         Console.WriteLine("✅ [QdrantRagTestFixture] Cleanup complete");
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     /// <summary>

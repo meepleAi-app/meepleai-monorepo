@@ -1,7 +1,7 @@
 using Api.Services;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests;
 
@@ -15,13 +15,13 @@ public class MultilingualRagIntegrationTests : QdrantIntegrationTestBase, IAsync
 
     private readonly List<string> _createdPdfIds = new();
 
-    async Task IAsyncLifetime.InitializeAsync()
+    public override async ValueTask InitializeAsync()
     {
         // Call base class initialization to set up QdrantService
         await base.InitializeAsync();
     }
 
-    async Task IAsyncLifetime.DisposeAsync()
+    public override async ValueTask DisposeAsync()
     {
         // Cleanup all created documents
         if (QdrantService != null)

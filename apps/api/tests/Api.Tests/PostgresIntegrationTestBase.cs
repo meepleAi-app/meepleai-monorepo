@@ -44,7 +44,7 @@ public abstract class PostgresIntegrationTestBase : IAsyncLifetime
         }
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         if (!_isRunningInCi && _postgresContainer != null)
         {
@@ -64,7 +64,7 @@ public abstract class PostgresIntegrationTestBase : IAsyncLifetime
         await DbContext.Database.MigrateAsync();
     }
 
-    public virtual async Task DisposeAsync()
+    public virtual async ValueTask DisposeAsync()
     {
         // Dispose DbContext
         if (DbContext != null)

@@ -2,7 +2,7 @@ using Api.Models;
 using Api.Services;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests.Services;
 

@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests.Services;
 
@@ -64,7 +64,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
             allowedDatasetsDirectory: Path.GetTempPath());
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         // Create test dataset file
         var testDataset = new PromptTestDataset
@@ -160,7 +160,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         await _dbContext.SaveChangesAsync();
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         // Cleanup test dataset file
         if (File.Exists(_testDatasetPath))

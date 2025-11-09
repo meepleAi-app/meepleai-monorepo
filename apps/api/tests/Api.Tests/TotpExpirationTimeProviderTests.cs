@@ -3,7 +3,6 @@ using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
 using OtpNet;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Api.Tests;
 

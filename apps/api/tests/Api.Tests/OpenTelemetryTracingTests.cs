@@ -3,7 +3,7 @@ using System.Diagnostics;
 using Api.Observability;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests;
 

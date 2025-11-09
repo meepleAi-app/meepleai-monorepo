@@ -2,7 +2,7 @@ using Api.Tests.Helpers;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests.Infrastructure;
 

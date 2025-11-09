@@ -4,7 +4,6 @@ using System.Text.Json;
 using Api.Tests.Fixtures;
 using FluentAssertions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Api.Tests;
 

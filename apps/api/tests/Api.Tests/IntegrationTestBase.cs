@@ -84,7 +84,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
     ///
     /// BDD: Given test is starting
     /// </summary>
-    public virtual Task InitializeAsync()
+    public virtual ValueTask InitializeAsync()
     {
         // Create Factory with Postgres connection from fixture
         Factory = new WebApplicationFactoryFixture
@@ -92,7 +92,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
             PostgresConnectionString = PostgresFixture.ConnectionString
         };
 
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     /// <summary>
@@ -104,7 +104,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
     /// - Then all created test data is removed
     /// - And database returns to clean state
     /// </summary>
-    public virtual async Task DisposeAsync()
+    public virtual async ValueTask DisposeAsync()
     {
         try
         {

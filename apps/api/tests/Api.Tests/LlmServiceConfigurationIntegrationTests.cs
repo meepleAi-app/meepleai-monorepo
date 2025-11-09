@@ -54,7 +54,7 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
         var testUser = await CreateTestUserAsync($"config-test-{TestRunId}@test.com");
 
         var testModel = "test-database-model-" + TestRunId;
-        var configDto = await CreateOrUpdateConfigurationAsync(
+        await CreateOrUpdateConfigurationAsync(
             configService,
             "AI.Model",
             testModel,

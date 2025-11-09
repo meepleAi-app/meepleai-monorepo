@@ -458,3 +458,4 @@ nul
 codeql-db/
 apps/web/e2e-test-output.txt
 .playwright-mcp/
+alerts.json

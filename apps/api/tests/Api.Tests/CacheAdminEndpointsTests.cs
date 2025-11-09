@@ -311,7 +311,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
         var admin = await CreateTestUserAsync("admin-delete-tag", UserRole.Admin);
         var cookies = await AuthenticateUserAsync(admin.Email);
         var game = await CreateTestGameAsync("Game-Tag");
-        var pdf = await CreateTestPdfDocumentAsync(game.Id, admin.Id);
+        await CreateTestPdfDocumentAsync(game.Id, admin.Id); // Create PDF for test setup
 
         using (var scope = Factory.Services.CreateScope())
         {

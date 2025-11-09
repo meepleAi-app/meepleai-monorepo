@@ -18,7 +18,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace MeepleAI.Api.Tests.Services;
 

@@ -8,7 +8,7 @@ using Moq;
 using Moq.Protected;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests;
 

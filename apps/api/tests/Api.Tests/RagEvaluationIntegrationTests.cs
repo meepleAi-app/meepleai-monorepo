@@ -17,7 +17,7 @@ using Testcontainers.PostgreSql;
 using Testcontainers.Qdrant;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests;
 
@@ -38,7 +38,7 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
     private string? _tempDatasetPath;
     private string? _tempDirectory;
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         // Start Postgres container
         _postgresContainer = new PostgreSqlBuilder()
@@ -125,7 +125,7 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
         _tempDatasetPath = Path.Combine(_tempDirectory, $"integration-test-dataset-{Guid.NewGuid()}.json");
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         if (_dbContext != null)
         {

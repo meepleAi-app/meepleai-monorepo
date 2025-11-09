@@ -7,7 +7,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace MeepleAI.Api.Tests.Services;
 

@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests;
 

@@ -3,7 +3,7 @@ using Serilog.Core;
 using Serilog.Events;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests.Logging;
 

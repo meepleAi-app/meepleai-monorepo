@@ -4,7 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests;
 

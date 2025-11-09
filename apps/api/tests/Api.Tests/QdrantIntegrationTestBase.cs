@@ -58,7 +58,7 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
         _qdrantUrl = string.Empty; // Will be set after container starts
     }
 
-    public async Task InitializeAsync()
+    public virtual async ValueTask InitializeAsync()
     {
         if (_skipReason is not null)
         {
@@ -140,7 +140,7 @@ public abstract class QdrantIntegrationTestBase : IAsyncLifetime
         await QdrantService.EnsureCollectionExistsAsync();
     }
 
-    public virtual async Task DisposeAsync()
+    public virtual async ValueTask DisposeAsync()
     {
         if (_containerStarted && _qdrantContainer != null)
         {

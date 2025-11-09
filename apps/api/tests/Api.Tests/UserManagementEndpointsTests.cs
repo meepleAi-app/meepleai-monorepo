@@ -11,7 +11,7 @@ using Api.Infrastructure.Entities;
 using Api.Models;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests;
 

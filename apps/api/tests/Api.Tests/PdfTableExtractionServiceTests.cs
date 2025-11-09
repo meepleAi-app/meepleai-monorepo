@@ -13,7 +13,7 @@ using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 using QuestPdfDocument = QuestPDF.Fluent.Document;
 

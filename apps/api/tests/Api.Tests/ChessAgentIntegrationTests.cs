@@ -6,7 +6,7 @@ using Api.Models;
 using Api.Tests.Fixtures;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests;
 

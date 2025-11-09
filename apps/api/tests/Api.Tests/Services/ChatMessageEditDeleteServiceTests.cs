@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;

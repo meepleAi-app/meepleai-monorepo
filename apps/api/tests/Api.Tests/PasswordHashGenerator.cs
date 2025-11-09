@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Api.Tests;
 

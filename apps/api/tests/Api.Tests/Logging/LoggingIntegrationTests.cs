@@ -10,7 +10,7 @@ using Serilog.Events;
 using Serilog.Sinks.TestCorrelator;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests.Logging;
 

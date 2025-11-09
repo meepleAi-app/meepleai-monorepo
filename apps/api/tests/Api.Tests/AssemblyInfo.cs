@@ -8,7 +8,6 @@ using Xunit;
     MaxParallelThreads = 4
 )]
 
-// Enable assembly-wide test process cleanup
+// Enable assembly-wide test process cleanup (xUnit v3 native support)
 // The TestProcessCleanup fixture runs after all tests in the assembly complete
-// TODO: Re-enable when Xunit.Extensions.AssemblyFixture package is available in CI
-// [assembly: AssemblyFixture(typeof(Api.Tests.TestProcessCleanup))]
+[assembly: AssemblyFixture(typeof(Api.Tests.TestProcessCleanup))]

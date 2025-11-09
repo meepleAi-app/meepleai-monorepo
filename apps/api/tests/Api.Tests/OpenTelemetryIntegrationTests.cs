@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 using System.Diagnostics;
 using Api.Observability;
 using Api.Tests.Fixtures;

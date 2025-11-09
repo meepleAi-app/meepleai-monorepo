@@ -7,7 +7,7 @@ using Api.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Api.Tests;
 

@@ -43,16 +43,16 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
     /// Initialize test resources before each test.
     /// Override in derived classes for custom setup.
     /// </summary>
-    public virtual Task InitializeAsync()
+    public virtual ValueTask InitializeAsync()
     {
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     /// <summary>
     /// Cleanup test resources after each test.
     /// Automatically cleans up test users, configs, logs, and feedback.
     /// </summary>
-    public virtual async Task DisposeAsync()
+    public virtual async ValueTask DisposeAsync()
     {
         try
         {

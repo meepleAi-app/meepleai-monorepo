@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using FluentAssertions;
-using Xunit.Abstractions;
+using Xunit;
 
 /// <summary>
 /// AI-04: Comprehensive tests for Q&A snippet handling and fallback behavior

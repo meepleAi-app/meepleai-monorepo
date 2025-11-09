@@ -46,7 +46,7 @@ public abstract class TransactionalTestBase : IntegrationTestBase
     {
     }
 
-    public override async Task InitializeAsync()
+    public override async ValueTask InitializeAsync()
     {
         // Call base to create Factory
         await base.InitializeAsync();
@@ -64,7 +64,7 @@ public abstract class TransactionalTestBase : IntegrationTestBase
         DbContext.Database.UseTransaction(_transaction);
     }
 
-    public override async Task DisposeAsync()
+    public override async ValueTask DisposeAsync()
     {
         // Rollback transaction for fast cleanup (<1ms)
         if (_transaction != null)

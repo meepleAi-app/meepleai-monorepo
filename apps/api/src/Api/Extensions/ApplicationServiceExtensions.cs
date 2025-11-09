@@ -57,6 +57,10 @@ public static class ApplicationServiceExtensions
         // CONFIG-01: Dynamic configuration service
         services.AddScoped<IConfigurationService, ConfigurationService>();
 
+        // CONFIG: Configuration wrapper (TEST-900 RC-1: enables mocking of IConfiguration extension methods)
+        services.AddSingleton<IConfigurationWrapper>(sp =>
+            new ConfigurationWrapper(sp.GetRequiredService<IConfiguration>()));
+
         // CONFIG: Configuration helper for 3-tier fallback (Database → Config → Defaults)
         services.AddScoped<ConfigurationHelper>();
 

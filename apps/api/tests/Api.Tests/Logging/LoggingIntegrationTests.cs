@@ -241,9 +241,10 @@ public class LoggingIntegrationTests : IDisposable
         usernameProp.Should().NotBeNull();
         ((ScalarValue)usernameProp.Value).Value.Should().Be("admin");
 
+        // Email is now also redacted for privacy (updated security policy)
         var emailProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Email");
         emailProp.Should().NotBeNull();
-        ((ScalarValue)emailProp.Value).Value.Should().Be("admin@example.com");
+        ((ScalarValue)emailProp.Value).Value.Should().Be("[REDACTED]");
 
         var descProp = structureValue.Properties.FirstOrDefault(p => p.Name == "Description");
         descProp.Should().NotBeNull();

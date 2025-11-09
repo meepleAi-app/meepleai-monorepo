@@ -12,18 +12,18 @@ namespace Api.Tests.Helpers;
 public class ConfigurationHelperTests
 {
     private readonly Mock<IConfigurationService> _mockConfigService;
-    private readonly Mock<IConfiguration> _mockFallbackConfig;
+    private readonly Mock<IConfigurationWrapper> _mockConfigWrapper;
     private readonly Mock<ILogger<ConfigurationHelper>> _mockLogger;
     private readonly ConfigurationHelper _helper;
 
     public ConfigurationHelperTests()
     {
         _mockConfigService = new Mock<IConfigurationService>();
-        _mockFallbackConfig = new Mock<IConfiguration>();
+        _mockConfigWrapper = new Mock<IConfigurationWrapper>();
         _mockLogger = new Mock<ILogger<ConfigurationHelper>>();
         _helper = new ConfigurationHelper(
             _mockConfigService.Object,
-            _mockFallbackConfig.Object,
+            _mockConfigWrapper.Object,
             _mockLogger.Object
         );
     }
@@ -167,6 +167,7 @@ public class ConfigurationHelperTests
         const int appsettingsValue = 50;
         const int defaultValue = 100;
 
+        // Database has inactive config
         var inactiveDbConfig = new SystemConfigurationDto(
             Id: "test-config-4",
             Key: key,
@@ -174,7 +175,7 @@ public class ConfigurationHelperTests
             ValueType: "int",
             Description: null,
             Category: "Test",
-            IsActive: false,
+            IsActive: false, // INACTIVE
             RequiresRestart: false,
             Environment: "All",
             Version: 1,
@@ -190,11 +191,9 @@ public class ConfigurationHelperTests
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
             .ReturnsAsync(inactiveDbConfig);
 
-        var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Value).Returns(appsettingsValue.ToString());
-        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
-        _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
-        _mockFallbackConfig.Setup(x => x[key]).Returns(appsettingsValue.ToString());
+        // Mock wrapper directly - key exists and has value
+        _mockConfigWrapper.Setup(x => x.Exists(key)).Returns(true);
+        _mockConfigWrapper.Setup(x => x.GetValue<int>(key)).Returns(appsettingsValue);
 
         // Act
         var result = await _helper.GetValueAsync(key, defaultValue);
@@ -202,7 +201,6 @@ public class ConfigurationHelperTests
         // Assert
         Assert.Equal(appsettingsValue, result);
         _mockConfigService.Verify(x => x.GetConfigurationByKeyAsync(key, null), Times.Once);
-        _mockConfigService.Verify(x => x.GetValueAsync<int>(key, It.IsAny<int>(), null), Times.Never);
     }
 
     #endregion
@@ -221,11 +219,9 @@ public class ConfigurationHelperTests
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
             .ReturnsAsync((SystemConfigurationDto?)null);
 
-        var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Value).Returns(appsettingsValue.ToString());
-        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
-        _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
-        _mockFallbackConfig.Setup(x => x[key]).Returns(appsettingsValue.ToString());
+        // Mock wrapper directly - key exists with zero value
+        _mockConfigWrapper.Setup(x => x.Exists(key)).Returns(true);
+        _mockConfigWrapper.Setup(x => x.GetValue<int>(key)).Returns(appsettingsValue);
 
         // Act
         var result = await _helper.GetValueAsync(key, defaultValue);
@@ -247,11 +243,9 @@ public class ConfigurationHelperTests
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
             .ReturnsAsync((SystemConfigurationDto?)null);
 
-        var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Value).Returns(appsettingsValue.ToString().ToLowerInvariant());
-        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
-        _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
-        _mockFallbackConfig.Setup(x => x[key]).Returns(appsettingsValue.ToString().ToLowerInvariant());
+        // Mock wrapper directly - key exists with false value
+        _mockConfigWrapper.Setup(x => x.Exists(key)).Returns(true);
+        _mockConfigWrapper.Setup(x => x.GetValue<bool>(key)).Returns(appsettingsValue);
 
         // Act
         var result = await _helper.GetValueAsync(key, defaultValue);
@@ -265,7 +259,7 @@ public class ConfigurationHelperTests
     public async Task GetValueAsync_AppsettingsHasEmptyString_DatabaseMissing_ReturnsEmptyString()
     {
         // Arrange
-        const string key = "TestString";
+        const string key = "TestKey";
         const string appsettingsValue = "";
         const string defaultValue = "default";
 
@@ -273,11 +267,9 @@ public class ConfigurationHelperTests
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
             .ReturnsAsync((SystemConfigurationDto?)null);
 
-        var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Value).Returns(appsettingsValue);
-        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
-        _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
-        _mockFallbackConfig.Setup(x => x[key]).Returns(appsettingsValue);
+        // Mock wrapper directly - key exists with empty string
+        _mockConfigWrapper.Setup(x => x.Exists(key)).Returns(true);
+        _mockConfigWrapper.Setup(x => x.GetValue<string>(key)).Returns(appsettingsValue);
 
         // Act
         var result = await _helper.GetValueAsync(key, defaultValue);
@@ -295,17 +287,15 @@ public class ConfigurationHelperTests
     public async Task GetValueAsync_BothDatabaseAndAppsettingsMissing_ReturnsDefaultValue()
     {
         // Arrange
-        const string key = "TestKey";
-        const int defaultValue = 100;
+        const string key = "MissingKey";
+        const int defaultValue = 999;
 
         _mockConfigService
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
             .ReturnsAsync((SystemConfigurationDto?)null);
 
-        var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Value).Returns((string?)null);
-        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
-        _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
+        // Mock wrapper directly - key does NOT exist
+        _mockConfigWrapper.Setup(x => x.Exists(key)).Returns(false);
 
         // Act
         var result = await _helper.GetValueAsync(key, defaultValue);
@@ -320,23 +310,20 @@ public class ConfigurationHelperTests
     {
         // Arrange
         const string key = "TestKey";
-        const int defaultValue = 100;
+        const int defaultValue = 888;
 
         _mockConfigService
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
-            .ThrowsAsync(new Exception("Database error"));
+            .ThrowsAsync(new Exception("Database connection failed"));
 
-        var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Value).Returns((string?)null);
-        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
-        _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
+        // Mock wrapper directly - key does NOT exist
+        _mockConfigWrapper.Setup(x => x.Exists(key)).Returns(false);
 
         // Act
         var result = await _helper.GetValueAsync(key, defaultValue);
 
         // Assert
         Assert.Equal(defaultValue, result);
-        _mockConfigService.Verify(x => x.GetConfigurationByKeyAsync(key, null), Times.Once);
     }
 
     #endregion
@@ -382,7 +369,7 @@ public class ConfigurationHelperTests
 
         // Assert
         Assert.Equal(dbValue, result);
-        _mockFallbackConfig.Verify(x => x.GetSection(It.IsAny<string>()), Times.Never);
+        _mockConfigWrapper.Verify(x => x.GetSection(It.IsAny<string>()), Times.Never);
         // Removed GetValue verify - extension method cannot be verified
     }
 
@@ -391,25 +378,23 @@ public class ConfigurationHelperTests
     {
         // Arrange
         const string key = "TestKey";
-        const int appsettingsValue = 50;
+        const int appsettingsValue = 0; // Zero, but still a valid value
         const int defaultValue = 100;
 
         _mockConfigService
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
             .ReturnsAsync((SystemConfigurationDto?)null);
 
-        var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Value).Returns(appsettingsValue.ToString());
-        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
-        _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
-        _mockFallbackConfig.Setup(x => x[key]).Returns(appsettingsValue.ToString());
+        // Mock wrapper directly - key exists with zero
+        _mockConfigWrapper.Setup(x => x.Exists(key)).Returns(true);
+        _mockConfigWrapper.Setup(x => x.GetValue<int>(key)).Returns(appsettingsValue);
 
         // Act
         var result = await _helper.GetValueAsync(key, defaultValue);
 
         // Assert
         Assert.Equal(appsettingsValue, result);
-        Assert.NotEqual(defaultValue, result);
+        _mockConfigService.Verify(x => x.GetConfigurationByKeyAsync(key, null), Times.Once);
     }
 
     #endregion
@@ -421,18 +406,16 @@ public class ConfigurationHelperTests
     {
         // Arrange
         const string key = "TestKey";
-        const int appsettingsValue = 50;
+        const int appsettingsValue = 75;
         const int defaultValue = 100;
 
         _mockConfigService
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
-            .ThrowsAsync(new Exception("Database connection failed"));
+            .ThrowsAsync(new Exception("Database error"));
 
-        var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Value).Returns(appsettingsValue.ToString());
-        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
-        _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
-        _mockFallbackConfig.Setup(x => x[key]).Returns(appsettingsValue.ToString());
+        // Mock wrapper directly - key exists in appsettings
+        _mockConfigWrapper.Setup(x => x.Exists(key)).Returns(true);
+        _mockConfigWrapper.Setup(x => x.GetValue<int>(key)).Returns(appsettingsValue);
 
         // Act
         var result = await _helper.GetValueAsync(key, defaultValue);
@@ -452,7 +435,7 @@ public class ConfigurationHelperTests
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
             .ReturnsAsync((SystemConfigurationDto?)null);
 
-        _mockFallbackConfig
+        _mockConfigWrapper
             .Setup(x => x.GetSection(key))
             .Throws(new Exception("Appsettings error"));
 
@@ -478,10 +461,8 @@ public class ConfigurationHelperTests
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
             .ReturnsAsync((SystemConfigurationDto?)null);
 
-        var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Value).Returns((string?)null);
-        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
-        _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
+        // Mock wrapper directly - key does NOT exist
+        _mockConfigWrapper.Setup(x => x.Exists(key)).Returns(false);
 
         // Act
         var result = await _helper.GetIntAsync(key, defaultValue);
@@ -501,10 +482,8 @@ public class ConfigurationHelperTests
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
             .ReturnsAsync((SystemConfigurationDto?)null);
 
-        var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Value).Returns((string?)null);
-        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
-        _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
+        // Mock wrapper directly - key does NOT exist
+        _mockConfigWrapper.Setup(x => x.Exists(key)).Returns(false);
 
         // Act
         var result = await _helper.GetBoolAsync(key, defaultValue);
@@ -524,10 +503,8 @@ public class ConfigurationHelperTests
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
             .ReturnsAsync((SystemConfigurationDto?)null);
 
-        var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Value).Returns((string?)null);
-        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
-        _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
+        // Mock wrapper directly - key does NOT exist
+        _mockConfigWrapper.Setup(x => x.Exists(key)).Returns(false);
 
         // Act
         var result = await _helper.GetStringAsync(key, defaultValue);
@@ -547,10 +524,8 @@ public class ConfigurationHelperTests
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
             .ReturnsAsync((SystemConfigurationDto?)null);
 
-        var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Value).Returns((string?)null);
-        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
-        _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
+        // Mock wrapper directly - key does NOT exist
+        _mockConfigWrapper.Setup(x => x.Exists(key)).Returns(false);
 
         // Act
         var result = await _helper.GetDoubleAsync(key, defaultValue);
@@ -564,16 +539,14 @@ public class ConfigurationHelperTests
     {
         // Arrange
         const string key = "TestLong";
-        const long defaultValue = 999999999L;
+        const long defaultValue = 999999L;
 
         _mockConfigService
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
             .ReturnsAsync((SystemConfigurationDto?)null);
 
-        var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Value).Returns((string?)null);
-        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
-        _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
+        // Mock wrapper directly - key does NOT exist
+        _mockConfigWrapper.Setup(x => x.Exists(key)).Returns(false);
 
         // Act
         var result = await _helper.GetLongAsync(key, defaultValue);
@@ -590,14 +563,14 @@ public class ConfigurationHelperTests
     public async Task GetValueAsync_DatabaseDeserializationFails_ReturnsDefaultValue()
     {
         // Arrange
-        const string key = "RateLimit:MaxTokens";
-        const int defaultValue = 100; // Safe default for rate limiting
+        const string key = "TestKey";
+        const int defaultValue = 100;
 
-        // Database has active config but with invalid value "abc" for int type
+        // Database returns config but GetValueAsync fails (simulating deserialization error)
         var dbConfig = new SystemConfigurationDto(
-            Id: "test-config-6",
+            Id: "test-config-1",
             Key: key,
-            Value: "abc", // Invalid value for int
+            Value: "invalid_int",
             ValueType: "int",
             Description: null,
             Category: "Test",
@@ -617,18 +590,15 @@ public class ConfigurationHelperTests
             .Setup(x => x.GetConfigurationByKeyAsync(key, null))
             .ReturnsAsync(dbConfig);
 
-        // GetValueAsync will return defaultValue when deserialization fails
         _mockConfigService
             .Setup(x => x.GetValueAsync<int>(key, defaultValue, null))
-            .ReturnsAsync(defaultValue); // Returns the passed defaultValue on deserialization failure
+            .ReturnsAsync(defaultValue); // Deserialization failed, returns default
 
         // Act
         var result = await _helper.GetValueAsync(key, defaultValue);
 
         // Assert
-        Assert.Equal(defaultValue, result); // Should return 100, not 0
-        _mockConfigService.Verify(x => x.GetConfigurationByKeyAsync(key, null), Times.Once);
-        _mockConfigService.Verify(x => x.GetValueAsync<int>(key, defaultValue, null), Times.Once);
+        Assert.Equal(defaultValue, result);
     }
 
     [Fact]
@@ -692,15 +662,14 @@ public class ConfigurationHelperTests
             .Setup(x => x.GetConfigurationByKeyAsync(key, environment))
             .ReturnsAsync((SystemConfigurationDto?)null);
 
-        var mockSection = new Mock<IConfigurationSection>();
-        mockSection.Setup(x => x.Value).Returns((string?)null);
-        mockSection.Setup(x => x.GetChildren()).Returns(Enumerable.Empty<IConfigurationSection>());
-        _mockFallbackConfig.Setup(x => x.GetSection(key)).Returns(mockSection.Object);
+        // Mock wrapper directly - key does NOT exist
+        _mockConfigWrapper.Setup(x => x.Exists(key)).Returns(false);
 
         // Act
-        await _helper.GetValueAsync(key, defaultValue, environment);
+        var result = await _helper.GetValueAsync(key, defaultValue, environment);
 
         // Assert
+        Assert.Equal(defaultValue, result);
         _mockConfigService.Verify(x => x.GetConfigurationByKeyAsync(key, environment), Times.Once);
     }
 

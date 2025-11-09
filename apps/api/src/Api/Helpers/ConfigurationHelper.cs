@@ -11,7 +11,7 @@ namespace Api.Helpers;
 public class ConfigurationHelper
 {
     private readonly IConfigurationService _configService;
-    private readonly IConfiguration _fallbackConfig;
+    private readonly IConfigurationWrapper _fallbackConfigWrapper;
     private readonly ILogger<ConfigurationHelper> _logger;
 
     // SEC-738: Sensitive configuration key patterns to prevent CWE-532 (sensitive info in logs)
@@ -27,11 +27,11 @@ public class ConfigurationHelper
 
     public ConfigurationHelper(
         IConfigurationService configService,
-        IConfiguration fallbackConfig,
+        IConfigurationWrapper fallbackConfigWrapper,
         ILogger<ConfigurationHelper> logger)
     {
         _configService = configService;
-        _fallbackConfig = fallbackConfig;
+        _fallbackConfigWrapper = fallbackConfigWrapper;
         _logger = logger;
     }
 
@@ -81,11 +81,10 @@ public class ConfigurationHelper
         try
         {
             // Check if key exists in appsettings (to distinguish "not found" from "found with default value")
-            var section = _fallbackConfig.GetSection(key);
-            if (section.Exists())
+            if (_fallbackConfigWrapper.Exists(key))
             {
                 // Key exists, get the value even if it equals default(T)
-                var configValue = _fallbackConfig.GetValue<T>(key);
+                var configValue = _fallbackConfigWrapper.GetValue<T>(key);
 
                 // SEC-738: Don't log sensitive configuration values (CWE-532 prevention)
                 if (IsSensitiveConfigurationKey(key))

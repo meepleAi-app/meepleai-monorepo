@@ -98,11 +98,10 @@ if (-not $NoRun) {
     Write-Host "Running frontend tests with coverage..."
     $rawOutputFile = Join-Path "..\..\" $coverageDir "coverage-web-$timestamp-raw.json"
 
-    try {
-        pnpm test:coverage --silent --json --outputFile=$rawOutputFile 2>&1 | Select-Object -Last 20
-    }
-    catch {
-        Write-ColorOutput "⚠ Frontend test execution failed: $_" -Color Yellow
+    pnpm test:coverage --silent --json --outputFile=$rawOutputFile 2>&1 | Select-Object -Last 20
+    if ($LASTEXITCODE -ne 0) {
+        Write-ColorOutput "⚠ Frontend tests failed (exit code: $LASTEXITCODE) - coverage may be incomplete" -Color Yellow
+        exit $LASTEXITCODE
     }
 }
 
@@ -125,11 +124,10 @@ if (-not $NoRun) {
     Write-Host "Running backend tests with coverage..."
     $backendCoverageFile = Join-Path "..\..\" $coverageDir "coverage-api-$timestamp.json"
 
-    try {
-        dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=json /p:CoverletOutput=$backendCoverageFile --verbosity quiet 2>&1 | Select-Object -Last 20
-    }
-    catch {
-        Write-ColorOutput "⚠ Backend test execution failed: $_" -Color Yellow
+    dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=json /p:CoverletOutput=$backendCoverageFile --verbosity quiet 2>&1 | Select-Object -Last 20
+    if ($LASTEXITCODE -ne 0) {
+        Write-ColorOutput "⚠ Backend tests failed (exit code: $LASTEXITCODE) - coverage may be incomplete" -Color Yellow
+        exit $LASTEXITCODE
     }
 }
 

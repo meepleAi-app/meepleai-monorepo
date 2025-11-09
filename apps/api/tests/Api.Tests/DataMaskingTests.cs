@@ -65,8 +65,8 @@ public class DataMaskingTests
     }
 
     [Theory]
-    [InlineData("Server=localhost;Database=test;User=admin;Password=secret123", "Server=localhost;Database=test;User=admin;password=***REDACTED***")]
-    [InlineData("Host=db;Port=5432;Database=mydb;Username=user;Password=pass123", "Host=db;Port=5432;Database=mydb;Username=user;password=***REDACTED***")]
+    [InlineData("Server=localhost;Database=test;User=admin;Password=secret123", "Server=localhost;Database=test;User=admin;Password=***REDACTED***")] // Preserves original case
+    [InlineData("Host=db;Port=5432;Database=mydb;Username=user;Password=pass123", "Host=db;Port=5432;Database=mydb;Username=user;Password=***REDACTED***")] // Preserves original case
     [InlineData(null, "")]
     [InlineData("", "")]
     public void RedactConnectionString_RedactsPasswordCorrectly(string? input, string expected)

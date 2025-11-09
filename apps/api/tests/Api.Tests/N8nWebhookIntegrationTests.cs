@@ -309,6 +309,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
 
     /// <summary>
     /// Helper: Seed indexed content for webhook testing
+    /// Directly populates mocked Qdrant storage (similar to QdrantRagTestFixture.IndexChessKnowledgeAsync)
     /// </summary>
     private async Task SeedIndexedContentForWebhookAsync(string gameId, string userId)
     {
@@ -362,8 +363,67 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
 
         TrackPdfDocumentId(pdf.Id);
 
-        // Index the PDF content in Qdrant
-        var indexingService = scope.ServiceProvider.GetRequiredService<PdfIndexingService>();
-        await indexingService.IndexPdfAsync(pdf.Id, default);
+        // TEST #801 FIX: Directly populate mocked Qdrant storage instead of using PdfIndexingService
+        // PdfIndexingService.IndexPdfAsync doesn't work properly with mocked QdrantService in integration tests
+        // Follow the same pattern as QdrantRagTestFixture.IndexChessKnowledgeAsync (lines 301-378)
+
+        // Create chunking service for test data
+        var chunkingService = scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
+        var chunks = chunkingService.ChunkText(pdf.ExtractedText, chunkSize: 256, overlap: 50);
+
+        // Generate deterministic mock embeddings for chunks
+        var embeddings = chunks.Select((chunk, index) =>
+        {
+            var hash = chunk.Text.GetHashCode();
+            var random = new Random(hash);
+            return Enumerable.Range(0, 1536).Select(_ => (float)random.NextDouble()).ToArray();
+        }).ToList();
+
+        // Populate mocked Qdrant storage directly
+        const string collectionName = "meepleai_documents";
+        var points = new List<Qdrant.Client.Grpc.PointStruct>();
+
+        for (var i = 0; i < chunks.Count; i++)
+        {
+            var chunk = chunks[i];
+            var pointId = Guid.NewGuid().ToString();
+
+            // Create payload - must match QdrantService expectations
+            var payload = new Dictionary<string, Qdrant.Client.Grpc.Value>
+            {
+                ["chunk_index"] = new Qdrant.Client.Grpc.Value { IntegerValue = i },
+                ["text"] = new Qdrant.Client.Grpc.Value { StringValue = chunk.Text },
+                ["page"] = new Qdrant.Client.Grpc.Value { IntegerValue = chunk.Page },
+                ["char_start"] = new Qdrant.Client.Grpc.Value { IntegerValue = chunk.CharStart },
+                ["char_end"] = new Qdrant.Client.Grpc.Value { IntegerValue = chunk.CharEnd },
+                ["game_id"] = new Qdrant.Client.Grpc.Value { StringValue = gameId },
+                ["pdf_id"] = new Qdrant.Client.Grpc.Value { StringValue = pdf.Id },
+                ["source_type"] = new Qdrant.Client.Grpc.Value { StringValue = "pdf" },
+                ["indexed_at"] = new Qdrant.Client.Grpc.Value { StringValue = DateTime.UtcNow.ToString("o") },
+                ["language"] = new Qdrant.Client.Grpc.Value { StringValue = "en" } // AI-09: Add language for filtering
+            };
+
+            var point = new Qdrant.Client.Grpc.PointStruct
+            {
+                Id = new Qdrant.Client.Grpc.PointId { Uuid = pointId },
+                Vectors = embeddings[i],
+                Payload = { payload }
+            };
+
+            points.Add(point);
+        }
+
+        // Add to mock storage (thread-safe access to WebApplicationFactoryFixture._mockQdrantStorage)
+        lock (WebApplicationFactoryFixture._mockQdrantStorage)
+        {
+            if (!WebApplicationFactoryFixture._mockQdrantStorage.ContainsKey(collectionName))
+            {
+                WebApplicationFactoryFixture._mockQdrantStorage[collectionName] = new List<Qdrant.Client.Grpc.PointStruct>();
+            }
+
+            WebApplicationFactoryFixture._mockQdrantStorage[collectionName].AddRange(points);
+        }
+
+        System.Diagnostics.Debug.WriteLine($"[N8nWebhookTests] Seeded {chunks.Count} chunks for game {gameId} into mocked Qdrant storage");
     }
 }

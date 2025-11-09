@@ -8,7 +8,7 @@ using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using Api.Tests.Helpers;
-using Api.Tests.Infrastructure;
+using Microsoft.Extensions.Time.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -23,7 +23,6 @@ namespace Api.Tests;
 /// <summary>
 /// BDD-style unit tests for SessionAutoRevocationService background service.
 /// Tests configuration validation, periodic execution, error handling, and graceful shutdown.
-/// Uses TestTimeProvider for deterministic timing (eliminates Task.Delay).
 /// </summary>
 public class SessionAutoRevocationServiceTests : IDisposable
 {
@@ -32,7 +31,7 @@ public class SessionAutoRevocationServiceTests : IDisposable
     private readonly MeepleAiDbContext _dbContext;
     private readonly Mock<ILogger<SessionAutoRevocationService>> _loggerMock;
     private readonly ServiceCollection _serviceCollection;
-    private readonly TestTimeProvider _timeProvider;
+    private readonly FakeTimeProvider _timeProvider;
     private ServiceProvider? _serviceProvider;
 
     public SessionAutoRevocationServiceTests(ITestOutputHelper output)
@@ -56,7 +55,6 @@ public class SessionAutoRevocationServiceTests : IDisposable
         _serviceProvider?.Dispose();
         _dbContext.Database.CloseConnection();
         _dbContext.Dispose();
-        _timeProvider?.Dispose();
     }
 
     #region Configuration Validation Tests

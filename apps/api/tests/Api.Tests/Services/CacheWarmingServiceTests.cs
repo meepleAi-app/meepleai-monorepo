@@ -8,7 +8,7 @@ using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using Api.Tests.Helpers;
-using Api.Tests.Infrastructure;
+using Microsoft.Extensions.Time.Testing;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -36,7 +36,7 @@ public class CacheWarmingServiceTests : IDisposable
     private readonly Mock<IAiResponseCacheService> _cacheServiceMock;
     private readonly Mock<IRagService> _ragServiceMock;
     private readonly Mock<IOptions<CacheOptimizationConfiguration>> _mockConfig;
-    private readonly TestTimeProvider _timeProvider;
+    private readonly FakeTimeProvider _timeProvider;
     private SqliteConnection? _connection;
     private ServiceProvider? _serviceProvider;
     private IServiceScopeFactory? _scopeFactory;
@@ -88,7 +88,6 @@ public class CacheWarmingServiceTests : IDisposable
     public void Dispose()
     {
         _connection?.Dispose();
-        _timeProvider?.Dispose();
         _serviceProvider?.Dispose();
     }
 

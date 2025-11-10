@@ -109,7 +109,7 @@ clean_directory() {
         if [ "$VERBOSE" = true ]; then
             echo -e "${GREEN}Not found: $dir (skipping)${NC}"
         fi
-        return 1
+        return 0  # Return 0 to prevent set -e from exiting when directory doesn't exist
     fi
 }
 

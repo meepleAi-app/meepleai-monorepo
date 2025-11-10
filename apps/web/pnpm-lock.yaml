@@ -15,8 +15,8 @@ importers:
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.54.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@tiptap/extension-character-count':
-        specifier: ^3.10.4
-        version: 3.10.4(@tiptap/extensions@3.10.4(@tiptap/core@3.10.4(@tiptap/pm@3.10.4))(@tiptap/pm@3.10.4))
+        specifier: ^3.10.5
+        version: 3.10.5(@tiptap/extensions@3.10.4(@tiptap/core@3.10.4(@tiptap/pm@3.10.4))(@tiptap/pm@3.10.4))
       '@tiptap/extension-placeholder':
         specifier: ^3.10.4
         version: 3.10.4(@tiptap/extensions@3.10.4(@tiptap/core@3.10.4(@tiptap/pm@3.10.4))(@tiptap/pm@3.10.4))
@@ -87,8 +87,8 @@ importers:
         specifier: ^2.2.3
         version: 2.2.3(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       recharts:
-        specifier: ^3.3.0
-        version: 3.3.0(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react-is@18.3.1)(react@19.2.0)(redux@5.0.1)
+        specifier: ^3.4.1
+        version: 3.4.1(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react-is@18.3.1)(react@19.2.0)(redux@5.0.1)
       zod:
         specifier: ^4.1.12
         version: 4.1.12
@@ -1274,10 +1274,10 @@ packages:
     peerDependencies:
       '@tiptap/extension-list': ^3.10.4
 
-  '@tiptap/extension-character-count@3.10.4':
-    resolution: {integrity: sha512-08thCeA0ttEpBfFe5oD80cOAysjtoV/io4vJrz42ZRBWSfFN/8cWzg2Bgnp7SQspXQfESxVq8Wl2sBiIOpE75g==}
+  '@tiptap/extension-character-count@3.10.5':
+    resolution: {integrity: sha512-2l51VfrINJ97ebenIGTmPMe69NNSF6dIz9vmbGXOxsCIcXzli6QahiUkPuPe5XJnjxO0XlgbBNJ63Ap/PkCMZA==}
     peerDependencies:
-      '@tiptap/extensions': ^3.10.4
+      '@tiptap/extensions': ^3.10.5
 
   '@tiptap/extension-code-block@3.10.4':
     resolution: {integrity: sha512-dkqeZRGhwDobKfrZmRXojU/8s11gaMj+Bb5oUjhzmnWoS2Y3UwesdrAUcBwZd+fgV7/hAud5rt7oX4hJqCjgtw==}
@@ -3755,8 +3755,8 @@ packages:
     resolution: {integrity: sha512-tmbWg6W31tQLeB5cdIBOicJDJRR2KzXsV7uSK9iNfLWQ5bIZfxuPEHp7M8wiHyHnn0DD1i7w3Zmin0FtkrwoCQ==}
     engines: {node: '>=0.10.0'}
 
-  recharts@3.3.0:
-    resolution: {integrity: sha512-Vi0qmTB0iz1+/Cz9o5B7irVyUjX2ynvEgImbgMt/3sKRREcUM07QiYjS1QpAVrkmVlXqy5gykq4nGWMz9AS4Rg==}
+  recharts@3.4.1:
+    resolution: {integrity: sha512-35kYg6JoOgwq8sE4rhYkVWwa6aAIgOtT+Ob0gitnShjwUwZmhrmy7Jco/5kJNF4PnLXgt9Hwq+geEMS+WrjU1g==}
     engines: {node: '>=18'}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -5329,7 +5329,7 @@ snapshots:
     dependencies:
       '@tiptap/extension-list': 3.10.4(@tiptap/core@3.10.4(@tiptap/pm@3.10.4))(@tiptap/pm@3.10.4)
 
-  '@tiptap/extension-character-count@3.10.4(@tiptap/extensions@3.10.4(@tiptap/core@3.10.4(@tiptap/pm@3.10.4))(@tiptap/pm@3.10.4))':
+  '@tiptap/extension-character-count@3.10.5(@tiptap/extensions@3.10.4(@tiptap/core@3.10.4(@tiptap/pm@3.10.4))(@tiptap/pm@3.10.4))':
     dependencies:
       '@tiptap/extensions': 3.10.4(@tiptap/core@3.10.4(@tiptap/pm@3.10.4))(@tiptap/pm@3.10.4)
 
@@ -8284,7 +8284,7 @@ snapshots:
 
   react@19.2.0: {}
 
-  recharts@3.3.0(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react-is@18.3.1)(react@19.2.0)(redux@5.0.1):
+  recharts@3.4.1(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react-is@18.3.1)(react@19.2.0)(redux@5.0.1):
     dependencies:
       '@reduxjs/toolkit': 2.10.1(react-redux@9.2.0(@types/react@19.2.2)(react@19.2.0)(redux@5.0.1))(react@19.2.0)
       clsx: 2.1.1

@@ -50,7 +50,6 @@ jest.mock('../../../components/FollowUpQuestions', () => ({
  */
 const createMessage = (overrides?: Partial<MessageType>): MessageType => ({
   id: 'msg-1',
-  chatId: 'chat-1',
   role: 'user',
   content: 'Test message content',
   timestamp: new Date('2025-01-10T10:00:00Z'),
@@ -181,7 +180,7 @@ describe('Message Component', () => {
     it('shows "modificato" badge for edited messages', () => {
       const message = createMessage({
         content: 'Original',
-        updatedAt: new Date('2025-01-10T10:05:00Z'),
+        updatedAt: '2025-01-10T10:05:00Z',
       });
       render(<Message message={message} isUser={true} />);
 
@@ -198,7 +197,7 @@ describe('Message Component', () => {
     it('does not show badge for deleted messages', () => {
       const message = createMessage({
         isDeleted: true,
-        updatedAt: new Date('2025-01-10T10:05:00Z'),
+        updatedAt: '2025-01-10T10:05:00Z',
       });
       render(<Message message={message} isUser={true} />);
 

@@ -139,7 +139,7 @@ describe('Chat Test Utilities', () => {
         const testData = createChatTestData();
         const agentMessage = testData.mockChatWithHistory.messages[1];
 
-        const metadata = JSON.parse(agentMessage.metadataJson);
+        const metadata = JSON.parse(agentMessage.metadataJson || '{}');
         expect(metadata.snippets).toHaveLength(1);
         expect(metadata.snippets[0]).toMatchObject({
           text: 'Castling rules section',
@@ -204,8 +204,8 @@ describe('Chat Test Utilities', () => {
         // Setup some mock calls
         mockApi.get.mockResolvedValue({ data: 'test' });
         mockApi.post.mockResolvedValue({ data: 'test' });
-        mockApi.get();
-        mockApi.post();
+        mockApi.get('test');
+        mockApi.post('test', {});
 
         expect(mockApi.get).toHaveBeenCalled();
         expect(mockApi.post).toHaveBeenCalled();
@@ -242,17 +242,17 @@ describe('Chat Test Utilities', () => {
       });
 
       it('should reset API delete mock', () => {
-        mockApi.delete.mockResolvedValue({ data: 'test' });
+        mockApi.delete.mockResolvedValue(undefined);
         resetAllMocks();
 
         expect(mockApi.delete.mock.calls).toHaveLength(0);
       });
 
       it('should reset streaming mocks', () => {
-        mockStartStreaming.mockImplementation(() => {});
+        mockStartStreaming.mockImplementation(() => ({ data: null }));
         mockStopStreaming.mockImplementation(() => {});
 
-        mockStartStreaming();
+        mockStartStreaming({ endpoint: 'test', body: {}, onToken: () => {}, onError: () => {} });
         mockStopStreaming();
 
         expect(mockStartStreaming).toHaveBeenCalled();

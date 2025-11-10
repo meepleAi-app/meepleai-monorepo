@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
-import { Chessboard } from "react-chessboard";
+import { Chessboard, type PieceDropHandlerArgs } from "react-chessboard";
 import { Chess } from "chess.js";
 import { api } from "../lib/api";
 
@@ -186,7 +186,10 @@ export default function ChessPage() {
     }
   };
 
-  const onDrop = (sourceSquare: string, targetSquare: string) => {
+  const onDrop = ({ piece, sourceSquare, targetSquare }: PieceDropHandlerArgs) => {
+    // targetSquare can be null when piece is dropped off board
+    if (!targetSquare) return false;
+
     try {
       const move = game.move({
         from: sourceSquare,
@@ -348,11 +351,12 @@ export default function ChessPage() {
           }}
         >
           <Chessboard
-            position={currentPosition}
-            onPieceDrop={onDrop}
-            boardOrientation={boardOrientation}
-            customSquareStyles={highlightedSquares}
-            boardWidth={550}
+            options={{
+              position: currentPosition,
+              onPieceDrop: onDrop,
+              boardOrientation: boardOrientation,
+              squareStyles: highlightedSquares
+            }}
           />
         </div>
 

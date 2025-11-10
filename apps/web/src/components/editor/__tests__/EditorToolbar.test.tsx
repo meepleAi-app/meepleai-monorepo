@@ -168,7 +168,7 @@ describe("EditorToolbar", () => {
 
     mockEditor.can = jest.fn(() => ({
       chain: jest.fn(() => createChainFalse())
-    }));
+    })) as any;
 
     render(<EditorToolbar editor={mockEditor as Editor} />);
 

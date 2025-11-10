@@ -35,17 +35,22 @@ const mockApi = api as jest.Mocked<typeof api>;
 const createMockComment = (overrides?: Partial<RuleSpecComment>): RuleSpecComment => ({
   id: 'comment-1',
   gameId: 'game-1',
-  ruleSpecVersion: 'v1.0',
+  version: 'v1.0',
   userId: 'user-1',
-  userName: 'Test User',
+  userDisplayName: 'Test User',
   atomId: null,
   lineNumber: null,
-  commentText: 'Test comment',
+  lineContext: null,
   parentCommentId: null,
+  replies: [],
+  commentText: 'Test comment',
   isResolved: false,
+  resolvedByUserId: null,
+  resolvedByDisplayName: null,
+  resolvedAt: null,
+  mentionedUserIds: [],
   createdAt: '2025-01-10T10:00:00Z',
   updatedAt: '2025-01-10T10:00:00Z',
-  replies: [],
   ...overrides,
 });
 
@@ -59,7 +64,7 @@ describe('CommentThread Component', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockApi.ruleSpecComments.getComments.mockResolvedValue({
+    (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
       comments: [],
       total: 0,
     });
@@ -77,7 +82,7 @@ describe('CommentThread Component', () => {
     });
 
     it('displays comment count in header', async () => {
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [createMockComment(), createMockComment({ id: 'comment-2' })],
         total: 2,
       });
@@ -110,7 +115,7 @@ describe('CommentThread Component', () => {
    */
   describe('Loading Comments', () => {
     it('displays loading state initially', () => {
-      mockApi.ruleSpecComments.getComments.mockImplementation(
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockImplementation(
         () => new Promise(() => {}) // Never resolves
       );
 
@@ -160,7 +165,7 @@ describe('CommentThread Component', () => {
    */
   describe('Empty State', () => {
     it('displays empty state message when no comments', async () => {
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [],
         total: 0,
       });
@@ -173,7 +178,7 @@ describe('CommentThread Component', () => {
     });
 
     it('encourages editors to comment in empty state', async () => {
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [],
         total: 0,
       });
@@ -186,7 +191,7 @@ describe('CommentThread Component', () => {
     });
 
     it('does not encourage non-editors to comment', async () => {
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [],
         total: 0,
       });
@@ -216,7 +221,7 @@ describe('CommentThread Component', () => {
         createMockComment({ id: 'comment-3', lineNumber: 10, commentText: 'Comment on line 10 #2' }),
       ];
 
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments,
         total: 3,
       });
@@ -232,7 +237,7 @@ describe('CommentThread Component', () => {
     });
 
     it('shows placeholder text specific to line when empty', async () => {
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [],
         total: 0,
       });
@@ -285,7 +290,7 @@ describe('CommentThread Component', () => {
    */
   describe('Creating Comments', () => {
     it('creates comment with text and atomId', async () => {
-      mockApi.ruleSpecComments.createComment.mockResolvedValue(undefined);
+      (mockApi.ruleSpecComments.createComment as jest.Mock).mockResolvedValue(undefined);
 
       render(<CommentThread {...defaultProps} currentUserRole="Editor" />);
 
@@ -303,7 +308,7 @@ describe('CommentThread Component', () => {
     });
 
     it('creates comment with line number when specified', async () => {
-      mockApi.ruleSpecComments.createComment.mockResolvedValue(undefined);
+      (mockApi.ruleSpecComments.createComment as jest.Mock).mockResolvedValue(undefined);
 
       render(<CommentThread {...defaultProps} lineNumber={42} currentUserRole="Editor" />);
 
@@ -323,8 +328,8 @@ describe('CommentThread Component', () => {
     });
 
     it('reloads comments after creating', async () => {
-      mockApi.ruleSpecComments.createComment.mockResolvedValue(undefined);
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.createComment as jest.Mock).mockResolvedValue(undefined);
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [],
         total: 0,
       });
@@ -345,7 +350,7 @@ describe('CommentThread Component', () => {
     });
 
     it('prevents duplicate submissions', async () => {
-      mockApi.ruleSpecComments.createComment.mockImplementation(
+      (mockApi.ruleSpecComments.createComment as jest.Mock).mockImplementation(
         () => new Promise(resolve => setTimeout(resolve, 100))
       );
 
@@ -371,11 +376,11 @@ describe('CommentThread Component', () => {
   describe('Editing Comments', () => {
     it('calls updateComment with new text', async () => {
       const comment = createMockComment({ id: 'comment-1', userId: 'current-user' });
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [comment],
         total: 1,
       });
-      mockApi.ruleSpecComments.updateComment.mockResolvedValue(undefined);
+      (mockApi.ruleSpecComments.updateComment as jest.Mock).mockResolvedValue(undefined);
 
       const { container } = render(<CommentThread {...defaultProps} currentUserRole="Editor" />);
 
@@ -409,11 +414,11 @@ describe('CommentThread Component', () => {
 
     it('reloads comments after editing', async () => {
       const comment = createMockComment({ id: 'comment-1', userId: 'current-user' });
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [comment],
         total: 1,
       });
-      mockApi.ruleSpecComments.updateComment.mockResolvedValue(undefined);
+      (mockApi.ruleSpecComments.updateComment as jest.Mock).mockResolvedValue(undefined);
 
       render(<CommentThread {...defaultProps} currentUserRole="Editor" />);
 
@@ -426,8 +431,8 @@ describe('CommentThread Component', () => {
     });
 
     it('displays error when edit fails', async () => {
-      mockApi.ruleSpecComments.updateComment.mockRejectedValue(new Error('Update failed'));
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.updateComment as jest.Mock).mockRejectedValue(new Error('Update failed'));
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [],
         total: 0,
       });
@@ -441,11 +446,11 @@ describe('CommentThread Component', () => {
 
     it('prevents edit when already submitting', async () => {
       const comment = createMockComment({ id: 'comment-1', userId: 'current-user' });
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [comment],
         total: 1,
       });
-      mockApi.ruleSpecComments.updateComment.mockImplementation(
+      (mockApi.ruleSpecComments.updateComment as jest.Mock).mockImplementation(
         () => new Promise(resolve => setTimeout(resolve, 200))
       );
 
@@ -466,7 +471,7 @@ describe('CommentThread Component', () => {
     it('prompts for confirmation before deleting', async () => {
       window.confirm = jest.fn(() => false);
       const comment = createMockComment({ userId: 'current-user' });
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [comment],
         total: 1,
       });
@@ -485,11 +490,11 @@ describe('CommentThread Component', () => {
     it('calls deleteComment when confirmed', async () => {
       window.confirm = jest.fn(() => true);
       const comment = createMockComment({ userId: 'current-user' });
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [comment],
         total: 1,
       });
-      mockApi.ruleSpecComments.deleteComment.mockResolvedValue(undefined);
+      (mockApi.ruleSpecComments.deleteComment as jest.Mock).mockResolvedValue(undefined);
 
       render(<CommentThread {...defaultProps} currentUserRole="Editor" />);
 
@@ -516,11 +521,11 @@ describe('CommentThread Component', () => {
     it('reloads comments after deleting', async () => {
       window.confirm = jest.fn(() => true);
       const comment = createMockComment({ userId: 'current-user' });
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [comment],
         total: 1,
       });
-      mockApi.ruleSpecComments.deleteComment.mockResolvedValue(undefined);
+      (mockApi.ruleSpecComments.deleteComment as jest.Mock).mockResolvedValue(undefined);
 
       render(<CommentThread {...defaultProps} currentUserRole="Editor" />);
 
@@ -533,8 +538,8 @@ describe('CommentThread Component', () => {
 
     it('displays error when delete fails', async () => {
       window.confirm = jest.fn(() => true);
-      mockApi.ruleSpecComments.deleteComment.mockRejectedValue(new Error('Delete failed'));
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.deleteComment as jest.Mock).mockRejectedValue(new Error('Delete failed'));
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [],
         total: 0,
       });
@@ -549,11 +554,11 @@ describe('CommentThread Component', () => {
     it('prevents delete when already submitting', async () => {
       window.confirm = jest.fn(() => true);
       const comment = createMockComment({ userId: 'current-user' });
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [comment],
         total: 1,
       });
-      mockApi.ruleSpecComments.deleteComment.mockImplementation(
+      (mockApi.ruleSpecComments.deleteComment as jest.Mock).mockImplementation(
         () => new Promise(resolve => setTimeout(resolve, 200))
       );
 
@@ -573,11 +578,11 @@ describe('CommentThread Component', () => {
   describe('Reply Functionality', () => {
     it('creates reply to parent comment', async () => {
       const comment = createMockComment();
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [comment],
         total: 1,
       });
-      mockApi.ruleSpecComments.createReply.mockResolvedValue(undefined);
+      (mockApi.ruleSpecComments.createReply as jest.Mock).mockResolvedValue(undefined);
 
       render(<CommentThread {...defaultProps} currentUserRole="Editor" />);
 
@@ -591,11 +596,11 @@ describe('CommentThread Component', () => {
 
     it('reloads comments after replying', async () => {
       const comment = createMockComment();
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [comment],
         total: 1,
       });
-      mockApi.ruleSpecComments.createReply.mockResolvedValue(undefined);
+      (mockApi.ruleSpecComments.createReply as jest.Mock).mockResolvedValue(undefined);
 
       render(<CommentThread {...defaultProps} currentUserRole="Editor" />);
 
@@ -607,8 +612,8 @@ describe('CommentThread Component', () => {
     });
 
     it('displays error when reply fails', async () => {
-      mockApi.ruleSpecComments.createReply.mockRejectedValue(new Error('Reply failed'));
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.createReply as jest.Mock).mockRejectedValue(new Error('Reply failed'));
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [],
         total: 0,
       });
@@ -622,11 +627,11 @@ describe('CommentThread Component', () => {
 
     it('prevents reply when already submitting', async () => {
       const comment = createMockComment();
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [comment],
         total: 1,
       });
-      mockApi.ruleSpecComments.createReply.mockImplementation(
+      (mockApi.ruleSpecComments.createReply as jest.Mock).mockImplementation(
         () => new Promise(resolve => setTimeout(resolve, 200))
       );
 
@@ -646,11 +651,11 @@ describe('CommentThread Component', () => {
   describe('Resolve/Unresolve', () => {
     it('calls resolveComment when resolving', async () => {
       const comment = createMockComment({ isResolved: false });
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [comment],
         total: 1,
       });
-      mockApi.ruleSpecComments.resolveComment.mockResolvedValue(undefined);
+      (mockApi.ruleSpecComments.resolveComment as jest.Mock).mockResolvedValue(undefined);
 
       render(<CommentThread {...defaultProps} currentUserRole="Editor" />);
 
@@ -664,11 +669,11 @@ describe('CommentThread Component', () => {
 
     it('calls unresolveComment when unresolving', async () => {
       const comment = createMockComment({ isResolved: true });
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [comment],
         total: 1,
       });
-      mockApi.ruleSpecComments.unresolveComment.mockResolvedValue(undefined);
+      (mockApi.ruleSpecComments.unresolveComment as jest.Mock).mockResolvedValue(undefined);
 
       render(<CommentThread {...defaultProps} currentUserRole="Editor" />);
 
@@ -682,11 +687,11 @@ describe('CommentThread Component', () => {
 
     it('reloads comments after resolving', async () => {
       const comment = createMockComment({ isResolved: false });
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [comment],
         total: 1,
       });
-      mockApi.ruleSpecComments.resolveComment.mockResolvedValue(undefined);
+      (mockApi.ruleSpecComments.resolveComment as jest.Mock).mockResolvedValue(undefined);
 
       render(<CommentThread {...defaultProps} currentUserRole="Editor" />);
 
@@ -698,8 +703,8 @@ describe('CommentThread Component', () => {
     });
 
     it('displays error when resolve fails', async () => {
-      mockApi.ruleSpecComments.resolveComment.mockRejectedValue(new Error('Resolve failed'));
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.resolveComment as jest.Mock).mockRejectedValue(new Error('Resolve failed'));
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [],
         total: 0,
       });
@@ -712,8 +717,8 @@ describe('CommentThread Component', () => {
     });
 
     it('displays error when unresolve fails', async () => {
-      mockApi.ruleSpecComments.unresolveComment.mockRejectedValue(new Error('Unresolve failed'));
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.unresolveComment as jest.Mock).mockRejectedValue(new Error('Unresolve failed'));
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [],
         total: 0,
       });
@@ -727,11 +732,11 @@ describe('CommentThread Component', () => {
 
     it('prevents resolve when already submitting', async () => {
       const comment = createMockComment({ isResolved: false });
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [comment],
         total: 1,
       });
-      mockApi.ruleSpecComments.resolveComment.mockImplementation(
+      (mockApi.ruleSpecComments.resolveComment as jest.Mock).mockImplementation(
         () => new Promise(resolve => setTimeout(resolve, 200))
       );
 
@@ -746,11 +751,11 @@ describe('CommentThread Component', () => {
 
     it('prevents unresolve when already submitting', async () => {
       const comment = createMockComment({ isResolved: true });
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [comment],
         total: 1,
       });
-      mockApi.ruleSpecComments.unresolveComment.mockImplementation(
+      (mockApi.ruleSpecComments.unresolveComment as jest.Mock).mockImplementation(
         () => new Promise(resolve => setTimeout(resolve, 200))
       );
 
@@ -769,7 +774,7 @@ describe('CommentThread Component', () => {
    */
   describe('Error Handling', () => {
     it('displays error when loading comments fails', async () => {
-      mockApi.ruleSpecComments.getComments.mockRejectedValue(new Error('Load failed'));
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockRejectedValue(new Error('Load failed'));
 
       render(<CommentThread {...defaultProps} />);
 
@@ -780,7 +785,7 @@ describe('CommentThread Component', () => {
     });
 
     it('displays error when creating comment fails', async () => {
-      mockApi.ruleSpecComments.createComment.mockRejectedValue(new Error('Create failed'));
+      (mockApi.ruleSpecComments.createComment as jest.Mock).mockRejectedValue(new Error('Create failed'));
 
       render(<CommentThread {...defaultProps} currentUserRole="Editor" />);
 
@@ -799,7 +804,7 @@ describe('CommentThread Component', () => {
     });
 
     it('displays generic error for unknown errors', async () => {
-      mockApi.ruleSpecComments.getComments.mockRejectedValue('Unknown error');
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockRejectedValue('Unknown error');
 
       render(<CommentThread {...defaultProps} />);
 
@@ -810,7 +815,7 @@ describe('CommentThread Component', () => {
 
     it('logs errors to console', async () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
-      mockApi.ruleSpecComments.getComments.mockRejectedValue(new Error('Test error'));
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockRejectedValue(new Error('Test error'));
 
       render(<CommentThread {...defaultProps} />);
 
@@ -832,7 +837,7 @@ describe('CommentThread Component', () => {
         createMockComment({ id: 'comment-2', commentText: 'Second comment' }),
       ];
 
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments,
         total: 2,
       });
@@ -851,7 +856,7 @@ describe('CommentThread Component', () => {
         userId: 'user-1',
       });
 
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [comment],
         total: 1,
       });
@@ -882,7 +887,7 @@ describe('CommentThread Component', () => {
     });
 
     it('displays error with appropriate styling', async () => {
-      mockApi.ruleSpecComments.getComments.mockRejectedValue(new Error('Load failed'));
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockRejectedValue(new Error('Load failed'));
 
       render(<CommentThread {...defaultProps} />);
 
@@ -910,7 +915,7 @@ describe('CommentThread Component', () => {
         ],
       });
 
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [parentComment],
         total: 1,
       });
@@ -928,7 +933,7 @@ describe('CommentThread Component', () => {
       const longText = 'A'.repeat(10000);
       const comment = createMockComment({ commentText: longText });
 
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [comment],
         total: 1,
       });
@@ -944,7 +949,7 @@ describe('CommentThread Component', () => {
       const specialText = '<script>alert("xss")</script> special & chars "\'';
       const comment = createMockComment({ commentText: specialText });
 
-      mockApi.ruleSpecComments.getComments.mockResolvedValue({
+      (mockApi.ruleSpecComments.getComments as jest.Mock).mockResolvedValue({
         comments: [comment],
         total: 1,
       });

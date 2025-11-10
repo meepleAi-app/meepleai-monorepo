@@ -245,9 +245,9 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state for H1 when active', () => {
-      mockEditor.isActive = jest.fn((format, options) =>
+      mockEditor.isActive = jest.fn((format: string, options?: any) =>
         format === 'heading' && options?.level === 1
-      );
+      ) as any;
       render(<EditorToolbar editor={mockEditor} />);
 
       const h1Button = screen.getByTitle('Titolo 1 (Ctrl+Alt+1)');
@@ -264,9 +264,9 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state for H2 when active', () => {
-      mockEditor.isActive = jest.fn((format, options) =>
+      mockEditor.isActive = jest.fn((format: string, options?: any) =>
         format === 'heading' && options?.level === 2
-      );
+      ) as any;
       render(<EditorToolbar editor={mockEditor} />);
 
       const h2Button = screen.getByTitle('Titolo 2 (Ctrl+Alt+2)');
@@ -283,9 +283,9 @@ describe('EditorToolbar Component', () => {
     });
 
     it('shows active state for H3 when active', () => {
-      mockEditor.isActive = jest.fn((format, options) =>
+      mockEditor.isActive = jest.fn((format: string, options?: any) =>
         format === 'heading' && options?.level === 3
-      );
+      ) as any;
       render(<EditorToolbar editor={mockEditor} />);
 
       const h3Button = screen.getByTitle('Titolo 3 (Ctrl+Alt+3)');
@@ -483,9 +483,9 @@ describe('EditorToolbar Component', () => {
    */
   describe('Multiple Active States', () => {
     it('shows multiple active buttons simultaneously', () => {
-      mockEditor.isActive = jest.fn((format) =>
+      mockEditor.isActive = jest.fn((format: string) =>
         ['bold', 'italic', 'strike'].includes(format)
-      );
+      ) as any;
       render(<EditorToolbar editor={mockEditor} />);
 
       const boldButton = screen.getByTitle('Grassetto (Ctrl+B)');
@@ -618,7 +618,7 @@ describe('EditorToolbar Component', () => {
 
       const buttons = screen.getAllByRole('button');
       buttons.forEach(button => {
-        if (!button.disabled) {
+        if (!(button as HTMLButtonElement).disabled) {
           expect(button).not.toHaveStyle({ background: '#0070f3' });
         }
       });

@@ -7,6 +7,7 @@
 
 import { api } from '../../../../lib/api';
 import { createMockAuthResponse, createMockGame, createMockAgent, createMockChat } from '../../../fixtures/common-fixtures';
+import { Agent } from '@/types';
 
 // Mock function references that need to be shared across files
 export const mockStartStreaming = jest.fn();
@@ -210,8 +211,7 @@ export const setupFullChatEnvironment = (options?: {
     id: options?.agent?.id ?? 'agent-1',
     gameId: options?.agent?.gameId ?? mockGame.id,
     name: options?.agent?.name ?? 'Chess Expert',
-    type: options?.agent?.type ?? 'qa',
-    ...options?.agent
+    type: (options?.agent?.type as 'qa' | 'explain' | 'setup') ?? 'qa',
   });
 
   // Setup chats (with overrides or defaults)
@@ -253,7 +253,7 @@ export const setupFullChatEnvironment = (options?: {
   const allGames = [mockGame, ...(options?.additionalGames?.map(g => createMockGame(g)) ?? [])];
 
   // Setup additional agents if provided
-  const allAgents = [mockAgent, ...(options?.additionalAgents?.map(a => createMockAgent(a)) ?? [])];
+  const allAgents = [mockAgent, ...(options?.additionalAgents?.map(a => createMockAgent(a as Partial<Agent>)) ?? [])];
 
   // Session status
   const mockSessionStatus = { remainingMinutes: options?.sessionMinutes ?? 30 };

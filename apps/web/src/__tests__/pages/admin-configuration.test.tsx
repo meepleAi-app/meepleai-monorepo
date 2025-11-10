@@ -170,7 +170,7 @@ describe('ConfigurationManagement Page', () => {
     jest.clearAllMocks();
     // Mock window.location.href setter using Object.defineProperty
     delete (window as any).location;
-    window.location = { href: '' } as Location;
+    (window as any).location = { href: '' };
     (api.config.getConfigurations as jest.Mock).mockResolvedValue(mockApiResponse);
     (api.config.getCategories as jest.Mock).mockResolvedValue(mockCategories);
   });

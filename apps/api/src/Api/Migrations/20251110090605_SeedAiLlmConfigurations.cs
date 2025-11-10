@@ -41,7 +41,7 @@ namespace Api.Migrations
                 ) VALUES (
                     'config-ai-model-prod',
                     'AI.Model',
-                    '""deepseek/deepseek-chat-v3.1""',
+                    'deepseek/deepseek-chat-v3.1',
                     'string',
                     'LLM model identifier for OpenRouter API (Production)',
                     'AI/LLM',
@@ -111,7 +111,7 @@ namespace Api.Migrations
                 (
                     'config-ai-model-dev',
                     'AI.Model',
-                    '""deepseek/deepseek-chat-v3.1""',
+                    'deepseek/deepseek-chat-v3.1',
                     'string',
                     'LLM model identifier for OpenRouter API (Development)',
                     'AI/LLM',

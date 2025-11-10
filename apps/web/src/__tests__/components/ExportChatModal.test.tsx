@@ -39,7 +39,7 @@ describe('ExportChatModal Component', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockApi.chat.exportChat.mockResolvedValue(undefined);
+    (mockApi.chat.exportChat as jest.Mock).mockResolvedValue(undefined);
   });
 
   /**
@@ -281,7 +281,7 @@ describe('ExportChatModal Component', () => {
     });
 
     it('displays error when export fails', async () => {
-      mockApi.chat.exportChat.mockRejectedValue(new Error('Network error'));
+      (mockApi.chat.exportChat as jest.Mock).mockRejectedValue(new Error('Network error'));
       render(<ExportChatModal {...defaultProps} />);
 
       const exportButton = screen.getByRole('button', { name: /esporta/i });
@@ -291,7 +291,7 @@ describe('ExportChatModal Component', () => {
     });
 
     it('displays generic error message for unknown errors', async () => {
-      mockApi.chat.exportChat.mockRejectedValue('Unknown error');
+      (mockApi.chat.exportChat as jest.Mock).mockRejectedValue('Unknown error');
       render(<ExportChatModal {...defaultProps} />);
 
       const exportButton = screen.getByRole('button', { name: /esporta/i });
@@ -301,7 +301,7 @@ describe('ExportChatModal Component', () => {
     });
 
     it('does not close modal when export fails', async () => {
-      mockApi.chat.exportChat.mockRejectedValue(new Error('Export failed'));
+      (mockApi.chat.exportChat as jest.Mock).mockRejectedValue(new Error('Export failed'));
       render(<ExportChatModal {...defaultProps} />);
 
       const exportButton = screen.getByRole('button', { name: /esporta/i });
@@ -315,7 +315,7 @@ describe('ExportChatModal Component', () => {
     });
 
     it('clears previous error when starting new export', async () => {
-      mockApi.chat.exportChat
+      (mockApi.chat.exportChat as jest.Mock)
         .mockRejectedValueOnce(new Error('First error'))
         .mockResolvedValueOnce(undefined);
 
@@ -341,7 +341,7 @@ describe('ExportChatModal Component', () => {
    */
   describe('Loading State', () => {
     it('shows loading state during export', async () => {
-      mockApi.chat.exportChat.mockImplementation(
+      (mockApi.chat.exportChat as jest.Mock).mockImplementation(
         () => new Promise(resolve => setTimeout(resolve, 100))
       );
 
@@ -354,7 +354,7 @@ describe('ExportChatModal Component', () => {
     });
 
     it('disables buttons during export', async () => {
-      mockApi.chat.exportChat.mockImplementation(
+      (mockApi.chat.exportChat as jest.Mock).mockImplementation(
         () => new Promise(resolve => setTimeout(resolve, 100))
       );
 
@@ -372,7 +372,7 @@ describe('ExportChatModal Component', () => {
     });
 
     it('disables format radios during export', async () => {
-      mockApi.chat.exportChat.mockImplementation(
+      (mockApi.chat.exportChat as jest.Mock).mockImplementation(
         () => new Promise(resolve => setTimeout(resolve, 100))
       );
 
@@ -390,7 +390,7 @@ describe('ExportChatModal Component', () => {
     });
 
     it('disables date inputs during export', async () => {
-      mockApi.chat.exportChat.mockImplementation(
+      (mockApi.chat.exportChat as jest.Mock).mockImplementation(
         () => new Promise(resolve => setTimeout(resolve, 100))
       );
 
@@ -406,7 +406,7 @@ describe('ExportChatModal Component', () => {
     });
 
     it('shows loading spinner during export', async () => {
-      mockApi.chat.exportChat.mockImplementation(
+      (mockApi.chat.exportChat as jest.Mock).mockImplementation(
         () => new Promise(resolve => setTimeout(resolve, 100))
       );
 
@@ -437,7 +437,7 @@ describe('ExportChatModal Component', () => {
     });
 
     it('does not call onClose when backdrop is clicked during export', async () => {
-      mockApi.chat.exportChat.mockImplementation(
+      (mockApi.chat.exportChat as jest.Mock).mockImplementation(
         () => new Promise(resolve => setTimeout(resolve, 100))
       );
 

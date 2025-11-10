@@ -254,7 +254,7 @@ describe('Locale Queries', () => {
         </div>
       );
 
-      const button = getByRoleInDialog('button', { name: 'Confirm' });
+      const button = getByRoleInDialog('button', { name: /Confirm/i });
 
       expect(button).toBeInTheDocument();
       expect(button).toHaveTextContent('Confirm');
@@ -268,7 +268,7 @@ describe('Locale Queries', () => {
         </div>
       );
 
-      const input = getByRoleInDialog('textbox', { name: 'Username' });
+      const input = getByRoleInDialog('textbox', { name: /Username/i });
 
       expect(input).toBeInTheDocument();
       expect(input).toHaveAttribute('type', 'text');
@@ -300,7 +300,7 @@ describe('Locale Queries', () => {
         </>
       );
 
-      const button = getByRoleInDialog('button', { name: 'Inside Button' });
+      const button = getByRoleInDialog('button', { name: /Inside Button/i });
 
       expect(button).toBeInTheDocument();
       expect(button).toHaveTextContent('Inside Button');
@@ -407,7 +407,7 @@ describe('Locale Queries', () => {
       const { container } = render(<Dialog />);
 
       const title = getByTextInDialog('Statistics');
-      const closeBtn = getByRoleInDialog('button', { name: 'Close' });
+      const closeBtn = getByRoleInDialog('button', { name: /Close/i });
       const dialog = screen.getByRole('dialog');
       const totalElement = getByLocalizedNumber(dialog, 5000);
 

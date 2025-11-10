@@ -1,14 +1,14 @@
-import { test as base, expect } from '@playwright/test';
+import { test as base, expect, Page, Route } from '@playwright/test';
 import { loginAsAdmin } from './fixtures/auth';
 import { getTextMatcher, t } from './fixtures/i18n';
 
-const test = base.extend<{ adminPage: any }>({
-  adminPage: async ({ page }, use) => {
+const test = base.extend<{ adminPage: Page }>({
+  adminPage: async ({ page }: { page: Page }, use: (page: Page) => Promise<void>) => {
     // Set up auth mocks first (but skip navigation)
     await loginAsAdmin(page, true);
 
     // Set up analytics API mocks BEFORE any navigation
-    await page.route('**/api/v1/admin/analytics*', async (route) => {
+    await page.route('**/api/v1/admin/analytics*', async (route: Route) => {
       const url = route.request().url();
       
       // Handle export endpoint

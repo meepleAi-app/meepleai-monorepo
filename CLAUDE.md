@@ -2,7 +2,7 @@
 
 AI-powered board game rules assistant. PDF processing → vector embeddings → semantic Q&A.
 
-**Stack**: ASP.NET Core 9.0, Next.js 14, PostgreSQL, Qdrant, Redis, OpenRouter API, n8n, Docker
+**Stack**: ASP.NET Core 9.0, Next.js 16, React 19, PostgreSQL, Qdrant, Redis, OpenRouter API, n8n, Docker
 
 ## Structure
 ```
@@ -74,7 +74,7 @@ tools/             - PowerShell scripts
 - **Seed Data** (DB-02): Demo users (admin/editor/user@meepleai.dev, pwd: `Demo123!`), games, specs. Migration: `20251009140700_SeedDemoData`
 - **Admin Bootstrap**: Auto-creates initial admin user on first startup via `INITIAL_ADMIN_EMAIL`/`INITIAL_ADMIN_PASSWORD` env vars (see `docs/guide/admin-bootstrap-guide.md`)
 
-### Frontend (Next.js 14)
+### Frontend (Next.js 16, React 19)
 
 **Pages**: index, chat, upload, editor (EDIT-03 rich text), versions, admin, admin/users (ADMIN-01), admin/analytics (ADMIN-02), admin/cache, admin/configuration (CONFIG-06), admin/n8n-templates (N8N-04), admin/bulk-export (EDIT-07), n8n, logs, setup (AI-03)
 

@@ -19,15 +19,24 @@ jest.mock('../DiffCodePanel', () => ({
 describe('SideBySideDiffView', () => {
   const mockProcessedDiff: ProcessedDiff = {
     oldLines: [
-      { id: '1', lineNumber: 1, content: 'old line 1', type: 'unchanged' },
-      { id: '2', lineNumber: 2, content: 'old line 2', type: 'deleted' },
+      { lineNumber: 1, content: 'old line 1', type: 'unchanged' },
+      { lineNumber: 2, content: 'old line 2', type: 'deleted' },
     ],
     newLines: [
-      { id: '3', lineNumber: 1, content: 'new line 1', type: 'unchanged' },
-      { id: '4', lineNumber: 2, content: 'new line 2', type: 'added' },
+      { lineNumber: 1, content: 'new line 1', type: 'unchanged' },
+      { lineNumber: 2, content: 'new line 2', type: 'added' },
     ],
     changes: [
-      { id: 'change-1', oldLineNumber: 2, newLineNumber: 2, type: 'modified' },
+      {
+        id: 'change-1',
+        startLine: 2,
+        endLine: 2,
+        type: 'modified',
+        oldStartLine: 2,
+        oldEndLine: 2,
+        newStartLine: 2,
+        newEndLine: 2
+      },
     ],
     statistics: {
       added: 1,
@@ -126,8 +135,8 @@ describe('SideBySideDiffView', () => {
   describe('Section Filtering', () => {
     it('should filter old sections by line count', () => {
       const sections = new Map<string, CollapsibleSection>([
-        ['old-1', { startLine: 1, endLine: 2, lineCount: 2 }],
-        ['old-99', { startLine: 99, endLine: 100, lineCount: 2 }], // Beyond oldLines length
+        ['old-1', { startLine: 1, endLine: 2, lineCount: 2, isCollapsed: false }],
+        ['old-99', { startLine: 99, endLine: 100, lineCount: 2, isCollapsed: false }], // Beyond oldLines length
       ]);
 
       render(
@@ -146,8 +155,8 @@ describe('SideBySideDiffView', () => {
 
     it('should filter new sections by line count', () => {
       const sections = new Map<string, CollapsibleSection>([
-        ['new-1', { startLine: 1, endLine: 2, lineCount: 2 }],
-        ['new-99', { startLine: 99, endLine: 100, lineCount: 2 }], // Beyond newLines length
+        ['new-1', { startLine: 1, endLine: 2, lineCount: 2, isCollapsed: false }],
+        ['new-99', { startLine: 99, endLine: 100, lineCount: 2, isCollapsed: false }], // Beyond newLines length
       ]);
 
       render(
@@ -257,7 +266,7 @@ describe('SideBySideDiffView', () => {
   describe('Section Toggle Callbacks', () => {
     it('should call onToggleSection with old- prefix for old panel', () => {
       const sections = new Map<string, CollapsibleSection>([
-        ['old-1', { startLine: 1, endLine: 2, lineCount: 2 }],
+        ['old-1', { startLine: 1, endLine: 2, lineCount: 2, isCollapsed: false }],
       ]);
 
       render(
@@ -277,7 +286,7 @@ describe('SideBySideDiffView', () => {
 
     it('should call onToggleSection with new- prefix for new panel', () => {
       const sections = new Map<string, CollapsibleSection>([
-        ['new-1', { startLine: 1, endLine: 2, lineCount: 2 }],
+        ['new-1', { startLine: 1, endLine: 2, lineCount: 2, isCollapsed: false }],
       ]);
 
       render(

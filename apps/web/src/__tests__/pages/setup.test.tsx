@@ -107,9 +107,10 @@ describe('SetupPage', () => {
 
       render(<SetupPage />);
 
-      await waitForApiCall(mockApi.get, '/api/v1/auth/me');
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Game Setup Guide' })).toBeInTheDocument();
+      });
 
-      expect(screen.getByRole('heading', { name: 'Game Setup Guide' })).toBeInTheDocument();
       expect(screen.queryByText('Login Required')).not.toBeInTheDocument();
     });
 

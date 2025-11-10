@@ -236,6 +236,12 @@ Deleting: codeql-db (62.8 MB) - CodeQL database cache
 - Prima di operazioni git pesanti (pull, merge di branch grandi)
 - Dopo aggiornamenti di dipendenze o tooling
 
+**Note Tecniche**:
+- Lo script usa `set -e` per interrompersi in caso di errore
+- La funzione `clean_directory` ritorna `0` anche quando una directory non esiste, per prevenire uscite premature
+- Gli sviluppatori tipicamente avranno solo un subset delle cache, quindi il comportamento di skip è normale
+- Il calcolo `du` può impiegare tempo su repository grandi
+
 ## Sviluppo
 
 ### Aggiungere Nuovi Strumenti

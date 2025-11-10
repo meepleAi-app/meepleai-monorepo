@@ -581,6 +581,43 @@ cd apps/web && pnpm dev                                                         
 | **Schemas** | `schemas/README.md` | RuleSpec v0 reference |
 | **Skills** | `docs/guides/SKILLS_GUIDE.md` | 21 available skills |
 
+## Maintenance
+
+### Cache Cleanup
+
+Periodically clean cache directories to free disk space and prevent buildup:
+
+```bash
+# Preview what would be deleted (dry run)
+bash tools/cleanup-caches.sh --dry-run        # Linux/Mac
+pwsh tools/cleanup-caches.ps1 -DryRun         # Windows
+
+# Run cleanup with confirmation
+bash tools/cleanup-caches.sh                  # Linux/Mac
+pwsh tools/cleanup-caches.ps1                 # Windows
+
+# Run without confirmation (for scripts/CI)
+bash tools/cleanup-caches.sh --yes            # Linux/Mac
+pwsh tools/cleanup-caches.ps1 -Yes            # Windows
+```
+
+**Directories cleaned**:
+- `.serena/` - Serena MCP cache
+- `codeql-db/` - CodeQL database cache
+- `.playwright-mcp/` - Playwright MCP cache
+- `apps/api/obj`, `apps/api/bin` - .NET build artifacts (default)
+- `apps/web/.next` - Next.js build cache (default)
+
+**Recommended frequency**: Monthly or when disk space is low
+
+**Options**:
+- `--dry-run` / `-DryRun` - Preview without deleting
+- `--verbose` / `-Verbose` - Show detailed output
+- `--skip-build` / `-SkipBuild` - Skip build artifacts (clean only caches)
+- `--yes` / `-Yes` - Skip confirmation prompt
+
+See `tools/README.md` for complete documentation.
+
 ## Troubleshooting
 
 | Issue | Check | Fix |

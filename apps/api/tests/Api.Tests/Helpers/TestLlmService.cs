@@ -75,17 +75,13 @@ internal sealed class TestLlmService : ILlmService
 
         if (typeof(T) == typeof(ExplainOutline))
         {
-            // TEST-814: Extract topic from user prompt or use default
+            // TEST-827: Enhanced topic extraction with realistic outline generation
             var topic = ExtractTopicFromPrompt(userPrompt) ?? "Game Rules";
+            var sections = GenerateRealisticOutlineSections(topic);
+
             var dto = new ExplainOutline(
                 mainTopic: topic,
-                sections: new List<string>
-                {
-                    "Overview",
-                    "Key Concepts",
-                    "Examples",
-                    "Common Mistakes"
-                }
+                sections: sections
             );
 
             return Task.FromResult(dto as T);
@@ -96,8 +92,15 @@ internal sealed class TestLlmService : ILlmService
 
     private static string? ExtractTopicFromPrompt(string prompt)
     {
-        // Extract topic from prompts like "Topic: winning conditions" or "explain topic: castling"
-        var topicMarkers = new[] { "Topic:", "topic:", "explain topic:", "about:" };
+        // TEST-827: Enhanced topic extraction with support for multiple prompt formats
+        // Extract topic from various formats:
+        // - "Topic: winning conditions"
+        // - "explain topic: castling"
+        // - "TOPIC: game setup"
+        // - "about: scoring"
+        // - "Explain 'winning conditions' for the game"
+        var topicMarkers = new[] { "Topic:", "topic:", "explain topic:", "about:", "Explain '" };
+
         foreach (var marker in topicMarkers)
         {
             var index = prompt.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
@@ -105,14 +108,129 @@ internal sealed class TestLlmService : ILlmService
             {
                 var start = index + marker.Length;
                 var remainder = prompt.Substring(start).Trim();
+
+                // Handle quoted topics like "Explain 'winning conditions'"
+                if (marker.Contains("'"))
+                {
+                    var endQuote = remainder.IndexOf('\'');
+                    if (endQuote > 0)
+                    {
+                        return remainder.Substring(0, endQuote).Trim();
+                    }
+                }
+
+                // Extract first line or until punctuation
                 var firstLine = remainder.Split('\n')[0].Trim();
+
+                // Remove trailing punctuation/quotes
+                firstLine = firstLine.TrimEnd('.', '?', '!', '"', '\'').Trim();
+
                 if (!string.IsNullOrEmpty(firstLine))
                 {
                     return firstLine;
                 }
             }
         }
+
         return null;
+    }
+
+    /// <summary>
+    /// TEST-827: Generate realistic outline sections based on topic
+    /// </summary>
+    private static List<string> GenerateRealisticOutlineSections(string topic)
+    {
+        // Generate domain-specific sections based on topic keywords
+        var topicLower = topic.ToLowerInvariant();
+
+        // Winning/Victory conditions
+        if (topicLower.Contains("win") || topicLower.Contains("victory") || topicLower.Contains("condition"))
+        {
+            return new List<string>
+            {
+                "Victory Conditions Overview",
+                "Primary Win Conditions",
+                "Alternative Victory Paths",
+                "Tie-Breaking Rules",
+                "Common Winning Strategies"
+            };
+        }
+
+        // Setup/Preparation
+        if (topicLower.Contains("setup") || topicLower.Contains("preparation") || topicLower.Contains("start"))
+        {
+            return new List<string>
+            {
+                "Initial Setup Requirements",
+                "Component Placement",
+                "Player Preparation Steps",
+                "First Player Determination",
+                "Setup Verification Checklist"
+            };
+        }
+
+        // Scoring
+        if (topicLower.Contains("scor") || topicLower.Contains("point"))
+        {
+            return new List<string>
+            {
+                "Scoring System Overview",
+                "Point Calculation Methods",
+                "Bonus Points and Multipliers",
+                "Scoring Edge Cases",
+                "Final Score Tallying"
+            };
+        }
+
+        // Movement/Actions
+        if (topicLower.Contains("move") || topicLower.Contains("action") || topicLower.Contains("turn"))
+        {
+            return new List<string>
+            {
+                "Available Actions Overview",
+                "Movement Rules and Restrictions",
+                "Turn Structure and Phases",
+                "Action Priority and Timing",
+                "Movement Examples and Scenarios"
+            };
+        }
+
+        // Combat/Conflict
+        if (topicLower.Contains("combat") || topicLower.Contains("battle") || topicLower.Contains("attack"))
+        {
+            return new List<string>
+            {
+                "Combat Basics and Prerequisites",
+                "Attack Resolution Process",
+                "Defense Mechanisms",
+                "Damage Calculation",
+                "Combat Outcome Effects"
+            };
+        }
+
+        // Trading/Economy
+        if (topicLower.Contains("trad") || topicLower.Contains("econom") || topicLower.Contains("resource"))
+        {
+            return new List<string>
+            {
+                "Trading Mechanics Overview",
+                "Resource Types and Values",
+                "Trade Negotiation Rules",
+                "Economic Strategy Considerations",
+                "Resource Management Tips"
+            };
+        }
+
+        // Default/Generic structure for unknown topics
+        return new List<string>
+        {
+            $"{topic} - Introduction",
+            $"Core {topic} Mechanics",
+            $"Detailed {topic} Rules",
+            $"{topic} Strategy and Tips",
+            $"Common {topic} Mistakes to Avoid",
+            $"{topic} Advanced Concepts"
+        };
     }
 
     private static string? ExtractFirstSnippet(string prompt)

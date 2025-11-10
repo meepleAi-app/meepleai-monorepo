@@ -144,6 +144,9 @@ builder.Services.AddInfrastructureServices(builder.Configuration, builder.Enviro
 // In production, uses TimeProvider.System. Tests can override with TestTimeProvider/FakeTimeProvider.
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
+// DDD-PHASE1: MediatR for CQRS (Commands, Queries, Handlers)
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+
 // Application services (Domain, AI, Admin)
 builder.Services.AddApplicationServices();
 
@@ -153,6 +156,27 @@ builder.Services.AddAuthenticationServices(builder.Configuration);
 
 // Observability services (OpenTelemetry, Health checks, Swagger)
 builder.Services.AddObservabilityServices(builder.Configuration, builder.Environment);
+
+// Configure JSON serialization for ASP.NET Core Minimal APIs
+// Accept camelCase from frontend (JavaScript convention) while backend uses PascalCase (C# convention)
+// NOTE: ASP.NET Core 9.0 Minimal APIs require unified JsonOptions configuration
+// Reference: https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis/parameter-binding
+
+// Configure BOTH request (parameter binding) AND response (Results.Ok) serialization
+// This single configuration applies to all JSON operations in Minimal APIs
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    // Case-insensitive deserialization allows both {"email":...} and {"Email":...} to work
+    // This is critical for frontend/backend interoperability (JS uses camelCase, C# uses PascalCase)
+    options.SerializerOptions.PropertyNameCaseInsensitive = true;
+
+    // Allow trailing commas in JSON for tolerant parsing (e.g., {"a":1,} is valid)
+    options.SerializerOptions.AllowTrailingCommas = true;
+
+    // Preserve property names as-is (don't auto-convert to camelCase)
+    // Frontend sends camelCase, backend uses PascalCase, PropertyNameCaseInsensitive handles both
+    options.SerializerOptions.PropertyNamingPolicy = null;
+});
 
 builder.Services.AddCors(options =>
 {

@@ -21,8 +21,13 @@ namespace Api.Tests;
 ///
 /// Note: This consolidates authorization tests to eliminate duplication.
 /// Individual endpoint test files focus on happy-path behaviors.
+///
+/// Performance Optimization (Issue #829):
+/// - Moved to "Admin Endpoints - Read Only" collection for parallel execution
+/// - These tests only check authorization (no state modification)
+/// - Safe to run in parallel with other read-only tests
 /// </summary>
-[Collection("Admin Endpoints")]
+[Collection("Admin Endpoints - Read Only")]
 public class AdminAuthorizationTests : AdminTestFixture
 {
     private readonly ITestOutputHelper _output;

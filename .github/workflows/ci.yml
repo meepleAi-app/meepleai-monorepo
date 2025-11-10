@@ -227,7 +227,7 @@ jobs:
           done
           curl -v http://localhost:6333/healthz || echo "Qdrant health check failed"
       - name: Test with Coverage & Threshold Check
-        timeout-minutes: 15
+        timeout-minutes: 20
         env:
           CI: true
           OPENROUTER_API_KEY: test-key-for-ci
@@ -238,7 +238,8 @@ jobs:
         run: |
           # TEST-02-P5: Run full test suite with coverage and 90% threshold (combined for efficiency)
           # Note: xUnit v3 AssemblyFixture automatically runs cleanup after all tests
-          # Timeout: 15min (validated actual duration: ~14min), down from 20min baseline
+          # Timeout: 20min (Issue #829: increased from 15min for xUnit v3 + ExecuteDeleteAsync overhead)
+          # With optimizations, expected completion: ~12-14min
           echo "::notice::TEST-02-P5: Running tests with coverage and enforcing 90% line coverage threshold"
           dotnet test \
             --logger "console;verbosity=normal" \

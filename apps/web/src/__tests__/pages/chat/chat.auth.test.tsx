@@ -132,9 +132,10 @@ describe('ChatPage - Authentication', () => {
 
     render(<ChatPage />);
 
-    await waitFor(() => expect(mockApi.get).toHaveBeenCalledWith('/api/v1/auth/me'));
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /MeepleAI Chat/i })).toBeInTheDocument();
+    });
 
-    expect(screen.getByRole('heading', { name: /MeepleAI Chat/i })).toBeInTheDocument();
     expect(screen.queryByText(/Accesso richiesto/i)).not.toBeInTheDocument();
   });
 

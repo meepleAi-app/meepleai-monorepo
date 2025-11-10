@@ -88,7 +88,8 @@ test.describe.skip('Visual Debug Demo', () => {
       await getStartedButton.click({ timeout: 5000 });
       console.log('✅ Click succeeded!');
     } catch (error) {
-      console.log('❌ Click failed:', error.message);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log('❌ Click failed:', errorMessage);
 
       // Try force click
       console.log('🔧 Attempting force click...');
@@ -96,7 +97,8 @@ test.describe.skip('Visual Debug Demo', () => {
         await getStartedButton.click({ force: true, timeout: 5000 });
         console.log('✅ Force click succeeded (but handler might not fire)');
       } catch (forceError) {
-        console.log('❌ Force click also failed:', forceError.message);
+        const forceErrorMessage = forceError instanceof Error ? forceError.message : String(forceError);
+        console.log('❌ Force click also failed:', forceErrorMessage);
       }
     }
 

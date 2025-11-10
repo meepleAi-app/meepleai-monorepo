@@ -15,6 +15,7 @@ import {
   createMockEvents,
   createMockEvent,
 } from './test-utils';
+import { TimelineEvent } from '../timeline-types';
 import React from 'react';
 
 describe('test-utils', () => {
@@ -52,7 +53,7 @@ describe('test-utils', () => {
 
     describe('Edge Cases', () => {
       it('should render null children', () => {
-        const { container } = renderWithProviders(null);
+        const { container } = renderWithProviders(<></>);
         expect(container).toBeInTheDocument();
       });
 
@@ -578,7 +579,7 @@ describe('test-utils', () => {
 
         const metrics = events[0].data.metrics!;
         expect(metrics.totalTokens).toBe(
-          metrics.promptTokens + metrics.completionTokens
+          (metrics.promptTokens || 0) + (metrics.completionTokens || 0)
         );
       });
 

@@ -91,7 +91,7 @@ export async function waitForAsync(assertion: () => void, timeout = 1000): Promi
  */
 export function createMockEvents(
   count: number,
-  overrides?: Partial<TimelineEvent>[]
+  overrides?: Array<Partial<TimelineEvent> | undefined>
 ): TimelineEvent[] {
   const types: TimelineEventType[] = [
     'message',

@@ -2,12 +2,16 @@
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone', // Enable Docker-optimized output
-  eslint: {
-    // Disable ESLint during builds - run separately to avoid ESLint 9 circular structure issues
-    ignoreDuringBuilds: true,
+
+  // Turbopack configuration for Next.js 16
+  turbopack: {
+    // Empty config to silence Turbopack warning
+    // Note: PDF.js aliases not needed in Turbopack (handled differently)
   },
+
+  // Webpack config for backward compatibility (use --webpack flag if needed)
   webpack: (config) => {
-    // PDF.js worker configuration
+    // PDF.js worker configuration - only used with --webpack flag
     config.resolve.alias.canvas = false;
     config.resolve.alias.encoding = false;
     return config;

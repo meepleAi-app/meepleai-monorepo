@@ -43,17 +43,18 @@ describe('Type Index Exports', () => {
     it('should export game types', () => {
       const game: import('../index').Game = {
         id: 'test-game',
-        title: 'Test Game',
+        name: 'Test Game',
         createdAt: '2024-01-01',
-        updatedAt: null,
       };
 
       const chat: import('../index').Chat = {
         id: 'chat-1',
-        userId: 'user-1',
         gameId: 'game-1',
-        createdAt: '2024-01-01',
-        updatedAt: null,
+        gameName: 'Test Game',
+        agentId: 'agent-1',
+        agentName: 'Test Agent',
+        startedAt: '2024-01-01',
+        lastMessageAt: null,
       };
 
       expect(game).toBeDefined();
@@ -63,21 +64,17 @@ describe('Type Index Exports', () => {
     it('should export RuleSpec types', () => {
       const ruleAtom: import('../index').RuleAtom = {
         id: 'atom-1',
-        atomId: 'test-atom',
-        title: 'Test Atom',
-        content: 'Test content',
-        category: 'gameplay',
+        text: 'Test content',
+        section: 'gameplay',
+        page: '1',
+        line: '10',
       };
 
       const ruleSpec: import('../index').RuleSpec = {
-        id: 'spec-1',
         gameId: 'game-1',
         version: '1.0.0',
-        content: '{}',
-        status: 'active',
         createdAt: '2024-01-01',
-        updatedAt: null,
-        createdBy: 'user-1',
+        rules: [],
       };
 
       expect(ruleAtom).toBeDefined();
@@ -87,15 +84,19 @@ describe('Type Index Exports', () => {
     it('should export chat types', () => {
       const chatMessage: import('../index').ChatMessage = {
         id: 'msg-1',
-        role: 'user',
-        content: 'Hello',
-        timestamp: Date.now(),
+        level: 'user',
+        message: 'Hello',
+        metadataJson: null,
+        createdAt: '2024-01-01',
+        updatedAt: null,
+        isDeleted: false,
+        isInvalidated: false,
       };
 
       const qaResponse: import('../index').QaResponse = {
         answer: 'Answer',
-        confidence: 0.95,
-        citations: [],
+        snippets: [],
+        followUpQuestions: [],
       };
 
       expect(chatMessage).toBeDefined();
@@ -196,10 +197,11 @@ describe('Type Index Exports', () => {
     });
 
     it('should export ProcessingProgress type', () => {
+      const { ProcessingStep } = require('../index');
       const progress: import('../index').ProcessingProgress = {
-        step: 'validating' as any,
-        progress: 0.5,
-        message: 'Validating PDF',
+        currentStep: ProcessingStep.Extracting,
+        percentComplete: 0.5,
+        updatedAt: '2024-01-01',
       };
 
       expect(progress).toBeDefined();

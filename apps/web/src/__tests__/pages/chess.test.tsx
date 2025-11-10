@@ -21,7 +21,11 @@ jest.mock("react-chessboard", () => ({
     boardWidth
   }: {
     position: string;
-    onPieceDrop: (from: string, to: string) => boolean;
+    onPieceDrop: (args: {
+      piece: string;
+      sourceSquare: string;
+      targetSquare: string;
+    }) => boolean;
     boardOrientation: string;
     customSquareStyles: Record<string, object>;
     boardWidth: number;
@@ -35,13 +39,13 @@ jest.mock("react-chessboard", () => ({
     >
       <button
         data-testid="make-move-e2-e4"
-        onClick={() => onPieceDrop("e2", "e4")}
+        onClick={() => onPieceDrop({ piece: "wP", sourceSquare: "e2", targetSquare: "e4" })}
       >
         Make Move e2-e4
       </button>
       <button
         data-testid="make-invalid-move"
-        onClick={() => onPieceDrop("a1", "a1")}
+        onClick={() => onPieceDrop({ piece: "wR", sourceSquare: "a1", targetSquare: "a1" })}
       >
         Invalid Move
       </button>

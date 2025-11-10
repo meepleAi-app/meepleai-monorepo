@@ -321,6 +321,33 @@ if (typeof global.FileReader === 'undefined' || !global.FileReader.prototype.rea
   FileReader.DONE = 2;
 }
 
+// Suppress expected React 19 warnings in tests
+const originalError = console.error;
+beforeAll(() => {
+  console.error = (...args) => {
+    // Suppress expected framer-motion prop warnings in React 19
+    if (typeof args[0] === 'string' && args[0].includes('React does not recognize the `whileHover` prop')) {
+      return;
+    }
+    // Suppress act() warnings for provider initialization effects
+    if (typeof args[0] === 'string' && args[0].includes('An update to ChatProvider inside a test was not wrapped in act(')) {
+      return;
+    }
+    if (typeof args[0] === 'string' && args[0].includes('An update to AnalyticsDashboard inside a test was not wrapped in act(')) {
+      return;
+    }
+    // Suppress JSDOM navigation warnings (known limitation)
+    if (typeof args[0] === 'string' && args[0].includes('Error: Not implemented: navigation (except hash changes)')) {
+      return;
+    }
+    originalError.call(console, ...args);
+  };
+});
+
+afterAll(() => {
+  console.error = originalError;
+});
+
 beforeEach(() => {
 // Mock DOM APIs for TipTap/ProseMirror (TEST-633)
 if (typeof Range.prototype.getClientRects === 'undefined') {

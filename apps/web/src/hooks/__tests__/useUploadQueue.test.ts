@@ -1257,7 +1257,7 @@ describe('useUploadQueue', () => {
         }
       };
 
-      const apiError = new ApiError('Bad Request', 400, 'test-correlation-id', responseWithBadJson as Response);
+      const apiError = new ApiError('Bad Request', 400, 'test-correlation-id', responseWithBadJson as unknown as Response);
 
       retryWithBackoff.mockImplementation(async (fn: () => Promise<any>) => {
         mockFetch.mockResolvedValue(responseWithBadJson);
@@ -1557,7 +1557,7 @@ describe('useUploadQueue', () => {
 
       let shouldRetryResult: boolean | undefined;
       retryWithBackoff.mockImplementation(async (fn: () => Promise<any>, options: any) => {
-        const error = new ApiError('Internal Server Error', 500, 'test-id', responseWithBadJson as Response);
+        const error = new ApiError('Internal Server Error', 500, 'test-id', responseWithBadJson as unknown as Response);
 
         // Capture shouldRetry result
         if (options.shouldRetry) {

@@ -1,4 +1,4 @@
-import { test as base, expect } from '@playwright/test';
+import { test as base, expect, Page, Route } from '@playwright/test';
 import { loginAsAdmin } from './fixtures/auth';
 import { getTextMatcher, t } from './fixtures/i18n';
 
@@ -7,13 +7,13 @@ import { getTextMatcher, t } from './fixtures/i18n';
  * Validates configuration management workflows through the browser
  */
 
-const test = base.extend<{ adminPage: any }>({
-  adminPage: async ({ page }, use) => {
+const test = base.extend<{ adminPage: Page }>({
+  adminPage: async ({ page }: { page: Page }, use: (page: Page) => Promise<void>) => {
     // Set up auth mocks first (but skip navigation)
     await loginAsAdmin(page, true);
 
     // Set up configuration API mocks BEFORE any navigation
-    await page.route('**/api/v1/admin/configurations*', async (route) => {
+    await page.route('**/api/v1/admin/configurations*', async (route: Route) => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
           status: 200,
@@ -39,7 +39,7 @@ const test = base.extend<{ adminPage: any }>({
       }
     });
 
-    await page.route('**/api/v1/admin/configurations/categories', async (route) => {
+    await page.route('**/api/v1/admin/configurations/categories', async (route: Route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

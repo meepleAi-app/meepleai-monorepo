@@ -1,3 +1,5 @@
+import { AuthUser } from '@/types';
+
 function createMockApi() {
   return {
     get: jest.fn(),
@@ -671,7 +673,7 @@ describe('ChatProvider', () => {
       const mockUser: AuthUser = {
         id: 'user-1',
         email: 'test@example.com',
-        username: 'testuser',
+        displayName: 'Test User',
         role: 'user',
       };
 

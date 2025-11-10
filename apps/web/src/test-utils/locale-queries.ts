@@ -7,7 +7,7 @@
  * @module test-utils/locale-queries
  */
 
-import { screen, within as rtlWithin, type BoundFunction, type GetByText } from '@testing-library/react';
+import { screen, within as rtlWithin, type ByRoleMatcher, type ByRoleOptions } from '@testing-library/react';
 
 /**
  * Queries for an element containing a localized number.
@@ -147,11 +147,11 @@ export function queryByTextInDialog(text: string | RegExp): HTMLElement | null {
  * await user.click(confirmButton);
  */
 export function getByRoleInDialog(
-  role: string,
-  options?: Parameters<BoundFunction<GetByText>>[1]
+  role: ByRoleMatcher,
+  options?: ByRoleOptions
 ): HTMLElement {
   const dialog = screen.getByRole('dialog');
-  return rtlWithin(dialog).getByRole(role as any, options);
+  return rtlWithin(dialog).getByRole(role, options);
 }
 
 /**

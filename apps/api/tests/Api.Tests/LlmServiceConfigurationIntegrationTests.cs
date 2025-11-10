@@ -359,16 +359,109 @@ public class LlmServiceConfigurationIntegrationTests : IntegrationTestBase
     }
 
     /// <summary>
-    /// Scenario: ConfigurationService can store and retrieve configurations
-    ///   Given configurations are created via ConfigurationService
-    ///   When querying the database for configurations
-    ///   Then configurations can be retrieved correctly
+    /// Scenario: Migration seeds default AI/LLM configurations
+    ///   Given the SeedAiLlmConfigurations migration has been applied
+    ///   When querying the database for AI/LLM configurations
+    ///   Then all 8 configurations exist (4 Production + 4 Development)
+    ///   And they have the correct default values
     /// </summary>
-    [Fact(Skip = "TODO: Create migration to seed default AI/LLM configurations for Production and Development environments")]
+    [Fact]
     public async Task Migration_SeedsDefaultConfigurations_ForProductionAndDevelopment()
     {
-        // This test is skipped until a migration is created to seed default configurations
-        await Task.CompletedTask;
+        // Arrange
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        // Expected configuration keys
+        var expectedProductionKeys = new[]
+        {
+            "AI.Model",
+            "AI.Temperature",
+            "AI.MaxTokens",
+            "AI.TimeoutSeconds"
+        };
+
+        var expectedDevelopmentKeys = new[]
+        {
+            "AI.Model",
+            "AI.Temperature",
+            "AI.MaxTokens",
+            "AI.TimeoutSeconds"
+        };
+
+        // Act - Query Production configurations
+        var productionConfigs = await db.SystemConfigurations
+            .Where(c => c.Environment == "Production" && c.Category == "AI/LLM")
+            .ToListAsync();
+
+        // Act - Query Development configurations
+        var developmentConfigs = await db.SystemConfigurations
+            .Where(c => c.Environment == "Development" && c.Category == "AI/LLM")
+            .ToListAsync();
+
+        // Assert - Production configurations
+        Assert.Equal(4, productionConfigs.Count);
+        foreach (var key in expectedProductionKeys)
+        {
+            var config = productionConfigs.FirstOrDefault(c => c.Key == key);
+            Assert.NotNull(config);
+            Assert.True(config.IsActive);
+            Assert.Equal("AI/LLM", config.Category);
+            Assert.Equal("Production", config.Environment);
+
+            // Verify default values
+            switch (key)
+            {
+                case "AI.Model":
+                    Assert.Equal("string", config.ValueType);
+                    Assert.Contains("deepseek/deepseek-chat-v3.1", config.Value);
+                    break;
+                case "AI.Temperature":
+                    Assert.Equal("double", config.ValueType);
+                    Assert.Equal("0.3", config.Value);
+                    break;
+                case "AI.MaxTokens":
+                    Assert.Equal("int", config.ValueType);
+                    Assert.Equal("500", config.Value);
+                    break;
+                case "AI.TimeoutSeconds":
+                    Assert.Equal("int", config.ValueType);
+                    Assert.Equal("60", config.Value);
+                    break;
+            }
+        }
+
+        // Assert - Development configurations
+        Assert.Equal(4, developmentConfigs.Count);
+        foreach (var key in expectedDevelopmentKeys)
+        {
+            var config = developmentConfigs.FirstOrDefault(c => c.Key == key);
+            Assert.NotNull(config);
+            Assert.True(config.IsActive);
+            Assert.Equal("AI/LLM", config.Category);
+            Assert.Equal("Development", config.Environment);
+
+            // Verify default values
+            switch (key)
+            {
+                case "AI.Model":
+                    Assert.Equal("string", config.ValueType);
+                    Assert.Contains("deepseek/deepseek-chat-v3.1", config.Value);
+                    break;
+                case "AI.Temperature":
+                    Assert.Equal("double", config.ValueType);
+                    Assert.Equal("0.3", config.Value);
+                    break;
+                case "AI.MaxTokens":
+                    Assert.Equal("int", config.ValueType);
+                    Assert.Equal("500", config.Value);
+                    break;
+                case "AI.TimeoutSeconds":
+                    Assert.Equal("int", config.ValueType);
+                    Assert.Equal("60", config.Value);
+                    break;
+            }
+        }
     }
 
     #region Helper Methods

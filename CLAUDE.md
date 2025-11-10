@@ -579,7 +579,8 @@ cd apps/web && pnpm dev                                                         
 | **OAuth User Guide** | `docs/guide/oauth-user-guide.md` | Linking/unlinking accounts |
 | **Repo Migration** | `docs/guide/repository-visibility-migration.md` | Public ↔ private |
 | **Schemas** | `schemas/README.md` | RuleSpec v0 reference |
-| **Skills** | `docs/guides/SKILLS_GUIDE.md` | 21 available skills |
+| **Skills** | `docs/guide/SKILLS_GUIDE.md` | 21 available skills |
+| **UI/UX Testing Roadmap** | `docs/issue/ui-ux-testing-roadmap-2025.md` | Accessibility, performance, E2E expansion (Epic #844) |
 
 ## Maintenance
 

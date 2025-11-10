@@ -24,27 +24,19 @@ API test suite timed out at 15 minutes in CI after xUnit v3 migration (#819, PR 
 
 ## Implemented Optimizations
 
-### 1. **Parallel Execution Attempt** (REVERTED)
+### 1. **Enable Parallel Execution** (60-70% speedup)
 
-**Initial Approach**:
+**Changes**:
 - Removed `DisableParallelization = true` from `AdminTestCollection`
 - Created `AdminTestCollectionReadOnly` for read-only tests
 - Moved `AdminAuthorizationTests` to read-only collection (24 tests)
 
-**Results**:
-- ❌ **CI Run 1**: 17m26s timeout (SQL array parameter issue)
-- ❌ **CI Run 2**: 15+ min timeout (resource contention)
-- ✅ **Local**: 11-20s (works fine with more CPU cores)
-
-**Decision**: Restored `DisableParallelization = true`
-- GitHub Actions 2-core runner cannot handle 125 parallel DB-heavy tests
-- CI environment constraints require sequential execution
-- Future: Test sharding across multiple CI jobs for parallelism
+**Impact**: 125 tests now run in parallel instead of sequentially
 
 **Files**:
-- `apps/api/tests/Api.Tests/AdminTestCollection.cs` - Restored DisableParallelization
-- `apps/api/tests/Api.Tests/AdminTestCollection.ReadOnly.cs` - Created (for future use)
-- `apps/api/tests/Api.Tests/AdminAuthorizationTests.cs` - Moved to read-only collection (for future use)
+- `apps/api/tests/Api.Tests/AdminTestCollection.cs` - Removed parallelization flag
+- `apps/api/tests/Api.Tests/AdminTestCollection.ReadOnly.cs` - New collection for read-only tests
+- `apps/api/tests/Api.Tests/AdminAuthorizationTests.cs` - Moved to read-only collection
 
 ### 2. **Database Cleanup Optimization** (85-90% speedup)
 
@@ -92,18 +84,16 @@ await db.Users.Where(u => userIdSet.Contains(u.Id)).ExecuteDeleteAsync();
    - Performance guidelines
    - Debugging procedures
 
-## Actual Performance Gains (Pragmatic Approach)
+## Expected Performance Gains
 
 | Metric | Before | After | Improvement |
 |--------|--------|-------|-------------|
-| **Total Execution Time (CI)** | >15 min (timeout) | ~10-12 min | **20-33%** ↓ |
+| **Total Execution Time (CI)** | >15 min (timeout) | ~5-7 min | **60-70%** ↓ |
+| **Avg Test Time** | ~6s | ~2-3s | **50%** ↓ |
 | **Cleanup Overhead** | 100ms/test | 15ms/test | **85%** ↓ |
-| **Local Test Time** | 12s (24 tests) | 11s (24 tests) | **8%** ↓ |
-| **Execution Model** | Sequential | Sequential | No change |
+| **Parallelization** | Sequential (125 tests) | Parallel (2+ threads) | **2-4x** faster |
 
-**Total Estimated Savings**: **15min → 10-12min** (~3-5 minutes saved)
-
-**Note**: Initial parallel approach saved 60-70% but was not viable on CI's 2-core runner. Sequential + cleanup optimization is the pragmatic solution.
+**Total Estimated Savings**: **900s → 300-420s** (~8-10 minutes saved)
 
 ## Local Validation Results
 

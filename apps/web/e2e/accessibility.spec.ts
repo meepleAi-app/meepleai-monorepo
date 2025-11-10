@@ -54,8 +54,8 @@ test.describe('Accessibility Tests - WCAG 2.1 AA', () => {
   }) => {
     await page.goto('/chat');
 
-    // Wait for page to load completely
-    await page.waitForSelector(`text=${t('chat.loginRequired')}`);
+    // Wait for page to load completely (removed specific text selector to avoid timeout - Issue #841)
+    await page.waitForLoadState('networkidle');
 
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -73,8 +73,8 @@ test.describe('Accessibility Tests - WCAG 2.1 AA', () => {
   }) => {
     await page.goto('/setup');
 
-    // Wait for page to load
-    await page.waitForSelector(`text=${t('setup.loginRequired')}`);
+    // Wait for page to load (removed specific text selector to avoid timeout - Issue #841)
+    await page.waitForLoadState('networkidle');
 
     const results = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
@@ -240,5 +240,220 @@ test.describe('Screen Reader - Semantic HTML', () => {
 
       expect(hasLabel).toBeGreaterThan(0);
     }
+  });
+});
+
+/**
+ * Authenticated Pages Accessibility Tests
+ * Issue #841 - Phase 2
+ */
+test.describe('Accessibility - Authenticated User Pages', () => {
+  test.beforeEach(async ({ page }) => {
+    // Login as regular user before each test
+    await page.goto('/login');
+    await page.getByLabel('Email').fill('user@meepleai.dev');
+    await page.getByLabel('Password').fill('Demo123!');
+    await page.getByRole('button', { name: /login|accedi/i }).click();
+
+    // Wait for successful login redirect
+    await page.waitForURL(/\/(chat|games|dashboard)/, { timeout: 10000 });
+  });
+
+  test('chat interface should not have accessibility violations', async ({ page }) => {
+    await page.goto('/chat');
+    await page.waitForLoadState('networkidle');
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+
+    if (results.violations.length > 0) {
+      console.log('Chat violations:', formatViolations(results.violations));
+    }
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test('upload page should not have accessibility violations', async ({ page }) => {
+    await page.goto('/upload');
+    await page.waitForLoadState('networkidle');
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+
+    if (results.violations.length > 0) {
+      console.log('Upload violations:', formatViolations(results.violations));
+    }
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test('user profile should not have accessibility violations', async ({ page }) => {
+    await page.goto('/profile');
+    await page.waitForLoadState('networkidle');
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+
+    if (results.violations.length > 0) {
+      console.log('Profile violations:', formatViolations(results.violations));
+    }
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test('settings page should not have accessibility violations', async ({ page }) => {
+    await page.goto('/settings');
+    await page.waitForLoadState('networkidle');
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+
+    if (results.violations.length > 0) {
+      console.log('Settings violations:', formatViolations(results.violations));
+    }
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test('games listing (authenticated) should not have violations', async ({ page }) => {
+    await page.goto('/games');
+    await page.waitForLoadState('networkidle');
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+
+    if (results.violations.length > 0) {
+      console.log('Games violations:', formatViolations(results.violations));
+    }
+
+    expect(results.violations).toEqual([]);
+  });
+});
+
+/**
+ * Authenticated Editor Pages Accessibility Tests
+ * Issue #841 - Phase 2
+ */
+test.describe('Accessibility - Editor Role Pages', () => {
+  test.beforeEach(async ({ page }) => {
+    // Login as editor user
+    await page.goto('/login');
+    await page.getByLabel('Email').fill('editor@meepleai.dev');
+    await page.getByLabel('Password').fill('Demo123!');
+    await page.getByRole('button', { name: /login|accedi/i }).click();
+    await page.waitForURL(/\/(chat|games|dashboard|editor)/, { timeout: 10000 });
+  });
+
+  test('rule editor should not have accessibility violations', async ({ page }) => {
+    await page.goto('/editor');
+    await page.waitForLoadState('networkidle');
+
+    // Wait for TipTap editor to initialize
+    await page.waitForSelector('.ProseMirror', { timeout: 5000 });
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+
+    if (results.violations.length > 0) {
+      console.log('Editor violations:', formatViolations(results.violations));
+    }
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test('version history should not have accessibility violations', async ({ page }) => {
+    await page.goto('/versions');
+    await page.waitForLoadState('networkidle');
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+
+    if (results.violations.length > 0) {
+      console.log('Versions violations:', formatViolations(results.violations));
+    }
+
+    expect(results.violations).toEqual([]);
+  });
+});
+
+/**
+ * Authenticated Admin Pages Accessibility Tests
+ * Issue #841 - Phase 2
+ */
+test.describe('Accessibility - Admin Role Pages', () => {
+  test.beforeEach(async ({ page }) => {
+    // Login as admin user
+    await page.goto('/login');
+    await page.getByLabel('Email').fill('admin@meepleai.dev');
+    await page.getByLabel('Password').fill('Demo123!');
+    await page.getByRole('button', { name: /login|accedi/i }).click();
+    await page.waitForURL(/\/(chat|games|dashboard|admin)/, { timeout: 10000 });
+  });
+
+  test('admin dashboard should not have accessibility violations', async ({ page }) => {
+    await page.goto('/admin');
+    await page.waitForLoadState('networkidle');
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+
+    if (results.violations.length > 0) {
+      console.log('Admin dashboard violations:', formatViolations(results.violations));
+    }
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test('admin users page should not have accessibility violations', async ({ page }) => {
+    await page.goto('/admin/users');
+    await page.waitForLoadState('networkidle');
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+
+    if (results.violations.length > 0) {
+      console.log('Admin users violations:', formatViolations(results.violations));
+    }
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test('admin analytics should not have accessibility violations', async ({ page }) => {
+    await page.goto('/admin/analytics');
+    await page.waitForLoadState('networkidle');
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+
+    if (results.violations.length > 0) {
+      console.log('Admin analytics violations:', formatViolations(results.violations));
+    }
+
+    expect(results.violations).toEqual([]);
+  });
+
+  test('admin configuration should not have accessibility violations', async ({ page }) => {
+    await page.goto('/admin/configuration');
+    await page.waitForLoadState('networkidle');
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+
+    if (results.violations.length > 0) {
+      console.log('Admin config violations:', formatViolations(results.violations));
+    }
+
+    expect(results.violations).toEqual([]);
   });
 });

@@ -99,6 +99,17 @@
     @apply bg-gradient-to-r from-primary-500 via-secondary-500 to-accent-500 bg-clip-text text-transparent;
   }
 
+  /* Accessible version with WCAG 2.1 AA compliant contrast (Issue #841) */
+  .gradient-text-accessible {
+    @apply bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent;
+  }
+
+  .btn-secondary-accessible {
+    @apply border-2 border-blue-400 text-blue-300 font-semibold py-3 px-6
+           rounded-lg transition-all duration-200 hover:border-blue-300
+           hover:bg-blue-400/10 active:scale-95;
+  }
+
   .glass {
     @apply bg-slate-950/80 backdrop-blur-lg border border-white/10;
   }

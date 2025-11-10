@@ -4,9 +4,19 @@ using Api.Tests.Fixtures;
 namespace Api.Tests;
 
 /// <summary>
-/// Test collection definition for admin endpoint tests.
-/// Tests in this collection will not run in parallel with each other,
-/// preventing resource contention and deadlocks on the shared WebApplicationFactory.
+/// Test collection definition for WRITE admin endpoint tests.
+/// These tests MODIFY database state and may have concurrency considerations.
+///
+/// Performance Optimization (Issue #829):
+/// - ExecuteDeleteAsync optimizations applied (85-90% faster cleanup)
+/// - DisableParallelization TEMPORARILY RESTORED due to CI resource contention
+/// - Parallel execution caused 17min+ timeouts even with SQL fixes
+/// - Root issue: GitHub Actions 2-core runner + 125 tests + heavy DB operations
+///
+/// Future: Re-enable parallel after implementing:
+/// - Test sharding across multiple CI jobs
+/// - Shared test user patterns (reduce PBKDF2 overhead)
+/// - DbContext pooling optimizations
 /// </summary>
 [CollectionDefinition("Admin Endpoints", DisableParallelization = true)]
 public class AdminTestCollection : ICollectionFixture<PostgresCollectionFixture>, ICollectionFixture<WebApplicationFactoryFixture>

@@ -128,7 +128,7 @@ export default function Home() {
                 )}
                 <button
                   onClick={logout}
-                  className="btn-secondary text-sm py-2 px-4"
+                  className="btn-secondary-accessible text-sm py-2 px-4"
                   aria-label="Logout from MeepleAI"
                 >
                   Logout
@@ -158,9 +158,9 @@ export default function Home() {
             <h1 className="text-5xl md:text-7xl font-extrabold leading-tight">
               Your AI-Powered
               <br />
-              <span className="gradient-text">Board Game Rules Assistant</span>
+              <span className="gradient-text-accessible">Board Game Rules Assistant</span>
             </h1>
-            <p className="text-xl text-slate-100 leading-relaxed">
+            <p className="text-xl text-slate-50 leading-relaxed">
               Never argue about rules again. Get instant, accurate answers from any game&apos;s rulebook with AI-powered semantic search.
             </p>
             <div className="flex flex-wrap gap-4">
@@ -175,7 +175,7 @@ export default function Home() {
               </motion.button>
               <motion.a
                 href="#features"
-                className="btn-secondary text-lg"
+                className="btn-secondary-accessible text-lg"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -183,8 +183,8 @@ export default function Home() {
               </motion.a>
             </div>
             {!authUser && (
-              <p className="text-sm text-slate-100 mt-4">
-                💡 Try with demo account: <code className="bg-white/20 px-2 py-1 rounded text-slate-200 font-mono">user@meepleai.dev</code> / <code className="bg-white/20 px-2 py-1 rounded text-slate-200 font-mono">Demo123!</code>
+              <p className="text-sm text-slate-50 mt-4">
+                💡 Try with demo account: <code className="bg-slate-700 px-2 py-1 rounded text-white font-mono">user@meepleai.dev</code> / <code className="bg-slate-700 px-2 py-1 rounded text-white font-mono">Demo123!</code>
               </p>
             )}
           </motion.div>
@@ -250,7 +250,7 @@ export default function Home() {
             className="text-center mb-16"
           >
             <h2 className="text-5xl font-bold mb-4">How It Works</h2>
-            <p className="text-xl text-slate-100">Three simple steps to never misunderstand rules again</p>
+            <p className="text-xl text-slate-50">Three simple steps to never misunderstand rules again</p>
           </motion.div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -268,7 +268,7 @@ export default function Home() {
               >
                 <div className="text-6xl mb-4">{feature.icon}</div>
                 <h3 className="text-2xl font-semibold mb-3">{feature.title}</h3>
-                <p className="text-slate-100 leading-relaxed">{feature.description}</p>
+                <p className="text-slate-50 leading-relaxed">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -296,7 +296,7 @@ export default function Home() {
                   <span className="text-2xl">{feature.icon}</span>
                   {feature.title}
                 </h3>
-                <p className="text-slate-100">{feature.description}</p>
+                <p className="text-slate-50">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -333,7 +333,7 @@ export default function Home() {
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <span className="text-3xl">🎲</span>
-              <span className="text-xl font-bold gradient-text">MeepleAI</span>
+              <span className="text-xl font-bold gradient-text-accessible">MeepleAI</span>
             </div>
             <p className="text-slate-300 text-sm">AI-powered board game rules assistance</p>
           </div>

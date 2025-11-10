@@ -152,6 +152,90 @@ pwsh tools/measure-coverage.ps1
 
 Vedi `docs/code-coverage.md` per dettagli completi.
 
+### 5. Cleanup Cache
+
+**File**: `cleanup-caches.sh` (bash) / `cleanup-caches.ps1` (PowerShell)
+
+Script per pulire periodicamente le directory di cache accumulate durante lo sviluppo.
+
+**Directory pulite**:
+- `.serena/` - Cache Serena MCP
+- `codeql-db/` - Database CodeQL
+- `.playwright-mcp/` - Cache Playwright MCP
+- `apps/api/obj`, `apps/api/bin` - Build artifacts .NET (opzionale)
+- `apps/web/.next` - Build cache Next.js (opzionale)
+
+**Uso (Linux/Mac)**:
+
+```bash
+# Dry run (mostra cosa verrebbe eliminato)
+bash tools/cleanup-caches.sh --dry-run
+
+# Esegui pulizia con conferma
+bash tools/cleanup-caches.sh
+
+# Esegui senza conferma
+bash tools/cleanup-caches.sh --yes
+
+# Pulisci solo cache (salta build artifacts)
+bash tools/cleanup-caches.sh --skip-build
+
+# Output dettagliato
+bash tools/cleanup-caches.sh --verbose
+```
+
+**Uso (Windows PowerShell)**:
+
+```powershell
+# Dry run (mostra cosa verrebbe eliminato)
+pwsh tools/cleanup-caches.ps1 -DryRun
+
+# Esegui pulizia con conferma
+pwsh tools/cleanup-caches.ps1
+
+# Esegui senza conferma
+pwsh tools/cleanup-caches.ps1 -Yes
+
+# Pulisci solo cache (salta build artifacts)
+pwsh tools/cleanup-caches.ps1 -SkipBuild
+
+# Output dettagliato
+pwsh tools/cleanup-caches.ps1 -Verbose
+```
+
+**Output**:
+```
+╔════════════════════════════════════════════╗
+║   MeepleAI Cache Cleanup                   ║
+╚════════════════════════════════════════════╝
+
+📊 Calculating current sizes...
+📁 Target directories:
+  - .serena
+  - codeql-db
+  - .playwright-mcp
+  - apps/api build artifacts
+  - apps/web/.next
+
+🧹 Cleaning cache directories...
+Deleting: .serena (45.2 MB) - Serena MCP cache
+Deleting: codeql-db (62.8 MB) - CodeQL database cache
+...
+
+╔════════════════════════════════════════════╗
+║   Cleanup Summary                          ║
+╚════════════════════════════════════════════╝
+
+✅ Cleanup complete!
+  Space freed: 120.5 MB (0.12 GB)
+```
+
+**Quando usarlo**:
+- Mensilmente per manutenzione ordinaria
+- Quando il disco si riempie
+- Prima di operazioni git pesanti (pull, merge di branch grandi)
+- Dopo aggiornamenti di dipendenze o tooling
+
 ## Sviluppo
 
 ### Aggiungere Nuovi Strumenti

@@ -1,3 +1,4 @@
+using Api.Extensions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -14,15 +15,13 @@ public static class RuleSpecEndpoints
 {
     public static RouteGroupBuilder MapRuleSpecEndpoints(this RouteGroupBuilder group)
     {
-        group.MapGet("/games/{gameId}/rulespec", async (string gameId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/games/{gameId:guid}/rulespec", async (Guid gameId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             logger.LogInformation("Fetching RuleSpec for game {GameId}", gameId);
-            var ruleSpec = await ruleSpecService.GetRuleSpecAsync(gameId, ct);
+            var ruleSpec = await ruleSpecService.GetRuleSpecAsync(gameId.ToString(), ct);
 
             if (ruleSpec == null)
             {
@@ -33,29 +32,20 @@ public static class RuleSpecEndpoints
             return Results.Json(ruleSpec);
         });
 
-        group.MapPut("/games/{gameId}/rulespec", async (string gameId, RuleSpec ruleSpec, HttpContext context, RuleSpecService ruleSpecService, AuditService auditService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPut("/games/{gameId:guid}/rulespec", async (Guid gameId, RuleSpec ruleSpec, HttpContext context, RuleSpecService ruleSpecService, AuditService auditService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
 
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} with role {Role} attempted to update RuleSpec without permission", session.User.Id, session.User.Role);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
-
-            if (!string.Equals(ruleSpec.gameId, gameId, StringComparison.Ordinal))
+            if (!string.Equals(ruleSpec.gameId, gameId.ToString(), StringComparison.Ordinal))
             {
                 return Results.BadRequest(new { error = "gameId in URL does not match gameId in RuleSpec" });
             }
 
             try
             {
-                logger.LogInformation("User {UserId} updating RuleSpec for game {GameId}", session.User.Id, gameId);
-                var updated = await ruleSpecService.UpdateRuleSpecAsync(gameId, ruleSpec, session.User.Id, ct);
+                logger.LogInformation("User {UserId} updating RuleSpec for game {GameId}", session!.User.Id, gameId);
+                var updated = await ruleSpecService.UpdateRuleSpecAsync(gameId.ToString(), ruleSpec, session.User.Id, ct);
                 logger.LogInformation("RuleSpec updated successfully for game {GameId}, version {Version}", gameId, updated.version);
 
                 // Audit trail for RuleSpec changes
@@ -63,7 +53,7 @@ public static class RuleSpecEndpoints
                     session.User.Id,
                     "UPDATE_RULESPEC",
                     "RuleSpec",
-                    gameId,
+                    gameId.ToString(),
                     "Success",
                     $"Updated RuleSpec to version {updated.version}",
                     context.Connection.RemoteIpAddress?.ToString(),
@@ -80,21 +70,13 @@ public static class RuleSpecEndpoints
         });
 
         // RULE-02: Get version history
-        group.MapGet("/games/{gameId}/rulespec/history", async (string gameId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/games/{gameId:guid}/rulespec/history", async (Guid gameId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
 
             logger.LogInformation("Fetching RuleSpec version history for game {GameId}", gameId);
-            var history = await ruleSpecService.GetVersionHistoryAsync(gameId, ct);
+            var history = await ruleSpecService.GetVersionHistoryAsync(gameId.ToString(), ct);
             return Results.Json(history);
         });
 
@@ -110,16 +92,8 @@ public static class RuleSpecEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
 
             logger.LogInformation("Fetching RuleSpec version timeline for game {GameId}", gameId);
 
@@ -139,21 +113,13 @@ public static class RuleSpecEndpoints
         .WithTags("Versions");
 
         // RULE-02: Get specific version
-        group.MapGet("/games/{gameId}/rulespec/versions/{version}", async (string gameId, string version, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/games/{gameId:guid}/rulespec/versions/{version}", async (Guid gameId, string version, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
 
             logger.LogInformation("Fetching RuleSpec version {Version} for game {GameId}", version, gameId);
-            var ruleSpec = await ruleSpecService.GetVersionAsync(gameId, version, ct);
+            var ruleSpec = await ruleSpecService.GetVersionAsync(gameId.ToString(), version, ct);
 
             if (ruleSpec == null)
             {
@@ -165,18 +131,10 @@ public static class RuleSpecEndpoints
         });
 
         // RULE-02: Compare two versions (diff)
-        group.MapGet("/games/{gameId}/rulespec/diff", async (string gameId, string? from, string? to, HttpContext context, RuleSpecService ruleSpecService, RuleSpecDiffService diffService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/games/{gameId:guid}/rulespec/diff", async (Guid gameId, string? from, string? to, HttpContext context, RuleSpecService ruleSpecService, RuleSpecDiffService diffService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
 
             if (string.IsNullOrWhiteSpace(from) || string.IsNullOrWhiteSpace(to))
             {
@@ -185,8 +143,8 @@ public static class RuleSpecEndpoints
 
             logger.LogInformation("Computing diff between versions {FromVersion} and {ToVersion} for game {GameId}", from, to, gameId);
 
-            var fromSpec = await ruleSpecService.GetVersionAsync(gameId, from, ct);
-            var toSpec = await ruleSpecService.GetVersionAsync(gameId, to, ct);
+            var fromSpec = await ruleSpecService.GetVersionAsync(gameId.ToString(), from, ct);
+            var toSpec = await ruleSpecService.GetVersionAsync(gameId.ToString(), to, ct);
 
             if (fromSpec == null || toSpec == null)
             {
@@ -198,18 +156,10 @@ public static class RuleSpecEndpoints
         });
 
         // EDIT-02: RuleSpec comment endpoints
-        group.MapPost("/games/{gameId}/rulespec/versions/{version}/comments", async (string gameId, string version, CreateRuleSpecCommentRequest request, HttpContext context, RuleSpecCommentService commentService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/games/{gameId:guid}/rulespec/versions/{version}/comments", async (Guid gameId, string version, CreateRuleSpecCommentRequest request, HttpContext context, RuleSpecCommentService commentService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
 
             if (string.IsNullOrWhiteSpace(request.CommentText))
             {
@@ -218,8 +168,8 @@ public static class RuleSpecEndpoints
 
             try
             {
-                logger.LogInformation("User {UserId} adding comment to RuleSpec {GameId} version {Version}", session.User.Id, gameId, version);
-                var comment = await commentService.AddCommentAsync(gameId, version, request.AtomId, session.User.Id, request.CommentText, ct);
+                logger.LogInformation("User {UserId} adding comment to RuleSpec {GameId} version {Version}", session!.User.Id, gameId, version);
+                var comment = await commentService.AddCommentAsync(gameId.ToString(), version, request.AtomId, session.User.Id, request.CommentText, ct);
                 logger.LogInformation("Comment {CommentId} created successfully", comment.Id);
                 return Results.Created($"/api/v1/games/{gameId}/rulespec/comments/{comment.Id}", comment);
             }
@@ -230,30 +180,20 @@ public static class RuleSpecEndpoints
             }
         });
 
-        group.MapGet("/games/{gameId}/rulespec/versions/{version}/comments", async (string gameId, string version, HttpContext context, RuleSpecCommentService commentService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/games/{gameId:guid}/rulespec/versions/{version}/comments", async (Guid gameId, string version, HttpContext context, RuleSpecCommentService commentService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
 
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
-
-            logger.LogInformation("User {UserId} fetching comments for RuleSpec {GameId} version {Version}", session.User.Id, gameId, version);
-            var response = await commentService.GetCommentsForVersionAsync(gameId, version, ct);
+            logger.LogInformation("User {UserId} fetching comments for RuleSpec {GameId} version {Version}", session!.User.Id, gameId, version);
+            var response = await commentService.GetCommentsForVersionAsync(gameId.ToString(), version, ct);
             return Results.Json(response);
         });
 
-        group.MapPut("/games/{gameId}/rulespec/comments/{commentId:guid}", async (string gameId, Guid commentId, UpdateRuleSpecCommentRequest request, HttpContext context, RuleSpecCommentService commentService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPut("/games/{gameId:guid}/rulespec/comments/{commentId:guid}", async (Guid gameId, Guid commentId, UpdateRuleSpecCommentRequest request, HttpContext context, RuleSpecCommentService commentService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             if (string.IsNullOrWhiteSpace(request.CommentText))
             {
@@ -262,7 +202,7 @@ public static class RuleSpecEndpoints
 
             try
             {
-                logger.LogInformation("User {UserId} updating comment {CommentId}", session.User.Id, commentId);
+                logger.LogInformation("User {UserId} updating comment {CommentId}", session!.User.Id, commentId);
                 var comment = await commentService.UpdateCommentAsync(commentId, session.User.Id, request.CommentText, ct);
                 logger.LogInformation("Comment {CommentId} updated successfully", commentId);
                 return Results.Json(comment);
@@ -279,14 +219,12 @@ public static class RuleSpecEndpoints
             }
         });
 
-        group.MapDelete("/games/{gameId}/rulespec/comments/{commentId:guid}", async (string gameId, Guid commentId, HttpContext context, RuleSpecCommentService commentService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapDelete("/games/{gameId:guid}/rulespec/comments/{commentId:guid}", async (Guid gameId, Guid commentId, HttpContext context, RuleSpecCommentService commentService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
-            var isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+            var isAdmin = string.Equals(session!.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
 
             try
             {
@@ -318,12 +256,10 @@ public static class RuleSpecEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
-            if (!Guid.TryParse(session.User.Id, out var userId))
+            if (!Guid.TryParse(session!.User.Id, out var userId))
             {
                 return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
             }
@@ -335,7 +271,7 @@ public static class RuleSpecEndpoints
             {
                 logger.LogInformation("User {UserId} creating comment on RuleSpec {GameId} version {Version}", userId, gameId, version);
                 var comment = await commentService.CreateCommentAsync(
-                    gameId,
+                    gameId.ToString(),
                     version,
                     request.LineNumber,
                     request.CommentText,
@@ -371,12 +307,10 @@ public static class RuleSpecEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
-            if (!Guid.TryParse(session.User.Id, out var userId))
+            if (!Guid.TryParse(session!.User.Id, out var userId))
             {
                 return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
             }
@@ -434,11 +368,9 @@ public static class RuleSpecEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-            var userId = session.User.Id;
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+            var userId = session!.User.Id;
 
             // Manually resolve service from DI container
             var commentService = context.RequestServices.GetRequiredService<IRuleCommentService>();
@@ -465,11 +397,9 @@ public static class RuleSpecEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-            var userId = session.User.Id;
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+            var userId = session!.User.Id;
 
             // Manually resolve service from DI container
             var commentService = context.RequestServices.GetRequiredService<IRuleCommentService>();
@@ -495,21 +425,10 @@ public static class RuleSpecEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
 
-            // SECURITY: Only Admin and Editor roles can resolve comments
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} with role {Role} attempted to resolve comment without permission",
-                    session.User.Id, session.User.Role);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
-
-            if (!Guid.TryParse(session.User.Id, out var userId))
+            if (!Guid.TryParse(session!.User.Id, out var userId))
             {
                 return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
             }
@@ -561,21 +480,10 @@ public static class RuleSpecEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
 
-            // SECURITY: Only Admin and Editor roles can unresolve comments
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} with role {Role} attempted to unresolve comment without permission",
-                    session.User.Id, session.User.Role);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
-
-            var userId = session.User.Id;
+            var userId = session!.User.Id;
 
             // Manually resolve service from DI container
             var commentService = context.RequestServices.GetRequiredService<IRuleCommentService>();
@@ -619,17 +527,8 @@ public static class RuleSpecEndpoints
         // EDIT-07: Bulk RuleSpec operations
         group.MapPost("/rulespecs/bulk/export", async (BulkExportRequest request, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} with role {Role} attempted to export rule specs without permission", session.User.Id, session.User.Role);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
 
             if (request?.RuleSpecIds == null || request.RuleSpecIds.Count == 0)
             {
@@ -638,7 +537,7 @@ public static class RuleSpecEndpoints
 
             try
             {
-                logger.LogInformation("User {UserId} exporting {Count} rule specs", session.User.Id, request.RuleSpecIds.Count);
+                logger.LogInformation("User {UserId} exporting {Count} rule specs", session!.User.Id, request.RuleSpecIds.Count);
                 var zipBytes = await ruleSpecService.CreateZipArchiveAsync(request.RuleSpecIds, ct);
 
                 var fileName = $"meepleai-rulespecs-{DateTime.UtcNow:yyyy-MM-dd}.zip";

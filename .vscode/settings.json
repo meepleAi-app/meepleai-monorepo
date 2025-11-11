@@ -1,5 +1,25 @@
 {
-  "mcp.configPath": "${workspaceFolder}/mcp/claude_mcp_config.json",
-  "CodeGPT.apiKey": "Docker",
-  "git.ignoreLimitWarning": true
+  "files.exclude": {
+    "apps/web": true,
+    "**/node_modules": true,
+    "**/.next": true
+  },
+  "search.exclude": {
+    "apps/web": true,
+    "**/node_modules": true,
+    "**/bin": true,
+    "**/obj": true
+  },
+  "terminal.integrated.cwd": "${workspaceFolder}/apps/api",
+  "editor.formatOnSave": true,
+  "[csharp]": {
+    "editor.defaultFormatter": "ms-dotnettools.csharp",
+    "editor.tabSize": 4
+  },
+  "dotnet.defaultSolution": "apps/api/Api.sln",
+  "workbench.colorCustomizations": {
+    "statusBar.background": "#004494",
+    "statusBar.foreground": "#ffffff"
+  },
+  "window.title": "Backend - ${rootName}${separator}${activeEditorShort}"
 }

@@ -1,7 +1,44 @@
 {
   "version": "2.0.0",
   "tasks": [
-    { "label": "MCP build wrappers", "type": "shell", "command": "docker compose -f mcp/docker/compose.mcp.yml build" },
-    { "label": "MCP prepare outdir", "type": "shell", "command": "mkdir -p .mcp_out" }
+    {
+      "label": "build",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/apps/api/src/Api/Api.csproj"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "test",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "test",
+        "${workspaceFolder}/apps/api/tests/Api.Tests/Api.Tests.csproj"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "run",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "run",
+        "--project",
+        "${workspaceFolder}/apps/api/src/Api/Api.csproj"
+      ],
+      "problemMatcher": "$msCompile"
+    }
   ]
 }

@@ -537,6 +537,35 @@ namespace Api.Migrations
                     b.ToTable("chat_logs", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.ChatThreadEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("GameId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("LastMessageAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MessagesJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameId");
+
+                    b.ToTable("ChatThreads");
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.GameEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1753,6 +1782,15 @@ namespace Api.Migrations
                     b.Navigation("DeletedByUser");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.ChatThreadEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                        .WithMany()
+                        .HasForeignKey("GameId");
+
+                    b.Navigation("Game");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameSessionEntity", b =>

@@ -148,7 +148,8 @@ builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
 // Application services (Domain, AI, Admin)
-builder.Services.AddApplicationServices();
+// BGAI-001-v2: Pass configuration for PDF extractor provider selection
+builder.Services.AddApplicationServices(builder.Configuration);
 
 // Authentication services (Auth, OAuth, 2FA, API keys, Sessions)
 builder.Services.AddAuthenticationServices(builder.Configuration);

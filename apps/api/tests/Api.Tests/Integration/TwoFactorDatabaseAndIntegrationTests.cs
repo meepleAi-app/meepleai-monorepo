@@ -125,7 +125,7 @@ public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
 
         var user = new UserEntity
         {
-            Id = "test-user",
+            Id = Guid.NewGuid(),
             Email = "test@example.com",
             PasswordHash = "dummy",
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
@@ -516,7 +516,7 @@ public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
         // Arrange - Create 100 expired sessions
         var user = new UserEntity
         {
-            Id = "test-user",
+            Id = Guid.NewGuid(),
             Email = "test@example.com",
             PasswordHash = "dummy",
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
@@ -604,7 +604,7 @@ public class TwoFactorDatabaseAndIntegrationTests : TransactionalTestBase
         // Arrange - Create user with backup codes and temp session
         var user = new UserEntity
         {
-            Id = "test-user",
+            Id = Guid.NewGuid(),
             Email = "test@example.com",
             PasswordHash = "dummy",
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime

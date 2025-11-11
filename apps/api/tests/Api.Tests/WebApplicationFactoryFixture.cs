@@ -592,31 +592,31 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
         // Seed demo users
         var adminUser = new Api.Infrastructure.Entities.UserEntity
         {
-            Id = "demo-admin-001",
+            Id = Guid.NewGuid(),
             Email = "admin@meepleai.dev",
             DisplayName = "Demo Admin",
             PasswordHash = demoPasswordHash,
-            Role = "admin",
+            Role = UserRole.Admin,
             CreatedAt = now
         };
 
         var editorUser = new Api.Infrastructure.Entities.UserEntity
         {
-            Id = "demo-editor-001",
+            Id = Guid.NewGuid(),
             Email = "editor@meepleai.dev",
             DisplayName = "Demo Editor",
             PasswordHash = demoPasswordHash,
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = now
         };
 
         var regularUser = new Api.Infrastructure.Entities.UserEntity
         {
-            Id = "demo-user-001",
+            Id = Guid.NewGuid(),
             Email = "user@meepleai.dev",
             DisplayName = "Demo User",
             PasswordHash = demoPasswordHash,
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = now
         };
 
@@ -627,7 +627,7 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
         {
             var ticTacToeGame = new Api.Infrastructure.Entities.GameEntity
             {
-                Id = "tic-tac-toe",
+                Id = Guid.NewGuid(),
                 Name = "Tic-Tac-Toe",
                 CreatedAt = now
             };
@@ -638,7 +638,7 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
         {
             var chessGame = new Api.Infrastructure.Entities.GameEntity
             {
-                Id = "chess",
+                Id = Guid.NewGuid(),
                 Name = "Chess",
                 CreatedAt = now
             };
@@ -723,19 +723,19 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
         var ticTacToeRuleSpec = new Api.Infrastructure.Entities.RuleSpecEntity
         {
             Id = Guid.Parse("f5e4d3c2-b1a0-4f3e-9d8c-7b6a5e4d3c21"),
-            GameId = "tic-tac-toe",
+            GameId = Guid.NewGuid(),
             Version = "v1.0",
             CreatedAt = now,
-            CreatedByUserId = "demo-admin-001"
+            CreatedByUserId = Guid.NewGuid()
         };
 
         var chessRuleSpec = new Api.Infrastructure.Entities.RuleSpecEntity
         {
             Id = Guid.Parse("a1b2c3d4-e5f6-47a8-b9c0-d1e2f3a4b5c6"),
-            GameId = "chess",
+            GameId = Guid.NewGuid(),
             Version = "v1.0",
             CreatedAt = now,
-            CreatedByUserId = "demo-admin-001"
+            CreatedByUserId = Guid.NewGuid()
         };
 
         db.RuleSpecs.AddRange(ticTacToeRuleSpec, chessRuleSpec);
@@ -743,8 +743,8 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
         // Seed demo agents
         var tttExplainAgent = new Api.Infrastructure.Entities.AgentEntity
         {
-            Id = "agent-ttt-explain",
-            GameId = "tic-tac-toe",
+            Id = Guid.NewGuid(),
+            GameId = Guid.NewGuid(),
             Name = "Tic-Tac-Toe Explainer",
             Kind = "explain",
             CreatedAt = now
@@ -752,8 +752,8 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
 
         var tttQaAgent = new Api.Infrastructure.Entities.AgentEntity
         {
-            Id = "agent-ttt-qa",
-            GameId = "tic-tac-toe",
+            Id = Guid.NewGuid(),
+            GameId = Guid.NewGuid(),
             Name = "Tic-Tac-Toe Q&A",
             Kind = "qa",
             CreatedAt = now
@@ -761,8 +761,8 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
 
         var chessExplainAgent = new Api.Infrastructure.Entities.AgentEntity
         {
-            Id = "agent-chess-explain",
-            GameId = "chess",
+            Id = Guid.NewGuid(),
+            GameId = Guid.NewGuid(),
             Name = "Chess Explainer",
             Kind = "explain",
             CreatedAt = now
@@ -770,8 +770,8 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
 
         var chessQaAgent = new Api.Infrastructure.Entities.AgentEntity
         {
-            Id = "agent-chess-qa",
-            GameId = "chess",
+            Id = Guid.NewGuid(),
+            GameId = Guid.NewGuid(),
             Name = "Chess Q&A",
             Kind = "qa",
             CreatedAt = now

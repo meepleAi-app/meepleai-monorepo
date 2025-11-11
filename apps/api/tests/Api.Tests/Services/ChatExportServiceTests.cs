@@ -91,27 +91,31 @@ public class ChatExportServiceTests : IDisposable
         _connection.Dispose();
     }
 
-    private async Task<ChatEntity> CreateTestChatAsync(string userId = "user-123", string gameName = "Test Game")
+    private async Task<ChatEntity> CreateTestChatAsync(Guid? userId = null, string gameName = "Test Game")
     {
+        var actualUserId = userId ?? Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var agentId = Guid.NewGuid();
+
         var user = new UserEntity
         {
-            Id = userId,
-            Email = $"{userId}@test.com",
+            Id = actualUserId,
+            Email = $"{actualUserId}@test.com",
             PasswordHash = "hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = DateTime.UtcNow
         };
 
         var game = new GameEntity
         {
-            Id = "test-game",
+            Id = gameId,
             Name = gameName
         };
 
         var agent = new AgentEntity
         {
-            Id = "test-agent",
-            GameId = "test-game",
+            Id = agentId,
+            GameId = gameId,
             Name = "Q&A Agent",
             Kind = "qa",
             CreatedAt = DateTime.UtcNow
@@ -120,9 +124,9 @@ public class ChatExportServiceTests : IDisposable
         var chat = new ChatEntity
         {
             Id = Guid.NewGuid(),
-            UserId = userId,
-            GameId = "test-game",
-            AgentId = "test-agent",
+            UserId = actualUserId,
+            GameId = gameId,
+            AgentId = agentId,
             StartedAt = DateTime.UtcNow.AddHours(-1)
         };
 
@@ -149,7 +153,7 @@ public class ChatExportServiceTests : IDisposable
         var nonExistentChatId = Guid.NewGuid();
 
         // When: User attempts to export
-        var result = await _service.ExportChatAsync(nonExistentChatId, "user-123", "pdf");
+        var result = await _service.ExportChatAsync(nonExistentChatId, Guid.NewGuid(), "pdf");
 
         // Then: NotFound result is returned
         result.Success.Should().BeFalse();
@@ -176,7 +180,7 @@ public class ChatExportServiceTests : IDisposable
         var chat = await CreateTestChatAsync();
 
         // When: User requests export with unsupported format
-        var result = await _service.ExportChatAsync(chat.Id, "user-123", "xml");
+        var result = await _service.ExportChatAsync(chat.Id, chat.UserId, "xml");
 
         // Then: UnsupportedFormat result is returned
         result.Success.Should().BeFalse();
@@ -201,7 +205,7 @@ public class ChatExportServiceTests : IDisposable
     public async Task ExportChatAsync_ValidChat_SelectsCorrectFormatter()
     {
         // Given: User owns a chat
-        var chat = await CreateTestChatAsync("user-123");
+        var chat = await CreateTestChatAsync(Guid.NewGuid());
 
         var log = new ChatLogEntity
         {
@@ -220,7 +224,7 @@ public class ChatExportServiceTests : IDisposable
             .ReturnsAsync(exportStream);
 
         // When: User requests export in TXT format
-        var result = await _service.ExportChatAsync(chat.Id, "user-123", "txt");
+        var result = await _service.ExportChatAsync(chat.Id, chat.UserId, "txt");
 
         // Then: Correct formatter is selected
         _txtFormatterMock.Verify(
@@ -247,10 +251,10 @@ public class ChatExportServiceTests : IDisposable
     public async Task ExportChatAsync_OtherUsersChat_ReturnsNotFound()
     {
         // Given: Chat belongs to different user
-        var chat = await CreateTestChatAsync("owner-456");
+        var chat = await CreateTestChatAsync(Guid.NewGuid());
 
         // When: Different user attempts to export
-        var result = await _service.ExportChatAsync(chat.Id, "attacker-789", "pdf");
+        var result = await _service.ExportChatAsync(chat.Id, Guid.NewGuid(), "pdf");
 
         // Then: NotFound result is returned (not Forbidden for security)
         result.Success.Should().BeFalse();
@@ -304,7 +308,7 @@ public class ChatExportServiceTests : IDisposable
         // When: User requests export with date range (last 5 days)
         var startDate = DateTime.UtcNow.AddDays(-5);
         var endDate = DateTime.UtcNow;
-        var result = await _service.ExportChatAsync(chat.Id, "user-123", "pdf", startDate, endDate);
+        var result = await _service.ExportChatAsync(chat.Id, chat.UserId, "pdf", startDate, endDate);
 
         // Then: Formatter receives date range parameters
         _pdfFormatterMock.Verify(
@@ -335,7 +339,7 @@ public class ChatExportServiceTests : IDisposable
             .ThrowsAsync(new InvalidOperationException("PDF generation failed"));
 
         // When: Formatter throws exception
-        var result = await _service.ExportChatAsync(chat.Id, "user-123", "pdf");
+        var result = await _service.ExportChatAsync(chat.Id, chat.UserId, "pdf");
 
         // Then: GenerationFailed result is returned
         result.Success.Should().BeFalse();
@@ -361,7 +365,7 @@ public class ChatExportServiceTests : IDisposable
     public async Task GenerateFilename_SpecialCharacters_SanitizesCorrectly(string gameName, string expectedSanitized)
     {
         // Given: Game name contains special characters
-        var chat = await CreateTestChatAsync("user-123", gameName);
+        var chat = await CreateTestChatAsync(Guid.NewGuid(), gameName);
 
         using var exportStream = new MemoryStream();
         _txtFormatterMock
@@ -369,7 +373,7 @@ public class ChatExportServiceTests : IDisposable
             .ReturnsAsync(exportStream);
 
         // When: Generating export filename
-        var result = await _service.ExportChatAsync(chat.Id, "user-123", "txt");
+        var result = await _service.ExportChatAsync(chat.Id, chat.UserId, "txt");
 
         // Then: Filename is sanitized and follows pattern
         result.Success.Should().BeTrue();
@@ -406,7 +410,7 @@ public class ChatExportServiceTests : IDisposable
         var endDate = new DateTime(2025, 10, 15);
 
         // When: Generating filename
-        var result = await _service.ExportChatAsync(chat.Id, "user-123", "pdf", startDate, endDate);
+        var result = await _service.ExportChatAsync(chat.Id, chat.UserId, "pdf", startDate, endDate);
 
         // Then: Export succeeds (date range in filename is optional)
         result.Success.Should().BeTrue();
@@ -435,7 +439,7 @@ public class ChatExportServiceTests : IDisposable
             .ReturnsAsync(exportStream);
 
         // When: User exports chat
-        var result = await _service.ExportChatAsync(chat.Id, "user-123", "md");
+        var result = await _service.ExportChatAsync(chat.Id, chat.UserId, "md");
 
         // Then: Formatter is still called
         _mdFormatterMock.Verify(
@@ -499,7 +503,7 @@ public class ChatExportServiceTests : IDisposable
             .ReturnsAsync(exportStream);
 
         // When: User exports chat
-        var result = await _service.ExportChatAsync(chat.Id, "user-123", "pdf");
+        var result = await _service.ExportChatAsync(chat.Id, chat.UserId, "pdf");
 
         // Then: All message types are included
         _pdfFormatterMock.Verify(
@@ -556,7 +560,7 @@ public class ChatExportServiceTests : IDisposable
             .ReturnsAsync(exportStream);
 
         // When: User requests export with case variant
-        var result = await _service.ExportChatAsync(chat.Id, "user-123", format);
+        var result = await _service.ExportChatAsync(chat.Id, chat.UserId, format);
 
         // Then: Correct formatter is selected
         mockFormatter.Verify(
@@ -586,7 +590,7 @@ public class ChatExportServiceTests : IDisposable
         cts.Cancel();
 
         // Then: OperationCanceledException is thrown
-        var act = async () => await _service.ExportChatAsync(chat.Id, "user-123", "pdf", ct: cts.Token);
+        var act = async () => await _service.ExportChatAsync(chat.Id, chat.UserId, "pdf", ct: cts.Token);
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
@@ -606,7 +610,7 @@ public class ChatExportServiceTests : IDisposable
     public async Task ExportChatAsync_EmptyGameName_UsesChatFallback(string emptyGameName)
     {
         // Given: Game name is empty/whitespace
-        var chat = await CreateTestChatAsync("user-123", emptyGameName);
+        var chat = await CreateTestChatAsync(Guid.NewGuid(), emptyGameName);
 
         using var exportStream = new MemoryStream();
         _txtFormatterMock
@@ -614,7 +618,7 @@ public class ChatExportServiceTests : IDisposable
             .ReturnsAsync(exportStream);
 
         // When: Generating export filename
-        var result = await _service.ExportChatAsync(chat.Id, "user-123", "txt");
+        var result = await _service.ExportChatAsync(chat.Id, chat.UserId, "txt");
 
         // Then: Filename uses "file" as fallback (format: file_chat-{id}.txt)
         result.Success.Should().BeTrue();
@@ -639,7 +643,7 @@ public class ChatExportServiceTests : IDisposable
     public async Task ExportChatAsync_ControlCharactersInGameName_RemovesControlChars(string gameName, string expectedSanitized)
     {
         // Given: Game name contains control characters
-        var chat = await CreateTestChatAsync("user-123", gameName);
+        var chat = await CreateTestChatAsync(Guid.NewGuid(), gameName);
 
         using var exportStream = new MemoryStream();
         _pdfFormatterMock
@@ -647,7 +651,7 @@ public class ChatExportServiceTests : IDisposable
             .ReturnsAsync(exportStream);
 
         // When: Generating filename
-        var result = await _service.ExportChatAsync(chat.Id, "user-123", "pdf");
+        var result = await _service.ExportChatAsync(chat.Id, chat.UserId, "pdf");
 
         // Then: Control characters are removed
         result.Success.Should().BeTrue();
@@ -671,7 +675,7 @@ public class ChatExportServiceTests : IDisposable
     {
         // Given: Game name exceeds 50 characters
         var longGameName = "This is an extremely long game name that definitely exceeds the fifty character limit for filenames";
-        var chat = await CreateTestChatAsync("user-123", longGameName);
+        var chat = await CreateTestChatAsync(Guid.NewGuid(), longGameName);
 
         using var exportStream = new MemoryStream();
         _mdFormatterMock
@@ -679,7 +683,7 @@ public class ChatExportServiceTests : IDisposable
             .ReturnsAsync(exportStream);
 
         // When: Generating filename
-        var result = await _service.ExportChatAsync(chat.Id, "user-123", "md");
+        var result = await _service.ExportChatAsync(chat.Id, chat.UserId, "md");
 
         // Then: Game name is truncated
         result.Success.Should().BeTrue();
@@ -710,7 +714,7 @@ public class ChatExportServiceTests : IDisposable
     public async Task ExportChatAsync_NewlinesInGameName_RemovesNewlines(string gameName, string expectedSanitized)
     {
         // Given: Game name contains newlines
-        var chat = await CreateTestChatAsync("user-123", gameName);
+        var chat = await CreateTestChatAsync(Guid.NewGuid(), gameName);
 
         using var exportStream = new MemoryStream();
         _txtFormatterMock
@@ -718,7 +722,7 @@ public class ChatExportServiceTests : IDisposable
             .ReturnsAsync(exportStream);
 
         // When: Generating filename
-        var result = await _service.ExportChatAsync(chat.Id, "user-123", "txt");
+        var result = await _service.ExportChatAsync(chat.Id, chat.UserId, "txt");
 
         // Then: Newlines are removed
         result.Success.Should().BeTrue();
@@ -760,7 +764,7 @@ public class ChatExportServiceTests : IDisposable
 
         // When: 5 concurrent export requests are made
         var tasks = Enumerable.Range(0, 5).Select(_ =>
-            _service.ExportChatAsync(chat.Id, "user-123", "pdf")
+            _service.ExportChatAsync(chat.Id, chat.UserId, "pdf")
         ).ToArray();
 
         var results = await Task.WhenAll(tasks);
@@ -809,7 +813,7 @@ public class ChatExportServiceTests : IDisposable
             .ReturnsAsync(exportStream);
 
         // When: User exports chat
-        var result = await _service.ExportChatAsync(chat.Id, "user-123", "pdf");
+        var result = await _service.ExportChatAsync(chat.Id, chat.UserId, "pdf");
 
         // Then: Export completes successfully
         result.Success.Should().BeTrue();

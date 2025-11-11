@@ -64,7 +64,7 @@ public class PromptTemplateConcurrencyTests : ConfigIntegrationTestBase
     public async Task ConcurrentVersionActivations_OptimisticConcurrency_Test()
     {
         // Arrange: Create template with 3 versions
-        var templateId = "";
+        var templateId = Guid.NewGuid();
         var versionIds = new List<string>();
 
         using (var scope = Factory.Services.CreateScope())
@@ -156,8 +156,8 @@ public class PromptTemplateConcurrencyTests : ConfigIntegrationTestBase
     public async Task ConcurrentSameVersionActivations_AreIdempotent_Test()
     {
         // Arrange: Create template with 2 versions
-        var templateId = "";
-        var versionId = "";
+        var templateId = Guid.NewGuid();
+        var versionId = Guid.NewGuid();
 
         using (var scope = Factory.Services.CreateScope())
         {
@@ -253,7 +253,7 @@ public class PromptTemplateConcurrencyTests : ConfigIntegrationTestBase
     {
         // Arrange: Create template with 2 versions
         var templateName = $"cache-template-{Guid.NewGuid():N}";
-        var templateId = "";
+        var templateId = Guid.NewGuid();
         var version2Id = "";
 
         using (var scope = Factory.Services.CreateScope())
@@ -352,7 +352,7 @@ public class PromptTemplateConcurrencyTests : ConfigIntegrationTestBase
     {
         // Arrange: Create template with active version
         var templateName = $"distributed-{Guid.NewGuid():N}";
-        var templateId = "";
+        var templateId = Guid.NewGuid();
 
         using (var scope = Factory.Services.CreateScope())
         {

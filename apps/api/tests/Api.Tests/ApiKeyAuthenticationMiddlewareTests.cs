@@ -42,13 +42,13 @@ public class ApiKeyAuthenticationMiddlewareTests
             Email = "sanitized@example.com",
             DisplayName = "Test User",
             PasswordHash = "hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = DateTime.UtcNow
         };
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();
 
-        var (plaintextKey, apiKeyEntity) = await service.GenerateApiKeyAsync(user.Id.ToString(), "Test Key", "read");
+        (string plaintextKey, var apiKeyEntity) = await service.GenerateApiKeyAsync(user.Id.ToString(), "Test Key", new[] { "read" });
         dbContext.ApiKeys.Add(apiKeyEntity);
         await dbContext.SaveChangesAsync();
 

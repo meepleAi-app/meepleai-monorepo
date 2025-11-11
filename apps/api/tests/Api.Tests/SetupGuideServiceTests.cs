@@ -75,7 +75,7 @@ public class SetupGuideServiceTests : IDisposable
     public async Task GenerateSetupGuideAsync_WithNonExistentGame_ReturnsDefaultGuide()
     {
         // Arrange
-        var gameId = "nonexistent";
+        var gameId = Guid.NewGuid();
 
         // Act
         var result = await _service.GenerateSetupGuideAsync(gameId);
@@ -91,7 +91,7 @@ public class SetupGuideServiceTests : IDisposable
     public async Task GenerateSetupGuideAsync_WithValidGame_ReturnsSetupGuide()
     {
         // Arrange
-        var gameId = "game1";
+        var gameId = Guid.NewGuid();
 
         // Create test game
         var game = new GameEntity
@@ -130,7 +130,7 @@ public class SetupGuideServiceTests : IDisposable
     public async Task GenerateSetupGuideAsync_WithRAGData_ReturnsEnrichedSteps()
     {
         // Arrange
-        var gameId = "game1";
+        var gameId = Guid.NewGuid();
 
         var game = new GameEntity
         {
@@ -228,7 +228,7 @@ Each player takes a player board and starting components.";
     public async Task SetupGuideResponse_CalculatesEstimatedTime()
     {
         // Arrange
-        var gameId = "game1";
+        var gameId = Guid.NewGuid();
 
         var game = new GameEntity
         {

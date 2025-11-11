@@ -47,7 +47,7 @@ public class AuditServiceTests : IDisposable
     public async Task LogAsync_CreatesAuditLogWithGlobalFields()
     {
         // Arrange
-        var userId = "user-123";
+        var userId = Guid.NewGuid();
         var action = "TestAction";
         var resource = "TestResource";
         var resourceId = "resource-456";
@@ -109,7 +109,7 @@ public class AuditServiceTests : IDisposable
         // Arrange
         var userScope = "scope-1";
         var requiredScope = "scope-2";
-        var userId = "user-123";
+        var userId = Guid.NewGuid();
         var resource = "Game";
 
         // Act

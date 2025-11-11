@@ -73,8 +73,8 @@ public class RagEvaluationServiceTests : IDisposable
             {
                 new RagEvaluationQuery
                 {
-                    Id = "test-001",
-                    GameId = "test-game",
+                    Id = Guid.NewGuid(),
+                    GameId = Guid.NewGuid(),
                     Query = "Test query",
                     RelevantDocIds = new List<string> { "doc-1" }
                 }
@@ -149,8 +149,8 @@ public class RagEvaluationServiceTests : IDisposable
             {
                 new RagEvaluationQuery
                 {
-                    Id = "nested-001",
-                    GameId = "test-game",
+                    Id = Guid.NewGuid(),
+                    GameId = Guid.NewGuid(),
                     Query = "Test query",
                     RelevantDocIds = new List<string> { "doc-1" }
                 }
@@ -200,8 +200,8 @@ public class RagEvaluationServiceTests : IDisposable
             {
                 new RagEvaluationQuery
                 {
-                    Id = "nested-002",
-                    GameId = "test-game",
+                    Id = Guid.NewGuid(),
+                    GameId = Guid.NewGuid(),
                     Query = "Test query",
                     RelevantDocIds = new List<string> { "doc-1" }
                 }
@@ -405,8 +405,8 @@ public class RagEvaluationServiceTests : IDisposable
             {
                 new RagEvaluationQuery
                 {
-                    Id = "recall-001",
-                    GameId = "test-game",
+                    Id = Guid.NewGuid(),
+                    GameId = Guid.NewGuid(),
                     Query = "Test query",
                     RelevantDocIds = new List<string> { "doc-1", "doc-2", "doc-3", "doc-4" } // 4 relevant docs
                 }
@@ -446,15 +446,15 @@ public class RagEvaluationServiceTests : IDisposable
             {
                 new RagEvaluationQuery
                 {
-                    Id = "q1",
-                    GameId = "test-game",
+                    Id = Guid.NewGuid(),
+                    GameId = Guid.NewGuid(),
                     Query = "Query 1",
                     RelevantDocIds = new List<string> { "doc-1" }
                 },
                 new RagEvaluationQuery
                 {
-                    Id = "q2",
-                    GameId = "test-game",
+                    Id = Guid.NewGuid(),
+                    GameId = Guid.NewGuid(),
                     Query = "Query 2",
                     RelevantDocIds = new List<string> { "doc-2" }
                 }
@@ -539,7 +539,7 @@ public class RagEvaluationServiceTests : IDisposable
         var queries = Enumerable.Range(1, 100).Select(i => new RagEvaluationQuery
         {
             Id = $"q{i}",
-            GameId = "test-game",
+            GameId = Guid.NewGuid(),
             Query = $"Query {i}",
             RelevantDocIds = new List<string> { "doc-1" }
         }).ToList();
@@ -783,8 +783,8 @@ public class RagEvaluationServiceTests : IDisposable
             {
                 new RagEvaluationQuery
                 {
-                    Id = "test-001",
-                    GameId = "test-game",
+                    Id = Guid.NewGuid(),
+                    GameId = Guid.NewGuid(),
                     Query = "Test query",
                     RelevantDocIds = new List<string> { "doc-1", "doc-2" }
                 }

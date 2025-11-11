@@ -57,7 +57,7 @@ public class RuleSpecServiceTests : IDisposable
     [Fact]
     public async Task GetOrCreateDemoAsync_WhenNoData_CreatesDemoSpec()
     {
-        var gameId = "chess";
+        var gameId = Guid.NewGuid();
 
         var result = await _service.GetOrCreateDemoAsync(gameId);
 
@@ -88,7 +88,7 @@ public class RuleSpecServiceTests : IDisposable
     {
         var game = new GameEntity
         {
-            Id = "existing-game",
+            Id = Guid.NewGuid(),
             Name = "Existing Game",
             CreatedAt = DateTime.UtcNow
         };
@@ -124,18 +124,18 @@ public class RuleSpecServiceTests : IDisposable
     {
         var game = new GameEntity
         {
-            Id = "game-1",
+            Id = Guid.NewGuid(),
             Name = "Test Game",
             CreatedAt = DateTime.UtcNow
         };
 
         var user = new UserEntity
         {
-            Id = "author-1",
+            Id = Guid.NewGuid(),
             Email = "author@example.com",
             DisplayName = "Author",
             PasswordHash = "hash",
-            Role = "admin",
+            Role = UserRole.Admin,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -177,18 +177,18 @@ public class RuleSpecServiceTests : IDisposable
     {
         var game = new GameEntity
         {
-            Id = "game-2",
+            Id = Guid.NewGuid(),
             Name = "Sequential Game",
             CreatedAt = DateTime.UtcNow
         };
 
         var user = new UserEntity
         {
-            Id = "author-2",
+            Id = Guid.NewGuid(),
             Email = "author2@example.com",
             DisplayName = "Second Author",
             PasswordHash = "hash",
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -242,18 +242,18 @@ public class RuleSpecServiceTests : IDisposable
     {
         var game = new GameEntity
         {
-            Id = "game-duplicate",
+            Id = Guid.NewGuid(),
             Name = "Duplicate Game",
             CreatedAt = DateTime.UtcNow
         };
 
         var user = new UserEntity
         {
-            Id = "author-dup",
+            Id = Guid.NewGuid(),
             Email = "dup@example.com",
             DisplayName = "Duplicate Author",
             PasswordHash = "hash",
-            Role = "admin",
+            Role = UserRole.Admin,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -288,17 +288,17 @@ public class RuleSpecServiceTests : IDisposable
     {
         var game = new GameEntity
         {
-            Id = "history-game",
+            Id = Guid.NewGuid(),
             Name = "History Game",
             CreatedAt = DateTime.UtcNow
         };
         var user = new UserEntity
         {
-            Id = "user-1",
+            Id = Guid.NewGuid(),
             Email = "user@example.com",
             DisplayName = "Test User",
             PasswordHash = "hash",
-            Role = "admin",
+            Role = UserRole.Admin,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -359,24 +359,24 @@ public class RuleSpecServiceTests : IDisposable
     {
         var game = new GameEntity
         {
-            Id = "game-pdf",
+            Id = Guid.NewGuid(),
             Name = "PDF Game",
             CreatedAt = DateTime.UtcNow
         };
 
         var user = new UserEntity
         {
-            Id = "user-atom",
+            Id = Guid.NewGuid(),
             Email = "atom@example.com",
             DisplayName = "Atomic User",
             PasswordHash = "hash",
-            Role = "admin",
+            Role = UserRole.Admin,
             CreatedAt = DateTime.UtcNow
         };
 
         var pdf = new PdfDocumentEntity
         {
-            Id = "pdf-structured",
+            Id = Guid.NewGuid(),
             GameId = game.Id,
             FileName = "rules.pdf",
             FilePath = "/tmp/rules.pdf",
@@ -415,24 +415,24 @@ public class RuleSpecServiceTests : IDisposable
     {
         var game = new GameEntity
         {
-            Id = "game-atomic",
+            Id = Guid.NewGuid(),
             Name = "Atomic Game",
             CreatedAt = DateTime.UtcNow
         };
 
         var user = new UserEntity
         {
-            Id = "user-atomic",
+            Id = Guid.NewGuid(),
             Email = "atomic@example.com",
             DisplayName = "Atomic Tester",
             PasswordHash = "hash",
-            Role = "admin",
+            Role = UserRole.Admin,
             CreatedAt = DateTime.UtcNow
         };
 
         var pdf = new PdfDocumentEntity
         {
-            Id = "pdf-atomic",
+            Id = Guid.NewGuid(),
             GameId = game.Id,
             FileName = "rules.pdf",
             FilePath = "/tmp/rules.pdf",
@@ -467,24 +467,24 @@ public class RuleSpecServiceTests : IDisposable
     {
         var game = new GameEntity
         {
-            Id = "game-text",
+            Id = Guid.NewGuid(),
             Name = "Text Game",
             CreatedAt = DateTime.UtcNow
         };
 
         var user = new UserEntity
         {
-            Id = "user-text",
+            Id = Guid.NewGuid(),
             Email = "text@example.com",
             DisplayName = "Text Tester",
             PasswordHash = "hash",
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = DateTime.UtcNow
         };
 
         var pdf = new PdfDocumentEntity
         {
-            Id = "pdf-text",
+            Id = Guid.NewGuid(),
             GameId = game.Id,
             FileName = "rules.pdf",
             FilePath = "/tmp/rules.pdf",
@@ -515,24 +515,24 @@ public class RuleSpecServiceTests : IDisposable
     {
         var game = new GameEntity
         {
-            Id = "game-fallback",
+            Id = Guid.NewGuid(),
             Name = "Fallback Game",
             CreatedAt = DateTime.UtcNow
         };
 
         var user = new UserEntity
         {
-            Id = "user-fallback",
+            Id = Guid.NewGuid(),
             Email = "fallback@example.com",
             DisplayName = "Fallback Tester",
             PasswordHash = "hash",
-            Role = "admin",
+            Role = UserRole.Admin,
             CreatedAt = DateTime.UtcNow
         };
 
         var pdf = new PdfDocumentEntity
         {
-            Id = "pdf-fallback",
+            Id = Guid.NewGuid(),
             GameId = game.Id,
             FileName = "fallback.pdf",
             FilePath = "/tmp/fallback.pdf",
@@ -573,7 +573,7 @@ public class RuleSpecServiceTests : IDisposable
         // Arrange
         var game = new GameEntity
         {
-            Id = "chess",
+            Id = Guid.NewGuid(),
             Name = "Chess",
             CreatedAt = DateTime.UtcNow
         };
@@ -633,8 +633,8 @@ public class RuleSpecServiceTests : IDisposable
     public async Task CreateZipArchiveAsync_WithMultipleGameIds_CreatesZipWithAllGames()
     {
         // Arrange
-        var game1 = new GameEntity { Id = "chess", Name = "Chess", CreatedAt = DateTime.UtcNow };
-        var game2 = new GameEntity { Id = "checkers", Name = "Checkers", CreatedAt = DateTime.UtcNow };
+        var game1 = new GameEntity { Id = Guid.NewGuid(), Name = "Chess", CreatedAt = DateTime.UtcNow };
+        var game2 = new GameEntity { Id = Guid.NewGuid(), Name = "Checkers", CreatedAt = DateTime.UtcNow };
 
         var spec1 = new RuleSpecEntity
         {
@@ -718,7 +718,7 @@ public class RuleSpecServiceTests : IDisposable
         // Arrange
         var game = new GameEntity
         {
-            Id = "chess",
+            Id = Guid.NewGuid(),
             Name = "Chess",
             CreatedAt = DateTime.UtcNow
         };
@@ -757,7 +757,7 @@ public class RuleSpecServiceTests : IDisposable
         // Arrange
         var game = new GameEntity
         {
-            Id = "game/with:invalid*chars",
+            Id = Guid.NewGuid(),
             Name = "Invalid Name",
             CreatedAt = DateTime.UtcNow
         };

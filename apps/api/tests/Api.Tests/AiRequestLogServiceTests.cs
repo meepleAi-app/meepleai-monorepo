@@ -114,8 +114,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "qa",
-                UserId = "user-1",
-                GameId = "game-1",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = DateTime.UtcNow.AddMinutes(-10),
                 LatencyMs = 100,
                 Status = "Success"
@@ -123,8 +123,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "setup",
-                UserId = "user-2",
-                GameId = "game-1",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = DateTime.UtcNow.AddMinutes(-5),
                 LatencyMs = 200,
                 Status = "Error"
@@ -132,8 +132,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "qa",
-                UserId = "user-1",
-                GameId = "game-2",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = DateTime.UtcNow.AddMinutes(-1),
                 LatencyMs = 150,
                 Status = "Success"
@@ -165,8 +165,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "qa",
-                UserId = "user-1",
-                GameId = "game-1",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = DateTime.UtcNow.AddHours(-2),
                 LatencyMs = 100,
                 TokenCount = 200,
@@ -175,8 +175,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "qa",
-                UserId = "user-2",
-                GameId = "game-1",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = DateTime.UtcNow.AddHours(-1),
                 LatencyMs = 300,
                 TokenCount = 100,
@@ -185,8 +185,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "setup",
-                UserId = "user-1",
-                GameId = "game-2",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = DateTime.UtcNow.AddMinutes(-30),
                 LatencyMs = 200,
                 TokenCount = 50,
@@ -234,8 +234,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "qa",
-                UserId = "user-1",
-                GameId = "game-1",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = DateTime.UtcNow,
                 LatencyMs = 100,
                 TokenCount = 50,
@@ -244,8 +244,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "setup",
-                UserId = "user-2",
-                GameId = "game-1",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = DateTime.UtcNow,
                 LatencyMs = 200,
                 TokenCount = 100,
@@ -274,8 +274,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "qa",
-                UserId = "user-1",
-                GameId = "game-1",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = DateTime.UtcNow,
                 LatencyMs = 150,
                 TokenCount = 75,
@@ -284,8 +284,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "explain",
-                UserId = "user-1",
-                GameId = "game-2",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = DateTime.UtcNow,
                 LatencyMs = 250,
                 TokenCount = 125,
@@ -314,8 +314,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "qa",
-                UserId = "user-1",
-                GameId = "game-1",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = DateTime.UtcNow,
                 LatencyMs = 100,
                 TokenCount = 0,
@@ -324,8 +324,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "setup",
-                UserId = "user-1",
-                GameId = "game-1",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = DateTime.UtcNow,
                 LatencyMs = 150,
                 TokenCount = 0,
@@ -351,8 +351,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "qa",
-                UserId = "user-1",
-                GameId = "game-1",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = now.AddHours(-10),
                 LatencyMs = 100,
                 Status = "Success"
@@ -360,8 +360,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "setup",
-                UserId = "user-1",
-                GameId = "game-1",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = now.AddHours(-5),
                 LatencyMs = 200,
                 Status = "Success"
@@ -369,8 +369,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "explain",
-                UserId = "user-1",
-                GameId = "game-1",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = now.AddHours(-1),
                 LatencyMs = 150,
                 Status = "Success"
@@ -399,8 +399,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "qa",
-                UserId = "user-1",
-                GameId = "game-1",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = now.AddHours(-3),
                 LatencyMs = 100,
                 Status = "Success"
@@ -408,8 +408,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "setup",
-                UserId = "user-1",
-                GameId = "game-1",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = now.AddHours(-1),
                 LatencyMs = 200,
                 Status = "Success"
@@ -417,8 +417,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "explain",
-                UserId = "user-1",
-                GameId = "game-1",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = now.AddHours(-2),
                 LatencyMs = 150,
                 Status = "Success"
@@ -444,8 +444,8 @@ public class AiRequestLogServiceTests : IDisposable
             new AiRequestLogEntity
             {
                 Endpoint = "qa",
-                UserId = "user-1",
-                GameId = "game-1",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 CreatedAt = DateTime.UtcNow,
                 LatencyMs = 100,
                 Status = "Success"

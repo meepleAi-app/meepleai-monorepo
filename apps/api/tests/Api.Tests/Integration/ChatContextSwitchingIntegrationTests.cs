@@ -9,7 +9,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 using FluentAssertions;
-using Xunit;
 
 namespace Api.Tests.Integration;
 
@@ -53,20 +52,20 @@ public class ChatContextSwitchingIntegrationTests
     {
         var user = new UserEntity
         {
-            Id = "user-123",
+            Id = Guid.NewGuid(),
             Email = "test@meepleai.dev",
             PasswordHash = "hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = DateTime.UtcNow
         };
 
-        var chess = new GameEntity { Id = "chess", Name = "Chess" };
-        var checkers = new GameEntity { Id = "checkers", Name = "Checkers" };
+        var chess = new GameEntity { Id = Guid.NewGuid(), Name = "Chess" };
+        var checkers = new GameEntity { Id = Guid.NewGuid(), Name = "Checkers" };
 
         var chessAgent = new AgentEntity
         {
-            Id = "chess-qa",
-            GameId = "chess",
+            Id = Guid.NewGuid(),
+            GameId = chess.Id,
             Name = "Chess Q&A Agent",
             Kind = "qa",
             CreatedAt = DateTime.UtcNow
@@ -74,8 +73,8 @@ public class ChatContextSwitchingIntegrationTests
 
         var checkersAgent = new AgentEntity
         {
-            Id = "checkers-qa",
-            GameId = "checkers",
+            Id = Guid.NewGuid(),
+            GameId = checkers.Id,
             Name = "Checkers Q&A Agent",
             Kind = "qa",
             CreatedAt = DateTime.UtcNow
@@ -112,10 +111,10 @@ public class ChatContextSwitchingIntegrationTests
         var service = CreateChatService(dbContext);
 
         // Act: Create chat for Chess
-        var chessChat = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
+        var chessChat = await service.CreateChatAsync(user.Id.ToString(), chess.Id.ToString(), chessAgent.Id.ToString());
 
         // Act: Create chat for Checkers
-        var checkersChat = await service.CreateChatAsync(user.Id, checkers.Id, checkersAgent.Id);
+        var checkersChat = await service.CreateChatAsync(user.Id.ToString(), checkers.Id.ToString(), checkersAgent.Id.ToString());
 
         // Assert: Each chat has correct game association
         chessChat.Id.Should().NotBe(Guid.Empty);
@@ -142,12 +141,12 @@ public class ChatContextSwitchingIntegrationTests
         var (user, chess, checkers, chessAgent, checkersAgent) = await SeedTestDataAsync(dbContext);
         var service = CreateChatService(dbContext);
 
-        var chessChat1 = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
-        var chessChat2 = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
-        var checkersChat = await service.CreateChatAsync(user.Id, checkers.Id, checkersAgent.Id);
+        var chessChat1 = await service.CreateChatAsync(user.Id.ToString(), chess.Id.ToString(), chessAgent.Id.ToString());
+        var chessChat2 = await service.CreateChatAsync(user.Id.ToString(), chess.Id.ToString(), chessAgent.Id.ToString());
+        var checkersChat = await service.CreateChatAsync(user.Id.ToString(), checkers.Id.ToString(), checkersAgent.Id.ToString());
 
         // Act: Get chats for Chess only
-        var chessChats = await service.GetUserChatsByGameAsync(user.Id, chess.Id);
+        var chessChats = await service.GetUserChatsByGameAsync(user.Id.ToString(), chess.Id.ToString());
 
         // Assert: Only Chess chats returned
         chessChats.Count.Should().Be(2);
@@ -174,19 +173,19 @@ public class ChatContextSwitchingIntegrationTests
         var (user, chess, checkers, chessAgent, checkersAgent) = await SeedTestDataAsync(dbContext);
         var service = CreateChatService(dbContext);
 
-        var chessChat = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
-        var checkersChat = await service.CreateChatAsync(user.Id, checkers.Id, checkersAgent.Id);
+        var chessChat = await service.CreateChatAsync(user.Id.ToString(), chess.Id.ToString(), chessAgent.Id.ToString());
+        var checkersChat = await service.CreateChatAsync(user.Id.ToString(), checkers.Id.ToString(), checkersAgent.Id.ToString());
 
         // Add messages to Chess chat
-        await service.AddMessageAsync(chessChat.Id, user.Id, "user", "How does castling work?");
-        await service.AddMessageAsync(chessChat.Id, user.Id, "assistant", "Castling is a special move...");
+        await service.AddMessageAsync(chessChat.Id, user.Id.ToString(), "user", "How does castling work?");
+        await service.AddMessageAsync(chessChat.Id, user.Id.ToString(), "assistant", "Castling is a special move...");
 
         // Add messages to Checkers chat
-        await service.AddMessageAsync(checkersChat.Id, user.Id, "user", "Can pieces move backwards?");
-        await service.AddMessageAsync(checkersChat.Id, user.Id, "assistant", "Only kings can move backwards...");
+        await service.AddMessageAsync(checkersChat.Id, user.Id.ToString(), "user", "Can pieces move backwards?");
+        await service.AddMessageAsync(checkersChat.Id, user.Id.ToString(), "assistant", "Only kings can move backwards...");
 
         // Act: Retrieve Chess chat history
-        var chessHistory = await service.GetChatHistoryAsync(chessChat.Id, user.Id);
+        var chessHistory = await service.GetChatHistoryAsync(chessChat.Id, user.Id.ToString());
 
         // Assert: Chess chat has only Chess messages
         chessHistory.Count.Should().Be(2);
@@ -194,7 +193,7 @@ public class ChatContextSwitchingIntegrationTests
         chessHistory.Should().NotContain(msg => msg.Message.Contains("backwards"));
 
         // Act: Retrieve Checkers chat history
-        var checkersHistory = await service.GetChatHistoryAsync(checkersChat.Id, user.Id);
+        var checkersHistory = await service.GetChatHistoryAsync(checkersChat.Id, user.Id.ToString());
 
         // Assert: Checkers chat has only Checkers messages
         checkersHistory.Count.Should().Be(2);
@@ -218,32 +217,32 @@ public class ChatContextSwitchingIntegrationTests
         var (user, chess, checkers, chessAgent, checkersAgent) = await SeedTestDataAsync(dbContext);
         var service = CreateChatService(dbContext);
 
-        var chessChat = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
-        var checkersChat = await service.CreateChatAsync(user.Id, checkers.Id, checkersAgent.Id);
+        var chessChat = await service.CreateChatAsync(user.Id.ToString(), chess.Id.ToString(), chessAgent.Id.ToString());
+        var checkersChat = await service.CreateChatAsync(user.Id.ToString(), checkers.Id.ToString(), checkersAgent.Id.ToString());
 
         // Act: Simulate user switching between games
         // 1. Chess conversation
-        await service.AddMessageAsync(chessChat.Id, user.Id, "user", "Question 1 about chess");
-        await service.AddMessageAsync(chessChat.Id, user.Id, "assistant", "Answer 1 about chess");
+        await service.AddMessageAsync(chessChat.Id, user.Id.ToString(), "user", "Question 1 about chess");
+        await service.AddMessageAsync(chessChat.Id, user.Id.ToString(), "assistant", "Answer 1 about chess");
 
         // 2. Switch to Checkers
-        await service.AddMessageAsync(checkersChat.Id, user.Id, "user", "Question 1 about checkers");
-        await service.AddMessageAsync(checkersChat.Id, user.Id, "assistant", "Answer 1 about checkers");
+        await service.AddMessageAsync(checkersChat.Id, user.Id.ToString(), "user", "Question 1 about checkers");
+        await service.AddMessageAsync(checkersChat.Id, user.Id.ToString(), "assistant", "Answer 1 about checkers");
 
         // 3. Switch back to Chess
-        await service.AddMessageAsync(chessChat.Id, user.Id, "user", "Question 2 about chess");
-        await service.AddMessageAsync(chessChat.Id, user.Id, "assistant", "Answer 2 about chess");
+        await service.AddMessageAsync(chessChat.Id, user.Id.ToString(), "user", "Question 2 about chess");
+        await service.AddMessageAsync(chessChat.Id, user.Id.ToString(), "assistant", "Answer 2 about chess");
 
         // 4. Switch back to Checkers
-        await service.AddMessageAsync(checkersChat.Id, user.Id, "user", "Question 2 about checkers");
+        await service.AddMessageAsync(checkersChat.Id, user.Id.ToString(), "user", "Question 2 about checkers");
 
         // Assert: Chess chat has complete Chess history
-        var chessHistory = await service.GetChatHistoryAsync(chessChat.Id, user.Id);
+        var chessHistory = await service.GetChatHistoryAsync(chessChat.Id, user.Id.ToString());
         chessHistory.Count.Should().Be(4);
         chessHistory.Should().OnlyContain(msg => msg.Message.ToLower().Contains("chess"));
 
         // Assert: Checkers chat has complete Checkers history
-        var checkersHistory = await service.GetChatHistoryAsync(checkersChat.Id, user.Id);
+        var checkersHistory = await service.GetChatHistoryAsync(checkersChat.Id, user.Id.ToString());
         checkersHistory.Count.Should().Be(3);
         checkersHistory.Should().OnlyContain(msg => msg.Message.ToLower().Contains("checkers"));
     }
@@ -264,18 +263,18 @@ public class ChatContextSwitchingIntegrationTests
         var service = CreateChatService(dbContext);
 
         // Act: Create 2 chats for Chess with different conversations
-        var chessChat1 = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
-        await service.AddMessageAsync(chessChat1.Id, user.Id, "user", "Opening strategy?");
+        var chessChat1 = await service.CreateChatAsync(user.Id.ToString(), chess.Id.ToString(), chessAgent.Id.ToString());
+        await service.AddMessageAsync(chessChat1.Id, user.Id.ToString(), "user", "Opening strategy?");
 
-        var chessChat2 = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
-        await service.AddMessageAsync(chessChat2.Id, user.Id, "user", "Endgame tactics?");
+        var chessChat2 = await service.CreateChatAsync(user.Id.ToString(), chess.Id.ToString(), chessAgent.Id.ToString());
+        await service.AddMessageAsync(chessChat2.Id, user.Id.ToString(), "user", "Endgame tactics?");
 
         // Assert: Both chats exist and are independent
-        var chessChats = await service.GetUserChatsByGameAsync(user.Id, chess.Id);
+        var chessChats = await service.GetUserChatsByGameAsync(user.Id.ToString(), chess.Id.ToString());
         chessChats.Count.Should().Be(2);
 
-        var history1 = await service.GetChatHistoryAsync(chessChat1.Id, user.Id);
-        var history2 = await service.GetChatHistoryAsync(chessChat2.Id, user.Id);
+        var history1 = await service.GetChatHistoryAsync(chessChat1.Id, user.Id.ToString());
+        var history2 = await service.GetChatHistoryAsync(chessChat2.Id, user.Id.ToString());
 
         history1.Should().ContainSingle();
         history1[0].Message.Should().Contain("Opening");
@@ -299,8 +298,8 @@ public class ChatContextSwitchingIntegrationTests
         var (user, chess, checkers, chessAgent, checkersAgent) = await SeedTestDataAsync(dbContext);
         var service = CreateChatService(dbContext);
 
-        var chessChat = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
-        var checkersChat = await service.CreateChatAsync(user.Id, checkers.Id, checkersAgent.Id);
+        var chessChat = await service.CreateChatAsync(user.Id.ToString(), chess.Id.ToString(), chessAgent.Id.ToString());
+        var checkersChat = await service.CreateChatAsync(user.Id.ToString(), checkers.Id.ToString(), checkersAgent.Id.ToString());
 
         // Initial state: both have null LastMessageAt
         chessChat.LastMessageAt.Should().BeNull();
@@ -308,7 +307,7 @@ public class ChatContextSwitchingIntegrationTests
 
         // Act: Add message to Chess chat only
         await Task.Delay(10); // Ensure timestamp difference
-        await service.AddMessageAsync(chessChat.Id, user.Id, "user", "Chess question");
+        await service.AddMessageAsync(chessChat.Id, user.Id.ToString(), "user", "Chess question");
 
         // Assert: Reload chats from DB
         var updatedChessChat = await dbContext.Chats.FindAsync(chessChat.Id);
@@ -333,24 +332,24 @@ public class ChatContextSwitchingIntegrationTests
         var service = CreateChatService(dbContext);
 
         // Create 3 Chess chats with different activity times
-        var oldChat = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
+        var oldChat = await service.CreateChatAsync(user.Id.ToString(), chess.Id.ToString(), chessAgent.Id.ToString());
         await Task.Delay(10);
 
-        var midChat = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
+        var midChat = await service.CreateChatAsync(user.Id.ToString(), chess.Id.ToString(), chessAgent.Id.ToString());
         await Task.Delay(10);
 
-        var recentChat = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
+        var recentChat = await service.CreateChatAsync(user.Id.ToString(), chess.Id.ToString(), chessAgent.Id.ToString());
         await Task.Delay(10);
 
         // Add messages to establish recency order (reverse chronological)
-        await service.AddMessageAsync(recentChat.Id, user.Id, "user", "Most recent");
+        await service.AddMessageAsync(recentChat.Id, user.Id.ToString(), "user", "Most recent");
         await Task.Delay(10);
-        await service.AddMessageAsync(midChat.Id, user.Id, "user", "Middle");
+        await service.AddMessageAsync(midChat.Id, user.Id.ToString(), "user", "Middle");
         await Task.Delay(10);
-        await service.AddMessageAsync(oldChat.Id, user.Id, "user", "Oldest");
+        await service.AddMessageAsync(oldChat.Id, user.Id.ToString(), "user", "Oldest");
 
         // Act: Get chats for Chess
-        var chessChats = await service.GetUserChatsByGameAsync(user.Id, chess.Id);
+        var chessChats = await service.GetUserChatsByGameAsync(user.Id.ToString(), chess.Id.ToString());
 
         // Assert: Chats ordered by LastMessageAt descending (most recent first)
         chessChats.Count.Should().Be(3);
@@ -374,10 +373,10 @@ public class ChatContextSwitchingIntegrationTests
         var service = CreateChatService(dbContext);
 
         // Only create chat for Chess
-        await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
+        await service.CreateChatAsync(user.Id.ToString(), chess.Id.ToString(), chessAgent.Id.ToString());
 
         // Act: Request chats for Checkers (none exist)
-        var checkersChats = await service.GetUserChatsByGameAsync(user.Id, checkers.Id);
+        var checkersChats = await service.GetUserChatsByGameAsync(user.Id.ToString(), checkers.Id.ToString());
 
         // Assert: Empty list returned
         checkersChats.Should().BeEmpty();
@@ -398,19 +397,19 @@ public class ChatContextSwitchingIntegrationTests
         var (user, chess, checkers, chessAgent, checkersAgent) = await SeedTestDataAsync(dbContext);
         var service = CreateChatService(dbContext);
 
-        var chessChat = await service.CreateChatAsync(user.Id, chess.Id, chessAgent.Id);
-        var checkersChat = await service.CreateChatAsync(user.Id, checkers.Id, checkersAgent.Id);
+        var chessChat = await service.CreateChatAsync(user.Id.ToString(), chess.Id.ToString(), chessAgent.Id.ToString());
+        var checkersChat = await service.CreateChatAsync(user.Id.ToString(), checkers.Id.ToString(), checkersAgent.Id.ToString());
 
         // Act: Delete Chess chat
-        var deleted = await service.DeleteChatAsync(chessChat.Id, user.Id);
+        var deleted = await service.DeleteChatAsync(chessChat.Id, user.Id.ToString());
 
         // Assert: Chess chat deleted
         deleted.Should().BeTrue();
-        var chessChats = await service.GetUserChatsByGameAsync(user.Id, chess.Id);
+        var chessChats = await service.GetUserChatsByGameAsync(user.Id.ToString(), chess.Id.ToString());
         chessChats.Should().BeEmpty();
 
         // Assert: Checkers chat still exists
-        var checkersChats = await service.GetUserChatsByGameAsync(user.Id, checkers.Id);
+        var checkersChats = await service.GetUserChatsByGameAsync(user.Id.ToString(), checkers.Id.ToString());
         checkersChats.Should().ContainSingle();
         checkersChats[0].Id.Should().Be(checkersChat.Id);
     }

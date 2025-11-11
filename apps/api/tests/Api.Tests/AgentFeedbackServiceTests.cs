@@ -68,12 +68,16 @@ public class AgentFeedbackServiceTests : IDisposable
     public async Task RecordFeedbackAsync_RemovesEntryWhenOutcomeNull()
     {
         await using var dbContext = CreateInMemoryContext();
+        var messageId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+
         dbContext.AgentFeedbacks.Add(new AgentFeedbackEntity
         {
-            MessageId = "msg-2",
+            MessageId = messageId,
             Endpoint = "qa",
-            UserId = "user-1",
-            GameId = "game-1",
+            UserId = userId,
+            GameId = gameId,
             Outcome = "helpful"
         });
         await dbContext.SaveChangesAsync();
@@ -81,7 +85,7 @@ public class AgentFeedbackServiceTests : IDisposable
         var loggerMock = new Mock<ILogger<AgentFeedbackService>>();
         var service = new AgentFeedbackService(dbContext, loggerMock.Object);
 
-        await service.RecordFeedbackAsync("msg-2", "qa", "user-1", null, "game-1");
+        await service.RecordFeedbackAsync(messageId.ToString(), "qa", userId.ToString(), null, gameId.ToString());
 
         // Empty and Null assertions
         dbContext.AgentFeedbacks.Should().BeEmpty();
@@ -94,28 +98,28 @@ public class AgentFeedbackServiceTests : IDisposable
         dbContext.AgentFeedbacks.AddRange(
             new AgentFeedbackEntity
             {
-                MessageId = "msg-1",
+                MessageId = Guid.NewGuid(),
                 Endpoint = "qa",
-                UserId = "user-1",
-                GameId = "game-1",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 Outcome = "helpful",
                 CreatedAt = DateTime.UtcNow.AddHours(-2)
             },
             new AgentFeedbackEntity
             {
-                MessageId = "msg-2",
+                MessageId = Guid.NewGuid(),
                 Endpoint = "qa",
-                UserId = "user-2",
-                GameId = "game-1",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 Outcome = "not-helpful",
                 CreatedAt = DateTime.UtcNow.AddHours(-1)
             },
             new AgentFeedbackEntity
             {
-                MessageId = "msg-3",
+                MessageId = Guid.NewGuid(),
                 Endpoint = "setup",
-                UserId = "user-3",
-                GameId = "game-2",
+                UserId = Guid.NewGuid(),
+                GameId = Guid.NewGuid(),
                 Outcome = "helpful",
                 CreatedAt = DateTime.UtcNow.AddMinutes(-30)
             });
@@ -173,12 +177,17 @@ public class AgentFeedbackServiceTests : IDisposable
     public async Task RecordFeedbackAsync_UpdatesExistingFeedback()
     {
         await using var dbContext = CreateInMemoryContext();
+        var messageId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var gameId1 = Guid.NewGuid();
+        var gameId2 = Guid.NewGuid();
+
         dbContext.AgentFeedbacks.Add(new AgentFeedbackEntity
         {
-            MessageId = "msg-1",
+            MessageId = messageId,
             Endpoint = "qa",
-            UserId = "user-1",
-            GameId = "game-1",
+            UserId = userId,
+            GameId = gameId1,
             Outcome = "helpful",
             CreatedAt = DateTime.UtcNow.AddMinutes(-5),
             UpdatedAt = DateTime.UtcNow.AddMinutes(-5)
@@ -188,13 +197,13 @@ public class AgentFeedbackServiceTests : IDisposable
         var loggerMock = new Mock<ILogger<AgentFeedbackService>>();
         var service = new AgentFeedbackService(dbContext, loggerMock.Object);
 
-        await service.RecordFeedbackAsync("msg-1", "explain", "user-1", "not-helpful", "game-2");
+        await service.RecordFeedbackAsync(messageId.ToString(), "explain", userId.ToString(), "not-helpful", gameId2.ToString());
 
         var updated = await dbContext.AgentFeedbacks.SingleAsync();
         // Updated entity assertions
         updated.Outcome.Should().Be("not-helpful");
         updated.Endpoint.Should().Be("explain");
-        updated.GameId.Should().Be("game-2");
+        updated.GameId.Should().Be(gameId2);
         updated.UpdatedAt.Should().BeAfter(updated.CreatedAt);
     }
 
@@ -202,10 +211,11 @@ public class AgentFeedbackServiceTests : IDisposable
     public async Task GetStatsAsync_FiltersByEndpoint()
     {
         await using var dbContext = CreateInMemoryContext();
+        var userId = Guid.NewGuid();
         dbContext.AgentFeedbacks.AddRange(
-            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-1", Outcome = "helpful", CreatedAt = DateTime.UtcNow },
-            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "explain", UserId = "user-1", Outcome = "helpful", CreatedAt = DateTime.UtcNow },
-            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-1", Outcome = "not-helpful", CreatedAt = DateTime.UtcNow }
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = userId, Outcome = "helpful", CreatedAt = DateTime.UtcNow },
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "explain", UserId = userId, Outcome = "helpful", CreatedAt = DateTime.UtcNow },
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = userId, Outcome = "not-helpful", CreatedAt = DateTime.UtcNow }
         );
         await dbContext.SaveChangesAsync();
 
@@ -223,16 +233,18 @@ public class AgentFeedbackServiceTests : IDisposable
     public async Task GetStatsAsync_FiltersByUserId()
     {
         await using var dbContext = CreateInMemoryContext();
+        var userId1 = Guid.NewGuid();
+        var userId2 = Guid.NewGuid();
         dbContext.AgentFeedbacks.AddRange(
-            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-1", Outcome = "helpful", CreatedAt = DateTime.UtcNow },
-            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-2", Outcome = "helpful", CreatedAt = DateTime.UtcNow }
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = userId1, Outcome = "helpful", CreatedAt = DateTime.UtcNow },
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = userId2, Outcome = "helpful", CreatedAt = DateTime.UtcNow }
         );
         await dbContext.SaveChangesAsync();
 
         var loggerMock = new Mock<ILogger<AgentFeedbackService>>();
         var service = new AgentFeedbackService(dbContext, loggerMock.Object);
 
-        var stats = await service.GetStatsAsync(userId: "user-1");
+        var stats = await service.GetStatsAsync(userId: userId1.ToString());
 
         stats.TotalFeedback.Should().Be(1);
         stats.OutcomeCounts["helpful"].Should().Be(1);
@@ -242,16 +254,19 @@ public class AgentFeedbackServiceTests : IDisposable
     public async Task GetStatsAsync_FiltersByGameId()
     {
         await using var dbContext = CreateInMemoryContext();
+        var userId = Guid.NewGuid();
+        var gameId1 = Guid.NewGuid();
+        var gameId2 = Guid.NewGuid();
         dbContext.AgentFeedbacks.AddRange(
-            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-1", GameId = "game-1", Outcome = "helpful", CreatedAt = DateTime.UtcNow },
-            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-1", GameId = "game-2", Outcome = "not-helpful", CreatedAt = DateTime.UtcNow }
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = userId, GameId = gameId1, Outcome = "helpful", CreatedAt = DateTime.UtcNow },
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = userId, GameId = gameId2, Outcome = "not-helpful", CreatedAt = DateTime.UtcNow }
         );
         await dbContext.SaveChangesAsync();
 
         var loggerMock = new Mock<ILogger<AgentFeedbackService>>();
         var service = new AgentFeedbackService(dbContext, loggerMock.Object);
 
-        var stats = await service.GetStatsAsync(gameId: "game-1");
+        var stats = await service.GetStatsAsync(gameId: gameId1.ToString());
 
         stats.TotalFeedback.Should().Be(1);
         stats.OutcomeCounts["helpful"].Should().Be(1);
@@ -262,10 +277,11 @@ public class AgentFeedbackServiceTests : IDisposable
     {
         await using var dbContext = CreateInMemoryContext();
         var now = DateTime.UtcNow;
+        var userId = Guid.NewGuid();
         dbContext.AgentFeedbacks.AddRange(
-            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-1", Outcome = "helpful", CreatedAt = now.AddDays(-5) },
-            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-1", Outcome = "helpful", CreatedAt = now.AddDays(-2) },
-            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-1", Outcome = "not-helpful", CreatedAt = now }
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = userId, Outcome = "helpful", CreatedAt = now.AddDays(-5) },
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = userId, Outcome = "helpful", CreatedAt = now.AddDays(-2) },
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = userId, Outcome = "not-helpful", CreatedAt = now }
         );
         await dbContext.SaveChangesAsync();
 
@@ -310,10 +326,12 @@ public class AgentFeedbackServiceTests : IDisposable
     {
         await using var dbContext = CreateInMemoryContext();
         // Note: Service is case-sensitive, so using consistent casing
+        var userId1 = Guid.NewGuid();
+        var userId2 = Guid.NewGuid();
         dbContext.AgentFeedbacks.AddRange(
-            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-1", Outcome = "helpful", CreatedAt = DateTime.UtcNow },
-            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-2", Outcome = "helpful", CreatedAt = DateTime.UtcNow },
-            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "explain", UserId = "user-1", Outcome = "not_helpful", CreatedAt = DateTime.UtcNow }
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = userId1, Outcome = "helpful", CreatedAt = DateTime.UtcNow },
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = userId2, Outcome = "helpful", CreatedAt = DateTime.UtcNow },
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "explain", UserId = userId1, Outcome = "not_helpful", CreatedAt = DateTime.UtcNow }
         );
         await dbContext.SaveChangesAsync();
 

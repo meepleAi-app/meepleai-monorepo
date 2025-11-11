@@ -11,7 +11,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using FluentAssertions;
-using Xunit;
 
 namespace Api.Tests;
 
@@ -71,11 +70,11 @@ public class PasswordResetServiceTests : IDisposable
 
         var user = new UserEntity
         {
-            Id = "user1",
+            Id = Guid.NewGuid(),
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = "existing-hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
@@ -99,7 +98,7 @@ public class PasswordResetServiceTests : IDisposable
 
         var token = await db.PasswordResetTokens.FirstOrDefaultAsync();
         token.Should().NotBeNull();
-        token.UserId.Should().Be("user1");
+        token.UserId.Should().Be(user.Id);
         token.IsUsed.Should().BeFalse();
         token.CreatedAt.Should().Be(FixedNow);
         token.ExpiresAt.Should().Be(FixedNow.AddMinutes(30));
@@ -271,19 +270,19 @@ public class PasswordResetServiceTests : IDisposable
 
         var user = new UserEntity
         {
-            Id = "user1",
+            Id = Guid.NewGuid(),
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = "existing-hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
 
         var existingToken = new PasswordResetTokenEntity
         {
-            Id = "existing-token",
-            UserId = "user1",
+            Id = Guid.NewGuid().ToString(),
+            UserId = user.Id,
             TokenHash = "existing-hash",
             ExpiresAt = FixedNow.AddMinutes(15),
             IsUsed = false,
@@ -311,10 +310,10 @@ public class PasswordResetServiceTests : IDisposable
         var allTokens = await db.PasswordResetTokens.ToListAsync();
         allTokens.Count.Should().Be(2);
 
-        var oldToken = allTokens.First(t => t.Id == "existing-token");
+        var oldToken = allTokens.First(t => t.IsUsed);
         oldToken.IsUsed.Should().BeTrue();
 
-        var newToken = allTokens.First(t => t.Id != "existing-token");
+        var newToken = allTokens.First(t => !t.IsUsed);
         newToken.IsUsed.Should().BeFalse();
 
         mockEmail.Verify(x => x.SendPasswordResetEmailAsync(
@@ -340,11 +339,11 @@ public class PasswordResetServiceTests : IDisposable
 
         var user = new UserEntity
         {
-            Id = "user1",
+            Id = Guid.NewGuid(),
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = "existing-hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
@@ -402,11 +401,11 @@ public class PasswordResetServiceTests : IDisposable
 
         var user = new UserEntity
         {
-            Id = "user1",
+            Id = Guid.NewGuid(),
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = "existing-hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
@@ -454,11 +453,11 @@ public class PasswordResetServiceTests : IDisposable
 
         var user = new UserEntity
         {
-            Id = "user1",
+            Id = Guid.NewGuid(),
             Email = "user@example.com",
             DisplayName = "Test User",
             PasswordHash = "existing-hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
@@ -481,7 +480,7 @@ public class PasswordResetServiceTests : IDisposable
 
         var token = await db.PasswordResetTokens.FirstOrDefaultAsync();
         token.Should().NotBeNull();
-        token.UserId.Should().Be("user1");
+        token.UserId.Should().Be(user.Id);
     }
 
     /// <summary>
@@ -498,11 +497,11 @@ public class PasswordResetServiceTests : IDisposable
 
         var user = new UserEntity
         {
-            Id = "user1",
+            Id = Guid.NewGuid(),
             Email = "user@example.com",
             DisplayName = "Test User",
             PasswordHash = "existing-hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
@@ -525,7 +524,7 @@ public class PasswordResetServiceTests : IDisposable
 
         var token = await db.PasswordResetTokens.FirstOrDefaultAsync();
         token.Should().NotBeNull();
-        token.UserId.Should().Be("user1");
+        token.UserId.Should().Be(user.Id);
     }
 
     #endregion
@@ -549,19 +548,19 @@ public class PasswordResetServiceTests : IDisposable
 
         var user = new UserEntity
         {
-            Id = "user1",
+            Id = Guid.NewGuid(),
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = "existing-hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
 
         var resetToken = new PasswordResetTokenEntity
         {
-            Id = "token1",
-            UserId = "user1",
+            Id = Guid.NewGuid().ToString(),
+            UserId = user.Id,
             TokenHash = tokenHash,
             ExpiresAt = FixedNow.AddMinutes(15),
             IsUsed = false,
@@ -689,19 +688,19 @@ public class PasswordResetServiceTests : IDisposable
 
         var user = new UserEntity
         {
-            Id = "user1",
+            Id = Guid.NewGuid(),
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = "existing-hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
 
         var resetToken = new PasswordResetTokenEntity
         {
-            Id = "token1",
-            UserId = "user1",
+            Id = Guid.NewGuid().ToString(),
+            UserId = user.Id,
             TokenHash = tokenHash,
             ExpiresAt = FixedNow.AddMinutes(15),
             IsUsed = true,
@@ -756,19 +755,19 @@ public class PasswordResetServiceTests : IDisposable
 
         var user = new UserEntity
         {
-            Id = "user1",
+            Id = Guid.NewGuid(),
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = "existing-hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
 
         var resetToken = new PasswordResetTokenEntity
         {
-            Id = "token1",
-            UserId = "user1",
+            Id = Guid.NewGuid().ToString(),
+            UserId = user.Id,
             TokenHash = tokenHash,
             ExpiresAt = FixedNow.AddMinutes(-5), // Expired 5 minutes ago
             IsUsed = false,
@@ -829,19 +828,19 @@ public class PasswordResetServiceTests : IDisposable
 
         var user = new UserEntity
         {
-            Id = "user1",
+            Id = Guid.NewGuid(),
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = originalPasswordHash,
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
 
         var resetToken = new PasswordResetTokenEntity
         {
-            Id = "token1",
-            UserId = "user1",
+            Id = Guid.NewGuid().ToString(),
+            UserId = user.Id,
             TokenHash = tokenHash,
             ExpiresAt = FixedNow.AddMinutes(15),
             IsUsed = false,
@@ -865,13 +864,13 @@ public class PasswordResetServiceTests : IDisposable
 
         // Assert
         result.Success.Should().BeTrue();
-        result.UserId.Should().BeEquivalentTo("user1");
+        result.UserId.Should().Be(user.Id);
 
-        var updatedUser = await db.Users.FindAsync("user1");
+        var updatedUser = await db.Users.FindAsync(user.Id);
         updatedUser!.PasswordHash.Should().NotBe(originalPasswordHash);
         updatedUser.PasswordHash.Should().StartWith("v1.210000."); // PBKDF2 format
 
-        var updatedToken = await db.PasswordResetTokens.FindAsync("token1");
+        var updatedToken = await db.PasswordResetTokens.FirstOrDefaultAsync(t => t.UserId == user.Id && !t.IsUsed);
         updatedToken!.IsUsed.Should().BeTrue();
     }
 
@@ -893,19 +892,19 @@ public class PasswordResetServiceTests : IDisposable
 
         var user = new UserEntity
         {
-            Id = "user1",
+            Id = Guid.NewGuid(),
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = "original-hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
 
         var session1 = new UserSessionEntity
         {
-            Id = "session1",
-            UserId = "user1",
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
             TokenHash = "session-hash-1",
             CreatedAt = FixedNow.AddDays(-5),
             ExpiresAt = FixedNow.AddDays(85),
@@ -915,8 +914,8 @@ public class PasswordResetServiceTests : IDisposable
         };
         var session2 = new UserSessionEntity
         {
-            Id = "session2",
-            UserId = "user1",
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
             TokenHash = "session-hash-2",
             CreatedAt = FixedNow.AddDays(-3),
             ExpiresAt = FixedNow.AddDays(87),
@@ -928,8 +927,8 @@ public class PasswordResetServiceTests : IDisposable
 
         var resetToken = new PasswordResetTokenEntity
         {
-            Id = "token1",
-            UserId = "user1",
+            Id = Guid.NewGuid().ToString(),
+            UserId = user.Id,
             TokenHash = tokenHash,
             ExpiresAt = FixedNow.AddMinutes(15),
             IsUsed = false,
@@ -954,7 +953,7 @@ public class PasswordResetServiceTests : IDisposable
         // Assert
         result.Success.Should().BeTrue();
 
-        var sessions = await db.UserSessions.Where(s => s.UserId == "user1").ToListAsync();
+        var sessions = await db.UserSessions.Where(s => s.UserId == user.Id).ToListAsync();
         sessions.Should().OnlyContain(s => s.RevokedAt != null);
         sessions.Should().OnlyContain(s => s.RevokedAt!.Value == FixedNow);
     }
@@ -1191,19 +1190,19 @@ public class PasswordResetServiceTests : IDisposable
 
         var user = new UserEntity
         {
-            Id = "user1",
+            Id = Guid.NewGuid(),
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = originalPasswordHash,
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
 
         var resetToken = new PasswordResetTokenEntity
         {
-            Id = "token1",
-            UserId = "user1",
+            Id = Guid.NewGuid().ToString(),
+            UserId = user.Id,
             TokenHash = tokenHash,
             ExpiresAt = FixedNow.AddMinutes(15),
             IsUsed = true,
@@ -1230,7 +1229,7 @@ public class PasswordResetServiceTests : IDisposable
         result.Success.Should().BeFalse();
         result.UserId.Should().BeNull();
 
-        var updatedUser = await db.Users.FindAsync("user1");
+        var updatedUser = await db.Users.FindAsync(user.Id);
         updatedUser!.PasswordHash.Should().Be(originalPasswordHash); // Password unchanged
 
         // Verify warning log was written
@@ -1264,19 +1263,19 @@ public class PasswordResetServiceTests : IDisposable
 
         var user = new UserEntity
         {
-            Id = "user1",
+            Id = Guid.NewGuid(),
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = originalPasswordHash,
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
 
         var resetToken = new PasswordResetTokenEntity
         {
-            Id = "token1",
-            UserId = "user1",
+            Id = Guid.NewGuid().ToString(),
+            UserId = user.Id,
             TokenHash = tokenHash,
             ExpiresAt = FixedNow.AddMinutes(-5), // Expired 5 minutes ago
             IsUsed = false,
@@ -1302,7 +1301,7 @@ public class PasswordResetServiceTests : IDisposable
         result.Success.Should().BeFalse();
         result.UserId.Should().BeNull();
 
-        var updatedUser = await db.Users.FindAsync("user1");
+        var updatedUser = await db.Users.FindAsync(user.Id);
         updatedUser!.PasswordHash.Should().Be(originalPasswordHash); // Password unchanged
 
         // Verify information log was written
@@ -1333,19 +1332,19 @@ public class PasswordResetServiceTests : IDisposable
 
         var user = new UserEntity
         {
-            Id = "user1",
+            Id = Guid.NewGuid(),
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = "original-hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
 
         var resetToken = new PasswordResetTokenEntity
         {
-            Id = "token1",
-            UserId = "user1",
+            Id = Guid.NewGuid().ToString(),
+            UserId = user.Id,
             TokenHash = tokenHash,
             ExpiresAt = FixedNow.AddMinutes(15),
             IsUsed = false,
@@ -1369,9 +1368,9 @@ public class PasswordResetServiceTests : IDisposable
 
         // Assert
         result.Success.Should().BeTrue();
-        result.UserId.Should().BeEquivalentTo("user1");
+        result.UserId.Should().Be(user.Id);
 
-        var updatedUser = await db.Users.FindAsync("user1");
+        var updatedUser = await db.Users.FindAsync(user.Id);
         updatedUser!.PasswordHash.Should().NotBe("original-hash");
     }
 

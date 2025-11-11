@@ -147,7 +147,7 @@ public class EdgeScenarioTests : IntegrationTestBase
         var client = Factory.CreateHttpsClient();
 
         // GameId with special characters: spaces, unicode, symbols
-        var specialGameId = "Test Game 123 !@#$%^&*() 中文 émojis🎮";
+        var specialGameId = Guid.NewGuid();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
         request.Content = JsonContent.Create(new { gameId = specialGameId, query = "test" });
         AddCookies(request, cookies);

@@ -653,24 +653,24 @@ public class N8nTemplateServiceTests : IDisposable
         // Create test user first (required for foreign key constraint)
         var user = new UserEntity
         {
-            Id = "admin",
+            Id = Guid.NewGuid(),
             Email = "admin@test.com",
             DisplayName = "Test Admin",
             PasswordHash = "hash",
-            Role = "admin",
+            Role = UserRole.Admin,
             CreatedAt = DateTime.UtcNow
         };
         _db.Users.Add(user);
 
         var config = new N8nConfigEntity
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             Name = "Test Config",
             BaseUrl = "http://localhost:5678",
             ApiKeyEncrypted = EncryptTestApiKey("test-api-key"),
             WebhookUrl = null,
             IsActive = true,
-            CreatedByUserId = "admin",
+            CreatedByUserId = user.Id,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };

@@ -393,7 +393,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         }
         var userId = await GetUserIdByEmailAsync(email);
         TrackUserId(userId);
-        return new AuthenticatedClient(client, cookies, userId);
+        return new AuthenticatedClient(client, cookies, userId.ToString());
     }
 
     private async Task<string> GetUserIdByEmailAsync(string email)

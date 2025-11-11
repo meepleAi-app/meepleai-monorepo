@@ -55,7 +55,7 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         await RegisterAndAuthenticateAsync(userClient, userEmail, "User");
         var userId = await GetUserIdByEmailAsync(userEmail);
 
-        var seedContext = await SeedDashboardDataAsync(adminUserId, userId);
+        var seedContext = await SeedDashboardDataAsync(adminUserId, userId.ToString());
 
         // When: Admin requests stats with filters
         var requestUri = $"/api/v1/admin/stats?userId={adminUserId}&gameId=game-1" +
@@ -196,7 +196,7 @@ public class AdminStatsEndpointsTests : AdminTestFixture
 
         // And: System has logs from different dates
         var now = DateTime.UtcNow;
-        var seedContext = await SeedDashboardDataAsync(adminUserId, adminUserId);
+        var seedContext = await SeedDashboardDataAsync(adminUserId, adminUserId.ToString());
 
         // When: Admin requests stats with date range (only recent data)
         var requestUri = $"/api/v1/admin/stats?startDate={Uri.EscapeDataString(seedContext.StartDate.ToString("O"))}" +
@@ -234,7 +234,7 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         var adminUserId = await GetUserIdByEmailAsync(adminEmail);
 
         // And: System has logs for game-1
-        var seedContext = await SeedDashboardDataAsync(adminUserId, adminUserId);
+        var seedContext = await SeedDashboardDataAsync(adminUserId, adminUserId.ToString());
 
         // When: Admin requests stats filtered by game-1
         var requestUri = "/api/v1/admin/stats?gameId=game-1";
@@ -276,9 +276,9 @@ public class AdminStatsEndpointsTests : AdminTestFixture
         await RegisterAndAuthenticateAsync(userClient, userEmail, "User");
         var userId = await GetUserIdByEmailAsync(userEmail);
 
-        var seedContext = await SeedDashboardDataAsync(adminUserId, userId);
+        var seedContext = await SeedDashboardDataAsync(adminUserId, userId.ToString());
 
-        // When: Admin requests stats with userId, gameId, and dateRange filters
+        // When: Admin requests stats with userId, gameId.ToString(), and dateRange filters
         var requestUri = $"/api/v1/admin/stats?userId={adminUserId}&gameId=game-1" +
                          $"&startDate={Uri.EscapeDataString(seedContext.StartDate.ToString("O"))}" +
                          $"&endDate={Uri.EscapeDataString(seedContext.EndDate.ToString("O"))}";
@@ -322,7 +322,7 @@ public class AdminStatsEndpointsTests : AdminTestFixture
             {
                 UserId = adminUserId,
                 Endpoint = "qa",
-                GameId = "game-1",
+                GameId = Guid.NewGuid(),
                 LatencyMs = 100,
                 TokenCount = 0,
                 Status = "Error",
@@ -333,7 +333,7 @@ public class AdminStatsEndpointsTests : AdminTestFixture
             {
                 UserId = adminUserId,
                 Endpoint = "explain",
-                GameId = "game-1",
+                GameId = Guid.NewGuid(),
                 LatencyMs = 150,
                 TokenCount = 0,
                 Status = "Error",

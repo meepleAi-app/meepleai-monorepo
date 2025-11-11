@@ -115,7 +115,7 @@ public class SessionManagementConcurrencyTests : ConfigIntegrationTestBase
     {
         // Arrange: Create user and manually create 3 sessions
         var userEmail = $"user-bulk-{Guid.NewGuid():N}@test.com";
-        var userId = "";
+        var userId = Guid.NewGuid();
 
         // Create user once
         using var userTempClient = Factory.CreateHttpsClient();
@@ -190,7 +190,7 @@ public class SessionManagementConcurrencyTests : ConfigIntegrationTestBase
     {
         // Arrange: Create user and manually create 3 sessions
         var userEmail = $"user-mixed-{Guid.NewGuid():N}@test.com";
-        var userId = "";
+        var userId = Guid.NewGuid();
         var sessionIds = new List<string>();
 
         // Create user once

@@ -71,7 +71,7 @@ public class SessionManagementServiceTests : IDisposable
             Email = "test@example.com",
             PasswordHash = "hash",
             DisplayName = "Test User",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = DateTime.UtcNow
         };
         db.Users.Add(user);
@@ -116,7 +116,7 @@ public class SessionManagementServiceTests : IDisposable
             Email = "test@example.com",
             PasswordHash = "hash",
             DisplayName = "Test User",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = DateTime.UtcNow
         };
         db.Users.Add(user);
@@ -176,8 +176,8 @@ public class SessionManagementServiceTests : IDisposable
         var user1Id = Guid.NewGuid().ToString();
         var user2Id = Guid.NewGuid().ToString();
 
-        var user1 = new UserEntity { Id = user1Id, Email = "user1@example.com", PasswordHash = "hash", DisplayName = "User 1", Role = "user", CreatedAt = DateTime.UtcNow };
-        var user2 = new UserEntity { Id = user2Id, Email = "user2@example.com", PasswordHash = "hash", DisplayName = "User 2", Role = "user", CreatedAt = DateTime.UtcNow };
+        var user1 = new UserEntity { Id = user1Id, Email = "user1@example.com", PasswordHash = "hash", DisplayName = "User 1", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
+        var user2 = new UserEntity { Id = user2Id, Email = "user2@example.com", PasswordHash = "hash", DisplayName = "User 2", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
 
         db.Users.AddRange(user1, user2);
 
@@ -211,7 +211,7 @@ public class SessionManagementServiceTests : IDisposable
         var service = CreateService(db);
 
         var userId = Guid.NewGuid().ToString();
-        var user = new UserEntity { Id = userId, Email = "user@example.com", PasswordHash = "hash", DisplayName = "User", Role = "user", CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = userId, Email = "user@example.com", PasswordHash = "hash", DisplayName = "User", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
         db.Users.Add(user);
 
         for (int i = 0; i < 10; i++)
@@ -270,7 +270,7 @@ public class SessionManagementServiceTests : IDisposable
         var service = CreateService(db, timeProvider, mockCache.Object);
 
         var userId = Guid.NewGuid().ToString();
-        var user = new UserEntity { Id = userId, Email = "user@example.com", PasswordHash = "hash", DisplayName = "User", Role = "user", CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = userId, Email = "user@example.com", PasswordHash = "hash", DisplayName = "User", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
         db.Users.Add(user);
 
         var session = CreateSession(userId, "session1", tokenHash: "hash123", user: user);
@@ -310,7 +310,7 @@ public class SessionManagementServiceTests : IDisposable
         var service = CreateService(db);
 
         var userId = Guid.NewGuid().ToString();
-        var user = new UserEntity { Id = userId, Email = "user@example.com", PasswordHash = "hash", DisplayName = "User", Role = "user", CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = userId, Email = "user@example.com", PasswordHash = "hash", DisplayName = "User", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
         db.Users.Add(user);
 
         var originalRevokedAt = DateTime.Parse("2024-01-14T12:00:00Z");
@@ -392,7 +392,7 @@ public class SessionManagementServiceTests : IDisposable
         var service = CreateService(db, cache: mockCache.Object);
 
         var userId = Guid.NewGuid().ToString();
-        var user = new UserEntity { Id = userId, Email = "user@example.com", PasswordHash = "hash", DisplayName = "User", Role = "user", CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = userId, Email = "user@example.com", PasswordHash = "hash", DisplayName = "User", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
         db.Users.Add(user);
 
         var session = CreateSession(userId, "session1", tokenHash: "hash123", user: user);
@@ -432,7 +432,7 @@ public class SessionManagementServiceTests : IDisposable
         var service = CreateService(db, timeProvider, mockCache.Object);
 
         var userId = Guid.NewGuid().ToString();
-        var user = new UserEntity { Id = userId, Email = "user@example.com", PasswordHash = "hash", DisplayName = "User", Role = "user", CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = userId, Email = "user@example.com", PasswordHash = "hash", DisplayName = "User", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
         db.Users.Add(user);
 
         var session1 = CreateSession(userId, "session1", tokenHash: "hash1", user: user);
@@ -473,7 +473,7 @@ public class SessionManagementServiceTests : IDisposable
         var service = CreateService(db);
 
         var userId = Guid.NewGuid().ToString();
-        var user = new UserEntity { Id = userId, Email = "user@example.com", PasswordHash = "hash", DisplayName = "User", Role = "user", CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = userId, Email = "user@example.com", PasswordHash = "hash", DisplayName = "User", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
         db.Users.Add(user);
 
         var revokedSession = CreateSession(userId, "session1", revokedAt: DateTime.Parse("2024-01-14T12:00:00Z"), user: user);
@@ -535,7 +535,7 @@ public class SessionManagementServiceTests : IDisposable
         var service = CreateService(db, timeProvider, mockCache.Object, config);
 
         var userId = Guid.NewGuid().ToString();
-        var user = new UserEntity { Id = userId, Email = "user@example.com", PasswordHash = "hash", DisplayName = "User", Role = "user", CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = userId, Email = "user@example.com", PasswordHash = "hash", DisplayName = "User", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
         db.Users.Add(user);
 
         // Active session (seen 10 days ago)
@@ -593,7 +593,7 @@ public class SessionManagementServiceTests : IDisposable
         var service = CreateService(db, timeProvider, config: config);
 
         var userId = Guid.NewGuid().ToString();
-        var user = new UserEntity { Id = userId, Email = "user@example.com", PasswordHash = "hash", DisplayName = "User", Role = "user", CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = userId, Email = "user@example.com", PasswordHash = "hash", DisplayName = "User", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
         db.Users.Add(user);
 
         // Session created 40 days ago, never seen
@@ -639,7 +639,7 @@ public class SessionManagementServiceTests : IDisposable
         var service = CreateService(db, timeProvider, config: config);
 
         var userId = Guid.NewGuid().ToString();
-        var user = new UserEntity { Id = userId, Email = "user@example.com", PasswordHash = "hash", DisplayName = "User", Role = "user", CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = userId, Email = "user@example.com", PasswordHash = "hash", DisplayName = "User", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
         db.Users.Add(user);
 
         var activeSession = CreateSession(userId, "active", lastSeenAt: DateTime.Parse("2024-02-10T12:00:00Z"), user: user);
@@ -708,7 +708,7 @@ public class SessionManagementServiceTests : IDisposable
                 Email = $"user-{userId}@example.com",
                 PasswordHash = "hash",
                 DisplayName = "Test User",
-                Role = "user",
+                Role = UserRole.User,
                 CreatedAt = DateTime.UtcNow
             }
         };

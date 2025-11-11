@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using FluentAssertions;
-using Xunit;
 
 namespace Api.Tests;
 
@@ -64,7 +63,7 @@ public class TotpServiceTests : IDisposable
     public async Task GenerateSetupAsync_ShouldGenerateSecretAndBackupCodes()
     {
         // Arrange
-        var userId = "test-user-1";
+        var userId = Guid.NewGuid();
         var userEmail = "test@example.com";
         var user = new UserEntity
         {
@@ -111,7 +110,7 @@ public class TotpServiceTests : IDisposable
     public async Task EnableTwoFactorAsync_WithValidCode_ShouldEnable()
     {
         // Arrange
-        var userId = "test-user-2";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -141,7 +140,7 @@ public class TotpServiceTests : IDisposable
     public async Task EnableTwoFactorAsync_WithInvalidCode_ShouldFail()
     {
         // Arrange
-        var userId = "test-user-3";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -167,7 +166,7 @@ public class TotpServiceTests : IDisposable
     public async Task VerifyBackupCodeAsync_ShouldMarkAsUsed()
     {
         // Arrange
-        var userId = "test-user-4";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -206,7 +205,7 @@ public class TotpServiceTests : IDisposable
     public async Task DisableTwoFactorAsync_ShouldClearAllData()
     {
         // Arrange
-        var userId = "test-user-5";
+        var userId = Guid.NewGuid();
         var password = "Test123!";
         var user = new UserEntity
         {
@@ -246,7 +245,7 @@ public class TotpServiceTests : IDisposable
     public async Task GetTwoFactorStatusAsync_ShouldReturnCorrectCounts()
     {
         // Arrange
-        var userId = "test-user-6";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -299,7 +298,7 @@ public class TotpServiceTests : IDisposable
     public async Task GenerateSetupAsync_ConcurrentCalls_GeneratesUniqueSecrets()
     {
         // Arrange
-        var userId = "test-user-concurrent";
+        var userId = Guid.NewGuid();
         var userEmail = "concurrent@example.com";
         var user = new UserEntity
         {
@@ -336,7 +335,7 @@ public class TotpServiceTests : IDisposable
     public async Task GenerateSetupAsync_ReenrollmentDeletesOldBackupCodes()
     {
         // Arrange
-        var userId = "test-user-reenroll";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -365,7 +364,7 @@ public class TotpServiceTests : IDisposable
     public async Task GenerateSecret_GeneratesValid160BitSecret()
     {
         // Arrange
-        var userId = "test-user-secret";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -394,7 +393,7 @@ public class TotpServiceTests : IDisposable
     public async Task GenerateQrCodeUrl_ContainsValidOtpauthUri()
     {
         // Arrange
-        var userId = "test-user-qr";
+        var userId = Guid.NewGuid();
         var userEmail = "qr@example.com";
         var user = new UserEntity
         {
@@ -420,7 +419,7 @@ public class TotpServiceTests : IDisposable
     public async Task GenerateBackupCodes_NoAmbiguousCharacters()
     {
         // Arrange
-        var userId = "test-user-backup";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -447,7 +446,7 @@ public class TotpServiceTests : IDisposable
     public async Task GenerateBackupCodes_UniqueCodesPerGeneration()
     {
         // Arrange
-        var userId = "test-user-unique";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -470,7 +469,7 @@ public class TotpServiceTests : IDisposable
     public async Task VerifyTotpCode_WithClockSkew_AcceptsCodesInWindow()
     {
         // Arrange
-        var userId = "test-user-skew";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -508,7 +507,7 @@ public class TotpServiceTests : IDisposable
     public async Task VerifyTotpCode_OutsideTimeWindow_RejectsCode()
     {
         // Arrange
-        var userId = "test-user-window";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -539,7 +538,7 @@ public class TotpServiceTests : IDisposable
     public async Task VerifyTotpCode_WithInvalidBase32Secret_ReturnsFalse()
     {
         // Arrange
-        var userId = "test-user-invalid";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -563,7 +562,7 @@ public class TotpServiceTests : IDisposable
     public async Task VerifyBackupCodeAsync_WithInvalidHashFormat_ReturnsFalse()
     {
         // Arrange
-        var userId = "test-user-badhash";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -577,7 +576,7 @@ public class TotpServiceTests : IDisposable
         // Corrupted hash
         _dbContext.UserBackupCodes.Add(new UserBackupCodeEntity
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             UserId = userId,
             CodeHash = "invalid-format",
             IsUsed = false,
@@ -596,7 +595,7 @@ public class TotpServiceTests : IDisposable
     public async Task VerifyBackupCodeAsync_ConcurrentAttemptsOnSameCode_OnlyOneSucceeds()
     {
         // Arrange
-        var userId = "test-user-race";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -629,7 +628,7 @@ public class TotpServiceTests : IDisposable
     public async Task DisableTwoFactorAsync_WithBackupCode_Succeeds()
     {
         // Arrange
-        var userId = "test-user-disable-backup";
+        var userId = Guid.NewGuid();
         var password = "Test123!";
         var user = new UserEntity
         {
@@ -661,7 +660,7 @@ public class TotpServiceTests : IDisposable
     public async Task DisableTwoFactorAsync_UserNotEnabled_ThrowsInvalidOperationException()
     {
         // Arrange
-        var userId = "test-user-not-enabled";
+        var userId = Guid.NewGuid();
         var password = "Test123!";
         var user = new UserEntity
         {

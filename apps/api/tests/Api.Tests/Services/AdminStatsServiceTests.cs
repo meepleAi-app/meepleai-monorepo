@@ -95,13 +95,14 @@ public class AdminStatsServiceTests : IDisposable
     {
         // Arrange
         var now = DateTime.UtcNow;
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
-            Id = "user1",
+            Id = userId,
             Email = "test@test.com",
             DisplayName = "Test User",
             PasswordHash = "hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = now
         };
         _dbContext.Users.Add(user);
@@ -110,8 +111,8 @@ public class AdminStatsServiceTests : IDisposable
         _dbContext.UserSessions.AddRange(
             new UserSessionEntity
             {
-                Id = "sess1",
-                UserId = "user1",
+                Id = Guid.NewGuid(),
+                UserId = userId,
                 User = user,
                 TokenHash = "hash1",
                 CreatedAt = now,
@@ -120,8 +121,8 @@ public class AdminStatsServiceTests : IDisposable
             },
             new UserSessionEntity
             {
-                Id = "sess2",
-                UserId = "user1",
+                Id = Guid.NewGuid(),
+                UserId = userId,
                 User = user,
                 TokenHash = "hash2",
                 CreatedAt = now,
@@ -130,8 +131,8 @@ public class AdminStatsServiceTests : IDisposable
             },
             new UserSessionEntity
             {
-                Id = "sess3",
-                UserId = "user1",
+                Id = Guid.NewGuid(),
+                UserId = userId,
                 User = user,
                 TokenHash = "hash3",
                 CreatedAt = now,
@@ -157,20 +158,20 @@ public class AdminStatsServiceTests : IDisposable
         var now = DateTime.UtcNow.Date;
         var user1 = new UserEntity
         {
-            Id = "user1",
+            Id = Guid.NewGuid(),
             Email = "test1@test.com",
             DisplayName = "User 1",
             PasswordHash = "hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = now.AddDays(-5)
         };
         var user2 = new UserEntity
         {
-            Id = "user2",
+            Id = Guid.NewGuid(),
             Email = "test2@test.com",
             DisplayName = "User 2",
             PasswordHash = "hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = now.AddDays(-3)
         };
         _dbContext.Users.AddRange(user1, user2);
@@ -208,47 +209,47 @@ public class AdminStatsServiceTests : IDisposable
         // Add user first (required for PDF upload)
         var user = new UserEntity
         {
-            Id = "user1",
+            Id = Guid.NewGuid(),
             Email = "user@test.com",
             DisplayName = "Test User",
             PasswordHash = "hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = now
         };
         _dbContext.Users.Add(user);
 
-        var game1 = new GameEntity { Id = "game1", Name = "Chess", CreatedAt = now };
-        var game2 = new GameEntity { Id = "game2", Name = "Checkers", CreatedAt = now };
+        var game1 = new GameEntity { Id = Guid.NewGuid(), Name = "Chess", CreatedAt = now };
+        var game2 = new GameEntity { Id = Guid.NewGuid(), Name = "Checkers", CreatedAt = now };
         _dbContext.Games.AddRange(game1, game2);
 
         // Add PDFs for different games
         _dbContext.PdfDocuments.AddRange(
             new PdfDocumentEntity
             {
-                Id = "pdf1",
-                GameId = "game1",
+                Id = Guid.NewGuid(),
+                GameId = game1.Id,
                 FileName = "chess.pdf",
                 FilePath = "/path/chess.pdf",
                 FileSizeBytes = 1000,
                 PageCount = 10,
-                UploadedByUserId = "user1",
+                UploadedByUserId = user.Id,
                 UploadedAt = now
             },
             new PdfDocumentEntity
             {
-                Id = "pdf2",
-                GameId = "game2",
+                Id = Guid.NewGuid(),
+                GameId = game2.Id,
                 FileName = "checkers.pdf",
                 FilePath = "/path/checkers.pdf",
                 FileSizeBytes = 2000,
                 PageCount = 20,
-                UploadedByUserId = "user1",
+                UploadedByUserId = user.Id,
                 UploadedAt = now
             }
         );
         await _dbContext.SaveChangesAsync();
 
-        var queryParams = new AnalyticsQueryParams(Days: 30, GameId: "game1");
+        var queryParams = new AnalyticsQueryParams(Days: 30, GameId: game1.Id);
 
         // Act
         var result = await _service.GetDashboardStatsAsync(queryParams, CancellationToken.None);
@@ -272,11 +273,11 @@ public class AdminStatsServiceTests : IDisposable
         // Add more data after first call
         _dbContext.Users.Add(new UserEntity
         {
-            Id = "user-new",
+            Id = Guid.NewGuid(),
             Email = "new@test.com",
             DisplayName = "New User",
             PasswordHash = "hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = DateTime.UtcNow
         });
         await _dbContext.SaveChangesAsync();
@@ -347,7 +348,7 @@ public class AdminStatsServiceTests : IDisposable
         _dbContext.AiRequestLogs.AddRange(
             new AiRequestLogEntity
             {
-                Id = "req1",
+                Id = Guid.NewGuid(),
                 Endpoint = "qa",
                 CreatedAt = now,
                 TokenCount = 100,
@@ -356,7 +357,7 @@ public class AdminStatsServiceTests : IDisposable
             },
             new AiRequestLogEntity
             {
-                Id = "req2",
+                Id = Guid.NewGuid(),
                 Endpoint = "qa",
                 CreatedAt = now,
                 TokenCount = 150,
@@ -365,7 +366,7 @@ public class AdminStatsServiceTests : IDisposable
             },
             new AiRequestLogEntity
             {
-                Id = "req3",
+                Id = Guid.NewGuid(),
                 Endpoint = "qa",
                 CreatedAt = now,
                 TokenCount = 200,
@@ -392,7 +393,7 @@ public class AdminStatsServiceTests : IDisposable
         _dbContext.AiRequestLogs.AddRange(
             new AiRequestLogEntity
             {
-                Id = "req1",
+                Id = Guid.NewGuid(),
                 Endpoint = "qa",
                 CreatedAt = now,
                 TokenCount = 100,
@@ -400,7 +401,7 @@ public class AdminStatsServiceTests : IDisposable
             },
             new AiRequestLogEntity
             {
-                Id = "req2",
+                Id = Guid.NewGuid(),
                 Endpoint = "explain",
                 CreatedAt = now,
                 TokenCount = 250,
@@ -408,7 +409,7 @@ public class AdminStatsServiceTests : IDisposable
             },
             new AiRequestLogEntity
             {
-                Id = "req3",
+                Id = Guid.NewGuid(),
                 Endpoint = "setup",
                 CreatedAt = now,
                 TokenCount = 150,
@@ -434,29 +435,29 @@ public class AdminStatsServiceTests : IDisposable
         _dbContext.Users.AddRange(
             new UserEntity
             {
-                Id = "admin1",
+                Id = Guid.NewGuid(),
                 Email = "admin1@test.com",
                 DisplayName = "Admin User",
                 PasswordHash = "hash",
-                Role = "admin",
+                Role = UserRole.Admin,
                 CreatedAt = now.AddDays(-5)
             },
             new UserEntity
             {
-                Id = "editor1",
+                Id = Guid.NewGuid(),
                 Email = "editor1@test.com",
                 DisplayName = "Editor User",
                 PasswordHash = "hash",
-                Role = "editor",
+                Role = UserRole.Editor,
                 CreatedAt = now.AddDays(-3)
             },
             new UserEntity
             {
-                Id = "user1",
+                Id = Guid.NewGuid(),
                 Email = "user1@test.com",
                 DisplayName = "Regular User",
                 PasswordHash = "hash",
-                Role = "user",
+                Role = UserRole.User,
                 CreatedAt = now.AddDays(-1)
             }
         );
@@ -511,29 +512,29 @@ public class AdminStatsServiceTests : IDisposable
         _dbContext.Users.AddRange(
             new UserEntity
             {
-                Id = "user1",
+                Id = Guid.NewGuid(),
                 Email = "user1@test.com",
                 DisplayName = "User 1",
                 PasswordHash = "hash",
-                Role = "user",
+                Role = UserRole.User,
                 CreatedAt = now.AddDays(-10)
             },
             new UserEntity
             {
-                Id = "user2",
+                Id = Guid.NewGuid(),
                 Email = "user2@test.com",
                 DisplayName = "User 2",
                 PasswordHash = "hash",
-                Role = "editor",
+                Role = UserRole.Editor,
                 CreatedAt = now.AddDays(-5)
             },
             new UserEntity
             {
-                Id = "admin",
+                Id = Guid.NewGuid(),
                 Email = "admin@test.com",
                 DisplayName = "Admin",
                 PasswordHash = "hash",
-                Role = "admin",
+                Role = UserRole.Admin,
                 CreatedAt = now.AddDays(-20)
             }
         );
@@ -550,8 +551,8 @@ public class AdminStatsServiceTests : IDisposable
         _dbContext.UserSessions.AddRange(
             new UserSessionEntity
             {
-                Id = "sess1",
-                UserId = "user1",
+                Id = Guid.NewGuid(),
+                UserId = (user1Ref as UserEntity).Id,
                 User = user1Ref!,
                 TokenHash = "hash1",
                 CreatedAt = now,
@@ -560,8 +561,8 @@ public class AdminStatsServiceTests : IDisposable
             },
             new UserSessionEntity
             {
-                Id = "sess2",
-                UserId = "user2",
+                Id = Guid.NewGuid(),
+                UserId = (user2Ref as UserEntity).Id,
                 User = user2Ref!,
                 TokenHash = "hash2",
                 CreatedAt = now,
@@ -570,8 +571,8 @@ public class AdminStatsServiceTests : IDisposable
             },
             new UserSessionEntity
             {
-                Id = "sess3",
-                UserId = "admin",
+                Id = Guid.NewGuid(),
+                UserId = (adminRef as UserEntity).Id,
                 User = adminRef!,
                 TokenHash = "hash3",
                 CreatedAt = now.AddDays(-10),
@@ -581,20 +582,20 @@ public class AdminStatsServiceTests : IDisposable
         );
 
         // Add games
-        var game = new GameEntity { Id = "game1", Name = "Chess", CreatedAt = now };
+        var game = new GameEntity { Id = Guid.NewGuid(), Name = "Chess", CreatedAt = now };
         _dbContext.Games.Add(game);
 
         // Add PDFs
         _dbContext.PdfDocuments.AddRange(
             Enumerable.Range(1, 5).Select(i => new PdfDocumentEntity
             {
-                Id = $"pdf{i}",
-                GameId = "game1",
+                Id = Guid.NewGuid(),
+                GameId = game.Id,
                 FileName = $"chess-{i}.pdf",
                 FilePath = $"/path/chess-{i}.pdf",
                 FileSizeBytes = 1000 * i,
                 PageCount = 10 * i,
-                UploadedByUserId = "user1",
+                UploadedByUserId = (user1Ref as UserEntity).Id,
                 UploadedAt = now.AddDays(-i)
             })
         );
@@ -602,8 +603,8 @@ public class AdminStatsServiceTests : IDisposable
         // Add agent for chat
         var agent = new AgentEntity
         {
-            Id = "agent1",
-            GameId = "game1",
+            Id = Guid.NewGuid(),
+            GameId = game.Id,
             Name = "QA Agent",
             Kind = "qa"
         };
@@ -613,9 +614,9 @@ public class AdminStatsServiceTests : IDisposable
         var chat = new ChatEntity
         {
             Id = Guid.NewGuid(),
-            UserId = "user1",
-            GameId = "game1",
-            AgentId = "agent1",
+            UserId = (user1Ref as UserEntity).Id,
+            GameId = game.Id,
+            AgentId = agent.Id,
             StartedAt = now
         };
         _dbContext.Chats.Add(chat);
@@ -625,7 +626,7 @@ public class AdminStatsServiceTests : IDisposable
             {
                 Id = Guid.NewGuid(),
                 ChatId = chat.Id,
-                UserId = "user1",
+                UserId = (user1Ref as UserEntity).Id,
                 Level = "info",
                 Message = $"Message {i}",
                 SequenceNumber = i,
@@ -637,9 +638,9 @@ public class AdminStatsServiceTests : IDisposable
         _dbContext.AiRequestLogs.AddRange(
             Enumerable.Range(1, 15).Select(i => new AiRequestLogEntity
             {
-                Id = $"req{i}",
-                UserId = "user1",
-                GameId = "game1",
+                Id = Guid.NewGuid(),
+                UserId = (user1Ref as UserEntity).Id,
+                GameId = game.Id,
                 Endpoint = "qa",
                 Query = $"Question {i}",
                 TokenCount = 100 + (i * 10),

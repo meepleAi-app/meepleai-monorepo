@@ -36,11 +36,12 @@ public class RuleCommentServiceTests : IDisposable
     private readonly RuleCommentService _service;
 
     // Test data constants
-    private const string TestGameId = "game-123";
+    private static readonly string TestGameId = Guid.NewGuid().ToString();
+    private static readonly Guid TestGameIdGuid = Guid.NewGuid();
     private const string TestVersion = "v1.0";
-    private const string TestUserId1 = "user-1";
-    private const string TestUserId2 = "user-2";
-    private const string TestUserId3 = "user-3";
+    private static readonly Guid TestUserId1 = Guid.NewGuid();
+    private static readonly Guid TestUserId2 = Guid.NewGuid();
+    private static readonly Guid TestUserId3 = Guid.NewGuid();
 
     public RuleCommentServiceTests(ITestOutputHelper output)
     {
@@ -109,7 +110,7 @@ public class RuleCommentServiceTests : IDisposable
         // Add test game
         var game = new GameEntity
         {
-            Id = TestGameId,
+            Id = TestGameIdGuid,
             Name = "Test Game"
         };
 
@@ -139,7 +140,7 @@ public class RuleCommentServiceTests : IDisposable
         result.Version.Should().BeEquivalentTo(TestVersion);
         result.LineNumber.Should().Be(10);
         result.CommentText.Should().BeEquivalentTo(commentText);
-        result.UserId.Should().BeEquivalentTo(TestUserId1);
+        result.UserId.Should().BeEquivalentTo(TestUserId1.ToString());
         result.UserDisplayName.Should().BeEquivalentTo("alice");
         result.IsResolved.Should().BeFalse();
         result.ParentCommentId.Should().BeNull();
@@ -183,8 +184,8 @@ public class RuleCommentServiceTests : IDisposable
         // Assert
         result.Should().NotBeNull();
         result.MentionedUserIds.Count.Should().Be(2);
-        result.MentionedUserIds.Should().Contain(TestUserId1); // alice
-        result.MentionedUserIds.Should().Contain(TestUserId2); // Bob
+        result.MentionedUserIds.Should().Contain(TestUserId1.ToString()); // alice
+        result.MentionedUserIds.Should().Contain(TestUserId2.ToString()); // Bob
     }
 
     [Fact]
@@ -204,7 +205,7 @@ public class RuleCommentServiceTests : IDisposable
         // Assert
         result.Should().NotBeNull();
         result.MentionedUserIds.Should().ContainSingle();
-        result.MentionedUserIds.Should().Contain(TestUserId3); // admin@example.com
+        result.MentionedUserIds.Should().Contain(TestUserId3.ToString()); // admin@example.com
     }
 
     [Fact]
@@ -308,7 +309,7 @@ public class RuleCommentServiceTests : IDisposable
         reply.GameId.Should().Be(parent.GameId);
         reply.Version.Should().Be(parent.Version);
         reply.LineNumber.Should().Be(parent.LineNumber);
-        reply.UserId.Should().Be(TestUserId2);
+        reply.UserId.Should().Be(TestUserId2.ToString());
         reply.UserDisplayName.Should().Be("Bob");
     }
 
@@ -364,7 +365,7 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         reply.MentionedUserIds.Should().ContainSingle();
-        reply.MentionedUserIds.Should().Contain(TestUserId2);
+        reply.MentionedUserIds.Should().Contain(TestUserId2.ToString());
     }
 
     [Fact]
@@ -562,7 +563,7 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         result.IsResolved.Should().BeTrue();
-        result.ResolvedByUserId.Should().BeEquivalentTo(TestUserId2);
+        result.ResolvedByUserId.Should().BeEquivalentTo(TestUserId2.ToString());
         result.ResolvedByDisplayName.Should().BeEquivalentTo("Bob");
         result.ResolvedAt.Should().NotBeNull();
     }
@@ -743,7 +744,7 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         result.Should().ContainSingle();
-        result.Should().Contain(TestUserId1); // alice
+        result.Should().Contain(TestUserId1.ToString()); // alice
     }
 
     [Fact]
@@ -754,9 +755,9 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         result.Count.Should().Be(3);
-        result.Should().Contain(TestUserId1); // alice
-        result.Should().Contain(TestUserId2); // Bob
-        result.Should().Contain(TestUserId3); // admin
+        result.Should().Contain(TestUserId1.ToString()); // alice
+        result.Should().Contain(TestUserId2.ToString()); // Bob
+        result.Should().Contain(TestUserId3.ToString()); // admin
     }
 
     [Fact]
@@ -767,9 +768,9 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         result.Count.Should().Be(3);
-        result.Should().Contain(TestUserId1);
-        result.Should().Contain(TestUserId2);
-        result.Should().Contain(TestUserId3);
+        result.Should().Contain(TestUserId1.ToString());
+        result.Should().Contain(TestUserId2.ToString());
+        result.Should().Contain(TestUserId3.ToString());
     }
 
     [Fact]
@@ -780,7 +781,7 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         result.Should().ContainSingle();
-        result.Should().Contain(TestUserId3); // admin@example.com
+        result.Should().Contain(TestUserId3.ToString()); // admin@example.com
     }
 
     [Fact]
@@ -791,7 +792,7 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         result.Should().ContainSingle();
-        result.Should().Contain(TestUserId1);
+        result.Should().Contain(TestUserId1.ToString());
     }
 
     [Fact]
@@ -802,8 +803,8 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         result.Count.Should().Be(2); // Only alice and Bob
-        result.Should().Contain(TestUserId1);
-        result.Should().Contain(TestUserId2);
+        result.Should().Contain(TestUserId1.ToString());
+        result.Should().Contain(TestUserId2.ToString());
     }
 
     [Fact]
@@ -814,7 +815,7 @@ public class RuleCommentServiceTests : IDisposable
 
         // Assert
         result.Should().ContainSingle();
-        result.Should().Contain(TestUserId1);
+        result.Should().Contain(TestUserId1.ToString());
     }
 
     #endregion

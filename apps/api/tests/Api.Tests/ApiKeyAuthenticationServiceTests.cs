@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 using FluentAssertions;
-using Xunit;
 
 public class ApiKeyAuthenticationServiceTests : IDisposable
 {
@@ -45,21 +44,22 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var service = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
 
         // Create test user
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = userId,
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();
 
         // Generate API key
-        var (plaintextKey, apiKeyEntity) = await service.GenerateApiKeyAsync(
-            user.Id,
+        (string plaintextKey, var apiKeyEntity) = await service.GenerateApiKeyAsync(
+            userId.ToString(),
             "Test Key",
             new[] { "read", "write" },
             environment: "live");
@@ -71,8 +71,8 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeTrue();
-        result.ApiKeyId.Should().BeEquivalentTo(apiKeyEntity.Id);
-        result.UserId.Should().BeEquivalentTo(user.Id);
+        result.ApiKeyId.Should().BeEquivalentTo(apiKeyEntity.Id.ToString());
+        result.UserId.Should().BeEquivalentTo(userId.ToString());
         result.UserEmail.Should().BeEquivalentTo(user.Email);
         result.UserDisplayName.Should().BeEquivalentTo(user.DisplayName);
         result.UserRole.Should().BeEquivalentTo("User");
@@ -167,20 +167,21 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var service = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
 
         // Create test user
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = userId,
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();
 
         // Generate and deactivate API key
-        var (plaintextKey, apiKeyEntity) = await service.GenerateApiKeyAsync(user.Id, "Test Key", new[] { "read" });
+        (string plaintextKey, var apiKeyEntity) = await service.GenerateApiKeyAsync(userId.ToString(), "Test Key", new[] { "read" });
         apiKeyEntity.IsActive = false;
         dbContext.ApiKeys.Add(apiKeyEntity);
         await dbContext.SaveChangesAsync();
@@ -208,13 +209,14 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var service = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
 
         // Create test user
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = userId,
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
@@ -222,8 +224,8 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Generate API key with expiration in the past
         var expiresAt = timeProvider.GetUtcNow().UtcDateTime.AddDays(-1);
-        var (plaintextKey, apiKeyEntity) = await service.GenerateApiKeyAsync(
-            user.Id,
+        (string plaintextKey, var apiKeyEntity) = await service.GenerateApiKeyAsync(
+            userId.ToString(),
             "Test Key",
             new[] { "read" },
             expiresAt: expiresAt);
@@ -253,24 +255,25 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var service = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
 
         // Create test user
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = userId,
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();
 
         // Generate and revoke API key
-        var (plaintextKey, apiKeyEntity) = await service.GenerateApiKeyAsync(user.Id, "Test Key", new[] { "read" });
+        (string plaintextKey, var apiKeyEntity) = await service.GenerateApiKeyAsync(userId.ToString(), "Test Key", new[] { "read" });
         dbContext.ApiKeys.Add(apiKeyEntity);
         await dbContext.SaveChangesAsync();
 
-        await service.RevokeApiKeyAsync(apiKeyEntity.Id, user.Id);
+        await service.RevokeApiKeyAsync(apiKeyEntity.Id.ToString(), userId.ToString());
 
         // Act
         var result = await service.ValidateApiKeyAsync(plaintextKey);
@@ -295,13 +298,14 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var service = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
 
         // Create test user
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = userId,
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
@@ -309,8 +313,8 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Generate API key expiring in 1 hour (still valid)
         var expiresAt = timeProvider.GetUtcNow().UtcDateTime.AddHours(1);
-        var (plaintextKey, apiKeyEntity) = await service.GenerateApiKeyAsync(
-            user.Id,
+        (string plaintextKey, var apiKeyEntity) = await service.GenerateApiKeyAsync(
+            userId.ToString(),
             "Test Key",
             new[] { "read" },
             expiresAt: expiresAt);
@@ -322,7 +326,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Assert
         result.IsValid.Should().BeTrue();
-        result.UserId.Should().BeEquivalentTo(user.Id);
+        result.UserId.Should().BeEquivalentTo(userId.ToString());
     }
 
     #endregion
@@ -346,13 +350,14 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var service = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
 
         // Create test user
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = userId,
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = "admin",
+            Role = UserRole.Admin,
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
@@ -360,7 +365,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Act
         var (plaintextKey, entity) = await service.GenerateApiKeyAsync(
-            user.Id,
+            userId.ToString(),
             "Test Key",
             new[] { "read", "write" },
             expiresAt: null,
@@ -372,7 +377,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         (plaintextKey.Length > 20).Should().BeTrue();
 
         entity.Should().NotBeNull();
-        entity.UserId.Should().Be(user.Id);
+        entity.UserId.Should().Be(userId.ToString());
         entity.KeyName.Should().Be("Test Key");
         entity.KeyHash.Should().NotBeNull();
         entity.KeyPrefix.Should().StartWith("mpl_");
@@ -402,13 +407,14 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var service = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
 
         // Create test user
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = userId,
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
@@ -418,7 +424,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
 
         // Act
         var (plaintextKey, entity) = await service.GenerateApiKeyAsync(
-            user.Id,
+            userId.ToString(),
             "Temporary Key",
             new[] { "read" },
             expiresAt: expiresAt);
@@ -522,21 +528,22 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var service = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
 
         // Create test user
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = userId,
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();
 
         // Act
-        var (key1, entity1) = await service.GenerateApiKeyAsync(user.Id, "Key 1", new[] { "read" });
-        var (key2, entity2) = await service.GenerateApiKeyAsync(user.Id, "Key 2", new[] { "write" });
+        var (key1, entity1) = await service.GenerateApiKeyAsync(userId.ToString(), "Key 1", new[] { "read" });
+        var (key2, entity2) = await service.GenerateApiKeyAsync(userId.ToString(), "Key 2", new[] { "write" });
 
         // Assert
         key2.Should().NotBe(key1);
@@ -563,32 +570,33 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var service = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
 
         // Create test user
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = userId,
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();
 
         // Generate API key
-        var (_, apiKeyEntity) = await service.GenerateApiKeyAsync(user.Id, "Test Key", new[] { "read" });
+        var (_, apiKeyEntity) = await service.GenerateApiKeyAsync(userId.ToString(), "Test Key", new[] { "read" });
         dbContext.ApiKeys.Add(apiKeyEntity);
         await dbContext.SaveChangesAsync();
 
         // Act
-        var result = await service.RevokeApiKeyAsync(apiKeyEntity.Id, user.Id);
+        var result = await service.RevokeApiKeyAsync(apiKeyEntity.Id.ToString(), userId.ToString());
 
         // Assert
         result.Should().BeTrue();
         var revokedKey = await dbContext.ApiKeys.FindAsync(apiKeyEntity.Id);
         revokedKey.Should().NotBeNull();
         revokedKey!.RevokedAt.Should().Be(timeProvider.GetUtcNow().UtcDateTime);
-        revokedKey.RevokedBy.Should().Be(user.Id);
+        revokedKey.RevokedBy.Should().Be(userId.ToString());
     }
 
     [Fact]
@@ -627,27 +635,28 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var service = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
 
         // Create test user
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = userId,
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();
 
         // Generate and revoke API key
-        var (_, apiKeyEntity) = await service.GenerateApiKeyAsync(user.Id, "Test Key", new[] { "read" });
+        var (_, apiKeyEntity) = await service.GenerateApiKeyAsync(userId.ToString(), "Test Key", new[] { "read" });
         dbContext.ApiKeys.Add(apiKeyEntity);
         await dbContext.SaveChangesAsync();
 
-        await service.RevokeApiKeyAsync(apiKeyEntity.Id, user.Id);
+        await service.RevokeApiKeyAsync(apiKeyEntity.Id.ToString(), userId.ToString());
 
         // Act - revoke again
-        var result = await service.RevokeApiKeyAsync(apiKeyEntity.Id, user.Id);
+        var result = await service.RevokeApiKeyAsync(apiKeyEntity.Id.ToString(), userId.ToString());
 
         // Assert
         result.Should().BeTrue();
@@ -672,21 +681,22 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var service = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
 
         // Create test user
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = userId,
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();
 
         // Act - Generate
-        var (plaintextKey, apiKeyEntity) = await service.GenerateApiKeyAsync(
-            user.Id,
+        (string plaintextKey, var apiKeyEntity) = await service.GenerateApiKeyAsync(
+            userId.ToString(),
             "Integration Test Key",
             new[] { "read", "write", "delete" },
             expiresAt: null,
@@ -701,7 +711,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         validationResult1.Scopes.Length.Should().Be(3);
 
         // Act - Revoke
-        var revokeResult = await service.RevokeApiKeyAsync(apiKeyEntity.Id, user.Id);
+        var revokeResult = await service.RevokeApiKeyAsync(apiKeyEntity.Id.ToString(), userId.ToString());
         revokeResult.Should().BeTrue();
 
         // Act - Validate (should fail)
@@ -725,20 +735,21 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
         var service = new ApiKeyAuthenticationService(dbContext, passwordHashingService, NullLogger<ApiKeyAuthenticationService>.Instance, timeProvider);
 
         // Create test user
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = userId,
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();
 
         // Generate key
-        var (plaintextKey, apiKeyEntity) = await service.GenerateApiKeyAsync(user.Id, "Test Key", new[] { "read" });
+        (string plaintextKey, var apiKeyEntity) = await service.GenerateApiKeyAsync(userId.ToString(), "Test Key", new[] { "read" });
         dbContext.ApiKeys.Add(apiKeyEntity);
         await dbContext.SaveChangesAsync();
 

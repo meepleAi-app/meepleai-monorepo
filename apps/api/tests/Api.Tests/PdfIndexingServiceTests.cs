@@ -72,23 +72,23 @@ public class PdfIndexingServiceTests : IDisposable
         // GIVEN: A PDF with extracted text
         var user = new UserEntity
         {
-            Id = "user-1",
+            Id = Guid.NewGuid(),
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "hash",
-            Role = "admin",
+            Role = UserRole.Admin,
             CreatedAt = DateTime.UtcNow
         };
-        var game = new GameEntity { Id = "tic-tac-toe", Name = "Tic-Tac-Toe", CreatedAt = DateTime.UtcNow };
+        var game = new GameEntity { Id = Guid.NewGuid(), Name = "Tic-Tac-Toe", CreatedAt = DateTime.UtcNow };
         var extractedText = "Players alternate marking X or O. Three in a row wins.";
         var pdf = new PdfDocumentEntity
         {
-            Id = "pdf-1",
-            GameId = "tic-tac-toe",
+            Id = Guid.NewGuid(),
+            GameId = Guid.NewGuid(),
             FileName = "rules.pdf",
             FilePath = "/pdfs/rules.pdf",
             FileSizeBytes = 1024,
-            UploadedByUserId = "user-1",
+            UploadedByUserId = Guid.NewGuid(),
             UploadedAt = DateTime.UtcNow,
             ExtractedText = extractedText,
             ProcessingStatus = "completed",
@@ -159,22 +159,22 @@ public class PdfIndexingServiceTests : IDisposable
         // GIVEN: A PDF without extracted text
         var user = new UserEntity
         {
-            Id = "user-2",
+            Id = Guid.NewGuid(),
             Email = "test2@example.com",
             DisplayName = "Test User 2",
             PasswordHash = "hash",
-            Role = "admin",
+            Role = UserRole.Admin,
             CreatedAt = DateTime.UtcNow
         };
-        var game = new GameEntity { Id = "chess", Name = "Chess", CreatedAt = DateTime.UtcNow };
+        var game = new GameEntity { Id = Guid.NewGuid(), Name = "Chess", CreatedAt = DateTime.UtcNow };
         var pdf = new PdfDocumentEntity
         {
-            Id = "pdf-2",
-            GameId = "chess",
+            Id = Guid.NewGuid(),
+            GameId = Guid.NewGuid(),
             FileName = "rules.pdf",
             FilePath = "/pdfs/rules.pdf",
             FileSizeBytes = 1024,
-            UploadedByUserId = "user-2",
+            UploadedByUserId = Guid.NewGuid(),
             UploadedAt = DateTime.UtcNow,
             ExtractedText = null,
             ProcessingStatus = "pending",
@@ -221,22 +221,22 @@ public class PdfIndexingServiceTests : IDisposable
         // GIVEN: A PDF that has already been indexed
         var user = new UserEntity
         {
-            Id = "user-3",
+            Id = Guid.NewGuid(),
             Email = "test3@example.com",
             DisplayName = "Test User 3",
             PasswordHash = "hash",
-            Role = "admin",
+            Role = UserRole.Admin,
             CreatedAt = DateTime.UtcNow
         };
-        var game = new GameEntity { Id = "tic-tac-toe", Name = "Tic-Tac-Toe", CreatedAt = DateTime.UtcNow };
+        var game = new GameEntity { Id = Guid.NewGuid(), Name = "Tic-Tac-Toe", CreatedAt = DateTime.UtcNow };
         var pdf = new PdfDocumentEntity
         {
-            Id = "pdf-3",
-            GameId = "tic-tac-toe",
+            Id = Guid.NewGuid(),
+            GameId = Guid.NewGuid(),
             FileName = "rules.pdf",
             FilePath = "/pdfs/rules.pdf",
             FileSizeBytes = 1024,
-            UploadedByUserId = "user-3",
+            UploadedByUserId = Guid.NewGuid(),
             UploadedAt = DateTime.UtcNow,
             ExtractedText = "Test content",
             ProcessingStatus = "completed",
@@ -247,8 +247,8 @@ public class PdfIndexingServiceTests : IDisposable
 
         var existingVectorDoc = new VectorDocumentEntity
         {
-            Id = "vec-existing",
-            GameId = "tic-tac-toe",
+            Id = Guid.NewGuid(),
+            GameId = Guid.NewGuid(),
             PdfDocumentId = "pdf-3",
             ChunkCount = 1,
             TotalCharacters = 12,
@@ -303,22 +303,22 @@ public class PdfIndexingServiceTests : IDisposable
         // GIVEN: A valid PDF
         var user = new UserEntity
         {
-            Id = "user-4",
+            Id = Guid.NewGuid(),
             Email = "test4@example.com",
             DisplayName = "Test User 4",
             PasswordHash = "hash",
-            Role = "admin",
+            Role = UserRole.Admin,
             CreatedAt = DateTime.UtcNow
         };
-        var game = new GameEntity { Id = "tic-tac-toe", Name = "Tic-Tac-Toe", CreatedAt = DateTime.UtcNow };
+        var game = new GameEntity { Id = Guid.NewGuid(), Name = "Tic-Tac-Toe", CreatedAt = DateTime.UtcNow };
         var pdf = new PdfDocumentEntity
         {
-            Id = "pdf-4",
-            GameId = "tic-tac-toe",
+            Id = Guid.NewGuid(),
+            GameId = Guid.NewGuid(),
             FileName = "rules.pdf",
             FilePath = "/pdfs/rules.pdf",
             FileSizeBytes = 1024,
-            UploadedByUserId = "user-4",
+            UploadedByUserId = Guid.NewGuid(),
             UploadedAt = DateTime.UtcNow,
             ExtractedText = "Test content",
             ProcessingStatus = "completed",

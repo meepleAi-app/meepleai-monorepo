@@ -179,7 +179,7 @@ public class QualityReportServiceTests : IDisposable
         // Add 10 AI request logs to database
         var logs = Enumerable.Range(1, 10).Select(i => new AiRequestLogEntity
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             CreatedAt = startDate.AddDays(i / 2.0),
             RagConfidence = i <= 3 ? 0.50 : 0.80, // 3 low, 7 high
             LlmConfidence = i <= 3 ? 0.45 : 0.75,
@@ -187,7 +187,7 @@ public class QualityReportServiceTests : IDisposable
             OverallConfidence = i <= 3 ? 0.50 : 0.80,
             IsLowQuality = i <= 3,
             // Required fields
-            GameId = Guid.NewGuid().ToString(),
+            GameId = Guid.NewGuid(),
             Query = "Test query",
             LatencyMs = 100,
             TokenCount = 50,
@@ -533,11 +533,11 @@ public class QualityReportServiceTests : IDisposable
         // Add 10 AI request logs to database
         var logs = Enumerable.Range(1, 10).Select(i => new AiRequestLogEntity
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             CreatedAt = startDate.AddDays(i / 2.0),
             IsLowQuality = i <= 3,
             // Required fields
-            GameId = Guid.NewGuid().ToString(),
+            GameId = Guid.NewGuid(),
             Query = "Test query",
             LatencyMs = 100,
             TokenCount = 50,

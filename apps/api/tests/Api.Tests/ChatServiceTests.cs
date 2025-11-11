@@ -10,7 +10,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 using FluentAssertions;
-using Xunit;
 
 namespace Api.Tests;
 
@@ -65,9 +64,9 @@ public class ChatServiceTests
     {
         // Given: Valid game and agent exist
         await using var dbContext = CreateInMemoryContext();
-        var user = new UserEntity { Id = "user-123", Email = "user@test.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow };
-        var game = new GameEntity { Id = "catan", Name = "Catan" };
-        var agent = new AgentEntity { Id = "catan-qa", GameId = "catan", Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = Guid.NewGuid(), Email = "user@test.com", PasswordHash = "hash", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
+        var game = new GameEntity { Id = Guid.NewGuid(), Name = "Catan" };
+        var agent = new AgentEntity { Id = Guid.NewGuid(), GameId = game.Id, Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
         dbContext.Users.Add(user);
         dbContext.Games.Add(game);
         dbContext.Agents.Add(agent);
@@ -76,13 +75,13 @@ public class ChatServiceTests
         var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, CreateAuditService(dbContext));
 
         // When: User creates a chat
-        var chat = await service.CreateChatAsync("user-123", "catan", "catan-qa");
+        var chat = await service.CreateChatAsync(user.Id, game.Id, agent.Id);
 
         // Then: Chat is persisted with correct associations
         chat.Id.Should().NotBe(Guid.Empty);
-        chat.UserId.Should().Be("user-123");
-        chat.GameId.Should().Be("catan");
-        chat.AgentId.Should().Be("catan-qa");
+        chat.UserId.Should().Be(user.Id);
+        chat.GameId.Should().Be(game.Id);
+        chat.AgentId.Should().Be(agent.Id);
         chat.StartedAt.Should().NotBe(default);
         chat.LastMessageAt.Should().BeNull();
 
@@ -102,7 +101,7 @@ public class ChatServiceTests
         await using var dbContext = CreateInMemoryContext();
         var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, CreateAuditService(dbContext));
 
-        var act = async () => await service.CreateChatAsync("user-123", "nonexistent", "agent-1");
+        var act = async () => await service.CreateChatAsync(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
@@ -116,13 +115,13 @@ public class ChatServiceTests
     public async Task CreateChatAsync_WhenAgentNotFound_Throws()
     {
         await using var dbContext = CreateInMemoryContext();
-        var game = new GameEntity { Id = "catan", Name = "Catan" };
+        var game = new GameEntity { Id = Guid.NewGuid(), Name = "Catan" };
         dbContext.Games.Add(game);
         await dbContext.SaveChangesAsync();
 
         var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, CreateAuditService(dbContext));
 
-        var act = async () => await service.CreateChatAsync("user-123", "catan", "nonexistent-agent");
+        var act = async () => await service.CreateChatAsync(Guid.NewGuid(), game.Id, Guid.NewGuid());
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
@@ -136,15 +135,15 @@ public class ChatServiceTests
     public async Task GetChatByIdAsync_WhenOwner_ReturnsChat()
     {
         await using var dbContext = CreateInMemoryContext();
-        var user = new UserEntity { Id = "user-123", Email = "user@test.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow };
-        var game = new GameEntity { Id = "catan", Name = "Catan" };
-        var agent = new AgentEntity { Id = "catan-qa", GameId = "catan", Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = Guid.NewGuid(), Email = "user@test.com", PasswordHash = "hash", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
+        var game = new GameEntity { Id = Guid.NewGuid(), Name = "Catan" };
+        var agent = new AgentEntity { Id = Guid.NewGuid(), GameId = game.Id, Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
         var chat = new ChatEntity
         {
             Id = Guid.NewGuid(),
-            UserId = "user-123",
-            GameId = "catan",
-            AgentId = "catan-qa",
+            UserId = user.Id,
+            GameId = game.Id,
+            AgentId = agent.Id,
             StartedAt = DateTime.UtcNow
         };
         dbContext.Users.Add(user);
@@ -155,11 +154,11 @@ public class ChatServiceTests
 
         var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, CreateAuditService(dbContext));
 
-        var result = await service.GetChatByIdAsync(chat.Id, "user-123");
+        var result = await service.GetChatByIdAsync(chat.Id, user.Id);
 
         result.Should().NotBeNull();
         result!.Id.Should().Be(chat.Id);
-        result.UserId.Should().BeEquivalentTo("user-123");
+        result.UserId.Should().Be(user.Id);
     }
 
     /// <summary>
@@ -172,16 +171,16 @@ public class ChatServiceTests
     public async Task GetChatByIdAsync_WhenNotOwner_ReturnsNull()
     {
         await using var dbContext = CreateInMemoryContext();
-        var user1 = new UserEntity { Id = "user-123", Email = "user-123@test.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow };
-        var user2 = new UserEntity { Id = "user-456", Email = "user-456@test.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow };
-        var game = new GameEntity { Id = "catan", Name = "Catan" };
-        var agent = new AgentEntity { Id = "catan-qa", GameId = "catan", Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
+        var user1 = new UserEntity { Id = Guid.NewGuid(), Email = "user-123@test.com", PasswordHash = "hash", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
+        var user2 = new UserEntity { Id = Guid.NewGuid(), Email = "user-456@test.com", PasswordHash = "hash", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
+        var game = new GameEntity { Id = Guid.NewGuid(), Name = "Catan" };
+        var agent = new AgentEntity { Id = Guid.NewGuid(), GameId = game.Id, Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
         var chat = new ChatEntity
         {
             Id = Guid.NewGuid(),
-            UserId = "user-123",
-            GameId = "catan",
-            AgentId = "catan-qa",
+            UserId = user.Id,
+            GameId = game.Id,
+            AgentId = agent.Id,
             StartedAt = DateTime.UtcNow
         };
         dbContext.Users.Add(user1);
@@ -193,7 +192,7 @@ public class ChatServiceTests
 
         var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, CreateAuditService(dbContext));
 
-        var result = await service.GetChatByIdAsync(chat.Id, "user-456");
+        var result = await service.GetChatByIdAsync(chat.Id, user2.Id);
 
         result.Should().BeNull();
     }
@@ -209,15 +208,15 @@ public class ChatServiceTests
     public async Task AddMessageAsync_WhenValidChat_AddsMessageAndUpdatesTimestamp()
     {
         await using var dbContext = CreateInMemoryContext();
-        var user = new UserEntity { Id = "user-123", Email = "user-123@test.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow };
-        var game = new GameEntity { Id = "catan", Name = "Catan" };
-        var agent = new AgentEntity { Id = "catan-qa", GameId = "catan", Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = Guid.NewGuid(), Email = "user-123@test.com", PasswordHash = "hash", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
+        var game = new GameEntity { Id = Guid.NewGuid(), Name = "Catan" };
+        var agent = new AgentEntity { Id = Guid.NewGuid(), GameId = game.Id, Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
         var chat = new ChatEntity
         {
             Id = Guid.NewGuid(),
-            UserId = "user-123",
-            GameId = "catan",
-            AgentId = "catan-qa",
+            UserId = user.Id,
+            GameId = game.Id,
+            AgentId = agent.Id,
             StartedAt = DateTime.UtcNow,
             LastMessageAt = null
         };
@@ -231,7 +230,7 @@ public class ChatServiceTests
 
         var message = await service.AddMessageAsync(
             chat.Id,
-            "user-123",
+            user.Id,
             "user",
             "How do I setup the game?",
             new { source = "test" });
@@ -258,15 +257,15 @@ public class ChatServiceTests
     public async Task DeleteChatAsync_WhenOwner_DeletesChat()
     {
         await using var dbContext = CreateInMemoryContext();
-        var user = new UserEntity { Id = "user-123", Email = "user-123@test.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow };
-        var game = new GameEntity { Id = "catan", Name = "Catan" };
-        var agent = new AgentEntity { Id = "catan-qa", GameId = "catan", Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = Guid.NewGuid(), Email = "user-123@test.com", PasswordHash = "hash", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
+        var game = new GameEntity { Id = Guid.NewGuid(), Name = "Catan" };
+        var agent = new AgentEntity { Id = Guid.NewGuid(), GameId = game.Id, Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
         var chat = new ChatEntity
         {
             Id = Guid.NewGuid(),
-            UserId = "user-123",
-            GameId = "catan",
-            AgentId = "catan-qa",
+            UserId = user.Id,
+            GameId = game.Id,
+            AgentId = agent.Id,
             StartedAt = DateTime.UtcNow
         };
         dbContext.Users.Add(user);
@@ -277,7 +276,7 @@ public class ChatServiceTests
 
         var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, CreateAuditService(dbContext));
 
-        var result = await service.DeleteChatAsync(chat.Id, "user-123");
+        var result = await service.DeleteChatAsync(chat.Id, user.Id);
 
         result.Should().BeTrue();
         (await dbContext.Chats.FindAsync(chat.Id)).Should().BeNull();
@@ -293,16 +292,16 @@ public class ChatServiceTests
     public async Task DeleteChatAsync_WhenNotOwner_ThrowsUnauthorized()
     {
         await using var dbContext = CreateInMemoryContext();
-        var user1 = new UserEntity { Id = "user-123", Email = "user-123@test.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow };
-        var user2 = new UserEntity { Id = "user-456", Email = "user-456@test.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow };
-        var game = new GameEntity { Id = "catan", Name = "Catan" };
-        var agent = new AgentEntity { Id = "catan-qa", GameId = "catan", Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
+        var user1 = new UserEntity { Id = Guid.NewGuid(), Email = "user-123@test.com", PasswordHash = "hash", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
+        var user2 = new UserEntity { Id = Guid.NewGuid(), Email = "user-456@test.com", PasswordHash = "hash", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
+        var game = new GameEntity { Id = Guid.NewGuid(), Name = "Catan" };
+        var agent = new AgentEntity { Id = Guid.NewGuid(), GameId = game.Id, Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
         var chat = new ChatEntity
         {
             Id = Guid.NewGuid(),
-            UserId = "user-123",
-            GameId = "catan",
-            AgentId = "catan-qa",
+            UserId = user.Id,
+            GameId = game.Id,
+            AgentId = agent.Id,
             StartedAt = DateTime.UtcNow
         };
         dbContext.Users.Add(user1);
@@ -314,7 +313,7 @@ public class ChatServiceTests
 
         var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, CreateAuditService(dbContext));
 
-        var act = async () => await service.DeleteChatAsync(chat.Id, "user-456");
+        var act = async () => await service.DeleteChatAsync(chat.Id, user2.Id);
         await act.Should().ThrowAsync<UnauthorizedAccessException>()
             .WithMessage("*does not have permission to delete chat*");
     }
@@ -329,9 +328,9 @@ public class ChatServiceTests
     public async Task GetUserChatsAsync_ReturnsChatsOrderedByRecency()
     {
         await using var dbContext = CreateInMemoryContext();
-        var user = new UserEntity { Id = "user-123", Email = "user-123@test.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow };
-        var game = new GameEntity { Id = "catan", Name = "Catan" };
-        var agent = new AgentEntity { Id = "catan-qa", GameId = "catan", Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = Guid.NewGuid(), Email = "user-123@test.com", PasswordHash = "hash", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
+        var game = new GameEntity { Id = Guid.NewGuid(), Name = "Catan" };
+        var agent = new AgentEntity { Id = Guid.NewGuid(), GameId = game.Id, Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
         dbContext.Users.Add(user);
         dbContext.Games.Add(game);
         dbContext.Agents.Add(agent);
@@ -339,18 +338,18 @@ public class ChatServiceTests
         var oldChat = new ChatEntity
         {
             Id = Guid.NewGuid(),
-            UserId = "user-123",
-            GameId = "catan",
-            AgentId = "catan-qa",
+            UserId = user.Id,
+            GameId = game.Id,
+            AgentId = agent.Id,
             StartedAt = DateTime.UtcNow.AddDays(-2),
             LastMessageAt = DateTime.UtcNow.AddDays(-1)
         };
         var recentChat = new ChatEntity
         {
             Id = Guid.NewGuid(),
-            UserId = "user-123",
-            GameId = "catan",
-            AgentId = "catan-qa",
+            UserId = user.Id,
+            GameId = game.Id,
+            AgentId = agent.Id,
             StartedAt = DateTime.UtcNow.AddHours(-1),
             LastMessageAt = DateTime.UtcNow
         };
@@ -359,7 +358,7 @@ public class ChatServiceTests
 
         var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, CreateAuditService(dbContext));
 
-        var chats = await service.GetUserChatsAsync("user-123");
+        var chats = await service.GetUserChatsAsync(user.Id);
 
         chats.Count.Should().Be(2);
         chats[0].Id.Should().Be(recentChat.Id);
@@ -376,13 +375,13 @@ public class ChatServiceTests
     public async Task GetOrCreateAgentAsync_WhenAgentNotExists_CreatesAgent()
     {
         await using var dbContext = CreateInMemoryContext();
-        var game = new GameEntity { Id = "catan", Name = "Catan" };
+        var game = new GameEntity { Id = Guid.NewGuid(), Name = "Catan" };
         dbContext.Games.Add(game);
         await dbContext.SaveChangesAsync();
 
         var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, CreateAuditService(dbContext));
 
-        var agent = await service.GetOrCreateAgentAsync("catan", "qa");
+        var agent = await service.GetOrCreateAgentAsync(game.Id, "qa");
 
         agent.Should().NotBeNull();
         agent!.Id.Should().Be("catan-qa");
@@ -391,7 +390,7 @@ public class ChatServiceTests
         agent.Kind.Should().Be("qa");
 
         // Verify it was persisted
-        var stored = await dbContext.Agents.FindAsync("catan-qa");
+        var stored = await dbContext.Agents.FindAsync(agent.Id);
         stored.Should().NotBeNull();
     }
 
@@ -405,11 +404,11 @@ public class ChatServiceTests
     public async Task GetOrCreateAgentAsync_WhenAgentExists_ReturnsExisting()
     {
         await using var dbContext = CreateInMemoryContext();
-        var game = new GameEntity { Id = "catan", Name = "Catan" };
+        var game = new GameEntity { Id = Guid.NewGuid(), Name = "Catan" };
         var existingAgent = new AgentEntity
         {
-            Id = "catan-qa",
-            GameId = "catan",
+            Id = Guid.NewGuid(),
+            GameId = game.Id,
             Name = "Q&A Agent",
             Kind = "qa",
             CreatedAt = DateTime.UtcNow.AddDays(-1)
@@ -420,13 +419,13 @@ public class ChatServiceTests
 
         var service = new ChatService(dbContext, NullLogger<ChatService>.Instance, CreateAuditService(dbContext));
 
-        var agent = await service.GetOrCreateAgentAsync("catan", "qa");
+        var agent = await service.GetOrCreateAgentAsync(game.Id, "qa");
 
         agent.Should().NotBeNull();
         agent!.Id.Should().Be("catan-qa");
         agent.CreatedAt.Should().Be(existingAgent.CreatedAt); // Same instance
 
         // Verify no duplicate was created
-        (await dbContext.Agents.CountAsync(a => a.GameId == "catan" && a.Kind == "qa")).Should().Be(1);
+        (await dbContext.Agents.CountAsync(a => a.GameId == game.Id && a.Kind == "qa")).Should().Be(1);
     }
 }

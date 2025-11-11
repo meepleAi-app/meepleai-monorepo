@@ -48,7 +48,7 @@ public class TempSessionServiceTests : IDisposable
     public async Task CreateTempSessionAsync_ShouldGenerateSecureToken()
     {
         // Arrange
-        var userId = "test-user-1";
+        var userId = Guid.NewGuid();
         var ipAddress = "192.168.1.1";
         var user = new UserEntity
         {
@@ -82,7 +82,7 @@ public class TempSessionServiceTests : IDisposable
     public async Task ValidateAndConsumeTempSessionAsync_WithValidToken_ShouldReturnUserId()
     {
         // Arrange
-        var userId = "test-user-2";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -111,7 +111,7 @@ public class TempSessionServiceTests : IDisposable
     public async Task ValidateAndConsumeTempSessionAsync_SingleUseEnforcement()
     {
         // Arrange
-        var userId = "test-user-3";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -137,7 +137,7 @@ public class TempSessionServiceTests : IDisposable
     public async Task ValidateAndConsumeTempSessionAsync_ExpiredSession_ShouldFail()
     {
         // Arrange
-        var userId = "test-user-4";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -152,7 +152,7 @@ public class TempSessionServiceTests : IDisposable
         var now = _timeProvider.GetUtcNow();
         var expiredSession = new TempSessionEntity
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             UserId = userId,
             TokenHash = "expired-hash",
             CreatedAt = now.AddMinutes(-10).UtcDateTime,
@@ -173,7 +173,7 @@ public class TempSessionServiceTests : IDisposable
     public async Task CleanupExpiredSessionsAsync_ShouldRemoveOldSessions()
     {
         // Arrange
-        var userId = "test-user-5";
+        var userId = Guid.NewGuid();
         var now = _timeProvider.GetUtcNow();
         var user = new UserEntity
         {
@@ -187,7 +187,7 @@ public class TempSessionServiceTests : IDisposable
         // Create expired session
         var expiredSession = new TempSessionEntity
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             UserId = userId,
             TokenHash = "expired-hash",
             CreatedAt = now.AddHours(-2).UtcDateTime,
@@ -198,7 +198,7 @@ public class TempSessionServiceTests : IDisposable
         // Create used session (>1 hour old)
         var oldUsedSession = new TempSessionEntity
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             UserId = userId,
             TokenHash = "old-used-hash",
             CreatedAt = now.AddHours(-3).UtcDateTime,
@@ -210,7 +210,7 @@ public class TempSessionServiceTests : IDisposable
         // Create recent session (should NOT be deleted)
         var recentSession = new TempSessionEntity
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             UserId = userId,
             TokenHash = "recent-hash",
             CreatedAt = now.UtcDateTime,
@@ -236,7 +236,7 @@ public class TempSessionServiceTests : IDisposable
     public async Task CreateTempSessionAsync_GeneratesUniqueTokens()
     {
         // Arrange
-        var userId = "test-user-entropy";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -262,7 +262,7 @@ public class TempSessionServiceTests : IDisposable
     public async Task CreateTempSessionAsync_TokenHashedInDatabase()
     {
         // Arrange
-        var userId = "test-user-hash";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -286,7 +286,7 @@ public class TempSessionServiceTests : IDisposable
     public async Task CreateTempSessionAsync_SetsCorrectExpiration()
     {
         // Arrange
-        var userId = "test-user-expiry";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -312,7 +312,7 @@ public class TempSessionServiceTests : IDisposable
     public async Task CreateTempSessionAsync_StoresIpAddress()
     {
         // Arrange
-        var userId = "test-user-ip";
+        var userId = Guid.NewGuid();
         var ipAddress = "203.0.113.42";
         var user = new UserEntity
         {
@@ -336,7 +336,7 @@ public class TempSessionServiceTests : IDisposable
     public async Task ValidateAndConsumeTempSessionAsync_WithCorruptedToken_ReturnsNull()
     {
         // Arrange
-        var userId = "test-user-corrupt";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -360,7 +360,7 @@ public class TempSessionServiceTests : IDisposable
     public async Task ValidateAndConsumeTempSessionAsync_ConcurrentValidation_OnlyOneSucceeds()
     {
         // Arrange
-        var userId = "test-user-concurrent-validate";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -388,7 +388,7 @@ public class TempSessionServiceTests : IDisposable
     public async Task ValidateAndConsumeTempSessionAsync_ExactlyAtExpirationTime_Fails()
     {
         // Arrange
-        var userId = "test-user-boundary-exact";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -402,7 +402,7 @@ public class TempSessionServiceTests : IDisposable
         var now = _timeProvider.GetUtcNow();
         var session = new TempSessionEntity
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             UserId = userId,
             TokenHash = "test-hash",
             CreatedAt = now.UtcDateTime,
@@ -426,7 +426,7 @@ public class TempSessionServiceTests : IDisposable
     public async Task ValidateAndConsumeTempSessionAsync_OneSecondBeforeExpiration_Succeeds()
     {
         // Arrange
-        var userId = "test-user-boundary-before";
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -453,7 +453,7 @@ public class TempSessionServiceTests : IDisposable
     public async Task CleanupExpiredSessionsAsync_KeepsRecentUsedSessions()
     {
         // Arrange
-        var userId = "test-user-audit";
+        var userId = Guid.NewGuid();
         var now = _timeProvider.GetUtcNow();
         var user = new UserEntity
         {
@@ -467,7 +467,7 @@ public class TempSessionServiceTests : IDisposable
         // Recent used session (<1 hour old BUT not expired) - kept for audit
         var recentUsed = new TempSessionEntity
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             UserId = userId,
             TokenHash = "recent-used",
             CreatedAt = now.AddMinutes(-30).UtcDateTime,
@@ -491,7 +491,7 @@ public class TempSessionServiceTests : IDisposable
     public async Task CleanupExpiredSessionsAsync_DeletesOldUsedSessions()
     {
         // Arrange
-        var userId = "test-user-cleanup";
+        var userId = Guid.NewGuid();
         var now = _timeProvider.GetUtcNow();
         var user = new UserEntity
         {
@@ -505,7 +505,7 @@ public class TempSessionServiceTests : IDisposable
         // Old used session (>1 hour) - should be deleted
         var oldUsed = new TempSessionEntity
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             UserId = userId,
             TokenHash = "old-used",
             CreatedAt = now.AddHours(-3).UtcDateTime,

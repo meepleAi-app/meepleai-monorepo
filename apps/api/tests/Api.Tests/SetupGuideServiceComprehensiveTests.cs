@@ -77,10 +77,10 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
     public async Task GivenNonExistentGame_WhenGeneratingSetupGuide_ThenReturnsDefaultGuideWithUnknownGameTitle()
     {
         // Arrange
-        var gameId = "nonexistent-game-id";
+        var gameId = Guid.NewGuid();
 
         // Act
-        var result = await _service.GenerateSetupGuideAsync(gameId);
+        var result = await _service.GenerateSetupGuideAsync(gameId.ToString());
 
         // Assert
         result.Should().NotBeNull();
@@ -93,7 +93,7 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
     public async Task GivenGameWithNoRagData_WhenGeneratingSetupGuide_ThenReturnsDefaultSteps()
     {
         // Arrange
-        var gameId = "game-no-rag";
+        var gameId = Guid.NewGuid();
         var game = new GameEntity { Id = gameId, Name = "Test Game", CreatedAt = DateTime.UtcNow };
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
@@ -107,7 +107,7 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>())); // Empty results
 
         // Act
-        var result = await _service.GenerateSetupGuideAsync(gameId);
+        var result = await _service.GenerateSetupGuideAsync(gameId.ToString());
 
         // Assert
         result.Should().NotBeNull();
@@ -121,7 +121,7 @@ public class SetupGuideServiceComprehensiveTests : IDisposable
     public async Task GivenGameWithRagDataAndSuccessfulLlm_WhenGeneratingSetupGuide_ThenReturnsParsedLlmSteps()
     {
         // Arrange
-        var gameId = "game-with-rag";
+        var gameId = Guid.NewGuid();
         var game = new GameEntity { Id = gameId, Name = "Advanced Strategy Game", CreatedAt = DateTime.UtcNow };
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
@@ -171,7 +171,7 @@ Shuffle all card decks thoroughly and place them face-down near the board.";
             ));
 
         // Act
-        var result = await _service.GenerateSetupGuideAsync(gameId);
+        var result = await _service.GenerateSetupGuideAsync(gameId.ToString());
 
         // Assert
         result.Should().NotBeNull();
@@ -193,7 +193,7 @@ Shuffle all card decks thoroughly and place them face-down near the board.";
     public async Task GivenLlmWithOptionalSteps_WhenParsing_ThenMarksStepsAsOptional()
     {
         // Arrange
-        var gameId = "game-optional-steps";
+        var gameId = Guid.NewGuid();
         var game = new GameEntity { Id = gameId, Name = "Flexible Game", CreatedAt = DateTime.UtcNow };
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
@@ -220,7 +220,7 @@ Include expansion components if playing with expansions.";
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(llmResponse, new LlmUsage(100, 50, 150)));
 
         // Act
-        var result = await _service.GenerateSetupGuideAsync(gameId);
+        var result = await _service.GenerateSetupGuideAsync(gameId.ToString());
 
         // Assert
         result.steps.Count.Should().Be(2);
@@ -233,7 +233,7 @@ Include expansion components if playing with expansions.";
     public async Task GivenLlmFailure_WhenGeneratingSetupGuide_ThenFallsBackToDefaultSteps()
     {
         // Arrange
-        var gameId = "game-llm-failure";
+        var gameId = Guid.NewGuid();
         var game = new GameEntity { Id = gameId, Name = "Resilient Game", CreatedAt = DateTime.UtcNow };
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
@@ -254,7 +254,7 @@ Include expansion components if playing with expansions.";
             .ReturnsAsync(LlmCompletionResult.CreateFailure("LLM service unavailable"));
 
         // Act
-        var result = await _service.GenerateSetupGuideAsync(gameId);
+        var result = await _service.GenerateSetupGuideAsync(gameId.ToString());
 
         // Assert
         result.Should().NotBeNull();
@@ -267,7 +267,7 @@ Include expansion components if playing with expansions.";
     public async Task GivenCachedResponse_WhenGeneratingSetupGuide_ThenReturnsCachedData()
     {
         // Arrange
-        var gameId = "game-cached";
+        var gameId = Guid.NewGuid();
         var cachedResponse = new SetupGuideResponse(
             "Cached Game",
             new List<SetupGuideStep>
@@ -282,7 +282,7 @@ Include expansion components if playing with expansions.";
         );
 
         _cacheServiceMock
-            .Setup(x => x.GenerateSetupCacheKey(gameId))
+            .Setup(x => x.GenerateSetupCacheKey(gameId.ToString()))
             .Returns($"setup:{gameId}");
 
         _cacheServiceMock
@@ -290,7 +290,7 @@ Include expansion components if playing with expansions.";
             .ReturnsAsync(cachedResponse);
 
         // Act
-        var result = await _service.GenerateSetupGuideAsync(gameId);
+        var result = await _service.GenerateSetupGuideAsync(gameId.ToString());
 
         // Assert
         result.Should().NotBeNull();
@@ -308,7 +308,7 @@ Include expansion components if playing with expansions.";
     public async Task GivenSuccessfulGeneration_WhenComplete_ThenCachesResponse()
     {
         // Arrange
-        var gameId = "game-to-cache";
+        var gameId = Guid.NewGuid();
         var game = new GameEntity { Id = gameId, Name = "Cacheable Game", CreatedAt = DateTime.UtcNow };
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
@@ -322,7 +322,7 @@ Include expansion components if playing with expansions.";
             .ReturnsAsync(SearchResult.CreateSuccess(new List<SearchResultItem>()));
 
         _cacheServiceMock
-            .Setup(x => x.GenerateSetupCacheKey(gameId))
+            .Setup(x => x.GenerateSetupCacheKey(gameId.ToString()))
             .Returns($"setup:{gameId}");
 
         // Act
@@ -341,7 +341,7 @@ Include expansion components if playing with expansions.";
     public async Task GivenEmbeddingServiceFailure_WhenGeneratingSetupGuide_ThenReturnsDefaultSteps()
     {
         // Arrange
-        var gameId = "game-embedding-fail";
+        var gameId = Guid.NewGuid();
         var game = new GameEntity { Id = gameId, Name = "Embedding Fail Game", CreatedAt = DateTime.UtcNow };
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
@@ -351,7 +351,7 @@ Include expansion components if playing with expansions.";
             .ReturnsAsync(new EmbeddingResult { Success = false, ErrorMessage = "Embedding service down" });
 
         // Act
-        var result = await _service.GenerateSetupGuideAsync(gameId);
+        var result = await _service.GenerateSetupGuideAsync(gameId.ToString());
 
         // Assert: Service gracefully falls back to default steps even when embedding fails
         result.Should().NotBeNull();
@@ -365,8 +365,8 @@ Include expansion components if playing with expansions.";
     public async Task GivenMultipleGames_WhenGeneratingSetupGuides_ThenReturnsCorrectGameData()
     {
         // Arrange
-        var game1 = new GameEntity { Id = "game1", Name = "Game One", CreatedAt = DateTime.UtcNow };
-        var game2 = new GameEntity { Id = "game2", Name = "Game Two", CreatedAt = DateTime.UtcNow };
+        var game1 = new GameEntity { Id = Guid.NewGuid(), Name = "Game One", CreatedAt = DateTime.UtcNow };
+        var game2 = new GameEntity { Id = Guid.NewGuid(), Name = "Game Two", CreatedAt = DateTime.UtcNow };
         _dbContext.Games.AddRange(game1, game2);
         await _dbContext.SaveChangesAsync();
 
@@ -391,7 +391,7 @@ Include expansion components if playing with expansions.";
     public async Task GivenLongInstructions_WhenParsing_ThenTruncatesAtMaxLength()
     {
         // Arrange
-        var gameId = "game-long-instructions";
+        var gameId = Guid.NewGuid();
         var game = new GameEntity { Id = gameId, Name = "Verbose Game", CreatedAt = DateTime.UtcNow };
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
@@ -416,7 +416,7 @@ Include expansion components if playing with expansions.";
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(llmResponse, new LlmUsage(100, 50, 150)));
 
         // Act
-        var result = await _service.GenerateSetupGuideAsync(gameId);
+        var result = await _service.GenerateSetupGuideAsync(gameId.ToString());
 
         // Assert
         result.steps.Should().ContainSingle();
@@ -428,7 +428,7 @@ Include expansion components if playing with expansions.";
     public async Task GivenEstimatedSetupTime_WhenCalculated_ThenReturnsMinimum5Minutes()
     {
         // Arrange
-        var gameId = "game-quick";
+        var gameId = Guid.NewGuid();
         var game = new GameEntity { Id = gameId, Name = "Quick Game", CreatedAt = DateTime.UtcNow };
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
@@ -452,7 +452,7 @@ Do this quickly.";
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(llmResponse, new LlmUsage(50, 25, 75)));
 
         // Act
-        var result = await _service.GenerateSetupGuideAsync(gameId);
+        var result = await _service.GenerateSetupGuideAsync(gameId.ToString());
 
         // Assert
         (result.estimatedSetupTimeMinutes >= 5).Should().BeTrue(); // Minimum 5 minutes
@@ -462,7 +462,7 @@ Do this quickly.";
     public async Task GivenMalformedLlmResponse_WhenParsing_ThenReturnsEmptySteps()
     {
         // Arrange
-        var gameId = "game-malformed-llm";
+        var gameId = Guid.NewGuid();
         var game = new GameEntity { Id = gameId, Name = "Parsing Challenge Game", CreatedAt = DateTime.UtcNow };
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
@@ -472,7 +472,7 @@ Do this quickly.";
             .ReturnsAsync((SetupGuideResponse?)null);
 
         _cacheServiceMock
-            .Setup(x => x.GenerateSetupCacheKey(gameId))
+            .Setup(x => x.GenerateSetupCacheKey(gameId.ToString()))
             .Returns($"setup:{gameId}");
 
         _embeddingServiceMock
@@ -493,7 +493,7 @@ Do this quickly.";
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(malformedResponse, new LlmUsage(100, 50, 150)));
 
         // Act
-        var result = await _service.GenerateSetupGuideAsync(gameId);
+        var result = await _service.GenerateSetupGuideAsync(gameId.ToString());
 
         // Assert: When LLM response can't be parsed, service returns empty steps (not default steps)
         // Note: This differs from LLM failure (when LLM call fails), which returns default steps
@@ -507,7 +507,7 @@ Do this quickly.";
     public async Task GivenHighConfidenceScore_WhenRetrieved_ThenIncludedInResponse()
     {
         // Arrange
-        var gameId = "game-high-confidence";
+        var gameId = Guid.NewGuid();
         var game = new GameEntity { Id = gameId, Name = "High Confidence Game", CreatedAt = DateTime.UtcNow };
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
@@ -528,7 +528,7 @@ Do this quickly.";
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("STEP 1: Test\nTest step", new LlmUsage(100, 50, 150)));
 
         // Act
-        var result = await _service.GenerateSetupGuideAsync(gameId);
+        var result = await _service.GenerateSetupGuideAsync(gameId.ToString());
 
         // Assert
         result.confidence.Should().NotBeNull();
@@ -539,7 +539,7 @@ Do this quickly.";
     public async Task GivenReferencesDistribution_WhenGeneratingSteps_ThenDistributesReferencesAcrossSteps()
     {
         // Arrange
-        var gameId = "game-ref-distribution";
+        var gameId = Guid.NewGuid();
         var game = new GameEntity { Id = gameId, Name = "Reference Distribution Game", CreatedAt = DateTime.UtcNow };
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
@@ -570,7 +570,7 @@ Second instruction.";
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(llmResponse, new LlmUsage(100, 50, 150)));
 
         // Act
-        var result = await _service.GenerateSetupGuideAsync(gameId);
+        var result = await _service.GenerateSetupGuideAsync(gameId.ToString());
 
         // Assert
         result.steps.Count.Should().Be(2);
@@ -582,7 +582,7 @@ Second instruction.";
     public async Task GivenException_WhenGenerating_ThenReturnsEmptyGuideAndLogsError()
     {
         // Arrange
-        var gameId = "game-exception";
+        var gameId = Guid.NewGuid();
         var game = new GameEntity { Id = gameId, Name = "Exception Game", CreatedAt = DateTime.UtcNow };
         _dbContext.Games.Add(game);
         await _dbContext.SaveChangesAsync();
@@ -592,7 +592,7 @@ Second instruction.";
             .ThrowsAsync(new Exception("Unexpected error"));
 
         // Act
-        var result = await _service.GenerateSetupGuideAsync(gameId);
+        var result = await _service.GenerateSetupGuideAsync(gameId.ToString());
 
         // Assert
         result.Should().NotBeNull();

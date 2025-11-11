@@ -30,8 +30,8 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
     };
 
     protected readonly WebApplicationFactoryFixture Factory;
-    private readonly List<string> _testUserIds = new();
-    private readonly List<string> _testConfigIds = new();
+    private readonly List<Guid> _testUserIds = new();
+    private readonly List<Guid> _testConfigIds = new();
 
     protected AdminTestFixture(PostgresCollectionFixture postgresFixture, WebApplicationFactoryFixture factory)
     {
@@ -74,7 +74,7 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
 
                 // Remove audit and credential artifacts created by test users
                 await db.AuditLogs
-                    .Where(l => l.UserId != null && userIdSet.Contains(l.UserId))
+                    .Where(l => l.UserId != null && userIdSet.Contains(l.UserId.Value))
                     .ExecuteDeleteAsync();
 
                 await db.ApiKeys
@@ -102,8 +102,8 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
                 await db.ChatLogs
                     .Where(l =>
                         (l.Chat != null && userIdSet.Contains(l.Chat.UserId)) ||
-                        (l.UserId != null && userIdSet.Contains(l.UserId)) ||
-                        (l.DeletedByUserId != null && userIdSet.Contains(l.DeletedByUserId)))
+                        (l.UserId != null && userIdSet.Contains(l.UserId.Value)) ||
+                        (l.DeletedByUserId != null && userIdSet.Contains(l.DeletedByUserId.Value)))
                     .ExecuteDeleteAsync();
 
                 await db.Chats
@@ -114,7 +114,7 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
                 // Simple ExecuteDeleteAsync - EF Core handles parent/child relationships efficiently
                 await db.RuleSpecComments
                     .Where(c => userIdSet.Contains(c.UserId) ||
-                                (c.ResolvedByUserId != null && userIdSet.Contains(c.ResolvedByUserId)))
+                                (c.ResolvedByUserId != null && userIdSet.Contains(c.ResolvedByUserId.Value)))
                     .ExecuteDeleteAsync();
 
                 // OPTIMIZED: Remove PDF artifacts uploaded by test users (cascading deletes)
@@ -145,22 +145,22 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
 
                 // OPTIMIZED: Remove user sessions, logs, feedback
                 await db.UserSessions
-                    .Where(s => s.UserId != null && userIdSet.Contains(s.UserId))
+                    .Where(s => userIdSet.Contains(s.UserId))
                     .ExecuteDeleteAsync();
 
                 await db.AiRequestLogs
-                    .Where(l => l.UserId != null && userIdSet.Contains(l.UserId))
+                    .Where(l => l.UserId != null && userIdSet.Contains(l.UserId.Value))
                     .ExecuteDeleteAsync();
 
                 await db.AgentFeedbacks
-                    .Where(f => f.UserId != null && userIdSet.Contains(f.UserId))
+                    .Where(f => userIdSet.Contains(f.UserId))
                     .ExecuteDeleteAsync();
 
                 // OPTIMIZED: Remove system configurations created or updated by test users
                 await db.SystemConfigurations
                     .Where(c =>
                         userIdSet.Contains(c.CreatedByUserId) ||
-                        (c.UpdatedByUserId != null && userIdSet.Contains(c.UpdatedByUserId)))
+                        (c.UpdatedByUserId != null && userIdSet.Contains(c.UpdatedByUserId.Value)))
                     .ExecuteDeleteAsync();
 
                 // OPTIMIZED: Remove users (final step after all dependencies)
@@ -239,7 +239,7 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
 
         // Track user ID for cleanup
         var userId = await GetUserIdByEmailAsync(email);
-        _testUserIds.Add(userId);
+        _testUserIds.Add(Guid.Parse(userId));
 
         return ExtractCookies(response);
     }
@@ -249,7 +249,7 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var user = await db.Users.SingleAsync(u => u.Email == email);
-        return user.Id;
+        return user.Id.ToString();
     }
 
     protected async Task PromoteUserAsync(string email, UserRole role)
@@ -276,8 +276,8 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
 
         var adminSuccess = new AiRequestLogEntity
         {
-            UserId = adminUserId,
-            GameId = "game-1",
+            UserId = Guid.Parse(adminUserId),
+            GameId = Guid.NewGuid(),
             Endpoint = "qa",
             Query = "How to score points?",
             ResponseSnippet = "Prioritize engine building.",
@@ -296,8 +296,8 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
 
         var adminError = new AiRequestLogEntity
         {
-            UserId = adminUserId,
-            GameId = "game-1",
+            UserId = Guid.Parse(adminUserId),
+            GameId = Guid.NewGuid(),
             Endpoint = "setup",
             Query = "How do I set up?",
             ResponseSnippet = "Unable to answer.",
@@ -317,8 +317,8 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
 
         var otherLog = new AiRequestLogEntity
         {
-            UserId = otherUserId,
-            GameId = "game-2",
+            UserId = Guid.Parse(otherUserId),
+            GameId = Guid.NewGuid(),
             Endpoint = "qa",
             Query = "Unrelated question",
             ResponseSnippet = "Different game response.",
@@ -341,8 +341,8 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
         {
             MessageId = "msg-helpful",
             Endpoint = "qa",
-            GameId = "game-1",
-            UserId = adminUserId,
+            GameId = Guid.NewGuid(),
+            UserId = Guid.Parse(adminUserId),
             Outcome = "helpful",
             CreatedAt = baseTime.AddMinutes(-25),
             UpdatedAt = baseTime.AddMinutes(-25)
@@ -352,8 +352,8 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
         {
             MessageId = "msg-not-helpful",
             Endpoint = "setup",
-            GameId = "game-1",
-            UserId = adminUserId,
+            GameId = Guid.NewGuid(),
+            UserId = Guid.Parse(adminUserId),
             Outcome = "not-helpful",
             CreatedAt = baseTime.AddMinutes(-15),
             UpdatedAt = baseTime.AddMinutes(-15)
@@ -363,8 +363,8 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
         {
             MessageId = "msg-other",
             Endpoint = "qa",
-            GameId = "game-2",
-            UserId = otherUserId,
+            GameId = Guid.NewGuid(),
+            UserId = Guid.Parse(otherUserId),
             Outcome = "helpful",
             CreatedAt = baseTime.AddMinutes(-5),
             UpdatedAt = baseTime.AddMinutes(-5)
@@ -395,8 +395,7 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
     {
         using var scope = Factory.Services.CreateScope();
         var service = scope.ServiceProvider.GetRequiredService<N8nConfigService>();
-        var config = await service.CreateConfigAsync(
-            userId,
+        var config = await service.CreateConfigAsync(userId.ToString(),
             new CreateN8nConfigRequest(
                 name,
                 "https://n8n.seed/",
@@ -405,7 +404,7 @@ public abstract class AdminTestFixture : IClassFixture<WebApplicationFactoryFixt
             default);
 
         // Track config ID for cleanup
-        _testConfigIds.Add(config.Id);
+        _testConfigIds.Add(Guid.Parse(config.Id));
 
         return config;
     }

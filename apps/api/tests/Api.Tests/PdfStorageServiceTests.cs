@@ -139,14 +139,14 @@ public class PdfStorageServiceTests
     }
 
 
-    private static async Task SeedUserAsync(MeepleAiDbContext dbContext, string userId)
+    private static async Task SeedUserAsync(MeepleAiDbContext dbContext, Guid userId)
     {
         dbContext.Users.Add(new UserEntity
         {
             Id = userId,
             Email = $"{userId}@example.com",
             PasswordHash = "hashed-password",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = DateTime.UtcNow
         });
 
@@ -157,9 +157,11 @@ public class PdfStorageServiceTests
     public async Task UploadPdfAsync_WithNullFile_ReturnsFailure()
     {
         await using var dbContext = CreateInMemoryContext();
-        dbContext.Games.Add(new GameEntity { Id = "game-1", Name = "Game" });
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        dbContext.Games.Add(new GameEntity { Id = gameId, Name = "Game" });
         await dbContext.SaveChangesAsync();
-        await SeedUserAsync(dbContext, "user");
+        await SeedUserAsync(dbContext, userId);
 
         var storagePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         try
@@ -167,7 +169,7 @@ public class PdfStorageServiceTests
             var backgroundMock = new Mock<IBackgroundTaskService>();
             var service = CreateService(dbContext, storagePath, backgroundMock);
 
-            var result = await service.UploadPdfAsync("game-1", "user", null!, CancellationToken.None);
+            var result = await service.UploadPdfAsync(gameId.ToString(), userId, null!, CancellationToken.None);
 
             result.Success.Should().BeFalse();
             result.Message.Should().Contain("No file provided");
@@ -186,9 +188,11 @@ public class PdfStorageServiceTests
     public async Task UploadPdfAsync_WithTooLargeFile_ReturnsFailure()
     {
         await using var dbContext = CreateInMemoryContext();
-        dbContext.Games.Add(new GameEntity { Id = "game-1", Name = "Game" });
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        dbContext.Games.Add(new GameEntity { Id = gameId, Name = "Game" });
         await dbContext.SaveChangesAsync();
-        await SeedUserAsync(dbContext, "user");
+        await SeedUserAsync(dbContext, userId);
 
         var storagePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         try
@@ -201,7 +205,7 @@ public class PdfStorageServiceTests
             mockFile.Setup(f => f.ContentType).Returns("application/pdf");
             mockFile.Setup(f => f.FileName).Returns("large.pdf");
 
-            var result = await service.UploadPdfAsync("game-1", "user", mockFile.Object, CancellationToken.None);
+            var result = await service.UploadPdfAsync(gameId.ToString(), userId, mockFile.Object, CancellationToken.None);
 
             result.Success.Should().BeFalse();
             result.Message.Should().Contain("File is too large");
@@ -220,7 +224,7 @@ public class PdfStorageServiceTests
     public async Task UploadPdfAsync_WithInvalidContentType_ReturnsFailure()
     {
         await using var dbContext = CreateInMemoryContext();
-        dbContext.Games.Add(new GameEntity { Id = "game-1", Name = "Game" });
+        dbContext.Games.Add(new GameEntity { Id = Guid.NewGuid(), Name = "Game" });
         await dbContext.SaveChangesAsync();
         await SeedUserAsync(dbContext, "user");
 
@@ -283,7 +287,7 @@ public class PdfStorageServiceTests
     public async Task UploadPdfAsync_WithValidFile_SavesDocumentAndSchedulesExtraction()
     {
         await using var dbContext = CreateInMemoryContext();
-        dbContext.Games.Add(new GameEntity { Id = "game-1", Name = "Game" });
+        dbContext.Games.Add(new GameEntity { Id = Guid.NewGuid(), Name = "Game" });
         await dbContext.SaveChangesAsync();
         await SeedUserAsync(dbContext, "user");
 
@@ -341,7 +345,7 @@ public class PdfStorageServiceTests
     public async Task IndexVectorsAsync_UsesOverridesWhenProvided()
     {
         await using var dbContext = CreateInMemoryContext();
-        dbContext.Games.Add(new GameEntity { Id = "game-1", Name = "Game" });
+        dbContext.Games.Add(new GameEntity { Id = Guid.NewGuid(), Name = "Game" });
         await dbContext.SaveChangesAsync();
         await SeedUserAsync(dbContext, "user");
 

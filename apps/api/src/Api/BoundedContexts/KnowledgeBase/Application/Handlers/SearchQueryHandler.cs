@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Mappers;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 
@@ -54,7 +55,7 @@ public class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResultDt
             query.Language,
             cancellationToken);
 
-        var queryVector = new Vector(queryEmbedding);
+        var queryVector = new Vector(queryEmbedding.ToFloatArray());
 
         // Execute search based on mode
         var searchResults = query.SearchMode.ToLowerInvariant() switch
@@ -112,21 +113,18 @@ public class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResultDt
         var vectorResults = await PerformVectorSearchAsync(
             gameId, queryVector, topK, minScore, cancellationToken);
 
-        // Keyword search (delegate to existing HybridSearchService)
-        var keywordSearchResults = await _hybridSearchService.KeywordSearchAsync(
-            gameId, query, topK, cancellationToken);
+        // Keyword search (use HybridSearchService with Keyword mode)
+        var hybridSearchResults = await _hybridSearchService.SearchAsync(
+            query,
+            gameId,
+            SearchMode.Keyword,
+            topK,
+            cancellationToken: cancellationToken);
 
         // Map keyword results to domain entities
-        var keywordResults = keywordSearchResults.Select((kr, index) =>
-            new Domain.Entities.SearchResult(
-                id: Guid.NewGuid(),
-                vectorDocumentId: Guid.Parse(kr.DocumentId),
-                textContent: kr.Content,
-                pageNumber: kr.PageNumber,
-                relevanceScore: new Confidence(kr.Score),
-                rank: index + 1,
-                searchMethod: "keyword"
-            )).ToList();
+        var keywordResults = hybridSearchResults
+            .Select((kr, index) => kr.ToDomainSearchResult(index + 1))
+            .ToList();
 
         // Use RRF fusion domain service
         return _rrfFusionService.FuseResults(vectorResults, keywordResults);

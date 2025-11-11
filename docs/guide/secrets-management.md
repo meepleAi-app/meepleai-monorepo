@@ -181,6 +181,21 @@ pre-commit run --all-files
 
 ## Secret Rotation
 
+### Strategy Overview
+
+MeepleAI follows a **two-phase approach** to secrets management:
+
+| Phase | Solution | Rotation | Versioning | Status |
+|-------|----------|----------|------------|--------|
+| **Phase 1 (MVP)** | Docker Secrets | ❌ Manual only | ❌ No | ✅ Current |
+| **Phase 2 (Production)** | Infisical (self-hosted) | ✅ Automatic | ✅ Unlimited | 📋 Planned |
+
+**Phase 2 Decision** (Issue #708):
+- **Selected**: [Infisical](https://infisical.com/) (MIT license, self-hosted)
+- **Why**: FREE automatic rotation + versioning, Docker Compose deployment, compatible stack (PostgreSQL + Redis)
+- **POC**: Issue #936
+- **Alternatives evaluated**: HashiCorp Vault (no free rotation), CyberArk Conjur (complex setup)
+
 ### When to Rotate
 
 **Immediately rotate if**:
@@ -190,11 +205,17 @@ pre-commit run --all-files
 - Suspected security breach
 - Service provider recommends rotation
 
-**Scheduled rotation**:
+**Scheduled rotation** (Phase 1 - Manual):
 - API keys: Every 90 days
 - Database passwords: Every 180 days
 - JWT secrets: Every 365 days
 - Gmail App Passwords: When Gmail prompts or annually
+
+**Scheduled rotation** (Phase 2 - Automatic via Infisical):
+- Database credentials: Every 30 days (auto-rotated)
+- API keys: Every 30 days (auto-rotated)
+- JWT secrets: Every 90 days (auto-rotated)
+- Service account credentials: Every 30 days (auto-rotated)
 
 ### Gmail App Password Rotation
 
@@ -323,6 +344,15 @@ See `docs/SECURITY.md` for detailed OpenRouter rotation procedure.
 - **GitHub Secret Scanning**: https://docs.github.com/en/code-security/secret-scanning
 - **OWASP Secrets Cheat Sheet**: https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html
 - **Gmail App Passwords**: https://support.google.com/accounts/answer/185833
+
+### Phase 2 (Infisical) Resources
+
+- **Infisical Documentation**: https://infisical.com/docs
+- **Docker Compose Setup**: https://infisical.com/docs/self-hosting/deployment-options/docker-compose
+- **Secret Rotation Guide**: https://infisical.com/docs/documentation/platform/secret-rotation/overview
+- **GitHub Repository**: https://github.com/Infisical/infisical
+- **Issue #708**: Secrets management strategy (parent issue)
+- **Issue #936**: POC Infisical rotation (spike task)
 
 ## Checklist
 

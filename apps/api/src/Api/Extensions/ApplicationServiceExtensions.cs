@@ -160,9 +160,8 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IBlobStorageService, BlobStorageService>();
 
         // PDF main services
-        services.AddScoped<PdfTableExtractionService>(); // Refactored facade
-        // PDF-09: Validation service migrated to DocumentProcessing DDD context (DocumentProcessingServiceExtensions)
-        services.AddScoped<PdfStorageService>(); // Refactored facade
+        // DDD-PHASE4: PDF services migrated to DocumentProcessing bounded context
+        services.AddScoped<PdfStorageService>(); // Orchestration service - coordinates bounded contexts
 
         // Issue #940 Phase 3: DDD PDF text extraction adapter
         services.AddSingleton<BoundedContexts.DocumentProcessing.Domain.Services.PdfTextProcessingDomainService>();

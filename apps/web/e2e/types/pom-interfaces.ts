@@ -432,11 +432,41 @@ export interface IChatPage extends IBasePage {
   exportConversation(format: 'json' | 'txt'): Promise<void>;
   selectGame(gameName: string): Promise<void>;
 
+  // Game Context
+  waitForGameContext(): Promise<void>;
+  getActiveGameName(): Promise<string | null>;
+  waitForResponseComplete(): Promise<void>;
+  getResponseText(): Promise<string>;
+
   // Assertions
   assertChatPageVisible(): Promise<void>;
   assertLoginRequired(): Promise<void>;
   assertAnswerContains(text: string): Promise<void>;
   assertCitationVisible(title: string): Promise<void>;
+}
+
+export interface IUploadPage extends IBasePage {
+  // Game Selection
+  selectGame(gameName: string): Promise<void>;
+  createNewGame(gameName: string): Promise<void>;
+  selectOrCreateGame(gameName: string, createNew?: boolean): Promise<void>;
+
+  // Language Selection
+  selectLanguage(languageCode: string): Promise<void>;
+
+  // File Upload
+  uploadPdf(
+    filePath: string,
+    options?: { language?: string; autoWait?: boolean }
+  ): Promise<void>;
+  waitForUploadSuccess(): Promise<void>;
+
+  // Status and Information
+  getUploadedGameName(): Promise<string | null>;
+  getErrorMessage(): Promise<string | null>;
+  isUploading(): Promise<boolean>;
+  waitForProcessingComplete(documentId: string): Promise<void>;
+  getStatusText(): Promise<string | null>;
 }
 
 export interface IEditorPage extends IBasePage {

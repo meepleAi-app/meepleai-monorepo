@@ -1,4 +1,5 @@
 {
   "mcp.configPath": "${workspaceFolder}/mcp/claude_mcp_config.json",
-  "CodeGPT.apiKey": "Docker"
+  "CodeGPT.apiKey": "Docker",
+  "git.ignoreLimitWarning": true
 }

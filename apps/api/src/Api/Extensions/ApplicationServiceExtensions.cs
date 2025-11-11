@@ -17,7 +17,9 @@ namespace Api.Extensions;
 
 public static class ApplicationServiceExtensions
 {
-    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+    public static IServiceCollection AddApplicationServices(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
         services.AddVectorSearchServices();
         services.AddDomainServices();
@@ -48,7 +50,8 @@ public static class ApplicationServiceExtensions
         services.AddAdministrationContext();
 
         // DDD-PHASE4: DocumentProcessing bounded context
-        services.AddDocumentProcessingContext();
+        // BGAI-001-v2: Pass configuration for PDF extractor provider selection
+        services.AddDocumentProcessingContext(configuration);
 
         return services;
     }

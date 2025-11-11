@@ -24,17 +24,17 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AgentEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("GameId")
-                        .IsRequired()
+                    b.Property<Guid>("GameId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Kind")
                         .IsRequired()
@@ -55,9 +55,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AgentFeedbackEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -67,14 +68,13 @@ namespace Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
-                    b.Property<string>("GameId")
+                    b.Property<Guid?>("GameId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
-                    b.Property<string>("MessageId")
-                        .IsRequired()
+                    b.Property<Guid>("MessageId")
                         .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Outcome")
                         .IsRequired()
@@ -84,10 +84,9 @@ namespace Api.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
+                    b.Property<Guid>("UserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -105,12 +104,13 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AiRequestLogEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
-                    b.Property<string>("ApiKeyId")
-                        .HasColumnType("text");
+                    b.Property<Guid?>("ApiKeyId")
+                        .HasColumnType("uuid");
 
                     b.Property<double?>("CitationQuality")
                         .HasColumnType("double precision");
@@ -139,9 +139,9 @@ namespace Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
-                    b.Property<string>("GameId")
+                    b.Property<Guid?>("GameId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("IpAddress")
                         .HasMaxLength(64)
@@ -193,9 +193,9 @@ namespace Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.Property<string>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -266,9 +266,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.ApiKeyEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -304,18 +305,17 @@ namespace Api.Migrations
                     b.Property<DateTime?>("RevokedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("RevokedBy")
+                    b.Property<Guid?>("RevokedBy")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
-                    b.PrimitiveCollection<string[]>("Scopes")
+                    b.Property<string>("Scopes")
                         .IsRequired()
-                        .HasColumnType("text[]");
+                        .HasColumnType("text");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
+                    b.Property<Guid>("UserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -333,9 +333,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.AuditLogEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Action")
                         .IsRequired()
@@ -371,9 +372,9 @@ namespace Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.Property<string>("UserId")
+                    b.Property<Guid?>("UserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -397,10 +398,9 @@ namespace Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.Property<string>("GameId")
-                        .IsRequired()
+                    b.Property<Guid>("GameId")
                         .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
+                        .HasColumnType("uuid")
                         .HasColumnName("game_id");
 
                     b.Property<long>("HitCount")
@@ -437,15 +437,13 @@ namespace Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("uuid");
 
-                    b.Property<string>("AgentId")
-                        .IsRequired()
+                    b.Property<Guid>("AgentId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
-                    b.Property<string>("GameId")
-                        .IsRequired()
+                    b.Property<Guid>("GameId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("LastMessageAt")
                         .HasColumnType("timestamp with time zone");
@@ -453,10 +451,9 @@ namespace Api.Migrations
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
+                    b.Property<Guid>("UserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -485,8 +482,8 @@ namespace Api.Migrations
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("DeletedByUserId")
-                        .HasColumnType("character varying(64)");
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsDeleted")
                         .ValueGeneratedOnAdd()
@@ -517,8 +514,8 @@ namespace Api.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserId")
-                        .HasColumnType("character varying(64)");
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -542,9 +539,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.GameEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<int?>("BggId")
                         .HasColumnType("integer");
@@ -570,9 +568,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.N8nConfigEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("ApiKeyEncrypted")
                         .IsRequired()
@@ -587,10 +586,9 @@ namespace Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("CreatedByUserId")
-                        .IsRequired()
+                    b.Property<Guid>("CreatedByUserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -626,9 +624,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.OAuthAccountEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("AccessTokenEncrypted")
                         .IsRequired()
@@ -656,10 +655,9 @@ namespace Api.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
+                    b.Property<Guid>("UserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -675,9 +673,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.PasswordResetTokenEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -696,10 +695,9 @@ namespace Api.Migrations
                     b.Property<DateTime?>("UsedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
+                    b.Property<Guid>("UserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -715,9 +713,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.PdfDocumentEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<int?>("AtomicRuleCount")
                         .HasColumnType("integer");
@@ -761,10 +760,9 @@ namespace Api.Migrations
                     b.Property<long>("FileSizeBytes")
                         .HasColumnType("bigint");
 
-                    b.Property<string>("GameId")
-                        .IsRequired()
+                    b.Property<Guid>("GameId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Language")
                         .IsRequired()
@@ -802,10 +800,9 @@ namespace Api.Migrations
                     b.Property<DateTime>("UploadedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UploadedByUserId")
-                        .IsRequired()
+                    b.Property<Guid>("UploadedByUserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -818,9 +815,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.PromptAuditLogEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Action")
                         .IsRequired()
@@ -830,23 +828,21 @@ namespace Api.Migrations
                     b.Property<DateTime>("ChangedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("ChangedByUserId")
-                        .IsRequired()
+                    b.Property<Guid>("ChangedByUserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Details")
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)");
 
-                    b.Property<string>("TemplateId")
-                        .IsRequired()
+                    b.Property<Guid>("TemplateId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
-                    b.Property<string>("VersionId")
+                    b.Property<Guid?>("VersionId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -865,9 +861,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.PromptEvaluationResultEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("uuid")
                         .HasColumnName("id");
 
                     b.Property<double>("Accuracy")
@@ -917,10 +914,9 @@ namespace Api.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("summary");
 
-                    b.Property<string>("TemplateId")
-                        .IsRequired()
+                    b.Property<Guid>("TemplateId")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("uuid")
                         .HasColumnName("template_id");
 
                     b.Property<int>("TotalQueries")
@@ -931,10 +927,9 @@ namespace Api.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
-                    b.Property<string>("VersionId")
-                        .IsRequired()
+                    b.Property<Guid>("VersionId")
                         .HasMaxLength(100)
-                        .HasColumnType("character varying(100)")
+                        .HasColumnType("uuid")
                         .HasColumnName("version_id");
 
                     b.HasKey("Id");
@@ -952,9 +947,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.PromptTemplateEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Category")
                         .HasMaxLength(64)
@@ -963,10 +959,9 @@ namespace Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("CreatedByUserId")
-                        .IsRequired()
+                    b.Property<Guid>("CreatedByUserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Description")
                         .HasMaxLength(512)
@@ -993,9 +988,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.PromptVersionEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Content")
                         .IsRequired()
@@ -1004,10 +1000,9 @@ namespace Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("CreatedByUserId")
-                        .IsRequired()
+                    b.Property<Guid>("CreatedByUserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -1016,10 +1011,9 @@ namespace Api.Migrations
                         .HasMaxLength(4096)
                         .HasColumnType("character varying(4096)");
 
-                    b.Property<string>("TemplateId")
-                        .IsRequired()
+                    b.Property<Guid>("TemplateId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("VersionNumber")
                         .HasColumnType("integer");
@@ -1083,9 +1077,9 @@ namespace Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("AtomId")
+                    b.Property<Guid?>("AtomId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("CommentText")
                         .IsRequired()
@@ -1095,10 +1089,9 @@ namespace Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("GameId")
-                        .IsRequired()
+                    b.Property<Guid>("GameId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<bool>("IsResolved")
                         .ValueGeneratedOnAdd()
@@ -1123,17 +1116,16 @@ namespace Api.Migrations
                     b.Property<DateTime?>("ResolvedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("ResolvedByUserId")
+                    b.Property<Guid?>("ResolvedByUserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
+                    b.Property<Guid>("UserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Version")
                         .IsRequired()
@@ -1173,17 +1165,16 @@ namespace Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("CreatedByUserId")
+                    b.Property<Guid?>("CreatedByUserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
-                    b.Property<string>("GameEntityId")
-                        .HasColumnType("character varying(64)");
+                    b.Property<Guid?>("GameEntityId")
+                        .HasColumnType("uuid");
 
-                    b.Property<string>("GameId")
-                        .IsRequired()
+                    b.Property<Guid>("GameId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("MergedFromVersionIds")
                         .HasMaxLength(1024)
@@ -1214,9 +1205,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.SystemConfigurationEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Category")
                         .IsRequired()
@@ -1226,10 +1218,9 @@ namespace Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("CreatedByUserId")
-                        .IsRequired()
+                    b.Property<Guid>("CreatedByUserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Description")
                         .HasMaxLength(1000)
@@ -1260,9 +1251,9 @@ namespace Api.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UpdatedByUserId")
+                    b.Property<Guid?>("UpdatedByUserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Value")
                         .IsRequired()
@@ -1298,9 +1289,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.TempSessionEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1325,10 +1317,9 @@ namespace Api.Migrations
                     b.Property<DateTime?>("UsedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
+                    b.Property<Guid>("UserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -1344,9 +1335,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.TextChunkEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("CharacterCount")
                         .HasColumnType("integer");
@@ -1361,18 +1353,16 @@ namespace Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("GameId")
-                        .IsRequired()
+                    b.Property<Guid>("GameId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<int?>("PageNumber")
                         .HasColumnType("integer");
 
-                    b.Property<string>("PdfDocumentId")
-                        .IsRequired()
+                    b.Property<Guid>("PdfDocumentId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("SearchVector")
                         .HasColumnType("text")
@@ -1393,9 +1383,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserBackupCodeEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<string>("CodeHash")
                         .IsRequired()
@@ -1413,10 +1404,9 @@ namespace Api.Migrations
                     b.Property<DateTime?>("UsedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
+                    b.Property<Guid>("UserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -1433,9 +1423,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1479,9 +1470,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.UserSessionEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1508,10 +1500,9 @@ namespace Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
+                    b.Property<Guid>("UserId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
@@ -1525,9 +1516,10 @@ namespace Api.Migrations
 
             modelBuilder.Entity("Api.Infrastructure.Entities.VectorDocumentEntity", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("ChunkCount")
                         .HasColumnType("integer");
@@ -1540,10 +1532,9 @@ namespace Api.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
-                    b.Property<string>("GameId")
-                        .IsRequired()
+                    b.Property<Guid>("GameId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("IndexedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1556,10 +1547,9 @@ namespace Api.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
-                    b.Property<string>("PdfDocumentId")
-                        .IsRequired()
+                    b.Property<Guid>("PdfDocumentId")
                         .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
+                        .HasColumnType("uuid");
 
                     b.Property<int>("TotalCharacters")
                         .HasColumnType("integer");

@@ -33,22 +33,35 @@ gh label create "month-6" --description "Month 6: Italian UI" --color "BFDADC"
 
 ### Missing Issues Breakdown by Month
 
-#### Month 1: PDF Processing Pipeline (15 issues)
-- [ ] [BGAI-001] Setup LLMWhisperer account and API key configuration
-- [ ] [BGAI-002] Implement LlmWhispererPdfExtractor (C# HttpClient wrapper)
-- [ ] [BGAI-003] Add LLMWhisperer configuration (appsettings + feature flag)
-- [ ] [BGAI-004] Unit tests for LlmWhispererPdfExtractor (12 tests)
-- [ ] [BGAI-005] Create FastAPI service for SmolDocling (Python)
-- [ ] [BGAI-006] Docker configuration for pdf-processor service
-- [ ] [BGAI-007] Implement SmolDoclingPdfExtractor (C# client)
-- [ ] [BGAI-008] Integration tests for SmolDocling pipeline
-- [ ] [BGAI-009] Migrate to IPdfTextExtractor interface (existing #940)
-- [ ] [BGAI-010] Implement EnhancedPdfProcessingOrchestrator (3-stage fallback)
-- [ ] [BGAI-011] Integration tests for 3-stage PDF pipeline (end-to-end)
-- [ ] [BGAI-012] PDF quality validation (≥0.80 quality score)
-- [ ] [BGAI-013] Bug fixes and edge cases for PDF pipeline
-- [ ] [BGAI-014] Code review checklist for PDF processing
-- [ ] [BGAI-015] Documentation (README, API docs, code comments)
+#### Month 1: PDF Processing Pipeline (12 issues) - UPDATED 2025-01-15
+
+**Architecture Change**: LLMWhisperer → **Unstructured** (Apache 2.0, RAG-optimized, zero cost)
+
+- [x] ~~[BGAI-001] Setup LLMWhisperer account~~ → **Closed #941** (replaced)
+- [x] ~~[BGAI-002] Implement LlmWhispererPdfExtractor~~ → **Closed #942** (replaced)
+- [x] ~~[BGAI-003] Add LLMWhisperer configuration~~ → **Closed #943** (replaced)
+- [x] ~~[BGAI-004] Unit tests LlmWhispererPdfExtractor~~ → **Closed #944** (replaced)
+- [ ] **[BGAI-001-v2]** Install Unstructured library → **#952** ✅ Created
+- [ ] **[BGAI-002-v2]** Implement UnstructuredPdfExtractor → **#953** ✅ Created
+- [ ] **[BGAI-003-v2]** Unit tests Unstructured integration → **#954** ✅ Created
+- [ ] [BGAI-005] Create FastAPI service for SmolDocling → **#945** ✅ Created
+- [ ] [BGAI-006] Docker configuration for pdf-processor → **#946** ✅ Created
+- [ ] [BGAI-007] Implement SmolDoclingPdfExtractor (C# client) → **#947** ✅ Created
+- [ ] [BGAI-008] Integration tests for SmolDocling → **#948** ✅ Created
+- [ ] [BGAI-009] Migrate to IPdfTextExtractor (maps to **#940**)
+- [ ] [BGAI-010] EnhancedPdfProcessingOrchestrator → **#949** ✅ Created
+- [ ] [BGAI-011] Integration tests 3-stage pipeline → **#950** ✅ Created
+- [ ] [BGAI-012] PDF quality validation → **#951** ✅ Created
+- [ ] [BGAI-013] Bug fixes and edge cases → To create
+- [ ] [BGAI-014] Code review checklist → To create
+- [ ] [BGAI-015] Documentation → To create
+
+**New 3-Stage Pipeline**:
+1. **Stage 1**: Unstructured (Apache 2.0, RAG-optimized, 1.29s)
+2. **Stage 2**: SmolDocling (VLM 256M, complex layouts)
+3. **Stage 3**: Docnet (existing fallback)
+
+**Reference**: `docs/architecture/pdf-extraction-opensource-alternatives.md`
 
 #### Month 2: LLM Integration (12 issues)
 - [ ] [BGAI-016] Setup OpenRouter account and API key
@@ -261,12 +274,12 @@ git push origin main
 
 **Month 1 (4 weeks): PDF Processing Pipeline**
 
-**Week 1: LLMWhisperer Integration** (Days 1-5)
-- Day 1: Setup LLMWhisperer account (#941 - [BGAI-001])
-- Day 2-3: Implement LlmWhispererPdfExtractor (#942 - [BGAI-002])
-- Day 4: Add configuration (#943 - [BGAI-003])
-- Day 5: Unit tests (#944 - [BGAI-004])
-- **Deliverable**: LLMWhisperer Stage 1 working
+**Week 1: Unstructured Integration** (Days 1-3) - ⚡ FASTER (was 5 days)
+- Day 1-2: Install Unstructured + FastAPI service (#952 - [BGAI-001-v2])
+- Day 3: Implement UnstructuredPdfExtractor C# client (#953 - [BGAI-002-v2])
+- **Bonus Days 4-5**: Unit tests (#954) + Start SmolDocling early
+- **Deliverable**: Unstructured Stage 1 working (Apache 2.0, zero cost, 1.29s)
+- **Architecture**: Unstructured → SmolDocling → Docnet (100% open source)
 
 **Week 2: SmolDocling Python Service** (Days 6-10)
 - Day 6-7: FastAPI service implementation (#945 - [BGAI-005])

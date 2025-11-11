@@ -45,7 +45,7 @@ Write-Host ""
 Write-Host "✅ VS Code instances opened!" -ForegroundColor Green
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
-Write-Host "  Backend  → cd apps/api && dotnet run" -ForegroundColor Gray
-Write-Host "  Frontend → cd apps/web && pnpm dev" -ForegroundColor Gray
+Write-Host "  Backend: cd apps/api; dotnet run" -ForegroundColor Gray
+Write-Host "  Frontend: cd apps/web; pnpm dev" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Documentation: claudedocs/DUAL-VSCODE-SETUP.md" -ForegroundColor Gray

@@ -1,3 +1,5 @@
+using Api.BoundedContexts.Administration.Domain.Repositories;
+using Api.BoundedContexts.Administration.Infrastructure.Persistence;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -7,7 +9,8 @@ public static class AdministrationServiceExtensions
 {
     public static IServiceCollection AddAdministrationContext(this IServiceCollection services)
     {
-        // Repository implementations pending
+        services.AddScoped<IAlertRepository, AlertRepository>();
+        services.AddScoped<IAuditLogRepository, AuditLogRepository>();
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
         return services;

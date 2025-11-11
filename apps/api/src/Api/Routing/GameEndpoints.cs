@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Queries;
+using Api.Extensions;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
@@ -22,14 +23,8 @@ public static class GameEndpoints
             HttpContext context,
             CancellationToken ct) =>
         {
-            // Support both cookie-based session auth and API key auth
-            var hasSession = context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession;
-            var hasApiKey = context.User.Identity?.IsAuthenticated == true;
-
-            if (!hasSession && !hasApiKey)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
 
             var query = new GetAllGamesQuery();
             var result = await mediator.Send(query, ct);
@@ -44,14 +39,8 @@ public static class GameEndpoints
             HttpContext context,
             CancellationToken ct) =>
         {
-            // Support both cookie-based session auth and API key auth
-            var hasSession = context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession;
-            var hasApiKey = context.User.Identity?.IsAuthenticated == true;
-
-            if (!hasSession && !hasApiKey)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
 
             var query = new GetGameByIdQuery(id);
             var result = await mediator.Send(query, ct);
@@ -68,16 +57,8 @@ public static class GameEndpoints
             CancellationToken ct) =>
         {
             // Auth check
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.Forbid();
-            }
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
 
             var command = new CreateGameCommand(
                 Title: request.Title,
@@ -103,16 +84,8 @@ public static class GameEndpoints
             CancellationToken ct) =>
         {
             // Auth check
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.Forbid();
-            }
+            var (authorized, session, error) = context.RequireAdminOrEditorSession();
+            if (!authorized) return error!;
 
             var command = new UpdateGameCommand(
                 GameId: id,
@@ -130,18 +103,12 @@ public static class GameEndpoints
         });
 
         // CHAT-06: Get agents for a specific game
-        group.MapGet("/games/{gameId}/agents", async (string gameId, HttpContext context, ChatService chatService, CancellationToken ct) =>
+        group.MapGet("/games/{gameId:guid}/agents", async (Guid gameId, HttpContext context, ChatService chatService, CancellationToken ct) =>
         {
-            // Support both cookie-based session auth and API key auth
-            var hasSession = context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession;
-            var hasApiKey = context.User.Identity?.IsAuthenticated == true;
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
 
-            if (!hasSession && !hasApiKey)
-            {
-                return Results.Unauthorized();
-            }
-
-            var agents = await chatService.GetAgentsForGameAsync(gameId, ct);
+            var agents = await chatService.GetAgentsForGameAsync(gameId.ToString(), ct);
             var response = agents.Select(a => new AgentDto(
                 a.Id.ToString(),
                 a.GameId.ToString(),

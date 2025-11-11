@@ -1,3 +1,4 @@
+using Api.Extensions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -16,10 +17,8 @@ public static class ChatEndpoints
     {
         group.MapGet("/chats", async (HttpContext context, ChatService chatService, string? gameId, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             var chats = string.IsNullOrWhiteSpace(gameId)
                 ? await chatService.GetUserChatsAsync(session.User.Id, 50, ct)
@@ -40,10 +39,8 @@ public static class ChatEndpoints
 
         group.MapGet("/chats/{chatId:guid}", async (Guid chatId, HttpContext context, ChatService chatService, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             var chat = await chatService.GetChatByIdAsync(chatId, session.User.Id, ct);
             if (chat == null)
@@ -75,10 +72,8 @@ public static class ChatEndpoints
 
         group.MapPost("/chats", async (CreateChatRequest? request, HttpContext context, ChatService chatService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             if (request == null)
             {
@@ -123,10 +118,8 @@ public static class ChatEndpoints
 
         group.MapDelete("/chats/{chatId:guid}", async (Guid chatId, HttpContext context, ChatService chatService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             try
             {
@@ -289,10 +282,8 @@ public static class ChatEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             // CONFIG-05: Check if chat export feature is enabled
             if (!await featureFlags.IsEnabledAsync("Features.ChatExport"))

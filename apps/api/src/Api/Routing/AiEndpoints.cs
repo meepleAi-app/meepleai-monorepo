@@ -1,4 +1,5 @@
 using Api.Configuration;
+using Api.Extensions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -33,10 +34,8 @@ public static class AiEndpoints
             bool generateFollowUps = true, // CHAT-02: opt-in parameter
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             if (string.IsNullOrWhiteSpace(req.gameId))
             {
@@ -269,10 +268,8 @@ public static class AiEndpoints
 
         group.MapPost("/agents/explain", async (ExplainRequest req, HttpContext context, IRagService rag, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             if (string.IsNullOrWhiteSpace(req.gameId))
             {
@@ -406,10 +403,8 @@ public static class AiEndpoints
         // API-02: Streaming RAG Explain endpoint (SSE)
         group.MapPost("/agents/explain/stream", async (ExplainRequest req, HttpContext context, IStreamingRagService streamingRag, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             if (string.IsNullOrWhiteSpace(req.gameId))
             {
@@ -491,10 +486,8 @@ public static class AiEndpoints
             bool generateFollowUps = true, // CHAT-02: opt-in parameter
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             // CONFIG-05: Check if streaming responses feature is enabled
             if (!await featureFlags.IsEnabledAsync("Features.StreamingResponses"))
@@ -787,10 +780,8 @@ public static class AiEndpoints
         // AI-03: RAG Setup Guide endpoint
         group.MapPost("/agents/setup", async (SetupGuideRequest req, HttpContext context, SetupGuideService setupGuide, ChatService chatService, AiRequestLogService aiLog, IFeatureFlagService featureFlags, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             // CONFIG-05: Check if setup guide generation feature is enabled
             if (!await featureFlags.IsEnabledAsync("Features.SetupGuideGeneration"))
@@ -942,10 +933,8 @@ public static class AiEndpoints
 
         group.MapPost("/agents/feedback", async (AgentFeedbackRequest req, HttpContext context, AgentFeedbackService feedbackService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             if (!string.Equals(req.userId, session.User.Id, StringComparison.Ordinal))
             {
@@ -992,10 +981,8 @@ public static class AiEndpoints
         // CHESS-04: Chess conversational agent endpoint
         group.MapPost("/agents/chess", async (ChessAgentRequest req, HttpContext context, IChessAgentService chessAgent, ChatService chatService, AiRequestLogService aiLog, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             if (string.IsNullOrWhiteSpace(req.question))
             {
@@ -1155,10 +1142,8 @@ public static class AiEndpoints
             CancellationToken ct) =>
         {
             // Authentication required
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             // Validate query parameter
             if (string.IsNullOrWhiteSpace(q))
@@ -1205,10 +1190,8 @@ public static class AiEndpoints
             CancellationToken ct) =>
         {
             // Authentication required
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             // Validate BGG ID
             if (bggId <= 0)
@@ -1257,10 +1240,8 @@ public static class AiEndpoints
 
         group.MapPost("/chess/index", async (HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
             {
@@ -1293,10 +1274,8 @@ public static class AiEndpoints
 
         group.MapGet("/chess/search", async (string? q, int? limit, HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             if (string.IsNullOrWhiteSpace(q))
             {
@@ -1330,10 +1309,8 @@ public static class AiEndpoints
 
         group.MapDelete("/chess/index", async (HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
             {

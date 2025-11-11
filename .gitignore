@@ -29,6 +29,11 @@ infra/env/n8n-service-session.env
 # SEC-700: Alertmanager configuration with secrets
 infra/env/alertmanager.env
 
+# SEC-708: Docker Secrets (actual secret files must never be committed)
+infra/secrets/*.txt
+!infra/secrets/.gitkeep
+!infra/secrets/README.md
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 

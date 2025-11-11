@@ -94,8 +94,10 @@ public static class ObservabilityServiceExtensions
         IWebHostEnvironment environment)
     {
         // OPS-01: Health checks for observability
+        // SEC-708: Build connection string from Docker Secrets if available
         var healthCheckConnectionString = configuration.GetConnectionString("Postgres")
-            ?? configuration["ConnectionStrings__Postgres"];
+            ?? configuration["ConnectionStrings__Postgres"]
+            ?? SecretsHelper.BuildPostgresConnectionString(configuration);
 
         var healthCheckRedisConnectionString = configuration["REDIS_URL"] ?? "localhost:6379";
         var healthCheckQdrantUrl = configuration["QDRANT_URL"] ?? "http://localhost:6333";

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.WorkflowIntegration.Infrastructure.DependencyInjection;
 using Api.Helpers;
 using Api.Services;
 using Api.Services.Chat;
@@ -33,6 +34,9 @@ public static class ApplicationServiceExtensions
 
         // DDD-PHASE3: KnowledgeBase bounded context
         services.AddKnowledgeBaseServices();
+
+        // DDD-PHASE3: WorkflowIntegration bounded context
+        services.AddWorkflowIntegrationContext();
 
         return services;
     }

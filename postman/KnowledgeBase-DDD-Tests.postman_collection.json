@@ -1,0 +1,671 @@
+{
+  "info": {
+    "name": "KnowledgeBase DDD - Phase 3 Tests",
+    "_postman_id": "knowledgebase-ddd-phase3",
+    "description": "Test collection for KnowledgeBase bounded context DDD implementation.\nTests SearchQueryHandler and AskQuestionQueryHandler via API endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "apiVersion",
+      "value": "v1",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testGameId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Setup",
+      "item": [
+        {
+          "name": "1. Login - Get Session Cookie",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Verify login successful",
+                  "pm.test('Login successful', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Check for session cookie",
+                  "pm.test('Session cookie set', function() {",
+                  "    pm.expect(pm.cookies.has('.AspNetCore.Session')).to.be.true;",
+                  "});",
+                  "",
+                  "// Parse response and save userId",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.user && response.user.id) {",
+                  "        pm.collectionVariables.set('userId', response.user.id);",
+                  "        console.log('Saved userId:', response.user.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@meepleai.dev\",\n  \"password\": \"Demo123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "auth", "login"]
+            },
+            "description": "Login with demo user credentials to get session cookie.\nDemo users: user@meepleai.dev, editor@meepleai.dev, admin@meepleai.dev\nPassword: Demo123!"
+          },
+          "response": []
+        },
+        {
+          "name": "2. Get Games - Find Test Game ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Get games successful', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Save first game ID for testing",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    if (response.length > 0) {",
+                  "        pm.collectionVariables.set('testGameId', response[0].id);",
+                  "        console.log('Saved test gameId:', response[0].id);",
+                  "        console.log('Game name:', response[0].name);",
+                  "    } else {",
+                  "        console.warn('No games found in database. You may need to seed data.');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/games",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "games"]
+            },
+            "description": "Get list of games and save first game ID for testing.\nRequires demo data to be seeded (Migration: 20251009140700_SeedDemoData)"
+          },
+          "response": []
+        }
+      ],
+      "description": "Setup requests: Login and get test game ID"
+    },
+    {
+      "name": "KnowledgeBase - Search",
+      "item": [
+        {
+          "name": "Search - Hybrid Mode (default)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Search successful', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has success flag', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Response has results array', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.results).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Response has count', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.count).to.be.a('number');",
+                  "});",
+                  "",
+                  "pm.test('Search mode is hybrid', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.searchMode).to.equal('hybrid');",
+                  "});",
+                  "",
+                  "// Log results for inspection",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Found', response.count, 'results');",
+                  "    if (response.results.length > 0) {",
+                  "        console.log('Top result:', response.results[0]);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{testGameId}}\",\n  \"query\": \"How do you win?\",\n  \"topK\": 5,\n  \"minScore\": 0.7,\n  \"searchMode\": \"hybrid\",\n  \"language\": \"en\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/knowledge-base/search",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "knowledge-base", "search"]
+            },
+            "description": "Test hybrid search (vector + keyword fusion via RRF).\nUses SearchQueryHandler with VectorSearchDomainService + RrfFusionDomainService."
+          },
+          "response": []
+        },
+        {
+          "name": "Search - Vector Only Mode",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Search successful', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Search mode is vector', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.searchMode).to.equal('vector');",
+                  "});",
+                  "",
+                  "pm.test('Results have relevance scores', function() {",
+                  "    const response = pm.response.json();",
+                  "    if (response.results.length > 0) {",
+                  "        pm.expect(response.results[0]).to.have.property('relevanceScore');",
+                  "        pm.expect(response.results[0].relevanceScore).to.be.a('number');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{testGameId}}\",\n  \"query\": \"setup phase\",\n  \"topK\": 3,\n  \"minScore\": 0.6,\n  \"searchMode\": \"vector\",\n  \"language\": \"en\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/knowledge-base/search",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "knowledge-base", "search"]
+            },
+            "description": "Test pure vector search (semantic similarity only).\nUses VectorSearchDomainService with cosine similarity."
+          },
+          "response": []
+        },
+        {
+          "name": "Search - High Min Score Filter",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Search successful', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('All results meet min score', function() {",
+                  "    const response = pm.response.json();",
+                  "    const minScore = 0.85;",
+                  "    response.results.forEach(result => {",
+                  "        pm.expect(result.relevanceScore).to.be.at.least(minScore);",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{testGameId}}\",\n  \"query\": \"scoring points\",\n  \"topK\": 10,\n  \"minScore\": 0.85,\n  \"searchMode\": \"hybrid\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/knowledge-base/search",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "knowledge-base", "search"]
+            },
+            "description": "Test high min score threshold (0.85).\nShould filter out low-relevance results."
+          },
+          "response": []
+        },
+        {
+          "name": "Search - Invalid GameId (Error Case)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 400 Bad Request', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message present', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('error');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"invalid-uuid\",\n  \"query\": \"test query\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/knowledge-base/search",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "knowledge-base", "search"]
+            },
+            "description": "Test validation: Invalid UUID format should return 400."
+          },
+          "response": []
+        }
+      ],
+      "description": "Tests for /knowledge-base/search endpoint (SearchQueryHandler)"
+    },
+    {
+      "name": "KnowledgeBase - Q&A",
+      "item": [
+        {
+          "name": "Ask - Simple Question",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Q&A successful', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has success flag', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Response has answer', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.answer).to.be.a('string');",
+                  "    pm.expect(response.answer.length).to.be.above(0);",
+                  "});",
+                  "",
+                  "pm.test('Response has sources', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.sources).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Response has confidence scores', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.searchConfidence).to.be.a('number');",
+                  "    pm.expect(response.llmConfidence).to.be.a('number');",
+                  "    pm.expect(response.overallConfidence).to.be.a('number');",
+                  "});",
+                  "",
+                  "pm.test('Confidence scores in valid range (0-1)', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.searchConfidence).to.be.within(0, 1);",
+                  "    pm.expect(response.llmConfidence).to.be.within(0, 1);",
+                  "    pm.expect(response.overallConfidence).to.be.within(0, 1);",
+                  "});",
+                  "",
+                  "pm.test('Has quality flag', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.isLowQuality).to.be.a('boolean');",
+                  "});",
+                  "",
+                  "pm.test('Has citations', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.citations).to.be.an('array');",
+                  "});",
+                  "",
+                  "// Log response for inspection",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Answer:', response.answer.substring(0, 100) + '...');",
+                  "    console.log('Search Confidence:', response.searchConfidence);",
+                  "    console.log('LLM Confidence:', response.llmConfidence);",
+                  "    console.log('Overall Confidence:', response.overallConfidence);",
+                  "    console.log('Is Low Quality:', response.isLowQuality);",
+                  "    console.log('Sources:', response.sources.length);",
+                  "    console.log('Citations:', response.citations.length);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{testGameId}}\",\n  \"query\": \"How do you win the game?\",\n  \"language\": \"en\",\n  \"bypassCache\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/knowledge-base/ask",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "knowledge-base", "ask"]
+            },
+            "description": "Test full RAG pipeline via AskQuestionQueryHandler.\nFlow: Search → Build prompt → LLM → Quality tracking"
+          },
+          "response": []
+        },
+        {
+          "name": "Ask - Complex Multi-Part Question",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Q&A successful', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Answer is comprehensive', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.answer.length).to.be.above(50);",
+                  "});",
+                  "",
+                  "pm.test('Multiple sources cited', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.sources.length).to.be.above(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{testGameId}}\",\n  \"query\": \"What are the different phases of the game and what actions can you take in each phase?\",\n  \"language\": \"en\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/knowledge-base/ask",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "knowledge-base", "ask"]
+            },
+            "description": "Test complex question requiring multiple sources.\nShould demonstrate RRF fusion and quality tracking."
+          },
+          "response": []
+        },
+        {
+          "name": "Ask - With Cache Bypass",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Q&A successful', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Save response time for comparison",
+                  "pm.collectionVariables.set('lastResponseTime', pm.response.responseTime);",
+                  "console.log('Response time (cache bypass):', pm.response.responseTime, 'ms');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{testGameId}}\",\n  \"query\": \"How many points do you need to win?\",\n  \"language\": \"en\",\n  \"bypassCache\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/knowledge-base/ask",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "knowledge-base", "ask"]
+            },
+            "description": "Test cache bypass functionality.\nShould always generate fresh response."
+          },
+          "response": []
+        },
+        {
+          "name": "Ask - Confidence Score Validation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Q&A successful', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Overall confidence is weighted average (70/30)', function() {",
+                  "    const response = pm.response.json();",
+                  "    const searchConf = response.searchConfidence;",
+                  "    const llmConf = response.llmConfidence;",
+                  "    const overallConf = response.overallConfidence;",
+                  "    ",
+                  "    // Calculate expected: 70% search + 30% LLM",
+                  "    const expected = (searchConf * 0.7) + (llmConf * 0.3);",
+                  "    const tolerance = 0.01;",
+                  "    ",
+                  "    pm.expect(overallConf).to.be.closeTo(expected, tolerance);",
+                  "    console.log('Search:', searchConf, '| LLM:', llmConf, '| Overall:', overallConf);",
+                  "    console.log('Expected overall:', expected.toFixed(2));",
+                  "});",
+                  "",
+                  "pm.test('Low quality detection works', function() {",
+                  "    const response = pm.response.json();",
+                  "    // If overall confidence < 0.5, should be marked low quality",
+                  "    if (response.overallConfidence < 0.5) {",
+                  "        pm.expect(response.isLowQuality).to.be.true;",
+                  "    } else if (response.overallConfidence >= 0.5) {",
+                  "        pm.expect(response.isLowQuality).to.be.false;",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{testGameId}}\",\n  \"query\": \"What are the rules?\",\n  \"language\": \"en\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/knowledge-base/ask",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "knowledge-base", "ask"]
+            },
+            "description": "Test QualityTrackingDomainService confidence calculation.\nVerifies 70/30 weighting formula."
+          },
+          "response": []
+        },
+        {
+          "name": "Ask - Empty Query (Error Case)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 400 Bad Request', function() {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message present', function() {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('error');",
+                  "    pm.expect(response.error).to.include('required');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{testGameId}}\",\n  \"query\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/knowledge-base/ask",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "knowledge-base", "ask"]
+            },
+            "description": "Test validation: Empty query should return 400."
+          },
+          "response": []
+        }
+      ],
+      "description": "Tests for /knowledge-base/ask endpoint (AskQuestionQueryHandler)"
+    },
+    {
+      "name": "Authentication Tests",
+      "item": [
+        {
+          "name": "Search - Unauthenticated (401)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Returns 401 Unauthorized', function() {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Clear cookies to simulate unauthenticated request",
+                  "pm.cookies.clear();"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"{{testGameId}}\",\n  \"query\": \"test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/{{apiVersion}}/knowledge-base/search",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "{{apiVersion}}", "knowledge-base", "search"]
+            },
+            "description": "Test authentication requirement.\nWithout session cookie, should return 401."
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication and authorization tests"
+    }
+  ]
+}

@@ -9,10 +9,14 @@
 
 | Worktree | Location | Branch | Focus | Status |
 |----------|----------|--------|-------|--------|
-| **Main** | `D:/Repositories/meepleai-monorepo` | main | Backend | ✅ Active |
-| **Frontend** | `D:/Repositories/meepleai-monorepo-frontend` | frontend-dev | Frontend | ✅ Active |
+| **Main** | `D:/Repositories/meepleai-monorepo` | main | Original (read-only for dev) | ✅ Active |
+| **Backend** | `D:/Repositories/meepleai-monorepo-backend` | backend-dev | Backend Development | ✅ Active |
+| **Frontend** | `D:/Repositories/meepleai-monorepo-frontend` | frontend-dev | Frontend Development | ✅ Active |
 
-**Verify**: Run `git worktree list` in either worktree
+**Verify**: Run `git worktree list` in any worktree
+
+**Development Worktrees**: Use `backend-dev` and `frontend-dev` for daily work
+**Main Worktree**: Use for merges and releases only
 
 ---
 
@@ -25,8 +29,9 @@
 - #880: Unit tests
 
 ### Worktree Usage
-- **Backend Worktree**: Active development (Mon-Thu)
-- **Frontend Worktree**: Prep for Week 2 (Fri afternoon)
+- **Main Worktree**: Merges, releases, coordination (minimal direct dev)
+- **Backend Worktree**: Backend development (apps/api/)
+- **Frontend Worktree**: Frontend development (apps/web/)
 
 ---
 

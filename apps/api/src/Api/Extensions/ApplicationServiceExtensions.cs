@@ -69,9 +69,6 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IEmbeddingService, EmbeddingService>();
         services.AddScoped<ITextChunkingService, TextChunkingService>();
 
-        // DDD-MIGRATION: PdfIndexingService replaced by IndexPdfCommand/Handler (CQRS pattern)
-        // services.AddScoped<PdfIndexingService>(); // TODO: Remove after verification
-
         return services;
     }
 

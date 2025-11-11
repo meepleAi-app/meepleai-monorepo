@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Handlers;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.Extensions;
 using Api.Middleware;
 using Api.Models;
 using MediatR;
@@ -22,11 +23,8 @@ public static class KnowledgeBaseEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            // Require authentication
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             // Validate request
             if (!Guid.TryParse(req.gameId, out var gameId))
@@ -90,11 +88,8 @@ public static class KnowledgeBaseEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            // Require authentication
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             // Validate request
             if (!Guid.TryParse(req.gameId, out var gameId))

@@ -11,6 +11,7 @@ using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using Api.Services.Chat;
+using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -29,15 +30,8 @@ public static class AdminEndpoints
     {
         group.MapGet("/logs", async (HttpContext context, AiRequestLogService logService, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var result = await logService.GetRequestsAsync(limit: 100, ct: ct);
 
@@ -77,10 +71,9 @@ public static class AdminEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
+
             var userId = session.User.Id;
 
             if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
@@ -112,15 +105,8 @@ public static class AdminEndpoints
 
         group.MapPost("/admin/seed", async (SeedRequest request, HttpContext context, RuleSpecService rules, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             if (string.IsNullOrWhiteSpace(request.gameId))
             {
@@ -134,15 +120,8 @@ public static class AdminEndpoints
         // ADM-01: Admin dashboard endpoints
         group.MapGet("/admin/requests", async (HttpContext context, AiRequestLogService logService, int limit = 100, int offset = 0, string? endpoint = null, string? userId = null, string? gameId = null, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var result = await logService.GetRequestsAsync(
                 limit,
@@ -159,15 +138,8 @@ public static class AdminEndpoints
 
         group.MapGet("/admin/stats", async (HttpContext context, AiRequestLogService logService, AgentFeedbackService feedbackService, DateTime? startDate = null, DateTime? endDate = null, string? userId = null, string? gameId = null, CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var stats = await logService.GetStatsAsync(startDate, endDate, userId, gameId, ct);
             var feedbackStats = await feedbackService.GetStatsAsync(null, userId, gameId, startDate, endDate, ct);
@@ -195,15 +167,8 @@ public static class AdminEndpoints
             DateTime? endDate = null,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             // Convert DateTime parameters to UTC if they have Kind=Unspecified (from query string parsing)
             // PostgreSQL requires UTC DateTimes
@@ -250,15 +215,8 @@ public static class AdminEndpoints
             IQualityReportService reportService,
             int days = 7) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var endDate = DateTime.UtcNow;
             var startDate = endDate.AddDays(-days);
@@ -274,15 +232,8 @@ public static class AdminEndpoints
         // ADM-02: n8n workflow configuration endpoints (DDD/CQRS)
         group.MapGet("/admin/n8n", async (IMediator mediator, HttpContext context, IFeatureFlagService featureFlags, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             // CONFIG-05: Check if n8n integration feature is enabled
             if (!await featureFlags.IsEnabledAsync("Features.N8nIntegration"))
@@ -298,15 +249,8 @@ public static class AdminEndpoints
 
         group.MapGet("/admin/n8n/{configId}", async (Guid configId, IMediator mediator, HttpContext context, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var config = await mediator.Send(new GetN8nConfigByIdQuery(configId), ct);
 
@@ -320,15 +264,8 @@ public static class AdminEndpoints
 
         group.MapPost("/admin/n8n", async (CreateN8nConfigRequest request, IMediator mediator, IEncryptionService encryptionService, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
@@ -362,15 +299,8 @@ public static class AdminEndpoints
 
         group.MapPut("/admin/n8n/{configId}", async (Guid configId, UpdateN8nConfigRequest request, IMediator mediator, IEncryptionService encryptionService, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
@@ -404,15 +334,8 @@ public static class AdminEndpoints
 
         group.MapDelete("/admin/n8n/{configId}", async (Guid configId, IMediator mediator, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var command = new DeleteN8nConfigCommand(ConfigId: configId);
 
@@ -428,22 +351,15 @@ public static class AdminEndpoints
             return Results.Json(new { ok = true });
         });
 
-        group.MapPost("/admin/n8n/{configId}/test", async (string configId, HttpContext context, N8nConfigService n8nService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/admin/n8n/{configId:guid}/test", async (Guid configId, HttpContext context, N8nConfigService n8nService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
                 logger.LogInformation("Admin {UserId} testing n8n config {ConfigId}", session.User.Id, configId);
-                var result = await n8nService.TestConnectionAsync(configId, ct);
+                var result = await n8nService.TestConnectionAsync(configId.ToString(), ct);
                 logger.LogInformation("n8n config {ConfigId} test result: {Success}", configId, result.Success);
                 return Results.Json(result);
             }
@@ -495,10 +411,8 @@ public static class AdminEndpoints
             CancellationToken ct) =>
         {
             // Extract userId from authenticated session
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Problem("Session not found", statusCode: StatusCodes.Status500InternalServerError);
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             try
             {
@@ -536,16 +450,8 @@ public static class AdminEndpoints
             CancellationToken ct) =>
         {
             // Extract session for role check (RequireAuthorization ensures authentication)
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Problem("Session not found", statusCode: StatusCodes.Status500InternalServerError);
-            }
-
-            // Only admins can validate templates
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.Forbid();
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var result = templateService.ValidateTemplate(request.TemplateJson);
             return Results.Ok(result);
@@ -558,35 +464,21 @@ public static class AdminEndpoints
         // AUTH-03: Session management endpoints
         group.MapGet("/admin/sessions", async (HttpContext context, ISessionManagementService sessionManagement, int limit = 100, string? userId = null, CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var sessions = await sessionManagement.GetAllSessionsAsync(string.IsNullOrEmpty(userId) ? (Guid?)null : Guid.Parse(userId), limit, ct);
             return Results.Json(sessions);
         });
 
-        group.MapDelete("/admin/sessions/{sessionId}", async (string sessionId, HttpContext context, ISessionManagementService sessionManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapDelete("/admin/sessions/{sessionId:guid}", async (Guid sessionId, HttpContext context, ISessionManagementService sessionManagement, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} revoking session {SessionId}", session.User.Id, sessionId);
 
-            var revoked = await sessionManagement.RevokeSessionAsync(Guid.Parse(sessionId), ct);
+            var revoked = await sessionManagement.RevokeSessionAsync(sessionId, ct);
             if (!revoked)
             {
                 return Results.NotFound(new { error = "Session not found or already revoked" });
@@ -596,21 +488,14 @@ public static class AdminEndpoints
             return Results.Json(new { ok = true });
         });
 
-        group.MapDelete("/admin/users/{userId}/sessions", async (string userId, HttpContext context, ISessionManagementService sessionManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapDelete("/admin/users/{userId:guid}/sessions", async (Guid userId, HttpContext context, ISessionManagementService sessionManagement, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} revoking all sessions for user {UserId}", session.User.Id, userId);
 
-            var count = await sessionManagement.RevokeAllUserSessionsAsync(Guid.Parse(userId), ct);
+            var count = await sessionManagement.RevokeAllUserSessionsAsync(userId, ct);
 
             logger.LogInformation("Revoked {Count} sessions for user {UserId}", count, userId);
             return Results.Json(new { ok = true, revokedCount = count });
@@ -627,15 +512,8 @@ public static class AdminEndpoints
             string? roleFilter = null,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var query = new GetAdminStatsQuery(fromDate, toDate, days, gameId, roleFilter);
             var stats = await mediator.Send(query, ct);
@@ -654,15 +532,8 @@ public static class AdminEndpoints
             ExportDataRequest request,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
@@ -722,15 +593,8 @@ public static class AdminEndpoints
             int limit = 20,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var queryParams = new WorkflowErrorsQueryParams(workflowId, fromDate, toDate, page, limit);
             var errors = await errorLoggingService.GetErrorsAsync(queryParams, ct);
@@ -750,15 +614,8 @@ public static class AdminEndpoints
             Guid id,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, authError) = context.RequireAdminSession();
+            if (!authorized) return authError!;
 
             var error = await errorLoggingService.GetErrorByIdAsync(id, ct);
 
@@ -845,15 +702,8 @@ public static class AdminEndpoints
             bool? activeOnly = true,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var alerts = activeOnly == true
                 ? await alertingService.GetActiveAlertsAsync(ct)
@@ -878,15 +728,8 @@ public static class AdminEndpoints
             string alertType,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var resolved = await alertingService.ResolveAlertAsync(alertType, ct);
 
@@ -916,15 +759,8 @@ public static class AdminEndpoints
             string? category = null,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var query = db.Set<PromptTemplateEntity>()
                 .AsNoTracking()
@@ -972,15 +808,8 @@ public static class AdminEndpoints
             MeepleAiDbContext db,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var exists = await db.Set<PromptTemplateEntity>()
                 .AnyAsync(t => t.Name == request.Name, ct);
@@ -1034,27 +863,19 @@ public static class AdminEndpoints
         .Produces(StatusCodes.Status403Forbidden);
 
         // Get template details with versions
-        group.MapGet("/admin/prompts/{id}", async (
-            string id,
+        group.MapGet("/admin/prompts/{id:guid}", async (
+            Guid id,
             HttpContext context,
             MeepleAiDbContext db,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var template = await db.Set<PromptTemplateEntity>()
-                .AsNoTracking()
-                .Include(t => t.CreatedBy)
                 .Include(t => t.Versions)
-                .FirstOrDefaultAsync(t => t.Id == Guid.Parse(id), ct);
+                .Include(t => t.CreatedBy)
+                .FirstOrDefaultAsync(t => t.Id == id, ct);
 
             if (template == null)
             {
@@ -1088,27 +909,20 @@ public static class AdminEndpoints
         .Produces(StatusCodes.Status403Forbidden);
 
         // Create new version for a template
-        group.MapPost("/admin/prompts/{id}/versions", async (
-            string id,
+        group.MapPost("/admin/prompts/{id:guid}/versions", async (
+            Guid id,
             CreatePromptVersionRequest request,
             HttpContext context,
             MeepleAiDbContext db,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var template = await db.Set<PromptTemplateEntity>()
                 .Include(t => t.Versions)
                 .Include(t => t.CreatedBy)
-                .FirstOrDefaultAsync(t => t.Id == Guid.Parse(id), ct);
+                .FirstOrDefaultAsync(t => t.Id == id, ct);
 
             if (template == null)
             {
@@ -1128,7 +942,7 @@ public static class AdminEndpoints
             var version = new PromptVersionEntity
             {
                 Id = Guid.NewGuid(),
-                TemplateId = Guid.Parse(id),
+                TemplateId = id,
                 VersionNumber = nextVersionNumber,
                 Content = request.Content,
                 IsActive = false, // New versions are inactive by default
@@ -1166,25 +980,18 @@ public static class AdminEndpoints
         .Produces(StatusCodes.Status403Forbidden);
 
         // Get version history for a template
-        group.MapGet("/admin/prompts/{id}/versions", async (
-            string id,
+        group.MapGet("/admin/prompts/{id:guid}/versions", async (
+            Guid id,
             HttpContext context,
             MeepleAiDbContext db,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var template = await db.Set<PromptTemplateEntity>()
                 .AsNoTracking()
-                .FirstOrDefaultAsync(t => t.Id == Guid.Parse(id), ct);
+                .FirstOrDefaultAsync(t => t.Id == id, ct);
 
             if (template == null)
             {
@@ -1194,7 +1001,7 @@ public static class AdminEndpoints
             var versions = await db.Set<PromptVersionEntity>()
                 .AsNoTracking()
                 .Include(v => v.CreatedBy)
-                .Where(v => v.TemplateId == Guid.Parse(id))
+                .Where(v => v.TemplateId == id)
                 .OrderByDescending(v => v.VersionNumber)
                 .Select(v => new PromptVersionDto
                 {
@@ -1221,26 +1028,19 @@ public static class AdminEndpoints
         .Produces(StatusCodes.Status403Forbidden);
 
         // Activate a specific version (CRITICAL endpoint)
-        group.MapPost("/admin/prompts/{id}/versions/{versionId}/activate", async (
-            string id,
-            string versionId,
+        group.MapPost("/admin/prompts/{id:guid}/versions/{versionId:guid}/activate", async (
+            Guid id,
+            Guid versionId,
             HttpContext context,
             IPromptTemplateService promptService,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
-                var activated = await promptService.ActivateVersionAsync(Guid.Parse(id), Guid.Parse(versionId), Guid.Parse(session.User.Id), ct);
+                var activated = await promptService.ActivateVersionAsync(id, versionId, Guid.Parse(session.User.Id), ct);
 
                 if (!activated)
                 {
@@ -1284,15 +1084,8 @@ public static class AdminEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
@@ -1348,15 +1141,8 @@ public static class AdminEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
@@ -1395,24 +1181,17 @@ public static class AdminEndpoints
         .Produces(StatusCodes.Status500InternalServerError);
 
         // Get historical evaluation results
-        group.MapGet("/admin/prompts/{templateId}/evaluations", async (
-            string templateId,
+        group.MapGet("/admin/prompts/{templateId:guid}/evaluations", async (
+            Guid templateId,
             int limit,
             IPromptEvaluationService evaluationService,
             HttpContext context,
             CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
-
-            var results = await evaluationService.GetHistoricalResultsAsync(templateId, limit, ct);
+            var results = await evaluationService.GetHistoricalResultsAsync(templateId.ToString(), limit, ct);
             return Results.Ok(results);
         })
         .WithName("GetEvaluationHistory")
@@ -1430,15 +1209,8 @@ public static class AdminEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
@@ -1494,15 +1266,8 @@ public static class AdminEndpoints
             int limit = 20,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var query = new GetAllUsersQuery(search, role, sortBy, sortOrder, page, limit);
             var result = await mediator.Send(query, ct);
@@ -1518,15 +1283,8 @@ public static class AdminEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
@@ -1553,15 +1311,8 @@ public static class AdminEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
@@ -1592,15 +1343,8 @@ public static class AdminEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
@@ -1627,17 +1371,8 @@ public static class AdminEndpoints
         // API-04: Admin API Key Management endpoint
         group.MapDelete("/admin/api-keys/{keyId}", async (string keyId, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} with role {Role} attempted to delete API key without admin permission",
-                    session.User.Id, session.User.Role);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} permanently deleting API key {KeyId}", session.User.Id, keyId);
 
@@ -1667,15 +1402,8 @@ public static class AdminEndpoints
             int pageSize = 50,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var query = new GetAllConfigsQuery(category, environment, activeOnly, page, pageSize);
             var result = await mediator.Send(query, ct);
@@ -1685,23 +1413,16 @@ public static class AdminEndpoints
         .WithTags("Admin", "Configuration")
         .Produces<PagedConfigurationResult>();
 
-        group.MapGet("/admin/configurations/{id}", async (
-            string id,
+        group.MapGet("/admin/configurations/{id:guid}", async (
+            Guid id,
             HttpContext context,
             IMediator mediator,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
-
-            var query = new GetConfigByIdQuery(Guid.Parse(id));
+            var query = new GetConfigByIdQuery(id);
             var config = await mediator.Send(query, ct);
             return config != null ? Results.Json(config) : Results.NotFound();
         })
@@ -1717,15 +1438,8 @@ public static class AdminEndpoints
             string? environment = null,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var query = new GetConfigByKeyQuery(key);
             var config = await mediator.Send(query, ct);
@@ -1743,15 +1457,8 @@ public static class AdminEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
@@ -1781,23 +1488,16 @@ public static class AdminEndpoints
         .Produces<ConfigurationDto>(201)
         .ProducesValidationProblem();
 
-        group.MapPut("/admin/configurations/{id}", async (
-            string id,
+        group.MapPut("/admin/configurations/{id:guid}", async (
+            Guid id,
             UpdateConfigurationRequest request,
             HttpContext context,
             IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
@@ -1810,7 +1510,7 @@ public static class AdminEndpoints
                 }
 
                 var command = new UpdateConfigValueCommand(
-                    ConfigId: Guid.Parse(id),
+                    ConfigId: id,
                     NewValue: request.Value,
                     UpdatedByUserId: Guid.Parse(session.User.Id)
                 );
@@ -1837,25 +1537,18 @@ public static class AdminEndpoints
         .Produces(404)
         .ProducesValidationProblem();
 
-        group.MapDelete("/admin/configurations/{id}", async (
-            string id,
+        group.MapDelete("/admin/configurations/{id:guid}", async (
+            Guid id,
             HttpContext context,
             IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} deleting configuration {Id}", session.User.Id, id);
-            var command = new DeleteConfigurationCommand(Guid.Parse(id));
+            var command = new DeleteConfigurationCommand(id);
             var success = await mediator.Send(command, ct);
 
             if (!success)
@@ -1872,28 +1565,21 @@ public static class AdminEndpoints
         .Produces(204)
         .Produces(404);
 
-        group.MapPatch("/admin/configurations/{id}/toggle", async (
-            string id,
+        group.MapPatch("/admin/configurations/{id:guid}/toggle", async (
+            Guid id,
             bool isActive,
             HttpContext context,
             IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             logger.LogInformation("Admin {AdminId} toggling configuration {Id} to {Status}",
                 session.User.Id, id, isActive ? "active" : "inactive");
 
-            var command = new ToggleConfigurationCommand(Guid.Parse(id), isActive);
+            var command = new ToggleConfigurationCommand(id, isActive);
             var config = await mediator.Send(command, ct);
 
             if (config == null)
@@ -1917,15 +1603,8 @@ public static class AdminEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
@@ -1962,15 +1641,8 @@ public static class AdminEndpoints
             IMediator mediator,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value1) || value1 is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var command = new ValidateConfigCommand(key, value, valueType);
             var result = await mediator.Send(command, ct);
@@ -1987,15 +1659,8 @@ public static class AdminEndpoints
             bool activeOnly = true,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var query = new ExportConfigsQuery(environment, activeOnly);
             var export = await mediator.Send(query, ct);
@@ -2012,15 +1677,8 @@ public static class AdminEndpoints
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
@@ -2061,24 +1719,17 @@ public static class AdminEndpoints
         .Produces<object>()
         .ProducesValidationProblem();
 
-        group.MapGet("/admin/configurations/{id}/history", async (
-            string id,
+        group.MapGet("/admin/configurations/{id:guid}/history", async (
+            Guid id,
             HttpContext context,
             IMediator mediator,
             int limit = 20,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
-
-            var query = new GetConfigHistoryQuery(Guid.Parse(id), limit);
+            var query = new GetConfigHistoryQuery(id, limit);
             var history = await mediator.Send(query, ct);
             return Results.Json(history);
         })
@@ -2086,30 +1737,23 @@ public static class AdminEndpoints
         .WithTags("Admin", "Configuration")
         .Produces<IReadOnlyList<Api.BoundedContexts.SystemConfiguration.Application.Queries.ConfigurationHistoryDto>>();
 
-        group.MapPost("/admin/configurations/{id}/rollback/{version:int}", async (
-            string id,
+        group.MapPost("/admin/configurations/{id:guid}/rollback/{version:int}", async (
+            Guid id,
             int version,
             HttpContext context,
             IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
                 logger.LogInformation("Admin {AdminId} rolling back configuration {Id} to version {Version}",
                     session.User.Id, id, version);
 
-                var command = new RollbackConfigCommand(Guid.Parse(id), version, Guid.Parse(session.User.Id));
+                var command = new RollbackConfigCommand(id, version, Guid.Parse(session.User.Id));
                 var config = await mediator.Send(command, ct);
 
                 if (config == null)
@@ -2137,15 +1781,8 @@ public static class AdminEndpoints
             IMediator mediator,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var query = new GetConfigCategoriesQuery();
             var categories = await mediator.Send(query, ct);
@@ -2162,15 +1799,8 @@ public static class AdminEndpoints
             string? key = null,
             CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             if (key != null)
             {
@@ -2193,15 +1823,8 @@ public static class AdminEndpoints
         // PERF-03: Cache management endpoints
         group.MapGet("/admin/cache/stats", async (HttpContext context, IAiResponseCacheService cacheService, string? gameId = null, CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
@@ -2227,25 +1850,13 @@ public static class AdminEndpoints
         .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status500InternalServerError);
 
-        group.MapDelete("/admin/cache/games/{gameId}", async (string gameId, HttpContext context, IAiResponseCacheService cacheService, MeepleAiDbContext dbContext, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapDelete("/admin/cache/games/{gameId:guid}", async (Guid gameId, HttpContext context, IAiResponseCacheService cacheService, MeepleAiDbContext dbContext, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
-
-            if (string.IsNullOrWhiteSpace(gameId))
-            {
-                return Results.BadRequest(new { error = "gameId is required" });
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             // Validate game exists (but proceed with cache invalidation even if not - idempotent)
-            var gameExists = await dbContext.Games.AnyAsync(g => g.Id == Guid.Parse(gameId), ct);
+            var gameExists = await dbContext.Games.AnyAsync(g => g.Id == gameId, ct);
             if (!gameExists)
             {
                 logger.LogWarning("Admin {AdminId} invalidating cache for non-existent game {GameId} (idempotent)", session.User.Id, gameId);
@@ -2254,7 +1865,7 @@ public static class AdminEndpoints
             try
             {
                 logger.LogInformation("Admin {AdminId} invalidating cache for game {GameId}", session.User.Id, gameId);
-                await cacheService.InvalidateGameAsync(gameId, ct);
+                await cacheService.InvalidateGameAsync(gameId.ToString(), ct);
                 logger.LogInformation("Successfully invalidated cache for game {GameId}", gameId);
                 return Results.Json(new { ok = true, message = $"Cache invalidated for game '{gameId}'" });
             }
@@ -2282,15 +1893,8 @@ public static class AdminEndpoints
 
         group.MapDelete("/admin/cache/tags/{tag}", async (string tag, HttpContext context, IAiResponseCacheService cacheService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             if (string.IsNullOrWhiteSpace(tag))
             {
@@ -2330,17 +1934,8 @@ public static class AdminEndpoints
         // Create prompt template (Admin only)
         group.MapPost("/prompts", async (CreatePromptTemplateRequest request, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} with role {Role} attempted to create prompt template without admin permission",
-                    session.User.Id, session.User.Role);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
@@ -2362,24 +1957,15 @@ public static class AdminEndpoints
         });
 
         // Create new version of prompt template (Admin only)
-        group.MapPost("/prompts/{templateId}/versions", async (string templateId, CreatePromptVersionRequest request, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/prompts/{templateId:guid}/versions", async (Guid templateId, CreatePromptVersionRequest request, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} with role {Role} attempted to create prompt version without admin permission",
-                    session.User.Id, session.User.Role);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
                 logger.LogInformation("Admin {AdminId} creating new version for prompt template {TemplateId}", session.User.Id, templateId);
-                var version = await promptManagement.CreatePromptVersionAsync(templateId, request, Guid.Parse(session.User.Id), ct);
+                var version = await promptManagement.CreatePromptVersionAsync(templateId.ToString(), request, Guid.Parse(session.User.Id), ct);
                 logger.LogInformation("Prompt version {VersionId} (v{VersionNumber}) created successfully", version.Id, version.VersionNumber);
                 return Results.Created($"/api/v1/prompts/{templateId}/versions/{version.VersionNumber}", version);
             }
@@ -2396,23 +1982,14 @@ public static class AdminEndpoints
         });
 
         // Get version history for prompt template (Admin only)
-        group.MapGet("/prompts/{templateId}/versions", async (string templateId, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/prompts/{templateId:guid}/versions", async (Guid templateId, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} with role {Role} attempted to view prompt version history without admin permission",
-                    session.User.Id, session.User.Role);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
-                var history = await promptManagement.GetVersionHistoryAsync(templateId, ct);
+                var history = await promptManagement.GetVersionHistoryAsync(templateId.ToString(), ct);
                 return Results.Json(history);
             }
             catch (InvalidOperationException ex)
@@ -2423,15 +2000,13 @@ public static class AdminEndpoints
         });
 
         // Get active version of prompt template (Authenticated users)
-        group.MapGet("/prompts/{templateId}/versions/active", async (string templateId, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/prompts/{templateId:guid}/versions/active", async (Guid templateId, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             // Get template to retrieve name
-            var template = await promptManagement.GetTemplateAsync(templateId, ct);
+            var template = await promptManagement.GetTemplateAsync(templateId.ToString(), ct);
             if (template == null)
             {
                 return Results.NotFound(new { error = "Template not found" });
@@ -2447,24 +2022,15 @@ public static class AdminEndpoints
         });
 
         // Activate version (rollback capability) (Admin only)
-        group.MapPut("/prompts/{templateId}/versions/{versionId}/activate", async (string templateId, string versionId, ActivatePromptVersionRequest request, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPut("/prompts/{templateId:guid}/versions/{versionId:guid}/activate", async (Guid templateId, Guid versionId, ActivatePromptVersionRequest request, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} with role {Role} attempted to activate prompt version without admin permission",
-                    session.User.Id, session.User.Role);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
                 logger.LogInformation("Admin {AdminId} activating version {VersionId} for template {TemplateId}", session.User.Id, versionId, templateId);
-                var activatedVersion = await promptManagement.ActivateVersionAsync(templateId, versionId, Guid.Parse(session.User.Id), request.Reason, ct);
+                var activatedVersion = await promptManagement.ActivateVersionAsync(templateId.ToString(), versionId.ToString(), Guid.Parse(session.User.Id), request.Reason, ct);
                 logger.LogInformation("Version {VersionId} (v{VersionNumber}) activated successfully", activatedVersion.Id, activatedVersion.VersionNumber);
                 return Results.Json(activatedVersion);
             }
@@ -2481,23 +2047,14 @@ public static class AdminEndpoints
         });
 
         // Get audit log for prompt template (Admin only)
-        group.MapGet("/prompts/{templateId}/audit-log", async (string templateId, int limit, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/prompts/{templateId:guid}/audit-log", async (Guid templateId, int limit, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} with role {Role} attempted to view audit log without admin permission",
-                    session.User.Id, session.User.Role);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             try
             {
-                var auditLog = await promptManagement.GetAuditLogAsync(templateId, limit, ct);
+                var auditLog = await promptManagement.GetAuditLogAsync(templateId.ToString(), limit, ct);
                 return Results.Json(auditLog);
             }
             catch (InvalidOperationException ex)
@@ -2515,38 +2072,20 @@ public static class AdminEndpoints
         // List all prompt templates (Admin only)
         group.MapGet("/prompts", async (string? category, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} with role {Role} attempted to list prompt templates without admin permission",
-                    session.User.Id, session.User.Role);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             var templates = await promptManagement.ListTemplatesAsync(category, ct);
             return Results.Json(templates);
         });
 
         // Get specific prompt template (Admin only)
-        group.MapGet("/prompts/{templateId}", async (string templateId, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapGet("/prompts/{templateId:guid}", async (Guid templateId, HttpContext context, IPromptManagementService promptManagement, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} with role {Role} attempted to get prompt template without admin permission",
-                    session.User.Id, session.User.Role);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
-
-            var template = await promptManagement.GetTemplateAsync(templateId, ct);
+            var template = await promptManagement.GetTemplateAsync(templateId.ToString(), ct);
             if (template == null)
             {
                 return Results.NotFound(new { error = "Template not found" });
@@ -2558,10 +2097,8 @@ public static class AdminEndpoints
         // API-04: API Key Management endpoints
         group.MapPost("/api-keys", async (CreateApiKeyRequest request, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             if (string.IsNullOrWhiteSpace(request.KeyName))
             {
@@ -2590,10 +2127,8 @@ public static class AdminEndpoints
 
         group.MapGet("/api-keys", async (HttpContext context, ApiKeyManagementService apiKeyManagement, bool includeRevoked = false, int page = 1, int pageSize = 20, CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             var result = await apiKeyManagement.ListApiKeysAsync(session.User.Id, includeRevoked, page, pageSize, ct);
             return Results.Json(result);
@@ -2601,10 +2136,8 @@ public static class AdminEndpoints
 
         group.MapGet("/api-keys/{keyId}", async (string keyId, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             var apiKey = await apiKeyManagement.GetApiKeyAsync(keyId, session.User.Id, ct);
 
@@ -2619,10 +2152,8 @@ public static class AdminEndpoints
 
         group.MapPut("/api-keys/{keyId}", async (string keyId, UpdateApiKeyRequest request, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             logger.LogInformation("User {UserId} updating API key {KeyId}", session.User.Id, keyId);
 
@@ -2644,10 +2175,8 @@ public static class AdminEndpoints
 
         group.MapDelete("/api-keys/{keyId}", async (string keyId, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             logger.LogInformation("User {UserId} revoking API key {KeyId}", session.User.Id, keyId);
 
@@ -2665,10 +2194,8 @@ public static class AdminEndpoints
 
         group.MapPost("/api-keys/{keyId}/rotate", async (string keyId, RotateApiKeyRequest? request, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             logger.LogInformation("User {UserId} rotating API key {KeyId}", session.User.Id, keyId);
 
@@ -2690,10 +2217,8 @@ public static class AdminEndpoints
 
         group.MapGet("/api-keys/{keyId}/usage", async (string keyId, HttpContext context, ApiKeyManagementService apiKeyManagement, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             var usage = await apiKeyManagement.GetApiKeyUsageAsync(keyId, session.User.Id, ct);
 
@@ -2709,17 +2234,8 @@ public static class AdminEndpoints
         // CHESS-03: Chess knowledge indexing endpoints
         group.MapPost("/chess/index", async (HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} with role {Role} attempted to index chess knowledge without permission",
-                    session.User.Id, session.User.Role);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             logger.LogInformation("Admin {UserId} starting chess knowledge indexing", session.User.Id);
 
@@ -2745,10 +2261,8 @@ public static class AdminEndpoints
 
         group.MapGet("/chess/search", async (string? q, int? limit, HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             if (string.IsNullOrWhiteSpace(q))
             {
@@ -2782,17 +2296,8 @@ public static class AdminEndpoints
 
         group.MapDelete("/chess/index", async (HttpContext context, IChessKnowledgeService chessService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning("User {UserId} with role {Role} attempted to delete chess knowledge without permission",
-                    session.User.Id, session.User.Role);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
+            var (authorized, session, error) = context.RequireAdminSession();
+            if (!authorized) return error!;
 
             logger.LogInformation("Admin {UserId} deleting all chess knowledge", session.User.Id);
 

@@ -78,10 +78,12 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
         var userPrompt = $"Question: {query.Question}\n\nContext:\n{context}";
 
         // Step 3: Generate answer with LLM
-        var llmResponse = await _llmService.GenerateResponseAsync(
+        var llmResult = await _llmService.GenerateCompletionAsync(
             systemPrompt,
             userPrompt,
             cancellationToken);
+
+        var llmResponse = llmResult.Response;
 
         // Calculate LLM confidence
         var llmConfidence = _qualityTrackingService.CalculateLlmConfidence(

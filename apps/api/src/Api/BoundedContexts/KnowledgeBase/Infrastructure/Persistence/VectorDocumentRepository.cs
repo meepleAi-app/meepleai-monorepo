@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Mappers;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,7 +8,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 
 /// <summary>
 /// EF Core implementation of IVectorDocumentRepository.
-/// Maps domain VectorDocument entities to persistence layer.
+/// Maps domain VectorDocument entities to persistence layer using KnowledgeBaseMappers.
 /// </summary>
 public class VectorDocumentRepository : IVectorDocumentRepository
 {
@@ -20,9 +21,11 @@ public class VectorDocumentRepository : IVectorDocumentRepository
 
     public async Task<VectorDocument?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        // TODO: Map from EF entity (VectorDocumentEntity) to domain entity (VectorDocument)
-        // This will require mapping logic between persistence and domain models
-        throw new NotImplementedException("Mapping from EF entity to domain entity not yet implemented");
+        var entity = await _context.VectorDocuments
+            .AsNoTracking()
+            .FirstOrDefaultAsync(vd => vd.Id == id, cancellationToken);
+
+        return entity?.ToDomain();
     }
 
     public async Task<VectorDocument?> GetByGameAndSourceAsync(
@@ -30,35 +33,46 @@ public class VectorDocumentRepository : IVectorDocumentRepository
         Guid sourceDocumentId,
         CancellationToken cancellationToken = default)
     {
-        // TODO: Query EF context and map to domain entity
-        throw new NotImplementedException("Mapping from EF entity to domain entity not yet implemented");
+        var entity = await _context.VectorDocuments
+            .AsNoTracking()
+            .FirstOrDefaultAsync(vd =>
+                vd.GameId == gameId &&
+                vd.PdfDocumentId == sourceDocumentId,
+                cancellationToken);
+
+        return entity?.ToDomain();
     }
 
     public async Task<List<VectorDocument>> GetByGameIdAsync(
         Guid gameId,
         CancellationToken cancellationToken = default)
     {
-        // TODO: Query EF context and map to domain entities
-        throw new NotImplementedException("Mapping from EF entity to domain entity not yet implemented");
+        var entities = await _context.VectorDocuments
+            .AsNoTracking()
+            .Where(vd => vd.GameId == gameId)
+            .ToListAsync(cancellationToken);
+
+        return entities.Select(e => e.ToDomain()).ToList();
     }
 
     public async Task AddAsync(VectorDocument document, CancellationToken cancellationToken = default)
     {
-        // TODO: Map from domain entity to EF entity and add to context
-        throw new NotImplementedException("Mapping from domain entity to EF entity not yet implemented");
+        var entity = document.ToEntity();
+        await _context.VectorDocuments.AddAsync(entity, cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task UpdateAsync(VectorDocument document, CancellationToken cancellationToken = default)
     {
-        // TODO: Map from domain entity to EF entity and update
-        throw new NotImplementedException("Mapping from domain entity to EF entity not yet implemented");
+        var entity = document.ToEntity();
+        _context.VectorDocuments.Update(entity);
+        await _context.SaveChangesAsync(cancellationToken);
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        // Query existing EF entity
         var entity = await _context.VectorDocuments
-            .FirstOrDefaultAsync(vd => vd.Id == id.ToString(), cancellationToken);
+            .FirstOrDefaultAsync(vd => vd.Id == id, cancellationToken);
 
         if (entity != null)
         {
@@ -74,8 +88,8 @@ public class VectorDocumentRepository : IVectorDocumentRepository
     {
         return await _context.VectorDocuments
             .AnyAsync(vd =>
-                vd.GameId == gameId.ToString() &&
-                vd.SourceDocumentId == sourceDocumentId.ToString(),
+                vd.GameId == gameId &&
+                vd.PdfDocumentId == sourceDocumentId,
                 cancellationToken);
     }
 

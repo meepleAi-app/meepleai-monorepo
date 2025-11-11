@@ -84,7 +84,7 @@ public class EmbeddingRepository : IEmbeddingRepository
     {
         // Query from PostgreSQL VectorDocuments table
         return await _context.VectorDocuments
-            .Where(vd => vd.GameId == gameId.ToString())
+            .Where(vd => vd.GameId == gameId)
             .SumAsync(vd => vd.ChunkCount, cancellationToken);
     }
 }

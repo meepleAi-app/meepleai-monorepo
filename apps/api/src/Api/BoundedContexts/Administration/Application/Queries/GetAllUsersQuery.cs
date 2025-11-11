@@ -1,5 +1,5 @@
 using Api.Models;
-using MediatR;
+using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.Administration.Application.Queries;
 
@@ -13,4 +13,4 @@ public record GetAllUsersQuery(
     string? SortOrder = null,
     int Page = 1,
     int Limit = 20
-) : IRequest<PagedResult<UserDto>>;
+) : IQuery<PagedResult<UserDto>>;

@@ -1,9 +1,9 @@
 using Api.Models;
-using MediatR;
+using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.Administration.Application.Queries;
 
 /// <summary>
 /// Query to get all active alerts.
 /// </summary>
-public record GetActiveAlertsQuery : IRequest<List<AlertDto>>;
+public record GetActiveAlertsQuery : IQuery<List<AlertDto>>;

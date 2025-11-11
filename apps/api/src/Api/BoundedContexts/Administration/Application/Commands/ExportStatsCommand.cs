@@ -1,4 +1,4 @@
-using MediatR;
+using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.Administration.Application.Commands;
 
@@ -10,4 +10,4 @@ public record ExportStatsCommand(
     DateTime? FromDate = null,
     DateTime? ToDate = null,
     string? GameId = null
-) : IRequest<string>;
+) : ICommand<string>;

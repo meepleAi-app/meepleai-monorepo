@@ -1,5 +1,5 @@
 using Api.Models;
-using MediatR;
+using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.Administration.Application.Commands;
 
@@ -11,4 +11,4 @@ public record UpdateUserCommand(
     string? Email = null,
     string? DisplayName = null,
     string? Role = null
-) : IRequest<UserDto>;
+) : ICommand<UserDto>;

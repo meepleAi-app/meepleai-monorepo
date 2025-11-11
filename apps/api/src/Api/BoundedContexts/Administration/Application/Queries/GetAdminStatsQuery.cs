@@ -1,5 +1,5 @@
 using Api.Models;
-using MediatR;
+using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.Administration.Application.Queries;
 
@@ -12,4 +12,4 @@ public record GetAdminStatsQuery(
     int Days = 30,
     string? GameId = null,
     string? RoleFilter = null
-) : IRequest<DashboardStatsDto>;
+) : IQuery<DashboardStatsDto>;

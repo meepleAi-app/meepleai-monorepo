@@ -1,5 +1,5 @@
 using Api.Models;
-using MediatR;
+using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.Administration.Application.Commands;
 
@@ -12,4 +12,4 @@ public record CreateUserCommand(
     string Password,
     string DisplayName,
     string Role = "user"
-) : IRequest<UserDto>;
+) : ICommand<UserDto>;

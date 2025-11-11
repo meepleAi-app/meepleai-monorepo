@@ -115,6 +115,14 @@ public class UserRepository : IUserRepository
         return user;
     }
 
+    public async Task<int> CountAdminsAsync(CancellationToken cancellationToken = default)
+    {
+        var adminRole = Role.Admin.Value;
+        return await _dbContext.Users
+            .AsNoTracking()
+            .CountAsync(u => u.Role == adminRole, cancellationToken);
+    }
+
     /// <summary>
     /// Maps domain entity to persistence entity.
     /// </summary>

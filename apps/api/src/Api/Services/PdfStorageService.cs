@@ -5,6 +5,7 @@ using Api.Infrastructure.Security;
 using Api.Models;
 using Api.Services.Exceptions;
 using Api.Services.Pdf;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -20,7 +21,7 @@ public class PdfStorageService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<PdfStorageService> _logger;
     private readonly PdfTextExtractionService _textExtractionService;
-    private readonly PdfTableExtractionService _tableExtractionService;
+    private readonly IPdfTableExtractor _tableExtractor;
     private readonly IBackgroundTaskService _backgroundTaskService;
     private readonly IAiResponseCacheService _cacheService;
     private readonly IBlobStorageService _blobStorageService;
@@ -39,7 +40,7 @@ public class PdfStorageService
         IServiceScopeFactory scopeFactory,
         ILogger<PdfStorageService> logger,
         PdfTextExtractionService textExtractionService,
-        PdfTableExtractionService tableExtractionService,
+        IPdfTableExtractor tableExtractor,
         IBackgroundTaskService backgroundTaskService,
         IAiResponseCacheService cacheService,
         IBlobStorageService blobStorageService,
@@ -52,7 +53,7 @@ public class PdfStorageService
         _scopeFactory = scopeFactory;
         _logger = logger;
         _textExtractionService = textExtractionService;
-        _tableExtractionService = tableExtractionService;
+        _tableExtractor = tableExtractor;
         _backgroundTaskService = backgroundTaskService;
         _cacheService = cacheService;
         _blobStorageService = blobStorageService;
@@ -381,11 +382,11 @@ public class PdfStorageService
             pdfDoc.CharacterCount = fullText.Length;
             await db.SaveChangesAsync(ct);
 
-            // Extract structured content (tables, diagrams)
-            var tableExtractionService = scope.ServiceProvider.GetService<PdfTableExtractionService>() ?? _tableExtractionService;
-            if (tableExtractionService != null)
+            // Extract structured content (tables, diagrams) using new adapter pattern
+            var tableExtractor = scope.ServiceProvider.GetService<IPdfTableExtractor>() ?? _tableExtractor;
+            if (tableExtractor != null)
             {
-                var structuredResult = await tableExtractionService.ExtractStructuredContentAsync(filePath);
+                var structuredResult = await tableExtractor.ExtractStructuredContentAsync(filePath, ct);
                 if (structuredResult.Success)
                 {
                     pdfDoc.ExtractedTables = System.Text.Json.JsonSerializer.Serialize(structuredResult.Tables);

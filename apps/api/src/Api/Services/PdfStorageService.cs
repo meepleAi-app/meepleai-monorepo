@@ -20,7 +20,8 @@ public class PdfStorageService
     private readonly MeepleAiDbContext _db;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<PdfStorageService> _logger;
-    private readonly PdfTextExtractionService _textExtractionService;
+    private readonly PdfTextExtractionService _textExtractionService; // Legacy - being replaced
+    private readonly IPdfTextExtractor _pdfTextExtractor;
     private readonly IPdfTableExtractor _tableExtractor;
     private readonly IBackgroundTaskService _backgroundTaskService;
     private readonly IAiResponseCacheService _cacheService;
@@ -40,6 +41,7 @@ public class PdfStorageService
         IServiceScopeFactory scopeFactory,
         ILogger<PdfStorageService> logger,
         PdfTextExtractionService textExtractionService,
+        IPdfTextExtractor pdfTextExtractor,
         IPdfTableExtractor tableExtractor,
         IBackgroundTaskService backgroundTaskService,
         IAiResponseCacheService cacheService,
@@ -52,7 +54,8 @@ public class PdfStorageService
         _db = db;
         _scopeFactory = scopeFactory;
         _logger = logger;
-        _textExtractionService = textExtractionService;
+        _textExtractionService = textExtractionService; // Legacy - being replaced
+        _pdfTextExtractor = pdfTextExtractor;
         _tableExtractor = tableExtractor;
         _backgroundTaskService = backgroundTaskService;
         _cacheService = cacheService;
@@ -360,13 +363,16 @@ public class PdfStorageService
 
             // Step 1: Extract text with page tracking (AI-08) (20-40%)
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, 0, 0, startTime, null, ct);
-            var extractResult = await _textExtractionService.ExtractPagedTextAsync(filePath, ct);
+
+            // Use new DDD adapter (Issue #940 Phase 3)
+            await using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var extractResult = await _pdfTextExtractor.ExtractPagedTextAsync(fileStream, enableOcrFallback: true, ct);
 
             if (!extractResult.Success)
             {
-                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractResult.Error, ct);
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractResult.ErrorMessage, ct);
                 pdfDoc.ProcessingStatus = "failed";
-                pdfDoc.ProcessingError = extractResult.Error;
+                pdfDoc.ProcessingError = extractResult.ErrorMessage;
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 await db.SaveChangesAsync(ct);
                 return;
@@ -378,8 +384,8 @@ public class PdfStorageService
                 .Select(pc => pc.Text));
 
             pdfDoc.ExtractedText = fullText;
-            pdfDoc.PageCount = extractResult.TotalPageCount;
-            pdfDoc.CharacterCount = fullText.Length;
+            pdfDoc.PageCount = extractResult.TotalPages;
+            pdfDoc.CharacterCount = extractResult.TotalCharacters;
             await db.SaveChangesAsync(ct);
 
             // Extract structured content (tables, diagrams) using new adapter pattern
@@ -407,7 +413,7 @@ public class PdfStorageService
                 }
             }
 
-            var totalPages = extractResult.TotalPageCount;
+            var totalPages = extractResult.TotalPages;
             await UpdateProgressAsync(db, pdfId, ProcessingStep.Extracting, totalPages, totalPages, startTime, null, ct);
 
 

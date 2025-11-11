@@ -161,10 +161,15 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IBlobStorageService, BlobStorageService>();
 
         // PDF main services
-        services.AddScoped<PdfTextExtractionService>();
+        services.AddScoped<PdfTextExtractionService>(); // Legacy - being replaced by IPdfTextExtractor
         services.AddScoped<PdfTableExtractionService>(); // Refactored facade
         // PDF-09: Validation service migrated to DocumentProcessing DDD context (DocumentProcessingServiceExtensions)
         services.AddScoped<PdfStorageService>(); // Refactored facade
+
+        // Issue #940 Phase 3: DDD PDF text extraction adapter
+        services.AddSingleton<BoundedContexts.DocumentProcessing.Domain.Services.PdfTextProcessingDomainService>();
+        services.AddScoped<BoundedContexts.DocumentProcessing.Infrastructure.External.IPdfTextExtractor,
+            BoundedContexts.DocumentProcessing.Infrastructure.External.DocnetPdfTextExtractor>();
 
         // PDF-02: OCR service for fallback text extraction (Windows-only)
 #pragma warning disable CA1416 // TesseractOcrAdapter is Windows-only by design

@@ -1,3 +1,5 @@
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
@@ -617,7 +619,7 @@ group.MapDelete("/admin/users/{userId}/sessions", async (string userId, HttpCont
 // ADMIN-02: Analytics dashboard endpoints
 group.MapGet("/admin/analytics", async (
     HttpContext context,
-    IAdminStatsService statsService,
+    IMediator mediator,
     DateTime? fromDate = null,
     DateTime? toDate = null,
     int days = 30,
@@ -635,8 +637,8 @@ group.MapGet("/admin/analytics", async (
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    var queryParams = new AnalyticsQueryParams(fromDate, toDate, days, gameId, roleFilter);
-    var stats = await statsService.GetDashboardStatsAsync(queryParams, ct);
+    var query = new GetAdminStatsQuery(fromDate, toDate, days, gameId, roleFilter);
+    var stats = await mediator.Send(query, ct);
     return Results.Ok(stats);
 })
 .WithName("GetAnalytics")
@@ -648,7 +650,7 @@ group.MapGet("/admin/analytics", async (
 
 group.MapPost("/admin/analytics/export", async (
     HttpContext context,
-    IAdminStatsService statsService,
+    IMediator mediator,
     ExportDataRequest request,
     CancellationToken ct = default) =>
 {
@@ -664,7 +666,8 @@ group.MapPost("/admin/analytics/export", async (
 
     try
     {
-        var data = await statsService.ExportDashboardDataAsync(request, ct);
+        var command = new ExportStatsCommand(request.Format, request.FromDate, request.ToDate, request.GameId);
+        var data = await mediator.Send(command, ct);
         var contentType = request.Format.ToLowerInvariant() switch
         {
             "csv" => "text/csv",
@@ -1482,7 +1485,7 @@ group.MapGet("/admin/prompts/evaluations/{evaluationId}/report", async (
 // ADMIN-01: User management endpoints
 group.MapGet("/admin/users", async (
     HttpContext context,
-    UserManagementService userManagement,
+    IMediator mediator,
     string? search = null,
     string? role = null,
     string? sortBy = null,
@@ -1501,7 +1504,8 @@ group.MapGet("/admin/users", async (
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    var result = await userManagement.GetUsersAsync(search, role, sortBy, sortOrder, page, limit, ct);
+    var query = new GetAllUsersQuery(search, role, sortBy, sortOrder, page, limit);
+    var result = await mediator.Send(query, ct);
     return Results.Json(result);
 })
 .WithName("GetUsers")
@@ -1510,7 +1514,7 @@ group.MapGet("/admin/users", async (
 group.MapPost("/admin/users", async (
     CreateUserRequest request,
     HttpContext context,
-    UserManagementService userManagement,
+    IMediator mediator,
     ILogger<Program> logger,
     CancellationToken ct) =>
 {
@@ -1527,7 +1531,8 @@ group.MapPost("/admin/users", async (
     try
     {
         logger.LogInformation("Admin {AdminId} creating new user with email {Email}", session.User.Id, request.Email);
-        var user = await userManagement.CreateUserAsync(request, ct);
+        var command = new CreateUserCommand(request.Email, request.Password, request.DisplayName, request.Role ?? "user");
+        var user = await mediator.Send(command, ct);
         logger.LogInformation("User {UserId} created successfully", user.Id);
         return Results.Created($"/api/v1/admin/users/{user.Id}", user);
     }
@@ -1544,7 +1549,7 @@ group.MapPut("/admin/users/{id}", async (
     string id,
     UpdateUserRequest request,
     HttpContext context,
-    UserManagementService userManagement,
+    IMediator mediator,
     ILogger<Program> logger,
     CancellationToken ct) =>
 {
@@ -1561,7 +1566,8 @@ group.MapPut("/admin/users/{id}", async (
     try
     {
         logger.LogInformation("Admin {AdminId} updating user {UserId}", session.User.Id, id);
-        var user = await userManagement.UpdateUserAsync(id, request, ct);
+        var command = new UpdateUserCommand(id, request.Email, request.DisplayName, request.Role);
+        var user = await mediator.Send(command, ct);
         logger.LogInformation("User {UserId} updated successfully", id);
         return Results.Ok(user);
     }
@@ -1582,7 +1588,7 @@ group.MapPut("/admin/users/{id}", async (
 group.MapDelete("/admin/users/{id}", async (
     string id,
     HttpContext context,
-    UserManagementService userManagement,
+    IMediator mediator,
     ILogger<Program> logger,
     CancellationToken ct) =>
 {
@@ -1599,7 +1605,8 @@ group.MapDelete("/admin/users/{id}", async (
     try
     {
         logger.LogInformation("Admin {AdminId} deleting user {UserId}", session.User.Id, id);
-        await userManagement.DeleteUserAsync(id, session.User.Id, ct);
+        var command = new DeleteUserCommand(id, session.User.Id);
+        await mediator.Send(command, ct);
         logger.LogInformation("User {UserId} deleted successfully", id);
         return Results.NoContent();
     }

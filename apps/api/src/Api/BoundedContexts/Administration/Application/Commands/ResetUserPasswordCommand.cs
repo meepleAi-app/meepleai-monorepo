@@ -1,4 +1,4 @@
-using MediatR;
+using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.Administration.Application.Commands;
 
@@ -8,4 +8,4 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 public record ResetUserPasswordCommand(
     string UserId,
     string NewPassword
-) : IRequest<Unit>;
+) : ICommand;

@@ -1,5 +1,5 @@
 using Api.Models;
-using MediatR;
+using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.Administration.Application.Queries;
 
@@ -9,4 +9,4 @@ namespace Api.BoundedContexts.Administration.Application.Queries;
 public record GetAlertHistoryQuery(
     DateTime FromDate,
     DateTime ToDate
-) : IRequest<List<AlertDto>>;
+) : IQuery<List<AlertDto>>;

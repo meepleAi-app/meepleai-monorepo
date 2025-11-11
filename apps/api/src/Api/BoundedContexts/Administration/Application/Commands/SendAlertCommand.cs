@@ -1,5 +1,5 @@
 using Api.Models;
-using MediatR;
+using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.Administration.Application.Commands;
 
@@ -11,4 +11,4 @@ public record SendAlertCommand(
     string Severity,
     string Message,
     Dictionary<string, object>? Metadata = null
-) : IRequest<AlertDto>;
+) : ICommand<AlertDto>;

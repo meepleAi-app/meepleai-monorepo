@@ -192,10 +192,10 @@ public static class ApplicationServiceExtensions
 
     private static IServiceCollection AddAdminServices(this IServiceCollection services)
     {
-        // ADMIN-01: User management service
-        services.AddScoped<UserManagementService>();
+        // ADMIN-01: User management - MIGRATED TO DDD/CQRS (handlers in Administration bounded context)
+        // UserManagementService REMOVED (243 lines eliminated)
 
-        // ADMIN-02: Analytics dashboard service
+        // ADMIN-02: Analytics dashboard service (still used by handlers as infrastructure)
         services.AddScoped<IAdminStatsService, AdminStatsService>();
 
         return services;

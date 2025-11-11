@@ -1,5 +1,5 @@
 using Api.Models;
-using MediatR;
+using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.Administration.Application.Commands;
 
@@ -9,4 +9,4 @@ namespace Api.BoundedContexts.Administration.Application.Commands;
 public record ChangeUserRoleCommand(
     string UserId,
     string NewRole
-) : IRequest<UserDto>;
+) : ICommand<UserDto>;

@@ -1,0 +1,29 @@
+using Api.BoundedContexts.Administration.Application.Queries;
+using Api.Models;
+using Api.Services;
+using Api.SharedKernel.Application.Interfaces;
+
+namespace Api.BoundedContexts.Administration.Application.Handlers;
+
+/// <summary>
+/// Handler for GetAlertHistoryQuery.
+/// Delegates to AlertingService (service will be refactored in future iterations).
+/// </summary>
+public class GetAlertHistoryQueryHandler : IQueryHandler<GetAlertHistoryQuery, List<AlertDto>>
+{
+    private readonly AlertingService _alertingService;
+
+    public GetAlertHistoryQueryHandler(AlertingService alertingService)
+    {
+        _alertingService = alertingService;
+    }
+
+    public async Task<List<AlertDto>> Handle(GetAlertHistoryQuery query, CancellationToken cancellationToken)
+    {
+        return await _alertingService.GetAlertHistoryAsync(
+            query.FromDate,
+            query.ToDate,
+            cancellationToken
+        );
+    }
+}

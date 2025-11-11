@@ -25,4 +25,10 @@ public interface IUserRepository : IRepository<User, Guid>
     /// Used for first-user-is-admin logic.
     /// </summary>
     Task<bool> HasAnyUsersAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Counts the number of admin users in the system.
+    /// Used to prevent deletion of the last admin.
+    /// </summary>
+    Task<int> CountAdminsAsync(CancellationToken cancellationToken = default);
 }

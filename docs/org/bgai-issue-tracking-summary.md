@@ -1,8 +1,43 @@
 # Board Game AI - Issue Tracking Implementation Summary
 
-**Date**: 2025-01-15
-**Status**: 85 issues planned, scripts ready for creation
+**Date**: 2025-01-15 (Updated after architecture change)
+**Status**: 9 issues created (#945-#954), 76 remaining, LLMWhisperer removed
+**Architecture**: 100% Open Source (Unstructured + SmolDocling + Docnet)
 **Document**: solo-developer-execution-plan.md updated with day-by-day tracking
+
+---
+
+## 🔄 Architecture Change (2025-01-15)
+
+### Decision: Replace LLMWhisperer with Unstructured
+
+**Original Plan**:
+- Stage 1: LLMWhisperer (API service, $0-99/month, 100 pages/day free tier)
+- Stage 2: SmolDocling (VLM open source)
+- Stage 3: Docnet (C# fallback)
+
+**New Architecture** (100% Open Source):
+- Stage 1: **Unstructured** (Apache 2.0, RAG-optimized, 1.29s, zero cost)
+- Stage 2: SmolDocling (VLM 256M, complex layouts)
+- Stage 3: Docnet (existing fallback)
+
+**Why Unstructured**:
+1. ✅ Apache 2.0 license (commercial-safe, no fees)
+2. ✅ "Clean semantic chunks, **perfect for RAG workflows**" (benchmark winner)
+3. ✅ Faster than LLMWhisperer (1.29s vs minutes)
+4. ✅ Self-hosted (full control, no vendor lock-in)
+5. ✅ Italian language support (tesseract-ocr-ita)
+6. ✅ Built-in semantic chunking (ideal for embeddings)
+
+**Impact**:
+- **Time Saved**: Week 1 reduced from 5 days → 3 days
+- **Cost Saved**: ~$600-1200/year in API fees
+- **Issues Closed**: #941-#944 (LLMWhisperer)
+- **Issues Created**: #952-#954 (Unstructured replacement)
+
+**References**:
+- Research: `docs/kb/Sistemi AI per arbitrare giochi da tavolo stato dell'arte 2025.md`
+- Analysis: `docs/architecture/pdf-extraction-opensource-alternatives.md`
 
 ---
 

@@ -296,6 +296,9 @@ v1Api.MapRuleSpecEndpoints();
 v1Api.MapChatEndpoints();
 v1Api.MapAdminEndpoints();
 
+// DDD-PHASE3: KnowledgeBase bounded context endpoints
+v1Api.MapKnowledgeBaseEndpoints();
+
 app.Run();
 
 // Bootstrap: Create initial admin user if database is empty

@@ -1,8 +1,9 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.Models;
 using Api.Routing;
-using Api.Services;
+using MediatR;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 
@@ -17,7 +18,7 @@ namespace Api.Authentication;
 /// ASP.NET tried to challenge unauthenticated requests (500 instead of 401/403).
 ///
 /// Solution: Provide a proper authentication handler that:
-/// 1. Validates session cookies via AuthService (same as SessionAuthenticationMiddleware)
+/// 1. Validates session cookies via DDD CQRS ValidateSessionQuery (same as SessionAuthenticationMiddleware)
 /// 2. Creates ClaimsPrincipal for authenticated users
 /// 3. Returns NoResult for unauthenticated requests (allows proper 401 from authorization)
 /// 4. Handles challenge (401) and forbidden (403) responses correctly
@@ -25,21 +26,21 @@ namespace Api.Authentication;
 /// Architecture:
 /// - SessionAuthenticationMiddleware: Runs first, populates HttpContext.Items[ActiveSession]
 /// - SessionAuthenticationHandler: Runs during authentication, creates ClaimsPrincipal from session
-/// - Both use the same AuthService.ValidateSessionAsync() for consistency
+/// - Both use the same ValidateSessionQuery via MediatR for consistency
 /// - Endpoints using .RequireAuthorization() now get proper 401/403 instead of 500
 /// </summary>
 public class SessionAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
-    private readonly AuthService _authService;
+    private readonly IMediator _mediator;
 
     public SessionAuthenticationHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder,
-        AuthService authService)
+        IMediator mediator)
         : base(options, logger, encoder)
     {
-        _authService = authService;
+        _mediator = mediator;
     }
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -60,9 +61,11 @@ public class SessionAuthenticationHandler : AuthenticationHandler<Authentication
 
         try
         {
-            // Validate session via AuthService (same logic as SessionAuthenticationMiddleware)
-            var session = await _authService.ValidateSessionAsync(token);
-            if (session == null)
+            // Validate session via DDD CQRS ValidateSessionQuery (same logic as SessionAuthenticationMiddleware)
+            var query = new ValidateSessionQuery(SessionToken: token);
+            var result = await _mediator.Send(query);
+
+            if (!result.IsValid || result.User == null)
             {
                 // Invalid/expired session - return NoResult (allows proper 401)
                 return AuthenticateResult.NoResult();
@@ -71,23 +74,30 @@ public class SessionAuthenticationHandler : AuthenticationHandler<Authentication
             // Create claims from validated session
             var claims = new List<Claim>
             {
-                new(ClaimTypes.NameIdentifier, session.User.Id),
-                new(ClaimTypes.Email, session.User.Email),
-                new(ClaimTypes.Role, session.User.Role)
+                new(ClaimTypes.NameIdentifier, result.User.Id.ToString()),
+                new(ClaimTypes.Email, result.User.Email),
+                new(ClaimTypes.Role, result.User.Role)
             };
 
-            if (!string.IsNullOrWhiteSpace(session.User.DisplayName))
+            if (!string.IsNullOrWhiteSpace(result.User.DisplayName))
             {
-                claims.Add(new Claim(ClaimTypes.Name, session.User.DisplayName!));
+                claims.Add(new Claim(ClaimTypes.Name, result.User.DisplayName));
             }
 
             var identity = new ClaimsIdentity(claims, Scheme.Name);
             var principal = new ClaimsPrincipal(identity);
             var ticket = new AuthenticationTicket(principal, Scheme.Name);
 
-            // Store session in HttpContext.Items for endpoints that need it
-            // (Consistent with SessionAuthenticationMiddleware behavior)
-            Context.Items[nameof(ActiveSession)] = session;
+            // Store session in HttpContext.Items for endpoints that need it (legacy ActiveSession format)
+            // Convert DDD DTO to legacy model for backward compatibility
+            var legacyUser = new AuthUser(
+                Id: result.User.Id.ToString(),
+                Email: result.User.Email,
+                DisplayName: result.User.DisplayName,
+                Role: result.User.Role);
+
+            var activeSession = new ActiveSession(legacyUser, result.ExpiresAt!.Value, result.LastSeenAt);
+            Context.Items[nameof(ActiveSession)] = activeSession;
 
             return AuthenticateResult.Success(ticket);
         }

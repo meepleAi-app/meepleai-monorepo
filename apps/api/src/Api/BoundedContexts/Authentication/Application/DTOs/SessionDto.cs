@@ -21,5 +21,6 @@ public record SessionDto(
 public record SessionStatusDto(
     bool IsValid,
     UserDto? User,
-    DateTime? ExpiresAt
+    DateTime? ExpiresAt,
+    DateTime? LastSeenAt
 );

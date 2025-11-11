@@ -1,9 +1,12 @@
+using Api.BoundedContexts.WorkflowIntegration.Application.Commands;
+using Api.BoundedContexts.WorkflowIntegration.Application.Queries;
 using Api.Configuration;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using Api.Services.Chat;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -263,8 +266,8 @@ group.MapGet("/admin/quality/report", async (
 .Produces(StatusCodes.Status401Unauthorized)
 .Produces(StatusCodes.Status403Forbidden);
 
-// ADM-02: n8n workflow configuration endpoints
-group.MapGet("/admin/n8n", async (HttpContext context, N8nConfigService n8nService, IFeatureFlagService featureFlags, CancellationToken ct) =>
+// ADM-02: n8n workflow configuration endpoints (DDD/CQRS)
+group.MapGet("/admin/n8n", async (IMediator mediator, HttpContext context, IFeatureFlagService featureFlags, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -284,11 +287,11 @@ group.MapGet("/admin/n8n", async (HttpContext context, N8nConfigService n8nServi
             statusCode: 403);
     }
 
-    var configs = await n8nService.GetConfigsAsync(ct);
+    var configs = await mediator.Send(new GetAllN8nConfigsQuery(), ct);
     return Results.Json(new { configs });
 });
 
-group.MapGet("/admin/n8n/{configId}", async (string configId, HttpContext context, N8nConfigService n8nService, CancellationToken ct) =>
+group.MapGet("/admin/n8n/{configId}", async (Guid configId, IMediator mediator, HttpContext context, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -300,7 +303,7 @@ group.MapGet("/admin/n8n/{configId}", async (string configId, HttpContext contex
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    var config = await n8nService.GetConfigAsync(configId, ct);
+    var config = await mediator.Send(new GetN8nConfigByIdQuery(configId), ct);
 
     if (config == null)
     {
@@ -310,7 +313,7 @@ group.MapGet("/admin/n8n/{configId}", async (string configId, HttpContext contex
     return Results.Json(config);
 });
 
-group.MapPost("/admin/n8n", async (CreateN8nConfigRequest request, HttpContext context, N8nConfigService n8nService, ILogger<Program> logger, CancellationToken ct) =>
+group.MapPost("/admin/n8n", async (CreateN8nConfigRequest request, IMediator mediator, IEncryptionService encryptionService, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -324,14 +327,30 @@ group.MapPost("/admin/n8n", async (CreateN8nConfigRequest request, HttpContext c
 
     try
     {
+        // Encrypt API key before storing (AUTH-06 pattern)
+        var apiKeyEncrypted = await encryptionService.EncryptAsync(request.ApiKey, "N8nApiKey");
+
+        var command = new CreateN8nConfigCommand(
+            Name: request.Name,
+            BaseUrl: request.BaseUrl,
+            ApiKeyEncrypted: apiKeyEncrypted,
+            CreatedByUserId: Guid.Parse(session.User.Id),
+            WebhookUrl: request.WebhookUrl
+        );
+
         logger.LogInformation("Admin {UserId} creating n8n config: {Name}", session.User.Id, request.Name);
-        var config = await n8nService.CreateConfigAsync(session.User.Id, request, ct);
+        var config = await mediator.Send(command, ct);
         logger.LogInformation("n8n config {ConfigId} created successfully", config.Id);
         return Results.Json(config);
     }
     catch (InvalidOperationException ex)
     {
         logger.LogWarning("Failed to create n8n config: {Error}", ex.Message);
+        return Results.BadRequest(new { error = ex.Message });
+    }
+    catch (Api.SharedKernel.Domain.Exceptions.DomainException ex)
+    {
+        logger.LogWarning("Domain validation failed: {Error}", ex.Message);
         return Results.BadRequest(new { error = ex.Message });
     }
 });

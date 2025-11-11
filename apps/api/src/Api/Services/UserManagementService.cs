@@ -12,20 +12,17 @@ namespace Api.Services;
 public class UserManagementService
 {
     private readonly MeepleAiDbContext _dbContext;
-    private readonly AuthService _authService;
     private readonly IPasswordHashingService _passwordHashingService;
     private readonly ILogger<UserManagementService> _logger;
     private readonly TimeProvider _timeProvider;
 
     public UserManagementService(
         MeepleAiDbContext dbContext,
-        AuthService authService,
         IPasswordHashingService passwordHashingService,
         ILogger<UserManagementService> logger,
         TimeProvider? timeProvider = null)
     {
         _dbContext = dbContext;
-        _authService = authService;
         _passwordHashingService = passwordHashingService;
         _logger = logger;
         _timeProvider = timeProvider ?? TimeProvider.System;

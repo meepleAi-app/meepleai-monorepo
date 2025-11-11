@@ -20,6 +20,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<RuleAtomEntity> RuleAtoms => Set<RuleAtomEntity>();
     public DbSet<AgentEntity> Agents => Set<AgentEntity>();
     public DbSet<ChatEntity> Chats => Set<ChatEntity>();
+    public DbSet<ChatThreadEntity> ChatThreads => Set<ChatThreadEntity>(); // DDD-PHASE3: KnowledgeBase ChatThread aggregate
     public DbSet<ChatLogEntity> ChatLogs => Set<ChatLogEntity>();
     public DbSet<PdfDocumentEntity> PdfDocuments => Set<PdfDocumentEntity>();
     public DbSet<VectorDocumentEntity> VectorDocuments => Set<VectorDocumentEntity>();

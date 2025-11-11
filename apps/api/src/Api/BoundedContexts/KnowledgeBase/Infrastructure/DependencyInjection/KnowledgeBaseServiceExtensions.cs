@@ -21,6 +21,7 @@ public static class KnowledgeBaseServiceExtensions
         // Infrastructure - Repositories (Scoped - tied to DbContext lifetime)
         services.AddScoped<IVectorDocumentRepository, VectorDocumentRepository>();
         services.AddScoped<IEmbeddingRepository, EmbeddingRepository>();
+        services.AddScoped<IChatThreadRepository, ChatThreadRepository>(); // Issue #924: ChatThread support
 
         // Infrastructure - Adapters (Scoped - uses IQdrantService which is Scoped)
         services.AddScoped<IQdrantVectorStoreAdapter, QdrantVectorStoreAdapter>();

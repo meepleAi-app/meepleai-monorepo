@@ -1,4 +1,4 @@
-using Api.SharedKernel.Domain;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 
 namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;

@@ -1,5 +1,5 @@
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
-using Api.SharedKernel.Domain;
+using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.GameManagement.Domain.Entities;
 

@@ -553,10 +553,28 @@ namespace Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("MaxPlayTimeMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MaxPlayers")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MinPlayTimeMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MinPlayers")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Publisher")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("YearPublished")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -564,6 +582,42 @@ namespace Api.Migrations
                         .IsUnique();
 
                     b.ToTable("games", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameSessionEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PlayersJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("WinnerName")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GameId");
+
+                    b.ToTable("GameSessions");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.N8nConfigEntity", b =>
@@ -1699,6 +1753,17 @@ namespace Api.Migrations
                     b.Navigation("DeletedByUser");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameSessionEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.GameEntity", "Game")
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Game");
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.N8nConfigEntity", b =>

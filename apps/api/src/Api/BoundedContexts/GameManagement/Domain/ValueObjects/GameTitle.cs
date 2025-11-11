@@ -1,4 +1,4 @@
-using Api.SharedKernel.Domain;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 using System.Text.RegularExpressions;
 

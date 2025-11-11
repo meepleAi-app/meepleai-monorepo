@@ -82,7 +82,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
             {
                 new()
                 {
-                    Id = "TC-001",
+                    Id = Guid.NewGuid(),
                     Category = "setup",
                     Difficulty = "easy",
                     Query = "How many players?",
@@ -95,7 +95,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
                 },
                 new()
                 {
-                    Id = "TC-002",
+                    Id = Guid.NewGuid(),
                     Category = "out-of-context",
                     Difficulty = "easy",
                     Query = "What is the capital of France?",
@@ -127,7 +127,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         {
             Id = TestUserId,
             Email = "test@example.com",
-            Role = "admin",
+            Role = UserRole.Admin,
             PasswordHash = "test-password-hash",
             CreatedAt = DateTime.UtcNow
         };
@@ -428,12 +428,12 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
     public async Task EvaluateAsync_VersionNotFound_ThrowsArgumentException()
     {
         // Arrange: Non-existent version ID
-        var nonExistentVersionId = "non-existent-version";
+        var nonExistentVersionId = Guid.NewGuid();
 
         // Act & Assert
         var act = async () => await _service.EvaluateAsync(
                 "test-template-id",
-                nonExistentVersionId,
+                nonExistentVersionId.ToString(),
                 _testDatasetPath);
         var exception = await act.Should().ThrowAsync<ArgumentException>();
 
@@ -718,7 +718,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
 
         // Assert
         var stored = await _dbContext.PromptEvaluationResults
-            .FirstOrDefaultAsync(e => e.Id == evalResult.EvaluationId);
+            .FirstOrDefaultAsync(e => e.Id.ToString() == evalResult.EvaluationId.ToString());
 
         stored.Should().NotBeNull();
         stored.TemplateId.Should().Be(evalResult.TemplateId);

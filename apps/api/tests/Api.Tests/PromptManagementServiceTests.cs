@@ -24,7 +24,7 @@ public class PromptManagementServiceTests : IDisposable
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
     private readonly PromptManagementService _service;
-    private readonly string _testUserId = "test-user-123";
+    private readonly string _testUserId = Guid.NewGuid();
 
     public PromptManagementServiceTests(ITestOutputHelper output)
     {
@@ -47,7 +47,7 @@ public class PromptManagementServiceTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "fake-hash",
-            Role = "admin",
+            Role = UserRole.Admin,
             CreatedAt = DateTime.UtcNow
         };
         _db.Users.Add(testUser);

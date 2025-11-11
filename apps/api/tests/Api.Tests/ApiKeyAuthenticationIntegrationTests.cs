@@ -38,7 +38,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
     {
         // Given: A user with a valid API key
         var user = await CreateTestUserAsync("apikey-user", "editor");
-        var (plaintextKey, _) = await CreateTestApiKeyAsync(
+        (string plaintextKey, _) = await CreateTestApiKeyAsync(
             user.Id,
             "Test Key",
             new[] { "read", "write" });
@@ -65,7 +65,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         // Given: A user with valid API key and a game exists
         var user = await CreateTestUserAsync("games-user", "user");
         var game = await CreateTestGameAsync("TestGame");
-        var (plaintextKey, _) = await CreateTestApiKeyAsync(
+        (string plaintextKey, _) = await CreateTestApiKeyAsync(
             user.Id,
             "Games Key",
             new[] { "read" });
@@ -88,7 +88,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
     {
         // Given: API key for specific environment
         var user = await CreateTestUserAsync($"env-{environment}-user", "user");
-        var (plaintextKey, _) = await CreateTestApiKeyAsync(
+        (string plaintextKey, _) = await CreateTestApiKeyAsync(
             user.Id,
             $"{environment} Key",
             new[] { "read" },
@@ -143,7 +143,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         // Given: User with expired API key
         var user = await CreateTestUserAsync("expired-key-user", "user");
         var expiresAt = DateTime.UtcNow.AddDays(-1); // Expired yesterday
-        var (plaintextKey, _) = await CreateTestApiKeyAsync(
+        (string plaintextKey, _) = await CreateTestApiKeyAsync(
             user.Id,
             "Expired Key",
             new[] { "read" },
@@ -165,7 +165,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
     {
         // Given: User with revoked API key
         var user = await CreateTestUserAsync("revoked-key-user", "user");
-        var (plaintextKey, apiKeyEntity) = await CreateTestApiKeyAsync(
+        (string plaintextKey, var apiKeyEntity) = await CreateTestApiKeyAsync(
             user.Id,
             "Revoked Key",
             new[] { "read" });
@@ -193,7 +193,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
     {
         // Given: User with inactive API key
         var user = await CreateTestUserAsync("inactive-key-user", "user");
-        var (plaintextKey, apiKeyEntity) = await CreateTestApiKeyAsync(
+        (string plaintextKey, var apiKeyEntity) = await CreateTestApiKeyAsync(
             user.Id,
             "Inactive Key",
             new[] { "read" });
@@ -247,7 +247,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         var apiKeyUser = await CreateTestUserAsync("apikey-dual-user", "admin");
         var cookieUser = await CreateTestUserAsync("cookie-dual-user", "user");
 
-        var (plaintextKey, _) = await CreateTestApiKeyAsync(
+        (string plaintextKey, _) = await CreateTestApiKeyAsync(
             apiKeyUser.Id,
             "Dual Auth Key",
             new[] { "read" });
@@ -301,7 +301,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
     {
         // Given: User with active API key
         var user = await CreateTestUserAsync("lifecycle-user", "user");
-        var (plaintextKey, apiKeyEntity) = await CreateTestApiKeyAsync(
+        (string plaintextKey, var apiKeyEntity) = await CreateTestApiKeyAsync(
             user.Id,
             "Lifecycle Key",
             new[] { "read" });
@@ -336,7 +336,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
         // Given: API key expiring in 1 hour (still valid)
         var user = await CreateTestUserAsync("near-expiry-user", "user");
         var expiresAt = DateTime.UtcNow.AddHours(1);
-        var (plaintextKey, _) = await CreateTestApiKeyAsync(
+        (string plaintextKey, _) = await CreateTestApiKeyAsync(
             user.Id,
             "Near Expiry Key",
             new[] { "read" },

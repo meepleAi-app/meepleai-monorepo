@@ -33,13 +33,13 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
         try
         {
             // Arrange database entities
-            DbContext.Games.Add(new GameEntity { Id = "game-1", Name = "Test Game" });
+            DbContext.Games.Add(new GameEntity { Id = Guid.NewGuid(), Name = "Test Game" });
             DbContext.Users.Add(new UserEntity
             {
-                Id = "user-1",
+                Id = Guid.NewGuid(),
                 Email = "user1@example.com",
                 PasswordHash = "hash",
-                Role = "user",
+                Role = UserRole.User,
                 CreatedAt = DateTime.UtcNow
             });
             await DbContext.SaveChangesAsync();

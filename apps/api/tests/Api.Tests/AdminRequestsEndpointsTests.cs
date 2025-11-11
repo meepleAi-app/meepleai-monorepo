@@ -54,7 +54,7 @@ public class AdminRequestsEndpointsTests : AdminTestFixture
         await RegisterAndAuthenticateAsync(editorClient, editorEmail, "Editor");
         var editorUserId = await GetUserIdByEmailAsync(editorEmail);
 
-        var seedContext = await SeedDashboardDataAsync(adminUserId, editorUserId);
+        var seedContext = await SeedDashboardDataAsync(adminUserId, editorUserId.ToString());
 
         // When: Admin requests logs with filters
         var requestUri = $"/api/v1/admin/requests?limit=10&offset=0&userId={adminUserId}&gameId=game-1" +

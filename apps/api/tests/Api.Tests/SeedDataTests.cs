@@ -139,7 +139,7 @@ public class SeedDataTests : IntegrationTestBase
 
         // When: Query for Tic-Tac-Toe game
         var game = await db.Games
-            .FirstOrDefaultAsync(g => g.Id == "tic-tac-toe");
+            .FirstOrDefaultAsync(g => g.Id.ToString() == "tic-tac-toe");
 
         // Then: Game exists with correct properties
         game.Should().NotBeNull();
@@ -162,7 +162,7 @@ public class SeedDataTests : IntegrationTestBase
 
         // When: Query for Chess game
         var game = await db.Games
-            .FirstOrDefaultAsync(g => g.Id == "chess");
+            .FirstOrDefaultAsync(g => g.Id.ToString() == "chess");
 
         // Then: Game exists with correct properties
         game.Should().NotBeNull();
@@ -374,7 +374,7 @@ public class SeedDataTests : IntegrationTestBase
             .CountAsync();
 
         var gameCount = await db.Games
-            .Where(g => g.Id == "tic-tac-toe" || g.Id == "chess")
+            .Where(g => g.Id.ToString() == "tic-tac-toe" || g.Id.ToString() == "chess")
             .CountAsync();
 
         var ruleSpecCount = await db.RuleSpecs

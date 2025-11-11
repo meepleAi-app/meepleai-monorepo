@@ -58,7 +58,7 @@ public class LogsEndpointTests : IntegrationTestBase
             {
                 Id = $"req-001-{TestRunId}",
                 UserId = user1.Id,
-                GameId = "demo-chess",
+                GameId = Guid.NewGuid(),
                 Endpoint = "qa",
                 Query = "How many players?",
                 ResponseSnippet = "Two players.",
@@ -70,7 +70,7 @@ public class LogsEndpointTests : IntegrationTestBase
             {
                 Id = $"req-002-{TestRunId}",
                 UserId = user2.Id,
-                GameId = "demo-chess",
+                GameId = Guid.NewGuid(),
                 Endpoint = "qa",
                 Query = "Explain setup",
                 LatencyMs = 240,

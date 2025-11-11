@@ -43,7 +43,7 @@ public class RuleSpecServiceTimelineTests : IDisposable
         // Create test game
         var game = new GameEntity
         {
-            Id = "test-game",
+            Id = Guid.NewGuid(),
             Name = "Test Game",
             CreatedAt = DateTime.UtcNow
         };
@@ -52,21 +52,21 @@ public class RuleSpecServiceTimelineTests : IDisposable
         // Create test users
         var user1 = new UserEntity
         {
-            Id = "user1",
+            Id = Guid.NewGuid(),
             Email = "user1@test.com",
             DisplayName = "User One",
             PasswordHash = "hash1",
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = DateTime.UtcNow
         };
 
         var user2 = new UserEntity
         {
-            Id = "user2",
+            Id = Guid.NewGuid(),
             Email = "user2@test.com",
             DisplayName = "User Two",
             PasswordHash = "hash2",
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -78,10 +78,10 @@ public class RuleSpecServiceTimelineTests : IDisposable
         var v1 = new RuleSpecEntity
         {
             Id = Guid.NewGuid(),
-            GameId = "test-game",
+            GameId = Guid.NewGuid(),
             Version = "v1",
             CreatedAt = baseTime,
-            CreatedByUserId = "user1",
+            CreatedByUserId = Guid.NewGuid(),
             ParentVersionId = null
         };
         v1.Atoms.Add(new RuleAtomEntity
@@ -96,10 +96,10 @@ public class RuleSpecServiceTimelineTests : IDisposable
         var v2 = new RuleSpecEntity
         {
             Id = Guid.NewGuid(),
-            GameId = "test-game",
+            GameId = Guid.NewGuid(),
             Version = "v2",
             CreatedAt = baseTime.AddDays(1),
-            CreatedByUserId = "user2",
+            CreatedByUserId = Guid.NewGuid(),
             ParentVersionId = v1.Id
         };
         v2.Atoms.Add(new RuleAtomEntity
@@ -122,10 +122,10 @@ public class RuleSpecServiceTimelineTests : IDisposable
         var v3 = new RuleSpecEntity
         {
             Id = Guid.NewGuid(),
-            GameId = "test-game",
+            GameId = Guid.NewGuid(),
             Version = "v3",
             CreatedAt = baseTime.AddDays(2),
-            CreatedByUserId = "user1",
+            CreatedByUserId = Guid.NewGuid(),
             ParentVersionId = v2.Id,
             MergedFromVersionIds = $"{v1.Id},{v2.Id}"
         };

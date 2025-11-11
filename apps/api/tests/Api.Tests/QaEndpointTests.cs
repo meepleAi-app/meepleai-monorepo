@@ -157,7 +157,7 @@ CRITICAL INSTRUCTIONS:
 
         var ragService = new RagService(dbContext, embeddingServiceMock.Object, qdrantServiceMock.Object, hybridSearchMock.Object, llmServiceMock.Object, cacheServiceMock.Object, CreatePromptTemplateMock().Object, ragLoggerMock, CreateQueryExpansionMock().Object, CreateRerankerMock().Object, CreateCitationExtractorMock().Object);
 
-        var gameId = "demo-chess";
+        var gameId = Guid.NewGuid();
 
         var spec = await ruleService.GetOrCreateDemoAsync(gameId);
 

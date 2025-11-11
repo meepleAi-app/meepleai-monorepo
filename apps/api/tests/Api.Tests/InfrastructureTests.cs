@@ -53,11 +53,11 @@ public class InfrastructureTests : IDisposable
         // Arrange
         var user1 = new UserEntity
         {
-            Id = "user-1",
+            Id = Guid.NewGuid(),
             Email = "test@example.com",
             PasswordHash = "hash1",
             DisplayName = "User 1",
-            Role = "user"
+            Role = UserRole.User
         };
 
         _dbContext.Users.Add(user1);
@@ -65,11 +65,11 @@ public class InfrastructureTests : IDisposable
 
         var user2 = new UserEntity
         {
-            Id = "user-2",
+            Id = Guid.NewGuid(),
             Email = "test@example.com", // Duplicate email
             PasswordHash = "hash2",
             DisplayName = "User 2",
-            Role = "user"
+            Role = UserRole.User
         };
 
         _dbContext.Users.Add(user2);
@@ -92,16 +92,16 @@ public class InfrastructureTests : IDisposable
         // Arrange
         var user = new UserEntity
         {
-            Id = "user-cascade",
+            Id = Guid.NewGuid(),
             Email = "cascade@example.com",
             PasswordHash = "hash",
             DisplayName = "Cascade User",
-            Role = "user"
+            Role = UserRole.User
         };
 
         var session1 = new UserSessionEntity
         {
-            Id = "session-1",
+            Id = Guid.NewGuid(),
             UserId = user.Id,
             TokenHash = "token-hash-1",
             ExpiresAt = DateTime.UtcNow.AddHours(1),
@@ -110,7 +110,7 @@ public class InfrastructureTests : IDisposable
 
         var session2 = new UserSessionEntity
         {
-            Id = "session-2",
+            Id = Guid.NewGuid(),
             UserId = user.Id,
             TokenHash = "token-hash-2",
             ExpiresAt = DateTime.UtcNow.AddHours(1),
@@ -143,7 +143,7 @@ public class InfrastructureTests : IDisposable
         // Arrange
         var game1 = new GameEntity
         {
-            Id = "game-1",
+            Id = Guid.NewGuid(),
             Name = "Chess"
         };
 
@@ -152,7 +152,7 @@ public class InfrastructureTests : IDisposable
 
         var game2 = new GameEntity
         {
-            Id = "game-2",
+            Id = Guid.NewGuid(),
             Name = "Chess" // Duplicate name
         };
 
@@ -176,11 +176,11 @@ public class InfrastructureTests : IDisposable
         // Arrange
         var user = new UserEntity
         {
-            Id = "user-required",
+            Id = Guid.NewGuid(),
             Email = null!, // Required field set to null
             PasswordHash = "hash",
             DisplayName = "Test User",
-            Role = "user"
+            Role = UserRole.User
         };
 
         _dbContext.Users.Add(user);
@@ -204,11 +204,11 @@ public class InfrastructureTests : IDisposable
         var longEmail = new string('a', 300) + "@example.com"; // Exceeds 256 char limit
         var user = new UserEntity
         {
-            Id = "user-maxlength",
+            Id = Guid.NewGuid(),
             Email = longEmail,
             PasswordHash = "hash",
             DisplayName = "Test User",
-            Role = "user"
+            Role = UserRole.User
         };
 
         _dbContext.Users.Add(user);
@@ -239,8 +239,8 @@ public class InfrastructureTests : IDisposable
         // Create an API key with a UserId that doesn't exist in the database
         var apiKey = new ApiKeyEntity
         {
-            Id = "apikey-fk-test",
-            UserId = "non-existent-user", // Invalid FK reference
+            Id = Guid.NewGuid(),
+            UserId = Guid.NewGuid(), // Invalid FK reference
             KeyName = "Test Key",
             KeyHash = "hash",
             KeyPrefix = "mpl_test_",
@@ -268,7 +268,7 @@ public class InfrastructureTests : IDisposable
         // Arrange
         var game = new GameEntity
         {
-            Id = "game-rulespec",
+            Id = Guid.NewGuid(),
             Name = "Test Game"
         };
 

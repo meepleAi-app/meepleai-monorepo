@@ -42,11 +42,11 @@ public class PdfExportFormatterTests
         return new ChatEntity
         {
             Id = Guid.NewGuid(),
-            UserId = "user-123",
-            GameId = "test-game",
-            AgentId = "test-agent",
+            UserId = Guid.NewGuid(),
+            GameId = Guid.NewGuid(),
+            AgentId = Guid.NewGuid(),
             StartedAt = new DateTime(2025, 10, 18, 10, 0, 0, DateTimeKind.Utc),
-            Game = new GameEntity { Id = "test-game", Name = gameName },
+            Game = new GameEntity { Id = Guid.NewGuid(), Name = gameName },
             Logs = new List<ChatLogEntity>()
         };
     }

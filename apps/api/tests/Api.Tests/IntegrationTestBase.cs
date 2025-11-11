@@ -63,14 +63,14 @@ public abstract class IntegrationTestBase : IAsyncLifetime
     protected readonly string TestRunId;
 
     // Tracked entities for automatic cleanup
-    private readonly List<string> _testUserIds = new();
-    private readonly List<string> _testGameIds = new();
-    private readonly List<string> _testRuleSpecIds = new();
-    private readonly List<string> _testPdfDocumentIds = new();
-    private readonly List<string> _testChatIds = new();
+    private readonly List<Guid> _testUserIds = new();
+    private readonly List<Guid> _testGameIds = new();
+    private readonly List<Guid> _testRuleSpecIds = new();
+    private readonly List<Guid> _testPdfDocumentIds = new();
+    private readonly List<Guid> _testChatIds = new();
     private readonly List<string> _testAgentIds = new();
-    private readonly List<string> _testN8nConfigIds = new();
-    private readonly List<string> _testApiKeyIds = new();
+    private readonly List<Guid> _testN8nConfigIds = new();
+    private readonly List<Guid> _testApiKeyIds = new();
 
     protected IntegrationTestBase(PostgresCollectionFixture postgresFixture)
     {
@@ -116,15 +116,13 @@ public abstract class IntegrationTestBase : IAsyncLifetime
             // 1. Remove chats (depends on users and games)
             if (_testChatIds.Count > 0)
             {
-                var chatGuids = _testChatIds.Select(Guid.Parse).ToList();
-
                 var chatLogs = await db.ChatLogs
-                    .Where(cl => chatGuids.Contains(cl.ChatId))
+                    .Where(cl => _testChatIds.Contains(cl.ChatId))
                     .ToListAsync();
                 db.ChatLogs.RemoveRange(chatLogs);
 
                 var chats = await db.Chats
-                    .Where(c => chatGuids.Contains(c.Id))
+                    .Where(c => _testChatIds.Contains(c.Id))
                     .ToListAsync();
                 db.Chats.RemoveRange(chats);
             }
@@ -133,12 +131,12 @@ public abstract class IntegrationTestBase : IAsyncLifetime
             if (_testUserIds.Count > 0)
             {
                 var logs = await db.AiRequestLogs
-                    .Where(l => l.UserId != null && _testUserIds.Contains(l.UserId))
+                    .Where(l => l.UserId != null && _testUserIds.Contains(l.UserId.Value))
                     .ToListAsync();
                 db.AiRequestLogs.RemoveRange(logs);
 
                 var feedback = await db.AgentFeedbacks
-                    .Where(f => f.UserId != null && _testUserIds.Contains(f.UserId))
+                    .Where(f => _testUserIds.Contains(f.UserId))
                     .ToListAsync();
                 db.AgentFeedbacks.RemoveRange(feedback);
             }
@@ -147,7 +145,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
             if (_testPdfDocumentIds.Count > 0)
             {
                 var vectorDocs = await db.VectorDocuments
-                    .Where(v => v.PdfDocumentId != null && _testPdfDocumentIds.Contains(v.PdfDocumentId))
+                    .Where(v => _testPdfDocumentIds.Contains(v.PdfDocumentId))
                     .ToListAsync();
                 db.VectorDocuments.RemoveRange(vectorDocs);
 
@@ -160,10 +158,8 @@ public abstract class IntegrationTestBase : IAsyncLifetime
             // 4. Remove RuleSpecs (depends on games)
             if (_testRuleSpecIds.Count > 0)
             {
-                var ruleSpecGuids = _testRuleSpecIds.Select(Guid.Parse).ToList();
-
                 var ruleSpecs = await db.RuleSpecs
-                    .Where(r => ruleSpecGuids.Contains(r.Id))
+                    .Where(r => _testRuleSpecIds.Contains(r.Id))
                     .ToListAsync();
                 db.RuleSpecs.RemoveRange(ruleSpecs);
             }
@@ -207,12 +203,12 @@ public abstract class IntegrationTestBase : IAsyncLifetime
             if (_testUserIds.Count > 0)
             {
                 var sessions = await db.UserSessions
-                    .Where(s => s.UserId != null && _testUserIds.Contains(s.UserId))
+                    .Where(s => _testUserIds.Contains(s.UserId))
                     .ToListAsync();
                 db.UserSessions.RemoveRange(sessions);
 
                 var auditLogs = await db.AuditLogs
-                    .Where(a => a.UserId != null && _testUserIds.Contains(a.UserId))
+                    .Where(a => a.UserId != null && _testUserIds.Contains(a.UserId.Value))
                     .ToListAsync();
                 db.AuditLogs.RemoveRange(auditLogs);
 
@@ -250,9 +246,10 @@ public abstract class IntegrationTestBase : IAsyncLifetime
     /// </summary>
     protected void TrackUserId(string userId)
     {
-        if (!_testUserIds.Contains(userId))
+        var guid = Guid.Parse(userId);
+        if (!_testUserIds.Contains(guid))
         {
-            _testUserIds.Add(userId);
+            _testUserIds.Add(guid);
         }
     }
 
@@ -264,9 +261,10 @@ public abstract class IntegrationTestBase : IAsyncLifetime
     /// </summary>
     protected void TrackGameId(string gameId)
     {
-        if (!_testGameIds.Contains(gameId))
+        var guid = Guid.Parse(gameId);
+        if (!_testGameIds.Contains(guid))
         {
-            _testGameIds.Add(gameId);
+            _testGameIds.Add(guid);
         }
     }
 
@@ -275,9 +273,10 @@ public abstract class IntegrationTestBase : IAsyncLifetime
     /// </summary>
     protected void TrackRuleSpecId(string ruleSpecId)
     {
-        if (!_testRuleSpecIds.Contains(ruleSpecId))
+        var guid = Guid.Parse(ruleSpecId);
+        if (!_testRuleSpecIds.Contains(guid))
         {
-            _testRuleSpecIds.Add(ruleSpecId);
+            _testRuleSpecIds.Add(guid);
         }
     }
 
@@ -286,9 +285,10 @@ public abstract class IntegrationTestBase : IAsyncLifetime
     /// </summary>
     protected void TrackPdfDocumentId(string pdfDocumentId)
     {
-        if (!_testPdfDocumentIds.Contains(pdfDocumentId))
+        var guid = Guid.Parse(pdfDocumentId);
+        if (!_testPdfDocumentIds.Contains(guid))
         {
-            _testPdfDocumentIds.Add(pdfDocumentId);
+            _testPdfDocumentIds.Add(guid);
         }
     }
 
@@ -297,9 +297,10 @@ public abstract class IntegrationTestBase : IAsyncLifetime
     /// </summary>
     protected void TrackApiKeyId(string apiKeyId)
     {
-        if (!_testApiKeyIds.Contains(apiKeyId))
+        var guid = Guid.Parse(apiKeyId);
+        if (!_testApiKeyIds.Contains(guid))
         {
-            _testApiKeyIds.Add(apiKeyId);
+            _testApiKeyIds.Add(guid);
         }
     }
 
@@ -320,7 +321,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 
         var user = new UserEntity
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             Email = $"{username}-{TestRunId}@test.local",
             PasswordHash = HashPassword(password ?? "TestPassword123!"),
             DisplayName = $"Test {username}",
@@ -358,7 +359,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 
         var game = new GameEntity
         {
-            Id = $"{gameName.ToLowerInvariant()}-{TestRunId}",
+            Id = Guid.NewGuid(),
             Name = gameName,
             CreatedAt = DateTime.UtcNow
         };
@@ -385,16 +386,16 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 
         var ruleSpec = new RuleSpecEntity
         {
-            GameId = gameId,
+            GameId = Guid.Parse(gameId),
             Version = version,
-            CreatedByUserId = createdByUserId,
+            CreatedByUserId = Guid.Parse(createdByUserId),
             CreatedAt = DateTime.UtcNow
         };
 
         db.RuleSpecs.Add(ruleSpec);
         await db.SaveChangesAsync();
 
-        _testRuleSpecIds.Add(ruleSpec.Id.ToString());
+        _testRuleSpecIds.Add(ruleSpec.Id);
         return ruleSpec;
     }
 
@@ -413,12 +414,12 @@ public abstract class IntegrationTestBase : IAsyncLifetime
 
         var pdf = new PdfDocumentEntity
         {
-            Id = $"pdf-{TestRunId}-{Guid.NewGuid():N}",
-            GameId = gameId,
+            Id = Guid.NewGuid(),
+            GameId = Guid.Parse(gameId),
             FileName = $"{filename}-{TestRunId}.pdf",
             FilePath = $"/test/{TestRunId}/{filename}",
             FileSizeBytes = 1024,
-            UploadedByUserId = uploadedByUserId,
+            UploadedByUserId = Guid.Parse(uploadedByUserId),
             UploadedAt = DateTime.UtcNow
         };
 
@@ -481,7 +482,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
         db.Chats.Add(chat);
         await db.SaveChangesAsync();
 
-        _testChatIds.Add(chat.Id.ToString());
+        _testChatIds.Add(chat.Id);
         return chat;
     }
 

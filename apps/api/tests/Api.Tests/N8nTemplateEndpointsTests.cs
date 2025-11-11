@@ -104,7 +104,7 @@ public class N8nTemplateEndpointsTests : AdminTestFixture, IClassFixture<Postgre
         var client = CreateClientWithoutCookies();
         var email = $"n8n-user-{Guid.NewGuid():N}@test.local";
         var cookies = await RegisterAndAuthenticateAsync(client, email, "User");
-        var templateId = "bgg-game-sync"; // Known template from seed data
+        var templateId = Guid.NewGuid(); // Known template from seed data
 
         using var request = new HttpRequestMessage(HttpMethod.Get, $"/api/v1/n8n/templates/{templateId}");
         AddCookies(request, cookies);

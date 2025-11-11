@@ -331,7 +331,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
         var agent = await CreateTestAgentAsync("chess", serviceUser.Id);
 
         // And: A chat session
-        var chatRequest = new { GameId = "chess", AgentId = agent.Id };
+        var chatRequest = new { GameId = Guid.NewGuid(), AgentId = agent.Id };
         using var chatHttpRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/chats")
         {
             Content = JsonContent.Create(chatRequest)

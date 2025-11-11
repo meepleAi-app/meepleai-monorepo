@@ -73,7 +73,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
             Id = Guid.NewGuid().ToString(),
             Email = "test@example.com",
             PasswordHash = "hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = DateTime.UtcNow
         };
         _context.Users.Add(user);
@@ -81,7 +81,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         // Create game
         var game = new GameEntity
         {
-            Id = "test-game",
+            Id = Guid.NewGuid(),
             Name = "Test Game",
             CreatedAt = DateTime.UtcNow
         };
@@ -90,8 +90,8 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         // Create agent
         var agent = new AgentEntity
         {
-            Id = "test-agent",
-            GameId = "test-game",
+            Id = Guid.NewGuid(),
+            GameId = Guid.NewGuid(),
             Name = "Test Agent",
             Kind = "qa",
             CreatedAt = DateTime.UtcNow
@@ -103,8 +103,8 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
-            GameId = "test-game",
-            AgentId = "test-agent",
+            GameId = Guid.NewGuid(),
+            AgentId = Guid.NewGuid(),
             StartedAt = DateTime.UtcNow
         };
         _context.Chats.Add(chat);
@@ -210,7 +210,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
             Id = Guid.NewGuid().ToString(),
             Email = "userb@example.com",
             PasswordHash = "hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = DateTime.UtcNow
         };
         _context.Users.Add(userB);
@@ -319,7 +319,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
             Id = Guid.NewGuid().ToString(),
             Email = "admin@example.com",
             PasswordHash = "hash",
-            Role = "admin",
+            Role = UserRole.Admin,
             CreatedAt = DateTime.UtcNow
         };
         _context.Users.Add(adminUser);
@@ -358,7 +358,7 @@ public class ChatMessageEditDeleteServiceTests : IDisposable
             Id = Guid.NewGuid().ToString(),
             Email = "userb@example.com",
             PasswordHash = "hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = DateTime.UtcNow
         };
         _context.Users.Add(userB);

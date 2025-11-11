@@ -92,10 +92,10 @@ public class DataMaskingTests
         // Arrange
         var user = new UserEntity
         {
-            Id = "user-123",
+            Id = Guid.NewGuid(),
             Email = "test@example.com",
             DisplayName = "Test User",
-            Role = "user",
+            Role = UserRole.User,
             PasswordHash = "sensitive-hash",
             TotpSecretEncrypted = "sensitive-totp",
             CreatedAt = DateTime.UtcNow

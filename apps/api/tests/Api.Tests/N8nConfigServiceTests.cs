@@ -41,14 +41,14 @@ public class N8nConfigServiceTests : IDisposable
         return context;
     }
 
-    private static async Task SeedUserAsync(MeepleAiDbContext dbContext, string userId)
+    private static async Task SeedUserAsync(MeepleAiDbContext dbContext, Guid userId)
     {
         dbContext.Users.Add(new UserEntity
         {
             Id = userId,
             Email = $"{userId}@example.com",
             PasswordHash = "hashed-password",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = DateTime.UtcNow
         });
 

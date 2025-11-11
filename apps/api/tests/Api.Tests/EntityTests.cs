@@ -24,7 +24,7 @@ public class EntityTests
     {
         var game = new GameEntity
         {
-            Id = "game-1",
+            Id = Guid.NewGuid(),
             Name = "Test Game"
         };
 
@@ -41,8 +41,8 @@ public class EntityTests
     {
         var chat = new ChatEntity
         {
-            AgentId = "agent-1",
-            GameId = "game-1"
+            AgentId = Guid.NewGuid(),
+            GameId = Guid.NewGuid()
         };
 
         chat.Id.Should().NotBe(Guid.Empty);
@@ -58,12 +58,12 @@ public class EntityTests
     {
         var document = new PdfDocumentEntity
         {
-            Id = "doc-1",
-            GameId = "game-1",
+            Id = Guid.NewGuid(),
+            GameId = Guid.NewGuid(),
             FileName = "rules.pdf",
             FilePath = "/tmp/rules.pdf",
             FileSizeBytes = 1024,
-            UploadedByUserId = "user-1"
+            UploadedByUserId = Guid.NewGuid()
         };
 
         document.ContentType.Should().Be("application/pdf");
@@ -78,7 +78,7 @@ public class EntityTests
     {
         var log = new AuditLogEntity
         {
-            UserId = "user-1",
+            UserId = Guid.NewGuid(),
             Action = "Test",
             Resource = "Game",
             ResourceId = "game-1",

@@ -155,7 +155,7 @@ public class RagServiceMultilingualTests : IDisposable
     {
         _dbContext.Games.Add(new GameEntity
         {
-            Id = "chess",
+            Id = Guid.NewGuid(),
             Name = "Chess",
             CreatedAt = DateTime.UtcNow
         });

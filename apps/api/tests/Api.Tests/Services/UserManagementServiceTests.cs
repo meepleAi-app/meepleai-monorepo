@@ -228,7 +228,7 @@ public class UserManagementServiceTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "hash",
-            Role = "user",
+            Role = UserRole.User,
             CreatedAt = DateTime.UtcNow
         };
         var session = new UserSessionEntity
@@ -559,7 +559,7 @@ public class UserManagementServiceTests : IDisposable
                 Email = "admin@meepleai.dev",
                 DisplayName = "Administrator",
                 PasswordHash = "hash1",
-                Role = "admin",
+                Role = UserRole.Admin,
                 CreatedAt = DateTime.UtcNow.AddDays(-10)
             },
             new UserEntity
@@ -568,7 +568,7 @@ public class UserManagementServiceTests : IDisposable
                 Email = "editor@meepleai.dev",
                 DisplayName = "Editor User",
                 PasswordHash = "hash2",
-                Role = "editor",
+                Role = UserRole.Editor,
                 CreatedAt = DateTime.UtcNow.AddDays(-5)
             },
             new UserEntity
@@ -577,7 +577,7 @@ public class UserManagementServiceTests : IDisposable
                 Email = "user@meepleai.dev",
                 DisplayName = "Regular User",
                 PasswordHash = "hash3",
-                Role = "user",
+                Role = UserRole.User,
                 CreatedAt = DateTime.UtcNow.AddDays(-1)
             }
         };

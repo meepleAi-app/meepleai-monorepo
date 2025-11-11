@@ -251,8 +251,8 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
             {
                 new RagEvaluationQuery
                 {
-                    Id = "ttt-test-001",
-                    GameId = "tic-tac-toe",
+                    Id = Guid.NewGuid(),
+                    GameId = Guid.NewGuid(),
                     Query = "How many players can play?", // Should match indexed doc
                     RelevantDocIds = new List<string> { "ttt-test-pdf-001" }
                 }
@@ -349,12 +349,12 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
 
         if (!tictactoeExists)
         {
-            _dbContext.Games.Add(new GameEntity { Id = "tic-tac-toe", Name = "Tic-Tac-Toe", CreatedAt = DateTime.UtcNow });
+            _dbContext.Games.Add(new GameEntity { Id = Guid.NewGuid(), Name = "Tic-Tac-Toe", CreatedAt = DateTime.UtcNow });
         }
 
         if (!chessExists)
         {
-            _dbContext.Games.Add(new GameEntity { Id = "chess", Name = "Chess", CreatedAt = DateTime.UtcNow });
+            _dbContext.Games.Add(new GameEntity { Id = Guid.NewGuid(), Name = "Chess", CreatedAt = DateTime.UtcNow });
         }
 
         if (!tictactoeExists || !chessExists)
@@ -433,8 +433,8 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
             {
                 new RagEvaluationQuery
                 {
-                    Id = "int-ttt-001",
-                    GameId = "tic-tac-toe",
+                    Id = Guid.NewGuid(),
+                    GameId = Guid.NewGuid(),
                     Query = "How many players can play Tic-Tac-Toe?",
                     RelevantDocIds = new List<string> { "ttt-test-pdf-001" },
                     Difficulty = "easy",
@@ -442,8 +442,8 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
                 },
                 new RagEvaluationQuery
                 {
-                    Id = "int-ttt-002",
-                    GameId = "tic-tac-toe",
+                    Id = Guid.NewGuid(),
+                    GameId = Guid.NewGuid(),
                     Query = "How do you win in Tic-Tac-Toe?",
                     RelevantDocIds = new List<string> { "ttt-test-pdf-001" },
                     Difficulty = "easy",
@@ -451,8 +451,8 @@ public class RagEvaluationIntegrationTests : IAsyncLifetime, IDisposable
                 },
                 new RagEvaluationQuery
                 {
-                    Id = "int-chess-001",
-                    GameId = "chess",
+                    Id = Guid.NewGuid(),
+                    GameId = Guid.NewGuid(),
                     Query = "How many squares are on a chess board?",
                     RelevantDocIds = new List<string> { "chess-test-pdf-001" },
                     Difficulty = "easy",

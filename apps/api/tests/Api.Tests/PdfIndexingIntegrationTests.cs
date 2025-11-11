@@ -71,7 +71,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
     public async Task IndexPdf_WithValidExtractedText_IndexesSuccessfully()
     {
         // GIVEN: A PDF with extracted text
-        var gameId = "tic-tac-toe";
+        var gameId = Guid.NewGuid();
         var pdfId = await CreatePdfWithExtractedTextAsync(gameId, "Players alternate marking X or O in a 3x3 grid. " +
             "The first player to get three marks in a row (horizontally, vertically, or diagonally) wins the game. " +
             "If all nine squares are filled and no player has three in a row, the game is a draw.");
@@ -158,7 +158,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
     public async Task IndexPdf_WithSmallText_CreatesOneChunk()
     {
         // GIVEN: A PDF with minimal text (< 512 chars)
-        var gameId = "tic-tac-toe";
+        var gameId = Guid.NewGuid();
         var shortText = "X wins with three in a row."; // ~27 characters
         var pdfId = await CreatePdfWithExtractedTextAsync(gameId, shortText);
 
@@ -186,7 +186,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
     public async Task IndexPdf_WithLargeText_CreatesMultipleChunks()
     {
         // GIVEN: A large PDF (50k chars)
-        var gameId = "chess";
+        var gameId = Guid.NewGuid();
         var largeText = GenerateLargeText(50000);
         var pdfId = await CreatePdfWithExtractedTextAsync(gameId, largeText);
 
@@ -214,7 +214,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
     public async Task IndexPdf_AlreadyIndexed_ReindexesWithoutDuplicates()
     {
         // GIVEN: A PDF that has already been indexed
-        var gameId = "tic-tac-toe";
+        var gameId = Guid.NewGuid();
         var pdfId = await CreateAndIndexPdfAsync(gameId, "Original text about game rules.");
 
         var vectorDoc1 = await _db!.Set<VectorDocumentEntity>()
@@ -404,7 +404,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
             FileName = $"{pdfId}.pdf",
             FilePath = $"/pdfs/{pdfId}.pdf",
             FileSizeBytes = 1024,
-            UploadedByUserId = "demo-admin-001",
+            UploadedByUserId = Guid.NewGuid(),
             UploadedAt = DateTime.UtcNow,
             ExtractedText = extractedText,
             ProcessingStatus = "completed",
@@ -430,7 +430,7 @@ public class PdfIndexingIntegrationTests : IClassFixture<WebApplicationFactoryFi
             FileName = $"{pdfId}.pdf",
             FilePath = $"/pdfs/{pdfId}.pdf",
             FileSizeBytes = 1024,
-            UploadedByUserId = "demo-admin-001",
+            UploadedByUserId = Guid.NewGuid(),
             UploadedAt = DateTime.UtcNow,
             ExtractedText = null,
             ProcessingStatus = "pending",

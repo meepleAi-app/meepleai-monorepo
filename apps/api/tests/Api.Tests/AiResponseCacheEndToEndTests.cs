@@ -457,7 +457,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var client = CreateClientWithoutCookies();
-        var fakeGameId = "nonexistent-game-12345";
+        var fakeGameId = Guid.NewGuid();
 
         // When: Making QA request for non-existent game
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");

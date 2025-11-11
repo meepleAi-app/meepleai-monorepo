@@ -430,15 +430,15 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         var qdrantService = scope.ServiceProvider.GetRequiredService<IQdrantService>();
 
         // Create a PDF document
-        var pdfId = $"pdf-{TestRunId}-{Guid.NewGuid():N}";
+        var pdfId = Guid.NewGuid();
         var pdf = new PdfDocumentEntity
         {
-            Id = pdfId,
-            GameId = gameId,
+            Id = pdfId.ToString(),
+            GameId = gameId.ToString(),
             FileName = "test-rules.pdf",
             FilePath = "/test/rules.pdf",
             FileSizeBytes = 1024,
-            UploadedByUserId = userId,
+            UploadedByUserId = userId.ToString(),
             UploadedAt = DateTime.UtcNow,
             ProcessingStatus = "completed",
             ProcessedAt = DateTime.UtcNow
@@ -449,9 +449,9 @@ public class StreamingRagIntegrationTests : IntegrationTestBase
         // Create a VectorDocumentEntity to track that this PDF has been indexed
         var vectorDoc = new VectorDocumentEntity
         {
-            Id = Guid.NewGuid().ToString(),
-            PdfDocumentId = pdfId,
-            GameId = gameId,
+            Id = Guid.NewGuid(),
+            PdfDocumentId = pdfId.ToString(),
+            GameId = gameId.ToString(),
             ChunkCount = 2,
             TotalCharacters = 130,
             IndexingStatus = "completed",

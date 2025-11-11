@@ -46,20 +46,22 @@ public class RuleSpecCommentServiceTests : IDisposable
     public async Task AddCommentAsync_WhenValidData_CreatesComment()
     {
         // Arrange
+        var gameId = Guid.NewGuid();
         var game = new GameEntity
         {
-            Id = "chess",
+            Id = gameId,
             Name = "Chess",
             CreatedAt = DateTime.UtcNow
         };
 
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
-            Id = "user-1",
+            Id = userId,
             Email = "user1@example.com",
             DisplayName = "User One",
             PasswordHash = "hash",
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -77,18 +79,18 @@ public class RuleSpecCommentServiceTests : IDisposable
 
         // Act
         var result = await _service.AddCommentAsync(
-            game.Id,
+            game.Id.ToString(),
             "v1",
             "atom-1",
-            user.Id,
+            user.Id.ToString(),
             "This is a test comment");
 
         // Assert
         result.Id.Should().NotBe(Guid.Empty);
-        result.GameId.Should().BeEquivalentTo(game.Id);
+        result.GameId.Should().BeEquivalentTo(game.Id.ToString());
         result.Version.Should().BeEquivalentTo("v1");
         result.AtomId.Should().BeEquivalentTo("atom-1");
-        result.UserId.Should().BeEquivalentTo(user.Id);
+        result.UserId.Should().BeEquivalentTo(user.Id.ToString());
         result.UserDisplayName.Should().BeEquivalentTo("User One");
         result.CommentText.Should().BeEquivalentTo("This is a test comment");
         (result.CreatedAt <= DateTime.UtcNow).Should().BeTrue();
@@ -105,18 +107,18 @@ public class RuleSpecCommentServiceTests : IDisposable
         // Arrange
         var game = new GameEntity
         {
-            Id = "chess",
+            Id = Guid.NewGuid(),
             Name = "Chess",
             CreatedAt = DateTime.UtcNow
         };
 
         var user = new UserEntity
         {
-            Id = "user-1",
+            Id = Guid.NewGuid(),
             Email = "user1@example.com",
             DisplayName = "User One",
             PasswordHash = "hash",
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -151,18 +153,18 @@ public class RuleSpecCommentServiceTests : IDisposable
         // Arrange
         var game = new GameEntity
         {
-            Id = "chess",
+            Id = Guid.NewGuid(),
             Name = "Chess",
             CreatedAt = DateTime.UtcNow
         };
 
         var user = new UserEntity
         {
-            Id = "user-1",
+            Id = Guid.NewGuid(),
             Email = "user1@example.com",
             DisplayName = "User One",
             PasswordHash = "hash",
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -183,7 +185,7 @@ public class RuleSpecCommentServiceTests : IDisposable
         // Arrange
         var game = new GameEntity
         {
-            Id = "chess",
+            Id = Guid.NewGuid(),
             Name = "Chess",
             CreatedAt = DateTime.UtcNow
         };
@@ -212,18 +214,18 @@ public class RuleSpecCommentServiceTests : IDisposable
         // Arrange
         var game = new GameEntity
         {
-            Id = "chess",
+            Id = Guid.NewGuid(),
             Name = "Chess",
             CreatedAt = DateTime.UtcNow
         };
 
         var user = new UserEntity
         {
-            Id = "user-1",
+            Id = Guid.NewGuid(),
             Email = "user1@example.com",
             DisplayName = null, // No display name
             PasswordHash = "hash",
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -257,28 +259,28 @@ public class RuleSpecCommentServiceTests : IDisposable
         // Arrange
         var game = new GameEntity
         {
-            Id = "chess",
+            Id = Guid.NewGuid(),
             Name = "Chess",
             CreatedAt = DateTime.UtcNow
         };
 
         var user1 = new UserEntity
         {
-            Id = "user-1",
+            Id = Guid.NewGuid(),
             Email = "user1@example.com",
             DisplayName = "User One",
             PasswordHash = "hash",
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = DateTime.UtcNow
         };
 
         var user2 = new UserEntity
         {
-            Id = "user-2",
+            Id = Guid.NewGuid(),
             Email = "user2@example.com",
             DisplayName = "User Two",
             PasswordHash = "hash",
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -362,7 +364,7 @@ public class RuleSpecCommentServiceTests : IDisposable
         // Arrange
         var game = new GameEntity
         {
-            Id = "chess",
+            Id = Guid.NewGuid(),
             Name = "Chess",
             CreatedAt = DateTime.UtcNow
         };
@@ -394,18 +396,18 @@ public class RuleSpecCommentServiceTests : IDisposable
         // Arrange
         var game = new GameEntity
         {
-            Id = "chess",
+            Id = Guid.NewGuid(),
             Name = "Chess",
             CreatedAt = DateTime.UtcNow
         };
 
         var user = new UserEntity
         {
-            Id = "user-1",
+            Id = Guid.NewGuid(),
             Email = "user1@example.com",
             DisplayName = "User One",
             PasswordHash = "hash",
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -471,28 +473,28 @@ public class RuleSpecCommentServiceTests : IDisposable
         // Arrange
         var game = new GameEntity
         {
-            Id = "chess",
+            Id = Guid.NewGuid(),
             Name = "Chess",
             CreatedAt = DateTime.UtcNow
         };
 
         var owner = new UserEntity
         {
-            Id = "owner",
+            Id = Guid.NewGuid(),
             Email = "owner@example.com",
             DisplayName = "Owner",
             PasswordHash = "hash",
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = DateTime.UtcNow
         };
 
         var otherUser = new UserEntity
         {
-            Id = "other",
+            Id = Guid.NewGuid(),
             Email = "other@example.com",
             DisplayName = "Other",
             PasswordHash = "hash",
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -532,18 +534,18 @@ public class RuleSpecCommentServiceTests : IDisposable
         // Arrange
         var game = new GameEntity
         {
-            Id = "chess",
+            Id = Guid.NewGuid(),
             Name = "Chess",
             CreatedAt = DateTime.UtcNow
         };
 
         var user = new UserEntity
         {
-            Id = "user-1",
+            Id = Guid.NewGuid(),
             Email = "user1@example.com",
             DisplayName = "User One",
             PasswordHash = "hash",
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -584,28 +586,28 @@ public class RuleSpecCommentServiceTests : IDisposable
         // Arrange
         var game = new GameEntity
         {
-            Id = "chess",
+            Id = Guid.NewGuid(),
             Name = "Chess",
             CreatedAt = DateTime.UtcNow
         };
 
         var owner = new UserEntity
         {
-            Id = "owner",
+            Id = Guid.NewGuid(),
             Email = "owner@example.com",
             DisplayName = "Owner",
             PasswordHash = "hash",
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = DateTime.UtcNow
         };
 
         var admin = new UserEntity
         {
-            Id = "admin",
+            Id = Guid.NewGuid(),
             Email = "admin@example.com",
             DisplayName = "Admin",
             PasswordHash = "hash",
-            Role = "admin",
+            Role = UserRole.Admin,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -646,28 +648,28 @@ public class RuleSpecCommentServiceTests : IDisposable
         // Arrange
         var game = new GameEntity
         {
-            Id = "chess",
+            Id = Guid.NewGuid(),
             Name = "Chess",
             CreatedAt = DateTime.UtcNow
         };
 
         var owner = new UserEntity
         {
-            Id = "owner",
+            Id = Guid.NewGuid(),
             Email = "owner@example.com",
             DisplayName = "Owner",
             PasswordHash = "hash",
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = DateTime.UtcNow
         };
 
         var otherUser = new UserEntity
         {
-            Id = "other",
+            Id = Guid.NewGuid(),
             Email = "other@example.com",
             DisplayName = "Other",
             PasswordHash = "hash",
-            Role = "editor",
+            Role = UserRole.Editor,
             CreatedAt = DateTime.UtcNow
         };
 

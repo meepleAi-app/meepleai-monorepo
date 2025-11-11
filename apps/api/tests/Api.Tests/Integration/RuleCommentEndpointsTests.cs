@@ -52,7 +52,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     /// Creates a test game and rulespec for comment testing.
     /// Returns (gameId, version).
     /// </summary>
-    private async Task<(string gameId, string version)> CreateTestRuleSpecAsync(string userId)
+    private async Task<(string gameId, string version)> CreateTestRuleSpecAsync(Guid userId)
     {
         var game = await CreateTestGameAsync($"TestGame-{TestRunId}");
 
@@ -71,7 +71,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
         db.RuleSpecs.Add(ruleSpec);
         await db.SaveChangesAsync();
 
-        return (game.Id, ruleSpec.Version);
+        return (game.Id.ToString(), ruleSpec.Version);
     }
 
     private async Task<HttpResponseMessage> PostWithCookiesAsync<T>(

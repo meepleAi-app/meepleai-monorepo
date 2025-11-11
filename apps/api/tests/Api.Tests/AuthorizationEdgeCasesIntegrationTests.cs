@@ -147,7 +147,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         // Act: Try to create a game
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
         {
-            Content = JsonContent.Create(new { Name = "EditorGame", GameId = "editor-game" })
+            Content = JsonContent.Create(new { Name = "EditorGame", GameId = Guid.NewGuid() })
         };
         AddCookies(request, cookies);
         var response = await client.SendAsync(request);
@@ -173,7 +173,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         // Act: Try to create a game (editor/admin only)
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
         {
-            Content = JsonContent.Create(new { Name = "TestGame", GameId = "test-game" })
+            Content = JsonContent.Create(new { Name = "TestGame", GameId = Guid.NewGuid() })
         };
         AddCookies(request, cookies);
         var response = await client.SendAsync(request);
@@ -464,7 +464,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         // Act: Access editor endpoint (game creation)
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games")
         {
-            Content = JsonContent.Create(new { Name = "AdminEditorGame", GameId = "admin-editor-game" })
+            Content = JsonContent.Create(new { Name = "AdminEditorGame", GameId = Guid.NewGuid() })
         };
         AddCookies(request, cookies);
         var response = await client.SendAsync(request);

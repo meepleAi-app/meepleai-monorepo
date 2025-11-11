@@ -33,28 +33,28 @@ gh label create "month-6" --description "Month 6: Italian UI" --color "BFDADC"
 
 ### Missing Issues Breakdown by Month
 
-#### Month 1: PDF Processing Pipeline (12 issues) - UPDATED 2025-01-15
+#### Month 1: PDF Processing Pipeline (12 issues) ✅ ALL CREATED
 
 **Architecture Change**: LLMWhisperer → **Unstructured** (Apache 2.0, RAG-optimized, zero cost)
 
-- [x] ~~[BGAI-001] Setup LLMWhisperer account~~ → **Closed #941** (replaced)
-- [x] ~~[BGAI-002] Implement LlmWhispererPdfExtractor~~ → **Closed #942** (replaced)
-- [x] ~~[BGAI-003] Add LLMWhisperer configuration~~ → **Closed #943** (replaced)
-- [x] ~~[BGAI-004] Unit tests LlmWhispererPdfExtractor~~ → **Closed #944** (replaced)
-- [ ] **[BGAI-001-v2]** Install Unstructured library → **#952** ✅ Created
-- [ ] **[BGAI-002-v2]** Implement UnstructuredPdfExtractor → **#953** ✅ Created
-- [ ] **[BGAI-003-v2]** Unit tests Unstructured integration → **#954** ✅ Created
-- [ ] [BGAI-005] Create FastAPI service for SmolDocling → **#945** ✅ Created
-- [ ] [BGAI-006] Docker configuration for pdf-processor → **#946** ✅ Created
-- [ ] [BGAI-007] Implement SmolDoclingPdfExtractor (C# client) → **#947** ✅ Created
-- [ ] [BGAI-008] Integration tests for SmolDocling → **#948** ✅ Created
-- [ ] [BGAI-009] Migrate to IPdfTextExtractor (maps to **#940**)
-- [ ] [BGAI-010] EnhancedPdfProcessingOrchestrator → **#949** ✅ Created
-- [ ] [BGAI-011] Integration tests 3-stage pipeline → **#950** ✅ Created
-- [ ] [BGAI-012] PDF quality validation → **#951** ✅ Created
-- [ ] [BGAI-013] Bug fixes and edge cases → To create
-- [ ] [BGAI-014] Code review checklist → To create
-- [ ] [BGAI-015] Documentation → To create
+- [x] ~~[BGAI-001] Setup LLMWhisperer~~ → **#941** Closed (replaced)
+- [x] ~~[BGAI-002] LlmWhispererPdfExtractor~~ → **#942** Closed (replaced)
+- [x] ~~[BGAI-003] LLMWhisperer config~~ → **#943** Closed (replaced)
+- [x] ~~[BGAI-004] LLMWhisperer tests~~ → **#944** Closed (replaced)
+- [ ] **[BGAI-001-v2]** Install Unstructured → **#952** ✅
+- [ ] **[BGAI-002-v2]** UnstructuredPdfExtractor → **#953** ✅
+- [ ] **[BGAI-003-v2]** Unstructured tests → **#954** ✅
+- [ ] [BGAI-005] SmolDocling FastAPI service → **#945** ✅
+- [ ] [BGAI-006] Docker pdf-processor → **#946** ✅
+- [ ] [BGAI-007] SmolDoclingPdfExtractor C# → **#947** ✅
+- [ ] [BGAI-008] SmolDocling integration tests → **#948** ✅
+- [ ] [BGAI-009] IPdfTextExtractor interface → **#940** ✅
+- [ ] [BGAI-010] EnhancedOrchestrator → **#949** ✅
+- [ ] [BGAI-011] 3-stage E2E tests → **#950** ✅
+- [ ] [BGAI-012] PDF quality validation → **#951** ✅
+- [ ] [BGAI-013] Bug fixes edge cases → **#955** ✅
+- [ ] [BGAI-014] Code review checklist → **#956** ✅
+- [ ] [BGAI-015] Documentation complete → **#957** ✅
 
 **New 3-Stage Pipeline**:
 1. **Stage 1**: Unstructured (Apache 2.0, RAG-optimized, 1.29s)
@@ -63,104 +63,132 @@ gh label create "month-6" --description "Month 6: Italian UI" --color "BFDADC"
 
 **Reference**: `docs/architecture/pdf-extraction-opensource-alternatives.md`
 
-#### Month 2: LLM Integration (12 issues)
-- [ ] [BGAI-016] Setup OpenRouter account and API key
-- [ ] [BGAI-017] Implement OpenRouterClient (HttpClient wrapper)
-- [ ] [BGAI-018] Dynamic model selection configuration (GPT-4, Claude)
-- [ ] [BGAI-019] Unit tests for OpenRouterClient (12 tests)
-- [ ] [BGAI-020] Implement OllamaClient (local LLM fallback)
-- [ ] [BGAI-021] AdaptiveLlmService (routing logic: API vs local)
-- [ ] [BGAI-022] Feature flag AI:Provider (OpenRouter/Ollama toggle)
-- [ ] [BGAI-023] Integration tests for adaptive LLM routing
-- [ ] [BGAI-024] Replace existing LLM calls in RagService
-- [ ] [BGAI-025] Backward compatibility testing for RAG
-- [ ] [BGAI-026] Performance testing (latency baseline <3s P95)
-- [ ] [BGAI-027] Cost tracking (OpenRouter vs Ollama comparison)
+#### Month 2: LLM Integration (12 issues) ✅ ALL CREATED
 
-#### Month 3: Multi-Model Validation (13 issues)
-- [ ] [BGAI-028] ConfidenceValidationService (threshold ≥0.70)
-- [ ] [BGAI-029] CitationValidationService (verify source references)
-- [ ] [BGAI-030] HallucinationDetectionService (forbidden keywords)
-- [ ] [BGAI-031] Unit tests for 3 validation layers
-- [ ] [BGAI-032] MultiModelValidationService (GPT-4 + Claude consensus)
-- [ ] [BGAI-033] Consensus similarity calculation (cosine similarity ≥0.90)
-- [ ] [BGAI-034] Unit tests for consensus validation (18 tests)
-- [ ] [BGAI-035] Wire all 5 validation layers in RAG pipeline
-- [ ] [BGAI-036] End-to-end testing (question → validated response)
-- [ ] [BGAI-037] Performance optimization (parallel validation)
-- [ ] [BGAI-038] Bug fixes for validation edge cases
-- [ ] [BGAI-039] Accuracy baseline measurement (target 80%+)
-- [ ] [BGAI-040] Update ADRs with actual validation implementation
+**Note**: Evaluate Ollama-only vs OpenRouter+Ollama to eliminate/minimize costs
 
-#### Month 4: Quality Framework + Frontend (15 issues)
-- [ ] [BGAI-041] Extend PromptEvaluationService (5-metric framework)
-- [ ] [BGAI-042] Automated evaluation job (weekly cron)
-- [ ] [BGAI-043] Prometheus metrics (Board Game AI specific)
-- [ ] [BGAI-044] Grafana dashboard (5-metric gauges)
-- [ ] [BGAI-045] Quality framework integration tests
-- [ ] [BGAI-046] Install shadcn/ui in Next.js app
-- [ ] [BGAI-047] Design tokens (Italian color palette)
-- [ ] [BGAI-048] Base components (Button, Card, Input, Form)
-- [ ] [BGAI-049] i18n setup (React Intl, it.json)
-- [ ] [BGAI-050] BoardGameAI page structure (/board-game-ai)
-- [ ] [BGAI-051] Frontend component testing (Jest 90%+)
-- [ ] [BGAI-052] Responsive design testing (320px-1920px)
-- [ ] [BGAI-053] Accessibility audit (WCAG 2.1 AA)
-- [ ] [BGAI-054] Frontend build optimization
-- [ ] [BGAI-055] Month 4 integration testing
+- [ ] [BGAI-016] LLM strategy decision → **#958** ✅
+- [ ] [BGAI-017] OllamaClient implementation → **#959** ✅
+- [ ] [BGAI-018] OpenRouterClient (if Option B) → **#960** ✅
+- [ ] [BGAI-019] Unit tests LLM clients → **#961** ✅
+- [ ] [BGAI-020] AdaptiveLlmService routing → **#962** ✅
+- [ ] [BGAI-021] Feature flag AI:Provider → **#963** ✅
+- [ ] [BGAI-022] Integration tests routing → **#964** ✅
+- [ ] [BGAI-023] Replace RagService LLM calls → **#965** ✅
+- [ ] [BGAI-024] Backward compatibility tests → **#966** ✅
+- [ ] [BGAI-025] Performance testing → **#967** ✅
+- [ ] [BGAI-026] Cost tracking → **#968** ✅
+- [ ] [BGAI-027] LLM documentation/ADR → **#969** ✅
 
-#### Month 5: Golden Dataset + Q&A Interface (14 issues)
-- [ ] [BGAI-056] Annotation: Terraforming Mars (20 Q&A pairs)
-- [ ] [BGAI-057] Annotation: Wingspan (15 Q&A pairs)
-- [ ] [BGAI-058] Annotation: Azul (15 Q&A pairs)
-- [ ] [BGAI-059] Quality test implementation (accuracy validation)
-- [ ] [BGAI-060] Run first accuracy test (baseline measurement)
-- [ ] [BGAI-061] QuestionInputForm component (frontend)
-- [ ] [BGAI-062] ResponseCard component (answer, confidence, citations)
-- [ ] [BGAI-063] GameSelector dropdown component
-- [ ] [BGAI-064] Loading and error states (UI/UX)
-- [ ] [BGAI-065] Jest tests for Q&A components (20 tests)
-- [ ] [BGAI-066] Backend API integration (/api/v1/board-game-ai/ask)
-- [ ] [BGAI-067] Streaming SSE support for real-time responses
-- [ ] [BGAI-068] Error handling and retry logic
-- [ ] [BGAI-069] Month 5 E2E testing
+#### Month 3: Multi-Model Validation (13 issues) ✅ ALL CREATED
+- [ ] [BGAI-028] ConfidenceValidationService → **#970** ✅
+- [ ] [BGAI-029] CitationValidationService → **#971** ✅
+- [ ] [BGAI-030] HallucinationDetectionService → **#972** ✅
+- [ ] [BGAI-031] Unit tests 3 validation layers → **#973** ✅
+- [ ] [BGAI-032] MultiModelValidationService → **#974** ✅
+- [ ] [BGAI-033] Consensus similarity calculation → **#975** ✅
+- [ ] [BGAI-034] Unit tests consensus (18 tests) → **#976** ✅
+- [ ] [BGAI-035] Wire all 5 validation layers → **#977** ✅
+- [ ] [BGAI-036] End-to-end testing validation → **#978** ✅
+- [ ] [BGAI-037] Performance optimization → **#979** ✅
+- [ ] [BGAI-038] Bug fixes edge cases → **#980** ✅
+- [ ] [BGAI-039] Accuracy baseline → **#981** ✅
+- [ ] [BGAI-040] Update ADRs validation → **#982** ✅
 
-#### Month 6: Completion + Polish (16 issues)
-- [ ] [BGAI-070] Annotation: Scythe, Catan, Pandemic (30 Q&A)
-- [ ] [BGAI-071] Annotation: 7 Wonders, Agricola, Splendor (30 Q&A)
-- [ ] [BGAI-072] Adversarial dataset (50 synthetic queries)
-- [ ] [BGAI-073] PDF viewer integration (react-pdf)
-- [ ] [BGAI-074] Citation click → jump to page functionality
-- [ ] [BGAI-075] Mobile PDF viewer UX optimization
-- [ ] [BGAI-076] PDF viewer tests (Jest + Playwright)
-- [ ] [BGAI-077] Complete Italian UI strings (200+ translations)
-- [ ] [BGAI-078] Game catalog page (/board-game-ai/games)
-- [ ] [BGAI-079] Mobile responsive testing (all breakpoints)
-- [ ] [BGAI-080] End-to-end testing (question → PDF citation)
-- [ ] [BGAI-081] Accuracy validation (80% target on 100 Q&A)
-- [ ] [BGAI-082] Performance testing (P95 latency <3s)
-- [ ] [BGAI-083] Final bug fixes and polish
-- [ ] [BGAI-084] Documentation updates (user guide, README)
-- [ ] [BGAI-085] Phase 1A completion checklist
+#### Month 4: Quality Framework + Frontend (15 issues) ✅ ALL CREATED
+- [ ] [BGAI-041] 5-metric framework → **#983** ✅
+- [ ] [BGAI-042] Automated evaluation job → **#984** ✅
+- [ ] [BGAI-043] Prometheus metrics → **#985** ✅
+- [ ] [BGAI-044] Grafana dashboard → **#986** ✅
+- [ ] [BGAI-045] Quality framework tests → **#987** ✅
+- [ ] [BGAI-046] Install shadcn/ui → **#988** ✅
+- [ ] [BGAI-047] Design tokens → Check #989-990
+- [ ] [BGAI-048] Base components → **#989** ✅
+- [ ] [BGAI-049] i18n setup → **#990** ✅
+- [ ] [BGAI-050] BoardGameAI page → **#991** ✅
+- [ ] [BGAI-051] Component testing → **#992** ✅
+- [ ] [BGAI-052] Responsive testing → **#993** ✅
+- [ ] [BGAI-053] Accessibility audit → Check #994-995
+- [ ] [BGAI-054] Build optimization → **#994** ✅
+- [ ] [BGAI-055] Month 4 E2E testing → **#995** ✅
 
-**Total**: 85 issues needed for Phase 1A (Months 1-6)
+#### Month 5: Golden Dataset + Q&A Interface (14 issues) ✅ ALL CREATED
+- [ ] [BGAI-056] Terraforming Mars (20 Q&A) → **#996** ✅
+- [ ] [BGAI-057] Wingspan (15 Q&A) → **#997** ✅
+- [ ] [BGAI-058] Azul (15 Q&A) → **#998** ✅
+- [ ] [BGAI-059] Quality test implementation → **#999** ✅
+- [ ] [BGAI-060] Accuracy baseline test → **#1000** ✅
+- [ ] [BGAI-061] QuestionInputForm → **#1001** ✅
+- [ ] [BGAI-062] ResponseCard component → **#1002** ✅
+- [ ] [BGAI-063] GameSelector dropdown → **#1003** ✅
+- [ ] [BGAI-064] Loading/error states → **#1004** ✅
+- [ ] [BGAI-065] Jest tests (20 tests) → **#1005** ✅
+- [ ] [BGAI-066] Backend API integration → **#1006** ✅
+- [ ] [BGAI-067] Streaming SSE support → **#1007** ✅
+- [ ] [BGAI-068] Error handling/retry → **#1008** ✅
+- [ ] [BGAI-069] Month 5 E2E testing → **#1009** ✅
 
-### Issue Creation Script
+#### Month 6: Completion + Polish (16 issues) ✅ ALL CREATED
+- [ ] [BGAI-070] Scythe, Catan, Pandemic → **#1010** ✅
+- [ ] [BGAI-071] 7 Wonders, Agricola, Splendor → **#1011** ✅
+- [ ] [BGAI-072] Adversarial dataset (50) → **#1012** ✅
+- [ ] [BGAI-073] PDF viewer (react-pdf) → **#1013** ✅
+- [ ] [BGAI-074] Citation navigation → **#1014** ✅
+- [ ] [BGAI-075] Mobile PDF UX → Check #1015-1016
+- [ ] [BGAI-076] PDF viewer tests → **#1015** ✅
+- [ ] [BGAI-077] Italian UI strings (200+) → **#1016** ✅
+- [ ] [BGAI-078] Game catalog page → **#1017** ✅
+- [ ] [BGAI-079] Mobile responsive tests → Check #1018-1019
+- [ ] [BGAI-080] E2E (question → citation) → **#1018** ✅
+- [ ] [BGAI-081] Accuracy validation (80%) → **#1019** ✅
+- [ ] [BGAI-082] Performance testing P95 → **#1020** ✅
+- [ ] [BGAI-083] Final bug fixes → **#1021** ✅
+- [ ] [BGAI-084] Documentation updates → **#1022** ✅
+- [ ] [BGAI-085] Phase 1A checklist → **#1023** ✅
 
-```bash
-# Run this script to create all Board Game AI issues
-# Location: tools/create-bgai-issues.sh
+**Total**: 80 issues ACTIVE for Phase 1A (#940, #945-#1023)
+**Closed**: 4 issues (#941-#944 LLMWhisperer, replaced with Unstructured)
 
-#!/bin/bash
+### 🔗 Related Work (Non-BGAI Issues)
 
-# Month 1 issues
-gh issue create --title "[BGAI-001] Setup LLMWhisperer account and API key configuration" \
-  --body "Configure LLMWhisperer API for Stage 1 PDF extraction" \
-  --label "board-game-ai,month-1,backend" \
-  --milestone "Month 1: PDF Processing"
+**DDD Prerequisites**:
+- **#937**: [DDD] Complete Remaining 5% - Parent epic including PDF services
+  - ⚠️ Includes #940 (BGAI-009) as part of PDF services migration
+  - 📌 Coordinate: Complete BGAI PDF work first (Month 1), then finish remaining DDD
 
-# ... (repeat for all 85 issues)
-```
+- **#925**: [DDD] AI Agents Architecture Decision
+  - 📌 General architectural decision (not BGAI-specific yet)
+  - 📌 Board Game AI will adopt same architecture for agents in Phase 2+
+
+**Frontend General** (NOT Board Game AI specific):
+- #926-#935: Frontend Epic phases (general MeepleAI improvements)
+- #927: Install shadcn/ui (generale) - BGAI has specific #988
+- #928: Design tokens (generale) - BGAI has specific implementation
+- Note: BGAI uses separate frontend issues for Board Game AI-specific UI
+
+**Admin Console** (NOT Board Game AI):
+- #874-#922: FASE 1-4 Admin Console features (separate project)
+- Not blocking BGAI, can proceed in parallel
+
+### ✅ Issue Creation Complete (2025-01-15)
+
+**All 80 issues created successfully**:
+- Month 1: #940, #945-#957 (12 issues)
+- Month 2: #958-#969 (12 issues)
+- Month 3: #970-#982 (13 issues)
+- Month 4: #983-#995 (13 issues)
+- Month 5: #996-#1009 (14 issues)
+- Month 6: #1010-#1023 (14 issues)
+
+**View All**: https://github.com/DegrassiAaron/meepleai-monorepo/issues?q=is:issue+label:board-game-ai
+
+**Milestones**:
+- #13: Month 1 (0/12 complete)
+- #14: Month 2 (0/12 complete)
+- #15: Month 3 (0/13 complete)
+- #16: Month 4 (0/13 complete)
+- #17: Month 5 (0/14 complete)
+- #18: Month 6 (0/14 complete)
 
 ---
 
@@ -307,31 +335,30 @@ git push origin main
 
 **Month 2 (4 weeks): LLM Integration (OpenRouter + Ollama)**
 
-**Week 5: OpenRouter Client** (Days 21-25)
-- Day 21: Setup OpenRouter account ([BGAI-016])
-- Day 22-23: Implement OpenRouterClient ([BGAI-017])
-- Day 24: Dynamic model configuration ([BGAI-018])
-- Day 25: Unit tests (12 tests) ([BGAI-019])
-- **Deliverable**: OpenRouter GPT-4 + Claude callable
+**Week 5: LLM Strategy & Ollama** (Days 21-25)
+- Day 21: Evaluate LLM strategy (#958 - BGAI-016) - Ollama-only vs hybrid
+- Day 22-23: Implement OllamaClient (#959 - BGAI-017)
+- Day 24: OpenRouterClient if needed (#960 - BGAI-018)
+- Day 25: Unit tests (#961 - BGAI-019)
+- **Deliverable**: Ollama working, strategy decided
 
-**Week 6: Ollama Fallback** (Days 26-30)
-- Day 26-27: OllamaClient implementation ([BGAI-020])
-- Day 28-29: AdaptiveLlmService routing logic ([BGAI-021])
-- Day 30: Feature flag AI:Provider ([BGAI-022])
-- **Quality Gate**: Integration tests ([BGAI-023])
-- **Deliverable**: Ollama free fallback working
+**Week 6: Adaptive Routing** (Days 26-30)
+- Day 26-27: AdaptiveLlmService (#962 - BGAI-020)
+- Day 28: Feature flag AI:Provider (#963 - BGAI-021)
+- Day 29-30: Integration tests (#964 - BGAI-022)
+- **Deliverable**: Adaptive routing operational
 
-**Week 7: RagService Integration** (Days 31-35)
-- Day 31-32: Replace existing LLM calls ([BGAI-024])
-- Day 33-34: Backward compatibility testing ([BGAI-025])
-- Day 35: Integration tests RAG end-to-end
-- **Deliverable**: Adaptive LLM in production RAG pipeline
+**Week 7: RAG Integration** (Days 31-35)
+- Day 31-32: Replace RagService LLM calls (#965 - BGAI-023)
+- Day 33-34: Backward compatibility (#966 - BGAI-024)
+- Day 35: E2E integration tests
+- **Deliverable**: RAG uses adaptive LLM
 
-**Week 8: Buffer** (Days 36-40)
-- Day 36-37: Performance testing ([BGAI-026])
-- Day 38: Cost tracking comparison ([BGAI-027])
-- Day 39-40: Documentation updates
-- **Deliverable**: Month 2 COMPLETE with performance baseline
+**Week 8: Testing & Docs** (Days 36-40)
+- Day 36-37: Performance testing (#967 - BGAI-025)
+- Day 38: Cost tracking (#968 - BGAI-026)
+- Day 39-40: Documentation/ADR (#969 - BGAI-027)
+- **Deliverable**: Month 2 COMPLETE, baseline established
 
 **Month 2 Output**: ✅ LLM integration complete, OpenRouter + Ollama proven
 
@@ -339,30 +366,26 @@ git push origin main
 
 **Month 3 (4 weeks): Multi-Model Validation**
 
-**Week 9: Validation Services Part 1** (Days 41-45)
-- Day 41: ConfidenceValidationService ([BGAI-028])
-- Day 42-43: CitationValidationService ([BGAI-029])
-- Day 44-45: HallucinationDetectionService ([BGAI-030])
-- **Quality Gate**: Unit tests ([BGAI-031])
-- **Deliverable**: 3 of 5 validation layers working
+**Week 9: Validation Part 1** (Days 41-45)
+- Day 41: ConfidenceValidationService (#970)
+- Day 42-43: CitationValidationService (#971)
+- Day 44-45: HallucinationDetectionService (#972)
+- **Quality Gate**: Unit tests (#973)
 
 **Week 10: Multi-Model Consensus** (Days 46-50)
-- Day 46-47: MultiModelValidationService ([BGAI-032])
-- Day 48: Consensus similarity calculation ([BGAI-033])
-- Day 49-50: Unit tests (18 tests) ([BGAI-034])
-- **Deliverable**: GPT-4 + Claude consensus at 0.90
+- Day 46-47: MultiModelValidationService (#974)
+- Day 48: Consensus similarity (#975)
+- Day 49-50: Unit tests 18 (#976)
 
-**Week 11: Full Pipeline Integration** (Days 51-55)
-- Day 51-52: Wire all 5 validation layers ([BGAI-035])
-- Day 53-54: End-to-end testing ([BGAI-036])
-- Day 55: Performance optimization ([BGAI-037])
-- **Deliverable**: Full validation pipeline working
+**Week 11: Pipeline Integration** (Days 51-55)
+- Day 51-52: Wire 5 layers (#977)
+- Day 53-54: E2E testing (#978)
+- Day 55: Performance (#979)
 
 **Week 12: Buffer** (Days 56-60)
-- Day 56-57: Bug fixes edge cases ([BGAI-038])
-- Day 58: Accuracy baseline measurement ([BGAI-039])
-- Day 59-60: Update ADRs ([BGAI-040])
-- **Deliverable**: Month 3 COMPLETE with accuracy baseline
+- Day 56-57: Bug fixes (#980)
+- Day 58: Accuracy baseline (#981)
+- Day 59-60: ADR updates (#982)
 
 **Month 3 Output**: ✅ Multi-model validation complete, ready for quality framework
 
@@ -370,30 +393,24 @@ git push origin main
 
 **Month 4 (4 weeks): Quality Framework + Frontend Foundation**
 
-**Week 13: Quality Metrics Backend** (Days 61-65)
-- Day 61-62: Extend PromptEvaluationService ([BGAI-041])
-- Day 63-64: Automated evaluation job ([BGAI-042])
-- Day 65: Prometheus metrics ([BGAI-043])
-- **Deliverable**: 5-metric framework foundation
+**Week 13: Quality Backend** (Days 61-65)
+- Day 61-62: 5-metric framework (#983)
+- Day 63-64: Automated evaluation (#984)
+- Day 65: Prometheus metrics (#985)
 
-**Week 14: Quality Metrics Completion** (Days 66-70)
-- Day 66-67: Grafana dashboard ([BGAI-044])
-- Day 68-70: Integration tests ([BGAI-045])
-- **Deliverable**: 5-metric framework operational
+**Week 14: Quality Complete** (Days 66-70)
+- Day 66-67: Grafana dashboard (#986)
+- Day 68-70: Integration tests (#987)
 
 **Week 15: Frontend Foundation** (Days 71-75)
-- Day 71: Install shadcn/ui ([BGAI-046])
-- Day 72-73: Design tokens ([BGAI-047])
-- Day 74-75: Base components ([BGAI-048])
-- **Deliverable**: shadcn/ui installed and configured
+- Day 71: Install shadcn/ui (#988)
+- Day 72-73: Design tokens + Base components (#989)
+- Day 74-75: More components work
 
-**Week 16: Frontend Completion** (Days 76-80)
-- Day 76-77: i18n setup ([BGAI-049])
-- Day 78-79: BoardGameAI page structure ([BGAI-050])
-- Day 80: Component testing ([BGAI-051])
-- **Quality Gate**: Responsive design ([BGAI-052]), Accessibility ([BGAI-053])
-- **Final**: Build optimization ([BGAI-054]), Integration testing ([BGAI-055])
-- **Deliverable**: Frontend foundation complete
+**Week 16: Frontend Complete** (Days 76-80)
+- Day 76-77: i18n setup (#990)
+- Day 78-79: BoardGameAI page (#991)
+- Day 80: Testing (#992, #993, #994, #995)
 
 **Month 4 Output**: ✅ Quality framework + Frontend foundation both complete
 
@@ -401,31 +418,27 @@ git push origin main
 
 **Month 5 (4 weeks): Golden Dataset + Q&A Interface**
 
-**Week 17: Golden Dataset Part 1** (Days 81-85)
-- Day 81-82: Terraforming Mars annotation ([BGAI-056])
-- Day 83-84: Wingspan annotation ([BGAI-057])
-- Day 85: Azul annotation ([BGAI-058])
-- **Deliverable**: 50 Q&A pairs annotated
+**Week 17: Dataset Part 1** (Days 81-85)
+- Day 81-82: Terraforming Mars 20 Q&A (#996)
+- Day 83-84: Wingspan 15 Q&A (#997)
+- Day 85: Azul 15 Q&A (#998)
 
 **Week 18: Quality Testing** (Days 86-90)
-- Day 86-87: Quality test implementation ([BGAI-059])
-- Day 88-89: Run first accuracy test ([BGAI-060])
-- Day 90: Baseline analysis and reporting
-- **Deliverable**: Accuracy baseline established
+- Day 86-87: Quality test implementation (#999)
+- Day 88-89: Accuracy test (#1000)
+- Day 90: Baseline analysis
 
-**Week 19: Q&A Interface Components** (Days 91-95)
-- Day 91-92: QuestionInputForm component ([BGAI-061])
-- Day 93-94: ResponseCard component ([BGAI-062])
-- Day 95: GameSelector dropdown ([BGAI-063])
-- **Deliverable**: Core Q&A components built
+**Week 19: Q&A Components** (Days 91-95)
+- Day 91-92: QuestionInputForm (#1001)
+- Day 93-94: ResponseCard (#1002)
+- Day 95: GameSelector (#1003)
 
-**Week 20: Q&A Interface Integration** (Days 96-100)
-- Day 96: Loading and error states ([BGAI-064])
-- Day 97-98: Jest tests (20 tests) ([BGAI-065])
-- Day 99: Backend API integration ([BGAI-066])
-- Day 100: Streaming SSE support ([BGAI-067]), Error handling ([BGAI-068])
-- **Quality Gate**: E2E testing ([BGAI-069])
-- **Deliverable**: Q&A interface fully functional
+**Week 20: Q&A Integration** (Days 96-100)
+- Day 96: Loading/error states (#1004)
+- Day 97-98: Jest tests 20 (#1005)
+- Day 99: API integration (#1006)
+- Day 100: Streaming SSE (#1007), Error handling (#1008)
+- **Gate**: E2E testing (#1009)
 
 **Month 5 Output**: ✅ 50 Q&A dataset + Q&A UI functional
 
@@ -434,31 +447,26 @@ git push origin main
 **Month 6 (4 weeks): Dataset Completion + PDF Viewer + Italian UI**
 
 **Week 21: Dataset Expansion** (Days 101-105)
-- Day 101-102: Scythe, Catan, Pandemic ([BGAI-070])
-- Day 103-104: 7 Wonders, Agricola, Splendor ([BGAI-071])
-- Day 105: Adversarial dataset ([BGAI-072])
-- **Deliverable**: 100 Q&A complete + 50 adversarial
+- Day 101-102: Scythe, Catan, Pandemic 30 Q&A (#1010)
+- Day 103-104: 7 Wonders, Agricola, Splendor 30 Q&A (#1011)
+- Day 105: Adversarial dataset 50 (#1012)
 
 **Week 22: PDF Viewer** (Days 106-110)
-- Day 106-107: PDF viewer integration ([BGAI-073])
-- Day 108: Citation navigation ([BGAI-074])
-- Day 109: Mobile PDF UX ([BGAI-075])
-- Day 110: PDF viewer tests ([BGAI-076])
-- **Deliverable**: PDF viewer with citation navigation
+- Day 106-107: PDF viewer integration (#1013)
+- Day 108: Citation navigation (#1014)
+- Day 109-110: Mobile UX + Tests (#1015)
 
 **Week 23: Italian Localization** (Days 111-115)
-- Day 111-112: Italian UI strings 200+ ([BGAI-077])
-- Day 113-114: Game catalog page ([BGAI-078])
-- Day 115: Mobile responsive testing ([BGAI-079])
-- **Deliverable**: Full Italian UI
+- Day 111-112: Italian strings 200+ (#1016)
+- Day 113-114: Game catalog page (#1017)
+- Day 115: Mobile responsive (all issue numbers match)
 
-**Week 24: Final Integration & Testing** (Days 116-120)
-- Day 116-117: End-to-end testing ([BGAI-080])
-- Day 118: Accuracy validation 80% target ([BGAI-081])
-- Day 119: Performance testing P95 <3s ([BGAI-082])
-- Day 120: Final bug fixes and polish ([BGAI-083])
-- **Final Deliverables**: Documentation ([BGAI-084]), Completion checklist ([BGAI-085])
-- **Deliverable**: Phase 1A COMPLETE (core features working)
+**Week 24: Final Testing** (Days 116-120)
+- Day 116-117: E2E testing (#1018)
+- Day 118: Accuracy 80% (#1019)
+- Day 119: Performance P95 (#1020)
+- Day 120: Bug fixes (#1021), Docs (#1022), Checklist (#1023)
+- **Deliverable**: Phase 1A COMPLETE
 
 **Month 6 Output**: ✅ 100 Q&A dataset + Full Italian UI + E2E tested
 

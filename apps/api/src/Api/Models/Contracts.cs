@@ -446,7 +446,7 @@ public record SystemConfigurationDto(
     DateTime? LastToggledAt);
 
 public record CreateConfigurationRequest(
-    [Required] [StringLength(500, MinimumLength = 1)] string Key,
+    [Required][StringLength(500, MinimumLength = 1)] string Key,
     [Required] string Value,
     [Required] string ValueType = "string",
     string? Description = null,

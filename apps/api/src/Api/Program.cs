@@ -1,4 +1,4 @@
-﻿using Api.Configuration; // CHAT-02
+using Api.Configuration; // CHAT-02
 using Api.Extensions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;

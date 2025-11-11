@@ -14,7 +14,6 @@ public class TotpService : ITotpService
 {
     private readonly MeepleAiDbContext _dbContext;
     private readonly IEncryptionService _encryptionService;
-    private readonly AuthService _authService;
     private readonly AuditService _auditService;
     private readonly IPasswordHashingService _passwordHashingService;
     private readonly ILogger<TotpService> _logger;
@@ -31,7 +30,6 @@ public class TotpService : ITotpService
     public TotpService(
         MeepleAiDbContext dbContext,
         IEncryptionService encryptionService,
-        AuthService authService,
         AuditService auditService,
         IPasswordHashingService passwordHashingService,
         ILogger<TotpService> logger,
@@ -39,7 +37,6 @@ public class TotpService : ITotpService
     {
         _dbContext = dbContext;
         _encryptionService = encryptionService;
-        _authService = authService;
         _auditService = auditService;
         _passwordHashingService = passwordHashingService;
         _logger = logger;

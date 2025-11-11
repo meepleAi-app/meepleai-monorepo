@@ -39,7 +39,8 @@ public class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery, S
             return new SessionStatusDto(
                 IsValid: false,
                 User: null,
-                ExpiresAt: null
+                ExpiresAt: null,
+                LastSeenAt: null
             );
         }
 
@@ -49,7 +50,8 @@ public class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery, S
             return new SessionStatusDto(
                 IsValid: false,
                 User: null,
-                ExpiresAt: session.ExpiresAt
+                ExpiresAt: session.ExpiresAt,
+                LastSeenAt: session.LastSeenAt
             );
         }
 
@@ -65,7 +67,8 @@ public class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery, S
             return new SessionStatusDto(
                 IsValid: false,
                 User: null,
-                ExpiresAt: null
+                ExpiresAt: null,
+                LastSeenAt: null
             );
         }
 
@@ -74,7 +77,8 @@ public class ValidateSessionQueryHandler : IQueryHandler<ValidateSessionQuery, S
         return new SessionStatusDto(
             IsValid: true,
             User: userDto,
-            ExpiresAt: session.ExpiresAt
+            ExpiresAt: session.ExpiresAt,
+            LastSeenAt: session.LastSeenAt
         );
     }
 

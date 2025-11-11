@@ -2,7 +2,6 @@ using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
-using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -10,60 +9,35 @@ using Api.SharedKernel.Infrastructure.Persistence;
 namespace Api.BoundedContexts.Authentication.Application.Commands;
 
 /// <summary>
-/// Handles user login with email and password.
-/// Returns session token or temp token if 2FA is required.
+/// Handles session creation for an authenticated user.
+/// Used after OAuth callback or 2FA verification.
 /// </summary>
-public class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse>
+public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand, CreateSessionResponse>
 {
     private readonly IUserRepository _userRepository;
     private readonly ISessionRepository _sessionRepository;
-    private readonly ITempSessionService _tempSessionService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
 
-    public LoginCommandHandler(
+    public CreateSessionCommandHandler(
         IUserRepository userRepository,
         ISessionRepository sessionRepository,
-        ITempSessionService tempSessionService,
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider)
     {
         _userRepository = userRepository;
         _sessionRepository = sessionRepository;
-        _tempSessionService = tempSessionService;
         _unitOfWork = unitOfWork;
         _timeProvider = timeProvider;
     }
 
-    public async Task<LoginResponse> Handle(LoginCommand command, CancellationToken cancellationToken)
+    public async Task<CreateSessionResponse> Handle(CreateSessionCommand command, CancellationToken cancellationToken)
     {
-        // Find user by email
-        var email = new Email(command.Email);
-        var user = await _userRepository.GetByEmailAsync(email, cancellationToken);
+        // Get user by ID
+        var user = await _userRepository.GetByIdAsync(command.UserId, cancellationToken);
 
         if (user == null)
-            throw new DomainException("Invalid email or password");
-
-        // Verify password
-        if (!user.VerifyPassword(command.Password))
-            throw new DomainException("Invalid email or password");
-
-        // Check if 2FA is required
-        if (user.RequiresTwoFactor())
-        {
-            // Create temp session for 2FA verification (5-min TTL, single-use)
-            var tempSessionToken = await _tempSessionService.CreateTempSessionAsync(
-                user.Id,
-                command.IpAddress
-            );
-
-            return new LoginResponse(
-                RequiresTwoFactor: true,
-                TempSessionToken: tempSessionToken,
-                User: null,
-                SessionToken: null
-            );
-        }
+            throw new DomainException($"User with ID {command.UserId} not found");
 
         // Create session
         var sessionId = Guid.NewGuid();
@@ -82,11 +56,10 @@ public class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse>
         // Map to DTO
         var userDto = MapToUserDto(user);
 
-        return new LoginResponse(
-            RequiresTwoFactor: false,
-            TempSessionToken: null,
+        return new CreateSessionResponse(
             User: userDto,
-            SessionToken: sessionToken.Value
+            SessionToken: sessionToken.Value,
+            ExpiresAt: session.ExpiresAt
         );
     }
 

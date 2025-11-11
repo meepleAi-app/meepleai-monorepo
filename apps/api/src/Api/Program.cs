@@ -1,4 +1,4 @@
-﻿using Api.Configuration; // CHAT-02
+using Api.Configuration; // CHAT-02
 using Api.Extensions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -131,7 +131,7 @@ builder.Services.Configure<SessionCookieConfiguration>(builder.Configuration.Get
 builder.Services.Configure<SessionManagementConfiguration>(builder.Configuration.GetSection("Authentication:SessionManagement"));
 builder.Services.Configure<OAuthConfiguration>(builder.Configuration.GetSection("Authentication:OAuth")); // AUTH-06
 builder.Services.Configure<RateLimitConfiguration>(builder.Configuration.GetSection("RateLimit"));
-builder.Services.Configure<PdfProcessingConfiguration>(builder.Configuration.GetSection("PdfProcessing"));
+// DDD-PHASE4: PdfProcessingConfiguration removed - PDF config now in DocumentProcessing bounded context
 builder.Services.Configure<FollowUpQuestionsConfiguration>(builder.Configuration.GetSection("FollowUpQuestions")); // CHAT-02
 builder.Services.Configure<RagPromptsConfiguration>(builder.Configuration.GetSection("RagPrompts")); // AI-07.1: RAG prompt templates
 builder.Services.Configure<HybridCacheConfiguration>(builder.Configuration.GetSection("HybridCache")); // PERF-05: HybridCache configuration
@@ -322,7 +322,13 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
 
     // Get admin credentials from environment variables
     var adminEmail = app.Configuration["INITIAL_ADMIN_EMAIL"];
-    var adminPassword = app.Configuration["INITIAL_ADMIN_PASSWORD"];
+    // SEC-708: Read initial admin password from Docker Secret file or direct config
+    var adminPassword = SecretsHelper.GetSecretOrValue(
+        app.Configuration,
+        "INITIAL_ADMIN_PASSWORD",
+        app.Logger,
+        required: false
+    );
     var adminDisplayName = app.Configuration["INITIAL_ADMIN_DISPLAY_NAME"] ?? "System Admin";
 
     if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))

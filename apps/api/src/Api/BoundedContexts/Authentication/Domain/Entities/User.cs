@@ -64,7 +64,7 @@ public sealed class User : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Changes the user's password.
+    /// Changes the user's password (requires current password verification).
     /// </summary>
     public void ChangePassword(string currentPassword, PasswordHash newPasswordHash)
     {
@@ -73,6 +73,16 @@ public sealed class User : AggregateRoot<Guid>
 
         PasswordHash = newPasswordHash;
         // TODO: Add domain event PasswordChanged
+    }
+
+    /// <summary>
+    /// Updates the user's password (admin-only operation, no current password required).
+    /// Use this in admin password reset scenarios.
+    /// </summary>
+    public void UpdatePassword(PasswordHash newPasswordHash)
+    {
+        PasswordHash = newPasswordHash;
+        // TODO: Add domain event PasswordReset
     }
 
     /// <summary>
@@ -113,6 +123,19 @@ public sealed class User : AggregateRoot<Guid>
         // Cannot assign admin role to self (must be done by another admin)
         if (newRole.IsAdmin() && Role.IsAdmin())
             throw new DomainException("Cannot modify admin role through self-service");
+
+        Role = newRole;
+        // TODO: Add domain event RoleChanged
+    }
+
+    /// <summary>
+    /// Updates the user's role (admin-only operation).
+    /// Use this in admin handlers where authorization is already verified.
+    /// </summary>
+    public void UpdateRole(Role newRole)
+    {
+        if (Role == newRole)
+            return; // No change
 
         Role = newRole;
         // TODO: Add domain event RoleChanged

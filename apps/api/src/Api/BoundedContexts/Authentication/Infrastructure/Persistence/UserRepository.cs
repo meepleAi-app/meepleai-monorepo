@@ -43,6 +43,13 @@ public class UserRepository : IUserRepository
             .AnyAsync(u => u.Email == email.Value, cancellationToken);
     }
 
+    public async Task<bool> HasAnyUsersAsync(CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Users
+            .AsNoTracking()
+            .AnyAsync(cancellationToken);
+    }
+
     public async Task<List<User>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var userEntities = await _dbContext.Users
@@ -106,6 +113,14 @@ public class UserRepository : IUserRepository
         }
 
         return user;
+    }
+
+    public async Task<int> CountAdminsAsync(CancellationToken cancellationToken = default)
+    {
+        var adminRole = Role.Admin.Value;
+        return await _dbContext.Users
+            .AsNoTracking()
+            .CountAsync(u => u.Role == adminRole, cancellationToken);
     }
 
     /// <summary>

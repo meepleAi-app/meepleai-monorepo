@@ -3,9 +3,16 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using MediatR;
 using Microsoft.AspNetCore.Mvc; // For [FromBody] attribute
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+
+// DDD CQRS imports (using aliases to avoid conflicts with Api.Models)
+using DddRegisterCommand = Api.BoundedContexts.Authentication.Application.Commands.RegisterCommand;
+using DddLoginCommand = Api.BoundedContexts.Authentication.Application.Commands.LoginCommand;
+using DddLogoutCommand = Api.BoundedContexts.Authentication.Application.Commands.LogoutCommand;
+using DddCreateSessionCommand = Api.BoundedContexts.Authentication.Application.Commands.CreateSessionCommand;
 
 namespace Api.Routing;
 
@@ -22,24 +29,31 @@ public static class AuthEndpoints
         var removeSessionCookie = CookieHelpers.RemoveSessionCookie;
         var getSessionCookieName = CookieHelpers.GetSessionCookieName;
 
-        // User registration
-        group.MapPost("/auth/register", async (RegisterPayload payload, HttpContext context, AuthService auth, ILogger<Program> logger, CancellationToken ct) =>
+        // User registration (DDD/CQRS)
+        group.MapPost("/auth/register", async (RegisterPayload payload, IMediator mediator, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
         {
             try
             {
-                var command = new RegisterCommand(
-                    payload.Email,
-                    payload.Password,
-                    payload.DisplayName,
-                    payload.Role,
-                    context.Connection.RemoteIpAddress?.ToString(),
-                    context.Request.Headers.UserAgent.ToString());
+                var command = new DddRegisterCommand(
+                    Email: payload.Email,
+                    Password: payload.Password,
+                    DisplayName: payload.DisplayName,
+                    Role: payload.Role,
+                    IpAddress: context.Connection.RemoteIpAddress?.ToString(),
+                    UserAgent: context.Request.Headers.UserAgent.ToString());
 
                 logger.LogInformation("User registration attempt for {Email}", payload.Email);
-                var result = await auth.RegisterAsync(command, ct);
+                var result = await mediator.Send(command, ct);
                 writeSessionCookie(context, result.SessionToken, result.ExpiresAt);
                 logger.LogInformation("User {UserId} registered successfully with role {Role}", result.User.Id, result.User.Role);
-                return Results.Json(new AuthResponse(result.User, result.ExpiresAt));
+
+                // Map to legacy AuthResponse for backward compatibility
+                var legacyUser = new AuthUser(
+                    Id: result.User.Id.ToString(),
+                    Email: result.User.Email,
+                    DisplayName: result.User.DisplayName,
+                    Role: result.User.Role);
+                return Results.Json(new AuthResponse(legacyUser, result.ExpiresAt));
             }
             catch (ArgumentException ex)
             {
@@ -53,10 +67,15 @@ public static class AuthEndpoints
                 logger.LogWarning(ex, "Registration conflict for {Email}", payload.Email);
                 return Results.Conflict(new { error = ex.Message });
             }
+            catch (Api.SharedKernel.Domain.Exceptions.DomainException ex)
+            {
+                logger.LogWarning(ex, "Registration domain validation failed");
+                return Results.BadRequest(new { error = ex.Message });
+            }
         });
 
-        // User login with 2FA support (AUTH-07)
-        group.MapPost("/auth/login", async (HttpContext context, AuthService auth, MeepleAiDbContext db, ITempSessionService tempSessionService, ILogger<Program> logger, CancellationToken ct) =>
+        // User login with 2FA support (AUTH-07) - DDD CQRS
+        group.MapPost("/auth/login", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Manual deserialization to support both camelCase and PascalCase JSON
             // ASP.NET Core 9.0 Minimal API auto-deserialization ignores ConfigureHttpJsonOptions
@@ -92,73 +111,87 @@ public static class AuthEndpoints
 
             try
             {
-                var command = new LoginCommand(
-                    payload.Email,
-                    payload.Password,
-                    context.Connection.RemoteIpAddress?.ToString(),
-                    context.Request.Headers.UserAgent.ToString());
+                var command = new DddLoginCommand(
+                    Email: payload.Email,
+                    Password: payload.Password,
+                    IpAddress: context.Connection.RemoteIpAddress?.ToString(),
+                    UserAgent: context.Request.Headers.UserAgent.ToString());
 
                 logger.LogInformation("Login attempt for {Email}", payload.Email);
-                var result = await auth.LoginAsync(command, ct);
-                if (result == null)
-                {
-                    logger.LogWarning("Login failed for {Email}", payload.Email);
-                    removeSessionCookie(context);
-                    return Results.Unauthorized();
-                }
+                var result = await mediator.Send(command, ct);
 
-                // AUTH-07: Check if 2FA is enabled
-                var userIdGuid = Guid.Parse(result.User.Id);
-                var user = await db.Users.FindAsync(userIdGuid);
-                if (user == null)
+                // AUTH-07: 2FA flow
+                if (result.RequiresTwoFactor)
                 {
-                    logger.LogError("User {UserId} not found after successful login", result.User.Id);
-                    return Results.Problem("User not found", statusCode: 500);
-                }
-
-                if (user.IsTwoFactorEnabled)
-                {
-                    // Create temp session for 2FA verification
-                    var tempToken = await tempSessionService.CreateTempSessionAsync(
-                        userIdGuid,
-                        context.Connection.RemoteIpAddress?.ToString());
-
-                    logger.LogInformation("User {UserId} requires 2FA, temp session created", result.User.Id);
+                    logger.LogInformation("User requires 2FA, temp session created");
                     return Results.Json(new
                     {
                         requiresTwoFactor = true,
-                        sessionToken = tempToken, // Secure temp token (5-min TTL, single-use)
+                        sessionToken = result.TempSessionToken, // Secure temp token (5-min TTL, single-use)
                         message = "Two-factor authentication required"
                     });
                 }
 
                 // Normal login (no 2FA)
-                writeSessionCookie(context, result.SessionToken, result.ExpiresAt);
+                if (result.User == null || result.SessionToken == null)
+                {
+                    logger.LogWarning("Login failed for {Email}: missing user or session token", payload.Email);
+                    removeSessionCookie(context);
+                    return Results.Unauthorized();
+                }
+
+                // Calculate session expiration (30 days default)
+                var expiresAt = DateTime.UtcNow.AddDays(30);
+                writeSessionCookie(context, result.SessionToken, expiresAt);
                 logger.LogInformation("User {UserId} logged in successfully", result.User.Id);
-                return Results.Json(new AuthResponse(result.User, result.ExpiresAt));
+
+                // Map to legacy AuthResponse for backward compatibility
+                var legacyUser = new AuthUser(
+                    Id: result.User.Id.ToString(),
+                    Email: result.User.Email,
+                    DisplayName: result.User.DisplayName,
+                    Role: result.User.Role);
+
+                return Results.Json(new AuthResponse(legacyUser, expiresAt));
+            }
+            catch (Api.SharedKernel.Domain.Exceptions.DomainException ex)
+            {
+                logger.LogWarning(ex, "Login domain validation failed for {Email}", payload.Email);
+                removeSessionCookie(context);
+                return Results.Unauthorized(); // Don't leak information about which part failed
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            // All business exceptions are handled in AuthService; this catches unexpected infrastructure failures
+            // All business exceptions are handled in LoginCommandHandler; this catches unexpected infrastructure failures
             catch (Exception ex)
             {
                 // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (AuthService)
+                // Specific exception handling occurs in command handler (LoginCommandHandler)
                 logger.LogError(ex, "Login endpoint error");
                 return Results.Problem(detail: ex.Message, statusCode: 500);
             }
 #pragma warning restore CA1031
         });
 
-        // User logout
-        group.MapPost("/auth/logout", async (HttpContext context, AuthService auth, CancellationToken ct) =>
+        // User logout - DDD CQRS
+        group.MapPost("/auth/logout", async (HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             var sessionCookieName = getSessionCookieName(context);
 
             if (context.Request.Cookies.TryGetValue(sessionCookieName, out var token) &&
                 !string.IsNullOrWhiteSpace(token))
             {
-                await auth.LogoutAsync(token, ct);
+                try
+                {
+                    var command = new DddLogoutCommand(SessionToken: token);
+                    await mediator.Send(command, ct);
+                    logger.LogInformation("User logged out successfully");
+                }
+                catch (Api.SharedKernel.Domain.Exceptions.DomainException ex)
+                {
+                    // Invalid session token - log but don't fail (allow cookie cleanup)
+                    logger.LogWarning(ex, "Logout: Invalid session token");
+                }
             }
 
             removeSessionCookie(context);
@@ -291,7 +324,7 @@ public static class AuthEndpoints
         .WithName("Enable2FA")
         .WithTags("Authentication");
 
-        group.MapPost("/auth/2fa/verify", async (TwoFactorVerifyRequest request, HttpContext context, ITotpService totpService, ITempSessionService tempSessionService, IRateLimitService rateLimitService, AuthService authService, ILogger<Program> logger) =>
+        group.MapPost("/auth/2fa/verify", async (TwoFactorVerifyRequest request, HttpContext context, ITotpService totpService, ITempSessionService tempSessionService, IRateLimitService rateLimitService, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
             // Rate limit: 3 attempts per minute per session token
             var rateLimitKey = $"2fa:verify:{request.SessionToken}";
@@ -328,26 +361,33 @@ public static class AuthEndpoints
                     return Results.Unauthorized();
                 }
 
-                // Create actual session after 2FA verification
-                var loginResult = await authService.CreateSessionForUserAsync(userId.ToString(),
-                    context.Connection.RemoteIpAddress?.ToString(),
-                    context.Request.Headers.UserAgent.ToString());
-                if (loginResult != null)
-                {
-                    CookieHelpers.WriteSessionCookie(context, loginResult.SessionToken, loginResult.ExpiresAt);
-                    logger.LogInformation("2FA verified, session created for user {UserId}", userId);
-                    return Results.Ok(new { message = "2FA verification successful", user = loginResult.User });
-                }
+                // Create actual session after 2FA verification - DDD CQRS
+                var command = new DddCreateSessionCommand(
+                    UserId: userId,
+                    IpAddress: context.Connection.RemoteIpAddress?.ToString(),
+                    UserAgent: context.Request.Headers.UserAgent.ToString());
 
-                return Results.Problem("Failed to create session after 2FA", statusCode: 500);
+                var sessionResult = await mediator.Send(command, ct);
+
+                CookieHelpers.WriteSessionCookie(context, sessionResult.SessionToken, sessionResult.ExpiresAt);
+                logger.LogInformation("2FA verified, session created for user {UserId}", userId);
+
+                // Map to legacy format for backward compatibility
+                var legacyUser = new AuthUser(
+                    Id: sessionResult.User.Id.ToString(),
+                    Email: sessionResult.User.Email,
+                    DisplayName: sessionResult.User.DisplayName,
+                    Role: sessionResult.User.Role);
+
+                return Results.Ok(new { message = "2FA verification successful", user = legacyUser });
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             // Justification: API endpoint boundary - must catch all exceptions to return proper HTTP 500 response
-            // All business exceptions are handled in TotpService/TempSessionService; this catches unexpected failures
+            // All business exceptions are handled in TotpService/TempSessionService/CreateSessionCommandHandler; this catches unexpected failures
             catch (Exception ex)
             {
                 // Top-level API endpoint handler: Catches all exceptions to return HTTP 500
-                // Specific exception handling occurs in service layer (TotpService, TempSessionService)
+                // Specific exception handling occurs in service layer (TotpService, TempSessionService) and command handler (CreateSessionCommandHandler)
                 logger.LogError(ex, "2FA verify error");
                 return Results.Problem(detail: ex.Message, statusCode: 500);
             }
@@ -486,7 +526,7 @@ Rate limited to 10 requests per minute per IP address.
             string code,
             string state,
             IOAuthService oauthService,
-            AuthService authService,
+            IMediator mediator,
             HttpContext context,
             IConfiguration config,
             IRateLimitService rateLimiter,
@@ -512,18 +552,19 @@ Rate limited to 10 requests per minute per IP address.
             {
                 var result = await oauthService.HandleCallbackAsync(provider, code, state);
 
-                // Create session for the user
+                // Create session for the user - DDD CQRS
                 var sessionIpAddress = context.Connection.RemoteIpAddress?.ToString();
                 var userAgent = context.Request.Headers.UserAgent.ToString();
-                var authResult = await authService.CreateSessionForUserAsync(result.User.Id, sessionIpAddress, userAgent, ct);
 
-                if (authResult == null)
-                {
-                    throw new InvalidOperationException("Failed to create session for OAuth user");
-                }
+                var command = new DddCreateSessionCommand(
+                    UserId: Guid.Parse(result.User.Id),
+                    IpAddress: sessionIpAddress,
+                    UserAgent: userAgent);
+
+                var sessionResult = await mediator.Send(command, ct);
 
                 // Set session cookie
-                writeSessionCookie(context, authResult.SessionToken, authResult.ExpiresAt);
+                writeSessionCookie(context, sessionResult.SessionToken, sessionResult.ExpiresAt);
 
                 // Redirect to frontend with success
                 var frontendUrl = config["FrontendUrl"] ?? "http://localhost:3000";
@@ -829,7 +870,7 @@ User must have at least one authentication method remaining (password or another
             PasswordResetConfirmPayload payload,
             HttpContext context,
             IPasswordResetService passwordResetService,
-            AuthService authService,
+            IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
@@ -858,17 +899,15 @@ User must have at least one authentication method remaining (password or another
 
                 var userId = userIdNullable.Value;
 
-                // Create new session for auto-login
-                var sessionResult = await authService.CreateSessionForUserAsync(
-                    userId.ToString(),
-                    context.Connection.RemoteIpAddress?.ToString(),
-                    context.Request.Headers.UserAgent.ToString(),
-                    ct);
+                // Create new session for auto-login - DDD CQRS
+                var command = new DddCreateSessionCommand(
+                    UserId: userId,
+                    IpAddress: context.Connection.RemoteIpAddress?.ToString(),
+                    UserAgent: context.Request.Headers.UserAgent.ToString());
 
-                if (sessionResult != null)
-                {
-                    writeSessionCookie(context, sessionResult.SessionToken, sessionResult.ExpiresAt);
-                }
+                var sessionResult = await mediator.Send(command, ct);
+
+                writeSessionCookie(context, sessionResult.SessionToken, sessionResult.ExpiresAt);
 
                 return Results.Json(new { ok = true, message = "Password has been reset successfully" });
             }

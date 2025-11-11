@@ -20,7 +20,7 @@ public class TempSessionService : ITempSessionService
     private const int TokenSizeBytes = 32; // 256 bits
 
     public TempSessionService(
-        MeepleAiDbContext dbContext, 
+        MeepleAiDbContext dbContext,
         ILogger<TempSessionService> logger,
         TimeProvider? timeProvider = null)
     {

@@ -31,7 +31,7 @@ public static class CookieHelpers
     {
         var configuration = GetSessionCookieConfiguration(context);
         return string.IsNullOrWhiteSpace(configuration.Name)
-            ? AuthService.SessionCookieName
+            ? "meeple_session" // Default session cookie name (previously AuthService.SessionCookieName)
             : configuration.Name;
     }
 

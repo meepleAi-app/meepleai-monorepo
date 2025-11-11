@@ -242,6 +242,187 @@ Deleting: codeql-db (62.8 MB) - CodeQL database cache
 - Gli sviluppatori tipicamente avranno solo un subset delle cache, quindi il comportamento di skip è normale
 - Il calcolo `du` può impiegare tempo su repository grandi
 
+### 6. Gestione Processi Test
+
+**File**: `cleanup-test-processes.ps1`
+
+Script PowerShell per terminare processi di test rimasti in esecuzione.
+
+**Uso**:
+
+```powershell
+# Dry run (mostra processi senza terminarli)
+pwsh tools/cleanup-test-processes.ps1 -DryRun -Verbose
+
+# Termina processi di test
+pwsh tools/cleanup-test-processes.ps1 -Verbose
+```
+
+**Note**:
+- Eseguito automaticamente da `apps/web/package.json` dopo i test
+- Solo Windows (richiede PowerShell)
+- Terminazione sicura di processi node/jest rimasti attivi
+
+### 7. Gestione Qdrant
+
+**File**: `delete-qdrant-collection.ps1`
+
+Elimina collection dal database vettoriale Qdrant.
+
+**Uso**:
+
+```powershell
+# Elimina collection specifica
+pwsh tools/delete-qdrant-collection.ps1 -CollectionName "meepleai_vectors"
+```
+
+**Prerequisiti**: Qdrant deve essere in esecuzione (`docker compose up qdrant`)
+
+### 8. Configurazione n8n
+
+**File**: `register-n8n-webhook.ps1`, `setup-n8n-service-account.ps1`
+
+Configurazione e registrazione webhook per n8n workflow automation.
+
+**Uso**:
+
+```powershell
+# Setup account servizio n8n
+pwsh tools/setup-n8n-service-account.ps1
+
+# Registra webhook
+pwsh tools/register-n8n-webhook.ps1 -WebhookUrl "http://localhost:5678/webhook/xxx"
+```
+
+### 9. Configurazione Ollama
+
+**File**: `setup-ollama.ps1`
+
+Configura Ollama per modelli LLM locali.
+
+**Uso**:
+
+```powershell
+pwsh tools/setup-ollama.ps1
+```
+
+**Output**: Scarica e configura modelli LLM per sviluppo locale
+
+### 10. Generazione Issue Admin Console
+
+**File**: `create-admin-console-issues.{js,ps1,sh}`
+
+Genera issue GitHub per features Admin Console.
+
+**Uso**:
+
+```bash
+# Bash (Linux/Mac/WSL)
+./tools/create-admin-console-issues.sh [--dry-run]
+
+# PowerShell (Windows)
+pwsh tools/create-admin-console-issues.ps1 [-DryRun]
+
+# Node.js (cross-platform)
+node tools/create-admin-console-issues.js [--dry-run]
+```
+
+Vedi `tools/README-admin-console-issues.md` per documentazione completa.
+
+### 11. Setup GitHub Labels
+
+**File**: `setup-github-labels.sh`
+
+Crea label e milestone GitHub per il progetto.
+
+**Uso**:
+
+```bash
+bash tools/setup-github-labels.sh
+```
+
+**Prerequisiti**: GitHub CLI (`gh`) installato e autenticato
+
+### 12. Analisi Complessità Codice
+
+**File**: `analyze-complexity.ps1`
+
+Analizza complessità del codebase per file più grandi.
+
+**Uso**:
+
+```powershell
+# Analizza file C# (top 20)
+pwsh tools/analyze-complexity.ps1 -Path apps/api -Pattern "*.cs" -Top 20
+
+# Analizza file TypeScript
+pwsh tools/analyze-complexity.ps1 -Path apps/web -Pattern "*.ts,*.tsx" -Top 15
+```
+
+**Output**: Tabella ordinata per numero di righe
+
+**Quando usarlo**: Analisi trimestrale complessità, identificazione candidati refactoring
+
+### 13. Validazione Documentazione
+
+**File**: `validate-docs.ps1`
+
+Valida integrità e consistenza della documentazione.
+
+**Uso**:
+
+```powershell
+pwsh tools/validate-docs.ps1
+```
+
+### 14. Tracking Coverage Trends
+
+**File**: `coverage-trends.{sh,ps1}`
+
+Traccia trend di code coverage nel tempo.
+
+**Uso**:
+
+```bash
+# Bash (Linux/Mac)
+bash tools/coverage-trends.sh
+
+# PowerShell (Windows)
+pwsh tools/coverage-trends.ps1
+```
+
+**Output**: Appende metriche a `coverage-history.json`
+
+### 15. Migrazione Repository
+
+**File**: `migrate-to-private.ps1`
+
+Migra repository da public a private (o viceversa).
+
+**Uso**:
+
+```powershell
+pwsh tools/migrate-to-private.ps1
+```
+
+**Warning**: Richiede permessi admin sul repository
+
+### 16. Dual VS Code Launcher
+
+**File**: `open-dual-vscode.{ps1,sh}`
+
+Apre due istanze VS Code per sviluppo API + Web.
+
+**Uso**:
+
+```bash
+# Bash
+bash tools/open-dual-vscode.sh
+
+# PowerShell
+pwsh tools/open-dual-vscode.ps1
+```
+
 ## Sviluppo
 
 ### Aggiungere Nuovi Strumenti

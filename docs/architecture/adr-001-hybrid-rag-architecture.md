@@ -163,7 +163,9 @@ Implement **Hybrid RAG Architecture with Triple Validation**:
 
 **Mitigation**:
 - Semantic caching (40-60% cache hit rate → 40-60% cost reduction)
-- Smart routing (GPT-3.5 for simple queries → 30% cost reduction on 50% of traffic)
+- OpenRouter automatic fallback to cheaper models (built-in cost optimization)
+- Ollama fallback for free operation (mistral:7b + llama3.1:8b self-hosted)
+- Feature flag: Disable multi-model validation for non-critical use cases
 - Validation skip for high-confidence queries (≥0.90)
 - Publisher B2B revenue offsets consumer API costs
 
@@ -182,79 +184,136 @@ Implement **Hybrid RAG Architecture with Triple Validation**:
 
 ### Confidence Threshold Implementation
 
-```python
-# services/validation.py
-class ConfidenceValidator:
-    THRESHOLD = 0.70
+```csharp
+// BoundedContexts/KnowledgeBase/Application/Services/ConfidenceValidationService.cs
+public class ConfidenceValidationService : IConfidenceValidationService
+{
+    private const decimal CONFIDENCE_THRESHOLD = 0.70m;
+    private readonly ILogger<ConfidenceValidationService> _logger;
 
-    def validate(self, response: GeneratedResponse) -> ValidationResult:
-        if response.confidence >= self.THRESHOLD:
-            return ValidationResult(
-                passed=True,
-                layer='confidence_threshold',
-                message=f"Confidence {response.confidence:.2f} >= {self.THRESHOLD}"
-            )
-        else:
-            return ValidationResult(
-                passed=False,
-                layer='confidence_threshold',
-                message=f"Confidence {response.confidence:.2f} < {self.THRESHOLD}",
-                fallback_action='explicit_uncertainty'
-            )
+    public ValidationResult Validate(GeneratedResponse response)
+    {
+        if (response.Confidence >= CONFIDENCE_THRESHOLD)
+        {
+            return new ValidationResult
+            {
+                Passed = true,
+                Layer = "confidence_threshold",
+                Message = $"Confidence {response.Confidence:F2} >= {CONFIDENCE_THRESHOLD}"
+            };
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Confidence {Confidence} below threshold {Threshold}, returning explicit uncertainty",
+                response.Confidence, CONFIDENCE_THRESHOLD);
+
+            return new ValidationResult
+            {
+                Passed = false,
+                Layer = "confidence_threshold",
+                Message = $"Confidence {response.Confidence:F2} < {CONFIDENCE_THRESHOLD}",
+                FallbackAction = "explicit_uncertainty"
+            };
+        }
+    }
+}
 ```
 
-### Multi-Model Consensus Implementation
+### Multi-Model Consensus Implementation (OpenRouter API)
 
-```python
-# services/validation.py
-class MultiModelConsensusValidator:
-    SIMILARITY_THRESHOLD = 0.90
+```csharp
+// BoundedContexts/KnowledgeBase/Application/Services/MultiModelValidationService.cs
+public class MultiModelValidationService : IMultiModelValidationService
+{
+    private const decimal SIMILARITY_THRESHOLD = 0.90m;
+    private readonly IOpenRouterClient _openRouter;
+    private readonly IEmbeddingService _embeddings;
+    private readonly ILogger<MultiModelValidationService> _logger;
 
-    async def validate(self,
-                       query: str,
-                       primary_response: GeneratedResponse,
-                       context: List[RetrievedChunk]) -> ValidationResult:
+    public async Task<ValidationResult> ValidateWithConsensusAsync(
+        string query,
+        GeneratedResponse primaryResponse,
+        List<RetrievedChunk> context,
+        CancellationToken ct = default)
+    {
+        // Build validation prompt
+        var validationPrompt = BuildValidationPrompt(query, primaryResponse.Answer, context);
 
-        # Build validation prompt
-        validation_prompt = self._build_validation_prompt(
-            query, primary_response.answer, context
-        )
+        // Call Claude via OpenRouter for validation
+        var claudeResponse = await _openRouter.GenerateAsync(new LlmRequest
+        {
+            Model = "anthropic/claude-3.5-sonnet",  // OpenRouter model ID
+            Messages = new[]
+            {
+                new Message { Role = "system", Content = "You are a board game rules validator." },
+                new Message { Role = "user", Content = validationPrompt }
+            },
+            Temperature = 0.1m,
+            MaxTokens = 1024
+        }, ct);
 
-        # Call Claude for validation
-        claude_response = await self.claude_client.generate(
-            prompt=validation_prompt,
-            model="claude-3-5-sonnet-20240620",
-            temperature=0.1,
-            max_tokens=1024
-        )
+        // Calculate semantic similarity using embeddings
+        var primaryEmbedding = await _embeddings.GenerateEmbeddingAsync(primaryResponse.Answer, ct);
+        var validationEmbedding = await _embeddings.GenerateEmbeddingAsync(claudeResponse.Content, ct);
+        var similarity = CalculateCosineSimilarity(primaryEmbedding, validationEmbedding);
 
-        # Calculate semantic similarity
-        primary_embedding = self.embedder.embed(primary_response.answer)
-        validation_embedding = self.embedder.embed(claude_response)
-        similarity = self.cosine_similarity(primary_embedding, validation_embedding)
+        if (similarity >= SIMILARITY_THRESHOLD)
+        {
+            _logger.LogInformation(
+                "Multi-model consensus reached: similarity {Similarity:F3} >= {Threshold}",
+                similarity, SIMILARITY_THRESHOLD);
 
-        if similarity >= self.SIMILARITY_THRESHOLD:
-            return ValidationResult(
-                passed=True,
-                layer='multi_model_consensus',
-                message=f"Consensus similarity {similarity:.3f} >= {self.SIMILARITY_THRESHOLD}",
-                metadata={'claude_response': claude_response, 'similarity': similarity}
-            )
-        else:
-            return ValidationResult(
-                passed=False,
-                layer='multi_model_consensus',
-                message=f"Models disagree (similarity {similarity:.3f})",
-                fallback_action='explicit_uncertainty',
-                metadata={'claude_response': claude_response, 'similarity': similarity}
-            )
+            return new ValidationResult
+            {
+                Passed = true,
+                Layer = "multi_model_consensus",
+                Message = $"Consensus similarity {similarity:F3} >= {SIMILARITY_THRESHOLD}",
+                Metadata = new Dictionary<string, object>
+                {
+                    ["validation_response"] = claudeResponse.Content,
+                    ["similarity"] = similarity,
+                    ["validation_model"] = "claude-3.5-sonnet"
+                }
+            };
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Models disagree: similarity {Similarity:F3} < {Threshold}",
+                similarity, SIMILARITY_THRESHOLD);
+
+            return new ValidationResult
+            {
+                Passed = false,
+                Layer = "multi_model_consensus",
+                Message = $"Models disagree (similarity {similarity:F3})",
+                FallbackAction = "explicit_uncertainty",
+                Metadata = new Dictionary<string, object>
+                {
+                    ["validation_response"] = claudeResponse.Content,
+                    ["similarity"] = similarity
+                }
+            };
+        }
+    }
+
+    private static decimal CalculateCosineSimilarity(float[] a, float[] b)
+    {
+        var dotProduct = a.Zip(b, (x, y) => x * y).Sum();
+        var magnitudeA = Math.Sqrt(a.Sum(x => x * x));
+        var magnitudeB = Math.Sqrt(b.Sum(x => x * x));
+        return (decimal)(dotProduct / (magnitudeA * magnitudeB));
+    }
+}
 ```
 
 ### Citation Verification Implementation
 
-```python
-# services/validation.py
-class CitationValidator:
+```csharp
+// BoundedContexts/KnowledgeBase/Application/Services/CitationValidationService.cs
+public class CitationValidationService : ICitationValidationService
+{
     def validate(self,
                  citations: List[Citation],
                  context_chunks: List[RetrievedChunk]) -> ValidationResult:

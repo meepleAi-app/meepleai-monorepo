@@ -636,27 +636,29 @@ class EmbeddingService:
 
 | Component | Technology | Rationale |
 |-----------|-----------|-----------|
-| **Backend Framework** | FastAPI (Python 3.11+) | Async support, automatic OpenAPI docs, type safety (Pydantic) |
-| **Frontend Framework** | Next.js 14 + React 18 | SSR/SSG, excellent DX, Vercel deployment simplicity |
-| **PDF Processing** | LLMWhisperer (primary) | Layout preservation, free tier 100 pages/day |
-| | SmolDocling (fallback) | Vision-language model, 256M params, fast |
-| | dots.ocr (tertiary) | Multilingual OCR, open-source |
-| **Embeddings** | multilingual-e5-large | 1024 dims, strong multilingual support, Sentence Transformers |
-| **Vector DB** | ChromaDB (MVP) | Embedded, easy setup, zero infra for prototyping |
-| | Weaviate (Production Phase 2+) | Hybrid search, scalable, active community |
-| **LLM Primary** | OpenAI GPT-4 Turbo | Highest accuracy, broad knowledge, cost-effective (vs GPT-4) |
-| **Cache** | Redis (single instance) | In-memory, semantic cache (FAISS similarity search) |
-| **Database** | PostgreSQL 16 | ACID, JSON support, Full-Text Search (Phase 3 hybrid) |
-| **Deployment** | Docker Compose | Simple local dev + staging (DigitalOcean App Platform) |
-| **Monitoring** | Basic logs (stdout) | Sufficient for MVP, upgrade Phase 2 |
+| **Backend Framework** | ASP.NET Core 9.0 (C#) | Existing system, DDD architecture, 90%+ test coverage, production-ready |
+| **Frontend Framework** | Next.js 16 + React 19 | Latest stable, existing infrastructure, SSR/SSG capabilities |
+| **PDF Processing** | LLMWhisperer (primary) | Layout preservation for LLM, free tier 100 pages/day |
+| | SmolDocling (fallback) | Vision-language model (Python microservice), GPU-accelerated |
+| | Docnet.Core + iText7 (final) | Existing implementation, proven fallback, table extraction |
+| **Embeddings** | OpenRouter API (feature-flagged) | text-embedding-3-large via unified API |
+| | Ollama nomic-embed-text (fallback) | Free self-hosted option, 768 dims |
+| **Vector DB** | Qdrant (existing) | Already deployed, hybrid search support v1.7+, production-proven |
+| **LLM Primary** | OpenRouter: gpt-4-turbo | Unified API, automatic fallback, cost tracking |
+| **LLM Validation** | OpenRouter: claude-3.5-sonnet | Multi-model consensus via same API |
+| **LLM Fallback** | Ollama: mistral:7b + llama3.1:8b | Free self-hosted, lower accuracy trade-off (75-80% vs 95%) |
+| **Cache** | Redis HybridCache (existing) | L1 memory + L2 Redis, add semantic layer for LLM responses |
+| **Database** | PostgreSQL 16 (existing) | ACID, EF Core 9.0, Full-Text Search for hybrid (Phase 3) |
+| **Deployment** | Docker Compose (existing) | Proven local dev + staging, Kubernetes-ready |
+| **Monitoring** | Prometheus + Grafana (existing) | OpenTelemetry, Seq, Jaeger already configured |
 
 ### Phase 2 (Production)
 
-**Additions**:
-- **LLM Validation**: Anthropic Claude 3.5 Sonnet (multi-model consensus)
-- **Cache**: Redis Cluster (3 nodes, HA)
-- **Vector DB**: Weaviate (Kubernetes deployment)
-- **Database**: PostgreSQL replication (primary + replica)
+**Enhancements** (Building on Existing Infrastructure):
+- **LLM Validation**: OpenRouter multi-model (GPT-4 + Claude + Gemini ensemble)
+- **Cache**: Redis Cluster (3 nodes, HA) - already planned
+- **Vector DB**: Qdrant optimization (hybrid search, Italian-specific collections)
+- **Database**: PostgreSQL replication (already available in existing system)
 - **Orchestration**: Kubernetes (AWS EKS or DigitalOcean)
 - **IaC**: Terraform (infrastructure as code)
 - **Monitoring**: Prometheus + Grafana + PagerDuty

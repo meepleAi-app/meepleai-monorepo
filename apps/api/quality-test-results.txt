@@ -1,7 +1,0 @@
-Esecuzione dei test per D:\Repositories\meepleai-monorepo\apps\api\tests\Api.Tests\bin\Debug\net9.0\Api.Tests.dll (.NETCoreApp,Version=v9.0)
-Versione di VSTest 17.14.0 (x64)
-
-Avvio dell'esecuzione dei test in corso. Attendere...
-Un totale di 1 file di test corrisponde al criterio specificato.
-
-Superato!     - Non superati:     0. Superati:     6. Ignorati:     0. Totale:     6. Durata: 35 s - Api.Tests.dll (net9.0)

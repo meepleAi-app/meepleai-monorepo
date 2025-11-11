@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.Helpers;
 using Api.Services;
@@ -22,6 +23,9 @@ public static class ApplicationServiceExtensions
         services.AddChessServices();
         services.AddBggServices();
         services.AddQualityServices();
+
+        // DDD-PHASE2: Authentication bounded context (repositories for CQRS handlers)
+        services.AddAuthenticationContext();
 
         // DDD-PHASE3: KnowledgeBase bounded context
         services.AddKnowledgeBaseServices();

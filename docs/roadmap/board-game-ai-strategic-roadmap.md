@@ -1,15 +1,25 @@
 # MeepleAI Strategic Roadmap - Italian Board Game Rules Assistant
 
 **Status**: Approved for Implementation
-**Version**: 1.0
+**Version**: 2.0 (Consolidated with Existing MeepleAI System)
 **Date**: 2025-01-15
 **Owner**: Product & Engineering Team
 
 ---
 
+## ⚠️ SYSTEM INTEGRATION NOTICE
+
+This roadmap describes **Board Game AI features integrated into the existing MeepleAI system** (ASP.NET Core 9.0), NOT a separate new system.
+
+**Technology Stack**: ASP.NET Core 9.0 + Next.js 16 + Qdrant + OpenRouter (feature-flagged with Ollama fallback)
+
+**See**: [Consolidation Strategy](../architecture/board-game-ai-consolidation-strategy.md) for integration details.
+
+---
+
 ## Executive Summary
 
-**Mission**: Creare il primo sistema AI italiano open-source per arbitrare giochi da tavolo, con accuracy >95% e robustezza multilingual, utilizzando tecnologia open-source e partnership con publisher italiani.
+**Mission**: Enhance existing MeepleAI system with Italian-focused board game rules assistance, achieving >95% accuracy through multi-model validation, publisher partnerships, and advanced PDF processing.
 
 **Market Opportunity**:
 - Mercato italiano completamente unserved (nessun sistema dedicato identificato)
@@ -92,12 +102,12 @@
 
 **Goal**: Validate product-market fit con 100 beta users e accuracy >80% su dataset limitato
 
-**Milestones**:
-- **Sprint 1-2**: Infrastructure setup (Docker Compose, CI/CD, basic API skeleton)
-- **Sprint 3-4**: PDF processing pipeline (LLMWhisperer → SmolDocling → chunking)
-- **Sprint 5-6**: RAG core (embeddings, Weaviate indexing, GPT-4 generation)
-- **Sprint 7-8**: Quality validation (multi-model consensus, confidence scoring, 5-metric framework)
-- **Sprint 9-10**: Frontend (Q&A interface, PDF viewer, mobile responsive)
+**Milestones** (Integrated into Existing ASP.NET Core System):
+- **Sprint 1-2**: LLMWhisperer C# client + SmolDocling Python microservice integration
+- **Sprint 3-4**: 3-stage PDF pipeline (LLMWhisperer → SmolDocling → Docnet.Core fallback)
+- **Sprint 5-6**: Multi-model validation (OpenRouter: GPT-4 + Claude consensus)
+- **Sprint 7-8**: 5-metric quality framework + Italian localization
+- **Sprint 9-10**: Frontend enhancements (Italian UI, citation viewer, mobile-optimized)
 - **Sprint 11-12**: Beta launch (La Tana dei Goblin partnership, 100 user recruitment)
 
 **Success Criteria**:
@@ -122,10 +132,10 @@
 **Goal**: Launch production system con 1,000 MAU e publisher partnerships
 
 **Focus Areas**:
-1. **Production Stack Upgrade**:
-   - Weaviate self-hosted (Kubernetes deployment)
-   - Redis cluster (HA setup, 3 nodes)
-   - PostgreSQL replication (primary + replica)
+1. **Production Stack Enhancement** (Leverage Existing Infrastructure):
+   - Qdrant optimization (hybrid search, Italian collections)
+   - Redis cluster (already planned, HA setup, 3 nodes)
+   - PostgreSQL replication (already available, primary + replica)
    - CDN for static assets (Cloudflare)
 
 2. **Publisher Partnerships**:
@@ -134,11 +144,11 @@
    - White-label integration POC (iframe embed)
    - Revenue share model: 70% platform, 30% publisher
 
-3. **Scale & Performance**:
-   - Semantic caching (Redis FAISS, 40-60% hit rate target)
-   - Smart model routing (GPT-3.5 simple, GPT-4 complex)
-   - Load testing (100 RPS sustained, error rate <1%)
-   - Circuit breakers (LLM API, Vector DB failure handling)
+3. **Scale & Performance** (Extend Existing Optimizations):
+   - Semantic caching (Redis + existing HybridCache, 40-60% hit rate target)
+   - Smart model routing via OpenRouter (auto-fallback to cheaper models)
+   - Load testing (100 RPS sustained, leverage existing test infrastructure)
+   - Circuit breakers (OpenRouter API + Ollama fallback for LLM resilience)
 
 4. **Mobile App**:
    - Progressive Web App (PWA) with offline fallback
@@ -168,20 +178,21 @@
 **Goal**: Achieve 95%+ accuracy gold standard e 5,000 MAU
 
 **Focus Areas**:
-1. **Hybrid Search Enhancement**:
-   - PostgreSQL Full-Text Search integration
-   - RRF fusion (70% vector + 30% keyword)
-   - Query expansion (synonyms, related terms)
+1. **Hybrid Search Enhancement** (Extend Existing AI-14):
+   - Qdrant hybrid search (sparse + dense vectors)
+   - RRF fusion (70% vector + 30% keyword, existing implementation)
+   - Query expansion (synonyms, Italian game terms)
 
 2. **Fine-Tuned Italian Model**:
    - Corpus: 10K Italian rulebooks + community FAQ
    - Method: Contrastive learning on annotated Q&A pairs
    - Validation: +5-10 accuracy points over generic embeddings
 
-3. **Advanced Validation**:
+3. **Advanced Validation** (OpenRouter Multi-Model):
    - Citation correctness ≥90% (stringent page validation)
-   - Multi-provider ensemble (GPT-4 + Claude + Mistral consensus)
-   - A/B testing framework for new model versions
+   - Multi-model ensemble via OpenRouter (GPT-4 + Claude + Gemini consensus)
+   - A/B testing framework (extend existing PromptEvaluationService)
+   - Ollama fallback for cost control (free self-hosted option)
 
 4. **Academic Publication**:
    - IEEE CoG 2026 paper submission (target: June 2026)

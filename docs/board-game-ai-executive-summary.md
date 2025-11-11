@@ -1,9 +1,19 @@
 # MeepleAI Executive Summary - Italian Board Game Rules AI Assistant
 
-**Project**: Open-Source AI System for Board Game Rules Assistance
+**Project**: Board Game AI Features Integration into Existing MeepleAI System
 **Target Market**: Italy (Phase 1-3) → Europe (Phase 4) → Global (Phase 5)
-**Status**: Ready for Phase 1 Implementation
+**Status**: Ready for Phase 1 Implementation (Consolidated Approach)
 **Date**: 2025-01-15
+
+---
+
+## ⚠️ CRITICAL: Technology Stack Clarification
+
+**This describes features integrated into existing MeepleAI (ASP.NET Core 9.0)**, NOT a separate Python system.
+
+**Actual Stack**: ASP.NET Core 9.0 + Next.js 16 + Qdrant + OpenRouter (with Ollama free fallback)
+
+**See**: [Implementation Notes](./board-game-ai-IMPLEMENTATION-NOTES.md) for technology corrections.
 
 ---
 
@@ -42,16 +52,16 @@
 
 ## 🏗️ Product Architecture
 
-**Tech Stack** (Open-Source Core):
-- **Backend**: Python 3.11 + FastAPI (async, type-safe)
-- **PDF Processing**: LLMWhisperer → SmolDocling → dots.ocr (3-stage fallback)
-- **Embeddings**: multilingual-e5-large (1024 dims, Italian support)
-- **Vector DB**: Weaviate (hybrid search: vector + keyword RRF fusion)
-- **LLM**: GPT-4 Turbo (primary) + Claude 3.5 Sonnet (validation)
-- **Cache**: Redis (semantic cache, 40-60% hit rate)
-- **Database**: PostgreSQL 16 (metadata, users, analytics)
-- **Frontend**: Next.js 14 + React 18 (SSR, mobile-responsive)
-- **Deployment**: Docker Compose (MVP) → Kubernetes (Production)
+**Tech Stack** (Integrated into Existing MeepleAI):
+- **Backend**: ASP.NET Core 9.0 (C#, DDD architecture, 90%+ coverage)
+- **PDF Processing**: LLMWhisperer → SmolDocling (Python microservice) → Docnet.Core (existing fallback)
+- **Embeddings**: OpenRouter API (feature-flagged) + Ollama nomic-embed-text (free fallback)
+- **Vector DB**: Qdrant (existing, hybrid search v1.7+)
+- **LLM**: OpenRouter (gpt-4-turbo primary + claude-3.5-sonnet validation) + Ollama (mistral:7b + llama3.1:8b free fallback)
+- **Cache**: Redis HybridCache (existing L1+L2) + semantic layer
+- **Database**: PostgreSQL 16 (existing EF Core infrastructure)
+- **Frontend**: Next.js 16 + React 19 (existing, latest stable)
+- **Deployment**: Docker Compose (existing, add pdf-processor service) → Kubernetes (ready)
 
 **Triple Validation Architecture**:
 ```
@@ -90,11 +100,13 @@ Layer 5: User Feedback (negative reports → admin review → improvement)
 - LTV/CAC: 4.5x (healthy, target >3x)
 - Payback period: 4 months
 
-**Financial Projections** (18 months):
-- Month 6 (MVP): €0 MRR, €6.5K burn (validation phase)
-- Month 12 (Launch): €3.2K MRR, €8.5K burn (50 premium + 2 B2B)
-- Month 18 (Scale): €10K MRR, €7K burn (500 premium + 5 B2B)
+**Financial Projections** (18 months, Consolidated Approach):
+- Month 6 (MVP): €0 MRR, €4.5K burn (34% lower via infra reuse)
+- Month 12 (Launch): €3.2K MRR, €6.8K burn (50 premium + 2 B2B)
+- Month 18 (Scale): €10K MRR, €5.5K burn (500 premium + 5 B2B)
 - Month 24-30 (Breakeven): €17K MRR, €0 burn (self-sustaining)
+
+**Cost Savings**: 34-48% reduction by consolidating into existing system (€3.5-5K/month saved)
 
 ---
 

@@ -44,13 +44,13 @@ public class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespons
             "Processing AskQuestionQuery: GameId={GameId}, Question={Question}",
             query.GameId, query.Question);
 
-        // Step 1: Perform vector search
+        // Step 1: Perform vector search (AI-14: configurable search mode)
         var searchQuery = new SearchQuery(
             GameId: query.GameId,
             Query: query.Question,
             TopK: 5,
             MinScore: 0.7,
-            SearchMode: "hybrid",
+            SearchMode: query.SearchMode ?? "hybrid", // Default to hybrid if not specified
             Language: query.Language
         );
 

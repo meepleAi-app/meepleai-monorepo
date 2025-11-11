@@ -1,0 +1,45 @@
+using Api.BoundedContexts.Administration.Application.Commands;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.Models;
+using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
+
+namespace Api.BoundedContexts.Administration.Application.Handlers;
+
+public class ChangeUserRoleCommandHandler : ICommandHandler<ChangeUserRoleCommand, UserDto>
+{
+    private readonly IUserRepository _userRepository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public ChangeUserRoleCommandHandler(
+        IUserRepository userRepository,
+        IUnitOfWork unitOfWork)
+    {
+        _userRepository = userRepository;
+        _unitOfWork = unitOfWork;
+    }
+
+    public async Task<UserDto> Handle(ChangeUserRoleCommand command, CancellationToken cancellationToken)
+    {
+        var userId = Guid.Parse(command.UserId);
+        var user = await _userRepository.GetByIdAsync(userId, cancellationToken);
+        if (user == null)
+            throw new DomainException($"User {command.UserId} not found");
+
+        var newRole = Role.Parse(command.NewRole);
+        user.UpdateRole(newRole);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new UserDto(
+            Id: user.Id.ToString(),
+            Email: user.Email.Value,
+            DisplayName: user.DisplayName,
+            Role: user.Role.Value,
+            CreatedAt: user.CreatedAt,
+            LastSeenAt: null
+        );
+    }
+}

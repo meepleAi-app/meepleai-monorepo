@@ -16,8 +16,11 @@ public static class GameEndpoints
 {
     public static RouteGroupBuilder MapGameEndpoints(this RouteGroupBuilder group)
     {
-        // Get all games
-        group.MapGet("/games", async (HttpContext context, GameService gameService, CancellationToken ct) =>
+        // Get all games (DDD/CQRS)
+        group.MapGet("/games", async (
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
         {
             // Support both cookie-based session auth and API key auth
             var hasSession = context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession;
@@ -28,54 +31,18 @@ public static class GameEndpoints
                 return Results.Unauthorized();
             }
 
-            var games = await gameService.GetGamesAsync(ct);
-            var response = games.Select(g => new GameResponse(g.Id.ToString(), g.Name, g.CreatedAt)).ToList();
-            return Results.Json(response);
+            var query = new GetAllGamesQuery();
+            var result = await mediator.Send(query, ct);
+
+            return Results.Ok(result);
         });
 
-        // Create a new game (Admin/Editor only) - Legacy endpoint
-        group.MapPost("/games", async (Api.Models.CreateGameRequest? request, HttpContext context, GameService gameService, ILogger<Program> logger, CancellationToken ct) =>
-        {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
-
-            if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
-            {
-                logger.LogWarning(
-                    "User {UserId} with role {Role} attempted to create a game without permission",
-                    session.User.Id,
-                    session.User.Role);
-                return Results.StatusCode(StatusCodes.Status403Forbidden);
-            }
-
-            if (request is null)
-            {
-                return Results.BadRequest(new { error = "Request body is required" });
-            }
-
-            try
-            {
-                var game = await gameService.CreateGameAsync(request.Name, request.GameId, ct);
-                logger.LogInformation("Created game {GameId}", game.Id);
-                return Results.Created($"/games/{game.Id}", new GameResponse(game.Id.ToString(), game.Name, game.CreatedAt));
-            }
-            catch (ArgumentException ex)
-            {
-                logger.LogWarning(ex, "Invalid game creation request");
-                return Results.BadRequest(new { error = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning(ex, "Conflict creating game");
-                return Results.Conflict(new { error = ex.Message });
-            }
-        });
-
-        // CHAT-06: Get agents for a specific game
-        group.MapGet("/games/{gameId}/agents", async (string gameId, HttpContext context, ChatService chatService, CancellationToken ct) =>
+        // Get game by ID (DDD/CQRS)
+        group.MapGet("/games/{id}", async (
+            Guid id,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
         {
             // Support both cookie-based session auth and API key auth
             var hasSession = context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession;
@@ -86,24 +53,14 @@ public static class GameEndpoints
                 return Results.Unauthorized();
             }
 
-            var agents = await chatService.GetAgentsForGameAsync(gameId, ct);
-            var response = agents.Select(a => new AgentDto(
-                a.Id.ToString(),
-                a.GameId.ToString(),
-                a.Name,
-                a.Kind,
-                a.CreatedAt
-            )).ToList();
+            var query = new GetGameByIdQuery(id);
+            var result = await mediator.Send(query, ct);
 
-            return Results.Json(response);
+            return result != null ? Results.Ok(result) : Results.NotFound();
         });
 
-        // ========================================
-        // DDD-PHASE2: GameManagement CQRS Endpoints
-        // ========================================
-
-        // Create game (CQRS)
-        group.MapPost("/games/ddd", async (
+        // Create game (DDD/CQRS) - Admin/Editor only
+        group.MapPost("/games", async (
             Api.BoundedContexts.GameManagement.Application.DTOs.CreateGameRequest request,
             IMediator mediator,
             HttpContext context,
@@ -133,12 +90,12 @@ public static class GameEndpoints
             );
 
             var result = await mediator.Send(command, ct);
-            logger.LogInformation("Created game {GameId} via CQRS", result.Id);
+            logger.LogInformation("Created game {GameId} via DDD/CQRS", result.Id);
             return Results.Created($"/api/v1/games/{result.Id}", result);
         });
 
-        // Update game (CQRS)
-        group.MapPut("/games/{id}/ddd", async (
+        // Update game (DDD/CQRS) - Admin/Editor only
+        group.MapPut("/games/{id}", async (
             Guid id,
             Api.BoundedContexts.GameManagement.Application.DTOs.UpdateGameRequest request,
             IMediator mediator,
@@ -172,14 +129,10 @@ public static class GameEndpoints
             return Results.Ok(result);
         });
 
-        // Get game by ID (CQRS)
-        group.MapGet("/games/{id}/ddd", async (
-            Guid id,
-            IMediator mediator,
-            HttpContext context,
-            CancellationToken ct) =>
+        // CHAT-06: Get agents for a specific game
+        group.MapGet("/games/{gameId}/agents", async (string gameId, HttpContext context, ChatService chatService, CancellationToken ct) =>
         {
-            // Auth check
+            // Support both cookie-based session auth and API key auth
             var hasSession = context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession;
             var hasApiKey = context.User.Identity?.IsAuthenticated == true;
 
@@ -188,32 +141,18 @@ public static class GameEndpoints
                 return Results.Unauthorized();
             }
 
-            var query = new GetGameByIdQuery(id);
-            var result = await mediator.Send(query, ct);
+            var agents = await chatService.GetAgentsForGameAsync(gameId, ct);
+            var response = agents.Select(a => new AgentDto(
+                a.Id.ToString(),
+                a.GameId.ToString(),
+                a.Name,
+                a.Kind,
+                a.CreatedAt
+            )).ToList();
 
-            return result != null ? Results.Ok(result) : Results.NotFound();
+            return Results.Json(response);
         });
 
-        // Get all games (CQRS)
-        group.MapGet("/games/ddd", async (
-            IMediator mediator,
-            HttpContext context,
-            CancellationToken ct) =>
-        {
-            // Auth check
-            var hasSession = context.Items.TryGetValue(nameof(ActiveSession), out var value) && value is ActiveSession;
-            var hasApiKey = context.User.Identity?.IsAuthenticated == true;
-
-            if (!hasSession && !hasApiKey)
-            {
-                return Results.Unauthorized();
-            }
-
-            var query = new GetAllGamesQuery();
-            var result = await mediator.Send(query, ct);
-
-            return Results.Ok(result);
-        });
 
         // ========================================
         // GameSession CQRS Endpoints

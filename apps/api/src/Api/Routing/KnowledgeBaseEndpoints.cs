@@ -14,11 +14,11 @@ public static class KnowledgeBaseEndpoints
 {
     public static RouteGroupBuilder MapKnowledgeBaseEndpoints(this RouteGroupBuilder group)
     {
-        // DDD-PHASE3: Vector/hybrid search endpoint using SearchQueryHandler
+        // DDD-PHASE3: Vector/hybrid search endpoint using MediatR
         group.MapPost("/knowledge-base/search", async (
             KnowledgeBaseSearchRequest req,
             HttpContext context,
-            SearchQueryHandler handler,
+            IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
@@ -55,8 +55,8 @@ public static class KnowledgeBaseEndpoints
                     Language: req.language ?? "en"
                 );
 
-                // Execute via handler
-                var results = await handler.Handle(query, ct);
+                // Execute via MediatR
+                var results = await mediator.Send(query, ct);
 
                 logger.LogInformation(
                     "KnowledgeBase search completed: {ResultCount} results found",
@@ -82,11 +82,11 @@ public static class KnowledgeBaseEndpoints
         .WithName("KnowledgeBaseSearch")
         .WithTags("KnowledgeBase");
 
-        // DDD-PHASE3: RAG Q&A endpoint using AskQuestionQueryHandler
+        // DDD-PHASE3: RAG Q&A endpoint using MediatR
         group.MapPost("/knowledge-base/ask", async (
             KnowledgeBaseAskRequest req,
             HttpContext context,
-            AskQuestionQueryHandler handler,
+            IMediator mediator,
             ILogger<Program> logger,
             CancellationToken ct = default) =>
         {
@@ -121,8 +121,8 @@ public static class KnowledgeBaseEndpoints
                     BypassCache: req.bypassCache ?? false
                 );
 
-                // Execute via handler
-                var response = await handler.Handle(query, ct);
+                // Execute via MediatR
+                var response = await mediator.Send(query, ct);
 
                 logger.LogInformation(
                     "KnowledgeBase Q&A completed: Confidence={Confidence}, IsLowQuality={IsLowQuality}",

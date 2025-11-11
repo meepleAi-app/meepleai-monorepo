@@ -53,29 +53,39 @@ MeepleAI helps players quickly find answers to gameplay questions by processing 
    cd meepleai-monorepo
    ```
 
-2. **Start infrastructure services**
+2. **Initialize Docker Secrets** (SEC-708)
+   ```bash
+   cd tools/secrets
+   ./init-secrets.sh
+   # Follow prompts to configure secrets or use defaults
+   # Secrets are stored in infra/secrets/*.txt (gitignored)
+   ```
+
+3. **Start infrastructure services**
    ```bash
    cd infra
    docker compose up -d postgres qdrant redis n8n
    ```
 
-3. **Run the API**
+4. **Run the API**
    ```bash
    cd apps/api/src/Api
    dotnet run
    ```
 
-4. **Run the Web app**
+5. **Run the Web app**
    ```bash
    cd apps/web
    pnpm install
    pnpm dev
    ```
 
-5. **Access the applications**
+6. **Access the applications**
    - Web: http://localhost:3000
    - API: http://localhost:8080
    - n8n: http://localhost:5678
+
+**Security Note**: All secrets are managed via Docker Secrets (Issue #708). See [`docs/guide/secrets-management.md`](./docs/guide/secrets-management.md) for rotation and advanced management.
 
 ## 📚 Documentation
 

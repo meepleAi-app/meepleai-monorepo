@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -16,17 +17,20 @@ public class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse>
 {
     private readonly IUserRepository _userRepository;
     private readonly ISessionRepository _sessionRepository;
+    private readonly ITempSessionService _tempSessionService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
 
     public LoginCommandHandler(
         IUserRepository userRepository,
         ISessionRepository sessionRepository,
+        ITempSessionService tempSessionService,
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider)
     {
         _userRepository = userRepository;
         _sessionRepository = sessionRepository;
+        _tempSessionService = tempSessionService;
         _unitOfWork = unitOfWork;
         _timeProvider = timeProvider;
     }
@@ -47,11 +51,15 @@ public class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse>
         // Check if 2FA is required
         if (user.RequiresTwoFactor())
         {
-            // TODO: Create temp session for 2FA verification
-            // For now, return placeholder
+            // Create temp session for 2FA verification (5-min TTL, single-use)
+            var tempSessionToken = await _tempSessionService.CreateTempSessionAsync(
+                user.Id,
+                command.IpAddress
+            );
+
             return new LoginResponse(
                 RequiresTwoFactor: true,
-                TempSessionToken: null,
+                TempSessionToken: tempSessionToken,
                 User: null,
                 SessionToken: null
             );

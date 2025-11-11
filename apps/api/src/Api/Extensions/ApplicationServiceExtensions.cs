@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
@@ -44,7 +45,7 @@ public static class ApplicationServiceExtensions
         services.AddSystemConfigurationContext();
 
         // DDD-PHASE3: Administration bounded context
-        // services.AddAdministrationContext(); // TODO: Uncomment when repositories implemented
+        services.AddAdministrationContext();
 
         // DDD-PHASE4: DocumentProcessing bounded context
         services.AddDocumentProcessingContext();
@@ -67,7 +68,6 @@ public static class ApplicationServiceExtensions
 
         services.AddScoped<IEmbeddingService, EmbeddingService>();
         services.AddScoped<ITextChunkingService, TextChunkingService>();
-        services.AddScoped<PdfIndexingService>();
 
         return services;
     }
@@ -75,14 +75,13 @@ public static class ApplicationServiceExtensions
     private static IServiceCollection AddDomainServices(this IServiceCollection services)
     {
         // Game and RuleSpec services
-        services.AddScoped<GameService>();
         services.AddScoped<RuleSpecService>();
         services.AddScoped<RuleSpecDiffService>();
         services.AddScoped<RuleCommentService>(); // EDIT-05: Comment service with threading and mentions
         services.AddScoped<RuleSpecCommentService>(); // EDIT-02: Legacy comment service
 
-        // CONFIG-01: Dynamic configuration service
-        services.AddScoped<IConfigurationService, ConfigurationService>();
+        // CONFIG-01: Dynamic configuration service - REMOVED (migrated to CQRS)
+        // services.AddScoped<IConfigurationService, ConfigurationService>();
 
         // CONFIG: Configuration wrapper (TEST-900 RC-1: enables mocking of IConfiguration extension methods)
         services.AddSingleton<IConfigurationWrapper>(sp =>
@@ -158,14 +157,17 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IBlobStorageService, BlobStorageService>();
 
         // PDF main services
-        services.AddScoped<PdfTextExtractionService>();
-        services.AddScoped<PdfTableExtractionService>(); // Refactored facade
-        services.AddScoped<IPdfValidationService, PdfValidationService>(); // PDF-09: PDF validation service
-        services.AddScoped<PdfStorageService>(); // Refactored facade
+        // DDD-PHASE4: PDF services migrated to DocumentProcessing bounded context
+        services.AddScoped<PdfStorageService>(); // Orchestration service - coordinates bounded contexts
+
+        // Issue #940 Phase 3: DDD PDF text extraction adapter
+        services.AddSingleton<BoundedContexts.DocumentProcessing.Domain.Services.PdfTextProcessingDomainService>();
+        services.AddScoped<BoundedContexts.DocumentProcessing.Infrastructure.External.IPdfTextExtractor,
+            BoundedContexts.DocumentProcessing.Infrastructure.External.DocnetPdfTextExtractor>();
 
         // PDF-02: OCR service for fallback text extraction (Windows-only)
-#pragma warning disable CA1416 // TesseractOcrService is Windows-only by design
-        services.AddSingleton<IOcrService, TesseractOcrService>();
+#pragma warning disable CA1416 // TesseractOcrAdapter is Windows-only by design
+        services.AddSingleton<BoundedContexts.DocumentProcessing.Infrastructure.External.IOcrService, BoundedContexts.DocumentProcessing.Infrastructure.External.TesseractOcrAdapter>();
 #pragma warning restore CA1416
 
         return services;
@@ -187,10 +189,10 @@ public static class ApplicationServiceExtensions
 
     private static IServiceCollection AddAdminServices(this IServiceCollection services)
     {
-        // ADMIN-01: User management service
-        services.AddScoped<UserManagementService>();
+        // ADMIN-01: User management - MIGRATED TO DDD/CQRS (handlers in Administration bounded context)
+        // UserManagementService REMOVED (243 lines eliminated)
 
-        // ADMIN-02: Analytics dashboard service
+        // ADMIN-02: Analytics dashboard service (still used by handlers as infrastructure)
         services.AddScoped<IAdminStatsService, AdminStatsService>();
 
         return services;

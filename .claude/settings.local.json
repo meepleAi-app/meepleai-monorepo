@@ -73,7 +73,8 @@
       "Bash(done)",
       "Bash(gh pr list:*)",
       "Bash(mkdir:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "mcp__serena__initial_instructions"
     ],
     "deny": [],
     "ask": []

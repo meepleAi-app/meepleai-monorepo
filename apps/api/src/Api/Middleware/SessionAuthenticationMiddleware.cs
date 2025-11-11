@@ -1,7 +1,8 @@
 using System.Security.Claims;
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.Models;
 using Api.Routing;
-using Api.Services;
+using MediatR;
 
 namespace Api.Middleware;
 
@@ -21,7 +22,7 @@ public class SessionAuthenticationMiddleware
         _logger = logger;
     }
 
-    public async Task InvokeAsync(HttpContext context, AuthService authService)
+    public async Task InvokeAsync(HttpContext context, IMediator mediator)
     {
         // Process only API routes
         if (context.Request.Path.StartsWithSegments("/api"))
@@ -31,25 +32,37 @@ public class SessionAuthenticationMiddleware
                 var cookieName = CookieHelpers.GetSessionCookieName(context);
                 if (context.Request.Cookies.TryGetValue(cookieName, out var token) && !string.IsNullOrWhiteSpace(token))
                 {
-                    var session = await authService.ValidateSessionAsync(token);
-                    if (session != null)
+                    // Validate session via DDD CQRS ValidateSessionQuery
+                    var query = new ValidateSessionQuery(SessionToken: token);
+                    var result = await mediator.Send(query);
+
+                    if (result.IsValid && result.User != null)
                     {
+                        // Convert DDD DTO to legacy ActiveSession for backward compatibility
+                        var legacyUser = new AuthUser(
+                            Id: result.User.Id.ToString(),
+                            Email: result.User.Email,
+                            DisplayName: result.User.DisplayName,
+                            Role: result.User.Role);
+
+                        var activeSession = new ActiveSession(legacyUser, result.ExpiresAt!.Value, result.LastSeenAt);
+
                         // Make session available to endpoints expecting it
-                        context.Items[nameof(ActiveSession)] = session;
+                        context.Items[nameof(ActiveSession)] = activeSession;
 
                         // If no authenticated user is set, populate ClaimsPrincipal for observability and helpers
                         if (context.User?.Identity?.IsAuthenticated != true)
                         {
                             var claims = new List<Claim>
                             {
-                                new(ClaimTypes.NameIdentifier, session.User.Id),
-                                new(ClaimTypes.Email, session.User.Email),
-                                new(ClaimTypes.Role, session.User.Role)
+                                new(ClaimTypes.NameIdentifier, result.User.Id.ToString()),
+                                new(ClaimTypes.Email, result.User.Email),
+                                new(ClaimTypes.Role, result.User.Role)
                             };
 
-                            if (!string.IsNullOrWhiteSpace(session.User.DisplayName))
+                            if (!string.IsNullOrWhiteSpace(result.User.DisplayName))
                             {
-                                claims.Add(new Claim(ClaimTypes.Name, session.User.DisplayName!));
+                                claims.Add(new Claim(ClaimTypes.Name, result.User.DisplayName));
                             }
 
                             context.User = new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType: "SessionCookie"));

@@ -55,7 +55,7 @@ public static class ObservabilityServiceExtensions
                 // Add explicit Activity Sources for tracing (not Meter sources)
                 .AddSource("Microsoft.AspNetCore")  // ASP.NET Core framework traces
                 .AddSource("System.Net.Http")       // HTTP client traces
-                // Add custom MeepleAI Activity Sources for domain-specific tracing
+                                                    // Add custom MeepleAI Activity Sources for domain-specific tracing
                 .AddSource(MeepleAiActivitySources.ApiSourceName)
                 .AddSource(MeepleAiActivitySources.RagSourceName)
                 .AddSource(MeepleAiActivitySources.VectorSearchSourceName)
@@ -94,9 +94,6 @@ public static class ObservabilityServiceExtensions
         IWebHostEnvironment environment)
     {
         // OPS-01: Health checks for observability
-        var healthCheckConnectionString = configuration.GetConnectionString("Postgres")
-            ?? configuration["ConnectionStrings__Postgres"];
-
         var healthCheckRedisConnectionString = configuration["REDIS_URL"] ?? "localhost:6379";
         var healthCheckQdrantUrl = configuration["QDRANT_URL"] ?? "http://localhost:6333";
 
@@ -105,6 +102,11 @@ public static class ObservabilityServiceExtensions
         // Skip Postgres health check in Testing environment (uses SQLite in-memory DB)
         if (!environment.IsEnvironment("Testing"))
         {
+            // SEC-708: Build connection string from Docker Secrets if available (only for non-testing)
+            var healthCheckConnectionString = configuration.GetConnectionString("Postgres")
+                ?? configuration["ConnectionStrings__Postgres"]
+                ?? SecretsHelper.BuildPostgresConnectionString(configuration);
+
             if (string.IsNullOrEmpty(healthCheckConnectionString))
             {
                 throw new InvalidOperationException(

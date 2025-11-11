@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.SystemConfiguration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.WorkflowIntegration.Infrastructure.DependencyInjection;
 using Api.Helpers;
 using Api.Services;
@@ -37,6 +38,9 @@ public static class ApplicationServiceExtensions
 
         // DDD-PHASE3: WorkflowIntegration bounded context
         services.AddWorkflowIntegrationContext();
+
+        // DDD-PHASE3: SystemConfiguration bounded context
+        services.AddSystemConfigurationContext();
 
         return services;
     }

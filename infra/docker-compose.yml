@@ -116,6 +116,38 @@ services:
     #           count: 1
     #           capabilities: [gpu]
 
+  # BGAI-001-v2: Unstructured PDF extraction service (Stage 1)
+  unstructured-service:
+    build:
+      context: ../apps/unstructured-service
+      dockerfile: ./Dockerfile
+    container_name: meepleai-unstructured
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - LOG_LEVEL=INFO
+      - MAX_FILE_SIZE=52428800  # 50MB
+      - TIMEOUT=30
+      - UNSTRUCTURED_STRATEGY=fast
+      - LANGUAGE=ita
+      - CHUNK_MAX_CHARACTERS=2000
+      - CHUNK_OVERLAP=200
+      - QUALITY_THRESHOLD=0.80
+      - MIN_CHARS_PER_PAGE=500
+      - ENABLE_METRICS=true
+      - ENABLE_STRUCTURED_LOGGING=true
+    volumes:
+      - unstructured-temp:/tmp/pdf-extraction
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - meepleai
+
   seq:
     image: datalust/seq:2025.1
     restart: unless-stopped
@@ -357,6 +389,8 @@ volumes:
   grafanadata:
   # OPS-05: Error Monitoring & Alerting volumes
   alertmanagerdata:
+  # BGAI-001-v2: Unstructured PDF extraction temporary storage
+  unstructured-temp:
 
 networks:
   meepleai:

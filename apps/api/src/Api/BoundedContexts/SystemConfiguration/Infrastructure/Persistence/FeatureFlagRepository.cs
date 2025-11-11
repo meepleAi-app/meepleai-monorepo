@@ -1,0 +1,128 @@
+using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
+using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
+using Api.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+
+namespace Api.BoundedContexts.SystemConfiguration.Infrastructure.Persistence;
+
+/// <summary>
+/// Feature flag repository - stores flags as SystemConfiguration entries with "Features:" prefix.
+/// </summary>
+public class FeatureFlagRepository : IFeatureFlagRepository
+{
+    private readonly MeepleAiDbContext _dbContext;
+    private const string FlagPrefix = "Features:";
+
+    public FeatureFlagRepository(MeepleAiDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
+    public async Task<FeatureFlag?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var entity = await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == id && c.Key.StartsWith(FlagPrefix), cancellationToken);
+
+        return entity != null ? MapToDomain(entity) : null;
+    }
+
+    public async Task<List<FeatureFlag>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+            .AsNoTracking()
+            .Where(c => c.Key.StartsWith(FlagPrefix))
+            .OrderBy(c => c.Key)
+            .ToListAsync(cancellationToken);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
+    public async Task<FeatureFlag?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
+    {
+        var key = $"{FlagPrefix}{name}";
+        var entity = await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Key == key, cancellationToken);
+
+        return entity != null ? MapToDomain(entity) : null;
+    }
+
+    public async Task<IReadOnlyList<FeatureFlag>> GetEnabledFlagsAsync(CancellationToken cancellationToken = default)
+    {
+        var entities = await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+            .AsNoTracking()
+            .Where(c => c.Key.StartsWith(FlagPrefix) && c.IsActive && c.Value == "true")
+            .ToListAsync(cancellationToken);
+
+        return entities.Select(MapToDomain).ToList();
+    }
+
+    public async Task AddAsync(FeatureFlag flag, CancellationToken cancellationToken = default)
+    {
+        var entity = MapToPersistence(flag);
+        await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().AddAsync(entity, cancellationToken);
+    }
+
+    public Task UpdateAsync(FeatureFlag flag, CancellationToken cancellationToken = default)
+    {
+        var entity = MapToPersistence(flag);
+        _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().Update(entity);
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(FeatureFlag flag, CancellationToken cancellationToken = default)
+    {
+        var entity = MapToPersistence(flag);
+        _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().Remove(entity);
+        return Task.CompletedTask;
+    }
+
+    public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
+            .AnyAsync(c => c.Id == id && c.Key.StartsWith(FlagPrefix), cancellationToken);
+    }
+
+    private static FeatureFlag MapToDomain(Api.Infrastructure.Entities.SystemConfigurationEntity entity)
+    {
+        var name = entity.Key.Substring(FlagPrefix.Length);
+        var isEnabled = entity.Value == "true" && entity.IsActive;
+
+        var flag = new FeatureFlag(
+            id: entity.Id,
+            name: name,
+            isEnabled: isEnabled,
+            description: entity.Description
+        );
+
+        // Override timestamps
+        var createdAtProp = typeof(FeatureFlag).GetProperty("CreatedAt");
+        createdAtProp?.SetValue(flag, entity.CreatedAt);
+
+        var updatedAtProp = typeof(FeatureFlag).GetProperty("UpdatedAt");
+        updatedAtProp?.SetValue(flag, entity.UpdatedAt);
+
+        return flag;
+    }
+
+    private static Api.Infrastructure.Entities.SystemConfigurationEntity MapToPersistence(FeatureFlag domain)
+    {
+        return new Api.Infrastructure.Entities.SystemConfigurationEntity
+        {
+            Id = domain.Id,
+            Key = $"{FlagPrefix}{domain.Name}",
+            Value = domain.IsEnabled ? "true" : "false",
+            ValueType = "bool",
+            Description = domain.Description,
+            Category = "Features",
+            IsActive = true,
+            RequiresRestart = false,
+            Environment = "All",
+            Version = 1,
+            CreatedAt = domain.CreatedAt,
+            UpdatedAt = domain.UpdatedAt,
+            CreatedByUserId = Guid.Empty // Feature flags don't track creator
+        };
+    }
+}

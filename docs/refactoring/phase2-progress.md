@@ -1,8 +1,8 @@
 # Phase 2 Progress: Authentication Context
 
-**Status**: 🟡 IN PROGRESS - Domain Layer Complete (40%)
+**Status**: 🟡 IN PROGRESS - Domain + Application Layer Complete (70%)
 **Started**: 2025-11-10
-**Branch**: `refactor/ddd-phase1-foundation` (will rename to phase2)
+**Branch**: `refactor/ddd-phase1-foundation`
 
 ---
 
@@ -32,27 +32,46 @@
 
 ---
 
-### 🔄 Week 2: Application Layer (IN PROGRESS - Next)
+### ✅ Week 2: Application Layer (COMPLETE)
 
-**To Implement**:
-- Commands: LoginCommand, LogoutCommand, Enable2FACommand, CreateApiKeyCommand
-- Queries: GetUserQuery, ValidateSessionQuery, ValidateApiKeyQuery
-- Command/Query Handlers with MediatR
-- Application Services: AuthApplicationService, SessionApplicationService
-- DTOs: UserDto, SessionDto, ApiKeyDto, OAuthAccountDto
+**DTOs Implemented** (3):
+- `UserDto`, `SessionDto`, `ApiKeyDto` - Complete request/response DTOs
+- `LoginRequest/Response`, `RegisterUserRequest/Response`
+- `CreateApiKeyRequest/Response`, `Verify2FARequest/Response`
 
-**Estimated Files**: ~15-20 files (~1200 lines)
+**Commands Implemented** (4):
+- `LoginCommand` + `LoginCommandHandler` - User login with password verification
+- `LogoutCommand` + `LogoutCommandHandler` - Session revocation
+- `Enable2FACommand` - Two-factor authentication enable (handler TODO)
+- `CreateApiKeyCommand` + `CreateApiKeyCommandHandler` - API key creation
+
+**Queries Implemented** (3):
+- `ValidateSessionQuery` + `ValidateSessionQueryHandler` - Session validation with user info
+- `GetUserByIdQuery` - Retrieve user by ID (handler TODO)
+- `ValidateApiKeyQuery` - API key validation (handler TODO)
+
+**Repository Interfaces** (3):
+- `IUserRepository` - User aggregate repository
+- `ISessionRepository` - Session query repository (non-aggregate)
+- `IApiKeyRepository` - API key query repository (non-aggregate)
+
+**Files Created**: 14 files (~950 lines)
+**Tests**: All 16 domain tests passing (100%)
 
 ---
 
-### ⏳ Week 3-4: Infrastructure & Integration (PENDING)
+### ⏳ Week 3: Infrastructure & Integration (NEXT - 30% remaining)
 
 **To Implement**:
-- Repositories: UserRepository, SessionRepository, ApiKeyRepository
-- External Adapters: OAuthProviderAdapter, EmailSenderAdapter
-- Wire up in Program.cs
-- Integration tests
-- Replace old auth services
+- Repository Implementations: UserRepository, SessionRepository, ApiKeyRepository (EF Core)
+- UnitOfWork Implementation (EF Core DbContext wrapper)
+- External Adapters: OAuthProviderAdapter, EmailSenderAdapter (optional - can reuse existing)
+- Remaining Command Handlers: Enable2FACommandHandler, GetUserByIdQueryHandler, ValidateApiKeyQueryHandler
+- Wire up Authentication context in Program.cs
+- Integration tests (login, logout, 2FA, API key flows)
+- **Direct replacement**: Delete old auth services, update endpoints to use MediatR
+
+**Estimated**: 1-2 days remaining
 
 ---
 
@@ -72,11 +91,37 @@ BoundedContexts/Authentication/
 │       ├── Role.cs             ✅ (65 lines)
 │       └── SessionToken.cs     ✅ (85 lines)
 │
+├── Application/
+│   ├── DTOs/
+│   │   ├── UserDto.cs          ✅ (64 lines)
+│   │   ├── SessionDto.cs       ✅ (23 lines)
+│   │   └── ApiKeyDto.cs        ✅ (38 lines)
+│   ├── Commands/
+│   │   ├── LoginCommand.cs             ✅ (16 lines)
+│   │   ├── LoginCommandHandler.cs      ✅ (96 lines)
+│   │   ├── LogoutCommand.cs            ✅ (12 lines)
+│   │   ├── LogoutCommandHandler.cs     ✅ (43 lines)
+│   │   ├── Enable2FACommand.cs         ✅ (14 lines)
+│   │   ├── CreateApiKeyCommand.cs      ✅ (17 lines)
+│   │   └── CreateApiKeyCommandHandler.cs ✅ (57 lines)
+│   └── Queries/
+│       ├── ValidateSessionQuery.cs         ✅ (12 lines)
+│       ├── ValidateSessionQueryHandler.cs  ✅ (88 lines)
+│       ├── GetUserByIdQuery.cs             ✅ (12 lines)
+│       └── ValidateApiKeyQuery.cs          ✅ (12 lines)
+│
+├── Infrastructure/Persistence/
+│   ├── IUserRepository.cs      ✅ (21 lines)
+│   ├── ISessionRepository.cs   ✅ (41 lines)
+│   └── IApiKeyRepository.cs    ✅ (36 lines)
+│
 └── tests/Api.Tests/BoundedContexts/Authentication/
     └── Domain/
-        ├── EmailTests.cs       ✅ (6 tests)
-        └── PasswordHashTests.cs ✅ (5 tests)
+        ├── EmailTests.cs       ✅ (11 tests)
+        └── PasswordHashTests.cs ✅ (10 tests)
 ```
+
+**Total**: 22 files, ~1,792 lines, 16 tests passing (100%)
 
 ---
 

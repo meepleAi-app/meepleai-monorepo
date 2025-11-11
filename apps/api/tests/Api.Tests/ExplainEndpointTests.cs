@@ -61,7 +61,7 @@ public class ExplainEndpointTests : IntegrationTestBase
     public async Task PostAgentsExplain_WhenAuthenticated_ReturnsExplanation()
     {
         // Given: An authenticated user
-        var user = await CreateTestUserAsync("explain-user-1", UserRole.User);
+        var user = await CreateTestUserAsync("explain-user-1", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -173,7 +173,7 @@ public class ExplainEndpointTests : IntegrationTestBase
     public async Task PostAgentsExplain_WithEmptyTopic_ReturnsErrorMessage()
     {
         // Given: An authenticated user
-        var user = await CreateTestUserAsync("explain-user-2", UserRole.User);
+        var user = await CreateTestUserAsync("explain-user-2", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -212,7 +212,7 @@ public class ExplainEndpointTests : IntegrationTestBase
     public async Task PostAgentsExplain_WithoutIndexedContent_ReturnsNoResults()
     {
         // Given: An authenticated user
-        var user = await CreateTestUserAsync("explain-user-3", UserRole.User);
+        var user = await CreateTestUserAsync("explain-user-3", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -252,7 +252,7 @@ public class ExplainEndpointTests : IntegrationTestBase
     public async Task PostAgentsExplain_WithoutGameId_ReturnsBadRequest()
     {
         // Given: An authenticated user
-        var user = await CreateTestUserAsync("explain-user-4", UserRole.User);
+        var user = await CreateTestUserAsync("explain-user-4", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -289,7 +289,7 @@ public class ExplainEndpointTests : IntegrationTestBase
     public async Task PostAgentsExplain_WithChatId_PersistsToChat()
     {
         // Given: An authenticated user with a chat
-        var user = await CreateTestUserAsync("explain-user-5", UserRole.User);
+        var user = await CreateTestUserAsync("explain-user-5", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -345,7 +345,7 @@ public class ExplainEndpointTests : IntegrationTestBase
     public async Task PostAgentsExplain_TracksTokenUsage()
     {
         // Given: An authenticated user
-        var user = await CreateTestUserAsync("explain-user-6", UserRole.User);
+        var user = await CreateTestUserAsync("explain-user-6", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 

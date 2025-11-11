@@ -42,8 +42,10 @@ public class AgentFeedbackService
 
         try
         {
+            var userGuid = Guid.Parse(userId);
+            var messageGuid = Guid.Parse(messageId);
             var existing = await _db.AgentFeedbacks
-                .FirstOrDefaultAsync(f => f.MessageId == messageId && f.UserId == userId, ct);
+                .FirstOrDefaultAsync(f => f.MessageId == messageGuid && f.UserId == userGuid, ct);
 
             if (string.IsNullOrWhiteSpace(outcome))
             {
@@ -60,10 +62,10 @@ public class AgentFeedbackService
             {
                 var entity = new AgentFeedbackEntity
                 {
-                    MessageId = messageId,
+                    MessageId = messageGuid,
                     Endpoint = endpoint,
-                    GameId = gameId,
-                    UserId = userId,
+                    GameId = !string.IsNullOrWhiteSpace(gameId) && Guid.TryParse(gameId, out var gameGuid) ? gameGuid : null,
+                    UserId = userGuid,
                     Outcome = outcome,
                     CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
                     UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime
@@ -74,7 +76,7 @@ public class AgentFeedbackService
             else
             {
                 existing.Endpoint = endpoint;
-                existing.GameId = gameId;
+                existing.GameId = !string.IsNullOrWhiteSpace(gameId) && Guid.TryParse(gameId, out var gameGuid) ? gameGuid : null;
                 existing.Outcome = outcome;
                 existing.UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime;
             }
@@ -111,14 +113,14 @@ public class AgentFeedbackService
             query = query.Where(f => f.Endpoint == endpoint);
         }
 
-        if (!string.IsNullOrWhiteSpace(userId))
+        if (!string.IsNullOrWhiteSpace(userId) && Guid.TryParse(userId, out var userGuid))
         {
-            query = query.Where(f => f.UserId == userId);
+            query = query.Where(f => f.UserId == userGuid);
         }
 
-        if (!string.IsNullOrWhiteSpace(gameId))
+        if (!string.IsNullOrWhiteSpace(gameId) && Guid.TryParse(gameId, out var gameGuidFilter))
         {
-            query = query.Where(f => f.GameId == gameId);
+            query = query.Where(f => f.GameId == gameGuidFilter);
         }
 
         if (startDate.HasValue)

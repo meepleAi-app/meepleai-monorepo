@@ -23,7 +23,7 @@ public interface IRuleCommentService
         string version,
         int? lineNumber,
         string commentText,
-        string userId);
+        Guid userId);
 
     /// <summary>
     /// Create a threaded reply to an existing comment.
@@ -39,7 +39,7 @@ public interface IRuleCommentService
     Task<RuleCommentDto> ReplyToCommentAsync(
         Guid parentCommentId,
         string commentText,
-        string userId);
+        Guid userId);
 
     /// <summary>
     /// Get all comments for a specific rule specification version.
@@ -78,7 +78,7 @@ public interface IRuleCommentService
     /// <exception cref="NotFoundException">If comment not found</exception>
     Task<RuleCommentDto> ResolveCommentAsync(
         Guid commentId,
-        string resolvedByUserId,
+        Guid resolvedByUserId,
         bool resolveReplies = false);
 
     /// <summary>

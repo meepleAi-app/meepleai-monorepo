@@ -228,7 +228,7 @@ public class UserManagementServiceTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = DateTime.UtcNow
         };
         var session = new UserSessionEntity
@@ -281,7 +281,7 @@ public class UserManagementServiceTests : IDisposable
         // Verify user exists in database
         var dbUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
         dbUser.Should().NotBeNull();
-        dbUser.Role.Should().Be(UserRole.User);
+        dbUser.Role.Should().Be("user");
     }
 
     [Fact]
@@ -305,7 +305,7 @@ public class UserManagementServiceTests : IDisposable
         // Verify database
         var dbUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
         dbUser.Should().NotBeNull();
-        dbUser.Role.Should().Be(UserRole.Admin);
+        dbUser.Role.Should().Be("admin");
     }
 
     [Fact]
@@ -350,7 +350,7 @@ public class UserManagementServiceTests : IDisposable
         // Verify database
         var dbUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
         dbUser.Should().NotBeNull();
-        dbUser.Role.Should().Be(UserRole.Editor);
+        dbUser.Role.Should().Be("editor");
     }
 
     #endregion
@@ -361,7 +361,7 @@ public class UserManagementServiceTests : IDisposable
     public async Task UpdateUserAsync_WithValidData_UpdatesUser()
     {
         // Arrange
-        var userId = await SeedSingleUser("original@example.com", "Original Name", UserRole.User);
+        var userId = await SeedSingleUser("original@example.com", "Original Name", "user");
         var request = new UpdateUserRequest(
             Email: "updated@example.com",
             DisplayName: "Updated Name",
@@ -380,14 +380,14 @@ public class UserManagementServiceTests : IDisposable
         var dbUser = await _dbContext.Users.FindAsync(userId);
         dbUser!.Email.Should().Be("updated@example.com");
         dbUser.DisplayName.Should().Be("Updated Name");
-        dbUser.Role.Should().Be(UserRole.Editor);
+        dbUser.Role.Should().Be("editor");
     }
 
     [Fact]
     public async Task UpdateUserAsync_WithPartialData_UpdatesOnlyProvidedFields()
     {
         // Arrange
-        var userId = await SeedSingleUser("original@example.com", "Original Name", UserRole.User);
+        var userId = await SeedSingleUser("original@example.com", "Original Name", "user");
         var request = new UpdateUserRequest(
             Email: null,
             DisplayName: "New Name Only",
@@ -442,7 +442,7 @@ public class UserManagementServiceTests : IDisposable
     public async Task UpdateUserAsync_WithInvalidRole_IgnoresRoleUpdate()
     {
         // Arrange
-        var userId = await SeedSingleUser("test@example.com", "Test", UserRole.User);
+        var userId = await SeedSingleUser("test@example.com", "Test", "user");
         var request = new UpdateUserRequest(
             Email: null,
             DisplayName: null,
@@ -464,7 +464,7 @@ public class UserManagementServiceTests : IDisposable
     public async Task DeleteUserAsync_WithValidUser_DeletesUser()
     {
         // Arrange
-        var userId = await SeedSingleUser("todelete@example.com", "To Delete", UserRole.User);
+        var userId = await SeedSingleUser("todelete@example.com", "To Delete", "user");
         var requestingUserId = Guid.NewGuid().ToString();
 
         // Act
@@ -479,7 +479,7 @@ public class UserManagementServiceTests : IDisposable
     public async Task DeleteUserAsync_WithSelfDeletion_ThrowsInvalidOperationException()
     {
         // Arrange
-        var userId = await SeedSingleUser("self@example.com", "Self", UserRole.Admin);
+        var userId = await SeedSingleUser("self@example.com", "Self", "admin");
 
         // Act & Assert - trying to delete self
         var act = async () => await _service.DeleteUserAsync(userId, userId);
@@ -491,7 +491,7 @@ public class UserManagementServiceTests : IDisposable
     public async Task DeleteUserAsync_WithLastAdmin_ThrowsInvalidOperationException()
     {
         // Arrange
-        var adminId = await SeedSingleUser("lastadmin@example.com", "Last Admin", UserRole.Admin);
+        var adminId = await SeedSingleUser("lastadmin@example.com", "Last Admin", "admin");
         var requestingUserId = Guid.NewGuid().ToString();
 
         // Act & Assert
@@ -504,8 +504,8 @@ public class UserManagementServiceTests : IDisposable
     public async Task DeleteUserAsync_WithMultipleAdmins_AllowsDeletingOneAdmin()
     {
         // Arrange
-        var admin1Id = await SeedSingleUser("admin1@example.com", "Admin 1", UserRole.Admin);
-        var admin2Id = await SeedSingleUser("admin2@example.com", "Admin 2", UserRole.Admin);
+        var admin1Id = await SeedSingleUser("admin1@example.com", "Admin 1", "admin");
+        var admin2Id = await SeedSingleUser("admin2@example.com", "Admin 2", "admin");
 
         // Act - delete one admin while another exists
         await _service.DeleteUserAsync(admin1Id, admin2Id);
@@ -534,8 +534,8 @@ public class UserManagementServiceTests : IDisposable
     public async Task DeleteUserAsync_WithNonAdminUser_AllowsDeletion()
     {
         // Arrange
-        var userId = await SeedSingleUser("user@example.com", "Regular User", UserRole.User);
-        var adminId = await SeedSingleUser("admin@example.com", "Admin", UserRole.Admin);
+        var userId = await SeedSingleUser("user@example.com", "Regular User", "user");
+        var adminId = await SeedSingleUser("admin@example.com", "Admin", "admin");
 
         // Act
         await _service.DeleteUserAsync(userId, adminId);
@@ -559,7 +559,7 @@ public class UserManagementServiceTests : IDisposable
                 Email = "admin@meepleai.dev",
                 DisplayName = "Administrator",
                 PasswordHash = "hash1",
-                Role = UserRole.Admin,
+                Role = "admin",
                 CreatedAt = DateTime.UtcNow.AddDays(-10)
             },
             new UserEntity
@@ -568,7 +568,7 @@ public class UserManagementServiceTests : IDisposable
                 Email = "editor@meepleai.dev",
                 DisplayName = "Editor User",
                 PasswordHash = "hash2",
-                Role = UserRole.Editor,
+                Role = "editor",
                 CreatedAt = DateTime.UtcNow.AddDays(-5)
             },
             new UserEntity
@@ -577,7 +577,7 @@ public class UserManagementServiceTests : IDisposable
                 Email = "user@meepleai.dev",
                 DisplayName = "Regular User",
                 PasswordHash = "hash3",
-                Role = UserRole.User,
+                Role = "user",
                 CreatedAt = DateTime.UtcNow.AddDays(-1)
             }
         };

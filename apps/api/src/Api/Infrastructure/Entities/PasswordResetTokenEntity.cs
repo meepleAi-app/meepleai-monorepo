@@ -1,9 +1,13 @@
 namespace Api.Infrastructure.Entities;
 
+/// <summary>
+/// Password reset token entity - persistence model.
+/// DDD-PHASE2: Converted to Guid IDs for domain alignment.
+/// </summary>
 public class PasswordResetTokenEntity
 {
-    required public string Id { get; set; }
-    required public string UserId { get; set; }
+    required public Guid Id { get; set; }
+    required public Guid UserId { get; set; }
     required public string TokenHash { get; set; }
     required public DateTime ExpiresAt { get; set; }
     public bool IsUsed { get; set; }

@@ -675,7 +675,7 @@ public class RuleSpecUpdateEndpointTests : IntegrationTestBase
         response.EnsureSuccessStatusCode();
         var cookies = ExtractCookies(response);
 
-        if (!string.Equals(role, UserRole.User.ToString(), StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(role, "user".ToString(), StringComparison.OrdinalIgnoreCase))
         {
             var parsedRole = Enum.Parse<UserRole>(role, true);
             await PromoteUserAsync(email, parsedRole);

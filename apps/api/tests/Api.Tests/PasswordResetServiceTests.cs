@@ -75,7 +75,7 @@ public class PasswordResetServiceTests : IDisposable
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = "existing-hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
@@ -275,7 +275,7 @@ public class PasswordResetServiceTests : IDisposable
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = "existing-hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
@@ -344,7 +344,7 @@ public class PasswordResetServiceTests : IDisposable
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = "existing-hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
@@ -406,7 +406,7 @@ public class PasswordResetServiceTests : IDisposable
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = "existing-hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
@@ -458,7 +458,7 @@ public class PasswordResetServiceTests : IDisposable
             Email = "user@example.com",
             DisplayName = "Test User",
             PasswordHash = "existing-hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
@@ -502,7 +502,7 @@ public class PasswordResetServiceTests : IDisposable
             Email = "user@example.com",
             DisplayName = "Test User",
             PasswordHash = "existing-hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
@@ -553,7 +553,7 @@ public class PasswordResetServiceTests : IDisposable
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = "existing-hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
@@ -693,7 +693,7 @@ public class PasswordResetServiceTests : IDisposable
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = "existing-hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
@@ -760,7 +760,7 @@ public class PasswordResetServiceTests : IDisposable
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = "existing-hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
@@ -833,7 +833,7 @@ public class PasswordResetServiceTests : IDisposable
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = originalPasswordHash,
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
@@ -897,7 +897,7 @@ public class PasswordResetServiceTests : IDisposable
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = "original-hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
@@ -1195,7 +1195,7 @@ public class PasswordResetServiceTests : IDisposable
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = originalPasswordHash,
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
@@ -1268,7 +1268,7 @@ public class PasswordResetServiceTests : IDisposable
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = originalPasswordHash,
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = FixedNow
         };
         db.Users.Add(user);
@@ -1337,7 +1337,7 @@ public class PasswordResetServiceTests : IDisposable
             Email = ValidEmail,
             DisplayName = "Test User",
             PasswordHash = "original-hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = FixedNow
         };
         db.Users.Add(user);

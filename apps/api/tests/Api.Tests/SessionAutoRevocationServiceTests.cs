@@ -610,7 +610,7 @@ public class SessionAutoRevocationServiceTests : IDisposable
             Email = $"{username}@test.com",
             DisplayName = username,
             PasswordHash = "hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = DateTime.UtcNow
         };
     }

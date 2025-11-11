@@ -42,7 +42,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
     public async Task PostAgentsQa_WithEmptyGameId_ReturnsBadRequest()
     {
         // Given: Authenticated user with empty gameId
-        var user = await CreateTestUserAsync("user", UserRole.User);
+        var user = await CreateTestUserAsync("user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
@@ -60,7 +60,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
     public async Task PostAgentsQa_WithNullGameId_ReturnsBadRequest()
     {
         // Given: Authenticated user with null gameId
-        var user = await CreateTestUserAsync("user", UserRole.User);
+        var user = await CreateTestUserAsync("user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
@@ -78,7 +78,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
     public async Task PostAgentsQa_WithEmptyQuery_ReturnsErrorOrBadResponse()
     {
         // Given: Authenticated user with empty query
-        var user = await CreateTestUserAsync("user", UserRole.User);
+        var user = await CreateTestUserAsync("user", "user");
         var game = await CreateTestGameAsync("Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
@@ -116,7 +116,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
     public async Task PostAgentsExplain_WithEmptyGameId_ReturnsBadRequest()
     {
         // Given: Authenticated user with empty gameId
-        var user = await CreateTestUserAsync("user", UserRole.User);
+        var user = await CreateTestUserAsync("user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
@@ -134,7 +134,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
     public async Task PostAgentsExplain_WithNullGameId_ReturnsBadRequest()
     {
         // Given: Authenticated user with null gameId
-        var user = await CreateTestUserAsync("user", UserRole.User);
+        var user = await CreateTestUserAsync("user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/explain");
@@ -152,7 +152,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
     public async Task PostAgentsExplain_WithEmptyTopic_ReturnsErrorOrBadResponse()
     {
         // Given: Authenticated user with empty topic
-        var user = await CreateTestUserAsync("user", UserRole.User);
+        var user = await CreateTestUserAsync("user", "user");
         var game = await CreateTestGameAsync("Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
@@ -189,7 +189,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
     public async Task PostAgentsSetup_WithEmptyGameId_ReturnsBadRequest()
     {
         // Given: Authenticated user with empty gameId
-        var user = await CreateTestUserAsync("user", UserRole.User);
+        var user = await CreateTestUserAsync("user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup");
@@ -207,7 +207,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
     public async Task PostAgentsSetup_WithNullGameId_ReturnsBadRequest()
     {
         // Given: Authenticated user with null gameId
-        var user = await CreateTestUserAsync("user", UserRole.User);
+        var user = await CreateTestUserAsync("user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/setup");
@@ -243,7 +243,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
     public async Task PostAgentsFeedback_WithMismatchedUserId_ReturnsBadRequest()
     {
         // Given: Authenticated user submitting feedback for different user
-        var user = await CreateTestUserAsync("user", UserRole.User);
+        var user = await CreateTestUserAsync("user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback");
@@ -267,7 +267,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
     public async Task PostAgentsFeedback_WithEmptyMessageId_ReturnsBadRequest()
     {
         // Given: Authenticated user with empty messageId
-        var user = await CreateTestUserAsync("user", UserRole.User);
+        var user = await CreateTestUserAsync("user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback");
@@ -291,7 +291,7 @@ public class AgentEndpointsErrorTests : IntegrationTestBase
     public async Task PostAgentsFeedback_WithEmptyEndpoint_ReturnsBadRequest()
     {
         // Given: Authenticated user with empty endpoint
-        var user = await CreateTestUserAsync("user", UserRole.User);
+        var user = await CreateTestUserAsync("user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/feedback");

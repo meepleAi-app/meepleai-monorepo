@@ -125,7 +125,7 @@ startxref
     public async Task PostIngestPdf_WhenAdminUploadsValidPdf_ReturnsSuccessWithDocumentId()
     {
         // Given: Admin user is authenticated
-        var admin = await CreateTestUserAsync("pdf-admin", UserRole.Admin);
+        var admin = await CreateTestUserAsync("pdf-admin", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
@@ -178,7 +178,7 @@ startxref
     public async Task PostIngestPdf_WhenEditorUploadsValidPdf_ReturnsSuccess()
     {
         // Given: Editor user is authenticated
-        var editor = await CreateTestUserAsync("pdf-editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("pdf-editor", "editor");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = CreateClientWithoutCookies();
 
@@ -244,7 +244,7 @@ startxref
     public async Task PostIngestPdf_WhenUserRoleAttempts_ReturnsForbidden()
     {
         // Given: User with "User" role is authenticated
-        var user = await CreateTestUserAsync("regular-user", UserRole.User);
+        var user = await CreateTestUserAsync("regular-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
         var game = await CreateTestGameAsync("Test Game");
@@ -279,7 +279,7 @@ startxref
     public async Task PostIngestPdf_WhenGameIdMissing_ReturnsBadRequest()
     {
         // Given: Admin user is authenticated
-        var admin = await CreateTestUserAsync("pdf-admin-2", UserRole.Admin);
+        var admin = await CreateTestUserAsync("pdf-admin-2", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
@@ -317,7 +317,7 @@ startxref
     public async Task GetGamesPdfs_WhenMultiplePdfsExist_ReturnsOrderedList()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync("pdf-list-user", UserRole.Admin);
+        var user = await CreateTestUserAsync("pdf-list-user", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -407,7 +407,7 @@ startxref
     public async Task GetGamesPdfs_WhenNoPdfsExist_ReturnsEmptyArray()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync("pdf-empty-user", UserRole.Admin);
+        var user = await CreateTestUserAsync("pdf-empty-user", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -461,7 +461,7 @@ startxref
     public async Task GetPdfText_WhenProcessingCompleted_ReturnsExtractedText()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync("pdf-text-user", UserRole.Admin);
+        var user = await CreateTestUserAsync("pdf-text-user", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -524,7 +524,7 @@ startxref
     public async Task GetPdfText_WhenProcessingPending_ReturnsNullExtractedText()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync("pdf-pending-user", UserRole.Admin);
+        var user = await CreateTestUserAsync("pdf-pending-user", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -583,7 +583,7 @@ startxref
     public async Task GetPdfText_WhenProcessingFailed_ReturnsErrorMessage()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync("pdf-failed-user", UserRole.Admin);
+        var user = await CreateTestUserAsync("pdf-failed-user", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -639,7 +639,7 @@ startxref
     public async Task GetPdfText_WhenPdfNotFound_ReturnsNotFound()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync("pdf-notfound-user", UserRole.Admin);
+        var user = await CreateTestUserAsync("pdf-notfound-user", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 

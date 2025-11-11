@@ -1,4 +1,4 @@
-﻿using Api.Configuration;
+using Api.Configuration;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -88,8 +88,9 @@ group.MapPost("/agents/qa", async (
         IReadOnlyList<string>? followUpQuestions = null;
         if (generateFollowUps)
         {
+            var gameGuid = Guid.Parse(req.gameId);
             var game = await dbContext.Games
-                .Where(g => g.Id == req.gameId)
+                .Where(g => g.Id == gameGuid)
                 .Select(g => g.Name)
                 .FirstOrDefaultAsync(ct);
 

@@ -193,7 +193,7 @@ public class QualityTrackingIntegrationTests : IntegrationTestBase
     public async Task AdminEndpoint_GetLowQualityResponses_ReturnsOnlyLowQuality()
     {
         // Given: Admin user is authenticated
-        var admin = await CreateTestUserAsync("quality-admin-list", UserRole.Admin);
+        var admin = await CreateTestUserAsync("quality-admin-list", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
@@ -301,7 +301,7 @@ public class QualityTrackingIntegrationTests : IntegrationTestBase
     public async Task AdminEndpoint_Pagination_ReturnsCorrectPage()
     {
         // Given: Admin user is authenticated
-        var admin = await CreateTestUserAsync("quality-admin-pagination", UserRole.Admin);
+        var admin = await CreateTestUserAsync("quality-admin-pagination", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
@@ -350,7 +350,7 @@ public class QualityTrackingIntegrationTests : IntegrationTestBase
     public async Task AdminEndpoint_NonAdminUser_ReturnsForbidden()
     {
         // Given: Regular user (non-admin) is authenticated
-        var user = await CreateTestUserAsync("qa-user-forbidden", UserRole.User);
+        var user = await CreateTestUserAsync("qa-user-forbidden", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -392,7 +392,7 @@ public class QualityTrackingIntegrationTests : IntegrationTestBase
     public async Task AdminEndpoint_QualityReport_ReturnsStatistics()
     {
         // Given: Admin user is authenticated
-        var admin = await CreateTestUserAsync("quality-admin-report", UserRole.Admin);
+        var admin = await CreateTestUserAsync("quality-admin-report", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
@@ -446,7 +446,7 @@ public class QualityTrackingIntegrationTests : IntegrationTestBase
     public async Task AdminEndpoint_DateRangeFilter_ReturnsFilteredResults()
     {
         // Given: Admin user is authenticated
-        var admin = await CreateTestUserAsync("quality-admin-datefilter", UserRole.Admin);
+        var admin = await CreateTestUserAsync("quality-admin-datefilter", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 

@@ -56,7 +56,7 @@ public class RuleSpecServiceTimelineTests : IDisposable
             Email = "user1@test.com",
             DisplayName = "User One",
             PasswordHash = "hash1",
-            Role = UserRole.Editor,
+            Role = "editor",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -66,7 +66,7 @@ public class RuleSpecServiceTimelineTests : IDisposable
             Email = "user2@test.com",
             DisplayName = "User Two",
             PasswordHash = "hash2",
-            Role = UserRole.Editor,
+            Role = "editor",
             CreatedAt = DateTime.UtcNow
         };
 

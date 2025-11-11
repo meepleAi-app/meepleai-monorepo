@@ -29,7 +29,7 @@ public class RuleSpecService
     {
         var pdf = await _dbContext.PdfDocuments
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == pdfId, cancellationToken);
+            .FirstOrDefaultAsync(p => p.Id.ToString() == pdfId, cancellationToken);
 
         if (pdf is null)
         {
@@ -58,29 +58,30 @@ public class RuleSpecService
         var timestamp = _timeProvider.GetUtcNow().UtcDateTime;
         var version = $"ingest-{timestamp:yyyyMMddHHmmss}";
 
-        return new RuleSpec(pdf.GameId, version, timestamp, atoms);
+        return new RuleSpec(pdf.GameId.ToString(), version, timestamp, atoms);
     }
 
     // FUTURE ENHANCEMENT: Integrate PDF parser (Tabula/Camelot via sidecar) for automated RuleSpec extraction
     // This would enable automatic conversion of PDF rulebooks to machine-readable RuleSpec format
     public async Task<RuleSpec> GetOrCreateDemoAsync(string gameId, CancellationToken cancellationToken = default)
     {
+        var gameGuid = Guid.Parse(gameId);
         var specEntity = await _dbContext.RuleSpecs
             .AsNoTracking() // PERF-05: Read-only query
             .Include(r => r.Atoms)
-            .Where(r => r.GameId == gameId)
+            .Where(r => r.GameId == gameGuid)
             .OrderByDescending(r => r.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (specEntity is null)
         {
             var game = await _dbContext.Games
-                .FirstOrDefaultAsync(g => g.Id == gameId, cancellationToken);
+                .FirstOrDefaultAsync(g => g.Id == gameGuid, cancellationToken);
             if (game is null)
             {
                 game = new GameEntity
                 {
-                    Id = gameId,
+                    Id = gameGuid,
                     Name = gameId,
                     CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
                 };
@@ -89,7 +90,7 @@ public class RuleSpecService
 
             specEntity = new RuleSpecEntity
             {
-                GameId = gameId,
+                GameId = Guid.Parse(gameId),
                 Version = "v0-demo",
                 CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
             };
@@ -127,7 +128,7 @@ public class RuleSpecService
     {
         var specEntity = await _dbContext.RuleSpecs
             .Include(r => r.Atoms)
-            .Where(r => r.GameId == gameId)
+            .Where(r => r.GameId.ToString() == gameId)
             .OrderByDescending(r => r.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -142,7 +143,7 @@ public class RuleSpecService
     {
         // Ensure game exists
         var game = await _dbContext.Games
-            .FirstOrDefaultAsync(g => g.Id == gameId, cancellationToken);
+            .FirstOrDefaultAsync(g => g.Id.ToString() == gameId, cancellationToken);
 
         if (game is null)
         {
@@ -155,7 +156,7 @@ public class RuleSpecService
         }
 
         var userExists = await _dbContext.Users
-            .AnyAsync(u => u.Id == userId, cancellationToken);
+            .AnyAsync(u => u.Id.ToString() == userId, cancellationToken);
 
         if (!userExists)
         {
@@ -174,7 +175,7 @@ public class RuleSpecService
         else
         {
             var duplicate = await _dbContext.RuleSpecs
-                .AnyAsync(r => r.GameId == gameId && r.Version == version, cancellationToken);
+                .AnyAsync(r => r.GameId.ToString() == gameId && r.Version == version, cancellationToken);
 
             if (duplicate)
             {
@@ -183,12 +184,13 @@ public class RuleSpecService
         }
 
         // Create new RuleSpec version
+        var gameGuid = Guid.Parse(gameId);
         var specEntity = new RuleSpecEntity
         {
-            GameId = gameId,
+            GameId = gameGuid,
             Version = version,
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
-            CreatedByUserId = userId,
+            CreatedByUserId = string.IsNullOrEmpty(userId) ? null : Guid.Parse(userId),
         };
 
         int sortOrder = 1;
@@ -217,7 +219,7 @@ public class RuleSpecService
     private async Task<string> GenerateNextVersionAsync(string gameId, CancellationToken cancellationToken)
     {
         var versions = await _dbContext.RuleSpecs
-            .Where(r => r.GameId == gameId)
+            .Where(r => r.GameId.ToString() == gameId)
             .Select(r => r.Version)
             .ToListAsync(cancellationToken);
 
@@ -239,7 +241,7 @@ public class RuleSpecService
             : $"v{_timeProvider.GetUtcNow().UtcDateTime:yyyyMMddHHmmss}";
 
         while (await _dbContext.RuleSpecs
-            .AnyAsync(r => r.GameId == gameId && r.Version == candidate, cancellationToken))
+            .AnyAsync(r => r.GameId.ToString() == gameId && r.Version == candidate, cancellationToken))
         {
             if (nextNumeric.HasValue)
             {
@@ -277,7 +279,7 @@ public class RuleSpecService
         var versions = await _dbContext.RuleSpecs
             .Include(r => r.Atoms)
             .Include(r => r.CreatedBy)
-            .Where(r => r.GameId == gameId)
+            .Where(r => r.GameId.ToString() == gameId)
             .OrderByDescending(r => r.CreatedAt)
             .Select(r => new RuleSpecVersion(
                 r.Version,
@@ -294,7 +296,7 @@ public class RuleSpecService
     {
         var specEntity = await _dbContext.RuleSpecs
             .Include(r => r.Atoms)
-            .Where(r => r.GameId == gameId && r.Version == version)
+            .Where(r => r.GameId.ToString() == gameId && r.Version == version)
             .FirstOrDefaultAsync(cancellationToken);
 
         return specEntity is null ? null : ToModel(specEntity);
@@ -312,7 +314,7 @@ public class RuleSpecService
                 a.LineNumber?.ToString(CultureInfo.InvariantCulture)))
             .ToList();
 
-        return new RuleSpec(entity.GameId, entity.Version, entity.CreatedAt, atoms);
+        return new RuleSpec(entity.GameId.ToString(), entity.Version, entity.CreatedAt, atoms);
     }
 
     private static List<string> ParseAtomicRules(string? atomicRulesJson)
@@ -383,7 +385,7 @@ public class RuleSpecService
         var query = _dbContext.RuleSpecs
             .AsNoTracking() // PERF-06
             .Include(r => r.CreatedBy)
-            .Where(r => r.GameId == gameId);
+            .Where(r => r.GameId.ToString() == gameId);
 
         // Apply filters
         if (filters.StartDate.HasValue)

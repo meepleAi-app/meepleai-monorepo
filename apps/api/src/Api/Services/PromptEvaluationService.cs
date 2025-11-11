@@ -192,7 +192,7 @@ public class PromptEvaluationService : IPromptEvaluationService
             // Step 2: Get prompt content from database
             var version = await _dbContext.PromptVersions
                 .AsNoTracking()
-                .FirstOrDefaultAsync(v => v.Id == versionId, ct);
+                .FirstOrDefaultAsync(v => v.Id.ToString() == versionId, ct);
 
             if (version == null)
             {
@@ -772,9 +772,9 @@ public class PromptEvaluationService : IPromptEvaluationService
         {
             var entity = new PromptEvaluationResultEntity
             {
-                Id = result.EvaluationId,
-                TemplateId = result.TemplateId,
-                VersionId = result.VersionId,
+                Id = Guid.Parse(result.EvaluationId),
+                TemplateId = Guid.Parse(result.TemplateId),
+                VersionId = Guid.Parse(result.VersionId),
                 DatasetId = result.DatasetId,
                 ExecutedAt = result.ExecutedAt,
                 TotalQueries = result.TotalQueries,
@@ -821,16 +821,16 @@ public class PromptEvaluationService : IPromptEvaluationService
         {
             var entities = await _dbContext.PromptEvaluationResults
                 .AsNoTracking()
-                .Where(e => e.TemplateId == templateId)
+                .Where(e => e.TemplateId.ToString() == templateId)
                 .OrderByDescending(e => e.ExecutedAt)
                 .Take(limit)
                 .ToListAsync(ct);
 
             var results = entities.Select(e => new PromptEvaluationResult
             {
-                EvaluationId = e.Id,
-                TemplateId = e.TemplateId,
-                VersionId = e.VersionId,
+                EvaluationId = e.Id.ToString(),
+                TemplateId = e.TemplateId.ToString(),
+                VersionId = e.VersionId.ToString(),
                 DatasetId = e.DatasetId,
                 ExecutedAt = e.ExecutedAt,
                 TotalQueries = e.TotalQueries,

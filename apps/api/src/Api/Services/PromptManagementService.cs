@@ -12,17 +12,14 @@ public interface IPromptManagementService
     /// Creates a new prompt template with an initial version.
     /// </summary>
     Task<CreatePromptTemplateResponse> CreatePromptTemplateAsync(
-        CreatePromptTemplateRequest request,
-        string createdByUserId,
+        CreatePromptTemplateRequest request, Guid createdByUserId,
         CancellationToken ct = default);
 
     /// <summary>
     /// Creates a new version of an existing prompt template.
     /// </summary>
     Task<PromptVersionDto> CreatePromptVersionAsync(
-        string templateId,
-        CreatePromptVersionRequest request,
-        string createdByUserId,
+        string templateId, CreatePromptVersionRequest request, Guid createdByUserId,
         CancellationToken ct = default);
 
     /// <summary>
@@ -46,9 +43,7 @@ public interface IPromptManagementService
     /// Deactivates all other versions of the same template.
     /// </summary>
     Task<PromptVersionDto> ActivateVersionAsync(
-        string templateId,
-        string versionId,
-        string activatedByUserId,
+        string templateId, string versionId, Guid activatedByUserId,
         string? reason = null,
         CancellationToken ct = default);
 
@@ -99,8 +94,7 @@ public class PromptManagementService : IPromptManagementService
     }
 
     public async Task<CreatePromptTemplateResponse> CreatePromptTemplateAsync(
-        CreatePromptTemplateRequest request,
-        string createdByUserId,
+        CreatePromptTemplateRequest request, Guid createdByUserId,
         CancellationToken ct = default)
     {
         if (request == null)
@@ -118,7 +112,7 @@ public class PromptManagementService : IPromptManagementService
             throw new ArgumentException("Initial content is required", nameof(request));
         }
 
-        if (string.IsNullOrWhiteSpace(createdByUserId))
+        if (createdByUserId == Guid.Empty)
         {
             throw new ArgumentException("Created by user ID is required", nameof(createdByUserId));
         }
@@ -133,8 +127,8 @@ public class PromptManagementService : IPromptManagementService
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var templateId = Guid.NewGuid().ToString();
-        var versionId = Guid.NewGuid().ToString();
+        var templateId = Guid.NewGuid();
+        var versionId = Guid.NewGuid();
 
         // Create template
         var template = new PromptTemplateEntity
@@ -166,7 +160,7 @@ public class PromptManagementService : IPromptManagementService
         // Create audit log entries
         var templateAuditLog = new PromptAuditLogEntity
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             TemplateId = templateId,
             VersionId = null,
             Action = "template_created",
@@ -184,7 +178,7 @@ public class PromptManagementService : IPromptManagementService
 
         var versionAuditLog = new PromptAuditLogEntity
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             TemplateId = templateId,
             VersionId = versionId,
             Action = "version_created",
@@ -229,9 +223,7 @@ public class PromptManagementService : IPromptManagementService
     }
 
     public async Task<PromptVersionDto> CreatePromptVersionAsync(
-        string templateId,
-        CreatePromptVersionRequest request,
-        string createdByUserId,
+        string templateId, CreatePromptVersionRequest request, Guid createdByUserId,
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(templateId))
@@ -249,7 +241,7 @@ public class PromptManagementService : IPromptManagementService
             throw new ArgumentException("Content is required", nameof(request));
         }
 
-        if (string.IsNullOrWhiteSpace(createdByUserId))
+        if (createdByUserId == Guid.Empty)
         {
             throw new ArgumentException("Created by user ID is required", nameof(createdByUserId));
         }
@@ -257,7 +249,7 @@ public class PromptManagementService : IPromptManagementService
         // Check if template exists
         var template = await _db.PromptTemplates
             .Include(t => t.Versions)
-            .FirstOrDefaultAsync(t => t.Id == templateId, ct);
+            .FirstOrDefaultAsync(t => t.Id.ToString() == templateId, ct);
 
         if (template == null)
         {
@@ -272,7 +264,7 @@ public class PromptManagementService : IPromptManagementService
             : 0;
         var nextVersionNumber = maxVersionNumber + 1;
 
-        var versionId = Guid.NewGuid().ToString();
+        var versionId = Guid.NewGuid();
 
         // Start transaction for version creation and optional activation
         using var transaction = await _db.Database.BeginTransactionAsync(ct);
@@ -283,7 +275,7 @@ public class PromptManagementService : IPromptManagementService
             var version = new PromptVersionEntity
             {
                 Id = versionId,
-                TemplateId = templateId,
+                TemplateId = Guid.Parse(templateId),
                 VersionNumber = nextVersionNumber,
                 Content = request.Content,
                 IsActive = request.ActivateImmediately,
@@ -299,8 +291,8 @@ public class PromptManagementService : IPromptManagementService
             // Create version creation audit log
             var versionAuditLog = new PromptAuditLogEntity
             {
-                Id = Guid.NewGuid().ToString(),
-                TemplateId = templateId,
+                Id = Guid.NewGuid(),
+                TemplateId = Guid.Parse(templateId),
                 VersionId = versionId,
                 Action = "version_created",
                 ChangedByUserId = createdByUserId,
@@ -321,7 +313,7 @@ public class PromptManagementService : IPromptManagementService
             if (request.ActivateImmediately)
             {
                 var otherVersions = await _db.PromptVersions
-                    .Where(v => v.TemplateId == templateId && v.Id != versionId && v.IsActive)
+                    .Where(v => v.TemplateId == Guid.Parse(templateId) && v.Id != versionId && v.IsActive)
                     .ToListAsync(ct);
 
                 foreach (var otherVersion in otherVersions)
@@ -331,8 +323,8 @@ public class PromptManagementService : IPromptManagementService
                     // Create deactivation audit log
                     var deactivationAuditLog = new PromptAuditLogEntity
                     {
-                        Id = Guid.NewGuid().ToString(),
-                        TemplateId = templateId,
+                        Id = Guid.NewGuid(),
+                        TemplateId = Guid.Parse(templateId),
                         VersionId = otherVersion.Id,
                         Action = "version_deactivated",
                         ChangedByUserId = createdByUserId,
@@ -352,8 +344,8 @@ public class PromptManagementService : IPromptManagementService
                 // Create activation audit log for new version
                 var activationAuditLog = new PromptAuditLogEntity
                 {
-                    Id = Guid.NewGuid().ToString(),
-                    TemplateId = templateId,
+                    Id = Guid.NewGuid(),
+                    TemplateId = Guid.Parse(templateId),
                     VersionId = versionId,
                     Action = "version_activated",
                     ChangedByUserId = createdByUserId,
@@ -451,16 +443,14 @@ public class PromptManagementService : IPromptManagementService
 
         var version = await _db.PromptVersions
             .Include(v => v.CreatedBy)
-            .Where(v => v.TemplateId == templateId && v.VersionNumber == versionNumber)
+            .Where(v => v.TemplateId.ToString() == templateId && v.VersionNumber == versionNumber)
             .FirstOrDefaultAsync(ct);
 
         return version != null ? MapToVersionDto(version) : null;
     }
 
     public async Task<PromptVersionDto> ActivateVersionAsync(
-        string templateId,
-        string versionId,
-        string activatedByUserId,
+        string templateId, string versionId, Guid activatedByUserId,
         string? reason = null,
         CancellationToken ct = default)
     {
@@ -474,7 +464,7 @@ public class PromptManagementService : IPromptManagementService
             throw new ArgumentException("Version ID is required", nameof(versionId));
         }
 
-        if (string.IsNullOrWhiteSpace(activatedByUserId))
+        if (activatedByUserId == Guid.Empty)
         {
             throw new ArgumentException("Activated by user ID is required", nameof(activatedByUserId));
         }
@@ -482,7 +472,7 @@ public class PromptManagementService : IPromptManagementService
         // Check if version exists and belongs to the specified template
         var versionToActivate = await _db.PromptVersions
             .Include(v => v.CreatedBy)
-            .FirstOrDefaultAsync(v => v.Id == versionId && v.TemplateId == templateId, ct);
+            .FirstOrDefaultAsync(v => v.Id.ToString() == versionId && v.TemplateId.ToString() == templateId, ct);
 
         if (versionToActivate == null)
         {
@@ -507,7 +497,7 @@ public class PromptManagementService : IPromptManagementService
         {
             // Deactivate all other versions of the same template
             var otherVersions = await _db.PromptVersions
-                .Where(v => v.TemplateId == templateId && v.Id != versionId && v.IsActive)
+                .Where(v => v.TemplateId.ToString() == templateId && v.Id.ToString() != versionId && v.IsActive)
                 .ToListAsync(ct);
 
             foreach (var otherVersion in otherVersions)
@@ -517,8 +507,8 @@ public class PromptManagementService : IPromptManagementService
                 // Create deactivation audit log
                 var deactivationAuditLog = new PromptAuditLogEntity
                 {
-                    Id = Guid.NewGuid().ToString(),
-                    TemplateId = templateId,
+                    Id = Guid.NewGuid(),
+                    TemplateId = Guid.Parse(templateId),
                     VersionId = otherVersion.Id,
                     Action = "version_deactivated",
                     ChangedByUserId = activatedByUserId,
@@ -541,9 +531,9 @@ public class PromptManagementService : IPromptManagementService
             // Create activation audit log
             var activationAuditLog = new PromptAuditLogEntity
             {
-                Id = Guid.NewGuid().ToString(),
-                TemplateId = templateId,
-                VersionId = versionId,
+                Id = Guid.NewGuid(),
+                TemplateId = Guid.Parse(templateId),
+                VersionId = Guid.Parse(versionId),
                 Action = "version_activated",
                 ChangedByUserId = activatedByUserId,
                 ChangedAt = now,
@@ -612,7 +602,7 @@ public class PromptManagementService : IPromptManagementService
             .Include(t => t.CreatedBy)
             .Include(t => t.Versions.OrderByDescending(v => v.VersionNumber))
             .ThenInclude(v => v.CreatedBy)
-            .FirstOrDefaultAsync(t => t.Id == templateId, ct);
+            .FirstOrDefaultAsync(t => t.Id.ToString() == templateId, ct);
 
         if (template == null)
         {
@@ -649,7 +639,7 @@ public class PromptManagementService : IPromptManagementService
 
         var template = await _db.PromptTemplates
             .Include(t => t.CreatedBy)
-            .FirstOrDefaultAsync(t => t.Id == templateId, ct);
+            .FirstOrDefaultAsync(t => t.Id.ToString() == templateId, ct);
 
         if (template == null)
         {
@@ -660,13 +650,13 @@ public class PromptManagementService : IPromptManagementService
             .Include(a => a.ChangedBy)
             .Include(a => a.Template)
             .Include(a => a.Version)
-            .Where(a => a.TemplateId == templateId)
+            .Where(a => a.TemplateId.ToString() == templateId)
             .OrderByDescending(a => a.ChangedAt)
             .Take(limit)
             .ToListAsync(ct);
 
         var totalCount = await _db.PromptAuditLogs
-            .CountAsync(a => a.TemplateId == templateId, ct);
+            .CountAsync(a => a.TemplateId.ToString() == templateId, ct);
 
         return new PromptAuditLogResponse
         {
@@ -713,7 +703,7 @@ public class PromptManagementService : IPromptManagementService
         var template = await _db.PromptTemplates
             .Include(t => t.CreatedBy)
             .Include(t => t.Versions)
-            .FirstOrDefaultAsync(t => t.Id == templateId, ct);
+            .FirstOrDefaultAsync(t => t.Id.ToString() == templateId, ct);
 
         return template != null ? MapToTemplateDto(template) : null;
     }
@@ -725,11 +715,11 @@ public class PromptManagementService : IPromptManagementService
 
         return new PromptTemplateDto
         {
-            Id = entity.Id,
+            Id = entity.Id.ToString(),
             Name = entity.Name,
             Description = entity.Description,
             Category = entity.Category,
-            CreatedByUserId = entity.CreatedByUserId,
+            CreatedByUserId = entity.CreatedByUserId.ToString(),
             CreatedByEmail = entity.CreatedBy?.Email,
             CreatedAt = entity.CreatedAt,
             VersionCount = entity.Versions.Count,
@@ -741,12 +731,12 @@ public class PromptManagementService : IPromptManagementService
     {
         return new PromptVersionDto
         {
-            Id = entity.Id,
-            TemplateId = entity.TemplateId,
+            Id = entity.Id.ToString(),
+            TemplateId = entity.TemplateId.ToString(),
             VersionNumber = entity.VersionNumber,
             Content = entity.Content,
             IsActive = entity.IsActive,
-            CreatedByUserId = entity.CreatedByUserId,
+            CreatedByUserId = entity.CreatedByUserId.ToString(),
             CreatedByEmail = entity.CreatedBy?.Email,
             CreatedAt = entity.CreatedAt,
             Metadata = entity.Metadata
@@ -757,13 +747,13 @@ public class PromptManagementService : IPromptManagementService
     {
         return new PromptAuditLogDto
         {
-            Id = entity.Id,
-            TemplateId = entity.TemplateId,
+            Id = entity.Id.ToString(),
+            TemplateId = entity.TemplateId.ToString(),
             TemplateName = entity.Template?.Name,
-            VersionId = entity.VersionId,
+            VersionId = entity.VersionId?.ToString(),
             VersionNumber = entity.Version?.VersionNumber,
             Action = entity.Action,
-            ChangedByUserId = entity.ChangedByUserId,
+            ChangedByUserId = entity.ChangedByUserId.ToString(),
             ChangedByEmail = entity.ChangedBy?.Email,
             ChangedAt = entity.ChangedAt,
             Details = entity.Details

@@ -453,7 +453,7 @@ public class OAuthServiceTests : IDisposable
             Email = email ?? "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = DateTime.UtcNow
         };
         _db.Users.Add(user);

@@ -135,7 +135,7 @@ public class RuleSpecServiceTests : IDisposable
             Email = "author@example.com",
             DisplayName = "Author",
             PasswordHash = "hash",
-            Role = UserRole.Admin,
+            Role = "admin",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -188,7 +188,7 @@ public class RuleSpecServiceTests : IDisposable
             Email = "author2@example.com",
             DisplayName = "Second Author",
             PasswordHash = "hash",
-            Role = UserRole.Editor,
+            Role = "editor",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -253,7 +253,7 @@ public class RuleSpecServiceTests : IDisposable
             Email = "dup@example.com",
             DisplayName = "Duplicate Author",
             PasswordHash = "hash",
-            Role = UserRole.Admin,
+            Role = "admin",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -298,7 +298,7 @@ public class RuleSpecServiceTests : IDisposable
             Email = "user@example.com",
             DisplayName = "Test User",
             PasswordHash = "hash",
-            Role = UserRole.Admin,
+            Role = "admin",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -370,7 +370,7 @@ public class RuleSpecServiceTests : IDisposable
             Email = "atom@example.com",
             DisplayName = "Atomic User",
             PasswordHash = "hash",
-            Role = UserRole.Admin,
+            Role = "admin",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -426,7 +426,7 @@ public class RuleSpecServiceTests : IDisposable
             Email = "atomic@example.com",
             DisplayName = "Atomic Tester",
             PasswordHash = "hash",
-            Role = UserRole.Admin,
+            Role = "admin",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -478,7 +478,7 @@ public class RuleSpecServiceTests : IDisposable
             Email = "text@example.com",
             DisplayName = "Text Tester",
             PasswordHash = "hash",
-            Role = UserRole.Editor,
+            Role = "editor",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -526,7 +526,7 @@ public class RuleSpecServiceTests : IDisposable
             Email = "fallback@example.com",
             DisplayName = "Fallback Tester",
             PasswordHash = "hash",
-            Role = UserRole.Admin,
+            Role = "admin",
             CreatedAt = DateTime.UtcNow
         };
 

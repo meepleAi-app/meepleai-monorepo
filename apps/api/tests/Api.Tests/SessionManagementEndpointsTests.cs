@@ -56,13 +56,13 @@ public class SessionManagementEndpointsTests : TransactionalTestBase
     public async Task GET_AdminSessions_AsAdmin_Returns200WithAllSessions()
     {
         // Given: An authenticated admin
-        var admin = await CreateTestUserAsync("admin-sessions-1", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-sessions-1", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
         // And: Multiple users with sessions
-        var user1 = await CreateTestUserAsync("user1-sessions", UserRole.User);
-        var user2 = await CreateTestUserAsync("user2-sessions", UserRole.User);
+        var user1 = await CreateTestUserAsync("user1-sessions", "user");
+        var user2 = await CreateTestUserAsync("user2-sessions", "user");
         var cookies1 = await AuthenticateUserAsync(user1.Email);
         var cookies2 = await AuthenticateUserAsync(user2.Email);
 
@@ -101,12 +101,12 @@ public class SessionManagementEndpointsTests : TransactionalTestBase
     public async Task GET_AdminSessions_WithUserIdFilter_Returns200WithFilteredSessions()
     {
         // Given: An authenticated admin
-        var admin = await CreateTestUserAsync("admin-sessions-2", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-sessions-2", "admin");
         var adminCookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
         // And: A user with sessions
-        var user = await CreateTestUserAsync("user-filter-test", UserRole.User);
+        var user = await CreateTestUserAsync("user-filter-test", "user");
         var cookies1 = await AuthenticateUserAsync(user.Email);
         var cookies2 = await AuthenticateUserAsync(user.Email); // Create another session
 
@@ -142,7 +142,7 @@ public class SessionManagementEndpointsTests : TransactionalTestBase
     public async Task GET_AdminSessions_WithLimit_Returns200WithLimitedResults()
     {
         // Given: An authenticated admin
-        var admin = await CreateTestUserAsync("admin-sessions-3", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-sessions-3", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
@@ -171,7 +171,7 @@ public class SessionManagementEndpointsTests : TransactionalTestBase
     public async Task GET_AdminSessions_AsNonAdmin_Returns403()
     {
         // Given: An authenticated regular user
-        var user = await CreateTestUserAsync("non-admin-sessions", UserRole.User);
+        var user = await CreateTestUserAsync("non-admin-sessions", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -217,12 +217,12 @@ public class SessionManagementEndpointsTests : TransactionalTestBase
     public async Task DELETE_AdminSessionId_AsAdmin_Returns200AndRevokesSession()
     {
         // Given: An authenticated admin
-        var admin = await CreateTestUserAsync("admin-revoke-1", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-revoke-1", "admin");
         var adminCookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
         // And: An active user session
-        var user = await CreateTestUserAsync("user-revoke-test", UserRole.User);
+        var user = await CreateTestUserAsync("user-revoke-test", "user");
         var userCookies = await AuthenticateUserAsync(user.Email);
 
         // Get the session ID from the database
@@ -272,7 +272,7 @@ public class SessionManagementEndpointsTests : TransactionalTestBase
     public async Task DELETE_AdminSessionId_WithNonExistentSession_Returns404()
     {
         // Given: An authenticated admin
-        var admin = await CreateTestUserAsync("admin-revoke-2", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-revoke-2", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
@@ -297,7 +297,7 @@ public class SessionManagementEndpointsTests : TransactionalTestBase
     public async Task DELETE_AdminSessionId_AsNonAdmin_Returns403()
     {
         // Given: An authenticated regular user
-        var user = await CreateTestUserAsync("non-admin-revoke", UserRole.User);
+        var user = await CreateTestUserAsync("non-admin-revoke", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -324,12 +324,12 @@ public class SessionManagementEndpointsTests : TransactionalTestBase
     public async Task DELETE_AdminUsersUserIdSessions_AsAdmin_Returns200AndRevokesAllSessions()
     {
         // Given: An authenticated admin
-        var admin = await CreateTestUserAsync("admin-revoke-all-1", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-revoke-all-1", "admin");
         var adminCookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
         // And: A user with multiple sessions
-        var user = await CreateTestUserAsync("user-revoke-all-test", UserRole.User);
+        var user = await CreateTestUserAsync("user-revoke-all-test", "user");
         var cookies1 = await AuthenticateUserAsync(user.Email);
         var cookies2 = await AuthenticateUserAsync(user.Email);
 
@@ -387,12 +387,12 @@ public class SessionManagementEndpointsTests : TransactionalTestBase
     public async Task DELETE_AdminUsersUserIdSessions_WithNoActiveSessions_Returns200WithZeroCount()
     {
         // Given: An authenticated admin
-        var admin = await CreateTestUserAsync("admin-revoke-all-2", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-revoke-all-2", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
         // And: A user with no active sessions (just created, no login)
-        var user = await CreateTestUserAsync("user-no-sessions", UserRole.User);
+        var user = await CreateTestUserAsync("user-no-sessions", "user");
 
         // When: Admin tries to revoke all sessions
         using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/users/{user.Id}/sessions");
@@ -418,12 +418,12 @@ public class SessionManagementEndpointsTests : TransactionalTestBase
     public async Task DELETE_AdminUsersUserIdSessions_AsNonAdmin_Returns403()
     {
         // Given: An authenticated regular user
-        var user = await CreateTestUserAsync("non-admin-revoke-all", UserRole.User);
+        var user = await CreateTestUserAsync("non-admin-revoke-all", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
         // When: User tries to revoke all sessions for another user
-        var anotherUser = await CreateTestUserAsync("another-user", UserRole.User);
+        var anotherUser = await CreateTestUserAsync("another-user", "user");
         using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/users/{anotherUser.Id}/sessions");
         AddCookies(request, cookies);
 
@@ -444,7 +444,7 @@ public class SessionManagementEndpointsTests : TransactionalTestBase
     public async Task GET_UsersMeSessions_AsAuthenticatedUser_Returns200WithOwnSessions()
     {
         // Given: An authenticated user with multiple sessions
-        var user = await CreateTestUserAsync("user-own-sessions", UserRole.User);
+        var user = await CreateTestUserAsync("user-own-sessions", "user");
         var cookies1 = await AuthenticateUserAsync(user.Email);
         var cookies2 = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();

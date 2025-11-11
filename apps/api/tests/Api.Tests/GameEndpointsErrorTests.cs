@@ -60,7 +60,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
     public async Task PostGames_WithUserRole_ReturnsForbidden()
     {
         // Given: Regular user (not Admin/Editor)
-        var user = await CreateTestUserAsync("regular-user", UserRole.User);
+        var user = await CreateTestUserAsync("regular-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games");
@@ -78,7 +78,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
     public async Task PostGames_WithNullRequest_ReturnsBadRequest()
     {
         // Given: Admin user with null payload
-        var admin = await CreateTestUserAsync("admin", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games");
@@ -96,7 +96,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
     public async Task PostGames_WithEmptyName_ReturnsBadRequest()
     {
         // Given: Admin user with empty game name
-        var admin = await CreateTestUserAsync("admin", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games");
@@ -114,7 +114,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
     public async Task PostGames_WithEmptyGameId_ReturnsBadRequestOrCreated()
     {
         // Given: Admin user with empty gameId
-        var admin = await CreateTestUserAsync("admin", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games");
@@ -136,7 +136,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
     public async Task PostGames_WithDuplicateGameId_ReturnsConflictOrCreated()
     {
         // Given: Admin user and existing game
-        var admin = await CreateTestUserAsync("admin", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin", "admin");
         var existingGame = await CreateTestGameAsync("Existing Game Duplicate");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = Factory.CreateHttpsClient();
@@ -159,7 +159,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
     public async Task PostGames_WithInvalidGameIdFormat_HandlesGracefully()
     {
         // Given: Admin user with invalid gameId (spaces, special chars)
-        var admin = await CreateTestUserAsync("admin", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/games");
@@ -199,7 +199,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
     public async Task GetGamePdfs_WithNonExistentGameId_ReturnsEmptyList()
     {
         // Given: Authenticated user
-        var user = await CreateTestUserAsync("user", UserRole.User);
+        var user = await CreateTestUserAsync("user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games/non-existent-game/pdfs");
@@ -233,7 +233,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
     public async Task GetRuleSpec_WithNonExistentGameId_ReturnsNotFound()
     {
         // Given: Authenticated user
-        var user = await CreateTestUserAsync("user", UserRole.User);
+        var user = await CreateTestUserAsync("user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games/non-existent-game/rulespec");
@@ -268,7 +268,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
     public async Task PutRuleSpec_WithUserRole_ReturnsForbidden()
     {
         // Given: Regular user (not Admin/Editor)
-        var user = await CreateTestUserAsync("regular-user", UserRole.User);
+        var user = await CreateTestUserAsync("regular-user", "user");
         var game = await CreateTestGameAsync($"Test Game RuleSpec UserRole");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
@@ -287,7 +287,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
     public async Task PutRuleSpec_WithMismatchedGameId_ReturnsBadRequest()
     {
         // Given: Editor user with mismatched gameId in URL vs payload
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor", "editor");
         var game = await CreateTestGameAsync($"Test Game RuleSpec Mismatched");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
@@ -323,7 +323,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
     public async Task GetRuleSpecHistory_WithUserRole_ReturnsForbidden()
     {
         // Given: Regular user (not Admin/Editor)
-        var user = await CreateTestUserAsync("regular-user", UserRole.User);
+        var user = await CreateTestUserAsync("regular-user", "user");
         var game = await CreateTestGameAsync("Test Game History UserRole");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
@@ -358,7 +358,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
     public async Task GetRuleSpecVersion_WithUserRole_ReturnsForbidden()
     {
         // Given: Regular user (not Admin/Editor)
-        var user = await CreateTestUserAsync("regular-user", UserRole.User);
+        var user = await CreateTestUserAsync("regular-user", "user");
         var game = await CreateTestGameAsync("Test Game Version UserRole");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
@@ -376,7 +376,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
     public async Task GetRuleSpecVersion_WithNonExistentVersion_ReturnsNotFound()
     {
         // Given: Editor user
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor", "editor");
         var game = await CreateTestGameAsync("Test Game Version NotFound");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
@@ -411,7 +411,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
     public async Task GetRuleSpecDiff_WithUserRole_ReturnsForbidden()
     {
         // Given: Regular user (not Admin/Editor)
-        var user = await CreateTestUserAsync("regular-user", UserRole.User);
+        var user = await CreateTestUserAsync("regular-user", "user");
         var game = await CreateTestGameAsync("Test Game Diff UserRole");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
@@ -429,7 +429,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
     public async Task GetRuleSpecDiff_WithMissingFromParameter_ReturnsBadRequest()
     {
         // Given: Editor user without 'from' parameter
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor", "editor");
         var game = await CreateTestGameAsync("Test Game Diff MissingFrom");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
@@ -447,7 +447,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
     public async Task GetRuleSpecDiff_WithMissingToParameter_ReturnsBadRequest()
     {
         // Given: Editor user without 'to' parameter
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor", "editor");
         var game = await CreateTestGameAsync("Test Game Diff MissingTo");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
@@ -465,7 +465,7 @@ public class GameEndpointsErrorTests : IntegrationTestBase
     public async Task GetRuleSpecDiff_WithNonExistentVersions_ReturnsNotFound()
     {
         // Given: Editor user with non-existent versions
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor", "editor");
         var game = await CreateTestGameAsync("Test Game Diff NonExistent");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();

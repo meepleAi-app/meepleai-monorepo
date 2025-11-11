@@ -29,7 +29,7 @@ public class RateLimitingTests : IntegrationTestBase
     public async Task GetRequest_Authenticated_ReturnsRateLimitHeaders()
     {
         // Given: Authenticated user making request
-        var user = await CreateTestUserAsync("rate-limit-user", UserRole.User);
+        var user = await CreateTestUserAsync("rate-limit-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
@@ -81,7 +81,7 @@ public class RateLimitingTests : IntegrationTestBase
     public async Task GetRequest_AdminUser_HasHigherRateLimit()
     {
         // Given: Admin user
-        var admin = await CreateTestUserAsync("admin-rate-limit", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-rate-limit", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
@@ -100,7 +100,7 @@ public class RateLimitingTests : IntegrationTestBase
     public async Task GetRequest_EditorUser_HasMediumRateLimit()
     {
         // Given: Editor user
-        var editor = await CreateTestUserAsync("editor-rate-limit", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor-rate-limit", "editor");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
@@ -119,7 +119,7 @@ public class RateLimitingTests : IntegrationTestBase
     public async Task GetRequest_RegularUser_HasStandardRateLimit()
     {
         // Given: Regular user
-        var user = await CreateTestUserAsync("user-rate-limit", UserRole.User);
+        var user = await CreateTestUserAsync("user-rate-limit", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
@@ -142,7 +142,7 @@ public class RateLimitingTests : IntegrationTestBase
     public async Task MultipleRequests_ExceedingLimit_Returns429()
     {
         // Given: Authenticated user with rate limit
-        var user = await CreateTestUserAsync("rate-exceed-user", UserRole.User);
+        var user = await CreateTestUserAsync("rate-exceed-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
 
@@ -178,7 +178,7 @@ public class RateLimitingTests : IntegrationTestBase
     public async Task RateLimitExceeded_ReturnsRetryAfterHeader()
     {
         // Given: Rate-limited request (simulated by rapid requests)
-        var user = await CreateTestUserAsync("retry-after-user", UserRole.User);
+        var user = await CreateTestUserAsync("retry-after-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
 
@@ -215,7 +215,7 @@ public class RateLimitingTests : IntegrationTestBase
     public async Task RateLimitExceeded_ReturnsJsonErrorResponse()
     {
         // Given: User attempting requests when rate limited
-        var user = await CreateTestUserAsync("error-json-user", UserRole.User);
+        var user = await CreateTestUserAsync("error-json-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
 
@@ -275,8 +275,8 @@ public class RateLimitingTests : IntegrationTestBase
     public async Task DifferentUsers_HaveSeparateRateLimits()
     {
         // Given: Two different authenticated users
-        var user1 = await CreateTestUserAsync("separate-limit-user1", UserRole.User);
-        var user2 = await CreateTestUserAsync("separate-limit-user2", UserRole.User);
+        var user1 = await CreateTestUserAsync("separate-limit-user1", "user");
+        var user2 = await CreateTestUserAsync("separate-limit-user2", "user");
         var cookies1 = await AuthenticateUserAsync(user1.Email);
         var cookies2 = await AuthenticateUserAsync(user2.Email);
         var client = Factory.CreateHttpsClient();
@@ -311,7 +311,7 @@ public class RateLimitingTests : IntegrationTestBase
     public async Task AfterLogin_UserTransitionsFromIpToUserRateLimit()
     {
         // Given: User logs in (transitions from IP-based to user-based rate limiting)
-        var user = await CreateTestUserAsync("transition-user", UserRole.User, "Password123!");
+        var user = await CreateTestUserAsync("transition-user", "user", "Password123!");
         var client = Factory.CreateHttpsClient();
 
         // When: Anonymous request first

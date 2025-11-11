@@ -101,7 +101,7 @@ public class AdminStatsServiceTests : IDisposable
             Email = "test@test.com",
             DisplayName = "Test User",
             PasswordHash = "hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = now
         };
         _dbContext.Users.Add(user);
@@ -161,7 +161,7 @@ public class AdminStatsServiceTests : IDisposable
             Email = "test1@test.com",
             DisplayName = "User 1",
             PasswordHash = "hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = now.AddDays(-5)
         };
         var user2 = new UserEntity
@@ -170,7 +170,7 @@ public class AdminStatsServiceTests : IDisposable
             Email = "test2@test.com",
             DisplayName = "User 2",
             PasswordHash = "hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = now.AddDays(-3)
         };
         _dbContext.Users.AddRange(user1, user2);
@@ -212,7 +212,7 @@ public class AdminStatsServiceTests : IDisposable
             Email = "user@test.com",
             DisplayName = "Test User",
             PasswordHash = "hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = now
         };
         _dbContext.Users.Add(user);
@@ -276,7 +276,7 @@ public class AdminStatsServiceTests : IDisposable
             Email = "new@test.com",
             DisplayName = "New User",
             PasswordHash = "hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = DateTime.UtcNow
         });
         await _dbContext.SaveChangesAsync();
@@ -438,7 +438,7 @@ public class AdminStatsServiceTests : IDisposable
                 Email = "admin1@test.com",
                 DisplayName = "Admin User",
                 PasswordHash = "hash",
-                Role = UserRole.Admin,
+                Role = "admin",
                 CreatedAt = now.AddDays(-5)
             },
             new UserEntity
@@ -447,7 +447,7 @@ public class AdminStatsServiceTests : IDisposable
                 Email = "editor1@test.com",
                 DisplayName = "Editor User",
                 PasswordHash = "hash",
-                Role = UserRole.Editor,
+                Role = "editor",
                 CreatedAt = now.AddDays(-3)
             },
             new UserEntity
@@ -456,7 +456,7 @@ public class AdminStatsServiceTests : IDisposable
                 Email = "user1@test.com",
                 DisplayName = "Regular User",
                 PasswordHash = "hash",
-                Role = UserRole.User,
+                Role = "user",
                 CreatedAt = now.AddDays(-1)
             }
         );
@@ -515,7 +515,7 @@ public class AdminStatsServiceTests : IDisposable
                 Email = "user1@test.com",
                 DisplayName = "User 1",
                 PasswordHash = "hash",
-                Role = UserRole.User,
+                Role = "user",
                 CreatedAt = now.AddDays(-10)
             },
             new UserEntity
@@ -524,7 +524,7 @@ public class AdminStatsServiceTests : IDisposable
                 Email = "user2@test.com",
                 DisplayName = "User 2",
                 PasswordHash = "hash",
-                Role = UserRole.Editor,
+                Role = "editor",
                 CreatedAt = now.AddDays(-5)
             },
             new UserEntity
@@ -533,7 +533,7 @@ public class AdminStatsServiceTests : IDisposable
                 Email = "admin@test.com",
                 DisplayName = "Admin",
                 PasswordHash = "hash",
-                Role = UserRole.Admin,
+                Role = "admin",
                 CreatedAt = now.AddDays(-20)
             }
         );

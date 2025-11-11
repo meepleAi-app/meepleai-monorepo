@@ -36,6 +36,11 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
     private readonly SqliteConnection _connection;
     private string _testDatasetPath = null!;
 
+    // Test Guid constants
+    private static readonly Guid TestUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+    private static readonly Guid TestTemplateId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+    private static readonly Guid TestVersionId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+
     public PromptEvaluationServiceTests(ITestOutputHelper output)
     {
         _output = output;
@@ -120,9 +125,9 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         // Add test user first (required for navigation properties)
         var testUser = new UserEntity
         {
-            Id = "test-user",
+            Id = TestUserId,
             Email = "test@example.com",
-            Role = UserRole.Admin,
+            Role = "admin",
             PasswordHash = "test-password-hash",
             CreatedAt = DateTime.UtcNow
         };
@@ -132,11 +137,11 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         // Add test prompt template
         var template = new PromptTemplateEntity
         {
-            Id = "test-template-id",
+            Id = TestTemplateId,
             Name = "qa-system-prompt",
             Category = "qa",
             Description = "Test template",
-            CreatedByUserId = "test-user",
+            CreatedByUserId = TestUserId,
             CreatedBy = testUser,
             CreatedAt = DateTime.UtcNow
         };
@@ -146,12 +151,12 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         // Add test prompt version
         var version = new PromptVersionEntity
         {
-            Id = "test-version-id",
-            TemplateId = "test-template-id",
+            Id = TestVersionId,
+            TemplateId = TestTemplateId,
             Template = template,
             VersionNumber = 1,
             Content = "You are a helpful assistant. Answer questions accurately.",
-            CreatedByUserId = "test-user",
+            CreatedByUserId = TestUserId,
             CreatedBy = testUser,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
@@ -449,12 +454,12 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         // Create candidate version
         var candidateVersion = new PromptVersionEntity
         {
-            Id = "candidate-version-id",
-            TemplateId = "test-template-id",
+            Id = Guid.NewGuid(),
+            TemplateId = template.Id,
             Template = template,
             VersionNumber = 2,
             Content = "You are an excellent assistant with improved prompting.",
-            CreatedByUserId = "test-user",
+            CreatedByUserId = user.Id,
             CreatedBy = user,
             IsActive = false,
             CreatedAt = DateTime.UtcNow
@@ -518,12 +523,12 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         // Create candidate version with poor prompt
         var candidateVersion = new PromptVersionEntity
         {
-            Id = "poor-candidate-version",
-            TemplateId = "test-template-id",
+            Id = Guid.NewGuid(),
+            TemplateId = template.Id,
             Template = template,
             VersionNumber = 3,
             Content = "Answer questions.", // Much worse prompt
-            CreatedByUserId = "test-user",
+            CreatedByUserId = user.Id,
             CreatedBy = user,
             IsActive = false,
             CreatedAt = DateTime.UtcNow
@@ -588,12 +593,12 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         // Create candidate version with slight improvement
         var candidateVersion = new PromptVersionEntity
         {
-            Id = "marginal-candidate",
-            TemplateId = "test-template-id",
+            Id = Guid.NewGuid(),
+            TemplateId = template.Id,
             Template = template,
             VersionNumber = 4,
             Content = "You are a helpful assistant. Answer accurately and cite sources.",
-            CreatedByUserId = "test-user",
+            CreatedByUserId = user.Id,
             CreatedBy = user,
             IsActive = false,
             CreatedAt = DateTime.UtcNow
@@ -727,25 +732,28 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
     public async Task GetHistoricalResultsAsync_MultipleResults_ReturnsOrderedByDate()
     {
         // Arrange: Insert 3 evaluation results with different dates
+        var evalId1 = Guid.NewGuid();
+        var evalId2 = Guid.NewGuid();
+        var evalId3 = Guid.NewGuid();
         var results = new[]
         {
-            CreateEvaluationEntity("eval-1", DateTime.UtcNow.AddDays(-2)),
-            CreateEvaluationEntity("eval-2", DateTime.UtcNow.AddDays(-1)),
-            CreateEvaluationEntity("eval-3", DateTime.UtcNow)
+            CreateEvaluationEntity(evalId1, DateTime.UtcNow.AddDays(-2)),
+            CreateEvaluationEntity(evalId2, DateTime.UtcNow.AddDays(-1)),
+            CreateEvaluationEntity(evalId3, DateTime.UtcNow)
         };
 
         await _dbContext.PromptEvaluationResults.AddRangeAsync(results);
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var historical = await _service.GetHistoricalResultsAsync("test-template-id", limit: 10);
+        var historical = await _service.GetHistoricalResultsAsync(TestTemplateId.ToString(), limit: 10);
 
         // Assert
         historical.Count.Should().Be(3);
         // Should be ordered by ExecutedAt DESC (newest first)
-        historical[0].EvaluationId.Should().Be("eval-3");
-        historical[1].EvaluationId.Should().Be("eval-2");
-        historical[2].EvaluationId.Should().Be("eval-1");
+        historical[0].EvaluationId.Should().Be(evalId3.ToString());
+        historical[1].EvaluationId.Should().Be(evalId2.ToString());
+        historical[2].EvaluationId.Should().Be(evalId1.ToString());
     }
 
     [Fact]
@@ -753,7 +761,7 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
     {
         // Arrange: Insert 5 results
         var results = Enumerable.Range(1, 5)
-            .Select(i => CreateEvaluationEntity($"eval-{i}", DateTime.UtcNow.AddDays(-i)))
+            .Select(i => CreateEvaluationEntity(Guid.NewGuid(), DateTime.UtcNow.AddDays(-i)))
             .ToArray();
 
         await _dbContext.PromptEvaluationResults.AddRangeAsync(results);
@@ -775,8 +783,8 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         return new PromptEvaluationResult
         {
             EvaluationId = $"eval-{Guid.NewGuid():N}",
-            TemplateId = "test-template-id",
-            VersionId = "test-version-id",
+            TemplateId = TestTemplateId.ToString(),
+            VersionId = TestVersionId.ToString(),
             DatasetId = "test-dataset-v1",
             ExecutedAt = DateTime.UtcNow,
             TotalQueries = 10,
@@ -807,13 +815,13 @@ public class PromptEvaluationServiceTests : IAsyncLifetime, IDisposable
         };
     }
 
-    private PromptEvaluationResultEntity CreateEvaluationEntity(string id, DateTime executedAt)
+    private PromptEvaluationResultEntity CreateEvaluationEntity(Guid id, DateTime executedAt)
     {
         return new PromptEvaluationResultEntity
         {
             Id = id,
-            TemplateId = "test-template-id",
-            VersionId = "test-version-id",
+            TemplateId = TestTemplateId,
+            VersionId = TestVersionId,
             DatasetId = "test-dataset-v1",
             ExecutedAt = executedAt,
             TotalQueries = 10,

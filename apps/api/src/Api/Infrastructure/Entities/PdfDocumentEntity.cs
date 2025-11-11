@@ -6,13 +6,16 @@ namespace Api.Infrastructure.Entities;
 
 public class PdfDocumentEntity
 {
-    public string Id { get; set; } = default!;
-    public string GameId { get; set; } = default!;
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid Id { get; set; } = Guid.NewGuid();
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid GameId { get; set; }
     public string FileName { get; set; } = default!;
     public string FilePath { get; set; } = default!;
     public long FileSizeBytes { get; set; }
     public string ContentType { get; set; } = "application/pdf";
-    public string UploadedByUserId { get; set; } = default!;
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid UploadedByUserId { get; set; }
     public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
     public string? Metadata { get; set; } // JSON metadata
 

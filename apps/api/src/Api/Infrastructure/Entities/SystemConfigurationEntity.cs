@@ -9,7 +9,8 @@ public class SystemConfigurationEntity
     /// <summary>
     /// Unique identifier for the configuration entry.
     /// </summary>
-    public string Id { get; set; } = Guid.NewGuid().ToString();
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid Id { get; set; } = Guid.NewGuid();
 
     /// <summary>
     /// Configuration key in hierarchical format (e.g., "RateLimit:Admin:MaxTokens").
@@ -84,12 +85,14 @@ public class SystemConfigurationEntity
     /// <summary>
     /// User ID of the administrator who created this configuration.
     /// </summary>
-    public string CreatedByUserId { get; set; } = default!;
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid CreatedByUserId { get; set; }
 
     /// <summary>
     /// User ID of the administrator who last updated this configuration.
     /// </summary>
-    public string? UpdatedByUserId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid? UpdatedByUserId { get; set; }
 
     /// <summary>
     /// When the configuration last changed from inactive to active or vice versa.

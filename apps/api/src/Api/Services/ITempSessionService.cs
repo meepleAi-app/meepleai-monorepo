@@ -12,14 +12,14 @@ public interface ITempSessionService
     /// <param name="userId">User ID</param>
     /// <param name="ipAddress">Client IP address</param>
     /// <returns>Temporary session token (5-min TTL, single-use)</returns>
-    Task<string> CreateTempSessionAsync(string userId, string? ipAddress = null);
+    Task<string> CreateTempSessionAsync(Guid userId, string? ipAddress = null);
 
     /// <summary>
     /// Validate and consume temporary session token
     /// </summary>
     /// <param name="token">Temporary session token</param>
     /// <returns>User ID if valid, null if invalid/expired/used</returns>
-    Task<string?> ValidateAndConsumeTempSessionAsync(string token);
+    Task<Guid?> ValidateAndConsumeTempSessionAsync(string token);
 
     /// <summary>
     /// Cleanup expired temporary sessions (background task)

@@ -46,7 +46,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
     public async Task PostComment_CreatesComment_ForEditor()
     {
         // Given: Editor user is authenticated
-        var user = await CreateTestUserAsync("comment-editor", UserRole.Editor);
+        var user = await CreateTestUserAsync("comment-editor", "editor");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         // And: A game with RuleSpec version exists
@@ -95,7 +95,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
     public async Task PostComment_CreatesVersionLevelComment_ForAdmin()
     {
         // Given: Admin user is authenticated
-        var user = await CreateTestUserAsync("comment-admin", UserRole.Admin);
+        var user = await CreateTestUserAsync("comment-admin", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         // And: A game with RuleSpec version exists
@@ -135,11 +135,11 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
     public async Task PostComment_ReturnsForbidden_ForUserRole()
     {
         // Given: Regular user is authenticated
-        var user = await CreateTestUserAsync("regular-user", UserRole.User);
+        var user = await CreateTestUserAsync("regular-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         // And: A game with RuleSpec version exists (created by admin)
-        var admin = await CreateTestUserAsync("admin-for-game", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-for-game", "admin");
         var game = await CreateTestGameAsync($"Chess-{Guid.NewGuid():N}"[..20]);
         var ruleSpec = await CreateTestRuleSpecAsync(game.Id, admin.Id, "v1");
 
@@ -171,8 +171,8 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
     public async Task GetComments_ReturnsCommentsOrderedByCreatedAt()
     {
         // Given: Multiple comments exist for a version
-        var editor = await CreateTestUserAsync("editor-1", UserRole.Editor);
-        var admin = await CreateTestUserAsync("admin-1", UserRole.Admin);
+        var editor = await CreateTestUserAsync("editor-1", "editor");
+        var admin = await CreateTestUserAsync("admin-1", "admin");
         var game = await CreateTestGameAsync($"Chess-{Guid.NewGuid():N}"[..20]);
         var ruleSpec = await CreateTestRuleSpecAsync(game.Id, editor.Id, "v1");
 
@@ -243,7 +243,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
     public async Task UpdateComment_UpdatesComment_WhenOwner()
     {
         // Given: A comment exists
-        var editor = await CreateTestUserAsync("comment-owner", UserRole.Editor);
+        var editor = await CreateTestUserAsync("comment-owner", "editor");
         var game = await CreateTestGameAsync($"Chess-{Guid.NewGuid():N}"[..20]);
         var ruleSpec = await CreateTestRuleSpecAsync(game.Id, editor.Id, "v1");
 
@@ -297,8 +297,8 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
     public async Task UpdateComment_ReturnsForbidden_WhenNotOwner()
     {
         // Given: A comment exists owned by another user
-        var owner = await CreateTestUserAsync("owner", UserRole.Editor);
-        var otherEditor = await CreateTestUserAsync("other-editor", UserRole.Editor);
+        var owner = await CreateTestUserAsync("owner", "editor");
+        var otherEditor = await CreateTestUserAsync("other-editor", "editor");
         var game = await CreateTestGameAsync($"Chess-{Guid.NewGuid():N}"[..20]);
         var ruleSpec = await CreateTestRuleSpecAsync(game.Id, owner.Id, "v1");
 
@@ -348,7 +348,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
     public async Task DeleteComment_DeletesComment_WhenOwner()
     {
         // Given: A comment exists
-        var editor = await CreateTestUserAsync("comment-owner", UserRole.Editor);
+        var editor = await CreateTestUserAsync("comment-owner", "editor");
         var game = await CreateTestGameAsync($"Chess-{Guid.NewGuid():N}"[..20]);
         var ruleSpec = await CreateTestRuleSpecAsync(game.Id, editor.Id, "v1");
 
@@ -402,8 +402,8 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
     public async Task DeleteComment_DeletesComment_WhenAdmin()
     {
         // Given: A comment exists owned by another user
-        var editor = await CreateTestUserAsync("editor-owner", UserRole.Editor);
-        var admin = await CreateTestUserAsync("admin-deleter", UserRole.Admin);
+        var editor = await CreateTestUserAsync("editor-owner", "editor");
+        var admin = await CreateTestUserAsync("admin-deleter", "admin");
         var game = await CreateTestGameAsync($"Chess-{Guid.NewGuid():N}"[..20]);
         var ruleSpec = await CreateTestRuleSpecAsync(game.Id, editor.Id, "v1");
 
@@ -456,8 +456,8 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
     public async Task DeleteComment_ReturnsForbidden_WhenNotOwnerAndNotAdmin()
     {
         // Given: A comment exists owned by another user
-        var owner = await CreateTestUserAsync("owner", UserRole.Editor);
-        var otherEditor = await CreateTestUserAsync("other-editor", UserRole.Editor);
+        var owner = await CreateTestUserAsync("owner", "editor");
+        var otherEditor = await CreateTestUserAsync("other-editor", "editor");
         var game = await CreateTestGameAsync($"Chess-{Guid.NewGuid():N}"[..20]);
         var ruleSpec = await CreateTestRuleSpecAsync(game.Id, owner.Id, "v1");
 
@@ -503,7 +503,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
     public async Task GetComments_ReturnsUnauthorized_WhenNotAuthenticated()
     {
         // Given: A game with RuleSpec exists
-        var admin = await CreateTestUserAsync("admin", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin", "admin");
         var game = await CreateTestGameAsync($"Chess-{Guid.NewGuid():N}"[..20]);
         var ruleSpec = await CreateTestRuleSpecAsync(game.Id, admin.Id, "v1");
 
@@ -526,7 +526,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
     public async Task PostComment_ReturnsBadRequest_WhenCommentTextEmpty()
     {
         // Given: Editor user is authenticated
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor", "editor");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var game = await CreateTestGameAsync($"Chess-{Guid.NewGuid():N}"[..20]);
         var ruleSpec = await CreateTestRuleSpecAsync(game.Id, editor.Id, "v1");
@@ -559,7 +559,7 @@ public class RuleSpecCommentEndpointsTests : IntegrationTestBase
     public async Task PostComment_ReturnsBadRequest_WhenVersionNotFound()
     {
         // Given: Editor user is authenticated
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor", "editor");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var game = await CreateTestGameAsync($"Chess-{Guid.NewGuid():N}"[..20]);
 

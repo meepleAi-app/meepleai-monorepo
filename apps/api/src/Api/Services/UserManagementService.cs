@@ -60,10 +60,9 @@ public class UserManagementService
         // Role filter
         if (!string.IsNullOrWhiteSpace(roleFilter) && roleFilter != "all")
         {
-            if (Enum.TryParse<UserRole>(roleFilter, true, out var roleEnum))
-            {
-                query = query.Where(u => u.Role == roleEnum);
-            }
+            // Normalize role filter to lowercase for comparison
+            var normalizedRole = roleFilter.ToLower();
+            query = query.Where(u => u.Role == normalizedRole);
         }
 
         // Sorting
@@ -103,15 +102,11 @@ public class UserManagementService
             throw new InvalidOperationException($"User with email {request.Email} already exists");
         }
 
-        // Parse role from request
-        var role = UserRole.User;
-        if (!string.IsNullOrWhiteSpace(request.Role) && Enum.TryParse<UserRole>(request.Role, true, out var parsedRole))
-        {
-            role = parsedRole;
-        }
+        // Parse role from request (default to "user")
+        var role = !string.IsNullOrWhiteSpace(request.Role) ? request.Role.ToLower() : "user";
 
         // Create user directly (bypassing AuthService role restrictions for admin-created users)
-        var userId = Guid.NewGuid().ToString("N");
+        var userId = Guid.NewGuid();
         var user = new UserEntity
         {
             Id = userId,
@@ -148,9 +143,10 @@ public class UserManagementService
         UpdateUserRequest request,
         CancellationToken cancellationToken = default)
     {
+        var userGuid = Guid.Parse(userId);
         var user = await _dbContext.Users
             .Include(u => u.Sessions)
-            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Id == userGuid, cancellationToken);
         if (user == null)
         {
             throw new KeyNotFoundException($"User {userId} not found");
@@ -160,7 +156,7 @@ public class UserManagementService
         if (!string.IsNullOrWhiteSpace(request.Email) && request.Email != user.Email)
         {
             // Check uniqueness
-            if (await _dbContext.Users.AnyAsync(u => u.Email == request.Email && u.Id != userId, cancellationToken))
+            if (await _dbContext.Users.AnyAsync(u => u.Email == request.Email && u.Id != userGuid, cancellationToken))
             {
                 throw new InvalidOperationException($"Email {request.Email} is already in use");
             }
@@ -174,9 +170,9 @@ public class UserManagementService
         }
 
         // Update role
-        if (!string.IsNullOrWhiteSpace(request.Role) && Enum.TryParse<UserRole>(request.Role, true, out var roleEnum))
+        if (!string.IsNullOrWhiteSpace(request.Role))
         {
-            user.Role = roleEnum;
+            user.Role = request.Role.ToLower();
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -207,9 +203,9 @@ public class UserManagementService
         }
 
         // Prevent deletion of last admin
-        if (user.Role == UserRole.Admin)
+        if (user.Role == "admin")
         {
-            var adminCount = await _dbContext.Users.CountAsync(u => u.Role == UserRole.Admin, cancellationToken);
+            var adminCount = await _dbContext.Users.CountAsync(u => u.Role == "admin", cancellationToken);
             if (adminCount <= 1)
             {
                 throw new InvalidOperationException("Cannot delete the last admin user");
@@ -231,10 +227,10 @@ public class UserManagementService
             ?.LastSeenAt;
 
         return new UserDto(
-            Id: user.Id,
+            Id: user.Id.ToString(),
             Email: user.Email,
             DisplayName: user.DisplayName ?? string.Empty,
-            Role: user.Role.ToString(),
+            Role: user.Role,
             CreatedAt: user.CreatedAt,
             LastSeenAt: lastSeenAt
         );

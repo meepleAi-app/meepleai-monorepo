@@ -60,7 +60,7 @@ public interface IPromptTemplateService
     /// <param name="activatedByUserId">User ID performing the activation</param>
     /// <param name="ct">Cancellation token</param>
     /// <returns>True if activated successfully, false if version not found</returns>
-    Task<bool> ActivateVersionAsync(string templateId, string versionId, string activatedByUserId, CancellationToken ct = default);
+    Task<bool> ActivateVersionAsync(Guid templateId, Guid versionId, Guid activatedByUserId, CancellationToken ct = default);
 
     /// <summary>
     /// Invalidates cache for a specific template (manual refresh)

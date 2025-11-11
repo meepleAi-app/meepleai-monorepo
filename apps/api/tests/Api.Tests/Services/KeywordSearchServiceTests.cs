@@ -63,7 +63,7 @@ public class KeywordSearchServiceTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "hash",
-            Role = UserRole.User
+            Role = "user"
         };
 
         var pdfDoc = new PdfDocumentEntity

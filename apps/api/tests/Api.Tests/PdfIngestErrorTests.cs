@@ -44,7 +44,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
     public async Task PostIngestPdf_WithUserRole_ReturnsForbidden()
     {
         // Given: Regular user (not Admin/Editor)
-        var user = await CreateTestUserAsync("regular-user", UserRole.User);
+        var user = await CreateTestUserAsync("regular-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         var content = new MultipartFormDataContent();
@@ -65,7 +65,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
     public async Task PostIngestPdf_WithMissingGameId_ReturnsBadRequest()
     {
         // Given: Editor user without gameId but with file
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor", "editor");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
 
@@ -91,7 +91,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
     public async Task PostIngestPdf_WithEmptyGameId_ReturnsBadRequest()
     {
         // Given: Editor user with empty gameId
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor", "editor");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
         var content = new MultipartFormDataContent();
@@ -112,7 +112,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
     public async Task PostIngestPdf_WithMissingFile_ReturnsBadRequest()
     {
         // Given: Editor user without file
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor", "editor");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
         var content = new MultipartFormDataContent();
@@ -151,7 +151,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
     public async Task PostIndexPdf_WithUserRole_ReturnsForbidden()
     {
         // Given: Regular user (not Admin/Editor)
-        var user = await CreateTestUserAsync("regular-user", UserRole.User);
+        var user = await CreateTestUserAsync("regular-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf/test-pdf-id/index");
@@ -168,7 +168,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
     public async Task PostIndexPdf_WithNonExistentPdfId_ReturnsNotFound()
     {
         // Given: Editor user with non-existent PDF ID
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor", "editor");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf/non-existent-pdf/index");
@@ -185,7 +185,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
     public async Task PostIndexPdf_WithoutExtractedText_ReturnsBadRequest()
     {
         // Given: Editor user and PDF without extracted text
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor", "editor");
         var game = await CreateTestGameAsync("Test Game");
         var pdf = await CreateTestPdfDocumentAsync(game.Id, editor.Id);
         // PDF created without ExtractedText
@@ -222,7 +222,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
     public async Task PostGenerateRuleSpec_WithUserRole_ReturnsForbidden()
     {
         // Given: Regular user (not Admin/Editor)
-        var user = await CreateTestUserAsync("regular-user", UserRole.User);
+        var user = await CreateTestUserAsync("regular-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf/test-pdf-id/rulespec");
@@ -239,7 +239,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
     public async Task PostGenerateRuleSpec_WithNonExistentPdfId_ReturnsBadRequest()
     {
         // Given: Editor user with non-existent PDF ID
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor", "editor");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/ingest/pdf/non-existent-pdf/rulespec");
@@ -273,7 +273,7 @@ public class PdfIngestErrorTests : IntegrationTestBase
     public async Task GetPdfText_WithNonExistentPdfId_ReturnsNotFound()
     {
         // Given: Authenticated user with non-existent PDF ID
-        var user = await CreateTestUserAsync("user", UserRole.User);
+        var user = await CreateTestUserAsync("user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/pdfs/non-existent-pdf/text");

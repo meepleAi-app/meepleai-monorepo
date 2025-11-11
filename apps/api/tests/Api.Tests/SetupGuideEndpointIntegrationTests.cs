@@ -54,7 +54,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
     public async Task GivenAuthenticatedUser_WhenRequestingSetupGuide_ThenReturnsStructuredGuide()
     {
         // Given: A user is authenticated
-        var user = await CreateTestUserAsync($"setup-user-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"setup-user-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -121,7 +121,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
     public async Task GivenNoGameId_WhenRequestingSetupGuide_ThenReturnsBadRequest()
     {
         // Given: A user is authenticated
-        var user = await CreateTestUserAsync($"setup-badreq-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"setup-badreq-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -149,7 +149,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
     public async Task GivenNonExistentGame_WhenRequestingSetupGuide_ThenReturnsDefaultGuide()
     {
         // Given: A user is authenticated
-        var user = await CreateTestUserAsync($"setup-notfound-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"setup-notfound-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -187,7 +187,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
     public async Task GivenChatId_WhenRequestingSetupGuide_ThenLogsToChat()
     {
         // Given: A user is authenticated
-        var user = await CreateTestUserAsync($"setup-chat-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"setup-chat-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -256,7 +256,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
     public async Task GivenGameSetup_WhenRequestingGuide_ThenIncludesEstimatedTime()
     {
         // Given: A user is authenticated
-        var user = await CreateTestUserAsync($"setup-time-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"setup-time-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -297,7 +297,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
     public async Task GivenSetupGuideGeneration_WhenComplete_ThenIncludesTokenUsage()
     {
         // Given: A user is authenticated
-        var user = await CreateTestUserAsync($"setup-tokens-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"setup-tokens-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -340,7 +340,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
     public async Task GivenSetupGuideRequest_WhenComplete_ThenLogsRequest()
     {
         // Given: A user is authenticated
-        var user = await CreateTestUserAsync($"setup-log-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"setup-log-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -386,9 +386,9 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
     public async Task GivenMultipleUsers_WhenRequestingSetupGuideConcurrently_ThenAllSucceed()
     {
         // Given: Multiple users are authenticated
-        var user1 = await CreateTestUserAsync($"setup-concurrent-1-{TestRunId}", UserRole.User);
-        var user2 = await CreateTestUserAsync($"setup-concurrent-2-{TestRunId}", UserRole.User);
-        var user3 = await CreateTestUserAsync($"setup-concurrent-3-{TestRunId}", UserRole.User);
+        var user1 = await CreateTestUserAsync($"setup-concurrent-1-{TestRunId}", "user");
+        var user2 = await CreateTestUserAsync($"setup-concurrent-2-{TestRunId}", "user");
+        var user3 = await CreateTestUserAsync($"setup-concurrent-3-{TestRunId}", "user");
 
         var cookies1 = await AuthenticateUserAsync(user1.Email);
         var cookies2 = await AuthenticateUserAsync(user2.Email);
@@ -454,7 +454,7 @@ public class SetupGuideEndpointIntegrationTests : IntegrationTestBase
     public async Task GivenRagData_WhenRequestingSetupGuide_ThenIncludesConfidenceScore()
     {
         // Given: A user is authenticated
-        var user = await CreateTestUserAsync($"setup-confidence-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"setup-confidence-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 

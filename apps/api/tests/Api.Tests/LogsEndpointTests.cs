@@ -83,7 +83,7 @@ public class LogsEndpointTests : IntegrationTestBase
         await db.SaveChangesAsync();
 
         // And: Admin user is authenticated
-        var adminUser = await CreateTestUserAsync("admin-logs", UserRole.Admin);
+        var adminUser = await CreateTestUserAsync("admin-logs", "admin");
         var cookies = await AuthenticateUserAsync(adminUser.Email);
         var client = CreateClientWithoutCookies();
 
@@ -135,8 +135,8 @@ public class LogsEndpointTests : IntegrationTestBase
 
     public static IEnumerable<object[]> NonAdminRoles => new[]
     {
-        new object[] { UserRole.Editor },
-        new object[] { UserRole.User }
+        new object[] { "editor" },
+        new object[] { "user" }
     };
 
     /// <summary>

@@ -11,22 +11,22 @@ public interface ISessionManagementService
     /// <summary>
     /// Gets all active sessions for a specific user.
     /// </summary>
-    Task<List<SessionInfo>> GetUserSessionsAsync(string userId, CancellationToken ct = default);
+    Task<List<SessionInfo>> GetUserSessionsAsync(Guid userId, CancellationToken ct = default);
 
     /// <summary>
     /// Gets all sessions (optionally filtered by user ID) for admin purposes.
     /// </summary>
-    Task<List<SessionInfo>> GetAllSessionsAsync(string? userId = null, int limit = 100, CancellationToken ct = default);
+    Task<List<SessionInfo>> GetAllSessionsAsync(Guid? userId = null, int limit = 100, CancellationToken ct = default);
 
     /// <summary>
     /// Revokes a specific session by session ID.
     /// </summary>
-    Task<bool> RevokeSessionAsync(string sessionId, CancellationToken ct = default);
+    Task<bool> RevokeSessionAsync(Guid sessionId, CancellationToken ct = default);
 
     /// <summary>
     /// Revokes all sessions for a specific user (e.g., on password change).
     /// </summary>
-    Task<int> RevokeAllUserSessionsAsync(string userId, CancellationToken ct = default);
+    Task<int> RevokeAllUserSessionsAsync(Guid userId, CancellationToken ct = default);
 
     /// <summary>
     /// Auto-revokes sessions that have been inactive for longer than the configured timeout.
@@ -57,13 +57,8 @@ public class SessionManagementService : ISessionManagementService
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public async Task<List<SessionInfo>> GetUserSessionsAsync(string userId, CancellationToken ct = default)
+    public async Task<List<SessionInfo>> GetUserSessionsAsync(Guid userId, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(userId))
-        {
-            throw new ArgumentException("User ID cannot be null or empty", nameof(userId));
-        }
-
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         var sessions = await _db.UserSessions
@@ -72,8 +67,8 @@ public class SessionManagementService : ISessionManagementService
             .Where(s => s.UserId == userId && s.RevokedAt == null && s.ExpiresAt > now)
             .OrderByDescending(s => s.LastSeenAt ?? s.CreatedAt)
             .Select(s => new SessionInfo(
-                s.Id,
-                s.UserId,
+                s.Id.ToString(),
+                s.UserId.ToString(),
                 s.User.Email,
                 s.CreatedAt,
                 s.ExpiresAt,
@@ -87,7 +82,7 @@ public class SessionManagementService : ISessionManagementService
         return sessions;
     }
 
-    public async Task<List<SessionInfo>> GetAllSessionsAsync(string? userId = null, int limit = 100, CancellationToken ct = default)
+    public async Task<List<SessionInfo>> GetAllSessionsAsync(Guid? userId = null, int limit = 100, CancellationToken ct = default)
     {
         if (limit <= 0 || limit > 1000)
         {
@@ -99,17 +94,17 @@ public class SessionManagementService : ISessionManagementService
             .Include(s => s.User)
             .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(userId))
+        if (userId.HasValue)
         {
-            query = query.Where(s => s.UserId == userId);
+            query = query.Where(s => s.UserId == userId.Value);
         }
 
         var sessions = await query
             .OrderByDescending(s => s.CreatedAt)
             .Take(limit)
             .Select(s => new SessionInfo(
-                s.Id,
-                s.UserId,
+                s.Id.ToString(),
+                s.UserId.ToString(),
                 s.User.Email,
                 s.CreatedAt,
                 s.ExpiresAt,
@@ -123,13 +118,8 @@ public class SessionManagementService : ISessionManagementService
         return sessions;
     }
 
-    public async Task<bool> RevokeSessionAsync(string sessionId, CancellationToken ct = default)
+    public async Task<bool> RevokeSessionAsync(Guid sessionId, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(sessionId))
-        {
-            throw new ArgumentException("Session ID cannot be null or empty", nameof(sessionId));
-        }
-
         var session = await _db.UserSessions.FirstOrDefaultAsync(s => s.Id == sessionId, ct);
         if (session == null)
         {
@@ -169,13 +159,8 @@ public class SessionManagementService : ISessionManagementService
         return true;
     }
 
-    public async Task<int> RevokeAllUserSessionsAsync(string userId, CancellationToken ct = default)
+    public async Task<int> RevokeAllUserSessionsAsync(Guid userId, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(userId))
-        {
-            throw new ArgumentException("User ID cannot be null or empty", nameof(userId));
-        }
-
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         var sessions = await _db.UserSessions

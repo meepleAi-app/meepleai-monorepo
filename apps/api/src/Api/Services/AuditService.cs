@@ -30,9 +30,11 @@ public class AuditService
     {
         try
         {
+            var userGuid = !string.IsNullOrWhiteSpace(userId) && Guid.TryParse(userId, out var parsed) ? (Guid?)parsed : null;
+
             var auditLog = new AuditLogEntity
             {
-                UserId = userId,
+                UserId = userGuid,
                 Action = action,
                 Resource = resource,
                 ResourceId = resourceId,

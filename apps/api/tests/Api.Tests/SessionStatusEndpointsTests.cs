@@ -36,7 +36,7 @@ public class SessionStatusEndpointsTests : IntegrationTestBase
     public async Task GetSessionStatus_WhenAuthenticated_ReturnsCorrectMinutes()
     {
         // Arrange
-        var user = await CreateTestUserAsync("session-status-user", UserRole.User);
+        var user = await CreateTestUserAsync("session-status-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -91,7 +91,7 @@ public class SessionStatusEndpointsTests : IntegrationTestBase
     public async Task ExtendSession_WhenAuthenticated_InvalidatesCache()
     {
         // Arrange
-        var user = await CreateTestUserAsync("extend-cache-user", UserRole.User);
+        var user = await CreateTestUserAsync("extend-cache-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -133,7 +133,7 @@ public class SessionStatusEndpointsTests : IntegrationTestBase
     public async Task ExtendSession_MultipleTimesWithinPeriod_KeepsSessionAlive()
     {
         // Arrange
-        var user = await CreateTestUserAsync("extend-multiple-user", UserRole.User);
+        var user = await CreateTestUserAsync("extend-multiple-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 

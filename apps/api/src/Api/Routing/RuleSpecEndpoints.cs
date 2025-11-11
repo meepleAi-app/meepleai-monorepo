@@ -322,7 +322,11 @@ group.MapPost("/rulespecs/{gameId}/{version}/comments", async (
     {
         return Results.Unauthorized();
     }
-    var userId = session.User.Id;
+
+    if (!Guid.TryParse(session.User.Id, out var userId))
+    {
+        return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+    }
 
     // Manually resolve service from DI container
     var commentService = context.RequestServices.GetRequiredService<IRuleCommentService>();
@@ -371,7 +375,11 @@ group.MapPost("/comments/{commentId}/replies", async (
     {
         return Results.Unauthorized();
     }
-    var userId = session.User.Id;
+
+    if (!Guid.TryParse(session.User.Id, out var userId))
+    {
+        return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+    }
 
     // Manually resolve service from DI container
     var commentService = context.RequestServices.GetRequiredService<IRuleCommentService>();
@@ -501,7 +509,10 @@ group.MapPost("/comments/{commentId}/resolve", async (
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    var userId = session.User.Id;
+    if (!Guid.TryParse(session.User.Id, out var userId))
+    {
+        return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+    }
 
     // Manually resolve service from DI container
     var commentService = context.RequestServices.GetRequiredService<IRuleCommentService>();

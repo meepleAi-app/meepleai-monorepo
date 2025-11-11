@@ -24,7 +24,7 @@ public class RuleSpecCommentService
     {
         // Validate version exists
         var versionExists = await _dbContext.RuleSpecs
-            .AnyAsync(r => r.GameId == gameId && r.Version == version, cancellationToken);
+            .AnyAsync(r => r.GameId.ToString() == gameId && r.Version == version, cancellationToken);
 
         if (!versionExists)
         {
@@ -34,7 +34,7 @@ public class RuleSpecCommentService
         // Get user info for response
         var user = await _dbContext.Users
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Id.ToString() == userId, cancellationToken);
 
         if (user is null)
         {
@@ -43,10 +43,10 @@ public class RuleSpecCommentService
 
         var comment = new RuleSpecCommentEntity
         {
-            GameId = gameId,
+            GameId = Guid.Parse(gameId),
             Version = version,
-            AtomId = atomId,
-            UserId = userId,
+            AtomId = string.IsNullOrEmpty(atomId) ? null : Guid.Parse(atomId),
+            UserId = Guid.Parse(userId),
             CommentText = commentText,
             CreatedAt = DateTime.UtcNow,
         };
@@ -56,10 +56,10 @@ public class RuleSpecCommentService
 
         return new RuleSpecComment(
             comment.Id,
-            comment.GameId,
+            comment.GameId.ToString(),
             comment.Version,
-            comment.AtomId,
-            comment.UserId,
+            comment.AtomId?.ToString(),
+            comment.UserId.ToString(),
             user.DisplayName ?? user.Email,
             comment.CommentText,
             comment.CreatedAt,
@@ -72,16 +72,17 @@ public class RuleSpecCommentService
         string version,
         CancellationToken cancellationToken = default)
     {
+        var gameGuid = Guid.Parse(gameId);
         var comments = await _dbContext.RuleSpecComments
             .Include(c => c.User)
-            .Where(c => c.GameId == gameId && c.Version == version)
+            .Where(c => c.GameId == gameGuid && c.Version == version)
             .OrderBy(c => c.CreatedAt)
             .Select(c => new RuleSpecComment(
                 c.Id,
-                c.GameId,
+                c.GameId.ToString(),
                 c.Version,
-                c.AtomId,
-                c.UserId,
+                c.AtomId != null ? c.AtomId.ToString() : null,
+                c.UserId.ToString(),
                 c.User != null ? (c.User.DisplayName ?? c.User.Email) : "Unknown",
                 c.CommentText,
                 c.CreatedAt,
@@ -113,7 +114,8 @@ public class RuleSpecCommentService
         }
 
         // Verify ownership
-        if (comment.UserId != userId)
+        var userGuid = Guid.Parse(userId);
+        if (comment.UserId != userGuid)
         {
             throw new UnauthorizedAccessException($"User {userId} is not authorized to update this comment");
         }
@@ -125,10 +127,10 @@ public class RuleSpecCommentService
 
         return new RuleSpecComment(
             comment.Id,
-            comment.GameId,
+            comment.GameId.ToString(),
             comment.Version,
-            comment.AtomId,
-            comment.UserId,
+            comment.AtomId?.ToString(),
+            comment.UserId.ToString(),
             comment.User.DisplayName ?? comment.User.Email,
             comment.CommentText,
             comment.CreatedAt,
@@ -151,7 +153,8 @@ public class RuleSpecCommentService
         }
 
         // Verify ownership or admin
-        if (comment.UserId != userId && !isAdmin)
+        var userGuid = Guid.Parse(userId);
+        if (comment.UserId != userGuid && !isAdmin)
         {
             throw new UnauthorizedAccessException($"User {userId} is not authorized to delete this comment");
         }

@@ -61,7 +61,7 @@ public class SeedDataTests : IntegrationTestBase
         admin.Should().NotBeNull();
         admin!.Id.Should().Be("demo-admin-001");
         admin.DisplayName.Should().Be("Demo Admin");
-        admin.Role.Should().Be(UserRole.Admin);
+        admin.Role.Should().Be("admin");
         admin.PasswordHash.Should().NotBeEmpty();
     }
 
@@ -88,7 +88,7 @@ public class SeedDataTests : IntegrationTestBase
         editor.Should().NotBeNull();
         editor!.Id.Should().Be("demo-editor-001");
         editor.DisplayName.Should().Be("Demo Editor");
-        editor.Role.Should().Be(UserRole.Editor);
+        editor.Role.Should().Be("editor");
         editor.PasswordHash.Should().NotBeEmpty();
     }
 
@@ -115,7 +115,7 @@ public class SeedDataTests : IntegrationTestBase
         user.Should().NotBeNull();
         user!.Id.Should().Be("demo-user-001");
         user.DisplayName.Should().Be("Demo User");
-        user.Role.Should().Be(UserRole.User);
+        user.Role.Should().Be("user");
         user.PasswordHash.Should().NotBeEmpty();
     }
 

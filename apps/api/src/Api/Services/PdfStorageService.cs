@@ -62,9 +62,7 @@ public class PdfStorageService
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
-    public async Task<PdfUploadResult> UploadPdfAsync(
-        string gameId,
-        string userId,
+    public async Task<PdfUploadResult> UploadPdfAsync(string gameId, Guid userId,
         IFormFile file,
         CancellationToken ct = default)
     {
@@ -105,7 +103,7 @@ public class PdfStorageService
 
         // Verify game exists
         var game = await _db.Games
-            .Where(g => g.Id == gameId)
+            .Where(g => g.Id.ToString() == gameId)
             .FirstOrDefaultAsync(ct);
 
         if (game == null)
@@ -132,8 +130,8 @@ public class PdfStorageService
             // Create database record
             var pdfDoc = new PdfDocumentEntity
             {
-                Id = storageResult.FileId!,
-                GameId = gameId,
+                Id = Guid.Parse(storageResult.FileId!),
+                GameId = Guid.Parse(gameId),
                 FileName = fileName,
                 FilePath = storageResult.FilePath!,
                 FileSizeBytes = storageResult.FileSizeBytes,
@@ -171,11 +169,11 @@ public class PdfStorageService
 
             return new PdfUploadResult(true, "PDF uploaded successfully", new PdfDocumentDto
             {
-                Id = pdfDoc.Id,
+                Id = pdfDoc.Id.ToString(),
                 FileName = pdfDoc.FileName,
                 FileSizeBytes = pdfDoc.FileSizeBytes,
                 UploadedAt = pdfDoc.UploadedAt,
-                UploadedByUserId = pdfDoc.UploadedByUserId
+                UploadedByUserId = pdfDoc.UploadedByUserId.ToString()
             });
         }
         catch (OperationCanceledException)
@@ -210,17 +208,18 @@ public class PdfStorageService
 
     public async Task<List<PdfDocumentDto>> GetPdfsByGameAsync(string gameId, CancellationToken ct = default)
     {
+        var gameGuid = Guid.Parse(gameId);
         var pdfs = await _db.PdfDocuments
             .AsNoTracking()
-            .Where(p => p.GameId == gameId)
+            .Where(p => p.GameId == gameGuid)
             .OrderByDescending(p => p.UploadedAt)
             .Select(p => new PdfDocumentDto
             {
-                Id = p.Id,
+                Id = p.Id.ToString(),
                 FileName = p.FileName,
                 FileSizeBytes = p.FileSizeBytes,
                 UploadedAt = p.UploadedAt,
-                UploadedByUserId = p.UploadedByUserId,
+                UploadedByUserId = p.UploadedByUserId.ToString(),
                 Language = p.Language
             })
             .ToListAsync(ct);
@@ -232,8 +231,9 @@ public class PdfStorageService
     {
         try
         {
+            var pdfGuid = Guid.Parse(pdfId);
             var pdfDoc = await _db.PdfDocuments
-                .FirstOrDefaultAsync(p => p.Id == pdfId, ct);
+                .FirstOrDefaultAsync(p => p.Id == pdfGuid, ct);
 
             if (pdfDoc == null)
             {
@@ -244,7 +244,7 @@ public class PdfStorageService
 
             // Delete associated vector document if exists
             var vectorDoc = await _db.VectorDocuments
-                .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId, ct);
+                .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, ct);
 
             if (vectorDoc != null)
             {
@@ -299,7 +299,7 @@ public class PdfStorageService
             // Delegate physical file deletion to BlobStorageService
             try
             {
-                await _blobStorageService.DeleteAsync(pdfId, gameId, ct);
+                await _blobStorageService.DeleteAsync(pdfId, gameId.ToString(), ct);
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             // Justification: Cleanup operation - physical file deletion failure should not fail entire operation
@@ -310,9 +310,9 @@ public class PdfStorageService
             }
 #pragma warning restore CA1031
 
-            await InvalidateCacheSafelyAsync(gameId, ct, "PDF deletion");
+            await InvalidateCacheSafelyAsync(gameId.ToString(), ct, "PDF deletion");
 
-            return new PdfDeleteResult(true, "PDF deleted successfully", gameId);
+            return new PdfDeleteResult(true, "PDF deleted successfully", gameId.ToString());
         }
         catch (OperationCanceledException)
         {
@@ -525,7 +525,8 @@ public class PdfStorageService
                 });
             }
 
-            var indexResult = await qdrantService.IndexDocumentChunksAsync(pdfDoc.GameId, pdfId, documentChunks);
+            var pdfGuid = Guid.Parse(pdfId);
+            var indexResult = await qdrantService.IndexDocumentChunksAsync(pdfDoc.GameId.ToString(), pdfId, documentChunks);
 
             if (!indexResult.Success)
             {
@@ -538,14 +539,14 @@ public class PdfStorageService
             }
 
             // Update vector document
-            var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId, ct);
+            var vectorDoc = await db.VectorDocuments.FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, ct);
             if (vectorDoc == null)
             {
                 vectorDoc = new VectorDocumentEntity
                 {
-                    Id = Guid.NewGuid().ToString("N"),
+                    Id = Guid.NewGuid(),
                     GameId = pdfDoc.GameId,
-                    PdfDocumentId = pdfId,
+                    PdfDocumentId = pdfGuid,
                     IndexingStatus = "completed",
                     ChunkCount = indexResult.IndexedCount,
                     TotalCharacters = fullText.Length,
@@ -567,7 +568,7 @@ public class PdfStorageService
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
             await db.SaveChangesAsync(ct);
 
-            await InvalidateCacheSafelyAsync(pdfDoc.GameId, ct, "PDF processing");
+            await InvalidateCacheSafelyAsync(pdfDoc.GameId.ToString(), ct, "PDF processing");
 
             _logger.LogInformation("PDF processing completed for {PdfId}: {ChunkCount} chunks indexed", pdfId, indexResult.IndexedCount);
         }

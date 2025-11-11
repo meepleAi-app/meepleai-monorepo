@@ -3,9 +3,12 @@ namespace Api.Infrastructure.Entities;
 public class ChatEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    public string UserId { get; set; } = default!;
-    public string GameId { get; set; } = default!;
-    public string AgentId { get; set; } = default!;
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid UserId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid GameId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid AgentId { get; set; }
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastMessageAt { get; set; }
 

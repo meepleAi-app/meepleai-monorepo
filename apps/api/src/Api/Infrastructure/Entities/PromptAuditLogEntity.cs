@@ -9,18 +9,21 @@ public class PromptAuditLogEntity
     /// <summary>
     /// Unique identifier for the audit log entry.
     /// </summary>
-    required public string Id { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    required public Guid Id { get; set; }
 
     /// <summary>
     /// ID of the template this log entry is for.
     /// </summary>
-    required public string TemplateId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    required public Guid TemplateId { get; set; }
 
     /// <summary>
     /// ID of the specific version (if applicable).
     /// Null for template-level operations (e.g., template creation).
     /// </summary>
-    public string? VersionId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid? VersionId { get; set; }
 
     /// <summary>
     /// The action performed (e.g., "template_created", "version_created", "version_activated", "version_deactivated").
@@ -30,7 +33,8 @@ public class PromptAuditLogEntity
     /// <summary>
     /// ID of the user who performed the action.
     /// </summary>
-    required public string ChangedByUserId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    required public Guid ChangedByUserId { get; set; }
 
     /// <summary>
     /// Timestamp when the action was performed.

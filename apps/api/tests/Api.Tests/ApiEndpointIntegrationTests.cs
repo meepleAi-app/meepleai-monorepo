@@ -72,7 +72,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
         authResponse.Should().NotBeNull();
         authResponse!.User.Email.Should().Be(payload.Email);
         authResponse.User.DisplayName.Should().Be(payload.DisplayName);
-        authResponse.User.Role.Should().Be(UserRole.User.ToString());
+        authResponse.User.Role.Should().Be("user".ToString());
 
         // And: User is tracked for automatic cleanup
         TrackUserId(authResponse.User.Id);
@@ -179,7 +179,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
     public async Task GenerateRuleSpecFromPdf_ReturnsStructuredSpec()
     {
         // Given: Admin user is authenticated
-        var user = await CreateTestUserAsync("pdf-parser", UserRole.Admin);
+        var user = await CreateTestUserAsync("pdf-parser", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -265,7 +265,7 @@ public class ApiEndpointIntegrationTests : IntegrationTestBase
             TrackUserId(authResponse.User.Id);
         }
 
-        if (!string.Equals(role, UserRole.User.ToString(), StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(role, "user".ToString(), StringComparison.OrdinalIgnoreCase))
         {
             var parsedRole = Enum.Parse<UserRole>(role, true);
             await PromoteUserAsync(email, parsedRole);

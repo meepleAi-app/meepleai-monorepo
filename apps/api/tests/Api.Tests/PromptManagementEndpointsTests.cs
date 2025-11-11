@@ -47,7 +47,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
     public async Task CreatePromptTemplate_AsAdmin_Succeeds()
     {
         // Given: An admin user is authenticated
-        var user = await CreateTestUserAsync("prompt-admin", UserRole.Admin);
+        var user = await CreateTestUserAsync("prompt-admin", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -109,7 +109,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
     public async Task CreatePromptTemplate_AsUser_ReturnsForbidden()
     {
         // Given: A regular user is authenticated
-        var user = await CreateTestUserAsync("prompt-user", UserRole.User);
+        var user = await CreateTestUserAsync("prompt-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -142,7 +142,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
     public async Task CreatePromptTemplate_DuplicateName_ReturnsBadRequest()
     {
         // Given: A template already exists
-        var user = await CreateTestUserAsync("prompt-admin-dup", UserRole.Admin);
+        var user = await CreateTestUserAsync("prompt-admin-dup", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -193,7 +193,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
     public async Task CreatePromptVersion_AsAdmin_Succeeds()
     {
         // Given: A template exists
-        var user = await CreateTestUserAsync("version-admin", UserRole.Admin);
+        var user = await CreateTestUserAsync("version-admin", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -240,7 +240,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
     public async Task CreatePromptVersion_WithImmediateActivation_DeactivatesOldVersion()
     {
         // Given: A template with active version 1
-        var user = await CreateTestUserAsync("activate-admin", UserRole.Admin);
+        var user = await CreateTestUserAsync("activate-admin", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -300,7 +300,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
     public async Task ActivateVersion_RollbackToOlderVersion_Succeeds()
     {
         // Given: A template with versions 1, 2, 3 (version 3 active)
-        var user = await CreateTestUserAsync("rollback-admin", UserRole.Admin);
+        var user = await CreateTestUserAsync("rollback-admin", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -357,7 +357,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
     public async Task GetVersionHistory_AsAdmin_ReturnsAllVersions()
     {
         // Given: A template with multiple versions
-        var user = await CreateTestUserAsync("history-admin", UserRole.Admin);
+        var user = await CreateTestUserAsync("history-admin", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -395,8 +395,8 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
     public async Task GetActiveVersion_AsAuthenticatedUser_Succeeds()
     {
         // Given: A template with active version
-        var adminUser = await CreateTestUserAsync("active-version-admin", UserRole.Admin);
-        var regularUser = await CreateTestUserAsync("active-version-user", UserRole.User);
+        var adminUser = await CreateTestUserAsync("active-version-admin", "admin");
+        var regularUser = await CreateTestUserAsync("active-version-user", "user");
         var cookies = await AuthenticateUserAsync(regularUser.Email);
         var client = CreateClientWithoutCookies();
 
@@ -429,7 +429,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
     public async Task GetAuditLog_AsAdmin_ReturnsAllActions()
     {
         // Given: A template with multiple operations
-        var user = await CreateTestUserAsync("audit-admin", UserRole.Admin);
+        var user = await CreateTestUserAsync("audit-admin", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -465,7 +465,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
     public async Task ListTemplates_AsAdmin_ReturnsAllTemplates()
     {
         // Given: Multiple templates exist
-        var user = await CreateTestUserAsync("list-admin", UserRole.Admin);
+        var user = await CreateTestUserAsync("list-admin", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -499,7 +499,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
     public async Task ListTemplates_WithCategoryFilter_ReturnsFilteredTemplates()
     {
         // Given: Templates in different categories
-        var user = await CreateTestUserAsync("filter-admin", UserRole.Admin);
+        var user = await CreateTestUserAsync("filter-admin", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -533,7 +533,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
     public async Task GetTemplate_AsAdmin_ReturnsTemplateDetails()
     {
         // Given: A template exists
-        var user = await CreateTestUserAsync("get-template-admin", UserRole.Admin);
+        var user = await CreateTestUserAsync("get-template-admin", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -586,7 +586,7 @@ public class PromptManagementEndpointsTests : IntegrationTestBase
     public async Task GetTemplate_NonExistent_ReturnsNotFound()
     {
         // Given: Template does not exist
-        var user = await CreateTestUserAsync("notfound-admin", UserRole.Admin);
+        var user = await CreateTestUserAsync("notfound-admin", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 

@@ -62,7 +62,7 @@ public class SetupGuideService
         {
             // Get game information
             var game = await _dbContext.Games
-                .Where(g => g.Id == gameId)
+                .Where(g => g.Id.ToString() == gameId)
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (game == null)

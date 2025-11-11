@@ -57,7 +57,7 @@ public class InfrastructureTests : IDisposable
             Email = "test@example.com",
             PasswordHash = "hash1",
             DisplayName = "User 1",
-            Role = UserRole.User
+            Role = "user"
         };
 
         _dbContext.Users.Add(user1);
@@ -69,7 +69,7 @@ public class InfrastructureTests : IDisposable
             Email = "test@example.com", // Duplicate email
             PasswordHash = "hash2",
             DisplayName = "User 2",
-            Role = UserRole.User
+            Role = "user"
         };
 
         _dbContext.Users.Add(user2);
@@ -96,7 +96,7 @@ public class InfrastructureTests : IDisposable
             Email = "cascade@example.com",
             PasswordHash = "hash",
             DisplayName = "Cascade User",
-            Role = UserRole.User
+            Role = "user"
         };
 
         var session1 = new UserSessionEntity
@@ -180,7 +180,7 @@ public class InfrastructureTests : IDisposable
             Email = null!, // Required field set to null
             PasswordHash = "hash",
             DisplayName = "Test User",
-            Role = UserRole.User
+            Role = "user"
         };
 
         _dbContext.Users.Add(user);
@@ -208,7 +208,7 @@ public class InfrastructureTests : IDisposable
             Email = longEmail,
             PasswordHash = "hash",
             DisplayName = "Test User",
-            Role = UserRole.User
+            Role = "user"
         };
 
         _dbContext.Users.Add(user);

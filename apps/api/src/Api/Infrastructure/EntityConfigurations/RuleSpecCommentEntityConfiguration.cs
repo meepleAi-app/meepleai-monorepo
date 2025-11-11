@@ -35,7 +35,9 @@ public class RuleSpecCommentEntityConfiguration : IEntityTypeConfiguration<RuleS
         builder.Property(e => e.MentionedUserIds)
             .HasConversion(
                 v => string.Join(',', v),
-                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
+                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                      .Select(Guid.Parse)
+                      .ToList())
             .HasMaxLength(1000);
 
         // Relationships

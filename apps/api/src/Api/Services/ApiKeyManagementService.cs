@@ -45,7 +45,12 @@ public class ApiKeyManagementService
         int pageSize = 20,
         CancellationToken ct = default)
     {
-        var query = _db.ApiKeys.Where(k => k.UserId == userId);
+        if (!Guid.TryParse(userId, out var userGuid))
+        {
+            return new ApiKeyListResponse { Keys = new List<ApiKeyDto>(), TotalCount = 0, Page = page, PageSize = pageSize };
+        }
+
+        var query = _db.ApiKeys.Where(k => k.UserId == userGuid);
 
         if (!includeRevoked)
         {
@@ -82,10 +87,14 @@ public class ApiKeyManagementService
     /// <returns>API key DTO or null if not found/unauthorized</returns>
     public async Task<ApiKeyDto?> GetApiKeyAsync(string keyId, string userId, CancellationToken ct = default)
     {
-        var apiKey = await _db.ApiKeys
-            .FirstOrDefaultAsync(k => k.Id == keyId && k.UserId == userId, ct);
+        if (!Guid.TryParse(keyId, out var keyGuid) || !Guid.TryParse(userId, out var userGuid))
+        {
+            return null;
+        }
 
-        return apiKey == null ? null : MapToDto(apiKey);
+        var key = await _db.ApiKeys.FirstOrDefaultAsync(k => k.Id == keyGuid && k.UserId == userGuid, ct);
+
+        return key == null ? null : MapToDto(key);
     }
 
     /// <summary>
@@ -154,8 +163,13 @@ public class ApiKeyManagementService
         UpdateApiKeyRequest request,
         CancellationToken ct = default)
     {
+        if (!Guid.TryParse(keyId, out var keyGuid) || !Guid.TryParse(userId, out var userGuid))
+        {
+            return null;
+        }
+
         var apiKey = await _db.ApiKeys
-            .FirstOrDefaultAsync(k => k.Id == keyId && k.UserId == userId, ct);
+            .FirstOrDefaultAsync(k => k.Id == keyGuid && k.UserId == userGuid, ct);
 
         if (apiKey == null)
         {
@@ -168,7 +182,7 @@ public class ApiKeyManagementService
             apiKey.KeyName = request.KeyName;
 
         if (request.Scopes != null)
-            apiKey.Scopes = request.Scopes;
+            apiKey.Scopes = string.Join(",", request.Scopes);
 
         if (request.ExpiresAt.HasValue)
             apiKey.ExpiresAt = request.ExpiresAt.Value;
@@ -203,8 +217,13 @@ public class ApiKeyManagementService
     /// <returns>True if revoked successfully, false if not found or unauthorized</returns>
     public async Task<bool> RevokeApiKeyAsync(string keyId, string userId, CancellationToken ct = default)
     {
+        if (!Guid.TryParse(keyId, out var keyGuid) || !Guid.TryParse(userId, out var userGuid))
+        {
+            return false;
+        }
+
         // Check that the user owns the key before revoking
-        var apiKey = await _db.ApiKeys.FirstOrDefaultAsync(k => k.Id == keyId && k.UserId == userId, ct);
+        var apiKey = await _db.ApiKeys.FirstOrDefaultAsync(k => k.Id == keyGuid && k.UserId == userGuid, ct);
         if (apiKey == null)
         {
             _logger.LogWarning("API key revocation failed: key not found or unauthorized. KeyId: {KeyId}, UserId: {UserId}", keyId, userId);
@@ -229,8 +248,13 @@ public class ApiKeyManagementService
         RotateApiKeyRequest request,
         CancellationToken ct = default)
     {
+        if (!Guid.TryParse(keyId, out var keyGuid) || !Guid.TryParse(userId, out var userGuid))
+        {
+            return null;
+        }
+
         var oldKey = await _db.ApiKeys
-            .FirstOrDefaultAsync(k => k.Id == keyId && k.UserId == userId, ct);
+            .FirstOrDefaultAsync(k => k.Id == keyGuid && k.UserId == userGuid, ct);
 
         if (oldKey == null)
         {
@@ -242,10 +266,11 @@ public class ApiKeyManagementService
         var environment = oldKey.KeyPrefix.Contains("live") ? "live" : "test";
 
         // Generate new key with same scopes and settings
+        var scopes = oldKey.Scopes.Split(',', StringSplitOptions.RemoveEmptyEntries);
         var (plaintextKey, newEntity) = await _authService.GenerateApiKeyAsync(
             userId,
             $"{oldKey.KeyName} (Rotated)",
-            oldKey.Scopes,
+            scopes,
             request.ExpiresAt ?? oldKey.ExpiresAt,
             environment,
             ct);
@@ -283,7 +308,12 @@ public class ApiKeyManagementService
     /// <returns>True if deleted successfully, false if not found</returns>
     public async Task<bool> DeleteApiKeyAsync(string keyId, string userId, CancellationToken ct = default)
     {
-        var apiKey = await _db.ApiKeys.FirstOrDefaultAsync(k => k.Id == keyId, ct);
+        if (!Guid.TryParse(keyId, out var keyGuid))
+        {
+            return false;
+        }
+
+        var apiKey = await _db.ApiKeys.FirstOrDefaultAsync(k => k.Id == keyGuid, ct);
         if (apiKey == null)
         {
             _logger.LogWarning("API key deletion failed: key not found. KeyId: {KeyId}", keyId);
@@ -310,8 +340,13 @@ public class ApiKeyManagementService
         string userId,
         CancellationToken ct = default)
     {
+        if (!Guid.TryParse(keyId, out var keyGuid) || !Guid.TryParse(userId, out var userGuid))
+        {
+            return null;
+        }
+
         var apiKey = await _db.ApiKeys
-            .FirstOrDefaultAsync(k => k.Id == keyId && k.UserId == userId, ct);
+            .FirstOrDefaultAsync(k => k.Id == keyGuid && k.UserId == userGuid, ct);
 
         if (apiKey == null)
             return null;
@@ -343,16 +378,16 @@ public class ApiKeyManagementService
 
         return new ApiKeyDto
         {
-            Id = entity.Id,
+            Id = entity.Id.ToString(),
             KeyName = entity.KeyName,
             KeyPrefix = entity.KeyPrefix,
-            Scopes = entity.Scopes,
+            Scopes = entity.Scopes.Split(',', StringSplitOptions.RemoveEmptyEntries),
             IsActive = entity.IsActive,
             CreatedAt = entity.CreatedAt,
             LastUsedAt = entity.LastUsedAt,
             ExpiresAt = entity.ExpiresAt,
             RevokedAt = entity.RevokedAt,
-            RevokedBy = entity.RevokedBy,
+            RevokedBy = entity.RevokedBy?.ToString(),
             Quota = quota.MaxRequestsPerDay.HasValue || quota.MaxRequestsPerHour.HasValue
                 ? new ApiKeyQuotaDto
                 {

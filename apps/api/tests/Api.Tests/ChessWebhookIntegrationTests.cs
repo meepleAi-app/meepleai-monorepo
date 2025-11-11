@@ -57,7 +57,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
     public async Task ChessWebhookFlow_WithValidSession_ReturnsAnalysis()
     {
         // Given: A service account
-        var serviceUser = await CreateTestUserAsync("chess-service", UserRole.User);
+        var serviceUser = await CreateTestUserAsync("chess-service", "user");
         var cookies = await AuthenticateUserAsync(serviceUser.Email);
         var client = CreateClientWithoutCookies();
 
@@ -110,7 +110,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
     public async Task ChessWebhookFlow_WithFenPosition_ReturnsPositionalAnalysis()
     {
         // Given: A service account
-        var serviceUser = await CreateTestUserAsync("chess-service-fen", UserRole.User);
+        var serviceUser = await CreateTestUserAsync("chess-service-fen", "user");
         var cookies = await AuthenticateUserAsync(serviceUser.Email);
         var client = CreateClientWithoutCookies();
 
@@ -184,7 +184,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
     public async Task ChessWebhookFlow_WithoutQuestion_ReturnsBadRequest()
     {
         // Given: A service account
-        var serviceUser = await CreateTestUserAsync("chess-service-no-q", UserRole.User);
+        var serviceUser = await CreateTestUserAsync("chess-service-no-q", "user");
         var cookies = await AuthenticateUserAsync(serviceUser.Email);
         var client = CreateClientWithoutCookies();
 
@@ -221,7 +221,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
     public async Task ChessWebhookFlow_ResponseFormat_MatchesStandardizedPayload()
     {
         // Given: A service account and indexed chess knowledge
-        var serviceUser = await CreateTestUserAsync("chess-service-format", UserRole.User);
+        var serviceUser = await CreateTestUserAsync("chess-service-format", "user");
         var cookies = await AuthenticateUserAsync(serviceUser.Email);
         var client = CreateClientWithoutCookies();
 
@@ -277,7 +277,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
     public async Task ChessWebhookFlow_OpeningQuestion_ReturnsOpeningInfo()
     {
         // Given: A service account
-        var serviceUser = await CreateTestUserAsync("chess-service-opening", UserRole.User);
+        var serviceUser = await CreateTestUserAsync("chess-service-opening", "user");
         var cookies = await AuthenticateUserAsync(serviceUser.Email);
         var client = CreateClientWithoutCookies();
 
@@ -321,7 +321,7 @@ public class ChessWebhookIntegrationTests : IntegrationTestBase
     public async Task ChessWebhookFlow_WithChatId_PersistsConversation()
     {
         // Given: A service account
-        var serviceUser = await CreateTestUserAsync("chess-service-chat", UserRole.User);
+        var serviceUser = await CreateTestUserAsync("chess-service-chat", "user");
         var cookies = await AuthenticateUserAsync(serviceUser.Email);
         var client = CreateClientWithoutCookies();
 

@@ -37,7 +37,7 @@ public class N8nConfigService
             .ToListAsync(ct);
 
         return configs.Select(c => new N8nConfigDto(
-            c.Id,
+            c.Id.ToString(),
             c.Name,
             c.BaseUrl,
             c.WebhookUrl,
@@ -51,8 +51,13 @@ public class N8nConfigService
 
     public async Task<N8nConfigDto?> GetConfigAsync(string configId, CancellationToken ct)
     {
+        if (!Guid.TryParse(configId, out var guidId))
+        {
+            return null;
+        }
+
         var config = await _db.N8nConfigs
-            .FirstOrDefaultAsync(c => c.Id == configId, ct);
+            .FirstOrDefaultAsync(c => c.Id == guidId, ct);
 
         if (config == null)
         {
@@ -60,7 +65,7 @@ public class N8nConfigService
         }
 
         return new N8nConfigDto(
-            config.Id,
+            config.Id.ToString(),
             config.Name,
             config.BaseUrl,
             config.WebhookUrl,
@@ -77,6 +82,11 @@ public class N8nConfigService
         CreateN8nConfigRequest request,
         CancellationToken ct)
     {
+        if (!Guid.TryParse(userId, out var userGuid))
+        {
+            throw new ArgumentException("Invalid user ID format", nameof(userId));
+        }
+
         var existingConfig = await _db.N8nConfigs
             .FirstOrDefaultAsync(c => c.Name == request.Name, ct);
 
@@ -87,13 +97,13 @@ public class N8nConfigService
 
         var config = new N8nConfigEntity
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             Name = request.Name,
             BaseUrl = request.BaseUrl.TrimEnd('/'),
             ApiKeyEncrypted = EncryptApiKey(request.ApiKey),
             WebhookUrl = request.WebhookUrl?.TrimEnd('/'),
             IsActive = true,
-            CreatedByUserId = userId,
+            CreatedByUserId = userGuid,
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
             UpdatedAt = _timeProvider.GetUtcNow().UtcDateTime
         };
@@ -102,7 +112,7 @@ public class N8nConfigService
         await _db.SaveChangesAsync(ct);
 
         return new N8nConfigDto(
-            config.Id,
+            config.Id.ToString(),
             config.Name,
             config.BaseUrl,
             config.WebhookUrl,
@@ -119,8 +129,13 @@ public class N8nConfigService
         UpdateN8nConfigRequest request,
         CancellationToken ct)
     {
+        if (!Guid.TryParse(configId, out var guidId))
+        {
+            throw new ArgumentException("Invalid config ID format", nameof(configId));
+        }
+
         var config = await _db.N8nConfigs
-            .FirstOrDefaultAsync(c => c.Id == configId, ct);
+            .FirstOrDefaultAsync(c => c.Id == guidId, ct);
 
         if (config == null)
         {
@@ -130,7 +145,7 @@ public class N8nConfigService
         if (request.Name != null && request.Name != config.Name)
         {
             var existingConfig = await _db.N8nConfigs
-                .FirstOrDefaultAsync(c => c.Name == request.Name && c.Id != configId, ct);
+                .FirstOrDefaultAsync(c => c.Name == request.Name && c.Id != guidId, ct);
 
             if (existingConfig != null)
             {
@@ -165,7 +180,7 @@ public class N8nConfigService
         await _db.SaveChangesAsync(ct);
 
         return new N8nConfigDto(
-            config.Id,
+            config.Id.ToString(),
             config.Name,
             config.BaseUrl,
             config.WebhookUrl,
@@ -179,8 +194,13 @@ public class N8nConfigService
 
     public async Task<bool> DeleteConfigAsync(string configId, CancellationToken ct)
     {
+        if (!Guid.TryParse(configId, out var guidId))
+        {
+            return false;
+        }
+
         var config = await _db.N8nConfigs
-            .FirstOrDefaultAsync(c => c.Id == configId, ct);
+            .FirstOrDefaultAsync(c => c.Id == guidId, ct);
 
         if (config == null)
         {
@@ -195,8 +215,13 @@ public class N8nConfigService
 
     public async Task<N8nTestResult> TestConnectionAsync(string configId, CancellationToken ct)
     {
+        if (!Guid.TryParse(configId, out var guidId))
+        {
+            throw new ArgumentException("Invalid config ID format", nameof(configId));
+        }
+
         var config = await _db.N8nConfigs
-            .FirstOrDefaultAsync(c => c.Id == configId, ct);
+            .FirstOrDefaultAsync(c => c.Id == guidId, ct);
 
         if (config == null)
         {

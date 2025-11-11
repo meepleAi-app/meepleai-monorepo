@@ -495,7 +495,7 @@ public class N8nTemplateServiceTests : IDisposable
             },
             workflow = new
             {
-                nodes = new[] { new { id = "1", type = "test" } },
+                nodes = new[] { new { Id = Guid.NewGuid(), type = "test" } },
                 connections = new { }
             }
         });
@@ -640,7 +640,7 @@ public class N8nTemplateServiceTests : IDisposable
             parameters = new object[] { },
             workflow = new
             {
-                nodes = new[] { new { id = "1", type = "webhook" } },
+                nodes = new[] { new { Id = Guid.NewGuid(), type = "webhook" } },
                 connections = new { }
             }
         };
@@ -657,7 +657,7 @@ public class N8nTemplateServiceTests : IDisposable
             Email = "admin@test.com",
             DisplayName = "Test Admin",
             PasswordHash = "hash",
-            Role = UserRole.Admin,
+            Role = "admin",
             CreatedAt = DateTime.UtcNow
         };
         _db.Users.Add(user);

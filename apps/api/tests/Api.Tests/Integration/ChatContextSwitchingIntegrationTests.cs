@@ -56,7 +56,7 @@ public class ChatContextSwitchingIntegrationTests
             Id = "user-123",
             Email = "test@meepleai.dev",
             PasswordHash = "hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = DateTime.UtcNow
         };
 

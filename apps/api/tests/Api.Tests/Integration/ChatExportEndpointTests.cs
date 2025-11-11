@@ -73,8 +73,8 @@ public class ChatExportEndpointTests : IntegrationTestBase
     public async Task GivenOtherUsersChat_WhenExporting_ThenReturns404()
     {
         // Given: Chat belongs to different user
-        var owner = await CreateTestUserAsync($"owner-{TestRunId}", UserRole.User);
-        var attacker = await CreateTestUserAsync($"attacker-{TestRunId}", UserRole.User);
+        var owner = await CreateTestUserAsync($"owner-{TestRunId}", "user");
+        var attacker = await CreateTestUserAsync($"attacker-{TestRunId}", "user");
 
         var game = await CreateTestGameAsync("Secret Game");
 
@@ -129,7 +129,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
     public async Task GivenUserOwnsChat_WhenExportingAsPdf_ThenReturns200WithPdf()
     {
         // Given: User owns a chat with messages
-        var user = await CreateTestUserAsync($"pdf-export-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"pdf-export-{TestRunId}", "user");
         var game = await CreateTestGameAsync("PDF Export Game");
 
         using var scope = Factory.Services.CreateScope();
@@ -209,7 +209,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
     public async Task GivenUserOwnsChat_WhenExportingAsTxt_ThenReturns200WithTxt()
     {
         // Given: User owns a chat
-        var user = await CreateTestUserAsync($"txt-export-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"txt-export-{TestRunId}", "user");
         var game = await CreateTestGameAsync("TXT Export Game");
 
         using var scope = Factory.Services.CreateScope();
@@ -285,7 +285,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
     public async Task GivenUserOwnsChat_WhenExportingAsMarkdown_ThenReturns200WithMarkdown()
     {
         // Given: User owns a chat
-        var user = await CreateTestUserAsync($"md-export-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"md-export-{TestRunId}", "user");
         var game = await CreateTestGameAsync("MD Export Game");
 
         using var scope = Factory.Services.CreateScope();
@@ -360,7 +360,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
     public async Task GivenInvalidFormat_WhenExporting_ThenReturns400()
     {
         // Given: User owns a chat
-        var user = await CreateTestUserAsync($"invalid-fmt-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"invalid-fmt-{TestRunId}", "user");
         var game = await CreateTestGameAsync("Invalid Format Game");
 
         using var scope = Factory.Services.CreateScope();
@@ -419,7 +419,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
     public async Task GivenDateRange_WhenExporting_ThenFiltersMessages()
     {
         // Given: Chat has messages across multiple dates
-        var user = await CreateTestUserAsync($"daterange-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"daterange-{TestRunId}", "user");
         var game = await CreateTestGameAsync("Date Range Game");
 
         using var scope = Factory.Services.CreateScope();
@@ -504,7 +504,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
     public async Task GivenNonExistentChat_WhenExporting_ThenReturns404()
     {
         // Given: Chat ID doesn't exist
-        var user = await CreateTestUserAsync($"nonexist-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"nonexist-{TestRunId}", "user");
         var nonExistentChatId = Guid.NewGuid();
 
         // When: User requests export
@@ -531,7 +531,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
     public async Task GivenMaliciousGameName_WhenExporting_ThenSanitizesFilename()
     {
         // Given: Game name contains path traversal attempts
-        var user = await CreateTestUserAsync($"sanitize-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"sanitize-{TestRunId}", "user");
 
         using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -602,7 +602,7 @@ public class ChatExportEndpointTests : IntegrationTestBase
 
         for (int i = 1; i <= 3; i++)
         {
-            var user = await CreateTestUserAsync($"concurrent-{i}-{TestRunId}", UserRole.User);
+            var user = await CreateTestUserAsync($"concurrent-{i}-{TestRunId}", "user");
             var game = await CreateTestGameAsync($"Concurrent Game {i}");
 
             using var scope = Factory.Services.CreateScope();

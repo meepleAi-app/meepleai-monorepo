@@ -37,7 +37,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
     public async Task GetAuthMe_WithValidApiKey_ReturnsUserInfo()
     {
         // Given: A user with a valid API key
-        var user = await CreateTestUserAsync("apikey-user", UserRole.Editor);
+        var user = await CreateTestUserAsync("apikey-user", "editor");
         var (plaintextKey, _) = await CreateTestApiKeyAsync(
             user.Id,
             "Test Key",
@@ -63,7 +63,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
     public async Task GetGames_WithValidApiKey_ReturnsGames()
     {
         // Given: A user with valid API key and a game exists
-        var user = await CreateTestUserAsync("games-user", UserRole.User);
+        var user = await CreateTestUserAsync("games-user", "user");
         var game = await CreateTestGameAsync("TestGame");
         var (plaintextKey, _) = await CreateTestApiKeyAsync(
             user.Id,
@@ -87,7 +87,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
     public async Task ApiKeyAuthentication_WithDifferentEnvironments_WorksCorrectly(string environment)
     {
         // Given: API key for specific environment
-        var user = await CreateTestUserAsync($"env-{environment}-user", UserRole.User);
+        var user = await CreateTestUserAsync($"env-{environment}-user", "user");
         var (plaintextKey, _) = await CreateTestApiKeyAsync(
             user.Id,
             $"{environment} Key",
@@ -141,7 +141,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
     public async Task GetAuthMe_WithExpiredApiKey_ReturnsUnauthorized()
     {
         // Given: User with expired API key
-        var user = await CreateTestUserAsync("expired-key-user", UserRole.User);
+        var user = await CreateTestUserAsync("expired-key-user", "user");
         var expiresAt = DateTime.UtcNow.AddDays(-1); // Expired yesterday
         var (plaintextKey, _) = await CreateTestApiKeyAsync(
             user.Id,
@@ -164,7 +164,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
     public async Task GetAuthMe_WithRevokedApiKey_ReturnsUnauthorized()
     {
         // Given: User with revoked API key
-        var user = await CreateTestUserAsync("revoked-key-user", UserRole.User);
+        var user = await CreateTestUserAsync("revoked-key-user", "user");
         var (plaintextKey, apiKeyEntity) = await CreateTestApiKeyAsync(
             user.Id,
             "Revoked Key",
@@ -192,7 +192,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
     public async Task GetAuthMe_WithInactiveApiKey_ReturnsUnauthorized()
     {
         // Given: User with inactive API key
-        var user = await CreateTestUserAsync("inactive-key-user", UserRole.User);
+        var user = await CreateTestUserAsync("inactive-key-user", "user");
         var (plaintextKey, apiKeyEntity) = await CreateTestApiKeyAsync(
             user.Id,
             "Inactive Key",
@@ -244,8 +244,8 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
     public async Task GetAuthMe_WithBothApiKeyAndCookie_PrefersApiKey()
     {
         // Given: Two different users - one with API key, one with cookie
-        var apiKeyUser = await CreateTestUserAsync("apikey-dual-user", UserRole.Admin);
-        var cookieUser = await CreateTestUserAsync("cookie-dual-user", UserRole.User);
+        var apiKeyUser = await CreateTestUserAsync("apikey-dual-user", "admin");
+        var cookieUser = await CreateTestUserAsync("cookie-dual-user", "user");
 
         var (plaintextKey, _) = await CreateTestApiKeyAsync(
             apiKeyUser.Id,
@@ -274,7 +274,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
     public async Task GetAuthMe_WithCookieOnly_UsesCookieAuthentication()
     {
         // Given: User authenticated with cookie (no API key)
-        var user = await CreateTestUserAsync("cookie-only-user", UserRole.Editor);
+        var user = await CreateTestUserAsync("cookie-only-user", "editor");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var client = Factory.CreateHttpsClient();
@@ -300,7 +300,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
     public async Task ApiKey_AfterRevocation_CannotBeUsedAgain()
     {
         // Given: User with active API key
-        var user = await CreateTestUserAsync("lifecycle-user", UserRole.User);
+        var user = await CreateTestUserAsync("lifecycle-user", "user");
         var (plaintextKey, apiKeyEntity) = await CreateTestApiKeyAsync(
             user.Id,
             "Lifecycle Key",
@@ -334,7 +334,7 @@ public class ApiKeyAuthenticationIntegrationTests : IntegrationTestBase
     public async Task ApiKey_NearExpiration_StillWorks()
     {
         // Given: API key expiring in 1 hour (still valid)
-        var user = await CreateTestUserAsync("near-expiry-user", UserRole.User);
+        var user = await CreateTestUserAsync("near-expiry-user", "user");
         var expiresAt = DateTime.UtcNow.AddHours(1);
         var (plaintextKey, _) = await CreateTestApiKeyAsync(
             user.Id,

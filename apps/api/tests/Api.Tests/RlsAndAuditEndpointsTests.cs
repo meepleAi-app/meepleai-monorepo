@@ -53,8 +53,8 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
     public async Task GetRuleSpec_AdminCanAccessAnyUsersResource()
     {
         // Given: Admin and another user exist
-        var admin = await CreateTestUserAsync("admin", UserRole.Admin);
-        var owner = await CreateTestUserAsync("owner", UserRole.User);
+        var admin = await CreateTestUserAsync("admin", "admin");
+        var owner = await CreateTestUserAsync("owner", "user");
         var game = await CreateTestGameAsync("Catan");
         var ruleSpec = await CreateTestRuleSpecAsync(game.Id, owner.Id, "1.0.0");
 
@@ -86,8 +86,8 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
     public async Task DeletePdf_AdminCanDeleteAnyUsersPdf()
     {
         // Given: Admin and PDF owner exist
-        var admin = await CreateTestUserAsync("admin", UserRole.Admin);
-        var owner = await CreateTestUserAsync("pdfowner", UserRole.User);
+        var admin = await CreateTestUserAsync("admin", "admin");
+        var owner = await CreateTestUserAsync("pdfowner", "user");
         var game = await CreateTestGameAsync("Wingspan");
         var pdf = await CreateTestPdfDocumentAsync(game.Id, owner.Id, "rules.pdf");
 
@@ -120,7 +120,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
     public async Task PostGame_AdminCanCreateGames()
     {
         // Given: Admin is authenticated
-        var admin = await CreateTestUserAsync("admin", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin", "admin");
         var adminCookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
@@ -151,7 +151,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
     public async Task GetRuleSpecHistory_AdminCanAccessHistory()
     {
         // Given: Admin and game with RuleSpec
-        var admin = await CreateTestUserAsync("admin", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin", "admin");
         var game = await CreateTestGameAsync("Scythe");
         await CreateTestRuleSpecAsync(game.Id, admin.Id, "1.0.0");
 
@@ -182,7 +182,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
     public async Task PostGame_EditorCanCreateGames()
     {
         // Given: Editor is authenticated
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor", "editor");
         var editorCookies = await AuthenticateUserAsync(editor.Email);
         var client = CreateClientWithoutCookies();
 
@@ -213,7 +213,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
     public async Task PutRuleSpec_EditorCanUpdateRuleSpec()
     {
         // Given: Editor and game exist
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor", "editor");
         var game = await CreateTestGameAsync("Pandemic");
         await CreateTestRuleSpecAsync(game.Id, editor.Id, "1.0.0");
 
@@ -251,8 +251,8 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
     public async Task DeletePdf_EditorCannotDeleteOtherUsersPdf()
     {
         // Given: Editor and PDF owner exist
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
-        var owner = await CreateTestUserAsync("pdfowner", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor", "editor");
+        var owner = await CreateTestUserAsync("pdfowner", "editor");
         var game = await CreateTestGameAsync("Gloomhaven");
         var pdf = await CreateTestPdfDocumentAsync(game.Id, owner.Id, "rules.pdf");
 
@@ -285,7 +285,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
     public async Task DeletePdf_EditorCanDeleteOwnPdf()
     {
         // Given: Editor created a PDF
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor", "editor");
         var game = await CreateTestGameAsync("Dominion");
         var pdf = await CreateTestPdfDocumentAsync(game.Id, editor.Id, "my-rules.pdf");
 
@@ -313,7 +313,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
     public async Task GetRuleSpecHistory_EditorCanAccessHistory()
     {
         // Given: Editor and game with RuleSpec
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor", "editor");
         var game = await CreateTestGameAsync("Agricola");
         await CreateTestRuleSpecAsync(game.Id, editor.Id, "1.0.0");
 
@@ -345,8 +345,8 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
     public async Task DeletePdf_UserCannotDeleteOtherUsersPdf()
     {
         // Given: Two users and a PDF owned by user1
-        var user1 = await CreateTestUserAsync("user1", UserRole.User);
-        var user2 = await CreateTestUserAsync("user2", UserRole.User);
+        var user1 = await CreateTestUserAsync("user1", "user");
+        var user2 = await CreateTestUserAsync("user2", "user");
         var game = await CreateTestGameAsync("Ticket to Ride");
         var pdf = await CreateTestPdfDocumentAsync(game.Id, user1.Id, "rules.pdf");
 
@@ -379,7 +379,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
     public async Task DeletePdf_UserCanDeleteOwnPdf()
     {
         // Given: User uploaded a PDF
-        var user = await CreateTestUserAsync("pdfuser", UserRole.User);
+        var user = await CreateTestUserAsync("pdfuser", "user");
         var game = await CreateTestGameAsync("Codenames");
         var pdf = await CreateTestPdfDocumentAsync(game.Id, user.Id, "my-rules.pdf");
 
@@ -406,7 +406,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
     public async Task PostGame_UserCannotCreateGames()
     {
         // Given: Regular user is authenticated
-        var user = await CreateTestUserAsync("regularuser", UserRole.User);
+        var user = await CreateTestUserAsync("regularuser", "user");
         var userCookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -433,7 +433,7 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
     public async Task GetAdminStats_UserCannotAccessAdminEndpoints()
     {
         // Given: Regular user is authenticated
-        var user = await CreateTestUserAsync("normaluser", UserRole.User);
+        var user = await CreateTestUserAsync("normaluser", "user");
         var userCookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -458,8 +458,8 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
     public async Task GetRuleSpecHistory_UserCannotAccessHistory()
     {
         // Given: User and game with RuleSpec
-        var user = await CreateTestUserAsync("user", UserRole.User);
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
+        var user = await CreateTestUserAsync("user", "user");
+        var editor = await CreateTestUserAsync("editor", "editor");
         var game = await CreateTestGameAsync("Splendor");
         await CreateTestRuleSpecAsync(game.Id, editor.Id, "1.0.0");
 
@@ -492,8 +492,8 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
     public async Task AuditLog_AccessDeniedIsLogged()
     {
         // Given: Two users and a PDF
-        var owner = await CreateTestUserAsync("pdfowner", UserRole.User);
-        var attacker = await CreateTestUserAsync("attacker", UserRole.User);
+        var owner = await CreateTestUserAsync("pdfowner", "user");
+        var attacker = await CreateTestUserAsync("attacker", "user");
         var game = await CreateTestGameAsync("7 Wonders");
         var pdf = await CreateTestPdfDocumentAsync(game.Id, owner.Id, "secure-rules.pdf");
 
@@ -542,9 +542,9 @@ public class RlsAndAuditEndpointsTests : IntegrationTestBase
     public async Task GetGames_AllAuthenticatedUsersCanReadGames()
     {
         // Given: Multiple users with different roles
-        var admin = await CreateTestUserAsync("admin", UserRole.Admin);
-        var editor = await CreateTestUserAsync("editor", UserRole.Editor);
-        var user = await CreateTestUserAsync("user", UserRole.User);
+        var admin = await CreateTestUserAsync("admin", "admin");
+        var editor = await CreateTestUserAsync("editor", "editor");
+        var user = await CreateTestUserAsync("user", "user");
         var game = await CreateTestGameAsync("Brass Birmingham");
 
         var adminCookies = await AuthenticateUserAsync(admin.Email);

@@ -12,22 +12,22 @@ namespace Api.Infrastructure.Entities;
 public class PromptEvaluationResultEntity
 {
     /// <summary>Unique evaluation run ID (Primary Key)</summary>
+    // DDD-PHASE2: Converted to Guid for domain alignment
     [Key]
     [Column("id")]
-    [MaxLength(100)]
-    public required string Id { get; set; }
+    public required Guid Id { get; set; }
 
     /// <summary>Template ID that was evaluated</summary>
+    // DDD-PHASE2: Converted to Guid for domain alignment
     [Column("template_id")]
-    [MaxLength(100)]
     [Required]
-    public required string TemplateId { get; set; }
+    public required Guid TemplateId { get; set; }
 
     /// <summary>Version ID that was evaluated</summary>
+    // DDD-PHASE2: Converted to Guid for domain alignment
     [Column("version_id")]
-    [MaxLength(100)]
     [Required]
-    public required string VersionId { get; set; }
+    public required Guid VersionId { get; set; }
 
     /// <summary>Dataset ID used for evaluation</summary>
     [Column("dataset_id")]

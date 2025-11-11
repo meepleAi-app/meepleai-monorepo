@@ -437,7 +437,7 @@ CRITICAL INSTRUCTIONS:
 
         var searchResults = new List<SearchResultItem>
         {
-            new() { Text = "Rule text.", PdfId = "abc-123-def", Page = 10, Score = 0.95f }
+            new() { Text = "Rule text.", PdfId = Guid.NewGuid(), Page = 10, Score = 0.95f }
         };
 
         var mockQdrant = new Mock<IQdrantService>();

@@ -19,7 +19,7 @@ public interface IChatExportService
     /// <returns>Export result with stream or error details.</returns>
     Task<ExportResult> ExportChatAsync(
         Guid chatId,
-        string userId,
+        Guid userId,
         string format,
         DateTime? dateFrom = null,
         DateTime? dateTo = null,

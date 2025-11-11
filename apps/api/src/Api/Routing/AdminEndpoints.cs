@@ -1,4 +1,4 @@
-﻿using Api.Configuration;
+using Api.Configuration;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -50,9 +50,9 @@ group.MapGet("/logs", async (HttpContext context, AiRequestLogService logService
                 log.CreatedAt,
                 level,
                 message,
-                log.Id,
-                log.UserId,
-                log.GameId
+                log.Id.ToString(),
+                log.UserId?.ToString(),
+                log.GameId?.ToString()
             );
         })
         .ToList();
@@ -87,7 +87,7 @@ group.MapGet("/users/search", async (
         .OrderBy(u => u.DisplayName ?? u.Email)
         .Take(10)
         .AsNoTracking()
-        .Select(u => new UserSearchResultDto(u.Id, u.DisplayName ?? u.Email, u.Email))
+        .Select(u => new UserSearchResultDto(u.Id.ToString(), u.DisplayName ?? u.Email, u.Email))
         .ToListAsync(ct);
 
     logger.LogInformation("Found {Count} users matching query: {Query}", users.Count, query);
@@ -218,7 +218,7 @@ group.MapGet("/admin/quality/low-responses", async (
         .Skip(offset)
         .Take(limit)
         .Select(log => new LowQualityResponseDto(
-            Guid.Parse(log.Id),
+            log.Id,
             log.CreatedAt,
             log.Query ?? string.Empty,
             log.RagConfidence ?? 0.0,
@@ -526,7 +526,7 @@ group.MapGet("/admin/sessions", async (HttpContext context, ISessionManagementSe
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    var sessions = await sessionManagement.GetAllSessionsAsync(userId, limit, ct);
+    var sessions = await sessionManagement.GetAllSessionsAsync(string.IsNullOrEmpty(userId) ? (Guid?)null : Guid.Parse(userId), limit, ct);
     return Results.Json(sessions);
 });
 
@@ -544,7 +544,7 @@ group.MapDelete("/admin/sessions/{sessionId}", async (string sessionId, HttpCont
 
     logger.LogInformation("Admin {AdminId} revoking session {SessionId}", session.User.Id, sessionId);
 
-    var revoked = await sessionManagement.RevokeSessionAsync(sessionId, ct);
+    var revoked = await sessionManagement.RevokeSessionAsync(Guid.Parse(sessionId), ct);
     if (!revoked)
     {
         return Results.NotFound(new { error = "Session not found or already revoked" });
@@ -568,7 +568,7 @@ group.MapDelete("/admin/users/{userId}/sessions", async (string userId, HttpCont
 
     logger.LogInformation("Admin {AdminId} revoking all sessions for user {UserId}", session.User.Id, userId);
 
-    var count = await sessionManagement.RevokeAllUserSessionsAsync(userId, ct);
+    var count = await sessionManagement.RevokeAllUserSessionsAsync(Guid.Parse(userId), ct);
 
     logger.LogInformation("Revoked {Count} sessions for user {UserId}", count, userId);
     return Results.Json(new { ok = true, revokedCount = count });
@@ -901,11 +901,11 @@ group.MapGet("/admin/prompts", async (
         .Take(limit)
         .Select(t => new PromptTemplateDto
         {
-            Id = t.Id,
+            Id = t.Id.ToString(),
             Name = t.Name,
             Description = t.Description,
             Category = t.Category,
-            CreatedByUserId = t.CreatedByUserId,
+            CreatedByUserId = t.CreatedByUserId.ToString(),
             CreatedByEmail = t.CreatedBy.Email,
             CreatedAt = t.CreatedAt,
             VersionCount = t.Versions.Count,
@@ -955,11 +955,11 @@ group.MapPost("/admin/prompts", async (
 
     var template = new PromptTemplateEntity
     {
-        Id = Guid.NewGuid().ToString(),
+        Id = Guid.NewGuid(),
         Name = request.Name,
         Description = request.Description,
         Category = request.Category,
-        CreatedByUserId = session.User.Id,
+        CreatedByUserId = Guid.Parse(session.User.Id),
         CreatedAt = DateTime.UtcNow,
         CreatedBy = user
     };
@@ -971,11 +971,11 @@ group.MapPost("/admin/prompts", async (
         $"/api/v1/admin/prompts/{template.Id}",
         new PromptTemplateDto
         {
-            Id = template.Id,
+            Id = template.Id.ToString(),
             Name = template.Name,
             Description = template.Description,
             Category = template.Category,
-            CreatedByUserId = template.CreatedByUserId,
+            CreatedByUserId = template.CreatedByUserId.ToString(),
             CreatedByEmail = user.Email,
             CreatedAt = template.CreatedAt,
             VersionCount = 0,
@@ -1011,7 +1011,7 @@ group.MapGet("/admin/prompts/{id}", async (
         .AsNoTracking()
         .Include(t => t.CreatedBy)
         .Include(t => t.Versions)
-        .FirstOrDefaultAsync(t => t.Id == id, ct);
+        .FirstOrDefaultAsync(t => t.Id == Guid.Parse(id), ct);
 
     if (template == null)
     {
@@ -1025,11 +1025,11 @@ group.MapGet("/admin/prompts/{id}", async (
 
     return Results.Ok(new PromptTemplateDto
     {
-        Id = template.Id,
+        Id = template.Id.ToString(),
         Name = template.Name,
         Description = template.Description,
         Category = template.Category,
-        CreatedByUserId = template.CreatedByUserId,
+        CreatedByUserId = template.CreatedByUserId.ToString(),
         CreatedByEmail = template.CreatedBy.Email,
         CreatedAt = template.CreatedAt,
         VersionCount = template.Versions.Count,
@@ -1065,7 +1065,7 @@ group.MapPost("/admin/prompts/{id}/versions", async (
     var template = await db.Set<PromptTemplateEntity>()
         .Include(t => t.Versions)
         .Include(t => t.CreatedBy)
-        .FirstOrDefaultAsync(t => t.Id == id, ct);
+        .FirstOrDefaultAsync(t => t.Id == Guid.Parse(id), ct);
 
     if (template == null)
     {
@@ -1084,12 +1084,12 @@ group.MapPost("/admin/prompts/{id}/versions", async (
 
     var version = new PromptVersionEntity
     {
-        Id = Guid.NewGuid().ToString(),
-        TemplateId = id,
+        Id = Guid.NewGuid(),
+        TemplateId = Guid.Parse(id),
         VersionNumber = nextVersionNumber,
         Content = request.Content,
         IsActive = false, // New versions are inactive by default
-        CreatedByUserId = session.User.Id,
+        CreatedByUserId = Guid.Parse(session.User.Id),
         CreatedAt = DateTime.UtcNow,
         Metadata = request.Metadata,
         Template = template,
@@ -1103,12 +1103,12 @@ group.MapPost("/admin/prompts/{id}/versions", async (
         $"/api/v1/admin/prompts/{id}/versions/{version.Id}",
         new PromptVersionDto
         {
-            Id = version.Id,
-            TemplateId = version.TemplateId,
+            Id = version.Id.ToString(),
+            TemplateId = version.TemplateId.ToString(),
             VersionNumber = version.VersionNumber,
             Content = version.Content,
             IsActive = version.IsActive,
-            CreatedByUserId = version.CreatedByUserId,
+            CreatedByUserId = version.CreatedByUserId.ToString(),
             CreatedByEmail = user.Email,
             CreatedAt = version.CreatedAt,
             Metadata = version.Metadata
@@ -1141,7 +1141,7 @@ group.MapGet("/admin/prompts/{id}/versions", async (
 
     var template = await db.Set<PromptTemplateEntity>()
         .AsNoTracking()
-        .FirstOrDefaultAsync(t => t.Id == id, ct);
+        .FirstOrDefaultAsync(t => t.Id == Guid.Parse(id), ct);
 
     if (template == null)
     {
@@ -1151,16 +1151,16 @@ group.MapGet("/admin/prompts/{id}/versions", async (
     var versions = await db.Set<PromptVersionEntity>()
         .AsNoTracking()
         .Include(v => v.CreatedBy)
-        .Where(v => v.TemplateId == id)
+        .Where(v => v.TemplateId == Guid.Parse(id))
         .OrderByDescending(v => v.VersionNumber)
         .Select(v => new PromptVersionDto
         {
-            Id = v.Id,
-            TemplateId = v.TemplateId,
+            Id = v.Id.ToString(),
+            TemplateId = v.TemplateId.ToString(),
             VersionNumber = v.VersionNumber,
             Content = v.Content,
             IsActive = v.IsActive,
-            CreatedByUserId = v.CreatedByUserId,
+            CreatedByUserId = v.CreatedByUserId.ToString(),
             CreatedByEmail = v.CreatedBy.Email,
             CreatedAt = v.CreatedAt,
             Metadata = v.Metadata
@@ -1197,7 +1197,7 @@ group.MapPost("/admin/prompts/{id}/versions/{versionId}/activate", async (
 
     try
     {
-        var activated = await promptService.ActivateVersionAsync(id, versionId, session.User.Id, ct);
+        var activated = await promptService.ActivateVersionAsync(Guid.Parse(id), Guid.Parse(versionId), Guid.Parse(session.User.Id), ct);
 
         if (!activated)
         {
@@ -1650,7 +1650,7 @@ group.MapGet("/admin/configurations/{id}", async (
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    var config = await configService.GetConfigurationByIdAsync(id);
+    var config = await configService.GetConfigurationByIdAsync(Guid.Parse(id));
     return config != null ? Results.Json(config) : Results.NotFound();
 })
 .WithName("GetConfigurationById")
@@ -1703,7 +1703,7 @@ group.MapPost("/admin/configurations", async (
     try
     {
         logger.LogInformation("Admin {AdminId} creating configuration {Key}", session.User.Id, request.Key);
-        var config = await configService.CreateConfigurationAsync(request, session.User.Id);
+        var config = await configService.CreateConfigurationAsync(request, Guid.Parse(session.User.Id));
         logger.LogInformation("Configuration {Key} created with ID {Id}", request.Key, config.Id);
         return Results.Created($"/api/v1/admin/configurations/{config.Id}", config);
     }
@@ -1739,7 +1739,7 @@ group.MapPut("/admin/configurations/{id}", async (
     try
     {
         logger.LogInformation("Admin {AdminId} updating configuration {Id}", session.User.Id, id);
-        var config = await configService.UpdateConfigurationAsync(id, request, session.User.Id);
+        var config = await configService.UpdateConfigurationAsync(Guid.Parse(id), request, Guid.Parse(session.User.Id));
 
         if (config == null)
         {
@@ -1780,7 +1780,7 @@ group.MapDelete("/admin/configurations/{id}", async (
     }
 
     logger.LogInformation("Admin {AdminId} deleting configuration {Id}", session.User.Id, id);
-    var success = await configService.DeleteConfigurationAsync(id);
+    var success = await configService.DeleteConfigurationAsync(Guid.Parse(id));
 
     if (!success)
     {
@@ -1817,7 +1817,7 @@ group.MapPatch("/admin/configurations/{id}/toggle", async (
     logger.LogInformation("Admin {AdminId} toggling configuration {Id} to {Status}",
         session.User.Id, id, isActive ? "active" : "inactive");
 
-    var config = await configService.ToggleConfigurationAsync(id, isActive, session.User.Id);
+    var config = await configService.ToggleConfigurationAsync(Guid.Parse(id), isActive, Guid.Parse(session.User.Id));
 
     if (config == null)
     {
@@ -1855,7 +1855,7 @@ group.MapPost("/admin/configurations/bulk-update", async (
         logger.LogInformation("Admin {AdminId} performing bulk update on {Count} configurations",
             session.User.Id, request.Updates.Count);
 
-        var configs = await configService.BulkUpdateConfigurationsAsync(request, session.User.Id);
+        var configs = await configService.BulkUpdateConfigurationsAsync(request, Guid.Parse(session.User.Id));
 
         logger.LogInformation("Bulk update completed successfully for {Count} configurations", configs.Count);
         return Results.Json(configs);
@@ -1942,7 +1942,7 @@ group.MapPost("/admin/configurations/import", async (
         logger.LogInformation("Admin {AdminId} importing {Count} configurations",
             session.User.Id, request.Configurations.Count);
 
-        var importedCount = await configService.ImportConfigurationsAsync(request, session.User.Id);
+        var importedCount = await configService.ImportConfigurationsAsync(request, Guid.Parse(session.User.Id));
 
         logger.LogInformation("Successfully imported {Count} configurations", importedCount);
         return Results.Json(new { importedCount });
@@ -2069,7 +2069,7 @@ group.MapGet("/admin/configurations/{id}/history", async (
         return Results.StatusCode(StatusCodes.Status403Forbidden);
     }
 
-    var history = await configService.GetConfigurationHistoryAsync(id, limit);
+    var history = await configService.GetConfigurationHistoryAsync(Guid.Parse(id), limit);
     return Results.Json(history);
 })
 .WithName("GetConfigurationHistory")
@@ -2099,7 +2099,7 @@ group.MapPost("/admin/configurations/{id}/rollback/{version:int}", async (
         logger.LogInformation("Admin {AdminId} rolling back configuration {Id} to version {Version}",
             session.User.Id, id, version);
 
-        var config = await configService.RollbackConfigurationAsync(id, version, session.User.Id);
+        var config = await configService.RollbackConfigurationAsync(Guid.Parse(id), version, Guid.Parse(session.User.Id));
 
         if (config == null)
         {
@@ -2232,7 +2232,7 @@ group.MapDelete("/admin/cache/games/{gameId}", async (string gameId, HttpContext
     }
 
     // Validate game exists (but proceed with cache invalidation even if not - idempotent)
-    var gameExists = await dbContext.Games.AnyAsync(g => g.Id == gameId, ct);
+    var gameExists = await dbContext.Games.AnyAsync(g => g.Id == Guid.Parse(gameId), ct);
     if (!gameExists)
     {
         logger.LogWarning("Admin {AdminId} invalidating cache for non-existent game {GameId} (idempotent)", session.User.Id, gameId);
@@ -2332,7 +2332,7 @@ group.MapPost("/prompts", async (CreatePromptTemplateRequest request, HttpContex
     try
     {
         logger.LogInformation("Admin {AdminId} creating prompt template '{TemplateName}'", session.User.Id, request.Name);
-        var response = await promptManagement.CreatePromptTemplateAsync(request, session.User.Id, ct);
+        var response = await promptManagement.CreatePromptTemplateAsync(request, Guid.Parse(session.User.Id), ct);
         logger.LogInformation("Prompt template {TemplateId} created successfully", response.Template.Id);
         return Results.Created($"/api/v1/prompts/{response.Template.Id}", response);
     }
@@ -2366,7 +2366,7 @@ group.MapPost("/prompts/{templateId}/versions", async (string templateId, Create
     try
     {
         logger.LogInformation("Admin {AdminId} creating new version for prompt template {TemplateId}", session.User.Id, templateId);
-        var version = await promptManagement.CreatePromptVersionAsync(templateId, request, session.User.Id, ct);
+        var version = await promptManagement.CreatePromptVersionAsync(templateId, request, Guid.Parse(session.User.Id), ct);
         logger.LogInformation("Prompt version {VersionId} (v{VersionNumber}) created successfully", version.Id, version.VersionNumber);
         return Results.Created($"/api/v1/prompts/{templateId}/versions/{version.VersionNumber}", version);
     }
@@ -2451,7 +2451,7 @@ group.MapPut("/prompts/{templateId}/versions/{versionId}/activate", async (strin
     try
     {
         logger.LogInformation("Admin {AdminId} activating version {VersionId} for template {TemplateId}", session.User.Id, versionId, templateId);
-        var activatedVersion = await promptManagement.ActivateVersionAsync(templateId, versionId, session.User.Id, request.Reason, ct);
+        var activatedVersion = await promptManagement.ActivateVersionAsync(templateId, versionId, Guid.Parse(session.User.Id), request.Reason, ct);
         logger.LogInformation("Version {VersionId} (v{VersionNumber}) activated successfully", activatedVersion.Id, activatedVersion.VersionNumber);
         return Results.Json(activatedVersion);
     }

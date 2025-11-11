@@ -128,14 +128,14 @@ public class OAuthService : IOAuthService
 
                 user = new UserEntity
                 {
-                    Id = Guid.NewGuid().ToString(),
+                    Id = Guid.NewGuid(),
                     // CS8602: False positive - Email validated non-null at line 89
 #pragma warning disable CS8602
                     Email = userInfo.Email.ToLowerInvariant(),
 #pragma warning restore CS8602
                     DisplayName = userInfo.Name ?? emailPrefix,
                     PasswordHash = GenerateRandomPasswordHash(), // No password for OAuth-only users
-                    Role = UserRole.User,
+                    Role = UserRole.User.ToString(),
                     CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
                 };
                 _db.Users.Add(user);
@@ -152,12 +152,12 @@ public class OAuthService : IOAuthService
             await CreateOAuthAccountAsync(user.Id, provider, userInfo, tokenResponse);
         }
 
-        var authUser = new AuthUser(user.Id, user.Email, user.DisplayName, user.Role.ToString());
+        var authUser = new AuthUser(user.Id.ToString(), user.Email, user.DisplayName, user.Role.ToString());
         return new OAuthCallbackResult(authUser, isNewUser);
     }
 
     /// <inheritdoc />
-    public async Task UnlinkOAuthAccountAsync(string userId, string provider)
+    public async Task UnlinkOAuthAccountAsync(Guid userId, string provider)
     {
         var oauthAccount = await _db.OAuthAccounts
             .FirstOrDefaultAsync(oa =>
@@ -177,7 +177,7 @@ public class OAuthService : IOAuthService
     }
 
     /// <inheritdoc />
-    public async Task<List<OAuthAccountDto>> GetLinkedAccountsAsync(string userId)
+    public async Task<List<OAuthAccountDto>> GetLinkedAccountsAsync(Guid userId)
     {
         var accounts = await _db.OAuthAccounts
             .Where(oa => oa.UserId == userId)
@@ -433,8 +433,7 @@ public class OAuthService : IOAuthService
         throw new InvalidOperationException("No verified primary email found on GitHub account");
     }
 
-    private async Task CreateOAuthAccountAsync(
-        string userId,
+    private async Task CreateOAuthAccountAsync(Guid userId,
         string provider,
         OAuthUserInfo userInfo,
         OAuthTokenResponse tokenResponse)
@@ -451,7 +450,7 @@ public class OAuthService : IOAuthService
 
         var oauthAccount = new OAuthAccountEntity
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             UserId = userId,
             Provider = provider.ToLowerInvariant(),
             ProviderUserId = userInfo.Id,
@@ -496,7 +495,7 @@ public class OAuthService : IOAuthService
     }
 
     /// <inheritdoc />
-    public async Task<OAuthTokenResponse?> RefreshTokenAsync(string userId, string provider)
+    public async Task<OAuthTokenResponse?> RefreshTokenAsync(Guid userId, string provider)
     {
         // GitHub doesn't support refresh tokens
         if (provider.Equals("github", StringComparison.OrdinalIgnoreCase))

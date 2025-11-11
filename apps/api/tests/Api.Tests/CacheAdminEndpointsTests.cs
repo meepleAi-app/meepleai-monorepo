@@ -53,7 +53,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
     public async Task GET_AdminCacheStats_AsAdmin_Returns200WithAggregatedStats()
     {
         // Given: Admin user and cache stats for multiple games
-        var admin = await CreateTestUserAsync("admin-stats-all", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-stats-all", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var game1 = await CreateTestGameAsync("Game1-Stats");
         var game2 = await CreateTestGameAsync("Game2-Stats");
@@ -102,7 +102,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
     public async Task GET_AdminCacheStats_WithGameIdFilter_Returns200WithFilteredStats()
     {
         // Given: Admin and stats for multiple games
-        var admin = await CreateTestUserAsync("admin-stats-filter", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-stats-filter", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var game1 = await CreateTestGameAsync("Game1-Filter");
         var game2 = await CreateTestGameAsync("Game2-Filter");
@@ -145,7 +145,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
     public async Task GET_AdminCacheStats_AsNonAdmin_Returns403()
     {
         // Given: Non-admin user
-        var user = await CreateTestUserAsync("user-stats", UserRole.User);
+        var user = await CreateTestUserAsync("user-stats", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         // When: User tries to access admin endpoint
@@ -195,7 +195,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
     public async Task DELETE_AdminCacheGamesGameId_AsAdmin_Returns200AndInvalidatesCache()
     {
         // Given: Admin and cached responses for a game
-        var admin = await CreateTestUserAsync("admin-delete-game", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-delete-game", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var game = await CreateTestGameAsync("Game-Delete");
 
@@ -253,7 +253,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
     public async Task DELETE_AdminCacheGamesGameId_ForNonExistentGame_Returns200()
     {
         // Given: Admin user
-        var admin = await CreateTestUserAsync("admin-delete-nonexistent", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-delete-nonexistent", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
 
         // When: Admin deletes cache for non-existent game
@@ -277,7 +277,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
     public async Task DELETE_AdminCacheGamesGameId_AsNonAdmin_Returns403()
     {
         // Given: Non-admin user
-        var user = await CreateTestUserAsync("user-delete-game", UserRole.User);
+        var user = await CreateTestUserAsync("user-delete-game", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var game = await CreateTestGameAsync("Game-Forbidden");
 
@@ -308,7 +308,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
     public async Task DELETE_AdminCacheTagsTag_AsAdmin_Returns200AndInvalidatesByTag()
     {
         // Given: Admin and cached responses with tags
-        var admin = await CreateTestUserAsync("admin-delete-tag", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-delete-tag", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var game = await CreateTestGameAsync("Game-Tag");
         await CreateTestPdfDocumentAsync(game.Id, admin.Id); // Create PDF for test setup
@@ -357,7 +357,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
     public async Task DELETE_AdminCacheTagsTag_WithSpecialCharacters_Returns200()
     {
         // Given: Admin user
-        var admin = await CreateTestUserAsync("admin-tag-special", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-tag-special", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
 
         // When: Admin deletes by tag with special characters
@@ -383,7 +383,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
     public async Task DELETE_AdminCacheTagsTag_AsNonAdmin_Returns403()
     {
         // Given: Non-admin user
-        var user = await CreateTestUserAsync("user-delete-tag", UserRole.User);
+        var user = await CreateTestUserAsync("user-delete-tag", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         // When: User tries to delete by tag
@@ -433,7 +433,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
     public async Task AdminInvalidation_PreservesStatisticsHistory()
     {
         // Given: Cached responses with stats
-        var admin = await CreateTestUserAsync("admin-stats-preserve", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-stats-preserve", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var game = await CreateTestGameAsync("Game-Stats-Preserve");
 
@@ -489,7 +489,7 @@ public class CacheAdminEndpointsTests : IntegrationTestBase
     public async Task DELETE_AdminCacheTagsTag_IndependentTagInvalidation()
     {
         // Given: Multiple cached responses with different tags
-        var admin = await CreateTestUserAsync("admin-multi-tag", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-multi-tag", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var game = await CreateTestGameAsync("Game-MultiTag");
         var pdf1 = await CreateTestPdfDocumentAsync(game.Id, admin.Id, "pdf1.pdf");

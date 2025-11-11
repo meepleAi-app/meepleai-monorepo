@@ -162,10 +162,8 @@ public class AdminStatsService : IAdminStatsService
         // Apply role filter if specified
         if (!string.IsNullOrWhiteSpace(roleFilter) && roleFilter != "all")
         {
-            if (Enum.TryParse<UserRole>(roleFilter, true, out var roleEnum))
-            {
-                query = query.Where(u => u.Role == roleEnum);
-            }
+            var normalizedRole = roleFilter.ToLower();
+            query = query.Where(u => u.Role == normalizedRole);
         }
 
         var data = await query
@@ -224,9 +222,9 @@ public class AdminStatsService : IAdminStatsService
             .AsNoTracking()
             .Where(log => log.CreatedAt >= fromDate && log.CreatedAt <= toDate);
 
-        if (!string.IsNullOrWhiteSpace(gameId))
+        if (!string.IsNullOrWhiteSpace(gameId) && Guid.TryParse(gameId, out var gameGuid))
         {
-            query = query.Where(log => log.GameId == gameId);
+            query = query.Where(log => log.GameId == gameGuid);
         }
 
         var data = await query
@@ -259,9 +257,9 @@ public class AdminStatsService : IAdminStatsService
             .AsNoTracking()
             .Where(pdf => pdf.UploadedAt >= fromDate && pdf.UploadedAt <= toDate);
 
-        if (!string.IsNullOrWhiteSpace(gameId))
+        if (!string.IsNullOrWhiteSpace(gameId) && Guid.TryParse(gameId, out var gameGuid))
         {
-            query = query.Where(pdf => pdf.GameId == gameId);
+            query = query.Where(pdf => pdf.GameId == gameGuid);
         }
 
         var data = await query

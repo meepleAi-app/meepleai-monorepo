@@ -373,19 +373,19 @@ ANSWER:",
     /// ADMIN-01: Activates a prompt version with transaction safety and cache invalidation
     /// Critical: Ensures only ONE active version per template + atomic cache invalidation
     /// </summary>
-    public async Task<bool> ActivateVersionAsync(string templateId, string versionId, string activatedByUserId, CancellationToken ct = default)
+    public async Task<bool> ActivateVersionAsync(Guid templateId, Guid versionId, Guid activatedByUserId, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(templateId))
+        if (templateId == Guid.Empty)
         {
-            throw new ArgumentException("Template ID cannot be null or empty", nameof(templateId));
+            throw new ArgumentException("Template ID cannot be empty", nameof(templateId));
         }
-        if (string.IsNullOrWhiteSpace(versionId))
+        if (versionId == Guid.Empty)
         {
-            throw new ArgumentException("Version ID cannot be null or empty", nameof(versionId));
+            throw new ArgumentException("Version ID cannot be empty", nameof(versionId));
         }
-        if (string.IsNullOrWhiteSpace(activatedByUserId))
+        if (activatedByUserId == Guid.Empty)
         {
-            throw new ArgumentException("Activated by user ID cannot be null or empty", nameof(activatedByUserId));
+            throw new ArgumentException("Activated by user ID cannot be empty", nameof(activatedByUserId));
         }
 
         // FIX: Load user BEFORE transaction to reduce transaction scope and lock duration
@@ -436,7 +436,7 @@ ANSWER:",
             // Note: changedByUser was fetched with AsNoTracking(), so we use only the FK
             var auditLog = new PromptAuditLogEntity
             {
-                Id = Guid.NewGuid().ToString(),
+                Id = Guid.NewGuid(),
                 TemplateId = templateId,
                 VersionId = versionId,
                 Action = "version_activated",

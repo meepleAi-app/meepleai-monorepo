@@ -27,7 +27,7 @@ public class ChatExportService : IChatExportService
 
     public async Task<ExportResult> ExportChatAsync(
         Guid chatId,
-        string userId,
+        Guid userId,
         string format,
         DateTime? dateFrom = null,
         DateTime? dateTo = null,

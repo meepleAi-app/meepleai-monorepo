@@ -13,10 +13,10 @@ public class CacheStatEntity
     [Column("id")]
     public int Id { get; set; }
 
+    // DDD-PHASE2: Converted to Guid for domain alignment
     [Required]
     [Column("game_id")]
-    [StringLength(50)]
-    public string GameId { get; set; } = string.Empty;
+    public Guid GameId { get; set; }
 
     [Required]
     [Column("question_hash")]

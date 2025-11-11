@@ -53,7 +53,7 @@ public class PdfIngestEndpointsTests : IntegrationTestBase
     public async Task PostRulespecIngest_ReturnsGeneratedRuleSpec()
     {
         // Given: Admin user is authenticated
-        var user = await CreateTestUserAsync("pdf-ingest", UserRole.Admin);
+        var user = await CreateTestUserAsync("pdf-ingest", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 

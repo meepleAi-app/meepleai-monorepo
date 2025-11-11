@@ -29,7 +29,7 @@ public interface IConfigurationService
     /// </summary>
     /// <param name="id">Configuration ID</param>
     /// <returns>Configuration DTO or null if not found</returns>
-    Task<SystemConfigurationDto?> GetConfigurationByIdAsync(string id);
+    Task<SystemConfigurationDto?> GetConfigurationByIdAsync(Guid id);
 
     /// <summary>
     /// Get a configuration by its key.
@@ -55,7 +55,7 @@ public interface IConfigurationService
     /// <param name="request">Configuration creation request</param>
     /// <param name="userId">ID of the user creating the configuration</param>
     /// <returns>Created configuration DTO</returns>
-    Task<SystemConfigurationDto> CreateConfigurationAsync(CreateConfigurationRequest request, string userId);
+    Task<SystemConfigurationDto> CreateConfigurationAsync(CreateConfigurationRequest request, Guid userId);
 
     /// <summary>
     /// Update an existing configuration.
@@ -64,14 +64,14 @@ public interface IConfigurationService
     /// <param name="request">Update request with modified fields</param>
     /// <param name="userId">ID of the user updating the configuration</param>
     /// <returns>Updated configuration DTO or null if not found</returns>
-    Task<SystemConfigurationDto?> UpdateConfigurationAsync(string id, UpdateConfigurationRequest request, string userId);
+    Task<SystemConfigurationDto?> UpdateConfigurationAsync(Guid id, UpdateConfigurationRequest request, Guid userId);
 
     /// <summary>
     /// Delete a configuration by ID.
     /// </summary>
     /// <param name="id">Configuration ID</param>
     /// <returns>True if deleted, false if not found</returns>
-    Task<bool> DeleteConfigurationAsync(string id);
+    Task<bool> DeleteConfigurationAsync(Guid id);
 
     /// <summary>
     /// Toggle a configuration's active status.
@@ -80,7 +80,7 @@ public interface IConfigurationService
     /// <param name="isActive">New active status</param>
     /// <param name="userId">ID of the user toggling the configuration</param>
     /// <returns>Updated configuration DTO or null if not found</returns>
-    Task<SystemConfigurationDto?> ToggleConfigurationAsync(string id, bool isActive, string userId);
+    Task<SystemConfigurationDto?> ToggleConfigurationAsync(Guid id, bool isActive, Guid userId);
 
     /// <summary>
     /// Bulk update multiple configurations atomically.
@@ -90,7 +90,7 @@ public interface IConfigurationService
     /// <returns>List of updated configurations</returns>
     Task<IReadOnlyList<SystemConfigurationDto>> BulkUpdateConfigurationsAsync(
         BulkConfigurationUpdateRequest request,
-        string userId);
+        Guid userId);
 
     /// <summary>
     /// Validate a configuration value before applying it.
@@ -115,7 +115,7 @@ public interface IConfigurationService
     /// <param name="request">Import request with configurations</param>
     /// <param name="userId">ID of the user performing the import</param>
     /// <returns>Number of configurations imported</returns>
-    Task<int> ImportConfigurationsAsync(ConfigurationImportRequest request, string userId);
+    Task<int> ImportConfigurationsAsync(ConfigurationImportRequest request, Guid userId);
 
     /// <summary>
     /// Get configuration change history.
@@ -123,7 +123,7 @@ public interface IConfigurationService
     /// <param name="configurationId">Configuration ID</param>
     /// <param name="limit">Maximum number of history entries to return</param>
     /// <returns>List of configuration history entries</returns>
-    Task<IReadOnlyList<ConfigurationHistoryDto>> GetConfigurationHistoryAsync(string configurationId, int limit = 20);
+    Task<IReadOnlyList<ConfigurationHistoryDto>> GetConfigurationHistoryAsync(Guid configurationId, int limit = 20);
 
     /// <summary>
     /// Rollback a configuration to a previous version.
@@ -132,7 +132,7 @@ public interface IConfigurationService
     /// <param name="toVersion">Version number to rollback to</param>
     /// <param name="userId">ID of the user performing the rollback</param>
     /// <returns>Rolled back configuration DTO or null if not found</returns>
-    Task<SystemConfigurationDto?> RollbackConfigurationAsync(string configurationId, int toVersion, string userId);
+    Task<SystemConfigurationDto?> RollbackConfigurationAsync(Guid configurationId, int toVersion, Guid userId);
 
     /// <summary>
     /// Get all unique categories across all configurations.

@@ -277,7 +277,7 @@ public class N8nTemplateEndpointsTests : AdminTestFixture, IClassFixture<Postgre
             parameters = new object[] { },
             workflow = new
             {
-                nodes = new[] { new { id = "1" } },
+                nodes = new[] { new { Id = Guid.NewGuid() } },
                 connections = new { }
             }
         });

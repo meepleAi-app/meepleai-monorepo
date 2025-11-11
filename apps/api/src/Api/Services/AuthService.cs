@@ -67,11 +67,11 @@ public class AuthService
 
         var user = new UserEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = Guid.NewGuid(),
             Email = email,
             DisplayName = command.DisplayName?.Trim(),
             PasswordHash = HashPassword(command.Password),
-            Role = role,
+            Role = role.ToString().ToLowerInvariant(),
             CreatedAt = now
         };
         _db.Users.Add(user);
@@ -129,7 +129,12 @@ public class AuthService
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
+        if (!Guid.TryParse(userId, out var userGuid))
+        {
+            return null;
+        }
+
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userGuid, ct);
         if (user == null)
         {
             return null;
@@ -163,9 +168,10 @@ public class AuthService
                 {
                     // TEST-656: Always refresh user data from DB to get current role
                     // Session cache stores user snapshot, but roles can change
+                    var cachedUserId = Guid.Parse(cached.User.Id);
                     var currentUser = await _db.Users
                         .AsNoTracking()
-                        .FirstOrDefaultAsync(u => u.Id == cached.User.Id, ct);
+                        .FirstOrDefaultAsync(u => u.Id == cachedUserId, ct);
                     
                     if (currentUser == null)
                     {
@@ -259,7 +265,7 @@ public class AuthService
 
         var entity = new UserSessionEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = Guid.NewGuid(),
             UserId = user.Id,
             TokenHash = HashToken(token),
             CreatedAt = now,
@@ -301,10 +307,10 @@ public class AuthService
     }
 
     private static AuthUser ToDto(UserEntity user) => new(
-        user.Id,
+        user.Id.ToString(),
         user.Email,
         user.DisplayName,
-        user.Role.ToString());
+        user.Role);
 
     private static UserRole ParseRole(string? role)
     {

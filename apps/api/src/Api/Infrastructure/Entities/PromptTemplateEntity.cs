@@ -9,7 +9,8 @@ public class PromptTemplateEntity
     /// <summary>
     /// Unique identifier for the prompt template.
     /// </summary>
-    required public string Id { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    required public Guid Id { get; set; }
 
     /// <summary>
     /// Unique name for the template (e.g., "qa-system-prompt", "explain-rules-prompt").
@@ -30,7 +31,8 @@ public class PromptTemplateEntity
     /// <summary>
     /// ID of the user who created this template.
     /// </summary>
-    required public string CreatedByUserId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    required public Guid CreatedByUserId { get; set; }
 
     /// <summary>
     /// Timestamp when the template was created.

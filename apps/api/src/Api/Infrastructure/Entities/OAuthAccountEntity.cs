@@ -2,18 +2,21 @@ namespace Api.Infrastructure.Entities;
 
 /// <summary>
 /// Represents a linked OAuth account for a user (Google, Discord, GitHub).
+/// DDD-PHASE2: Converted to Guid IDs for domain alignment.
 /// </summary>
 public class OAuthAccountEntity
 {
     /// <summary>
     /// Primary key (UUID)
+    /// DDD-PHASE2: Converted to Guid.
     /// </summary>
-    required public string Id { get; set; }
+    required public Guid Id { get; set; }
 
     /// <summary>
     /// Foreign key to users table
+    /// DDD-PHASE2: Converted to Guid.
     /// </summary>
-    required public string UserId { get; set; }
+    required public Guid UserId { get; set; }
 
     /// <summary>
     /// OAuth provider name (google, discord, github)

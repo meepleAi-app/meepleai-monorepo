@@ -596,7 +596,7 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
             Email = "admin@meepleai.dev",
             DisplayName = "Demo Admin",
             PasswordHash = demoPasswordHash,
-            Role = Api.Infrastructure.Entities.UserRole.Admin,
+            Role = "admin",
             CreatedAt = now
         };
 
@@ -606,7 +606,7 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
             Email = "editor@meepleai.dev",
             DisplayName = "Demo Editor",
             PasswordHash = demoPasswordHash,
-            Role = Api.Infrastructure.Entities.UserRole.Editor,
+            Role = "editor",
             CreatedAt = now
         };
 
@@ -616,7 +616,7 @@ public class WebApplicationFactoryFixture : WebApplicationFactory<Program>
             Email = "user@meepleai.dev",
             DisplayName = "Demo User",
             PasswordHash = demoPasswordHash,
-            Role = Api.Infrastructure.Entities.UserRole.User,
+            Role = "user",
             CreatedAt = now
         };
 

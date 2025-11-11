@@ -1,4 +1,4 @@
-﻿using Api.Infrastructure;
+using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
@@ -50,7 +50,12 @@ group.MapPost("/ingest/pdf", async (HttpContext context, IPdfValidationService p
         return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string> { ["file"] = "No file provided" } });
     }
 
-    logger.LogInformation("User {UserId} uploading PDF for game {GameId}", session.User.Id, gameId);
+    if (!Guid.TryParse(session.User.Id, out var userId))
+    {
+        return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+    }
+
+    logger.LogInformation("User {UserId} uploading PDF for game {GameId}", userId, gameId);
 
     // PDF-09: Validate file size
     var sizeValidation = pdfValidation.ValidateFileSize(file.Length);
@@ -81,7 +86,7 @@ group.MapPost("/ingest/pdf", async (HttpContext context, IPdfValidationService p
     // Reset stream position for processing
     stream.Position = 0;
 
-    var result = await pdfStorage.UploadPdfAsync(gameId, session.User.Id, file!, ct);
+    var result = await pdfStorage.UploadPdfAsync(gameId, userId, file!, ct);
 
     if (!result.Success)
     {
@@ -229,7 +234,7 @@ group.MapGet("/pdfs/{pdfId}/text", async (string pdfId, HttpContext context, Mee
     }
 
     var pdf = await db.PdfDocuments
-        .Where(p => p.Id == pdfId)
+        .Where(p => p.Id.ToString() == pdfId)
         .Select(p => new
         {
             p.Id,
@@ -261,7 +266,7 @@ group.MapDelete("/pdf/{pdfId}", async (string pdfId, HttpContext context, PdfSto
 
     // Load PDF to check ownership
     var pdf = await db.PdfDocuments
-        .Where(p => p.Id == pdfId)
+        .Where(p => p.Id.ToString() == pdfId)
         .Select(p => new { p.Id, p.UploadedByUserId, p.GameId })
         .FirstOrDefaultAsync(ct);
 
@@ -270,9 +275,14 @@ group.MapDelete("/pdf/{pdfId}", async (string pdfId, HttpContext context, PdfSto
         return Results.NotFound(new { error = "PDF not found" });
     }
 
+    if (!Guid.TryParse(session.User.Id, out var userId))
+    {
+        return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+    }
+
     // RLS: Check permissions
     bool isAdmin = string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
-    bool isOwner = pdf.UploadedByUserId == session.User.Id;
+    bool isOwner = pdf.UploadedByUserId == userId;
 
     if (!isAdmin && !isOwner)
     {
@@ -329,7 +339,7 @@ group.MapGet("/pdfs/{pdfId}/progress", async (string pdfId, HttpContext context,
     }
 
     var pdf = await db.PdfDocuments
-        .Where(p => p.Id == pdfId)
+        .Where(p => p.Id.ToString() == pdfId)
         .Select(p => new
         {
             p.Id,
@@ -343,8 +353,13 @@ group.MapGet("/pdfs/{pdfId}/progress", async (string pdfId, HttpContext context,
         return Results.NotFound(new { error = "PDF not found" });
     }
 
+    if (!Guid.TryParse(session.User.Id, out var userId))
+    {
+        return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+    }
+
     // Authorization: User can only view their own PDFs unless admin
-    if (pdf.UploadedByUserId != session.User.Id &&
+    if (pdf.UploadedByUserId != userId &&
         !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.Forbid();
@@ -386,7 +401,7 @@ group.MapDelete("/pdfs/{pdfId}/processing", async (string pdfId, HttpContext con
     }
 
     var pdf = await db.PdfDocuments
-        .Where(p => p.Id == pdfId)
+        .Where(p => p.Id.ToString() == pdfId)
         .Select(p => new { p.Id, p.UploadedByUserId, p.ProcessingStatus })
         .FirstOrDefaultAsync(ct);
 
@@ -395,8 +410,13 @@ group.MapDelete("/pdfs/{pdfId}/processing", async (string pdfId, HttpContext con
         return Results.NotFound(new { error = "PDF not found" });
     }
 
+    if (!Guid.TryParse(session.User.Id, out var userId))
+    {
+        return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+    }
+
     // Authorization: User can only cancel their own PDFs unless admin
-    if (pdf.UploadedByUserId != session.User.Id &&
+    if (pdf.UploadedByUserId != userId &&
         !string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase))
     {
         return Results.Forbid();

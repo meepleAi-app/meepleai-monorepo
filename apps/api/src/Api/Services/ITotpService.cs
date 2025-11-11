@@ -11,7 +11,7 @@ public interface ITotpService
     /// <param name="userId">User ID</param>
     /// <param name="userEmail">User email for QR code</param>
     /// <returns>Setup response with secret, QR URL, and backup codes</returns>
-    Task<TotpSetupResponse> GenerateSetupAsync(string userId, string userEmail);
+    Task<TotpSetupResponse> GenerateSetupAsync(Guid userId, string userEmail);
 
     /// <summary>
     /// Enable two-factor authentication after verifying TOTP code
@@ -19,7 +19,7 @@ public interface ITotpService
     /// <param name="userId">User ID</param>
     /// <param name="totpCode">6-digit TOTP code from authenticator app</param>
     /// <returns>True if code valid and 2FA enabled, false otherwise</returns>
-    Task<bool> EnableTwoFactorAsync(string userId, string totpCode);
+    Task<bool> EnableTwoFactorAsync(Guid userId, string totpCode);
 
     /// <summary>
     /// Verify TOTP code during login
@@ -27,7 +27,7 @@ public interface ITotpService
     /// <param name="userId">User ID</param>
     /// <param name="code">6-digit TOTP code</param>
     /// <returns>True if code valid, false otherwise</returns>
-    Task<bool> VerifyCodeAsync(string userId, string code);
+    Task<bool> VerifyCodeAsync(Guid userId, string code);
 
     /// <summary>
     /// Verify backup code and mark as used
@@ -35,7 +35,7 @@ public interface ITotpService
     /// <param name="userId">User ID</param>
     /// <param name="backupCode">8-character backup code</param>
     /// <returns>True if code valid and unused, false otherwise</returns>
-    Task<bool> VerifyBackupCodeAsync(string userId, string backupCode);
+    Task<bool> VerifyBackupCodeAsync(Guid userId, string backupCode);
 
     /// <summary>
     /// Disable two-factor authentication with password and code verification
@@ -43,14 +43,14 @@ public interface ITotpService
     /// <param name="userId">User ID</param>
     /// <param name="password">User password</param>
     /// <param name="totpOrBackupCode">TOTP code or backup code</param>
-    Task DisableTwoFactorAsync(string userId, string password, string totpOrBackupCode);
+    Task DisableTwoFactorAsync(Guid userId, string password, string totpOrBackupCode);
 
     /// <summary>
     /// Get two-factor authentication status for user
     /// </summary>
     /// <param name="userId">User ID</param>
     /// <returns>2FA status including enabled state and backup codes count</returns>
-    Task<TwoFactorStatusResponse> GetTwoFactorStatusAsync(string userId);
+    Task<TwoFactorStatusResponse> GetTwoFactorStatusAsync(Guid userId);
 }
 
 /// <summary>

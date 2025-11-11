@@ -46,7 +46,7 @@ public class GameEndpointsTests : IntegrationTestBase
     public async Task PostGames_CreatesGame_ForAdmin()
     {
         // Given: Admin user is authenticated
-        var user = await CreateTestUserAsync("creator", UserRole.Admin);
+        var user = await CreateTestUserAsync("creator", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -91,7 +91,7 @@ public class GameEndpointsTests : IntegrationTestBase
     public async Task PostGames_CreatesGame_ForEditor()
     {
         // Given: Editor user is authenticated
-        var user = await CreateTestUserAsync("editor", UserRole.Editor);
+        var user = await CreateTestUserAsync("editor", "editor");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -125,7 +125,7 @@ public class GameEndpointsTests : IntegrationTestBase
     public async Task PostGames_ReturnsForbidden_ForUserRole()
     {
         // Given: Regular user (non-editor/non-admin) is authenticated
-        var user = await CreateTestUserAsync("player", UserRole.User);
+        var user = await CreateTestUserAsync("player", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 

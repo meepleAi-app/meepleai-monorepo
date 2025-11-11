@@ -9,12 +9,14 @@ public class PromptVersionEntity
     /// <summary>
     /// Unique identifier for the version.
     /// </summary>
-    required public string Id { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    required public Guid Id { get; set; }
 
     /// <summary>
     /// ID of the parent template.
     /// </summary>
-    required public string TemplateId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    required public Guid TemplateId { get; set; }
 
     /// <summary>
     /// Sequential version number (1, 2, 3, ...).
@@ -37,7 +39,8 @@ public class PromptVersionEntity
     /// <summary>
     /// ID of the user who created this version.
     /// </summary>
-    required public string CreatedByUserId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    required public Guid CreatedByUserId { get; set; }
 
     /// <summary>
     /// Timestamp when this version was created.

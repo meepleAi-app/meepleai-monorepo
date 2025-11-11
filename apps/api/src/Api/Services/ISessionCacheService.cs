@@ -26,5 +26,5 @@ public interface ISessionCacheService
     /// <summary>
     /// Invalidate all sessions for a user (e.g., password change)
     /// </summary>
-    Task InvalidateUserSessionsAsync(string userId, CancellationToken ct = default);
+    Task InvalidateUserSessionsAsync(Guid userId, CancellationToken ct = default);
 }

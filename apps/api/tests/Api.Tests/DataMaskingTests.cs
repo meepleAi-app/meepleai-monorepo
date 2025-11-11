@@ -95,7 +95,7 @@ public class DataMaskingTests
             Id = "user-123",
             Email = "test@example.com",
             DisplayName = "Test User",
-            Role = UserRole.User,
+            Role = "user",
             PasswordHash = "sensitive-hash",
             TotpSecretEncrypted = "sensitive-totp",
             CreatedAt = DateTime.UtcNow

@@ -76,7 +76,7 @@ public class PdfIndexingServiceTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "hash",
-            Role = UserRole.Admin,
+            Role = "admin",
             CreatedAt = DateTime.UtcNow
         };
         var game = new GameEntity { Id = "tic-tac-toe", Name = "Tic-Tac-Toe", CreatedAt = DateTime.UtcNow };
@@ -163,7 +163,7 @@ public class PdfIndexingServiceTests : IDisposable
             Email = "test2@example.com",
             DisplayName = "Test User 2",
             PasswordHash = "hash",
-            Role = UserRole.Admin,
+            Role = "admin",
             CreatedAt = DateTime.UtcNow
         };
         var game = new GameEntity { Id = "chess", Name = "Chess", CreatedAt = DateTime.UtcNow };
@@ -225,7 +225,7 @@ public class PdfIndexingServiceTests : IDisposable
             Email = "test3@example.com",
             DisplayName = "Test User 3",
             PasswordHash = "hash",
-            Role = UserRole.Admin,
+            Role = "admin",
             CreatedAt = DateTime.UtcNow
         };
         var game = new GameEntity { Id = "tic-tac-toe", Name = "Tic-Tac-Toe", CreatedAt = DateTime.UtcNow };
@@ -307,7 +307,7 @@ public class PdfIndexingServiceTests : IDisposable
             Email = "test4@example.com",
             DisplayName = "Test User 4",
             PasswordHash = "hash",
-            Role = UserRole.Admin,
+            Role = "admin",
             CreatedAt = DateTime.UtcNow
         };
         var game = new GameEntity { Id = "tic-tac-toe", Name = "Tic-Tac-Toe", CreatedAt = DateTime.UtcNow };

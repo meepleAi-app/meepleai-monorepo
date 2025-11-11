@@ -46,7 +46,7 @@ public class PdfIndexingService
         // 1. Retrieve PDF document
         var pdf = await _db.PdfDocuments
             .Include(p => p.Game)
-            .FirstOrDefaultAsync(p => p.Id == pdfId, ct);
+            .FirstOrDefaultAsync(p => p.Id.ToString() == pdfId, ct);
 
         if (pdf == null)
         {
@@ -73,8 +73,9 @@ public class PdfIndexingService
         }
 
         // 3. Check if already indexed (for idempotency)
+        var pdfGuid = Guid.Parse(pdfId);
         var existingVectorDoc = await _db.Set<VectorDocumentEntity>()
-            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId, ct);
+            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, ct);
 
         if (existingVectorDoc != null)
         {
@@ -100,9 +101,9 @@ public class PdfIndexingService
 
             existingVectorDoc = new VectorDocumentEntity
             {
-                Id = $"vec-{Guid.NewGuid():N}",
+                Id = Guid.NewGuid(),
                 GameId = pdf.GameId,
-                PdfDocumentId = pdfId,
+                PdfDocumentId = pdfGuid,
                 IndexingStatus = "processing",
                 EmbeddingModel = _embeddingService.GetModelName(),
                 EmbeddingDimensions = embeddingDimensions
@@ -172,7 +173,7 @@ public class PdfIndexingService
                 documentChunks.Count, pdfId);
 
             var indexResult = await _qdrantService.IndexDocumentChunksAsync(
-                pdf.GameId,
+                pdf.GameId.ToString(),
                 pdfId,
                 documentChunks,
                 ct);
@@ -199,7 +200,7 @@ public class PdfIndexingService
                 pdfId, documentChunks.Count, pdf.ExtractedText.Length);
 
             return PdfIndexingResult.CreateSuccess(
-                existingVectorDoc.Id,
+                existingVectorDoc.Id.ToString(),
                 documentChunks.Count,
                 existingVectorDoc.IndexedAt.Value);
         }

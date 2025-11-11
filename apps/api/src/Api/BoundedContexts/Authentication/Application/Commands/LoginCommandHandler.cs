@@ -1,0 +1,97 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
+using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
+using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Infrastructure.Persistence;
+
+namespace Api.BoundedContexts.Authentication.Application.Commands;
+
+/// <summary>
+/// Handles user login with email and password.
+/// Returns session token or temp token if 2FA is required.
+/// </summary>
+public class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponse>
+{
+    private readonly IUserRepository _userRepository;
+    private readonly ISessionRepository _sessionRepository;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly TimeProvider _timeProvider;
+
+    public LoginCommandHandler(
+        IUserRepository userRepository,
+        ISessionRepository sessionRepository,
+        IUnitOfWork unitOfWork,
+        TimeProvider timeProvider)
+    {
+        _userRepository = userRepository;
+        _sessionRepository = sessionRepository;
+        _unitOfWork = unitOfWork;
+        _timeProvider = timeProvider;
+    }
+
+    public async Task<LoginResponse> Handle(LoginCommand command, CancellationToken cancellationToken)
+    {
+        // Find user by email
+        var email = new Email(command.Email);
+        var user = await _userRepository.GetByEmailAsync(email, cancellationToken);
+
+        if (user == null)
+            throw new DomainException("Invalid email or password");
+
+        // Verify password
+        if (!user.VerifyPassword(command.Password))
+            throw new DomainException("Invalid email or password");
+
+        // Check if 2FA is required
+        if (user.RequiresTwoFactor())
+        {
+            // TODO: Create temp session for 2FA verification
+            // For now, return placeholder
+            return new LoginResponse(
+                RequiresTwoFactor: true,
+                TempSessionToken: null,
+                User: null,
+                SessionToken: null
+            );
+        }
+
+        // Create session
+        var sessionId = Guid.NewGuid();
+        var sessionToken = SessionToken.Generate();
+        var session = new Session(
+            id: sessionId,
+            userId: user.Id,
+            token: sessionToken,
+            ipAddress: command.IpAddress,
+            userAgent: command.UserAgent
+        );
+
+        await _sessionRepository.AddAsync(session, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        // Map to DTO
+        var userDto = MapToUserDto(user);
+
+        return new LoginResponse(
+            RequiresTwoFactor: false,
+            TempSessionToken: null,
+            User: userDto,
+            SessionToken: sessionToken.Value
+        );
+    }
+
+    private static UserDto MapToUserDto(User user)
+    {
+        return new UserDto(
+            Id: user.Id,
+            Email: user.Email.Value,
+            DisplayName: user.DisplayName,
+            Role: user.Role.Value,
+            CreatedAt: user.CreatedAt,
+            IsTwoFactorEnabled: user.IsTwoFactorEnabled,
+            TwoFactorEnabledAt: user.TwoFactorEnabledAt
+        );
+    }
+}

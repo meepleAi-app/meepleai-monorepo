@@ -128,8 +128,8 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
     ///   Then the response carries X-RateLimit headers matching the role quota.
     /// </summary>
     [Theory]
-    [InlineData(UserRole.Editor, 500, 498)]
-    [InlineData(UserRole.User, 100, 42)]
+    [InlineData("editor", 500, 498)]
+    [InlineData("user", 100, 42)]
     public async Task AuthenticatedUsers_EmitRoleSpecificRateLimitHeaders(UserRole role, int expectedLimit, int expectedRemaining)
     {
         await using var context = await CreateClientContextAsync(role);
@@ -162,7 +162,7 @@ public class RateLimitingIntegrationTests : IntegrationTestBase
         response.Headers.Contains("Retry-After").Should().BeFalse();
     }
 
-    private async Task<TestClientContext> CreateClientContextAsync(UserRole? role = UserRole.Admin)
+    private async Task<TestClientContext> CreateClientContextAsync(string? role = "admin")
     {
         var rateLimitService = new TestRateLimitService();
 

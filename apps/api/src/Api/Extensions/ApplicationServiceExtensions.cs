@@ -78,7 +78,6 @@ public static class ApplicationServiceExtensions
     private static IServiceCollection AddDomainServices(this IServiceCollection services)
     {
         // Game and RuleSpec services
-        services.AddScoped<GameService>();
         services.AddScoped<RuleSpecService>();
         services.AddScoped<RuleSpecDiffService>();
         services.AddScoped<RuleCommentService>(); // EDIT-05: Comment service with threading and mentions

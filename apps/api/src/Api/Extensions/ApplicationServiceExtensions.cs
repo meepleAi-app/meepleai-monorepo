@@ -161,7 +161,6 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IBlobStorageService, BlobStorageService>();
 
         // PDF main services
-        services.AddScoped<PdfTextExtractionService>(); // Legacy - being replaced by IPdfTextExtractor
         services.AddScoped<PdfTableExtractionService>(); // Refactored facade
         // PDF-09: Validation service migrated to DocumentProcessing DDD context (DocumentProcessingServiceExtensions)
         services.AddScoped<PdfStorageService>(); // Refactored facade

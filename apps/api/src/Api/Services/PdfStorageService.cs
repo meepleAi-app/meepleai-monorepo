@@ -20,7 +20,6 @@ public class PdfStorageService
     private readonly MeepleAiDbContext _db;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<PdfStorageService> _logger;
-    private readonly PdfTextExtractionService _textExtractionService; // Legacy - being replaced
     private readonly IPdfTextExtractor _pdfTextExtractor;
     private readonly IPdfTableExtractor _tableExtractor;
     private readonly IBackgroundTaskService _backgroundTaskService;
@@ -40,7 +39,6 @@ public class PdfStorageService
         MeepleAiDbContext db,
         IServiceScopeFactory scopeFactory,
         ILogger<PdfStorageService> logger,
-        PdfTextExtractionService textExtractionService,
         IPdfTextExtractor pdfTextExtractor,
         IPdfTableExtractor tableExtractor,
         IBackgroundTaskService backgroundTaskService,
@@ -54,7 +52,6 @@ public class PdfStorageService
         _db = db;
         _scopeFactory = scopeFactory;
         _logger = logger;
-        _textExtractionService = textExtractionService; // Legacy - being replaced
         _pdfTextExtractor = pdfTextExtractor;
         _tableExtractor = tableExtractor;
         _backgroundTaskService = backgroundTaskService;

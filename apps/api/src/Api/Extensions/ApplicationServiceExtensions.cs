@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.Authentication.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
@@ -44,7 +45,7 @@ public static class ApplicationServiceExtensions
         services.AddSystemConfigurationContext();
 
         // DDD-PHASE3: Administration bounded context
-        // services.AddAdministrationContext(); // TODO: Uncomment when repositories implemented
+        services.AddAdministrationContext();
 
         // DDD-PHASE4: DocumentProcessing bounded context
         services.AddDocumentProcessingContext();

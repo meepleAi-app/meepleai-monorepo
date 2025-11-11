@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.Helpers;
 using Api.Services;
 using Api.Services.Chat;
@@ -21,6 +22,9 @@ public static class ApplicationServiceExtensions
         services.AddChessServices();
         services.AddBggServices();
         services.AddQualityServices();
+
+        // DDD-PHASE3: KnowledgeBase bounded context
+        services.AddKnowledgeBaseServices();
 
         return services;
     }

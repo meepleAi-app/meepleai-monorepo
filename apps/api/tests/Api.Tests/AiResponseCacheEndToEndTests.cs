@@ -260,7 +260,7 @@ public class AiResponseCacheEndToEndTests : IntegrationTestBase
     public async Task GivenCachedResponses_WhenGameIsUpdated_ThenCacheCanBeInvalidated()
     {
         // Given: Game with cached QA response
-        var user = await CreateTestUserAsync("invalidate-user", UserRole.Admin);
+        var user = await CreateTestUserAsync("invalidate-user", "admin");
         var cookies = await AuthenticateUserAsync(user.Email);
         var game = await CreateTestGameAsync("Catan-Invalidate");
         await CreateTestPdfDocumentAsync(game.Id, user.Id, "rules.pdf");

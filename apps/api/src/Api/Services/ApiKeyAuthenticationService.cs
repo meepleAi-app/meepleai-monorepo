@@ -79,21 +79,21 @@ public class ApiKeyAuthenticationService
         }
 
         // Update last used timestamp (fire-and-forget, non-blocking)
-        _ = UpdateLastUsedAsync(apiKeyEntity.Id);
+        _ = UpdateLastUsedAsync(apiKeyEntity.Id.ToString());
 
         _logger.LogInformation(
             "API key validated successfully. KeyId: {KeyId}, UserId: {UserId}, Scopes: {Scopes}",
-            apiKeyEntity.Id,
-            apiKeyEntity.UserId,
-            string.Join(",", apiKeyEntity.Scopes));
+            apiKeyEntity.Id.ToString(),
+            apiKeyEntity.UserId.ToString(),
+            apiKeyEntity.Scopes);
 
         return ApiKeyValidationResult.Valid(
-            apiKeyEntity.Id,
-            apiKeyEntity.User.Id,
+            apiKeyEntity.Id.ToString(),
+            apiKeyEntity.User.Id.ToString(),
             apiKeyEntity.User.Email,
             apiKeyEntity.User.DisplayName,
-            apiKeyEntity.User.Role.ToString(),
-            apiKeyEntity.Scopes);
+            apiKeyEntity.User.Role,
+            apiKeyEntity.Scopes.Split(',', StringSplitOptions.RemoveEmptyEntries));
     }
 
     /// <summary>
@@ -144,12 +144,12 @@ public class ApiKeyAuthenticationService
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var entity = new ApiKeyEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
-            UserId = userId,
+            Id = Guid.NewGuid(),
+            UserId = Guid.Parse(userId),
             KeyName = keyName,
             KeyHash = keyHash,
             KeyPrefix = displayPrefix,
-            Scopes = scopes,
+            Scopes = string.Join(",", scopes),
             IsActive = true,
             CreatedAt = now,
             ExpiresAt = expiresAt,
@@ -188,7 +188,7 @@ public class ApiKeyAuthenticationService
         }
 
         apiKey.RevokedAt = _timeProvider.GetUtcNow().UtcDateTime;
-        apiKey.RevokedBy = revokedByUserId;
+        apiKey.RevokedBy = revokedByUserId != null && Guid.TryParse(revokedByUserId, out var revokedByGuid) ? revokedByGuid : null;
         await _db.SaveChangesAsync(ct);
 
         _logger.LogInformation(
@@ -207,9 +207,15 @@ public class ApiKeyAuthenticationService
     {
         try
         {
+            if (!Guid.TryParse(keyId, out var keyGuid))
+            {
+                _logger.LogError("Invalid API key ID format: {KeyId}", keyId);
+                return;
+            }
+
             var now = _timeProvider.GetUtcNow().UtcDateTime;
             await _db.ApiKeys
-                .Where(k => k.Id == keyId)
+                .Where(k => k.Id == keyGuid)
                 .ExecuteUpdateAsync(s => s.SetProperty(k => k.LastUsedAt, now));
 
             _logger.LogDebug("Updated last_used_at for API key {KeyId}", keyId);

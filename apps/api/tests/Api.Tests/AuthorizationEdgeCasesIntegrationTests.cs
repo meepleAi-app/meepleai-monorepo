@@ -48,7 +48,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
     public async Task AdminEndpoint_WithAdminRole_Returns200()
     {
         // Arrange: Admin user
-        var admin = await CreateTestUserAsync("admin-test-1", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-test-1", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
@@ -71,7 +71,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
     public async Task AdminEndpoint_WithEditorRole_Returns403()
     {
         // Arrange: Editor user
-        var editor = await CreateTestUserAsync("editor-test-1", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor-test-1", "editor");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = CreateClientWithoutCookies();
 
@@ -94,7 +94,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
     public async Task AdminEndpoint_WithUserRole_Returns403()
     {
         // Arrange: Regular user
-        var user = await CreateTestUserAsync("user-test-1", UserRole.User);
+        var user = await CreateTestUserAsync("user-test-1", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -140,7 +140,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
     public async Task CreateGameEndpoint_WithEditorRole_IsAccessible()
     {
         // Arrange: Editor user
-        var editor = await CreateTestUserAsync("editor-game-create-1", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor-game-create-1", "editor");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = CreateClientWithoutCookies();
 
@@ -166,7 +166,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
     public async Task CreateGameEndpoint_WithUserRole_Returns403()
     {
         // Arrange: Regular user
-        var user = await CreateTestUserAsync("user-game-create-1", UserRole.User);
+        var user = await CreateTestUserAsync("user-game-create-1", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -196,8 +196,8 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
     public async Task GetChat_CrossUserAccess_Returns404()
     {
         // Arrange: Two users with their own chats
-        var userA = await CreateTestUserAsync("user-a-chat", UserRole.User);
-        var userB = await CreateTestUserAsync("user-b-chat", UserRole.User);
+        var userA = await CreateTestUserAsync("user-a-chat", "user");
+        var userB = await CreateTestUserAsync("user-b-chat", "user");
         var cookiesA = await AuthenticateUserAsync(userA.Email);
 
         // Create game and agent
@@ -227,8 +227,8 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
     public async Task DeleteChat_CrossUserAccess_Returns403()
     {
         // Arrange: Two users with their own chats
-        var userA = await CreateTestUserAsync("user-a-delete", UserRole.User);
-        var userB = await CreateTestUserAsync("user-b-delete", UserRole.User);
+        var userA = await CreateTestUserAsync("user-a-delete", "user");
+        var userB = await CreateTestUserAsync("user-b-delete", "user");
         var cookiesA = await AuthenticateUserAsync(userA.Email);
 
         // Create game and agent
@@ -258,7 +258,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
     public async Task GetChat_OwnResource_Returns200()
     {
         // Arrange: User with their own chat
-        var user = await CreateTestUserAsync("user-own-chat", UserRole.User);
+        var user = await CreateTestUserAsync("user-own-chat", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         // Create game and agent
@@ -292,7 +292,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
     public async Task UpdateProfile_CannotEscalateRole()
     {
         // Arrange: Regular user
-        var user = await CreateTestUserAsync("user-escalation-test", UserRole.User);
+        var user = await CreateTestUserAsync("user-escalation-test", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -311,7 +311,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
         {
             var db = scope.ServiceProvider.GetRequiredService<Api.Infrastructure.MeepleAiDbContext>();
             var updatedUser = await db.Users.FindAsync(user.Id);
-            updatedUser!.Role.Should().Be(UserRole.User); // Role should still be User
+            updatedUser!.Role.Should().Be("user"); // Role should still be User
         }
     }
 
@@ -325,12 +325,12 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
     public async Task AdminAction_WithEditorRole_Returns403()
     {
         // Arrange: Editor user
-        var editor = await CreateTestUserAsync("editor-admin-action", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor-admin-action", "editor");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = CreateClientWithoutCookies();
 
         // Act: Attempt admin action (delete all sessions for a user)
-        var targetUser = await CreateTestUserAsync("target-user", UserRole.User);
+        var targetUser = await CreateTestUserAsync("target-user", "user");
         using var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/v1/admin/users/{targetUser.Id}/sessions");
         AddCookies(request, cookies);
         var response = await client.SendAsync(request);
@@ -353,7 +353,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
     public async Task RevokedSession_ReturnsUnauthorized()
     {
         // Arrange: User with session
-        var user = await CreateTestUserAsync("revoked-session-user", UserRole.User);
+        var user = await CreateTestUserAsync("revoked-session-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         // Revoke the session
@@ -457,7 +457,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
     public async Task EditorEndpoint_WithAdminRole_IsAccessible()
     {
         // Arrange: Admin user
-        var admin = await CreateTestUserAsync("admin-editor-test", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-editor-test", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
@@ -483,7 +483,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
     public async Task UserEndpoint_WithAdminRole_IsAccessible()
     {
         // Arrange: Admin user
-        var admin = await CreateTestUserAsync("admin-user-test", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-user-test", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
@@ -506,7 +506,7 @@ public class AuthorizationEdgeCasesIntegrationTests : IntegrationTestBase
     public async Task UserEndpoint_WithEditorRole_IsAccessible()
     {
         // Arrange: Editor user
-        var editor = await CreateTestUserAsync("editor-user-test", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor-user-test", "editor");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = CreateClientWithoutCookies();
 

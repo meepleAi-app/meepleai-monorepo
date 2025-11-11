@@ -203,9 +203,9 @@ public class AgentFeedbackServiceTests : IDisposable
     {
         await using var dbContext = CreateInMemoryContext();
         dbContext.AgentFeedbacks.AddRange(
-            new AgentFeedbackEntity { MessageId = "1", Endpoint = "qa", UserId = "user-1", Outcome = "helpful", CreatedAt = DateTime.UtcNow },
-            new AgentFeedbackEntity { MessageId = "2", Endpoint = "explain", UserId = "user-1", Outcome = "helpful", CreatedAt = DateTime.UtcNow },
-            new AgentFeedbackEntity { MessageId = "3", Endpoint = "qa", UserId = "user-1", Outcome = "not-helpful", CreatedAt = DateTime.UtcNow }
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-1", Outcome = "helpful", CreatedAt = DateTime.UtcNow },
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "explain", UserId = "user-1", Outcome = "helpful", CreatedAt = DateTime.UtcNow },
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-1", Outcome = "not-helpful", CreatedAt = DateTime.UtcNow }
         );
         await dbContext.SaveChangesAsync();
 
@@ -224,8 +224,8 @@ public class AgentFeedbackServiceTests : IDisposable
     {
         await using var dbContext = CreateInMemoryContext();
         dbContext.AgentFeedbacks.AddRange(
-            new AgentFeedbackEntity { MessageId = "1", Endpoint = "qa", UserId = "user-1", Outcome = "helpful", CreatedAt = DateTime.UtcNow },
-            new AgentFeedbackEntity { MessageId = "2", Endpoint = "qa", UserId = "user-2", Outcome = "helpful", CreatedAt = DateTime.UtcNow }
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-1", Outcome = "helpful", CreatedAt = DateTime.UtcNow },
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-2", Outcome = "helpful", CreatedAt = DateTime.UtcNow }
         );
         await dbContext.SaveChangesAsync();
 
@@ -243,8 +243,8 @@ public class AgentFeedbackServiceTests : IDisposable
     {
         await using var dbContext = CreateInMemoryContext();
         dbContext.AgentFeedbacks.AddRange(
-            new AgentFeedbackEntity { MessageId = "1", Endpoint = "qa", UserId = "user-1", GameId = "game-1", Outcome = "helpful", CreatedAt = DateTime.UtcNow },
-            new AgentFeedbackEntity { MessageId = "2", Endpoint = "qa", UserId = "user-1", GameId = "game-2", Outcome = "not-helpful", CreatedAt = DateTime.UtcNow }
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-1", GameId = "game-1", Outcome = "helpful", CreatedAt = DateTime.UtcNow },
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-1", GameId = "game-2", Outcome = "not-helpful", CreatedAt = DateTime.UtcNow }
         );
         await dbContext.SaveChangesAsync();
 
@@ -263,9 +263,9 @@ public class AgentFeedbackServiceTests : IDisposable
         await using var dbContext = CreateInMemoryContext();
         var now = DateTime.UtcNow;
         dbContext.AgentFeedbacks.AddRange(
-            new AgentFeedbackEntity { MessageId = "1", Endpoint = "qa", UserId = "user-1", Outcome = "helpful", CreatedAt = now.AddDays(-5) },
-            new AgentFeedbackEntity { MessageId = "2", Endpoint = "qa", UserId = "user-1", Outcome = "helpful", CreatedAt = now.AddDays(-2) },
-            new AgentFeedbackEntity { MessageId = "3", Endpoint = "qa", UserId = "user-1", Outcome = "not-helpful", CreatedAt = now }
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-1", Outcome = "helpful", CreatedAt = now.AddDays(-5) },
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-1", Outcome = "helpful", CreatedAt = now.AddDays(-2) },
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-1", Outcome = "not-helpful", CreatedAt = now }
         );
         await dbContext.SaveChangesAsync();
 
@@ -311,9 +311,9 @@ public class AgentFeedbackServiceTests : IDisposable
         await using var dbContext = CreateInMemoryContext();
         // Note: Service is case-sensitive, so using consistent casing
         dbContext.AgentFeedbacks.AddRange(
-            new AgentFeedbackEntity { MessageId = "1", Endpoint = "qa", UserId = "user-1", Outcome = "helpful", CreatedAt = DateTime.UtcNow },
-            new AgentFeedbackEntity { MessageId = "2", Endpoint = "qa", UserId = "user-2", Outcome = "helpful", CreatedAt = DateTime.UtcNow },
-            new AgentFeedbackEntity { MessageId = "3", Endpoint = "explain", UserId = "user-1", Outcome = "not_helpful", CreatedAt = DateTime.UtcNow }
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-1", Outcome = "helpful", CreatedAt = DateTime.UtcNow },
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "qa", UserId = "user-2", Outcome = "helpful", CreatedAt = DateTime.UtcNow },
+            new AgentFeedbackEntity { MessageId = Guid.NewGuid(), Endpoint = "explain", UserId = "user-1", Outcome = "not_helpful", CreatedAt = DateTime.UtcNow }
         );
         await dbContext.SaveChangesAsync();
 

@@ -47,7 +47,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
     public async Task UploadPdf_ForGame_InvalidatesCachedResponses()
     {
         // Given: A game with cached AI responses
-        var admin = await CreateTestUserAsync("admin-cache-pdf", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-cache-pdf", "admin");
         var adminCookies = await AuthenticateUserAsync(admin.Email);
         var game = await CreateTestGameAsync("TestGame-PDF-Cache");
 
@@ -108,7 +108,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
     public async Task UploadPdf_WithGameTag_InvalidatesOnlyGameCachedResponses()
     {
         // Given: Two games with cached responses
-        var admin = await CreateTestUserAsync("admin-cache-tag", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-cache-tag", "admin");
         var adminCookies = await AuthenticateUserAsync(admin.Email);
         var game1 = await CreateTestGameAsync("TestGame1-Tag");
         var game2 = await CreateTestGameAsync("TestGame2-Tag");
@@ -168,7 +168,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
     public async Task UploadPdf_InvalidatesAllEndpointCaches()
     {
         // Given: Cached responses for all endpoints
-        var admin = await CreateTestUserAsync("admin-cache-endpoints", UserRole.Admin);
+        var admin = await CreateTestUserAsync("admin-cache-endpoints", "admin");
         var adminCookies = await AuthenticateUserAsync(admin.Email);
         var game = await CreateTestGameAsync("TestGame-AllEndpoints");
 
@@ -237,7 +237,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
     public async Task UpdateRuleSpec_InvalidatesCachedResponses()
     {
         // Given: Game with cached responses and rule spec
-        var editor = await CreateTestUserAsync("editor-rulespec", UserRole.Editor);
+        var editor = await CreateTestUserAsync("editor-rulespec", "editor");
         var editorCookies = await AuthenticateUserAsync(editor.Email);
         var game = await CreateTestGameAsync("TestGame-RuleSpec");
         var ruleSpec = await CreateTestRuleSpecAsync(game.Id, editor.Id, "1.0.0");
@@ -292,7 +292,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
     public async Task QaEndpoint_WithBypassCache_IgnoresCachedResponse()
     {
         // Given: Game with cached response
-        var user = await CreateTestUserAsync("user-bypass", UserRole.User);
+        var user = await CreateTestUserAsync("user-bypass", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var game = await CreateTestGameAsync("TestGame-Bypass");
 
@@ -354,7 +354,7 @@ public class CacheInvalidationIntegrationTests : IntegrationTestBase
     public async Task QaEndpoint_AfterBypass_ResumesCaching()
     {
         // Given: Game setup
-        var user = await CreateTestUserAsync("user-resume-cache", UserRole.User);
+        var user = await CreateTestUserAsync("user-resume-cache", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var game = await CreateTestGameAsync("TestGame-ResumeCache");
         var pdf = await CreateTestPdfDocumentAsync(game.Id, user.Id);

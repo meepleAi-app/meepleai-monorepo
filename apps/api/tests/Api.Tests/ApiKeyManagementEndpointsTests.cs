@@ -38,7 +38,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task CreateApiKey_WithValidRequest_ReturnsCreatedKey()
     {
         // Given: An authenticated user
-        var user = await CreateTestUserAsync("create-key-user", UserRole.User);
+        var user = await CreateTestUserAsync("create-key-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var request = new CreateApiKeyRequest
@@ -82,7 +82,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
         var request = new CreateApiKeyRequest
         {
             KeyName = "Test Key",
-            Scopes = new[] { "read" },
+            Scopes = "read",
             Environment = "test"
         };
 
@@ -98,13 +98,13 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task CreateApiKey_WithEmptyKeyName_ReturnsBadRequest()
     {
         // Given: An authenticated user with invalid request
-        var user = await CreateTestUserAsync("invalid-request-user", UserRole.User);
+        var user = await CreateTestUserAsync("invalid-request-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var request = new CreateApiKeyRequest
         {
             KeyName = "", // Invalid: empty name
-            Scopes = new[] { "read" }
+            Scopes = "read"
         };
 
         // When: User creates API key with invalid data
@@ -126,13 +126,13 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task CreateApiKey_WithDifferentEnvironments_CreatesCorrectKeyFormat(string environment)
     {
         // Given: An authenticated user
-        var user = await CreateTestUserAsync($"env-{environment}-user", UserRole.User);
+        var user = await CreateTestUserAsync($"env-{environment}-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var request = new CreateApiKeyRequest
         {
             KeyName = $"{environment} Key",
-            Scopes = new[] { "read" },
+            Scopes = "read",
             Environment = environment
         };
 
@@ -161,7 +161,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task ListApiKeys_WithMultipleKeys_ReturnsPaginatedList()
     {
         // Given: A user with multiple API keys
-        var user = await CreateTestUserAsync("list-keys-user", UserRole.User);
+        var user = await CreateTestUserAsync("list-keys-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         // Create 3 API keys
@@ -194,7 +194,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task ListApiKeys_ExcludesRevokedKeys_ByDefault()
     {
         // Given: A user with active and revoked keys
-        var user = await CreateTestUserAsync("revoked-keys-user", UserRole.User);
+        var user = await CreateTestUserAsync("revoked-keys-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         // Create active key
@@ -223,7 +223,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task ListApiKeys_IncludesRevokedKeys_WhenRequested()
     {
         // Given: A user with revoked key
-        var user = await CreateTestUserAsync("include-revoked-user", UserRole.User);
+        var user = await CreateTestUserAsync("include-revoked-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var (_, key) = await CreateTestApiKeyAsync(user.Id, "Revoked Key", new[] { "read" });
@@ -248,8 +248,8 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task ListApiKeys_OnlyReturnsCurrentUserKeys()
     {
         // Given: Two users with their own keys
-        var user1 = await CreateTestUserAsync("user1-isolation", UserRole.User);
-        var user2 = await CreateTestUserAsync("user2-isolation", UserRole.User);
+        var user1 = await CreateTestUserAsync("user1-isolation", "user");
+        var user2 = await CreateTestUserAsync("user2-isolation", "user");
 
         await CreateTestApiKeyAsync(user1.Id, "User1 Key", new[] { "read" });
         await CreateTestApiKeyAsync(user2.Id, "User2 Key", new[] { "read" });
@@ -278,7 +278,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task GetApiKey_WithValidId_ReturnsKey()
     {
         // Given: A user with an API key
-        var user = await CreateTestUserAsync("get-key-user", UserRole.User);
+        var user = await CreateTestUserAsync("get-key-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var (_, key) = await CreateTestApiKeyAsync(
@@ -306,7 +306,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task GetApiKey_WithInvalidId_ReturnsNotFound()
     {
         // Given: An authenticated user
-        var user = await CreateTestUserAsync("invalid-id-user", UserRole.User);
+        var user = await CreateTestUserAsync("invalid-id-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         // When: User requests non-existent key
@@ -323,8 +323,8 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task GetApiKey_ForOtherUsersKey_ReturnsNotFound()
     {
         // Given: Two users, User1 has a key
-        var user1 = await CreateTestUserAsync("user1-get", UserRole.User);
-        var user2 = await CreateTestUserAsync("user2-get", UserRole.User);
+        var user1 = await CreateTestUserAsync("user1-get", "user");
+        var user2 = await CreateTestUserAsync("user2-get", "user");
 
         var (_, key) = await CreateTestApiKeyAsync(user1.Id, "User1 Key", new[] { "read" });
 
@@ -347,7 +347,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task UpdateApiKey_WithValidRequest_UpdatesKey()
     {
         // Given: A user with an API key
-        var user = await CreateTestUserAsync("update-key-user", UserRole.User);
+        var user = await CreateTestUserAsync("update-key-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var (_, key) = await CreateTestApiKeyAsync(
@@ -387,7 +387,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task UpdateApiKey_WithInvalidId_ReturnsNotFound()
     {
         // Given: An authenticated user
-        var user = await CreateTestUserAsync("update-invalid-user", UserRole.User);
+        var user = await CreateTestUserAsync("update-invalid-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var updateRequest = new UpdateApiKeyRequest
@@ -412,8 +412,8 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task UpdateApiKey_ForOtherUsersKey_ReturnsNotFound()
     {
         // Given: Two users, User1 has a key
-        var user1 = await CreateTestUserAsync("user1-update", UserRole.User);
-        var user2 = await CreateTestUserAsync("user2-update", UserRole.User);
+        var user1 = await CreateTestUserAsync("user1-update", "user");
+        var user2 = await CreateTestUserAsync("user2-update", "user");
 
         var (_, key) = await CreateTestApiKeyAsync(user1.Id, "User1 Key", new[] { "read" });
 
@@ -444,7 +444,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task RotateApiKey_WithValidKey_CreatesNewKeyAndRevokesOld()
     {
         // Given: A user with an API key
-        var user = await CreateTestUserAsync("rotate-key-user", UserRole.User);
+        var user = await CreateTestUserAsync("rotate-key-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var (oldPlaintextKey, oldKey) = await CreateTestApiKeyAsync(
@@ -493,7 +493,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task RotateApiKey_WithInvalidId_ReturnsNotFound()
     {
         // Given: An authenticated user
-        var user = await CreateTestUserAsync("rotate-invalid-user", UserRole.User);
+        var user = await CreateTestUserAsync("rotate-invalid-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var rotateRequest = new RotateApiKeyRequest();
@@ -515,8 +515,8 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task RotateApiKey_ForOtherUsersKey_ReturnsNotFound()
     {
         // Given: Two users, User1 has a key
-        var user1 = await CreateTestUserAsync("user1-rotate", UserRole.User);
-        var user2 = await CreateTestUserAsync("user2-rotate", UserRole.User);
+        var user1 = await CreateTestUserAsync("user1-rotate", "user");
+        var user2 = await CreateTestUserAsync("user2-rotate", "user");
 
         var (_, key) = await CreateTestApiKeyAsync(user1.Id, "User1 Key", new[] { "read" });
 
@@ -544,7 +544,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task RevokeApiKey_WithValidKey_RevokesSuccessfully()
     {
         // Given: A user with an API key
-        var user = await CreateTestUserAsync("revoke-key-user", UserRole.User);
+        var user = await CreateTestUserAsync("revoke-key-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var (plaintextKey, key) = await CreateTestApiKeyAsync(
@@ -572,7 +572,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task RevokeApiKey_WithInvalidId_ReturnsNotFound()
     {
         // Given: An authenticated user
-        var user = await CreateTestUserAsync("revoke-invalid-user", UserRole.User);
+        var user = await CreateTestUserAsync("revoke-invalid-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         // When: User tries to revoke non-existent key
@@ -589,8 +589,8 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task RevokeApiKey_ForOtherUsersKey_ReturnsNotFound()
     {
         // Given: Two users, User1 has a key
-        var user1 = await CreateTestUserAsync("user1-revoke", UserRole.User);
-        var user2 = await CreateTestUserAsync("user2-revoke", UserRole.User);
+        var user1 = await CreateTestUserAsync("user1-revoke", "user");
+        var user2 = await CreateTestUserAsync("user2-revoke", "user");
 
         var (_, key) = await CreateTestApiKeyAsync(user1.Id, "User1 Key", new[] { "read" });
 
@@ -613,7 +613,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task GetApiKeyUsage_WithValidKey_ReturnsUsageStats()
     {
         // Given: A user with an API key that has quota
-        var user = await CreateTestUserAsync("usage-key-user", UserRole.User);
+        var user = await CreateTestUserAsync("usage-key-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var (_, key) = await CreateTestApiKeyAsync(
@@ -643,7 +643,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task GetApiKeyUsage_WithInvalidId_ReturnsNotFound()
     {
         // Given: An authenticated user
-        var user = await CreateTestUserAsync("usage-invalid-user", UserRole.User);
+        var user = await CreateTestUserAsync("usage-invalid-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         // When: User requests usage for non-existent key
@@ -664,8 +664,8 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task AdminDeleteApiKey_AsAdmin_DeletesSuccessfully()
     {
         // Given: An admin user and a regular user with an API key
-        var admin = await CreateTestUserAsync("admin-delete", UserRole.Admin);
-        var regularUser = await CreateTestUserAsync("regular-delete", UserRole.User);
+        var admin = await CreateTestUserAsync("admin-delete", "admin");
+        var regularUser = await CreateTestUserAsync("regular-delete", "user");
 
         var (_, key) = await CreateTestApiKeyAsync(regularUser.Id, "User Key", new[] { "read" });
 
@@ -684,7 +684,7 @@ public class ApiKeyManagementEndpointsTests : TransactionalTestBase
     public async Task AdminDeleteApiKey_AsNonAdmin_ReturnsForbidden()
     {
         // Given: A regular user trying to use admin endpoint
-        var user = await CreateTestUserAsync("non-admin-delete", UserRole.User);
+        var user = await CreateTestUserAsync("non-admin-delete", "user");
         var (_, key) = await CreateTestApiKeyAsync(user.Id, "User Key", new[] { "read" });
 
         // When: Non-admin tries to delete via admin endpoint

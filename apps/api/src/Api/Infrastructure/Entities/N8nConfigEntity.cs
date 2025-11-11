@@ -2,7 +2,8 @@ namespace Api.Infrastructure.Entities;
 
 public class N8nConfigEntity
 {
-    public string Id { get; set; } = default!;
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = default!;
     public string BaseUrl { get; set; } = default!;
     public string ApiKeyEncrypted { get; set; } = default!;
@@ -12,7 +13,8 @@ public class N8nConfigEntity
     public string? LastTestResult { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-    public string CreatedByUserId { get; set; } = default!;
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid CreatedByUserId { get; set; }
 
     public UserEntity CreatedBy { get; set; } = default!;
 }

@@ -48,7 +48,7 @@ public class N8nConfigServiceTests : IDisposable
             Id = userId,
             Email = $"{userId}@example.com",
             PasswordHash = "hashed-password",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = DateTime.UtcNow
         });
 

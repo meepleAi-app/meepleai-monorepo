@@ -88,7 +88,7 @@ public class SessionCacheService : ISessionCacheService
             // Also add to user's session set for bulk invalidation
             if (session.User != null)
             {
-                var userSetKey = GetUserSessionsSetKey(session.User.Id);
+                var userSetKey = GetUserSessionsSetKey(Guid.Parse(session.User.Id));
                 await db.SetAddAsync(userSetKey, cacheKey);
                 await db.KeyExpireAsync(userSetKey, ttl); // Set same expiration
             }
@@ -139,7 +139,7 @@ public class SessionCacheService : ISessionCacheService
         }
     }
 
-    public async Task InvalidateUserSessionsAsync(string userId, CancellationToken ct = default)
+    public async Task InvalidateUserSessionsAsync(Guid userId, CancellationToken ct = default)
     {
         try
         {
@@ -179,5 +179,5 @@ public class SessionCacheService : ISessionCacheService
     }
 
     private static string GetCacheKey(string tokenHash) => $"session:{tokenHash}";
-    private static string GetUserSessionsSetKey(string userId) => $"user_sessions:{userId}";
+    private static string GetUserSessionsSetKey(Guid userId) => $"user_sessions:{userId}";
 }

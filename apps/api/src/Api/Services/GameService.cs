@@ -35,7 +35,8 @@ public class GameService
             desiredId = Guid.NewGuid().ToString("N")[..12];
         }
 
-        if (await _dbContext.Games.AnyAsync(g => g.Id == desiredId, ct))
+        var desiredGuid = Guid.Parse(desiredId);
+        if (await _dbContext.Games.AnyAsync(g => g.Id == desiredGuid, ct))
         {
             throw new InvalidOperationException($"Game with id '{desiredId}' already exists");
         }
@@ -49,7 +50,7 @@ public class GameService
 
         var entity = new GameEntity
         {
-            Id = desiredId,
+            Id = desiredGuid,
             Name = normalizedName,
             CreatedAt = now
         };

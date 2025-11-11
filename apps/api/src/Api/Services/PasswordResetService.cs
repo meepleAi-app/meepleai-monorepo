@@ -93,7 +93,7 @@ public class PasswordResetService : IPasswordResetService
 
         var resetToken = new PasswordResetTokenEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = Guid.NewGuid(),
             UserId = user.Id,
             TokenHash = tokenHash,
             ExpiresAt = now.AddMinutes(TokenExpiryMinutes),
@@ -173,7 +173,7 @@ public class PasswordResetService : IPasswordResetService
         return true;
     }
 
-    public async Task<(bool Success, string? UserId)> ResetPasswordAsync(
+    public async Task<(bool Success, Guid? UserId)> ResetPasswordAsync(
         string token,
         string newPassword,
         CancellationToken ct = default)

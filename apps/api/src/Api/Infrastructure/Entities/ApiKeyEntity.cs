@@ -9,13 +9,15 @@ public class ApiKeyEntity
 {
     /// <summary>
     /// Unique identifier for the API key.
+    /// DDD-PHASE2: Converted to Guid for domain alignment.
     /// </summary>
-    required public string Id { get; set; }
+    required public Guid Id { get; set; }
 
     /// <summary>
     /// ID of the user who owns this API key.
+    /// DDD-PHASE2: Converted to Guid for domain alignment.
     /// </summary>
-    required public string UserId { get; set; }
+    required public Guid UserId { get; set; }
 
     /// <summary>
     /// Human-readable name for the API key (e.g., "Production Server", "Mobile App").
@@ -35,10 +37,10 @@ public class ApiKeyEntity
     required public string KeyPrefix { get; set; }
 
     /// <summary>
-    /// Array of permission scopes granted to this key (e.g., ["read", "write", "admin"]).
-    /// Allows fine-grained access control per key.
+    /// Comma-separated permission scopes granted to this key (e.g., "read,write,admin").
+    /// DDD-PHASE2: Changed from string[] to string for domain simplicity.
     /// </summary>
-    public string[] Scopes { get; set; } = Array.Empty<string>();
+    public string Scopes { get; set; } = "read";
 
     /// <summary>
     /// Whether the API key is currently active.
@@ -71,9 +73,9 @@ public class ApiKeyEntity
 
     /// <summary>
     /// ID of the user who revoked this API key.
-    /// Null if not revoked or revoked by system.
+    /// DDD-PHASE2: Converted to Guid for domain alignment.
     /// </summary>
-    public string? RevokedBy { get; set; }
+    public Guid? RevokedBy { get; set; }
 
     /// <summary>
     /// Optional JSON metadata for the API key (e.g., IP restrictions, usage limits).

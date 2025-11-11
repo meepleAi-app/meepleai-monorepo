@@ -23,12 +23,17 @@ public class ChatService
 
     public async Task<ChatEntity?> GetChatByIdAsync(Guid chatId, string userId, CancellationToken ct = default)
     {
+        if (!Guid.TryParse(userId, out var userGuid))
+        {
+            return null;
+        }
+
         // PERF-03: Split query to avoid Include with OrderBy (causes client evaluation)
         var chat = await _db.Chats
             .Include(c => c.Game)
             .Include(c => c.Agent)
             .AsSplitQuery() // Optimize for multiple includes
-            .FirstOrDefaultAsync(c => c.Id == chatId && c.UserId == userId, ct);
+            .FirstOrDefaultAsync(c => c.Id == chatId && c.UserId == userGuid, ct);
 
         if (chat == null)
         {
@@ -47,12 +52,17 @@ public class ChatService
 
     public async Task<List<ChatEntity>> GetUserChatsAsync(string userId, int limit = 50, CancellationToken ct = default)
     {
+        if (!Guid.TryParse(userId, out var userGuid))
+        {
+            return new List<ChatEntity>();
+        }
+
         // PERF-03: Use AsSplitQuery to avoid cartesian explosion with multiple includes
         return await _db.Chats
             .Include(c => c.Game)
             .Include(c => c.Agent)
             .AsSplitQuery()
-            .Where(c => c.UserId == userId)
+            .Where(c => c.UserId == userGuid)
             .OrderByDescending(c => c.LastMessageAt ?? c.StartedAt)
             .Take(limit)
             .ToListAsync(ct);
@@ -60,12 +70,17 @@ public class ChatService
 
     public async Task<List<ChatEntity>> GetUserChatsByGameAsync(string userId, string gameId, int limit = 50, CancellationToken ct = default)
     {
+        if (!Guid.TryParse(userId, out var userGuid) || !Guid.TryParse(gameId, out var gameGuid))
+        {
+            return new List<ChatEntity>();
+        }
+
         // PERF-03: Use AsSplitQuery to avoid cartesian explosion with multiple includes
         return await _db.Chats
             .Include(c => c.Game)
             .Include(c => c.Agent)
             .AsSplitQuery()
-            .Where(c => c.UserId == userId && c.GameId == gameId)
+            .Where(c => c.UserId == userGuid && c.GameId == gameGuid)
             .OrderByDescending(c => c.LastMessageAt ?? c.StartedAt)
             .Take(limit)
             .ToListAsync(ct);
@@ -73,16 +88,21 @@ public class ChatService
 
     public async Task<ChatEntity> CreateChatAsync(string userId, string gameId, string agentId, CancellationToken ct = default)
     {
+        if (!Guid.TryParse(userId, out var userGuid) || !Guid.TryParse(gameId, out var gameGuid) || !Guid.TryParse(agentId, out var agentGuid))
+        {
+            throw new ArgumentException("Invalid ID format");
+        }
+
         // Verify game exists
-        var game = await _db.Games.FindAsync(new object[] { gameId }, ct);
+        var game = await _db.Games.FindAsync(new object[] { gameGuid }, ct);
         if (game == null)
         {
             throw new InvalidOperationException($"Game with ID '{gameId}' not found");
         }
 
         // Verify agent exists and belongs to the game
-        var agent = await _db.Agents.FindAsync(new object[] { agentId }, ct);
-        if (agent == null || agent.GameId != gameId)
+        var agent = await _db.Agents.FindAsync(new object[] { agentGuid }, ct);
+        if (agent == null || agent.GameId != gameGuid)
         {
             throw new InvalidOperationException($"Agent with ID '{agentId}' not found for game '{gameId}'");
         }
@@ -90,9 +110,9 @@ public class ChatService
         var chat = new ChatEntity
         {
             Id = Guid.NewGuid(),
-            UserId = userId,
-            GameId = gameId,
-            AgentId = agentId,
+            UserId = userGuid,
+            GameId = gameGuid,
+            AgentId = agentGuid,
             StartedAt = _timeProvider.GetUtcNow().UtcDateTime,
             LastMessageAt = null
         };
@@ -114,8 +134,9 @@ public class ChatService
         object? metadata = null,
         CancellationToken ct = default)
     {
+        var userGuid = Guid.Parse(userId);
         var chat = await _db.Chats.FindAsync(new object[] { chatId }, ct);
-        if (chat == null || chat.UserId != userId)
+        if (chat == null || chat.UserId != userGuid)
         {
             throw new InvalidOperationException($"Chat with ID '{chatId}' not found or access denied");
         }
@@ -129,7 +150,7 @@ public class ChatService
         {
             Id = Guid.NewGuid(),
             ChatId = chatId,
-            UserId = level == "user" ? userId : null, // CHAT-06: Only user messages have UserId
+            UserId = level == "user" ? userGuid : null, // CHAT-06: Only user messages have UserId
             SequenceNumber = maxSequence + 1, // CHAT-06: Auto-increment sequence
             Level = level,
             Message = message,
@@ -151,13 +172,14 @@ public class ChatService
 
     public async Task<bool> DeleteChatAsync(Guid chatId, string userId, CancellationToken ct = default)
     {
+        var userGuid = Guid.Parse(userId);
         var chat = await _db.Chats.FindAsync(new object[] { chatId }, ct);
         if (chat == null)
         {
             return false;
         }
 
-        if (chat.UserId != userId)
+        if (chat.UserId != userGuid)
         {
             throw new UnauthorizedAccessException($"User {userId} does not have permission to delete chat {chatId}");
         }
@@ -172,8 +194,9 @@ public class ChatService
 
     public async Task<List<ChatLogEntity>> GetChatHistoryAsync(Guid chatId, string userId, int limit = 100, CancellationToken ct = default)
     {
+        var userGuid = Guid.Parse(userId);
         var chat = await _db.Chats.FindAsync(new object[] { chatId }, ct);
-        if (chat == null || chat.UserId != userId)
+        if (chat == null || chat.UserId != userGuid)
         {
             throw new InvalidOperationException($"Chat with ID '{chatId}' not found or access denied");
         }
@@ -187,17 +210,19 @@ public class ChatService
 
     public async Task<List<AgentEntity>> GetAgentsForGameAsync(string gameId, CancellationToken ct = default)
     {
+        var gameGuid = Guid.Parse(gameId);
         return await _db.Agents
-            .Where(a => a.GameId == gameId)
+            .Where(a => a.GameId == gameGuid)
             .OrderBy(a => a.Name)
             .ToListAsync(ct);
     }
 
     public async Task<AgentEntity?> GetOrCreateAgentAsync(string gameId, string agentKind, CancellationToken ct = default)
     {
+        var gameGuid = Guid.Parse(gameId);
         // Try to find existing agent
         var agent = await _db.Agents
-            .FirstOrDefaultAsync(a => a.GameId == gameId && a.Kind == agentKind, ct);
+            .FirstOrDefaultAsync(a => a.GameId == gameGuid && a.Kind == agentKind, ct);
 
         if (agent != null)
         {
@@ -216,8 +241,8 @@ public class ChatService
 
         agent = new AgentEntity
         {
-            Id = agentId,
-            GameId = gameId,
+            Id = Guid.NewGuid(),
+            GameId = gameGuid,
             Name = agentName,
             Kind = agentKind,
             CreatedAt = _timeProvider.GetUtcNow().UtcDateTime
@@ -244,6 +269,7 @@ public class ChatService
     /// <exception cref="KeyNotFoundException">Message not found</exception>
     public async Task<ChatLogEntity> UpdateMessageAsync(Guid chatId, Guid messageId, string newContent, string userId, CancellationToken ct = default)
     {
+        var userGuid = Guid.Parse(userId);
         // Load message with EF tracking enabled
         var message = await _db.ChatLogs
             .FirstOrDefaultAsync(m => m.Id == messageId && m.ChatId == chatId, ct);
@@ -260,7 +286,7 @@ public class ChatService
         }
 
         // User can only edit their own messages
-        if (message.UserId != userId)
+        if (message.UserId != userGuid)
         {
             throw new UnauthorizedAccessException("You can only edit your own messages");
         }
@@ -314,6 +340,7 @@ public class ChatService
     /// <exception cref="KeyNotFoundException">Message not found</exception>
     public async Task<bool> DeleteMessageAsync(Guid chatId, Guid messageId, string userId, bool isAdmin = false, CancellationToken ct = default)
     {
+        var userGuid = Guid.Parse(userId);
         // Load message with IgnoreQueryFilters to include already soft-deleted messages
         var message = await _db.ChatLogs
             .IgnoreQueryFilters()
@@ -331,7 +358,7 @@ public class ChatService
         }
 
         // Authorization: user must own the message OR be admin
-        if (!isAdmin && message.UserId != userId)
+        if (!isAdmin && message.UserId != userGuid)
         {
             throw new UnauthorizedAccessException("You can only delete your own messages");
         }
@@ -342,7 +369,7 @@ public class ChatService
         // Soft delete the message
         message.IsDeleted = true;
         message.DeletedAt = _timeProvider.GetUtcNow().UtcDateTime;
-        message.DeletedByUserId = userId;
+        message.DeletedByUserId = userGuid;
 
         // Invalidate subsequent AI responses
         await InvalidateSubsequentMessagesAsync(chatId, message.SequenceNumber, ct);

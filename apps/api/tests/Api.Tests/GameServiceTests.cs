@@ -56,12 +56,13 @@ public class GameServiceTests : IDisposable
     public async Task CreateGameAsync_WhenDuplicateId_Throws()
     {
         await using var dbContext = CreateInMemoryContext();
-        dbContext.Games.Add(new GameEntity { Id = "duplicate", Name = "Existing" });
+        var duplicateId = Guid.NewGuid();
+        dbContext.Games.Add(new GameEntity { Id = duplicateId, Name = "Existing" });
         await dbContext.SaveChangesAsync();
 
         var service = new GameService(dbContext);
 
-        var act = async () => await service.CreateGameAsync("Another", "duplicate");
+        var act = async () => await service.CreateGameAsync("Another", duplicateId.ToString());
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
@@ -69,12 +70,12 @@ public class GameServiceTests : IDisposable
     public async Task CreateGameAsync_WhenDuplicateName_Throws()
     {
         await using var dbContext = CreateInMemoryContext();
-        dbContext.Games.Add(new GameEntity { Id = "existing", Name = "Existing Game" });
+        dbContext.Games.Add(new GameEntity { Id = Guid.NewGuid(), Name = "Existing Game" });
         await dbContext.SaveChangesAsync();
 
         var service = new GameService(dbContext);
 
-        var act = async () => await service.CreateGameAsync("Existing Game", "new-id");
+        var act = async () => await service.CreateGameAsync("Existing Game", null);
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
 
@@ -96,9 +97,9 @@ public class GameServiceTests : IDisposable
     {
         await using var dbContext = CreateInMemoryContext();
         dbContext.Games.AddRange(
-            new GameEntity { Id = "b", Name = "Bravo" },
-            new GameEntity { Id = "c", Name = "Charlie" },
-            new GameEntity { Id = "a", Name = "Alpha" });
+            new GameEntity { Id = Guid.NewGuid(), Name = "Bravo" },
+            new GameEntity { Id = Guid.NewGuid(), Name = "Charlie" },
+            new GameEntity { Id = Guid.NewGuid(), Name = "Alpha" });
         await dbContext.SaveChangesAsync();
 
         var service = new GameService(dbContext);

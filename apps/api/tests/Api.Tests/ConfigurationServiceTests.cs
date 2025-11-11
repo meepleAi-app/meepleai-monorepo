@@ -63,7 +63,7 @@ public class ConfigurationServiceTests : IDisposable
             Id = _testUserId,
             Email = "admin@test.com",
             DisplayName = "Test Admin",
-            Role = UserRole.Admin,
+            Role = "admin",
             PasswordHash = "hash",
             CreatedAt = DateTime.UtcNow
         });

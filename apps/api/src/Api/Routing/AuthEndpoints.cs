@@ -108,7 +108,8 @@ public static class AuthEndpoints
                 }
 
                 // AUTH-07: Check if 2FA is enabled
-                var user = await db.Users.FindAsync(result.User.Id);
+                var userIdGuid = Guid.Parse(result.User.Id);
+                var user = await db.Users.FindAsync(userIdGuid);
                 if (user == null)
                 {
                     logger.LogError("User {UserId} not found after successful login", result.User.Id);
@@ -119,7 +120,7 @@ public static class AuthEndpoints
                 {
                     // Create temp session for 2FA verification
                     var tempToken = await tempSessionService.CreateTempSessionAsync(
-                        result.User.Id,
+                        userIdGuid,
                         context.Connection.RemoteIpAddress?.ToString());
 
                     logger.LogInformation("User {UserId} requires 2FA, temp session created", result.User.Id);
@@ -214,12 +215,17 @@ public static class AuthEndpoints
     {
         group.MapPost("/auth/2fa/setup", async (HttpContext context, ITotpService totpService, ILogger<Program> logger) =>
         {
-            var userId = context.User.FindFirst("sub")?.Value;
+            var userIdStr = context.User.FindFirst("sub")?.Value;
             var userEmail = context.User.FindFirst("email")?.Value;
 
-            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(userEmail))
+            if (string.IsNullOrEmpty(userIdStr) || string.IsNullOrEmpty(userEmail))
             {
                 return Results.Unauthorized();
+            }
+
+            if (!Guid.TryParse(userIdStr, out var userId))
+            {
+                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
             }
 
             try
@@ -246,10 +252,15 @@ public static class AuthEndpoints
 
         group.MapPost("/auth/2fa/enable", async (TwoFactorEnableRequest request, HttpContext context, ITotpService totpService, ILogger<Program> logger) =>
         {
-            var userId = context.User.FindFirst("sub")?.Value;
-            if (string.IsNullOrEmpty(userId))
+            var userIdStr = context.User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userIdStr))
             {
                 return Results.Unauthorized();
+            }
+
+            if (!Guid.TryParse(userIdStr, out var userId))
+            {
+                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
             }
 
             try
@@ -295,12 +306,14 @@ public static class AuthEndpoints
             try
             {
                 // Validate and consume temp session (5-min TTL, single-use)
-                var userId = await tempSessionService.ValidateAndConsumeTempSessionAsync(request.SessionToken);
-                if (userId == null)
+                var userIdNullable = await tempSessionService.ValidateAndConsumeTempSessionAsync(request.SessionToken);
+                if (userIdNullable == null)
                 {
                     logger.LogWarning("2FA verify failed: Invalid temp session");
                     return Results.Unauthorized();
                 }
+
+                var userId = userIdNullable.Value;
 
                 // Verify TOTP or backup code
                 var isValid = await totpService.VerifyCodeAsync(userId, request.Code);
@@ -316,7 +329,7 @@ public static class AuthEndpoints
                 }
 
                 // Create actual session after 2FA verification
-                var loginResult = await authService.CreateSessionForUserAsync(userId,
+                var loginResult = await authService.CreateSessionForUserAsync(userId.ToString(),
                     context.Connection.RemoteIpAddress?.ToString(),
                     context.Request.Headers.UserAgent.ToString());
                 if (loginResult != null)
@@ -345,10 +358,15 @@ public static class AuthEndpoints
 
         group.MapPost("/auth/2fa/disable", async (TwoFactorDisableRequest request, HttpContext context, ITotpService totpService, ILogger<Program> logger) =>
         {
-            var userId = context.User.FindFirst("sub")?.Value;
-            if (string.IsNullOrEmpty(userId))
+            var userIdStr = context.User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userIdStr))
             {
                 return Results.Unauthorized();
+            }
+
+            if (!Guid.TryParse(userIdStr, out var userId))
+            {
+                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
             }
 
             try
@@ -381,10 +399,15 @@ public static class AuthEndpoints
 
         group.MapGet("/users/me/2fa/status", async (HttpContext context, ITotpService totpService, ILogger<Program> logger) =>
         {
-            var userId = context.User.FindFirst("sub")?.Value;
-            if (string.IsNullOrEmpty(userId))
+            var userIdStr = context.User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userIdStr))
             {
                 return Results.Unauthorized();
+            }
+
+            if (!Guid.TryParse(userIdStr, out var userId))
+            {
+                return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
             }
 
             try
@@ -552,7 +575,7 @@ Rate limited to 10 requests per minute per IP address.
                 return Results.Unauthorized();
             }
 
-            await oauthService.UnlinkOAuthAccountAsync(session.User.Id, provider);
+            await oauthService.UnlinkOAuthAccountAsync(Guid.Parse(session.User.Id), provider);
             return Results.NoContent();
         })
         .WithName("UnlinkOAuthAccount")
@@ -580,7 +603,7 @@ User must have at least one authentication method remaining (password or another
                 return Results.Unauthorized();
             }
 
-            var accounts = await oauthService.GetLinkedAccountsAsync(session.User.Id);
+            var accounts = await oauthService.GetLinkedAccountsAsync(Guid.Parse(session.User.Id));
             return Results.Json(accounts);
         })
         .WithName("GetLinkedOAuthAccounts")
@@ -721,7 +744,7 @@ User must have at least one authentication method remaining (password or another
                 return Results.Unauthorized();
             }
 
-            var sessions = await sessionManagement.GetUserSessionsAsync(session.User.Id, ct);
+            var sessions = await sessionManagement.GetUserSessionsAsync(Guid.Parse(session.User.Id), ct);
             return Results.Json(sessions);
         });
     }
@@ -823,19 +846,21 @@ User must have at least one authentication method remaining (password or another
                 }
 
                 // Tuple destructuring for userId
-                var (success, userId) = await passwordResetService.ResetPasswordAsync(
+                var (success, userIdNullable) = await passwordResetService.ResetPasswordAsync(
                     payload.Token,
                     payload.NewPassword,
                     ct);
 
-                if (!success || userId == null)
+                if (!success || userIdNullable == null)
                 {
                     return Results.NotFound(new { error = "Invalid or expired token" });
                 }
 
+                var userId = userIdNullable.Value;
+
                 // Create new session for auto-login
                 var sessionResult = await authService.CreateSessionForUserAsync(
-                    userId,
+                    userId.ToString(),
                     context.Connection.RemoteIpAddress?.ToString(),
                     context.Request.Headers.UserAgent.ToString(),
                     ct);

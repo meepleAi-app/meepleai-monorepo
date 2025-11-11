@@ -261,7 +261,7 @@ public class CacheWarmingService : BackgroundService
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         var gameIds = await dbContext.Games
-            .Select(g => Guid.Parse(g.Id))
+            .Select(g => g.Id)
             .ToListAsync(cancellationToken);
 
         return gameIds;

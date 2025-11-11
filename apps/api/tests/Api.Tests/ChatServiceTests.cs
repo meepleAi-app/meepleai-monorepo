@@ -65,7 +65,7 @@ public class ChatServiceTests
     {
         // Given: Valid game and agent exist
         await using var dbContext = CreateInMemoryContext();
-        var user = new UserEntity { Id = "user-123", Email = "user@test.com", PasswordHash = "hash", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = "user-123", Email = "user@test.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow };
         var game = new GameEntity { Id = "catan", Name = "Catan" };
         var agent = new AgentEntity { Id = "catan-qa", GameId = "catan", Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
         dbContext.Users.Add(user);
@@ -136,7 +136,7 @@ public class ChatServiceTests
     public async Task GetChatByIdAsync_WhenOwner_ReturnsChat()
     {
         await using var dbContext = CreateInMemoryContext();
-        var user = new UserEntity { Id = "user-123", Email = "user@test.com", PasswordHash = "hash", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = "user-123", Email = "user@test.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow };
         var game = new GameEntity { Id = "catan", Name = "Catan" };
         var agent = new AgentEntity { Id = "catan-qa", GameId = "catan", Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
         var chat = new ChatEntity
@@ -172,8 +172,8 @@ public class ChatServiceTests
     public async Task GetChatByIdAsync_WhenNotOwner_ReturnsNull()
     {
         await using var dbContext = CreateInMemoryContext();
-        var user1 = new UserEntity { Id = "user-123", Email = "user-123@test.com", PasswordHash = "hash", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
-        var user2 = new UserEntity { Id = "user-456", Email = "user-456@test.com", PasswordHash = "hash", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
+        var user1 = new UserEntity { Id = "user-123", Email = "user-123@test.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow };
+        var user2 = new UserEntity { Id = "user-456", Email = "user-456@test.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow };
         var game = new GameEntity { Id = "catan", Name = "Catan" };
         var agent = new AgentEntity { Id = "catan-qa", GameId = "catan", Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
         var chat = new ChatEntity
@@ -209,7 +209,7 @@ public class ChatServiceTests
     public async Task AddMessageAsync_WhenValidChat_AddsMessageAndUpdatesTimestamp()
     {
         await using var dbContext = CreateInMemoryContext();
-        var user = new UserEntity { Id = "user-123", Email = "user-123@test.com", PasswordHash = "hash", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = "user-123", Email = "user-123@test.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow };
         var game = new GameEntity { Id = "catan", Name = "Catan" };
         var agent = new AgentEntity { Id = "catan-qa", GameId = "catan", Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
         var chat = new ChatEntity
@@ -258,7 +258,7 @@ public class ChatServiceTests
     public async Task DeleteChatAsync_WhenOwner_DeletesChat()
     {
         await using var dbContext = CreateInMemoryContext();
-        var user = new UserEntity { Id = "user-123", Email = "user-123@test.com", PasswordHash = "hash", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = "user-123", Email = "user-123@test.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow };
         var game = new GameEntity { Id = "catan", Name = "Catan" };
         var agent = new AgentEntity { Id = "catan-qa", GameId = "catan", Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
         var chat = new ChatEntity
@@ -293,8 +293,8 @@ public class ChatServiceTests
     public async Task DeleteChatAsync_WhenNotOwner_ThrowsUnauthorized()
     {
         await using var dbContext = CreateInMemoryContext();
-        var user1 = new UserEntity { Id = "user-123", Email = "user-123@test.com", PasswordHash = "hash", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
-        var user2 = new UserEntity { Id = "user-456", Email = "user-456@test.com", PasswordHash = "hash", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
+        var user1 = new UserEntity { Id = "user-123", Email = "user-123@test.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow };
+        var user2 = new UserEntity { Id = "user-456", Email = "user-456@test.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow };
         var game = new GameEntity { Id = "catan", Name = "Catan" };
         var agent = new AgentEntity { Id = "catan-qa", GameId = "catan", Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
         var chat = new ChatEntity
@@ -329,7 +329,7 @@ public class ChatServiceTests
     public async Task GetUserChatsAsync_ReturnsChatsOrderedByRecency()
     {
         await using var dbContext = CreateInMemoryContext();
-        var user = new UserEntity { Id = "user-123", Email = "user-123@test.com", PasswordHash = "hash", Role = UserRole.User, CreatedAt = DateTime.UtcNow };
+        var user = new UserEntity { Id = "user-123", Email = "user-123@test.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow };
         var game = new GameEntity { Id = "catan", Name = "Catan" };
         var agent = new AgentEntity { Id = "catan-qa", GameId = "catan", Name = "Q&A Agent", Kind = "qa", CreatedAt = DateTime.UtcNow };
         dbContext.Users.Add(user);

@@ -39,17 +39,20 @@ public partial class RuleCommentService : IRuleCommentService
         string version,
         int? lineNumber,
         string commentText,
-        string userId)
+        Guid userId)
     {
         ValidateCommentText(commentText);
         ValidateLineNumber(lineNumber);
 
-        // Extract and resolve mentions
-        var mentionedUserIds = await ExtractMentionedUsersAsync(commentText);
+        // Extract and resolve mentions (returns List<string>, convert to List<Guid>)
+        var mentionedUserIdsStr = await ExtractMentionedUsersAsync(commentText);
+        var mentionedUserIds = mentionedUserIdsStr
+            .Select(id => Guid.Parse(id))
+            .ToList();
 
         var comment = new RuleSpecCommentEntity
         {
-            GameId = gameId,
+            GameId = Guid.Parse(gameId),
             Version = version,
             LineNumber = lineNumber,
             CommentText = commentText,
@@ -73,7 +76,7 @@ public partial class RuleCommentService : IRuleCommentService
     public async Task<RuleCommentDto> ReplyToCommentAsync(
         Guid parentCommentId,
         string commentText,
-        string userId)
+        Guid userId)
     {
         ValidateCommentText(commentText);
 
@@ -91,8 +94,11 @@ public partial class RuleCommentService : IRuleCommentService
                 $"Maximum thread depth of {MaxThreadDepth} exceeded. Cannot reply to this comment.");
         }
 
-        // Extract and resolve mentions
-        var mentionedUserIds = await ExtractMentionedUsersAsync(commentText);
+        // Extract and resolve mentions (returns List<string>, convert to List<Guid>)
+        var mentionedUserIdsStr = await ExtractMentionedUsersAsync(commentText);
+        var mentionedUserIds = mentionedUserIdsStr
+            .Select(id => Guid.Parse(id))
+            .ToList();
 
         // Create reply inheriting context from parent
         var reply = new RuleSpecCommentEntity
@@ -138,7 +144,7 @@ public partial class RuleCommentService : IRuleCommentService
                     .ThenInclude(rr => rr.ResolvedByUser)
             .Include(c => c.ResolvedByUser)
             .AsNoTracking()
-            .Where(c => c.GameId == gameId && c.Version == version && c.ParentCommentId == null);
+            .Where(c => c.GameId.ToString() == gameId && c.Version == version && c.ParentCommentId == null);
 
         if (!includeResolved)
         {
@@ -167,7 +173,7 @@ public partial class RuleCommentService : IRuleCommentService
                 .ThenInclude(r => r.ResolvedByUser)
             .Include(c => c.ResolvedByUser)
             .AsNoTracking()
-            .Where(c => c.GameId == gameId
+            .Where(c => c.GameId.ToString() == gameId
                 && c.Version == version
                 && c.LineNumber == lineNumber
                 && c.ParentCommentId == null) // Only top-level comments for this line
@@ -179,7 +185,7 @@ public partial class RuleCommentService : IRuleCommentService
 
     public async Task<RuleCommentDto> ResolveCommentAsync(
         Guid commentId,
-        string resolvedByUserId,
+        Guid resolvedByUserId,
         bool resolveReplies = false)
     {
         var comment = await _dbContext.RuleSpecComments
@@ -280,7 +286,7 @@ public partial class RuleCommentService : IRuleCommentService
                 .AsNoTracking()
                 .Where(u => (u.DisplayName != null && mentionedUsernames.Contains(u.DisplayName.ToLower()))
                     || (u.Email != null && mentionedUsernames.Any(m => u.Email.ToLower().StartsWith(m))))
-                .Select(u => u.Id)
+                .Select(u => u.Id.ToString())
                 .Distinct()
                 .ToListAsync();
 
@@ -345,7 +351,7 @@ public partial class RuleCommentService : IRuleCommentService
         return depth;
     }
 
-    private async Task ResolveRepliesRecursiveAsync(IEnumerable<RuleSpecCommentEntity> replies, string resolvedByUserId)
+    private async Task ResolveRepliesRecursiveAsync(IEnumerable<RuleSpecCommentEntity> replies, Guid resolvedByUserId)
     {
         foreach (var reply in replies)
         {
@@ -370,19 +376,19 @@ public partial class RuleCommentService : IRuleCommentService
     {
         return new RuleCommentDto(
             Id: entity.Id,
-            GameId: entity.GameId,
+            GameId: entity.GameId.ToString(),
             Version: entity.Version,
             LineNumber: entity.LineNumber,
             LineContext: entity.LineContext,
             ParentCommentId: entity.ParentCommentId,
             CommentText: entity.CommentText,
-            UserId: entity.UserId,
+            UserId: entity.UserId.ToString(),
             UserDisplayName: entity.User?.DisplayName ?? "Unknown",
             IsResolved: entity.IsResolved,
-            ResolvedByUserId: entity.ResolvedByUserId,
+            ResolvedByUserId: entity.ResolvedByUserId?.ToString(),
             ResolvedByDisplayName: entity.ResolvedByUser?.DisplayName,
             ResolvedAt: entity.ResolvedAt,
-            MentionedUserIds: entity.MentionedUserIds,
+            MentionedUserIds: entity.MentionedUserIds.Select(id => id.ToString()).ToList(),
             Replies: entity.Replies?.Select(MapToDto).ToList() ?? new List<RuleCommentDto>(),
             CreatedAt: entity.CreatedAt,
             UpdatedAt: entity.UpdatedAt

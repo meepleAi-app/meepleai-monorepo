@@ -49,7 +49,7 @@ public class TotpService : ITotpService
     /// <summary>
     /// Generate TOTP setup with secret, QR code, and backup codes
     /// </summary>
-    public async Task<TotpSetupResponse> GenerateSetupAsync(string userId, string userEmail)
+    public async Task<TotpSetupResponse> GenerateSetupAsync(Guid userId, string userEmail)
     {
         var user = await _dbContext.Users.FindAsync(userId);
         if (user == null)
@@ -88,7 +88,7 @@ public class TotpService : ITotpService
             var codeHash = HashBackupCode(code);
             _dbContext.UserBackupCodes.Add(new UserBackupCodeEntity
             {
-                Id = Guid.NewGuid().ToString(),
+                Id = Guid.NewGuid(),
                 UserId = userId,
                 CodeHash = codeHash,
                 IsUsed = false,
@@ -97,7 +97,7 @@ public class TotpService : ITotpService
         }
         await _dbContext.SaveChangesAsync();
 
-        await _auditService.LogAsync(userId, "TwoFactorSetup", "TwoFactor", userId, "Success",
+        await _auditService.LogAsync(userId.ToString(), "TwoFactorSetup", "TwoFactor", userId.ToString(), "Success",
             "User generated 2FA setup");
         _logger.LogInformation("2FA setup generated for user {UserId}", userId);
 
@@ -112,7 +112,7 @@ public class TotpService : ITotpService
     /// <summary>
     /// Enable 2FA after verifying TOTP code (prevents misconfiguration)
     /// </summary>
-    public async Task<bool> EnableTwoFactorAsync(string userId, string totpCode)
+    public async Task<bool> EnableTwoFactorAsync(Guid userId, string totpCode)
     {
         var user = await _dbContext.Users.FindAsync(userId);
         if (user == null)
@@ -134,7 +134,7 @@ public class TotpService : ITotpService
         if (!isValid)
         {
             _logger.LogWarning("2FA enable failed: Invalid code for user {UserId}", userId);
-            await _auditService.LogAsync(userId, "TwoFactorEnable", "TwoFactor", userId, "Failed",
+            await _auditService.LogAsync(userId.ToString(), "TwoFactorEnable", "TwoFactor", userId.ToString(), "Failed",
                 "Invalid verification code");
             return false;
         }
@@ -144,7 +144,7 @@ public class TotpService : ITotpService
         user.TwoFactorEnabledAt = _timeProvider.GetUtcNow().UtcDateTime;
         await _dbContext.SaveChangesAsync();
 
-        await _auditService.LogAsync(userId, "TwoFactorEnable", "TwoFactor", userId, "Success",
+        await _auditService.LogAsync(userId.ToString(), "TwoFactorEnable", "TwoFactor", userId.ToString(), "Success",
             "User enabled 2FA");
         _logger.LogInformation("2FA enabled for user {UserId}", userId);
 
@@ -154,7 +154,7 @@ public class TotpService : ITotpService
     /// <summary>
     /// Verify TOTP code during login
     /// </summary>
-    public async Task<bool> VerifyCodeAsync(string userId, string code)
+    public async Task<bool> VerifyCodeAsync(Guid userId, string code)
     {
         var user = await _dbContext.Users.FindAsync(userId);
         if (user == null || !user.IsTwoFactorEnabled || string.IsNullOrEmpty(user.TotpSecretEncrypted))
@@ -170,7 +170,7 @@ public class TotpService : ITotpService
         if (!isValid)
         {
             _logger.LogWarning("2FA verify failed: Invalid TOTP code for user {UserId}", userId);
-            await _auditService.LogAsync(userId, "TwoFactorVerify", "TwoFactor", userId, "Failed",
+            await _auditService.LogAsync(userId.ToString(), "TwoFactorVerify", "TwoFactor", userId.ToString(), "Failed",
                 "Failed TOTP code attempt");
         }
         else
@@ -185,7 +185,7 @@ public class TotpService : ITotpService
     /// Verify backup code and mark as used (single-use enforcement)
     /// SECURITY FIX: Uses transaction with Serializable isolation to prevent race conditions
     /// </summary>
-    public async Task<bool> VerifyBackupCodeAsync(string userId, string backupCode)
+    public async Task<bool> VerifyBackupCodeAsync(Guid userId, string backupCode)
     {
         var user = await _dbContext.Users.FindAsync(userId);
         if (user == null || !user.IsTwoFactorEnabled)
@@ -206,7 +206,7 @@ public class TotpService : ITotpService
             if (!backupCodes.Any())
             {
                 _logger.LogWarning("Backup code verify failed: No unused codes for user {UserId}", userId);
-                await _auditService.LogAsync(userId, "BackupCodeVerify", "TwoFactor", userId, "Failed",
+                await _auditService.LogAsync(userId.ToString(), "BackupCodeVerify", "TwoFactor", userId.ToString(), "Failed",
                     "No unused backup codes available");
                 return false;
             }
@@ -224,7 +224,7 @@ public class TotpService : ITotpService
                     await transaction.CommitAsync();
 
                     var remainingCodes = backupCodes.Count - 1;
-                    await _auditService.LogAsync(userId, "BackupCodeUsed", "TwoFactor", userId, "Success",
+                    await _auditService.LogAsync(userId.ToString(), "BackupCodeUsed", "TwoFactor", userId.ToString(), "Success",
                         $"User authenticated with backup code ({remainingCodes} remaining)");
                     _logger.LogInformation("Backup code used for user {UserId}, {Remaining} codes remaining",
                         userId, remainingCodes);
@@ -242,7 +242,7 @@ public class TotpService : ITotpService
 
             // No match found
             _logger.LogWarning("Backup code verify failed: Invalid code for user {UserId}", userId);
-            await _auditService.LogAsync(userId, "BackupCodeVerify", "TwoFactor", userId, "Failed",
+            await _auditService.LogAsync(userId.ToString(), "BackupCodeVerify", "TwoFactor", userId.ToString(), "Failed",
                 "Failed backup code attempt");
             return false;
         }
@@ -263,7 +263,7 @@ public class TotpService : ITotpService
     /// <summary>
     /// Disable 2FA with password and code verification
     /// </summary>
-    public async Task DisableTwoFactorAsync(string userId, string password, string totpOrBackupCode)
+    public async Task DisableTwoFactorAsync(Guid userId, string password, string totpOrBackupCode)
     {
         var user = await _dbContext.Users.FindAsync(userId);
         if (user == null)
@@ -276,7 +276,7 @@ public class TotpService : ITotpService
         if (user.PasswordHash == null)
         {
             _logger.LogWarning("2FA disable failed: OAuth-only user {UserId} cannot use password auth", userId);
-            await _auditService.LogAsync(userId, "TwoFactorDisable", "TwoFactor", userId, "Failed",
+            await _auditService.LogAsync(userId.ToString(), "TwoFactorDisable", "TwoFactor", userId.ToString(), "Failed",
                 "OAuth user - password authentication not available");
             throw new UnauthorizedAccessException("OAuth users must re-authenticate via OAuth provider");
         }
@@ -286,7 +286,7 @@ public class TotpService : ITotpService
         if (!isPasswordValid)
         {
             _logger.LogWarning("2FA disable failed: Invalid password for user {UserId}", userId);
-            await _auditService.LogAsync(userId, "TwoFactorDisable", "TwoFactor", userId, "Failed",
+            await _auditService.LogAsync(userId.ToString(), "TwoFactorDisable", "TwoFactor", userId.ToString(), "Failed",
                 "Invalid password");
             throw new UnauthorizedAccessException("Invalid password");
         }
@@ -298,7 +298,7 @@ public class TotpService : ITotpService
         if (!isTotpValid && !isBackupValid)
         {
             _logger.LogWarning("2FA disable failed: Invalid verification code for user {UserId}", userId);
-            await _auditService.LogAsync(userId, "TwoFactorDisable", "TwoFactor", userId, "Failed",
+            await _auditService.LogAsync(userId.ToString(), "TwoFactorDisable", "TwoFactor", userId.ToString(), "Failed",
                 "Invalid verification code");
             throw new UnauthorizedAccessException("Invalid verification code");
         }
@@ -316,7 +316,7 @@ public class TotpService : ITotpService
 
         await _dbContext.SaveChangesAsync();
 
-        await _auditService.LogAsync(userId, "TwoFactorDisable", "TwoFactor", userId, "Success",
+        await _auditService.LogAsync(userId.ToString(), "TwoFactorDisable", "TwoFactor", userId.ToString(), "Success",
             "User disabled 2FA");
         _logger.LogInformation("2FA disabled for user {UserId}", userId);
     }
@@ -324,7 +324,7 @@ public class TotpService : ITotpService
     /// <summary>
     /// Get 2FA status for user
     /// </summary>
-    public async Task<TwoFactorStatusResponse> GetTwoFactorStatusAsync(string userId)
+    public async Task<TwoFactorStatusResponse> GetTwoFactorStatusAsync(Guid userId)
     {
         var user = await _dbContext.Users.FindAsync(userId);
         if (user == null)

@@ -90,7 +90,7 @@ public class ApiKeyManagementServiceTests : IDisposable
             var request = new CreateApiKeyRequest
             {
                 KeyName = $"Test Key {i}",
-                Scopes = new[] { "read" },
+                Scopes = "read",
                 Environment = "test"
             };
             await service.CreateApiKeyAsync(user.Id, request);
@@ -128,7 +128,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var activeKeyRequest = new CreateApiKeyRequest
         {
             KeyName = "Active Key",
-            Scopes = new[] { "read" },
+            Scopes = "read",
             Environment = "test"
         };
         await service.CreateApiKeyAsync(user.Id, activeKeyRequest);
@@ -137,7 +137,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var revokedKeyRequest = new CreateApiKeyRequest
         {
             KeyName = "Revoked Key",
-            Scopes = new[] { "read" },
+            Scopes = "read",
             Environment = "test"
         };
         var revokedKeyResponse = await service.CreateApiKeyAsync(user.Id, revokedKeyRequest);
@@ -174,7 +174,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var request = new CreateApiKeyRequest
         {
             KeyName = "Revoked Key",
-            Scopes = new[] { "read" },
+            Scopes = "read",
             Environment = "test"
         };
         var response = await service.CreateApiKeyAsync(user.Id, request);
@@ -275,7 +275,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var request = new CreateApiKeyRequest
         {
             KeyName = "User1 Key",
-            Scopes = new[] { "read" },
+            Scopes = "read",
             Environment = "test"
         };
         var response = await service.CreateApiKeyAsync(user1.Id, request);
@@ -351,7 +351,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var request = new CreateApiKeyRequest
         {
             KeyName = "Quota Key",
-            Scopes = new[] { "read" },
+            Scopes = "read",
             Environment = "test",
             MaxRequestsPerDay = 1000,
             MaxRequestsPerHour = 100
@@ -386,7 +386,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var request = new CreateApiKeyRequest
         {
             KeyName = "",
-            Scopes = new[] { "read" }
+            Scopes = "read"
         };
 
         // Act & Assert
@@ -416,7 +416,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var request = new CreateApiKeyRequest
         {
             KeyName = $"{environment} Key",
-            Scopes = new[] { "read" },
+            Scopes = "read",
             Environment = environment
         };
 
@@ -451,7 +451,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var createRequest = new CreateApiKeyRequest
         {
             KeyName = "Original Name",
-            Scopes = new[] { "read" },
+            Scopes = "read",
             Environment = "test"
         };
         var createResponse = await service.CreateApiKeyAsync(user.Id, createRequest);
@@ -565,7 +565,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var createRequest = new CreateApiKeyRequest
         {
             KeyName = "User1 Key",
-            Scopes = new[] { "read" },
+            Scopes = "read",
             Environment = "test"
         };
         var createResponse = await service.CreateApiKeyAsync(user1.Id, createRequest);
@@ -602,7 +602,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var createRequest = new CreateApiKeyRequest
         {
             KeyName = "Quota Key",
-            Scopes = new[] { "read" },
+            Scopes = "read",
             Environment = "test"
         };
         var createResponse = await service.CreateApiKeyAsync(user.Id, createRequest);
@@ -647,7 +647,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var createRequest = new CreateApiKeyRequest
         {
             KeyName = "To Be Revoked",
-            Scopes = new[] { "read" },
+            Scopes = "read",
             Environment = "test"
         };
         var createResponse = await service.CreateApiKeyAsync(user.Id, createRequest);
@@ -794,7 +794,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var createRequest = new CreateApiKeyRequest
         {
             KeyName = "User1 Key",
-            Scopes = new[] { "read" },
+            Scopes = "read",
             Environment = "test"
         };
         var createResponse = await service.CreateApiKeyAsync(user1.Id, createRequest);
@@ -832,7 +832,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var createRequest = new CreateApiKeyRequest
         {
             KeyName = "To Be Deleted",
-            Scopes = new[] { "read" },
+            Scopes = "read",
             Environment = "test"
         };
         var createResponse = await service.CreateApiKeyAsync(user.Id, createRequest);
@@ -896,7 +896,7 @@ public class ApiKeyManagementServiceTests : IDisposable
         var createRequest = new CreateApiKeyRequest
         {
             KeyName = "Usage Tracking Key",
-            Scopes = new[] { "read" },
+            Scopes = "read",
             Environment = "test",
             MaxRequestsPerDay = 1000,
             MaxRequestsPerHour = 100
@@ -961,7 +961,7 @@ public class ApiKeyManagementServiceTests : IDisposable
             Email = email,
             DisplayName = "Test User",
             PasswordHash = "dummy-hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
 

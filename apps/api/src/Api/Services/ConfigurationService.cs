@@ -81,7 +81,7 @@ public class ConfigurationService : IConfigurationService
         );
     }
 
-    public async Task<SystemConfigurationDto?> GetConfigurationByIdAsync(string id)
+    public async Task<SystemConfigurationDto?> GetConfigurationByIdAsync(Guid id)
     {
         var config = await _dbContext.SystemConfigurations
             .Include(c => c.CreatedBy)
@@ -150,7 +150,7 @@ public class ConfigurationService : IConfigurationService
 #pragma warning restore CA1031
     }
 
-    public async Task<SystemConfigurationDto> CreateConfigurationAsync(CreateConfigurationRequest request, string userId)
+    public async Task<SystemConfigurationDto> CreateConfigurationAsync(CreateConfigurationRequest request, Guid userId)
     {
         // Validate uniqueness of (key, environment)
         var exists = await _dbContext.SystemConfigurations
@@ -169,10 +169,9 @@ public class ConfigurationService : IConfigurationService
             throw new InvalidOperationException(
                 $"Configuration validation failed: {string.Join(", ", validationResult.Errors)}");
         }
-
         var entity = new SystemConfigurationEntity
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             Key = request.Key,
             Value = request.Value,
             ValueType = request.ValueType,
@@ -203,10 +202,7 @@ public class ConfigurationService : IConfigurationService
         return MapToDto(entity);
     }
 
-    public async Task<SystemConfigurationDto?> UpdateConfigurationAsync(
-        string id,
-        UpdateConfigurationRequest request,
-        string userId)
+    public async Task<SystemConfigurationDto?> UpdateConfigurationAsync(Guid id, UpdateConfigurationRequest request, Guid userId)
     {
         var entity = await _dbContext.SystemConfigurations
             .Include(c => c.CreatedBy)
@@ -287,7 +283,7 @@ public class ConfigurationService : IConfigurationService
         return MapToDto(entity);
     }
 
-    public async Task<bool> DeleteConfigurationAsync(string id)
+    public async Task<bool> DeleteConfigurationAsync(Guid id)
     {
         var entity = await _dbContext.SystemConfigurations.FindAsync(id);
 
@@ -309,7 +305,7 @@ public class ConfigurationService : IConfigurationService
         return true;
     }
 
-    public async Task<SystemConfigurationDto?> ToggleConfigurationAsync(string id, bool isActive, string userId)
+    public async Task<SystemConfigurationDto?> ToggleConfigurationAsync(Guid id, bool isActive, Guid userId)
     {
         var entity = await _dbContext.SystemConfigurations
             .Include(c => c.CreatedBy)
@@ -343,9 +339,7 @@ public class ConfigurationService : IConfigurationService
         return MapToDto(entity);
     }
 
-    public async Task<IReadOnlyList<SystemConfigurationDto>> BulkUpdateConfigurationsAsync(
-        BulkConfigurationUpdateRequest request,
-        string userId)
+    public async Task<IReadOnlyList<SystemConfigurationDto>> BulkUpdateConfigurationsAsync(BulkConfigurationUpdateRequest request, Guid userId)
     {
         // Use a transaction for atomicity
         using var transaction = await _dbContext.Database.BeginTransactionAsync();
@@ -545,7 +539,7 @@ public class ConfigurationService : IConfigurationService
         );
     }
 
-    public async Task<int> ImportConfigurationsAsync(ConfigurationImportRequest request, string userId)
+    public async Task<int> ImportConfigurationsAsync(ConfigurationImportRequest request, Guid userId)
     {
         var importedCount = 0;
 
@@ -586,7 +580,7 @@ public class ConfigurationService : IConfigurationService
                     // Create new
                     var entity = new SystemConfigurationEntity
                     {
-                        Id = Guid.NewGuid().ToString(),
+                        Id = Guid.NewGuid(),
                         Key = configRequest.Key,
                         Value = configRequest.Value,
                         ValueType = configRequest.ValueType,
@@ -653,7 +647,7 @@ public class ConfigurationService : IConfigurationService
     }
 
     public async Task<IReadOnlyList<ConfigurationHistoryDto>> GetConfigurationHistoryAsync(
-        string configurationId,
+        Guid configurationId,
         int limit = 20)
     {
         // For now, we track history through the version field and previous_value
@@ -674,23 +668,20 @@ public class ConfigurationService : IConfigurationService
         // Current version
         history.Add(new ConfigurationHistoryDto(
             Id: Guid.NewGuid().ToString(),
-            ConfigurationId: config.Id,
+            ConfigurationId: config.Id.ToString(),
             Key: config.Key,
             OldValue: config.PreviousValue ?? "",
             NewValue: config.Value,
             Version: config.Version,
             ChangedAt: config.UpdatedAt,
-            ChangedByUserId: config.UpdatedByUserId ?? config.CreatedByUserId ?? "system",
+            ChangedByUserId: (config.UpdatedByUserId ?? config.CreatedByUserId).ToString(),
             ChangeReason: "Configuration updated"
         ));
 
         return history;
     }
 
-    public async Task<SystemConfigurationDto?> RollbackConfigurationAsync(
-        string configurationId,
-        int toVersion,
-        string userId)
+    public async Task<SystemConfigurationDto?> RollbackConfigurationAsync(Guid configurationId, int toVersion, Guid userId)
     {
         var entity = await _dbContext.SystemConfigurations
             .Include(c => c.CreatedBy)
@@ -779,7 +770,7 @@ public class ConfigurationService : IConfigurationService
     private static SystemConfigurationDto MapToDto(SystemConfigurationEntity entity)
     {
         return new SystemConfigurationDto(
-            Id: entity.Id,
+            Id: entity.Id.ToString(),
             Key: entity.Key,
             Value: entity.Value,
             ValueType: entity.ValueType,
@@ -792,8 +783,8 @@ public class ConfigurationService : IConfigurationService
             PreviousValue: entity.PreviousValue,
             CreatedAt: entity.CreatedAt,
             UpdatedAt: entity.UpdatedAt,
-            CreatedByUserId: entity.CreatedByUserId,
-            UpdatedByUserId: entity.UpdatedByUserId,
+            CreatedByUserId: entity.CreatedByUserId.ToString(),
+            UpdatedByUserId: entity.UpdatedByUserId?.ToString(),
             LastToggledAt: entity.LastToggledAt
         );
     }

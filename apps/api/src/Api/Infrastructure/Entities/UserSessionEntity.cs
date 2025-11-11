@@ -1,9 +1,13 @@
 namespace Api.Infrastructure.Entities;
 
+/// <summary>
+/// User session entity - persistence model.
+/// DDD-PHASE2: Converted to Guid IDs for domain alignment.
+/// </summary>
 public class UserSessionEntity
 {
-    required public string Id { get; set; }
-    required public string UserId { get; set; }
+    required public Guid Id { get; set; }
+    required public Guid UserId { get; set; }
     required public string TokenHash { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime ExpiresAt { get; set; }

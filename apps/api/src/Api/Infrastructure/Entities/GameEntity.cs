@@ -2,7 +2,8 @@ namespace Api.Infrastructure.Entities;
 
 public class GameEntity
 {
-    public string Id { get; set; } = default!;
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = default!;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

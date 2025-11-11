@@ -714,7 +714,7 @@ public class PromptTemplateServiceTests : IDisposable
             Email = email,
             DisplayName = "Test User",
             PasswordHash = "hash",
-            Role = UserRole.Admin,
+            Role = "admin",
             CreatedAt = DateTime.UtcNow
         };
 

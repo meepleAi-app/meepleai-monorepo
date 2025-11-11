@@ -51,7 +51,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
@@ -173,7 +173,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
@@ -214,7 +214,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
@@ -259,7 +259,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
@@ -301,7 +301,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
@@ -352,7 +352,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = UserRole.Admin,
+            Role = "admin",
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
@@ -408,7 +408,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
@@ -528,7 +528,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
@@ -569,7 +569,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
@@ -633,7 +633,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
@@ -678,7 +678,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = UserRole.Editor,
+            Role = "editor",
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);
@@ -731,7 +731,7 @@ public class ApiKeyAuthenticationServiceTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "dummy",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = timeProvider.GetUtcNow().UtcDateTime
         };
         dbContext.Users.Add(user);

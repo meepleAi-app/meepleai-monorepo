@@ -54,7 +54,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
     public async Task AskChessAgent_SimpleRulesQuestion_ReturnsAnswerWithSources()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync("chess-simple", UserRole.User);
+        var user = await CreateTestUserAsync("chess-simple", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -104,7 +104,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
     public async Task AskChessAgent_OpeningQuestion_ReturnsExplanation()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync("chess-opening", UserRole.User);
+        var user = await CreateTestUserAsync("chess-opening", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -142,7 +142,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
     public async Task AskChessAgent_PositionAnalysisWithFEN_ReturnsAnalysisAndMoves()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync("chess-fen", UserRole.User);
+        var user = await CreateTestUserAsync("chess-fen", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -186,7 +186,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
     public async Task AskChessAgent_InvalidFEN_ReturnsWarning()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync("chess-invalid-fen", UserRole.User);
+        var user = await CreateTestUserAsync("chess-invalid-fen", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -224,7 +224,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
     public async Task AskChessAgent_TacticalQuestion_ReturnsExplanationWithExamples()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync("chess-tactics", UserRole.User);
+        var user = await CreateTestUserAsync("chess-tactics", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -279,7 +279,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
     public async Task AskChessAgent_EmptyQuestion_ReturnsBadRequest()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync("chess-empty", UserRole.User);
+        var user = await CreateTestUserAsync("chess-empty", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -308,7 +308,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
     public async Task AskChessAgent_ReturnsTokenUsage()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync("chess-tokens", UserRole.User);
+        var user = await CreateTestUserAsync("chess-tokens", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -346,7 +346,7 @@ public class ChessAgentIntegrationTests : IntegrationTestBase
     public async Task AskChessAgent_SameQuestionTwice_ReturnsCachedResponse()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync("chess-cache", UserRole.User);
+        var user = await CreateTestUserAsync("chess-cache", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 

@@ -32,7 +32,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
     public async Task PostAuthLogin_WithValidCredentials_CreatesSessionWithCorrectExpiration()
     {
         // Given: A user exists in the database
-        var user = await CreateTestUserAsync("session-user", UserRole.User, "SessionUser123!");
+        var user = await CreateTestUserAsync("session-user", "user", "SessionUser123!");
         var client = Factory.CreateHttpsClient();
         var payload = new { email = user.Email, password = "SessionUser123!" };
 
@@ -56,7 +56,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
     public async Task GetAuthMe_WithExpiredSession_ReturnsUnauthorized()
     {
         // Given: A user with an expired session token
-        var user = await CreateTestUserAsync("expired-user", UserRole.User);
+        var user = await CreateTestUserAsync("expired-user", "user");
 
         // Create an expired session (expires in the past)
         using var scope = Factory.Services.CreateScope();
@@ -96,7 +96,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
     public async Task PostAuthLogout_WithValidSession_InvalidatesSession()
     {
         // Given: A logged-in user
-        var user = await CreateTestUserAsync("logout-user", UserRole.User);
+        var user = await CreateTestUserAsync("logout-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
 
@@ -132,7 +132,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
     public async Task PostAuthLogout_AfterLogout_ReturnsOk()
     {
         // Given: A logged-in user
-        var user = await CreateTestUserAsync("double-logout-user", UserRole.User);
+        var user = await CreateTestUserAsync("double-logout-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
 
@@ -172,7 +172,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
     public async Task PostAuthLogin_WithWrongPassword_ReturnsUnauthorized()
     {
         // Given: User exists with correct password
-        var user = await CreateTestUserAsync("wrong-pwd-user", UserRole.User, "CorrectPassword123!");
+        var user = await CreateTestUserAsync("wrong-pwd-user", "user", "CorrectPassword123!");
         var client = Factory.CreateHttpsClient();
         var payload = new { email = user.Email, password = "WrongPassword123!" };
 
@@ -248,7 +248,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
     public async Task PostAuthRegister_WithExistingEmail_ReturnsConflict()
     {
         // Given: User already exists with email
-        var existingUser = await CreateTestUserAsync("existing-user", UserRole.User);
+        var existingUser = await CreateTestUserAsync("existing-user", "user");
         var client = Factory.CreateHttpsClient();
         var payload = new
         {
@@ -385,7 +385,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
     public async Task GetAuthMe_WithValidSession_ReturnsUserInfo()
     {
         // Given: A logged-in user
-        var user = await CreateTestUserAsync("me-user", UserRole.User);
+        var user = await CreateTestUserAsync("me-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");
@@ -401,7 +401,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
         authResponse.Should().NotBeNull();
         authResponse.User.Email.Should().Be(user.Email);
         authResponse.User.DisplayName.Should().Be(user.DisplayName);
-        authResponse.User.Role.Should().Be(UserRole.User.ToString());
+        authResponse.User.Role.Should().Be("user".ToString());
     }
 
     [Fact]
@@ -425,7 +425,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
     public async Task PostAuthLogin_CreatesNewSessionEachTime()
     {
         // Given: A user exists
-        var user = await CreateTestUserAsync("multi-session-user", UserRole.User, "MultiSession123!");
+        var user = await CreateTestUserAsync("multi-session-user", "user", "MultiSession123!");
         var client = Factory.CreateHttpsClient();
         var payload = new { email = user.Email, password = "MultiSession123!" };
 
@@ -446,7 +446,7 @@ public class AuthEndpointsComprehensiveTests : IntegrationTestBase
     public async Task PostAuthLogin_AllowsMultipleConcurrentSessions()
     {
         // Given: A user exists
-        var user = await CreateTestUserAsync("concurrent-user", UserRole.User, "Concurrent123!");
+        var user = await CreateTestUserAsync("concurrent-user", "user", "Concurrent123!");
         var client = Factory.CreateHttpsClient();
         var payload = new { email = user.Email, password = "Concurrent123!" };
 

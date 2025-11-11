@@ -368,7 +368,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         var payload = new RegisterPayload(Email: email, Password: "Password123!", DisplayName: $"{role} User", Role: null);
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
         response.EnsureSuccessStatusCode();
-        if (!string.Equals(role, UserRole.User.ToString(), StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(role, "user".ToString(), StringComparison.OrdinalIgnoreCase))
         {
             var parsedRole = Enum.Parse<UserRole>(role, true);
             await PromoteUserAsync(email, parsedRole);
@@ -386,7 +386,7 @@ public class RuleSpecHistoryIntegrationTests : IntegrationTestBase
         var response = await client.PostAsJsonAsync("/api/v1/auth/register", payload);
         response.EnsureSuccessStatusCode();
         var cookies = ExtractCookies(response);
-        if (!string.Equals(role, UserRole.User.ToString(), StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(role, "user".ToString(), StringComparison.OrdinalIgnoreCase))
         {
             var parsedRole = Enum.Parse<UserRole>(role, true);
             await PromoteUserAsync(email, parsedRole);

@@ -47,7 +47,7 @@ public class PromptManagementServiceTests : IDisposable
             Email = "test@example.com",
             DisplayName = "Test User",
             PasswordHash = "fake-hash",
-            Role = UserRole.Admin,
+            Role = "admin",
             CreatedAt = DateTime.UtcNow
         };
         _db.Users.Add(testUser);

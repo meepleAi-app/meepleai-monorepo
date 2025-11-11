@@ -42,9 +42,9 @@ public class AiRequestLogService
         {
             var log = new AiRequestLogEntity
             {
-                UserId = userId,
-                ApiKeyId = apiKeyId,
-                GameId = gameId,
+                UserId = userId != null && Guid.TryParse(userId, out var userGuid) ? userGuid : null,
+                ApiKeyId = apiKeyId != null && Guid.TryParse(apiKeyId, out var apiKeyGuid) ? apiKeyGuid : null,
+                GameId = gameId != null && Guid.TryParse(gameId, out var gameGuid) ? gameGuid : null,
                 Endpoint = endpoint,
                 Query = query,
                 ResponseSnippet = responseSnippet,
@@ -103,14 +103,14 @@ public class AiRequestLogService
             query = query.Where(log => log.Endpoint == endpoint);
         }
 
-        if (!string.IsNullOrWhiteSpace(userId))
+        if (!string.IsNullOrWhiteSpace(userId) && Guid.TryParse(userId, out var userGuid))
         {
-            query = query.Where(log => log.UserId == userId);
+            query = query.Where(log => log.UserId == userGuid);
         }
 
-        if (!string.IsNullOrWhiteSpace(gameId))
+        if (!string.IsNullOrWhiteSpace(gameId) && Guid.TryParse(gameId, out var gameGuid))
         {
-            query = query.Where(log => log.GameId == gameId);
+            query = query.Where(log => log.GameId == gameGuid);
         }
 
         if (startDate.HasValue)
@@ -161,14 +161,14 @@ public class AiRequestLogService
             query = query.Where(log => log.CreatedAt <= endDate.Value);
         }
 
-        if (!string.IsNullOrWhiteSpace(userId))
+        if (!string.IsNullOrWhiteSpace(userId) && Guid.TryParse(userId, out var userGuid))
         {
-            query = query.Where(log => log.UserId == userId);
+            query = query.Where(log => log.UserId == userGuid);
         }
 
-        if (!string.IsNullOrWhiteSpace(gameId))
+        if (!string.IsNullOrWhiteSpace(gameId) && Guid.TryParse(gameId, out var gameGuid))
         {
-            query = query.Where(log => log.GameId == gameId);
+            query = query.Where(log => log.GameId == gameGuid);
         }
 
         // PERF-03: Single aggregate query instead of 4 separate queries

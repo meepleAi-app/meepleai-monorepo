@@ -30,7 +30,7 @@ public class EdgeScenarioTests : IntegrationTestBase
     public async Task PostRequest_WithoutContentType_ReturnsBadRequest()
     {
         // Given: Authenticated user without Content-Type header
-        var user = await CreateTestUserAsync("no-content-type-user", UserRole.User);
+        var user = await CreateTestUserAsync("no-content-type-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
@@ -51,7 +51,7 @@ public class EdgeScenarioTests : IntegrationTestBase
     public async Task PostRequest_WithWrongContentType_ReturnsBadRequest()
     {
         // Given: Authenticated user with wrong Content-Type
-        var user = await CreateTestUserAsync("wrong-content-type-user", UserRole.User);
+        var user = await CreateTestUserAsync("wrong-content-type-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
@@ -71,7 +71,7 @@ public class EdgeScenarioTests : IntegrationTestBase
     public async Task PostRequest_WithCorrectContentType_Succeeds()
     {
         // Given: Authenticated user with correct Content-Type
-        var user = await CreateTestUserAsync("correct-content-type-user", UserRole.User);
+        var user = await CreateTestUserAsync("correct-content-type-user", "user");
         var game = await CreateTestGameAsync("Content Type Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
@@ -94,7 +94,7 @@ public class EdgeScenarioTests : IntegrationTestBase
     public async Task PostRequest_WithVeryLargePayload_HandlesGracefully()
     {
         // Given: Authenticated user with very large payload
-        var user = await CreateTestUserAsync("large-payload-user", UserRole.User);
+        var user = await CreateTestUserAsync("large-payload-user", "user");
         var game = await CreateTestGameAsync("Large Payload Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
@@ -120,7 +120,7 @@ public class EdgeScenarioTests : IntegrationTestBase
     public async Task PostRequest_WithEmptyBody_ReturnsBadRequest()
     {
         // Given: Authenticated user with empty request body
-        var user = await CreateTestUserAsync("empty-body-user", UserRole.User);
+        var user = await CreateTestUserAsync("empty-body-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
@@ -142,7 +142,7 @@ public class EdgeScenarioTests : IntegrationTestBase
     public async Task PostRequest_WithSpecialCharactersInGameId_HandlesCorrectly()
     {
         // Given: Authenticated user with special characters in gameId
-        var user = await CreateTestUserAsync("special-chars-user", UserRole.User);
+        var user = await CreateTestUserAsync("special-chars-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
 
@@ -164,7 +164,7 @@ public class EdgeScenarioTests : IntegrationTestBase
     public async Task PostRequest_WithUnicodeInQuery_HandlesCorrectly()
     {
         // Given: Authenticated user with Unicode in query
-        var user = await CreateTestUserAsync("unicode-user", UserRole.User);
+        var user = await CreateTestUserAsync("unicode-user", "user");
         var game = await CreateTestGameAsync("Unicode Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
@@ -186,7 +186,7 @@ public class EdgeScenarioTests : IntegrationTestBase
     public async Task PostRequest_WithSqlInjectionAttempt_IsSafelyHandled()
     {
         // Given: Authenticated user attempting SQL injection
-        var user = await CreateTestUserAsync("sql-injection-user", UserRole.User);
+        var user = await CreateTestUserAsync("sql-injection-user", "user");
         var game = await CreateTestGameAsync("SQL Injection Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
@@ -215,7 +215,7 @@ public class EdgeScenarioTests : IntegrationTestBase
     public async Task PostRequest_WithXssAttempt_IsSafelyHandled()
     {
         // Given: Authenticated user attempting XSS
-        var user = await CreateTestUserAsync("xss-user", UserRole.User);
+        var user = await CreateTestUserAsync("xss-user", "user");
         var game = await CreateTestGameAsync("XSS Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
@@ -244,7 +244,7 @@ public class EdgeScenarioTests : IntegrationTestBase
     public async Task PostRequest_WithMalformedJson_ReturnsBadRequest()
     {
         // Given: Authenticated user with malformed JSON
-        var user = await CreateTestUserAsync("malformed-json-user", UserRole.User);
+        var user = await CreateTestUserAsync("malformed-json-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
@@ -262,7 +262,7 @@ public class EdgeScenarioTests : IntegrationTestBase
     public async Task PostRequest_WithMissingRequiredFields_ReturnsBadRequest()
     {
         // Given: Authenticated user with missing required fields
-        var user = await CreateTestUserAsync("missing-fields-user", UserRole.User);
+        var user = await CreateTestUserAsync("missing-fields-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/qa");
@@ -280,7 +280,7 @@ public class EdgeScenarioTests : IntegrationTestBase
     public async Task PostRequest_WithExtraUnknownFields_HandlesGracefully()
     {
         // Given: Authenticated user with extra unknown fields
-        var user = await CreateTestUserAsync("extra-fields-user", UserRole.User);
+        var user = await CreateTestUserAsync("extra-fields-user", "user");
         var game = await CreateTestGameAsync("Extra Fields Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
@@ -310,7 +310,7 @@ public class EdgeScenarioTests : IntegrationTestBase
     public async Task ConcurrentRequests_FromSameUser_HandleCorrectly()
     {
         // Given: Authenticated user making concurrent requests
-        var user = await CreateTestUserAsync("concurrent-user", UserRole.User);
+        var user = await CreateTestUserAsync("concurrent-user", "user");
         var game = await CreateTestGameAsync("Concurrent Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
@@ -342,7 +342,7 @@ public class EdgeScenarioTests : IntegrationTestBase
     public async Task ConcurrentLogins_WithSameUser_HandleCorrectly()
     {
         // Given: User attempting concurrent logins
-        var user = await CreateTestUserAsync("concurrent-login-user", UserRole.User, "Password123!");
+        var user = await CreateTestUserAsync("concurrent-login-user", "user", "Password123!");
         var client = Factory.CreateHttpsClient();
 
         // When: Multiple concurrent login attempts
@@ -375,7 +375,7 @@ public class EdgeScenarioTests : IntegrationTestBase
     public async Task ConcurrentGameCreation_WithDifferentNames_Succeeds()
     {
         // Given: Editor attempting to create games with different names concurrently
-        var editor = await CreateTestUserAsync("concurrent-game-editor", UserRole.Editor);
+        var editor = await CreateTestUserAsync("concurrent-game-editor", "editor");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = Factory.CreateHttpsClient();
 

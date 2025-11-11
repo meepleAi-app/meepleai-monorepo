@@ -38,17 +38,17 @@ public class ApiKeyAuthenticationMiddlewareTests
 
         var user = new UserEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = Guid.NewGuid(),
             Email = "sanitized@example.com",
             DisplayName = "Test User",
             PasswordHash = "hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = DateTime.UtcNow
         };
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync();
 
-        var (plaintextKey, apiKeyEntity) = await service.GenerateApiKeyAsync(user.Id, "Test Key", new[] { "read" });
+        var (plaintextKey, apiKeyEntity) = await service.GenerateApiKeyAsync(user.Id.ToString(), "Test Key", "read");
         dbContext.ApiKeys.Add(apiKeyEntity);
         await dbContext.SaveChangesAsync();
 

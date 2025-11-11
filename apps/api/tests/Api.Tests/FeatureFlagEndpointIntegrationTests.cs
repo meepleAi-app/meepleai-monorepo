@@ -359,13 +359,13 @@ public class FeatureFlagEndpointIntegrationTests : AdminTestFixture
         var featureFlags = scope.ServiceProvider.GetRequiredService<IFeatureFlagService>();
 
         // When: Checked with Admin role
-        var adminEnabled = await featureFlags.IsEnabledAsync(featureName, UserRole.Admin);
+        var adminEnabled = await featureFlags.IsEnabledAsync(featureName, "admin");
 
         // Then: Returns true
         adminEnabled.Should().BeTrue();
 
         // And: Checked with User role
-        var userEnabled = await featureFlags.IsEnabledAsync(featureName, UserRole.User);
+        var userEnabled = await featureFlags.IsEnabledAsync(featureName, "user");
 
         // Then: Returns false
         userEnabled.Should().BeFalse();

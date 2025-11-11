@@ -67,8 +67,15 @@ public class FeatureFlagService : IFeatureFlagService
         // Check if configuration exists
         var existing = await _configService.GetConfigurationByKeyAsync(key);
 
+        var userGuid = userId != null && Guid.TryParse(userId, out var parsed) ? parsed : Guid.Empty;
+
         if (existing != null)
         {
+            if (!Guid.TryParse(existing.Id, out var configId))
+            {
+                throw new InvalidOperationException($"Invalid configuration ID format: {existing.Id}");
+            }
+
             // Update existing configuration
             var updateRequest = new UpdateConfigurationRequest(
                 Value: "true",
@@ -76,7 +83,7 @@ public class FeatureFlagService : IFeatureFlagService
                 IsActive: true,
                 RequiresRestart: false);
 
-            await _configService.UpdateConfigurationAsync(existing.Id, updateRequest, userId ?? "system");
+            await _configService.UpdateConfigurationAsync(configId, updateRequest, userGuid);
 
             _logger.LogInformation("Feature {FeatureName} enabled{RoleInfo} by {UserId}",
                 featureName, role.HasValue ? $" for {role.Value}" : "", userId ?? "system");
@@ -94,7 +101,7 @@ public class FeatureFlagService : IFeatureFlagService
                 RequiresRestart: false,
                 Environment: "Production");
 
-            await _configService.CreateConfigurationAsync(createRequest, userId ?? "system");
+            await _configService.CreateConfigurationAsync(createRequest, userGuid);
 
             _logger.LogInformation("Feature {FeatureName} created and enabled{RoleInfo} by {UserId}",
                 featureName, role.HasValue ? $" for {role.Value}" : "", userId ?? "system");
@@ -111,8 +118,15 @@ public class FeatureFlagService : IFeatureFlagService
         // Check if configuration exists
         var existing = await _configService.GetConfigurationByKeyAsync(key);
 
+        var userGuid = userId != null && Guid.TryParse(userId, out var parsed) ? parsed : Guid.Empty;
+
         if (existing != null)
         {
+            if (!Guid.TryParse(existing.Id, out var configId))
+            {
+                throw new InvalidOperationException($"Invalid configuration ID format: {existing.Id}");
+            }
+
             // Update existing configuration
             var updateRequest = new UpdateConfigurationRequest(
                 Value: "false",
@@ -120,7 +134,7 @@ public class FeatureFlagService : IFeatureFlagService
                 IsActive: true,
                 RequiresRestart: false);
 
-            await _configService.UpdateConfigurationAsync(existing.Id, updateRequest, userId ?? "system");
+            await _configService.UpdateConfigurationAsync(configId, updateRequest, userGuid);
 
             _logger.LogInformation("Feature {FeatureName} disabled{RoleInfo} by {UserId}",
                 featureName, role.HasValue ? $" for {role.Value}" : "", userId ?? "system");
@@ -138,7 +152,7 @@ public class FeatureFlagService : IFeatureFlagService
                 RequiresRestart: false,
                 Environment: "Production");
 
-            await _configService.CreateConfigurationAsync(createRequest, userId ?? "system");
+            await _configService.CreateConfigurationAsync(createRequest, userGuid);
 
             _logger.LogInformation("Feature {FeatureName} created and disabled{RoleInfo} by {UserId}",
                 featureName, role.HasValue ? $" for {role.Value}" : "", userId ?? "system");

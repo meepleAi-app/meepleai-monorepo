@@ -39,7 +39,7 @@ public class PdfStorageServiceIntegrationTests : PostgresIntegrationTestBase
                 Id = "user-1",
                 Email = "user1@example.com",
                 PasswordHash = "hash",
-                Role = UserRole.User,
+                Role = "user",
                 CreatedAt = DateTime.UtcNow
             });
             await DbContext.SaveChangesAsync();

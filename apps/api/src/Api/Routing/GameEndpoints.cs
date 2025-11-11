@@ -25,7 +25,7 @@ public static class GameEndpoints
             }
 
             var games = await gameService.GetGamesAsync(ct);
-            var response = games.Select(g => new GameResponse(g.Id, g.Name, g.CreatedAt)).ToList();
+            var response = games.Select(g => new GameResponse(g.Id.ToString(), g.Name, g.CreatedAt)).ToList();
             return Results.Json(response);
         });
 
@@ -56,7 +56,7 @@ public static class GameEndpoints
             {
                 var game = await gameService.CreateGameAsync(request.Name, request.GameId, ct);
                 logger.LogInformation("Created game {GameId}", game.Id);
-                return Results.Created($"/games/{game.Id}", new GameResponse(game.Id, game.Name, game.CreatedAt));
+                return Results.Created($"/games/{game.Id}", new GameResponse(game.Id.ToString(), game.Name, game.CreatedAt));
             }
             catch (ArgumentException ex)
             {
@@ -84,8 +84,8 @@ public static class GameEndpoints
 
             var agents = await chatService.GetAgentsForGameAsync(gameId, ct);
             var response = agents.Select(a => new AgentDto(
-                a.Id,
-                a.GameId,
+                a.Id.ToString(),
+                a.GameId.ToString(),
                 a.Name,
                 a.Kind,
                 a.CreatedAt

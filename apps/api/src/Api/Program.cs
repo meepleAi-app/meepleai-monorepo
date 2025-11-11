@@ -309,7 +309,7 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
 
     // Check if any admin users exist
     var hasAdminUser = await db.Users
-        .AnyAsync(u => u.Role == UserRole.Admin);
+        .AnyAsync(u => u.Role == "admin");
 
     if (hasAdminUser)
     {
@@ -358,11 +358,11 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
         // Create admin user
         var adminUser = new UserEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = Guid.NewGuid(),
             Email = adminEmail,
             DisplayName = adminDisplayName,
             PasswordHash = passwordHash,
-            Role = UserRole.Admin,
+            Role = "admin",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -378,11 +378,11 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
         // Audit log
         var auditLog = new AuditLogEntity
         {
-            Id = Guid.NewGuid().ToString("N"),
+            Id = Guid.NewGuid(),
             UserId = null, // System-generated
             Action = "BOOTSTRAP_ADMIN_CREATED",
             Resource = "User",
-            ResourceId = adminUser.Id,
+            ResourceId = adminUser.Id.ToString(),
             Result = "Success",
             Details = $"Initial admin user created: {adminEmail}",
             IpAddress = "system",
@@ -398,7 +398,7 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
         // Race condition: Another instance created the admin user simultaneously
         // Recheck if an admin user now exists
         var adminNowExists = await db.Users
-            .AnyAsync(u => u.Role == UserRole.Admin);
+            .AnyAsync(u => u.Role == "admin");
 
         if (adminNowExists)
         {

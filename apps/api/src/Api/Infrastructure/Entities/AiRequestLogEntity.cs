@@ -2,10 +2,14 @@ namespace Api.Infrastructure.Entities;
 
 public class AiRequestLogEntity
 {
-    public string Id { get; set; } = Guid.NewGuid().ToString();
-    public string? UserId { get; set; }
-    public string? ApiKeyId { get; set; }
-    public string? GameId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid Id { get; set; } = Guid.NewGuid();
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid? UserId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid? ApiKeyId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid? GameId { get; set; }
     public string Endpoint { get; set; } = string.Empty; // "qa", "explain", "setup"
     public string? Query { get; set; }
     public string? ResponseSnippet { get; set; }

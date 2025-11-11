@@ -115,7 +115,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     public async Task GivenAuthenticatedUser_WhenCreatingComment_ThenReturns201WithLocationHeader()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync($"commenter-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"commenter-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         // Given: Valid rulespec exists
@@ -153,7 +153,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     public async Task GivenAuthenticatedUser_WhenCreatingCommentWithLineNumber_ThenLineNumberStored()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync($"line-commenter-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"line-commenter-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var (gameId, version) = await CreateTestRuleSpecAsync(user.Id);
@@ -180,8 +180,8 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     public async Task GivenAuthenticatedUser_WhenCreatingCommentWithMentions_ThenCommentCreated()
     {
         // Given: User is authenticated
-        var author = await CreateTestUserAsync($"author-{TestRunId}", UserRole.User);
-        var mentioned = await CreateTestUserAsync($"mentioned-{TestRunId}", UserRole.User);
+        var author = await CreateTestUserAsync($"author-{TestRunId}", "user");
+        var mentioned = await CreateTestUserAsync($"mentioned-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(author.Email);
 
         var (gameId, version) = await CreateTestRuleSpecAsync(author.Id);
@@ -213,7 +213,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     public async Task GivenParentComment_WhenCreatingReply_ThenReturns201WithParentLink()
     {
         // Given: Parent comment exists
-        var user = await CreateTestUserAsync($"replier-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"replier-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var (gameId, version) = await CreateTestRuleSpecAsync(user.Id);
@@ -249,7 +249,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     public async Task GivenReplyChain_WhenCreatingNestedReply_ThenHierarchyPreserved()
     {
         // Given: Parent comment exists
-        var user = await CreateTestUserAsync($"nester-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"nester-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var (gameId, version) = await CreateTestRuleSpecAsync(user.Id);
@@ -294,7 +294,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     public async Task GivenNonExistentComment_WhenCreatingReply_ThenReturns404()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync($"404-replier-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"404-replier-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         // When: User replies to non-existent comment
@@ -317,7 +317,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     public async Task GivenMaxDepthReached_WhenCreatingReply_ThenReturns400()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync($"deep-replier-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"deep-replier-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var (gameId, version) = await CreateTestRuleSpecAsync(user.Id);
@@ -370,7 +370,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     public async Task GivenUnresolvedComment_WhenResolving_ThenReturns200AndMarkedResolved()
     {
         // Given: Unresolved comment exists
-        var user = await CreateTestUserAsync($"resolver-{TestRunId}", UserRole.Editor);
+        var user = await CreateTestUserAsync($"resolver-{TestRunId}", "editor");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var (gameId, version) = await CreateTestRuleSpecAsync(user.Id);
@@ -406,7 +406,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     public async Task GivenResolvedComment_WhenUnresolving_ThenReturns200AndMarkedUnresolved()
     {
         // Given: Resolved comment exists
-        var user = await CreateTestUserAsync($"unresolver-{TestRunId}", UserRole.Editor);
+        var user = await CreateTestUserAsync($"unresolver-{TestRunId}", "editor");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var (gameId, version) = await CreateTestRuleSpecAsync(user.Id);
@@ -443,7 +443,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     public async Task GivenCommentWithReplies_WhenResolvingRecursively_ThenRepliesAlsoResolved()
     {
         // Given: Comment with replies exists
-        var user = await CreateTestUserAsync($"recursive-resolver-{TestRunId}", UserRole.Editor);
+        var user = await CreateTestUserAsync($"recursive-resolver-{TestRunId}", "editor");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var (gameId, version) = await CreateTestRuleSpecAsync(user.Id);
@@ -492,7 +492,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     public async Task GivenResolvedAndUnresolvedComments_WhenFetchingWithoutResolved_ThenOnlyUnresolvedReturned()
     {
         // Given: Resolved and unresolved comments exist
-        var user = await CreateTestUserAsync($"filter-user-{TestRunId}", UserRole.Editor);
+        var user = await CreateTestUserAsync($"filter-user-{TestRunId}", "editor");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var (gameId, version) = await CreateTestRuleSpecAsync(user.Id);
@@ -531,7 +531,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     public async Task GivenResolvedAndUnresolvedComments_WhenFetchingWithResolved_ThenAllReturned()
     {
         // Given: Resolved and unresolved comments exist
-        var user = await CreateTestUserAsync($"all-comments-user-{TestRunId}", UserRole.Editor);
+        var user = await CreateTestUserAsync($"all-comments-user-{TestRunId}", "editor");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var (gameId, version) = await CreateTestRuleSpecAsync(user.Id);
@@ -566,7 +566,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     public async Task GivenCommentsOnDifferentLines_WhenFetchingLineComments_ThenOnlyTargetLineReturned()
     {
         // Given: Comments on different lines exist
-        var user = await CreateTestUserAsync($"line-filter-user-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"line-filter-user-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var (gameId, version) = await CreateTestRuleSpecAsync(user.Id);
@@ -604,7 +604,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     public async Task GivenThreadedComments_WhenFetchingAll_ThenHierarchyPreserved()
     {
         // Given: Threaded comments exist
-        var user = await CreateTestUserAsync($"hierarchy-user-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"hierarchy-user-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var (gameId, version) = await CreateTestRuleSpecAsync(user.Id);
@@ -652,10 +652,10 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     public async Task GivenMultipleUsers_WhenSearchingByDisplayName_ThenMatchingUsersReturned()
     {
         // Given: Multiple users exist
-        var searcher = await CreateTestUserAsync($"searcher-{TestRunId}", UserRole.User);
-        await CreateTestUserAsync($"john-{TestRunId}", UserRole.User); // Display name will be "Test john-{TestRunId}"
-        await CreateTestUserAsync($"jane-{TestRunId}", UserRole.User); // Display name will be "Test jane-{TestRunId}"
-        await CreateTestUserAsync($"bob-{TestRunId}", UserRole.User);
+        var searcher = await CreateTestUserAsync($"searcher-{TestRunId}", "user");
+        await CreateTestUserAsync($"john-{TestRunId}", "user"); // Display name will be "Test john-{TestRunId}"
+        await CreateTestUserAsync($"jane-{TestRunId}", "user"); // Display name will be "Test jane-{TestRunId}"
+        await CreateTestUserAsync($"bob-{TestRunId}", "user");
 
         var cookies = await AuthenticateUserAsync(searcher.Email);
 
@@ -679,9 +679,9 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     public async Task GivenMultipleUsers_WhenSearchingByEmail_ThenMatchingUsersReturned()
     {
         // Given: Multiple users exist
-        var searcher = await CreateTestUserAsync($"email-searcher-{TestRunId}", UserRole.User);
-        var alphaUser = await CreateTestUserAsync($"test-alpha-{TestRunId}", UserRole.User);
-        await CreateTestUserAsync($"test-beta-{TestRunId}", UserRole.User);
+        var searcher = await CreateTestUserAsync($"email-searcher-{TestRunId}", "user");
+        var alphaUser = await CreateTestUserAsync($"test-alpha-{TestRunId}", "user");
+        await CreateTestUserAsync($"test-beta-{TestRunId}", "user");
 
         var cookies = await AuthenticateUserAsync(searcher.Email);
 
@@ -730,7 +730,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     public async Task GivenAuthenticatedUser_WhenCreatingComment_ThenReturns201()
     {
         // Given: User is authenticated
-        var user = await CreateTestUserAsync($"auth-user-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"auth-user-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         var (gameId, version) = await CreateTestRuleSpecAsync(user.Id);
@@ -755,7 +755,7 @@ public class RuleCommentEndpointsTests : IntegrationTestBase
     public async Task GivenEditorUser_WhenResolvingComment_ThenReturns200()
     {
         // Given: Editor is authenticated
-        var editor = await CreateTestUserAsync($"editor-resolver-{TestRunId}", UserRole.Editor);
+        var editor = await CreateTestUserAsync($"editor-resolver-{TestRunId}", "editor");
         var cookies = await AuthenticateUserAsync(editor.Email);
 
         var (gameId, version) = await CreateTestRuleSpecAsync(editor.Id);

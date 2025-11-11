@@ -45,8 +45,8 @@ public class ApiKeyQuotaEnforcementMiddleware
         }
 
         // Get the API key ID from context (set by ApiKeyAuthenticationMiddleware)
-        var apiKeyId = context.User.FindFirst("ApiKeyId")?.Value;
-        if (string.IsNullOrWhiteSpace(apiKeyId))
+        var apiKeyIdStr = context.User.FindFirst("ApiKeyId")?.Value;
+        if (string.IsNullOrWhiteSpace(apiKeyIdStr) || !Guid.TryParse(apiKeyIdStr, out var apiKeyId))
         {
             await _next(context);
             return;
@@ -75,7 +75,7 @@ public class ApiKeyQuotaEnforcementMiddleware
             }
             catch (JsonException ex)
             {
-                _logger.LogWarning(ex, "Failed to parse metadata for API key {ApiKeyId}", apiKeyId);
+                _logger.LogWarning(ex, "Failed to parse metadata for API key {ApiKeyId}", apiKeyIdStr);
             }
         }
 
@@ -102,7 +102,7 @@ public class ApiKeyQuotaEnforcementMiddleware
             {
                 _logger.LogWarning(
                     "API key {ApiKeyId} exceeded hourly quota: {Count}/{Limit}",
-                    apiKeyId, hourlyCount, quota.HourlyLimit.Value);
+                    apiKeyIdStr, hourlyCount, quota.HourlyLimit.Value);
 
                 context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
                 context.Response.ContentType = "application/json";
@@ -141,7 +141,7 @@ public class ApiKeyQuotaEnforcementMiddleware
             {
                 _logger.LogWarning(
                     "API key {ApiKeyId} exceeded daily quota: {Count}/{Limit}",
-                    apiKeyId, dailyCount, quota.DailyLimit.Value);
+                    apiKeyIdStr, dailyCount, quota.DailyLimit.Value);
 
                 context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
                 context.Response.ContentType = "application/json";

@@ -8,9 +8,12 @@ namespace Api.Infrastructure.Entities;
 /// </summary>
 public class TextChunkEntity
 {
-    public string Id { get; set; } = default!;
-    public string GameId { get; set; } = default!;
-    public string PdfDocumentId { get; set; } = default!;
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid Id { get; set; } = Guid.NewGuid();
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid GameId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid PdfDocumentId { get; set; }
     public string Content { get; set; } = default!;
     public int ChunkIndex { get; set; }
     public int? PageNumber { get; set; }

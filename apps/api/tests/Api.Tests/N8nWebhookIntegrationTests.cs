@@ -57,7 +57,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
     public async Task WebhookFlow_WithValidSession_ReturnsExplanation()
     {
         // Given: A service account
-        var serviceUser = await CreateTestUserAsync("n8n-service", UserRole.User);
+        var serviceUser = await CreateTestUserAsync("n8n-service", "user");
         var cookies = await AuthenticateUserAsync(serviceUser.Email);
         var client = CreateClientWithoutCookies();
 
@@ -134,7 +134,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
     public async Task WebhookFlow_WithoutGameId_ReturnsBadRequest()
     {
         // Given: A service account
-        var serviceUser = await CreateTestUserAsync("n8n-service-2", UserRole.User);
+        var serviceUser = await CreateTestUserAsync("n8n-service-2", "user");
         var cookies = await AuthenticateUserAsync(serviceUser.Email);
         var client = CreateClientWithoutCookies();
 
@@ -172,7 +172,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
     public async Task WebhookFlow_GameWithoutContent_ReturnsNoResults()
     {
         // Given: A service account
-        var serviceUser = await CreateTestUserAsync("n8n-service-3", UserRole.User);
+        var serviceUser = await CreateTestUserAsync("n8n-service-3", "user");
         var cookies = await AuthenticateUserAsync(serviceUser.Email);
         var client = CreateClientWithoutCookies();
 
@@ -212,7 +212,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
     public async Task WebhookFlow_ResponseFormat_MatchesStandardizedPayload()
     {
         // Given: A service account and game with content
-        var serviceUser = await CreateTestUserAsync("n8n-service-4", UserRole.User);
+        var serviceUser = await CreateTestUserAsync("n8n-service-4", "user");
         var cookies = await AuthenticateUserAsync(serviceUser.Email);
         var client = CreateClientWithoutCookies();
 
@@ -266,7 +266,7 @@ public class N8nWebhookIntegrationTests : IntegrationTestBase
     public async Task N8nConfig_CreateAndRetrieve_Success()
     {
         // Given: An admin user
-        var admin = await CreateTestUserAsync("webhook-admin", UserRole.Admin);
+        var admin = await CreateTestUserAsync("webhook-admin", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 

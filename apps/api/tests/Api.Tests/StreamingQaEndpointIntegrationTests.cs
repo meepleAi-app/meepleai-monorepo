@@ -55,7 +55,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
     public async Task GivenAuthenticatedUser_WhenRequestingStreamingQa_ThenReturnsSSEWithEvents()
     {
         // Given: A user is authenticated
-        var user = await CreateTestUserAsync($"qa-stream-user-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"qa-stream-user-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -137,7 +137,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
     public async Task GivenNoGameId_WhenRequestingStreamingQa_ThenReturnsBadRequest()
     {
         // Given: A user is authenticated
-        var user = await CreateTestUserAsync($"qa-stream-badreq-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"qa-stream-badreq-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -166,7 +166,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
     public async Task GivenGameWithVectorData_WhenRequestingStreamingQa_ThenReceivesCitations()
     {
         // Given: A user is authenticated
-        var user = await CreateTestUserAsync($"qa-stream-citations-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"qa-stream-citations-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -220,7 +220,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
     public async Task GivenChatId_WhenRequestingStreamingQa_ThenLogsToChat()
     {
         // Given: A user is authenticated
-        var user = await CreateTestUserAsync($"qa-stream-chat-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"qa-stream-chat-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -302,7 +302,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
     public async Task GivenStreamingQaRequest_WhenComplete_ThenLogsRequest()
     {
         // Given: A user is authenticated
-        var user = await CreateTestUserAsync($"qa-stream-log-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"qa-stream-log-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -352,7 +352,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
     public async Task GivenSuccessfulStreamingQa_WhenComplete_ThenIncludesTokenCount()
     {
         // Given: A user is authenticated
-        var user = await CreateTestUserAsync($"qa-stream-tokens-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"qa-stream-tokens-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 
@@ -398,9 +398,9 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
     public async Task GivenMultipleUsers_WhenRequestingStreamingQaConcurrently_ThenAllSucceed()
     {
         // Given: Multiple users are authenticated
-        var user1 = await CreateTestUserAsync($"qa-stream-concurrent-1-{TestRunId}", UserRole.User);
-        var user2 = await CreateTestUserAsync($"qa-stream-concurrent-2-{TestRunId}", UserRole.User);
-        var user3 = await CreateTestUserAsync($"qa-stream-concurrent-3-{TestRunId}", UserRole.User);
+        var user1 = await CreateTestUserAsync($"qa-stream-concurrent-1-{TestRunId}", "user");
+        var user2 = await CreateTestUserAsync($"qa-stream-concurrent-2-{TestRunId}", "user");
+        var user3 = await CreateTestUserAsync($"qa-stream-concurrent-3-{TestRunId}", "user");
 
         var cookies1 = await AuthenticateUserAsync(user1.Email);
         var cookies2 = await AuthenticateUserAsync(user2.Email);
@@ -463,7 +463,7 @@ public class StreamingQaEndpointIntegrationTests : IntegrationTestBase
     public async Task GivenStreamingError_WhenEncountered_ThenEmitsErrorEvent()
     {
         // Given: A user is authenticated
-        var user = await CreateTestUserAsync($"qa-stream-error-{TestRunId}", UserRole.User);
+        var user = await CreateTestUserAsync($"qa-stream-error-{TestRunId}", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = CreateClientWithoutCookies();
 

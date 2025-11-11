@@ -51,7 +51,7 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
     public async Task BulkExport_WithSingleRuleSpec_ReturnsValidZip()
     {
         // Given: An editor user with one rule spec
-        var user = await CreateTestUserAsync($"editor-{TestRunId}@example.com", UserRole.Editor);
+        var user = await CreateTestUserAsync($"editor-{TestRunId}@example.com", "editor");
         var game = await CreateTestGameAsync("chess-export");
 
         // Create rule spec with atoms manually
@@ -141,7 +141,7 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
     public async Task BulkExport_WithMultipleRuleSpecs_ReturnsZipWithAllSpecs()
     {
         // Given: An admin user with three rule specs
-        var user = await CreateTestUserAsync($"admin-{TestRunId}@example.com", UserRole.Admin);
+        var user = await CreateTestUserAsync($"admin-{TestRunId}@example.com", "admin");
         var game1 = await CreateTestGameAsync("game1");
         var game2 = await CreateTestGameAsync("game2");
         var game3 = await CreateTestGameAsync("game3");
@@ -202,7 +202,7 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
     public async Task BulkExport_WithRegularUser_ReturnsForbidden()
     {
         // Given: A regular user without editor/admin role
-        var user = await CreateTestUserAsync($"user-{TestRunId}@example.com", UserRole.User);
+        var user = await CreateTestUserAsync($"user-{TestRunId}@example.com", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         using var client = Factory.CreateHttpsClient();
@@ -254,7 +254,7 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
     public async Task BulkExport_WithEmptyRuleSpecIds_ReturnsBadRequest()
     {
         // Given: An editor user
-        var user = await CreateTestUserAsync($"editor-empty-{TestRunId}@example.com", UserRole.Editor);
+        var user = await CreateTestUserAsync($"editor-empty-{TestRunId}@example.com", "editor");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         using var client = Factory.CreateHttpsClient();
@@ -282,7 +282,7 @@ public class RuleSpecBulkExportIntegrationTests : IntegrationTestBase
     public async Task BulkExport_WithNonExistentIds_ReturnsError()
     {
         // Given: An editor user
-        var user = await CreateTestUserAsync($"editor-missing-{TestRunId}@example.com", UserRole.Editor);
+        var user = await CreateTestUserAsync($"editor-missing-{TestRunId}@example.com", "editor");
         var cookies = await AuthenticateUserAsync(user.Email);
 
         using var client = Factory.CreateHttpsClient();

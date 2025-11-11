@@ -1,4 +1,4 @@
-﻿using Api.Infrastructure;
+using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
@@ -27,9 +27,9 @@ group.MapGet("/chats", async (HttpContext context, ChatService chatService, stri
 
     var response = chats.Select(c => new ChatDto(
         c.Id,
-        c.GameId,
+        c.GameId.ToString(),
         c.Game.Name,
-        c.AgentId,
+        c.AgentId.ToString(),
         c.Agent.Name,
         c.StartedAt,
         c.LastMessageAt
@@ -61,9 +61,9 @@ group.MapGet("/chats/{chatId:guid}", async (Guid chatId, HttpContext context, Ch
 
     var response = new ChatWithHistoryDto(
         chat.Id,
-        chat.GameId,
+        chat.GameId.ToString(),
         chat.Game.Name,
-        chat.AgentId,
+        chat.AgentId.ToString(),
         chat.Agent.Name,
         chat.StartedAt,
         chat.LastMessageAt,
@@ -103,9 +103,9 @@ group.MapPost("/chats", async (CreateChatRequest? request, HttpContext context, 
 
         var response = new ChatDto(
             fullChat.Id,
-            fullChat.GameId,
+            fullChat.GameId.ToString(),
             fullChat.Game.Name,
-            fullChat.AgentId,
+            fullChat.AgentId.ToString(),
             fullChat.Agent.Name,
             fullChat.StartedAt,
             fullChat.LastMessageAt
@@ -302,11 +302,16 @@ group.MapPost("/chats/{chatId:guid}/export", async (
             statusCode: 403);
     }
 
+    if (!Guid.TryParse(session.User.Id, out var userId))
+    {
+        return Results.BadRequest(new { error = "invalid_user_id", message = "Invalid user ID format" });
+    }
+
     try
     {
         var result = await exportService.ExportChatAsync(
             chatId,
-            session.User.Id,
+            userId,
             request.Format,
             request.DateFrom,
             request.DateTo,
@@ -358,7 +363,7 @@ group.MapPost("/chats/{chatId:guid}/export", async (
         return new ChatMessageResponse(
             entity.Id,
             entity.ChatId,
-            entity.UserId,
+            entity.UserId?.ToString(),
             entity.Level,
             entity.Message,
             entity.SequenceNumber,
@@ -366,7 +371,7 @@ group.MapPost("/chats/{chatId:guid}/export", async (
             entity.UpdatedAt,
             entity.IsDeleted,
             entity.DeletedAt,
-            entity.DeletedByUserId,
+            entity.DeletedByUserId?.ToString(),
             entity.IsInvalidated,
             entity.MetadataJson
         );

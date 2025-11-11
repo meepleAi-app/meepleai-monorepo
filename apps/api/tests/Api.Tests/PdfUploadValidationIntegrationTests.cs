@@ -62,7 +62,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
     public async Task PostIngestPdf_WhenFileSizeExceedsMaximum_ReturnsBadRequest()
     {
         // Given: Admin user is authenticated
-        var admin = await CreateTestUserAsync("pdf-val-admin-1", UserRole.Admin);
+        var admin = await CreateTestUserAsync("pdf-val-admin-1", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
@@ -113,7 +113,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
     public async Task PostIngestPdf_WhenMimeTypeIsInvalid_ReturnsBadRequest()
     {
         // Given: Admin user is authenticated
-        var admin = await CreateTestUserAsync("pdf-val-admin-2", UserRole.Admin);
+        var admin = await CreateTestUserAsync("pdf-val-admin-2", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
@@ -161,7 +161,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
     public async Task PostIngestPdf_WhenMagicBytesAreInvalid_ReturnsBadRequest()
     {
         // Given: Admin user is authenticated
-        var admin = await CreateTestUserAsync("pdf-val-admin-3", UserRole.Admin);
+        var admin = await CreateTestUserAsync("pdf-val-admin-3", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
@@ -209,7 +209,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
     public async Task PostIngestPdf_WhenFileIsEmpty_ReturnsBadRequest()
     {
         // Given: Admin user is authenticated
-        var admin = await CreateTestUserAsync("pdf-val-admin-4", UserRole.Admin);
+        var admin = await CreateTestUserAsync("pdf-val-admin-4", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
@@ -251,7 +251,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
     public async Task PostIngestPdf_WhenNoFileProvided_ReturnsBadRequest()
     {
         // Given: Admin user is authenticated
-        var admin = await CreateTestUserAsync("pdf-val-admin-5", UserRole.Admin);
+        var admin = await CreateTestUserAsync("pdf-val-admin-5", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
@@ -297,7 +297,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
     public async Task PostIngestPdf_WhenPdfIsValid_ReturnsSuccess()
     {
         // Given: Admin user is authenticated
-        var admin = await CreateTestUserAsync("pdf-val-admin-6", UserRole.Admin);
+        var admin = await CreateTestUserAsync("pdf-val-admin-6", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
@@ -341,7 +341,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
     public async Task PostIngestPdf_ValidationErrorResponse_HasCorrectStructure()
     {
         // Given: Admin user is authenticated
-        var admin = await CreateTestUserAsync("pdf-val-admin-7", UserRole.Admin);
+        var admin = await CreateTestUserAsync("pdf-val-admin-7", "admin");
         var cookies = await AuthenticateUserAsync(admin.Email);
         var client = CreateClientWithoutCookies();
 
@@ -392,7 +392,7 @@ public class PdfUploadValidationIntegrationTests : IntegrationTestBase
     public async Task PostIngestPdf_WhenEditorUploadsValidPdf_PassesValidationAndSucceeds()
     {
         // Given: Editor user is authenticated
-        var editor = await CreateTestUserAsync("pdf-val-editor-1", UserRole.Editor);
+        var editor = await CreateTestUserAsync("pdf-val-editor-1", "editor");
         var cookies = await AuthenticateUserAsync(editor.Email);
         var client = CreateClientWithoutCookies();
 

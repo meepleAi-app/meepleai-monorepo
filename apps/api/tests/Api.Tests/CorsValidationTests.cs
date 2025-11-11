@@ -110,7 +110,7 @@ public class CorsValidationTests : IntegrationTestBase
     public async Task GetRequest_WithValidOrigin_IncludesAllowCredentialsHeader()
     {
         // Given: Authenticated user with valid origin
-        var user = await CreateTestUserAsync("cors-user", UserRole.User);
+        var user = await CreateTestUserAsync("cors-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
@@ -134,7 +134,7 @@ public class CorsValidationTests : IntegrationTestBase
     public async Task PostRequest_WithCredentials_AcceptsCookieAuthentication()
     {
         // Given: Authenticated user with valid origin
-        var user = await CreateTestUserAsync("cors-post-user", UserRole.User);
+        var user = await CreateTestUserAsync("cors-post-user", "user");
         var game = await CreateTestGameAsync("CORS Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
@@ -161,7 +161,7 @@ public class CorsValidationTests : IntegrationTestBase
     public async Task GetRequest_WithLocalhostOrigin_IsAllowed()
     {
         // Given: Request from localhost:3000 (default fallback origin)
-        var user = await CreateTestUserAsync("localhost-user", UserRole.User);
+        var user = await CreateTestUserAsync("localhost-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
@@ -181,7 +181,7 @@ public class CorsValidationTests : IntegrationTestBase
     public async Task GetRequest_WithInvalidOrigin_IsRejectedByCors()
     {
         // Given: Request from unauthorized origin
-        var user = await CreateTestUserAsync("invalid-origin-user", UserRole.User);
+        var user = await CreateTestUserAsync("invalid-origin-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
@@ -201,7 +201,7 @@ public class CorsValidationTests : IntegrationTestBase
     public async Task GetRequest_WithHttpsLocalhostOrigin_IsAllowedIfConfigured()
     {
         // Given: Request from https://localhost:3000
-        var user = await CreateTestUserAsync("https-localhost-user", UserRole.User);
+        var user = await CreateTestUserAsync("https-localhost-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/games");
@@ -242,7 +242,7 @@ public class CorsValidationTests : IntegrationTestBase
     public async Task PostRequest_WithContentTypeHeader_IsAllowed()
     {
         // Given: POST with Content-Type header
-        var user = await CreateTestUserAsync("content-type-user", UserRole.User);
+        var user = await CreateTestUserAsync("content-type-user", "user");
         var game = await CreateTestGameAsync("Content-Type Test Game");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
@@ -305,7 +305,7 @@ public class CorsValidationTests : IntegrationTestBase
     public async Task PostAuthLogin_WithOriginHeader_SetsCookieWithCorsHeaders()
     {
         // Given: Login request with valid origin
-        var user = await CreateTestUserAsync("login-cors-user", UserRole.User, "Password123!");
+        var user = await CreateTestUserAsync("login-cors-user", "user", "Password123!");
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/login");
         request.Headers.Add("Origin", "http://localhost:3000");
@@ -327,7 +327,7 @@ public class CorsValidationTests : IntegrationTestBase
     public async Task GetAuthMe_WithOriginAndCookies_ReturnsUserInfo()
     {
         // Given: Authenticated user making request with origin
-        var user = await CreateTestUserAsync("me-cors-user", UserRole.User);
+        var user = await CreateTestUserAsync("me-cors-user", "user");
         var cookies = await AuthenticateUserAsync(user.Email);
         var client = Factory.CreateHttpsClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me");

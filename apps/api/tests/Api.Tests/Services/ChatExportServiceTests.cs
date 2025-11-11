@@ -98,7 +98,7 @@ public class ChatExportServiceTests : IDisposable
             Id = userId,
             Email = $"{userId}@test.com",
             PasswordHash = "hash",
-            Role = UserRole.User,
+            Role = "user",
             CreatedAt = DateTime.UtcNow
         };
 

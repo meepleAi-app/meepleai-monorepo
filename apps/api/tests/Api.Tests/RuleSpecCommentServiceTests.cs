@@ -59,7 +59,7 @@ public class RuleSpecCommentServiceTests : IDisposable
             Email = "user1@example.com",
             DisplayName = "User One",
             PasswordHash = "hash",
-            Role = UserRole.Editor,
+            Role = "editor",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -116,7 +116,7 @@ public class RuleSpecCommentServiceTests : IDisposable
             Email = "user1@example.com",
             DisplayName = "User One",
             PasswordHash = "hash",
-            Role = UserRole.Editor,
+            Role = "editor",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -162,7 +162,7 @@ public class RuleSpecCommentServiceTests : IDisposable
             Email = "user1@example.com",
             DisplayName = "User One",
             PasswordHash = "hash",
-            Role = UserRole.Editor,
+            Role = "editor",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -223,7 +223,7 @@ public class RuleSpecCommentServiceTests : IDisposable
             Email = "user1@example.com",
             DisplayName = null, // No display name
             PasswordHash = "hash",
-            Role = UserRole.Editor,
+            Role = "editor",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -268,7 +268,7 @@ public class RuleSpecCommentServiceTests : IDisposable
             Email = "user1@example.com",
             DisplayName = "User One",
             PasswordHash = "hash",
-            Role = UserRole.Editor,
+            Role = "editor",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -278,7 +278,7 @@ public class RuleSpecCommentServiceTests : IDisposable
             Email = "user2@example.com",
             DisplayName = "User Two",
             PasswordHash = "hash",
-            Role = UserRole.Editor,
+            Role = "editor",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -405,7 +405,7 @@ public class RuleSpecCommentServiceTests : IDisposable
             Email = "user1@example.com",
             DisplayName = "User One",
             PasswordHash = "hash",
-            Role = UserRole.Editor,
+            Role = "editor",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -482,7 +482,7 @@ public class RuleSpecCommentServiceTests : IDisposable
             Email = "owner@example.com",
             DisplayName = "Owner",
             PasswordHash = "hash",
-            Role = UserRole.Editor,
+            Role = "editor",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -492,7 +492,7 @@ public class RuleSpecCommentServiceTests : IDisposable
             Email = "other@example.com",
             DisplayName = "Other",
             PasswordHash = "hash",
-            Role = UserRole.Editor,
+            Role = "editor",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -543,7 +543,7 @@ public class RuleSpecCommentServiceTests : IDisposable
             Email = "user1@example.com",
             DisplayName = "User One",
             PasswordHash = "hash",
-            Role = UserRole.Editor,
+            Role = "editor",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -595,7 +595,7 @@ public class RuleSpecCommentServiceTests : IDisposable
             Email = "owner@example.com",
             DisplayName = "Owner",
             PasswordHash = "hash",
-            Role = UserRole.Editor,
+            Role = "editor",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -605,7 +605,7 @@ public class RuleSpecCommentServiceTests : IDisposable
             Email = "admin@example.com",
             DisplayName = "Admin",
             PasswordHash = "hash",
-            Role = UserRole.Admin,
+            Role = "admin",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -657,7 +657,7 @@ public class RuleSpecCommentServiceTests : IDisposable
             Email = "owner@example.com",
             DisplayName = "Owner",
             PasswordHash = "hash",
-            Role = UserRole.Editor,
+            Role = "editor",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -667,7 +667,7 @@ public class RuleSpecCommentServiceTests : IDisposable
             Email = "other@example.com",
             DisplayName = "Other",
             PasswordHash = "hash",
-            Role = UserRole.Editor,
+            Role = "editor",
             CreatedAt = DateTime.UtcNow
         };
 

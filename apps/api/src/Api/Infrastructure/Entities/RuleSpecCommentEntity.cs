@@ -3,10 +3,13 @@ namespace Api.Infrastructure.Entities;
 public class RuleSpecCommentEntity
 {
     public Guid Id { get; set; } = Guid.NewGuid();
-    public string GameId { get; set; } = default!;
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid GameId { get; set; }
     public string Version { get; set; } = default!;
-    public string? AtomId { get; set; }
-    public string UserId { get; set; } = default!;
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid? AtomId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid UserId { get; set; }
     public string CommentText { get; set; } = default!;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
@@ -20,11 +23,13 @@ public class RuleSpecCommentEntity
 
     // EDIT-05: Resolution Tracking
     public bool IsResolved { get; set; } = false;
-    public string? ResolvedByUserId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid? ResolvedByUserId { get; set; }
     public DateTime? ResolvedAt { get; set; }
 
     // EDIT-05: User Mentions
-    public List<string> MentionedUserIds { get; set; } = new();
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public List<Guid> MentionedUserIds { get; set; } = new();
 
     // Navigation Properties
     public GameEntity Game { get; set; } = default!;

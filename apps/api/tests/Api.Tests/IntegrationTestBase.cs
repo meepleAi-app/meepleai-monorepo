@@ -312,7 +312,7 @@ public abstract class IntegrationTestBase : IAsyncLifetime
     /// </summary>
     protected async Task<UserEntity> CreateTestUserAsync(
         string username,
-        UserRole role = UserRole.User,
+        string role = "user",
         string? password = null)
     {
         using var scope = Factory.Services.CreateScope();

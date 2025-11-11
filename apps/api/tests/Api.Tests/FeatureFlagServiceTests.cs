@@ -78,7 +78,7 @@ public class FeatureFlagServiceTests
     {
         // Arrange
         var featureName = "Features.AdvancedFeature";
-        var role = UserRole.Admin;
+        var role = "admin";
 
         // Role-specific flag enabled
         _configServiceMock.Setup(x => x.GetValueAsync<bool?>($"{featureName}.{role}", null, null))
@@ -102,7 +102,7 @@ public class FeatureFlagServiceTests
     {
         // Arrange
         var featureName = "Features.StandardFeature";
-        var role = UserRole.User;
+        var role = "user";
 
         // Role-specific flag not found
         _configServiceMock.Setup(x => x.GetValueAsync<bool?>($"{featureName}.{role}", null, null))
@@ -126,7 +126,7 @@ public class FeatureFlagServiceTests
     {
         // Arrange - Role-specific DISABLED, but global ENABLED (role-specific wins)
         var featureName = "Features.BetaFeature";
-        var role = UserRole.User;
+        var role = "user";
 
         _configServiceMock.Setup(x => x.GetValueAsync<bool?>($"{featureName}.{role}", null, null))
             .ReturnsAsync(false); // Role-specific: disabled
@@ -235,7 +235,7 @@ public class FeatureFlagServiceTests
     {
         // Arrange
         var featureName = "Features.AdminFeature";
-        var role = UserRole.Admin;
+        var role = "admin";
         var expectedKey = $"{featureName}.{role}";
 
         _configServiceMock.Setup(x => x.GetConfigurationByKeyAsync(expectedKey, null))
@@ -476,9 +476,9 @@ public class FeatureFlagServiceTests
     #region Hierarchy Tests
 
     [Theory]
-    [InlineData(UserRole.Admin)]
-    [InlineData(UserRole.Editor)]
-    [InlineData(UserRole.User)]
+    [InlineData("admin")]
+    [InlineData("editor")]
+    [InlineData("user")]
     public async Task IsEnabledAsync_SupportsAllUserRoles(UserRole role)
     {
         // Arrange

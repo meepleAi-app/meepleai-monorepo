@@ -4,10 +4,12 @@ public class RuleSpecEntity
 {
     public Guid Id { get; set; }
         = Guid.NewGuid();
-    public string GameId { get; set; } = default!;
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid GameId { get; set; }
     public string Version { get; set; } = default!;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public string? CreatedByUserId { get; set; }
+    // DDD-PHASE2: Converted to Guid for domain alignment
+    public Guid? CreatedByUserId { get; set; }
 
     // EDIT-06: Version timeline and branching support
     public Guid? ParentVersionId { get; set; }

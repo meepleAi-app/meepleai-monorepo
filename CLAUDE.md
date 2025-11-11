@@ -589,7 +589,22 @@ cd apps/web && pnpm dev                                                         
 - **VOs**: WorkflowUrl
 - **CQRS**: 2 commands + 1 query + 3 handlers
 
-### SystemConfiguration, Administration, DocumentProcessing
+### DocumentProcessing (DDD Phase 4 ✅ partial)
+- **Aggregates**: PdfDocument
+- **VOs**: FileName, FileSize, PageCount, PdfVersion
+- **Domain Services**:
+  - PdfValidationDomainService (PDF-09) - Magic bytes, size, page count validation
+  - TableToAtomicRuleConverter (Phase 3) - Table-to-rule business logic
+  - PdfTextProcessingDomainService (Phase 4) - OCR decisions, text normalization, quality assessment
+- **Infrastructure Adapters**:
+  - DocnetPdfValidator (IPdfValidator) - Docnet.Core validation adapter
+  - ITextPdfTableExtractor (IPdfTableExtractor) - iText7 table extraction
+  - DocnetPdfTextExtractor (IPdfTextExtractor) - Docnet.Core text extraction with OCR fallback
+- **CQRS**: 1 command + 2 queries + 3 handlers
+- **Tests**: 85/86 domain+infrastructure tests (98.8% pass rate)
+- **Remaining**: Application services (PdfIndexingService, PdfStorageService orchestration)
+
+### SystemConfiguration, Administration
 - **Status**: Domain foundations ready, repositories pending
 
 **Pattern**: Domain (pure business logic) → Application (CQRS via MediatR) → Infrastructure (EF Core repositories)

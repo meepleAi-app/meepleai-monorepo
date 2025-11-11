@@ -1,4 +1,4 @@
-using Api.SharedKernel.Domain;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Exceptions;
 
 namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
@@ -8,19 +8,19 @@ namespace Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 /// </summary>
 public sealed class PlayTime : ValueObject
 {
-    private const int MinMinutes = 1;
-    private const int MaxMinutes = 1440; // 24 hours
+    private const int MinPlayTimeMinutes = 1;
+    private const int MaxPlayTimeMinutes = 1440; // 24 hours
 
     public int MinMinutes { get; }
     public int MaxMinutes { get; }
 
     public PlayTime(int minMinutes, int maxMinutes)
     {
-        if (minMinutes < MinMinutes)
-            throw new ValidationException($"Minimum play time cannot be less than {MinMinutes} minute");
+        if (minMinutes < MinPlayTimeMinutes)
+            throw new ValidationException($"Minimum play time cannot be less than {MinPlayTimeMinutes} minute");
 
-        if (maxMinutes > MaxMinutes)
-            throw new ValidationException($"Maximum play time cannot exceed {MaxMinutes} minutes (24 hours)");
+        if (maxMinutes > MaxPlayTimeMinutes)
+            throw new ValidationException($"Maximum play time cannot exceed {MaxPlayTimeMinutes} minutes (24 hours)");
 
         if (minMinutes > maxMinutes)
             throw new ValidationException("Minimum play time cannot exceed maximum");
@@ -35,9 +35,9 @@ public sealed class PlayTime : ValueObject
     public int AverageMinutes => (MinMinutes + MaxMinutes) / 2;
 
     /// <summary>
-    /// Checks if game is quick (< 30 minutes).
+    /// Checks if game is quick (<= 30 minutes).
     /// </summary>
-    public bool IsQuick => MaxMinutes < 30;
+    public bool IsQuick => MaxMinutes <= 30;
 
     /// <summary>
     /// Checks if game is medium length (30-90 minutes).

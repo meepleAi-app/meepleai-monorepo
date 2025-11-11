@@ -1,9 +1,13 @@
+using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PdfIndexingErrorCode = Api.BoundedContexts.DocumentProcessing.Application.DTOs.PdfIndexingErrorCode;
 
 namespace Api.Routing;
 
@@ -471,7 +475,7 @@ group.MapPost("/ingest/pdf/{pdfId}/rulespec", async (string pdfId, HttpContext c
 });
 
 // AI-01: Index PDF for semantic search
-group.MapPost("/ingest/pdf/{pdfId}/index", async (string pdfId, HttpContext context, PdfIndexingService indexingService, ILogger<Program> logger, CancellationToken ct) =>
+group.MapPost("/ingest/pdf/{pdfId}/index", async (string pdfId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
 {
     if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
     {
@@ -487,7 +491,7 @@ group.MapPost("/ingest/pdf/{pdfId}/index", async (string pdfId, HttpContext cont
 
     logger.LogInformation("User {UserId} indexing PDF {PdfId}", session.User.Id, pdfId);
 
-    var result = await indexingService.IndexPdfAsync(pdfId, ct);
+    var result = await mediator.Send(new IndexPdfCommand(pdfId), ct);
 
     if (!result.Success)
     {

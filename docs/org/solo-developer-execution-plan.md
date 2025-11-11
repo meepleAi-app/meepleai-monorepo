@@ -262,17 +262,17 @@ git push origin main
 **Month 1 (4 weeks): PDF Processing Pipeline**
 
 **Week 1: LLMWhisperer Integration** (Days 1-5)
-- Day 1: Setup LLMWhisperer account ([BGAI-001])
-- Day 2-3: Implement LlmWhispererPdfExtractor ([BGAI-002])
-- Day 4: Add configuration ([BGAI-003])
-- Day 5: Unit tests ([BGAI-004])
+- Day 1: Setup LLMWhisperer account (#941 - [BGAI-001])
+- Day 2-3: Implement LlmWhispererPdfExtractor (#942 - [BGAI-002])
+- Day 4: Add configuration (#943 - [BGAI-003])
+- Day 5: Unit tests (#944 - [BGAI-004])
 - **Deliverable**: LLMWhisperer Stage 1 working
 
 **Week 2: SmolDocling Python Service** (Days 6-10)
-- Day 6-7: FastAPI service implementation ([BGAI-005])
-- Day 8: Docker configuration ([BGAI-006])
-- Day 9: SmolDoclingPdfExtractor C# client ([BGAI-007])
-- Day 10: Integration tests ([BGAI-008])
+- Day 6-7: FastAPI service implementation (#945 - [BGAI-005])
+- Day 8: Docker configuration (#946 - [BGAI-006])
+- Day 9: SmolDoclingPdfExtractor C# client ([BGAI-007] - to create)
+- Day 10: Integration tests ([BGAI-008] - to create)
 - **Deliverable**: SmolDocling Stage 2 working
 
 **Week 3: PDF Orchestration** (Days 11-15)

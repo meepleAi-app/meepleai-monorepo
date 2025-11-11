@@ -6,6 +6,7 @@ using System.Security;
 using System.Text;
 using System.Text.RegularExpressions;
 using Api.Services.Exceptions;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
 namespace Api.Services;
 

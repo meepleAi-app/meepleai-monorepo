@@ -165,8 +165,8 @@ public static class ApplicationServiceExtensions
         services.AddScoped<PdfStorageService>(); // Refactored facade
 
         // PDF-02: OCR service for fallback text extraction (Windows-only)
-#pragma warning disable CA1416 // TesseractOcrService is Windows-only by design
-        services.AddSingleton<IOcrService, TesseractOcrService>();
+#pragma warning disable CA1416 // TesseractOcrAdapter is Windows-only by design
+        services.AddSingleton<BoundedContexts.DocumentProcessing.Infrastructure.External.IOcrService, BoundedContexts.DocumentProcessing.Infrastructure.External.TesseractOcrAdapter>();
 #pragma warning restore CA1416
 
         return services;

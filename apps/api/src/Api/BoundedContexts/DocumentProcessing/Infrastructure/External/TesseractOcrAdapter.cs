@@ -9,23 +9,23 @@ using System.Security;
 using System.Text;
 using Tesseract;
 
-namespace Api.Services;
+namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
 /// <summary>
 /// OCR service implementation using Tesseract 5
 /// </summary>
 [SupportedOSPlatform("windows")]
-public class TesseractOcrService : IOcrService, IDisposable
+public class TesseractOcrAdapter : IOcrService, IDisposable
 {
-    private readonly ILogger<TesseractOcrService> _logger;
+    private readonly ILogger<TesseractOcrAdapter> _logger;
     private readonly string _tessdataPath;
     private readonly string _language;
     private TesseractEngine? _engine;
     private readonly SemaphoreSlim _semaphore;
     private bool _disposed;
 
-    public TesseractOcrService(
-        ILogger<TesseractOcrService> logger,
+    public TesseractOcrAdapter(
+        ILogger<TesseractOcrAdapter> logger,
         IConfiguration configuration)
     {
         _logger = logger;
@@ -42,7 +42,7 @@ public class TesseractOcrService : IOcrService, IDisposable
         _semaphore = new SemaphoreSlim(maxConcurrent, maxConcurrent);
 
         _logger.LogInformation(
-            "TesseractOcrService initialized with tessdata path: {TessdataPath}, language: {Language}",
+            "TesseractOcrAdapter initialized with tessdata path: {TessdataPath}, language: {Language}",
             _tessdataPath, _language);
     }
 
@@ -310,7 +310,7 @@ public class TesseractOcrService : IOcrService, IDisposable
         {
             _engine?.Dispose();
             _semaphore?.Dispose();
-            _logger.LogDebug("TesseractOcrService disposed");
+            _logger.LogDebug("TesseractOcrAdapter disposed");
         }
 
         _disposed = true;

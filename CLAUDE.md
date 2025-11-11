@@ -4,14 +4,33 @@ AI-powered board game rules assistant. PDF processing → vector embeddings → 
 
 **Stack**: ASP.NET Core 9.0, Next.js 16, React 19, PostgreSQL, Qdrant, Redis, OpenRouter API, n8n, Docker
 
+## Architecture (DDD Bounded Contexts)
+
+**NEW** (2025-11-11): Migrated to Domain-Driven Design architecture with 7 bounded contexts.
+
+```
+apps/api/src/Api/BoundedContexts/  - DDD Bounded Contexts (NEW!)
+├── Authentication/         User auth, sessions, API keys, OAuth, 2FA
+├── GameManagement/         Game catalog, play sessions (Issue #923 ✅)
+├── KnowledgeBase/          RAG, vector search, chat threads (Issue #924 ✅)
+├── WorkflowIntegration/    n8n workflows, error logging
+├── SystemConfiguration/    Runtime config, feature flags
+├── Administration/         Alerts, audit logs
+└── DocumentProcessing/     PDF upload, extraction, validation
+```
+
+**Pattern**: Each context has `Domain/` (aggregates, VOs) → `Application/` (CQRS) → `Infrastructure/` (repositories, adapters)
+
 ## Structure
 ```
 apps/api/          - Backend (ASP.NET Core)
-  src/Api/Services/      - Business logic
+  src/Api/BoundedContexts/   - DDD bounded contexts (NEW!)
+  src/Api/Services/      - Legacy services (being migrated)
   src/Api/Infrastructure/ - DB context & entities
   src/Api/Models/        - DTOs
   src/Api/Migrations/    - EF Core
   tests/Api.Tests/       - xUnit + Testcontainers
+    BoundedContexts/     - DDD domain tests (NEW!)
 apps/web/          - Frontend (Next.js)
   src/pages/       - Routes
   src/lib/         - API client
@@ -545,6 +564,37 @@ cd apps/web && pnpm dev                                                         
 - Roslyn analyzers: CA2000 (error), CA1001 (warning), IDE0067 (error) enforced via `.editorconfig`
 
 **TS/React**: Strict mode, ESLint, avoid `any`, use `@/lib/api`, AAA tests
+
+## DDD Bounded Contexts (2025-11-11)
+
+**Status**: 6/7 contexts with foundations, 3 fully implemented
+
+### GameManagement (Issue #923 ✅)
+- **Aggregates**: Game (catalog), GameSession (play tracking)
+- **VOs**: GameTitle, Publisher, YearPublished, PlayerCount, PlayTime, Version, SessionStatus, SessionPlayer
+- **CQRS**: 5 commands + 4 queries + 9 handlers
+- **Endpoints**: 9 HTTP (4 Game CRUD + 5 Session lifecycle)
+- **Tests**: 86 domain tests (100% coverage)
+- **Docs**: `claudedocs/ddd-phase2-complete-final.md`
+
+### KnowledgeBase (Issue #924 ✅ partial)
+- **Aggregates**: VectorDocument, Embedding, SearchResult, ChatThread
+- **VOs**: Vector, Confidence, Citation, ChatMessage
+- **CQRS**: 3 commands + 3 queries + 6 handlers
+- **Tests**: 17 domain tests
+- **Remaining**: RAG service split (995 lines → 5 services, ~3 weeks)
+
+### WorkflowIntegration ✅
+- **Aggregates**: N8nConfiguration, WorkflowErrorLog
+- **VOs**: WorkflowUrl
+- **CQRS**: 2 commands + 1 query + 3 handlers
+
+### SystemConfiguration, Administration, DocumentProcessing
+- **Status**: Domain foundations ready, repositories pending
+
+**Pattern**: Domain (pure business logic) → Application (CQRS via MediatR) → Infrastructure (EF Core repositories)
+
+**DDD Docs**: `docs/refactoring/ddd-architecture-plan.md`, `claudedocs/DDD-FOUNDATION-COMPLETE-2025-11-11.md`
 
 ## Key Docs
 

@@ -70,7 +70,7 @@ export class ChatPage extends BasePage implements IChatPage {
    * Game selection dropdown
    */
   private get gameSelect(): Locator {
-    return this.page.getByLabel(/game|gioco/i);
+    return this.page.locator('select#gameSelect');
   }
 
   /**
@@ -276,6 +276,76 @@ export class ChatPage extends BasePage implements IChatPage {
    */
   async getSelectedGame(): Promise<string> {
     return await this.gameSelect.inputValue();
+  }
+
+  /**
+   * Wait for game context to be loaded
+   * Waits for game select to be visible and populated
+   */
+  async waitForGameContext(): Promise<void> {
+    await this.waitForElement(this.gameSelect, { timeout: 10000 });
+    // Wait for at least one option to be available
+    await this.page.waitForFunction(
+      () => {
+        const select = document.querySelector<HTMLSelectElement>('[aria-label*="game" i], [aria-label*="gioco" i]');
+        return select && select.options.length > 0;
+      },
+      { timeout: 10000 }
+    );
+  }
+
+  /**
+   * Get the active game name from UI
+   * @returns Currently active game name or null if none selected
+   */
+  async getActiveGameName(): Promise<string | null> {
+    try {
+      const selectedValue = await this.getSelectedGame();
+      if (selectedValue) {
+        // Get the text content of the selected option
+        const selectedOption = await this.gameSelect.locator(`option[value="${selectedValue}"]`).textContent();
+        return selectedOption?.trim() || selectedValue;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Wait for streaming response to complete
+   * Alternative to waitForAnswer() with explicit streaming check
+   */
+  async waitForResponseComplete(): Promise<void> {
+    // Wait for streaming indicator to appear (if it hasn't already)
+    const hasStreamingIndicator = await this.isVisible(this.streamingIndicator);
+
+    if (hasStreamingIndicator) {
+      // Wait for streaming to complete
+      await this.waitForElementToDisappear(this.streamingIndicator, { timeout: 60000 });
+    } else {
+      // If no streaming indicator, wait for send button to be re-enabled
+      await this.page.waitForFunction(
+        () => {
+          const sendBtn = document.querySelector('button[type="submit"]') as HTMLButtonElement;
+          return sendBtn && !sendBtn.disabled;
+        },
+        { timeout: 60000 }
+      );
+    }
+  }
+
+  /**
+   * Get the complete response text from the last answer
+   * Handles both streaming and completed responses
+   * @returns Response text
+   */
+  async getResponseText(): Promise<string> {
+    // Wait for response to be complete first
+    await this.waitForResponseComplete();
+
+    // Get last answer
+    return await this.getLastAnswer();
   }
 
   // ========================================================================

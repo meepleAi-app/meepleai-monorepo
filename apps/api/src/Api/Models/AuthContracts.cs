@@ -6,9 +6,20 @@ public record RegisterPayload(
     string? DisplayName,
     string? Role);
 
+/// <summary>
+/// Login payload supporting both camelCase (frontend) and PascalCase (backend) JSON formats.
+/// Case-insensitive matching is configured globally in Program.cs via ConfigureHttpJsonOptions.
+/// </summary>
 public class LoginPayload
 {
+    /// <summary>
+    /// User email address. Accepts both "email" (camelCase) and "Email" (PascalCase) in JSON.
+    /// </summary>
     public string Email { get; set; } = default!;
+
+    /// <summary>
+    /// User password. Accepts both "password" (camelCase) and "Password" (PascalCase) in JSON.
+    /// </summary>
     public string Password { get; set; } = default!;
 }
 

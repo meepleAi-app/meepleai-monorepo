@@ -3,6 +3,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Microsoft.AspNetCore.Mvc; // For [FromBody] attribute
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -55,8 +56,27 @@ public static class AuthEndpoints
         });
 
         // User login with 2FA support (AUTH-07)
-        group.MapPost("/auth/login", async (LoginPayload? payload, HttpContext context, AuthService auth, MeepleAiDbContext db, ITempSessionService tempSessionService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/auth/login", async (HttpContext context, AuthService auth, MeepleAiDbContext db, ITempSessionService tempSessionService, ILogger<Program> logger, CancellationToken ct) =>
         {
+            // Manual deserialization to support both camelCase and PascalCase JSON
+            // ASP.NET Core 9.0 Minimal API auto-deserialization ignores ConfigureHttpJsonOptions
+            LoginPayload? payload;
+            try
+            {
+                var jsonOptions = new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    AllowTrailingCommas = true,
+                    PropertyNamingPolicy = null
+                };
+                payload = await context.Request.ReadFromJsonAsync<LoginPayload>(jsonOptions, ct);
+            }
+            catch (System.Text.Json.JsonException ex)
+            {
+                logger.LogWarning(ex, "Login failed: invalid JSON payload");
+                return Results.BadRequest(new { error = "Invalid JSON format" });
+            }
+
             if (payload == null)
             {
                 logger.LogWarning("Login failed: payload is null");

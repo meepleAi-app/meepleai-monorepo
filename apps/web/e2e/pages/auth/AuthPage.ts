@@ -90,10 +90,10 @@ export class AuthPage extends BasePage implements IAuthPage {
   // ========================================================================
 
   /**
-   * Navigate to authentication page (home page with login/register forms)
+   * Navigate to authentication page (login page)
    */
   async goto(): Promise<void> {
-    await this.page.goto('/');
+    await this.page.goto('/login');
     await this.waitForLoad();
   }
 

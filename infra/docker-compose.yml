@@ -4,13 +4,15 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-meeple}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-meeplepass}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       POSTGRES_DB: ${POSTGRES_DB:-meepleai}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    secrets:
+      - postgres-password
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -174,15 +176,20 @@ services:
   alertmanager:
     image: prom/alertmanager:v0.27.0
     restart: unless-stopped
+    env_file:
+      - ./env/alertmanager.env
+    secrets:
+      - gmail-app-password
+    volumes:
+      - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanagerdata:/alertmanager
+    entrypoint: ["/scripts/load-secrets-env.sh"]
     command:
+      - '/bin/alertmanager'
       - '--config.file=/etc/alertmanager/alertmanager.yml'
       - '--storage.path=/alertmanager'
       - '--web.external-url=http://localhost:9093'
-    env_file:
-      - ./env/alertmanager.env
-    volumes:
-      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
-      - alertmanagerdata:/alertmanager
     ports:
       - "9093:9093"
     healthcheck:
@@ -220,7 +227,7 @@ services:
     restart: unless-stopped
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana-admin-password
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_SERVER_ROOT_URL: "http://localhost:3001"
     volumes:
@@ -228,6 +235,8 @@ services:
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
       - ./grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
       - ./dashboards:/var/lib/grafana/dashboards:ro
+    secrets:
+      - grafana-admin-password
     ports:
       - "3001:3000"
     depends_on:
@@ -247,6 +256,14 @@ services:
     restart: unless-stopped
     env_file:
       - ./env/n8n.env.dev
+    secrets:
+      - postgres-password
+      - n8n-encryption-key
+      - n8n-basic-auth-password
+    volumes:
+      - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
+    entrypoint: ["/scripts/load-secrets-env.sh"]
+    command: ["n8n"]
     ports:
       - "5678:5678"
     depends_on:
@@ -265,7 +282,11 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Postgres: Host=postgres;Database=${POSTGRES_DB:-meepleai};Username=${POSTGRES_USER:-meeple};Password=${POSTGRES_PASSWORD:-meeplepass}
+      # SEC-708: Connection string will be built from secret file
+      # Password read from /run/secrets/postgres-password
+      POSTGRES_USER: ${POSTGRES_USER:-meeple}
+      POSTGRES_DB: ${POSTGRES_DB:-meepleai}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
       QDRANT_URL: http://qdrant:6333
       REDIS_URL: redis:6379
       OLLAMA_URL: http://ollama:11434
@@ -274,10 +295,16 @@ services:
       # AI-09: Local embedding service configuration
       LOCAL_EMBEDDING_URL: http://embedding-service:8000
       EMBEDDING_FALLBACK_ENABLED: "true"
-      # Bootstrap: Initial admin user configuration (set via env file or environment)
+      # SEC-708: OpenRouter API key from secret file
+      OPENROUTER_API_KEY_FILE: /run/secrets/openrouter-api-key
+      # Bootstrap: Initial admin user configuration (password from secret)
       INITIAL_ADMIN_EMAIL: ${INITIAL_ADMIN_EMAIL:-}
-      INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
+      INITIAL_ADMIN_PASSWORD_FILE: /run/secrets/initial-admin-password
       INITIAL_ADMIN_DISPLAY_NAME: ${INITIAL_ADMIN_DISPLAY_NAME:-System Admin}
+    secrets:
+      - postgres-password
+      - openrouter-api-key
+      - initial-admin-password
     ports:
       - "8080:8080"
     depends_on:
@@ -334,3 +361,22 @@ volumes:
 networks:
   meepleai:
     driver: bridge
+
+# SEC-708: Docker Secrets for sensitive credentials
+# Secret files are stored in ./secrets/ directory (gitignored)
+# Initialize secrets with: tools/secrets/init-secrets.sh
+secrets:
+  postgres-password:
+    file: ./secrets/postgres-password.txt
+  openrouter-api-key:
+    file: ./secrets/openrouter-api-key.txt
+  n8n-encryption-key:
+    file: ./secrets/n8n-encryption-key.txt
+  n8n-basic-auth-password:
+    file: ./secrets/n8n-basic-auth-password.txt
+  gmail-app-password:
+    file: ./secrets/gmail-app-password.txt
+  grafana-admin-password:
+    file: ./secrets/grafana-admin-password.txt
+  initial-admin-password:
+    file: ./secrets/initial-admin-password.txt

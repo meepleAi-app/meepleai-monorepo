@@ -35,9 +35,10 @@ public static class InfrastructureServiceExtensions
         // Only configure Postgres in non-test environments (tests will override with SQLite)
         if (!environment.IsEnvironment("Testing"))
         {
+            // SEC-708: Build connection string from Docker Secrets if available
             var connectionString = configuration.GetConnectionString("Postgres")
                 ?? configuration["ConnectionStrings__Postgres"]
-                ?? throw new InvalidOperationException("Missing Postgres connection string");
+                ?? SecretsHelper.BuildPostgresConnectionString(configuration);
 
             // PERF-09: Optimize Postgres connection pooling for better throughput
             services.AddDbContext<MeepleAiDbContext>(options =>

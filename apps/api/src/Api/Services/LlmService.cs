@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Api.Infrastructure;
 using Api.Infrastructure.Security;
 
 namespace Api.Services;
@@ -40,7 +41,9 @@ public class LlmService : ILlmService
     {
         _httpClient = httpClientFactory.CreateClient("OpenRouter");
         _logger = logger;
-        _apiKey = config["OPENROUTER_API_KEY"] ?? throw new InvalidOperationException("OPENROUTER_API_KEY not configured");
+        // SEC-708: Read API key from Docker Secret file or direct config
+        _apiKey = SecretsHelper.GetSecretOrValue(config, "OPENROUTER_API_KEY", logger, required: true)
+            ?? throw new InvalidOperationException("OPENROUTER_API_KEY not configured");
         _configService = configService;
         _fallbackConfig = fallbackConfig;
 

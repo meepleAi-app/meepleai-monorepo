@@ -322,7 +322,13 @@ static async Task EnsureInitialAdminUserAsync(WebApplication app, MeepleAiDbCont
 
     // Get admin credentials from environment variables
     var adminEmail = app.Configuration["INITIAL_ADMIN_EMAIL"];
-    var adminPassword = app.Configuration["INITIAL_ADMIN_PASSWORD"];
+    // SEC-708: Read initial admin password from Docker Secret file or direct config
+    var adminPassword = SecretsHelper.GetSecretOrValue(
+        app.Configuration,
+        "INITIAL_ADMIN_PASSWORD",
+        app.Logger,
+        required: false
+    );
     var adminDisplayName = app.Configuration["INITIAL_ADMIN_DISPLAY_NAME"] ?? "System Admin";
 
     if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))

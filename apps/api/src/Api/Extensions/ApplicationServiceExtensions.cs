@@ -42,6 +42,9 @@ public static class ApplicationServiceExtensions
         // DDD-PHASE3: SystemConfiguration bounded context
         services.AddSystemConfigurationContext();
 
+        // DDD-PHASE3: Administration bounded context
+        // services.AddAdministrationContext(); // TODO: Uncomment when repositories implemented
+
         return services;
     }
 

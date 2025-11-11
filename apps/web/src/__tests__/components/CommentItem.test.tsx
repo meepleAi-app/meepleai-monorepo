@@ -13,8 +13,15 @@ import { CommentItem } from '../../components/CommentItem';
 import { RuleSpecComment } from '@/lib/api';
 
 // Mock MentionInput component
+interface MockMentionInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+}
+
 jest.mock('../../components/MentionInput', () => ({
-  MentionInput: ({ value, onChange, placeholder, disabled }: any) => (
+  MentionInput: ({ value, onChange, placeholder, disabled }: MockMentionInputProps) => (
     <textarea
       data-testid="mention-input"
       value={value}
@@ -168,7 +175,7 @@ describe('CommentItem Component', () => {
 
     it('renders multiple @mentions', () => {
       const comment = createMockComment({ commentText: 'Hey @alice and @bob!' });
-      const { container } = render(<CommentItem {...defaultProps} comment={comment} />);
+      render(<CommentItem {...defaultProps} comment={comment} />);
 
       expect(screen.getByText('@alice')).toBeInTheDocument();
       expect(screen.getByText('@bob')).toBeInTheDocument();

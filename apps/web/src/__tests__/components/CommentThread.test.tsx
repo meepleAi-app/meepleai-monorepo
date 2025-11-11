@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CommentThread } from '../../components/CommentThread';
 import { api, RuleSpecComment } from '@/lib/api';
 

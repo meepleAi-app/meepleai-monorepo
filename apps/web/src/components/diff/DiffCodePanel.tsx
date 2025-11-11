@@ -87,7 +87,10 @@ export function DiffCodePanel({
       }
 
       // Render line
-      const isHighlighted = false; // TODO: Implement based on highlightedChangeId
+      // NOTE: Highlighting based on highlightedChangeId is not yet implemented
+      // This will require mapping highlightedChangeId to specific line numbers
+      // and applying appropriate CSS classes for visual highlighting
+      const isHighlighted = false;
       rendered.push(
         <DiffCodeBlock
           key={`line-${index}`}

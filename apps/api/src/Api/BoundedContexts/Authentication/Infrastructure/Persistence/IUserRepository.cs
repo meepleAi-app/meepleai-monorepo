@@ -19,4 +19,10 @@ public interface IUserRepository : IRepository<User, Guid>
     /// Checks if a user with the given email exists.
     /// </summary>
     Task<bool> ExistsByEmailAsync(Email email, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Checks if any users exist in the system.
+    /// Used for first-user-is-admin logic.
+    /// </summary>
+    Task<bool> HasAnyUsersAsync(CancellationToken cancellationToken = default);
 }

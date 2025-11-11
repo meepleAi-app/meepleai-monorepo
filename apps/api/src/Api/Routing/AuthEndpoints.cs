@@ -3,9 +3,15 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using MediatR;
 using Microsoft.AspNetCore.Mvc; // For [FromBody] attribute
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+
+// DDD CQRS imports (using aliases to avoid conflicts with Api.Models)
+using DddRegisterCommand = Api.BoundedContexts.Authentication.Application.Commands.RegisterCommand;
+using DddLoginCommand = Api.BoundedContexts.Authentication.Application.Commands.LoginCommand;
+using DddLogoutCommand = Api.BoundedContexts.Authentication.Application.Commands.LogoutCommand;
 
 namespace Api.Routing;
 
@@ -22,24 +28,31 @@ public static class AuthEndpoints
         var removeSessionCookie = CookieHelpers.RemoveSessionCookie;
         var getSessionCookieName = CookieHelpers.GetSessionCookieName;
 
-        // User registration
-        group.MapPost("/auth/register", async (RegisterPayload payload, HttpContext context, AuthService auth, ILogger<Program> logger, CancellationToken ct) =>
+        // User registration (DDD/CQRS)
+        group.MapPost("/auth/register", async (RegisterPayload payload, IMediator mediator, HttpContext context, ILogger<Program> logger, CancellationToken ct) =>
         {
             try
             {
-                var command = new RegisterCommand(
-                    payload.Email,
-                    payload.Password,
-                    payload.DisplayName,
-                    payload.Role,
-                    context.Connection.RemoteIpAddress?.ToString(),
-                    context.Request.Headers.UserAgent.ToString());
+                var command = new DddRegisterCommand(
+                    Email: payload.Email,
+                    Password: payload.Password,
+                    DisplayName: payload.DisplayName,
+                    Role: payload.Role,
+                    IpAddress: context.Connection.RemoteIpAddress?.ToString(),
+                    UserAgent: context.Request.Headers.UserAgent.ToString());
 
                 logger.LogInformation("User registration attempt for {Email}", payload.Email);
-                var result = await auth.RegisterAsync(command, ct);
+                var result = await mediator.Send(command, ct);
                 writeSessionCookie(context, result.SessionToken, result.ExpiresAt);
                 logger.LogInformation("User {UserId} registered successfully with role {Role}", result.User.Id, result.User.Role);
-                return Results.Json(new AuthResponse(result.User, result.ExpiresAt));
+
+                // Map to legacy AuthResponse for backward compatibility
+                var legacyUser = new AuthUser(
+                    Id: result.User.Id.ToString(),
+                    Email: result.User.Email,
+                    DisplayName: result.User.DisplayName,
+                    Role: result.User.Role);
+                return Results.Json(new AuthResponse(legacyUser, result.ExpiresAt));
             }
             catch (ArgumentException ex)
             {
@@ -52,6 +65,11 @@ public static class AuthEndpoints
                 // SEC-738: Pass exception object for proper destructuring (CWE-532 prevention)
                 logger.LogWarning(ex, "Registration conflict for {Email}", payload.Email);
                 return Results.Conflict(new { error = ex.Message });
+            }
+            catch (Api.SharedKernel.Domain.Exceptions.DomainException ex)
+            {
+                logger.LogWarning(ex, "Registration domain validation failed");
+                return Results.BadRequest(new { error = ex.Message });
             }
         });
 

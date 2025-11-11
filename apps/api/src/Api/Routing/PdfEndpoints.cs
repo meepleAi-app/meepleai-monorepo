@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -19,7 +20,7 @@ public static class PdfEndpoints
 {
     public static RouteGroupBuilder MapPdfEndpoints(this RouteGroupBuilder group)
     {
-group.MapPost("/ingest/pdf", async (HttpContext context, IPdfValidationService pdfValidation, PdfStorageService pdfStorage, IFeatureFlagService featureFlags, ILogger<Program> logger, CancellationToken ct) =>
+group.MapPost("/ingest/pdf", async (HttpContext context, IPdfValidator pdfValidator, PdfStorageService pdfStorage, IFeatureFlagService featureFlags, ILogger<Program> logger, CancellationToken ct) =>
 {
     // CONFIG-05: Check if PDF upload feature is enabled (return 403 before auth to reflect feature gating)
     if (!await featureFlags.IsEnabledAsync("Features.PdfUpload"))
@@ -61,25 +62,10 @@ group.MapPost("/ingest/pdf", async (HttpContext context, IPdfValidationService p
 
     logger.LogInformation("User {UserId} uploading PDF for game {GameId}", userId, gameId);
 
-    // PDF-09: Validate file size
-    var sizeValidation = pdfValidation.ValidateFileSize(file.Length);
-    if (!sizeValidation.IsValid)
-    {
-        logger.LogWarning("PDF validation failed for {FileName}: File size validation failed", file.FileName);
-        return Results.BadRequest(new { error = "validation_failed", details = sizeValidation.Errors });
-    }
-
-    // PDF-09: Validate MIME type
-    var mimeValidation = pdfValidation.ValidateMimeType(file.ContentType);
-    if (!mimeValidation.IsValid)
-    {
-        logger.LogWarning("PDF validation failed for {FileName}: MIME type validation failed", file.FileName);
-        return Results.BadRequest(new { error = "validation_failed", details = mimeValidation.Errors });
-    }
-
-    // PDF-09: Deep validation with PDF content
+    // PDF-09: Comprehensive validation (DDD adapter)
+    // Validates: magic bytes, file size, MIME type, page count, PDF version
     using var stream = file.OpenReadStream();
-    var validation = await pdfValidation.ValidateAsync(stream, file.FileName, ct);
+    var validation = await pdfValidator.ValidateAsync(stream, file.FileName, ct);
 
     if (!validation.IsValid)
     {

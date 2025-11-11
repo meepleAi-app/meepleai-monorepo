@@ -163,7 +163,7 @@ public static class ApplicationServiceExtensions
         // PDF main services
         services.AddScoped<PdfTextExtractionService>();
         services.AddScoped<PdfTableExtractionService>(); // Refactored facade
-        services.AddScoped<IPdfValidationService, PdfValidationService>(); // PDF-09: PDF validation service
+        // PDF-09: Validation service migrated to DocumentProcessing DDD context (DocumentProcessingServiceExtensions)
         services.AddScoped<PdfStorageService>(); // Refactored facade
 
         // PDF-02: OCR service for fallback text extraction (Windows-only)

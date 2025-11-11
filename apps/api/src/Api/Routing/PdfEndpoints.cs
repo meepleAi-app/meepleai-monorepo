@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.Extensions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -30,10 +31,8 @@ public static class PdfEndpoints
                     statusCode: 403);
             }
 
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
@@ -106,10 +105,8 @@ public static class PdfEndpoints
             CancellationToken ct) =>
         {
             // Authentication required
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             // Validate query parameter
             if (string.IsNullOrWhiteSpace(q))
@@ -156,10 +153,8 @@ public static class PdfEndpoints
             CancellationToken ct) =>
         {
             // Authentication required
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             // Validate BGG ID
             if (bggId <= 0)
@@ -205,26 +200,22 @@ public static class PdfEndpoints
 #pragma warning restore CA1031
         });
 
-        group.MapGet("/games/{gameId}/pdfs", async (string gameId, HttpContext context, PdfStorageService pdfStorage, CancellationToken ct) =>
+        group.MapGet("/games/{gameId:guid}/pdfs", async (Guid gameId, HttpContext context, PdfStorageService pdfStorage, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
-            var pdfs = await pdfStorage.GetPdfsByGameAsync(gameId, ct);
+            var pdfs = await pdfStorage.GetPdfsByGameAsync(gameId.ToString(), ct);
             return Results.Json(new { pdfs });
         });
 
-        group.MapGet("/pdfs/{pdfId}/text", async (string pdfId, HttpContext context, MeepleAiDbContext db, CancellationToken ct) =>
+        group.MapGet("/pdfs/{pdfId:guid}/text", async (Guid pdfId, HttpContext context, MeepleAiDbContext db, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             var pdf = await db.PdfDocuments
-                .Where(p => p.Id.ToString() == pdfId)
+                .Where(p => p.Id == pdfId)
                 .Select(p => new
                 {
                     p.Id,
@@ -247,16 +238,14 @@ public static class PdfEndpoints
         });
 
         // SEC-02: Delete PDF with Row-Level Security
-        group.MapDelete("/pdf/{pdfId}", async (string pdfId, HttpContext context, PdfStorageService pdfStorage, AuditService auditService, MeepleAiDbContext db, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapDelete("/pdf/{pdfId:guid}", async (Guid pdfId, HttpContext context, PdfStorageService pdfStorage, AuditService auditService, MeepleAiDbContext db, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             // Load PDF to check ownership
             var pdf = await db.PdfDocuments
-                .Where(p => p.Id.ToString() == pdfId)
+                .Where(p => p.Id == pdfId)
                 .Select(p => new { p.Id, p.UploadedByUserId, p.GameId })
                 .FirstOrDefaultAsync(ct);
 
@@ -281,7 +270,7 @@ public static class PdfEndpoints
                     session.User.Id,
                     "ACCESS_DENIED",
                     "PdfDocument",
-                    pdfId,
+                    pdfId.ToString(),
                     "Denied",
                     $"User attempted to delete PDF owned by another user. User role: {session.User.Role}, Owner: {pdf.UploadedByUserId}. RLS scope: own resources only.",
                     null,
@@ -295,7 +284,7 @@ public static class PdfEndpoints
             }
 
             // Delete PDF
-            var result = await pdfStorage.DeletePdfAsync(pdfId, ct);
+            var result = await pdfStorage.DeletePdfAsync(pdfId.ToString(), ct);
 
             if (!result.Success)
             {
@@ -310,7 +299,7 @@ public static class PdfEndpoints
                 session.User.Id,
                 "DELETE",
                 "PdfDocument",
-                pdfId,
+                pdfId.ToString(),
                 "Success",
                 $"PDF deleted successfully by user with role: {session.User.Role}",
                 null,
@@ -321,15 +310,13 @@ public static class PdfEndpoints
         });
 
         // PDF-08: Get PDF processing progress
-        group.MapGet("/pdfs/{pdfId}/progress", async (string pdfId, HttpContext context, MeepleAiDbContext db, CancellationToken ct) =>
+        group.MapGet("/pdfs/{pdfId:guid}/progress", async (Guid pdfId, HttpContext context, MeepleAiDbContext db, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             var pdf = await db.PdfDocuments
-                .Where(p => p.Id.ToString() == pdfId)
+                .Where(p => p.Id == pdfId)
                 .Select(p => new
                 {
                     p.Id,
@@ -383,15 +370,13 @@ public static class PdfEndpoints
         .WithName("GetPdfProcessingProgress");
 
         // PDF-08: Cancel PDF processing
-        group.MapDelete("/pdfs/{pdfId}/processing", async (string pdfId, HttpContext context, MeepleAiDbContext db, IBackgroundTaskService backgroundTaskService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapDelete("/pdfs/{pdfId:guid}/processing", async (Guid pdfId, HttpContext context, MeepleAiDbContext db, IBackgroundTaskService backgroundTaskService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             var pdf = await db.PdfDocuments
-                .Where(p => p.Id.ToString() == pdfId)
+                .Where(p => p.Id == pdfId)
                 .Select(p => new { p.Id, p.UploadedByUserId, p.ProcessingStatus })
                 .FirstOrDefaultAsync(ct);
 
@@ -419,7 +404,7 @@ public static class PdfEndpoints
             }
 
             // Cancel the background task
-            var cancelled = backgroundTaskService.CancelTask(pdfId);
+            var cancelled = backgroundTaskService.CancelTask(pdfId.ToString());
 
             if (!cancelled)
             {
@@ -434,12 +419,10 @@ public static class PdfEndpoints
         .RequireAuthorization()
         .WithName("CancelPdfProcessing");
 
-        group.MapPost("/ingest/pdf/{pdfId}/rulespec", async (string pdfId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/ingest/pdf/{pdfId:guid}/rulespec", async (Guid pdfId, HttpContext context, RuleSpecService ruleSpecService, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
@@ -450,7 +433,7 @@ public static class PdfEndpoints
             try
             {
                 logger.LogInformation("User {UserId} generating RuleSpec from PDF {PdfId}", session.User.Id, pdfId);
-                var ruleSpec = await ruleSpecService.GenerateRuleSpecFromPdfAsync(pdfId, ct);
+                var ruleSpec = await ruleSpecService.GenerateRuleSpecFromPdfAsync(pdfId.ToString(), ct);
                 return Results.Json(ruleSpec);
             }
             catch (InvalidOperationException ex)
@@ -461,12 +444,10 @@ public static class PdfEndpoints
         });
 
         // AI-01: Index PDF for semantic search
-        group.MapPost("/ingest/pdf/{pdfId}/index", async (string pdfId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
+        group.MapPost("/ingest/pdf/{pdfId:guid}/index", async (Guid pdfId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             if (!string.Equals(session.User.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(session.User.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
@@ -477,7 +458,7 @@ public static class PdfEndpoints
 
             logger.LogInformation("User {UserId} indexing PDF {PdfId}", session.User.Id, pdfId);
 
-            var result = await mediator.Send(new IndexPdfCommand(pdfId), ct);
+            var result = await mediator.Send(new IndexPdfCommand(pdfId.ToString()), ct);
 
             if (!result.Success)
             {

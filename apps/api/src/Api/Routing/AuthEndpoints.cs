@@ -1,4 +1,5 @@
 using Api.Configuration;
+using Api.Extensions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -611,10 +612,8 @@ Rate limited to 10 requests per minute per IP address.
             HttpContext context,
             IOAuthService oauthService) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             await oauthService.UnlinkOAuthAccountAsync(Guid.Parse(session.User.Id), provider);
             return Results.NoContent();
@@ -639,10 +638,8 @@ User must have at least one authentication method remaining (password or another
             HttpContext context,
             IOAuthService oauthService) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             var accounts = await oauthService.GetLinkedAccountsAsync(Guid.Parse(session.User.Id));
             return Results.Json(accounts);
@@ -672,10 +669,8 @@ User must have at least one authentication method remaining (password or another
             CancellationToken ct) =>
         {
             // Require authentication
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             var now = timeProvider.GetUtcNow().UtcDateTime;
             var inactivityTimeoutDays = config.GetValue<int>("Authentication:SessionManagement:InactivityTimeoutDays", 30);
@@ -725,10 +720,8 @@ User must have at least one authentication method remaining (password or another
             CancellationToken ct) =>
         {
             // Require authentication
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             var now = timeProvider.GetUtcNow().UtcDateTime;
             var inactivityTimeoutDays = config.GetValue<int>("Authentication:SessionManagement:InactivityTimeoutDays", 30);
@@ -780,10 +773,8 @@ User must have at least one authentication method remaining (password or another
 
         group.MapGet("/users/me/sessions", async (HttpContext context, ISessionManagementService sessionManagement, CancellationToken ct = default) =>
         {
-            if (!context.Items.TryGetValue(nameof(ActiveSession), out var value) || value is not ActiveSession session)
-            {
-                return Results.Unauthorized();
-            }
+            var (authenticated, session, error) = context.TryGetActiveSession();
+            if (!authenticated) return error!;
 
             var sessions = await sessionManagement.GetUserSessionsAsync(Guid.Parse(session.User.Id), ct);
             return Results.Json(sessions);

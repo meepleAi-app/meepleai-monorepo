@@ -236,6 +236,11 @@ describe('ChatProvider', () => {
         await result.current.selectGame(baseGame.id);
       });
 
+      // After selecting game, baseChat should be loaded
+      await waitFor(() => {
+        expect(result.current.chats).toHaveLength(1);
+      });
+
       const createdChat: Chat = {
         ...baseChat,
         id: 'chat-temp',
@@ -248,14 +253,18 @@ describe('ChatProvider', () => {
         await result.current.createChat();
       });
 
-      expect(result.current.chats).toHaveLength(1);
+      // After creating a chat, we should have 2 chats (baseChat + createdChat)
+      expect(result.current.chats).toHaveLength(2);
+      expect(result.current.chats[0].id).toBe(createdChat.id); // New chat is first
 
       await act(async () => {
         await result.current.deleteChat(createdChat.id);
       });
 
       expect(mockApi.delete).toHaveBeenCalledWith(`/api/v1/chats/${createdChat.id}`);
-      expect(result.current.chats).toHaveLength(0);
+      // After deletion, only baseChat remains
+      expect(result.current.chats).toHaveLength(1);
+      expect(result.current.chats[0].id).toBe(baseChat.id);
 
       confirmSpy.mockRestore();
     });
@@ -815,6 +824,11 @@ describe('ChatProvider', () => {
 
       await waitFor(() => expect(result.current.selectedAgentId).toBe(baseAgent.id));
 
+      // After selecting game, baseChat should be loaded
+      await waitFor(() => {
+        expect(result.current.chats).toHaveLength(1);
+      });
+
       mockApi.post.mockRejectedValueOnce(new Error('Server error'));
 
       await act(async () => {
@@ -825,7 +839,9 @@ describe('ChatProvider', () => {
         expect(result.current.errorMessage).toContain('Errore nella creazione');
       });
 
-      expect(result.current.chats).toHaveLength(0);
+      // Chat list should still have baseChat (creation failed, so no new chat added)
+      expect(result.current.chats).toHaveLength(1);
+      expect(result.current.chats[0].id).toBe(baseChat.id);
       expect(result.current.activeChatId).toBeNull();
     });
 

@@ -2,43 +2,49 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "dev",
+      "type": "shell",
+      "command": "pnpm dev",
+      "options": {
+        "cwd": "${workspaceFolder}/apps/web"
+      },
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
       "label": "build",
-      "command": "dotnet",
-      "type": "process",
-      "args": [
-        "build",
-        "${workspaceFolder}/apps/api/src/Api/Api.csproj"
-      ],
-      "problemMatcher": "$msCompile",
+      "type": "shell",
+      "command": "pnpm build",
+      "options": {
+        "cwd": "${workspaceFolder}/apps/web"
+      },
       "group": {
         "kind": "build",
         "isDefault": true
-      }
+      },
+      "problemMatcher": []
     },
     {
       "label": "test",
-      "command": "dotnet",
-      "type": "process",
-      "args": [
-        "test",
-        "${workspaceFolder}/apps/api/tests/Api.Tests/Api.Tests.csproj"
-      ],
-      "problemMatcher": "$msCompile",
+      "type": "shell",
+      "command": "pnpm test",
+      "options": {
+        "cwd": "${workspaceFolder}/apps/web"
+      },
       "group": {
         "kind": "test",
         "isDefault": true
-      }
+      },
+      "problemMatcher": []
     },
     {
-      "label": "run",
-      "command": "dotnet",
-      "type": "process",
-      "args": [
-        "run",
-        "--project",
-        "${workspaceFolder}/apps/api/src/Api/Api.csproj"
-      ],
-      "problemMatcher": "$msCompile"
+      "label": "lint",
+      "type": "shell",
+      "command": "pnpm lint",
+      "options": {
+        "cwd": "${workspaceFolder}/apps/web"
+      },
+      "problemMatcher": "$eslint-stylish"
     }
   ]
 }

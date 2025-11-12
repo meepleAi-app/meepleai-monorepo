@@ -115,20 +115,32 @@ public sealed record AgentStrategy
 
     /// <summary>
     /// Gets a parameter value with type conversion.
+    /// Supports both primitive types (via Convert.ChangeType) and complex types (via direct cast).
     /// </summary>
     public T GetParameter<T>(string key, T defaultValue = default!)
     {
         if (!Parameters.TryGetValue(key, out var value))
             return defaultValue;
 
-        try
+        // Direct type match - no conversion needed (handles arrays, complex objects)
+        if (value is T typedValue)
+            return typedValue;
+
+        // Try conversion for primitive types implementing IConvertible
+        if (value is IConvertible && typeof(T).IsPrimitive || typeof(T) == typeof(string))
         {
-            return (T)Convert.ChangeType(value, typeof(T));
+            try
+            {
+                return (T)Convert.ChangeType(value, typeof(T));
+            }
+            catch
+            {
+                return defaultValue;
+            }
         }
-        catch
-        {
-            return defaultValue;
-        }
+
+        // Unsupported conversion - return default
+        return defaultValue;
     }
 
     /// <summary>

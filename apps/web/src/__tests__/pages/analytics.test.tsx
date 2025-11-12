@@ -93,7 +93,13 @@ describe('AnalyticsDashboard', () => {
 
     render(<AnalyticsDashboard />);
 
+    // Wait for initial load to complete
     await waitFor(() => expect(mockApi.get).toHaveBeenCalledTimes(1));
+
+    // Wait for button to show "Refresh" (not "Refreshing...")
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+    });
 
     mockApi.get.mockResolvedValueOnce(sampleStats as any);
 
@@ -386,6 +392,12 @@ describe('AnalyticsDashboard', () => {
 
       render(<AnalyticsDashboard />);
 
+      // Wait for page to load first
+      await waitFor(() => {
+        expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
+      });
+
+      // Then check for percentage value
       await waitFor(() => {
         expect(screen.getByText((content, element) => {
           const text = element?.textContent || '';
@@ -443,9 +455,14 @@ describe('AnalyticsDashboard', () => {
 
       const { container } = render(<AnalyticsDashboard />);
 
-      await waitFor(() => container.querySelectorAll('select')[0]);
+      // Wait for page to load by checking for Analytics Dashboard heading
+      await waitFor(() => {
+        expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
+      });
 
       const select = container.querySelectorAll('select')[0] as HTMLSelectElement;
+      expect(select).toBeTruthy();
+
       fireEvent.change(select, { target: { value: '7' } });
 
       await waitFor(() => {
@@ -506,9 +523,14 @@ describe('AnalyticsDashboard', () => {
 
       const { container } = render(<AnalyticsDashboard />);
 
-      await waitFor(() => container.querySelectorAll('select')[1]);
+      // Wait for page to load
+      await waitFor(() => {
+        expect(screen.getByText('Analytics Dashboard')).toBeInTheDocument();
+      });
 
       const select = container.querySelectorAll('select')[1] as HTMLSelectElement;
+      expect(select).toBeTruthy();
+
       fireEvent.change(select, { target: { value: 'Admin' } });
 
       await waitFor(() => {

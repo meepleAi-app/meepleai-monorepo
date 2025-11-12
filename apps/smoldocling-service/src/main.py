@@ -327,7 +327,7 @@ async def health_check():
 
         return HealthCheckResponse(
             status=overall_status,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.utcnow().isoformat(),
             checks=checks,
             gpu_info=gpu_info,
         )
@@ -336,7 +336,7 @@ async def health_check():
         logger.error(f"Health check failed: {e}", exc_info=True)
         return HealthCheckResponse(
             status="unhealthy",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.utcnow().isoformat(),
             checks={
                 "model_initialized": "error",
                 "device_available": "error",

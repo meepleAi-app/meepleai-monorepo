@@ -81,13 +81,14 @@ public static class DocumentProcessingServiceExtensions
             return new EnhancedPdfProcessingOrchestrator(unstructured, smoldocling, docnet, logger, config);
         });
 
-        // Legacy: Single extractor registration for backward compatibility
+        // IPdfTextExtractor registration based on feature flag
         var extractorProvider = configuration["PdfProcessing:Extractor:Provider"] ?? "Orchestrator";
 
         if (extractorProvider.Equals("Orchestrator", StringComparison.OrdinalIgnoreCase))
         {
-            // Use orchestrator as default (recommended)
-            services.AddScoped<IPdfTextExtractor>(sp => sp.GetRequiredService<UnstructuredPdfTextExtractor>());
+            // Use 3-stage orchestrator as default (recommended for production)
+            services.AddScoped<OrchestratedPdfTextExtractor>();
+            services.AddScoped<IPdfTextExtractor, OrchestratedPdfTextExtractor>();
         }
         else if (extractorProvider.Equals("Unstructured", StringComparison.OrdinalIgnoreCase))
         {

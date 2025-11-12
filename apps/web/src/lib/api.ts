@@ -84,6 +84,41 @@ export interface TwoFactorStatusResponse {
   backupCodesCount: number;
 }
 
+// SPRINT-1: Settings Pages types (Issue #848)
+export interface UserProfile {
+  id: string;
+  email: string;
+  displayName: string;
+  role: string;
+  createdAt: string;
+  isTwoFactorEnabled: boolean;
+  twoFactorEnabledAt: string | null;
+}
+
+export interface UserPreferences {
+  language: string;
+  emailNotifications: boolean;
+  theme: 'light' | 'dark' | 'system';
+  dataRetentionDays: number;
+}
+
+export interface UpdateProfileRequest {
+  displayName?: string;
+  email?: string;
+}
+
+export interface UpdatePreferencesRequest {
+  language?: string;
+  emailNotifications?: boolean;
+  theme?: 'light' | 'dark' | 'system';
+  dataRetentionDays?: number;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
 // AI-13: BoardGameGeek API types
 export interface BggSearchResult {
   bggId: number;

@@ -186,13 +186,24 @@ services.AddScoped<ILlmService, HybridLlmService>();
 
 ---
 
+## Implemented Enhancements
+
+### Cost Tracking (BGAI-018) - ✅ Completed 2025-11-12
+- **Financial Cost Calculation**: LlmCostCalculator with pricing for 11 models
+- **Database Persistence**: llm_cost_logs table with full attribution
+- **Per-user/per-tier Attribution**: Tracks by UserId and UserRole
+- **Cost Analytics**: 3 admin endpoints (report, daily, alerts)
+- **Multi-threshold Alerts**: Daily ($100), Weekly ($500), Monthly projection ($3000)
+- **Test Coverage**: 19 tests (12 calculator + 7 repository integration)
+- **Non-blocking Logging**: Fire-and-forget persistence (doesn't slow requests)
+
 ## Future Enhancements
 
 1. **Dynamic Routing**: Quality-based fallback (Ollama fails → OpenRouter)
-2. **Cost Tracking**: Per-user/per-tier cost attribution
-3. **A/B Testing**: Automated quality comparison experiments
-4. **Model Registry**: Admin UI for model configuration
-5. **Consensus Mode**: Multi-model voting for critical questions
+2. **A/B Testing**: Automated quality comparison experiments
+3. **Model Registry**: Admin UI for model configuration
+4. **Consensus Mode**: Multi-model voting for critical questions
+5. **Cost Optimization ML**: Predictive routing based on historical accuracy/cost
 
 ---
 
@@ -206,6 +217,6 @@ services.AddScoped<ILlmService, HybridLlmService>();
 
 ---
 
-**Version**: 1.0
-**Last Updated**: 2025-11-12
+**Version**: 2.0
+**Last Updated**: 2025-11-12 (BGAI-018 Cost Tracking Complete)
 **Owner**: Engineering Lead

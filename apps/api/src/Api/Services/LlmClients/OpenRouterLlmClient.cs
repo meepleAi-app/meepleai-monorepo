@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Security;
 using Api.Models;
@@ -22,6 +23,7 @@ public class OpenRouterLlmClient : ILlmClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<OpenRouterLlmClient> _logger;
+    private readonly ILlmCostCalculator _costCalculator;
     private readonly string _apiKey;
 
     // Hardcoded defaults
@@ -32,10 +34,12 @@ public class OpenRouterLlmClient : ILlmClient
     public OpenRouterLlmClient(
         IHttpClientFactory httpClientFactory,
         IConfiguration config,
+        ILlmCostCalculator costCalculator,
         ILogger<OpenRouterLlmClient> logger)
     {
         _httpClient = httpClientFactory.CreateClient("OpenRouter");
         _logger = logger;
+        _costCalculator = costCalculator;
 
         // SEC-708: Read API key from Docker Secret file or direct config
         _apiKey = SecretsHelper.GetSecretOrValue(config, "OPENROUTER_API_KEY", logger, required: true)
@@ -47,7 +51,7 @@ public class OpenRouterLlmClient : ILlmClient
         _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://meepleai.app");
         _httpClient.Timeout = TimeSpan.FromSeconds(DefaultTimeoutSeconds);
 
-        _logger.LogInformation("OpenRouterLlmClient initialized");
+        _logger.LogInformation("OpenRouterLlmClient initialized with cost tracking");
     }
 
     /// <inheritdoc/>
@@ -121,9 +125,25 @@ public class OpenRouterLlmClient : ILlmClient
                     chatResponse.Usage.TotalTokens)
                 : LlmUsage.Empty;
 
+            // ISSUE-960: Calculate cost for this request
+            var costCalculation = _costCalculator.CalculateCost(
+                model,
+                ProviderName,
+                usage.PromptTokens,
+                usage.CompletionTokens);
+
+            var cost = new LlmCost
+            {
+                InputCost = costCalculation.InputCost,
+                OutputCost = costCalculation.OutputCost,
+                ModelId = model,
+                Provider = ProviderName
+            };
+
             var metadata = new Dictionary<string, string>
             {
-                ["provider"] = "OpenRouter"
+                ["provider"] = "OpenRouter",
+                ["cost_usd"] = cost.TotalCost.ToString("F6")
             };
 
             if (!string.IsNullOrWhiteSpace(chatResponse.Id))
@@ -142,9 +162,9 @@ public class OpenRouterLlmClient : ILlmClient
                 metadata["finish_reason"] = finishReason;
             }
 
-            _logger.LogInformation("Successfully generated OpenRouter completion");
+            _logger.LogInformation("Successfully generated OpenRouter completion (cost: ${Cost:F6})", cost.TotalCost);
 
-            return LlmCompletionResult.CreateSuccess(assistantMessage, usage, metadata);
+            return LlmCompletionResult.CreateSuccess(assistantMessage, usage, cost, metadata);
         }
         catch (TaskCanceledException ex)
         {

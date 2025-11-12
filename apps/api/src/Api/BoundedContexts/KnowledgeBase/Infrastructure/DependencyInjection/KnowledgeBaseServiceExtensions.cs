@@ -25,6 +25,11 @@ public static class KnowledgeBaseServiceExtensions
         // Domain Services - Routing Strategy
         services.AddSingleton<ILlmRoutingStrategy, HybridAdaptiveRoutingStrategy>();
 
+        // ISSUE-960: Cost Tracking
+        // Domain Services - Cost Calculator and Alerting
+        services.AddSingleton<ILlmCostCalculator, LlmCostCalculator>();
+        services.AddScoped<LlmCostAlertService>(); // Scoped - uses IAlertingService
+
         // Infrastructure - LLM Clients (Singleton - stateless HTTP clients)
         services.AddSingleton<ILlmClient, OllamaLlmClient>();
         services.AddSingleton<ILlmClient, OpenRouterLlmClient>();
@@ -36,6 +41,7 @@ public static class KnowledgeBaseServiceExtensions
         services.AddScoped<IVectorDocumentRepository, VectorDocumentRepository>();
         services.AddScoped<IEmbeddingRepository, EmbeddingRepository>();
         services.AddScoped<IChatThreadRepository, ChatThreadRepository>(); // Issue #924: ChatThread support
+        services.AddScoped<ILlmCostLogRepository, LlmCostLogRepository>(); // ISSUE-960: Cost tracking
 
         // Infrastructure - Adapters (Scoped - uses IQdrantService which is Scoped)
         services.AddScoped<IQdrantVectorStoreAdapter, QdrantVectorStoreAdapter>();
@@ -43,6 +49,7 @@ public static class KnowledgeBaseServiceExtensions
         // Application - Handlers (Scoped - uses Scoped dependencies)
         services.AddScoped<SearchQueryHandler>();
         services.AddScoped<AskQuestionQueryHandler>();
+        services.AddScoped<GetLlmCostReportQueryHandler>(); // ISSUE-960: Cost reporting
 
         return services;
     }

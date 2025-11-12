@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Infrastructure.Security;
 
 namespace Api.Services.LlmClients;
@@ -20,6 +21,7 @@ public class OllamaLlmClient : ILlmClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<OllamaLlmClient> _logger;
+    private readonly ILlmCostCalculator _costCalculator;
 
     // Hardcoded defaults for Ollama
     private const int DefaultTimeoutSeconds = 60;
@@ -29,17 +31,19 @@ public class OllamaLlmClient : ILlmClient
     public OllamaLlmClient(
         IHttpClientFactory httpClientFactory,
         IConfiguration config,
+        ILlmCostCalculator costCalculator,
         ILogger<OllamaLlmClient> logger)
     {
         _httpClient = httpClientFactory.CreateClient("Ollama");
         _logger = logger;
+        _costCalculator = costCalculator;
 
         // Configure Ollama endpoint (http://ollama:11434)
         var ollamaUrl = config["OllamaUrl"] ?? "http://ollama:11434";
         _httpClient.BaseAddress = new Uri(ollamaUrl);
         _httpClient.Timeout = TimeSpan.FromSeconds(DefaultTimeoutSeconds);
 
-        _logger.LogInformation("OllamaLlmClient initialized with endpoint: {OllamaUrl}", ollamaUrl);
+        _logger.LogInformation("OllamaLlmClient initialized with endpoint: {OllamaUrl} (zero cost - self-hosted)", ollamaUrl);
     }
 
     /// <inheritdoc/>
@@ -123,10 +127,26 @@ public class OllamaLlmClient : ILlmClient
                 estimatedCompletionTokens,
                 estimatedPromptTokens + estimatedCompletionTokens);
 
+            // ISSUE-960: Calculate cost for Ollama (always $0 - self-hosted)
+            var costCalculation = _costCalculator.CalculateCost(
+                model,
+                ProviderName,
+                usage.PromptTokens,
+                usage.CompletionTokens);
+
+            var cost = new LlmCost
+            {
+                InputCost = costCalculation.InputCost,  // Will be $0 for Ollama
+                OutputCost = costCalculation.OutputCost,
+                ModelId = model,
+                Provider = ProviderName
+            };
+
             var metadata = new Dictionary<string, string>
             {
                 ["model"] = chatResponse.Model ?? model,
-                ["provider"] = "Ollama"
+                ["provider"] = "Ollama",
+                ["cost_usd"] = "0.000000"  // Free - self-hosted
             };
 
             if (!string.IsNullOrWhiteSpace(chatResponse.DoneReason))
@@ -134,9 +154,9 @@ public class OllamaLlmClient : ILlmClient
                 metadata["finish_reason"] = chatResponse.DoneReason;
             }
 
-            _logger.LogInformation("Successfully generated Ollama completion");
+            _logger.LogInformation("Successfully generated Ollama completion (cost: $0 - self-hosted)");
 
-            return LlmCompletionResult.CreateSuccess(assistantMessage, usage, metadata);
+            return LlmCompletionResult.CreateSuccess(assistantMessage, usage, cost, metadata);
         }
         catch (TaskCanceledException ex)
         {

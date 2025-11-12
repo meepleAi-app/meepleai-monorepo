@@ -21,6 +21,9 @@ public static class KnowledgeBaseServiceExtensions
         services.AddSingleton<RrfFusionDomainService>();
         services.AddSingleton<QualityTrackingDomainService>();
 
+        // ISSUE-970: BGAI-028 - Confidence Validation (threshold ≥0.70)
+        services.AddSingleton<IConfidenceValidationService, ConfidenceValidationService>();
+
         // ISSUE-958: LLM Hybrid Architecture
         // Domain Services - Routing Strategy
         services.AddSingleton<ILlmRoutingStrategy, HybridAdaptiveRoutingStrategy>();

@@ -298,7 +298,7 @@ async def health_check():
 
         return HealthCheckResponse(
             status=overall_status,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.utcnow().isoformat(),
             checks={
                 "unstructured_library": unstructured_status,
                 "disk_space": disk_status,
@@ -310,7 +310,7 @@ async def health_check():
         logger.error(f"Health check failed: {e}", exc_info=True)
         return HealthCheckResponse(
             status="unhealthy",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.utcnow().isoformat(),
             checks={
                 "unstructured_library": "error",
                 "disk_space": "error",
